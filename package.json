@@ -1,0 +1,13 @@
+{
+  "name": "@questurian/source",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {},
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {
+    "@nx/js": "22.4.0",
+    "@nx/workspace": "22.4.0",
+    "nx": "22.4.0"
+  }
+}
