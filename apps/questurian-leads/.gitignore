@@ -1,0 +1,19 @@
+__pycache__/
+node_modules/
+.env
+dist/
+bun.lockb
+AGENTS.md
+CLAUDE.md
+.turbo/cookies/*.cookie
+# LibreTranslate model data (large binaries)
+libretranslate-data/
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    environment:
+      - LT_DISABLE_WEB_UI=false
+      - LT_LOAD_ONLY=en,es,fr,de,pt,ru,zh,ja,ko,ar  # Load common languages
+    volumes:
+      - ./libretranslate-data:/home/libretranslate/.local
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/languages"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8428:8428"
+    environment:
+      - LIBRETRANSLATE_URL=http://libretranslate:5000
+      - LIBRETRANSLATE_API_KEY=${LIBRETRANSLATE_API_KEY:-}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+      - RAPIDAPI_KEY=${RAPIDAPI_KEY:-}
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      - libretranslate
+    command: sh -c "python lib/database/init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8428 --reload"
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    ports:
+      - "5317:5317"
+    volumes:
+      - ./:/repo
+      - /repo/node_modules
+      - /repo/apps/client/node_modules
+    depends_on:
+      - api
+    command: sh -c "bun install --frozen-lockfile && bun --cwd apps/client run dev -- --host 0.0.0.0 --port 5317"

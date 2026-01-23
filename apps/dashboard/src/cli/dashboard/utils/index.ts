@@ -1,0 +1,1 @@
+export { checkHealth } from "./healthCheck";

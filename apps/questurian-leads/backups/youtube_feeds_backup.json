@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "category_id": 4,
+    "channel_id": "UCnraHeyOe_bnOG20YMDVLGQ",
+    "display_name": "DC Rob ",
+    "channel_url": "https://www.youtube.com/@dcbornrob",
+    "fetch_interval": 60,
+    "last_fetched": "2026-01-14T21:36:09.350598",
+    "is_active": 1,
+    "created_at": "2026-01-14 03:08:24"
+  },
+  {
+    "id": 2,
+    "category_id": 3,
+    "channel_id": "UC8848QXue5LVeCkbo6FL3aw",
+    "display_name": "AK Joel's Colombia",
+    "channel_url": "",
+    "fetch_interval": 60,
+    "last_fetched": "2026-01-14T21:36:09.688703",
+    "is_active": 1,
+    "created_at": "2026-01-14 06:52:33"
+  },
+  {
+    "id": 3,
+    "category_id": 3,
+    "channel_id": "UC0t5oN5GHK8KHslw9R_NDcQ",
+    "display_name": "Medellin Buzz",
+    "channel_url": "https://www.youtube.com/@MedellinBuzz",
+    "fetch_interval": 60,
+    "last_fetched": "2026-01-14T21:36:10.188192",
+    "is_active": 1,
+    "created_at": "2026-01-14 20:18:19"
+  },
+  {
+    "id": 4,
+    "category_id": 3,
+    "channel_id": "UCB7H-2NPzgl4GvLaJB4_2Nw",
+    "display_name": "Medellin Living Real Estate",
+    "channel_url": "https://www.youtube.com/@medellinlivingrealestate",
+    "fetch_interval": 60,
+    "last_fetched": "2026-01-14T21:36:10.614927",
+    "is_active": 1,
+    "created_at": "2026-01-14 21:36:04"
+  }
+]

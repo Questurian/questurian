@@ -1,0 +1,12 @@
+feedparser
+fastapi
+uvicorn
+pydantic
+python-dateutil
+aiosqlite
+requests
+python-dotenv
+scrapy>=2.11.0
+scrapy-playwright>=0.0.36
+playwright>=1.40.0
+youtube-transcript-api>=1.0.0
