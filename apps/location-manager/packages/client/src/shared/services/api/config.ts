@@ -73,5 +73,6 @@ export const API_ENDPOINTS = {
   TRANSLATE_MERGE_REVIEWS: (id: number) => `/api/locations/${id}/reviews/translate-merge`,
   DOWNLOAD_MERGED_REVIEWS: (id: number) => `/api/locations/${id}/reviews/merged/download`,
   MERGED_REVIEWS_STATUS: (id: number) => `/api/locations/${id}/reviews/merged/status`,
+  MERGED_REVIEWS_REPORT: (id: number) => `/api/locations/${id}/reviews/merged/report`,
   DOWNLOAD_REJECTS_REPORT: (id: number) => `/api/locations/${id}/reviews/rejects/download`,
 } as const;

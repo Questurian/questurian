@@ -29,6 +29,7 @@ import type {
   TripAdvisorReviewsStatusResponse,
   TranslateMergeReviewsResponse,
   MergedReviewsStatusResponse,
+  MergedReviewsReportResponse,
 } from "./types";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
@@ -379,6 +380,17 @@ export const locationsApi = {
   ): Promise<MergedReviewsStatusResponse["data"]> {
     return apiGet<MergedReviewsStatusResponse["data"]>(
       API_ENDPOINTS.MERGED_REVIEWS_STATUS(id)
+    );
+  },
+
+  /**
+   * Get full merged reviews report (stats, errors, translations)
+   */
+  async getMergedReviewsReport(
+    id: number
+  ): Promise<MergedReviewsReportResponse["data"]> {
+    return apiGet<MergedReviewsReportResponse["data"]>(
+      API_ENDPOINTS.MERGED_REVIEWS_REPORT(id)
     );
   },
 

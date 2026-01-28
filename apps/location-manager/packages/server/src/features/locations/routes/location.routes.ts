@@ -23,7 +23,7 @@ import {
   serveImage,
   fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
   fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
-  translateAndMergeReviews, downloadMergedReviews, getMergedReviewsStatus, downloadRejectsReport,
+  translateAndMergeReviews, downloadMergedReviews, getMergedReviewsStatus, getMergedReviewsReport, downloadRejectsReport,
 
   // Admin
   clearDatabase, scanOrphanedFiles, cleanupOrphanedFiles,
@@ -157,4 +157,5 @@ app.get("/api/locations/:id/tripadvisor-reviews/status", validateParams(deleteLo
 app.post("/api/locations/:id/reviews/translate-merge", validateParams(deleteLocationIdSchema), translateAndMergeReviews);
 app.get("/api/locations/:id/reviews/merged/download", validateParams(deleteLocationIdSchema), downloadMergedReviews);
 app.get("/api/locations/:id/reviews/merged/status", validateParams(deleteLocationIdSchema), getMergedReviewsStatus);
+app.get("/api/locations/:id/reviews/merged/report", validateParams(deleteLocationIdSchema), getMergedReviewsReport);
 app.get("/api/locations/:id/reviews/rejects/download", validateParams(deleteLocationIdSchema), downloadRejectsReport);

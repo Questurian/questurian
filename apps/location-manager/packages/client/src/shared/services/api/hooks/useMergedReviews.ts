@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
-import type { MergedReviewsStats, RejectsReportSummary } from "../types";
+import type { MergedReviewsStats, RejectsReportSummary, MergedReviewsReportData } from "../types";
 
 export const MERGED_REVIEWS_STATUS_QUERY_KEY = "merged-reviews-status";
+export const MERGED_REVIEWS_REPORT_QUERY_KEY = "merged-reviews-report";
 
 interface UseTranslateAndMergeReviewsOptions {
   locationId: number;
@@ -62,4 +63,17 @@ export function useDownloadRejectsReport() {
       window.open(url, "_blank");
     },
   };
+}
+
+interface UseMergedReviewsReportOptions {
+  locationId: number;
+  enabled?: boolean;
+}
+
+export function useMergedReviewsReport(options: UseMergedReviewsReportOptions) {
+  return useQuery({
+    queryKey: [MERGED_REVIEWS_REPORT_QUERY_KEY, options.locationId],
+    queryFn: () => locationsApi.getMergedReviewsReport(options.locationId),
+    enabled: options.enabled ?? true,
+  });
 }

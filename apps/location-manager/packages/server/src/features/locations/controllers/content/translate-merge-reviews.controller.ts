@@ -673,9 +673,16 @@ export async function translateAndMergeReviews(c: Context) {
   }
 }
 
+// Minimal review format for download (just text, rating, date)
+interface MinimalReview {
+  text: string;
+  rating: number;
+  date: string;
+}
+
 /**
  * GET /api/locations/:id/reviews/merged/download
- * Download the latest merged reviews file
+ * Download the latest merged reviews file in minimal format (text, rating, date array)
  */
 export async function downloadMergedReviews(c: Context) {
   const locationId = parseInt(c.req.param("id"));
@@ -696,11 +703,85 @@ export async function downloadMergedReviews(c: Context) {
 
   const filepath = path.join(MERGED_REVIEWS_DIR, locationFiles[0]!);
   const content = await Bun.file(filepath).text();
+  const data = JSON.parse(content) as {
+    reviews: UnifiedReview[];
+  };
+
+  // Transform to minimal format: just text, rating, date
+  const minimalReviews: MinimalReview[] = data.reviews
+    .filter((r) => r.review_text) // Only include reviews with text
+    .map((r) => ({
+      text: r.review_text || "",
+      rating: r.rating || 0,
+      date: r.review_datetime_utc || "",
+    }));
+
+  const minimalContent = JSON.stringify(minimalReviews, null, 2);
 
   c.header("Content-Type", "application/json");
-  c.header("Content-Disposition", `attachment; filename="${locationFiles[0]}"`);
+  c.header("Content-Disposition", `attachment; filename="reviews_${locationId}.json"`);
 
-  return c.body(content);
+  return c.body(minimalContent);
+}
+
+/**
+ * GET /api/locations/:id/reviews/merged/report
+ * Get the full report data (stats, errors, translations) for display in a dialog
+ */
+export async function getMergedReviewsReport(c: Context) {
+  const locationId = parseInt(c.req.param("id"));
+
+  if (!existsSync(MERGED_REVIEWS_DIR)) {
+    return c.json(errorResponse("No merged reviews found. Please run translate & merge first."), 404);
+  }
+
+  const files = await readdir(MERGED_REVIEWS_DIR);
+  const mergedFiles = files
+    .filter((f) => f.startsWith(`merged_reviews_${locationId}_`) && f.endsWith(".json"))
+    .sort()
+    .reverse();
+
+  if (mergedFiles.length === 0) {
+    return c.json(errorResponse("No merged reviews found for this location. Please run translate & merge first."), 404);
+  }
+
+  // Load the merged reviews file
+  const mergedFilepath = path.join(MERGED_REVIEWS_DIR, mergedFiles[0]!);
+  const mergedContent = await Bun.file(mergedFilepath).text();
+  const mergedData = JSON.parse(mergedContent) as {
+    locationId: number;
+    mergedAt: string;
+    stats: TranslateMergeStats;
+    reviews: UnifiedReview[];
+  };
+
+  // Check for rejects report with matching timestamp
+  const timestamp = mergedFiles[0]!.match(/_(\d+)\.json$/)?.[1];
+  let rejectsData = null;
+
+  if (timestamp) {
+    const rejectsFilename = `rejects_report_${locationId}_${timestamp}.json`;
+    const rejectsFilepath = path.join(MERGED_REVIEWS_DIR, rejectsFilename);
+    if (existsSync(rejectsFilepath)) {
+      const rejectsContent = await Bun.file(rejectsFilepath).text();
+      rejectsData = JSON.parse(rejectsContent);
+    }
+  }
+
+  return c.json(
+    successResponse({
+      locationId: mergedData.locationId,
+      mergedAt: mergedData.mergedAt,
+      stats: mergedData.stats,
+      rejectsReport: rejectsData
+        ? {
+            totalRejected: rejectsData.summary.totalRejected,
+            replacedWithEnglish: rejectsData.summary.replacedWithEnglish,
+            rejectedNonEnglish: rejectsData.summary.rejectedNonEnglish,
+          }
+        : null,
+    })
+  );
 }
 
 /**

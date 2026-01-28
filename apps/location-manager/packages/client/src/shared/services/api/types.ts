@@ -474,3 +474,19 @@ export interface MergedReviewsStatusResponse {
     stats: MergedReviewsStats | null;
   };
 }
+
+export interface MergedReviewsReportData {
+  locationId: number;
+  mergedAt: string;
+  stats: MergedReviewsStats;
+  rejectsReport: {
+    totalRejected: number;
+    replacedWithEnglish: number;
+    rejectedNonEnglish: number;
+  } | null;
+}
+
+export interface MergedReviewsReportResponse {
+  success: true;
+  data: MergedReviewsReportData;
+}

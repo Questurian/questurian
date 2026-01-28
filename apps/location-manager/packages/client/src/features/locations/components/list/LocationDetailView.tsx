@@ -7,13 +7,14 @@ import { AddInstagramEmbedForm } from "../forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "../forms/AddUploadFilesForm";
 import { ImageLightbox } from "../ui/ImageLightbox";
 import { FetchReviewsPipelineModal } from "../ui/FetchReviewsPipelineModal";
+import { ReviewsReportDialog } from "../ui/ReviewsReportDialog";
 import { Button } from "@client/components/ui/button";
 import { Input } from "@client/components/ui/input";
 import { X, RefreshCw, Star, Loader2 } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
-import { useDownloadMergedReviews, useMergedReviewsStatus } from "@client/shared/services/api/hooks/useMergedReviews";
+import { useDownloadMergedReviews, useMergedReviewsStatus, useMergedReviewsReport } from "@client/shared/services/api/hooks/useMergedReviews";
 import { useRefetchPlaceId } from "@client/shared/services/api/hooks/useRefetchPlaceId";
 import { useFetchReviewsPipeline } from "@client/shared/services/api/hooks/useReviewsPipeline";
 import { useUpdateLocation } from "@client/shared/services/api";
@@ -67,6 +68,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
 
   // Reviews state and hooks
   const [isReviewsPipelineModalOpen, setIsReviewsPipelineModalOpen] = useState(false);
+  const [isReviewsReportDialogOpen, setIsReviewsReportDialogOpen] = useState(false);
   const [tripadvisorUrlInput, setTripadvisorUrlInput] = useState("");
   const [pipelineStatus, setPipelineStatus] = useState<ReviewsPipelineJobStatus | null>(null);
 
@@ -91,6 +93,10 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
   const mergedReviewsStatusQuery = useMergedReviewsStatus({
     locationId: locationDetail?.id || 0,
     enabled: Boolean(locationDetail?.id),
+  });
+  const mergedReviewsReportQuery = useMergedReviewsReport({
+    locationId: locationDetail?.id || 0,
+    enabled: isReviewsReportDialogOpen && Boolean(locationDetail?.id),
   });
   const downloadMergedReviews = useDownloadMergedReviews();
 
@@ -396,16 +402,28 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
               Fetch Reviews
             </Button>
             {mergedReviewsStatusQuery.data?.hasMergedReviews && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => downloadMergedReviews.download(locationDetail.id)}
-                disabled={fetchReviewsPipelineMutation.isPending}
-                title="Download the latest merged reviews file"
-              >
-                Download Merged
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setIsReviewsReportDialogOpen(true)}
+                  disabled={fetchReviewsPipelineMutation.isPending}
+                  title="View pipeline report (stats, translations, errors)"
+                >
+                  View Report
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => downloadMergedReviews.download(locationDetail.id)}
+                  disabled={fetchReviewsPipelineMutation.isPending}
+                  title="Download the latest merged reviews file"
+                >
+                  Download
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -549,6 +567,16 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         googleAvailable={canFetchGoogle}
         tripadvisorAvailable={canFetchTripadvisor}
         statusMessage={pipelineStatus?.message}
+      />
+
+      {/* Reviews Report Dialog */}
+      <ReviewsReportDialog
+        isOpen={isReviewsReportDialogOpen}
+        onClose={() => setIsReviewsReportDialogOpen(false)}
+        report={mergedReviewsReportQuery.data}
+        isLoading={mergedReviewsReportQuery.isLoading}
+        error={mergedReviewsReportQuery.error}
+        locationName={locationDetail.source?.name}
       />
     </div>
   );
