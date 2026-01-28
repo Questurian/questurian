@@ -20,6 +20,9 @@ import type {
   FetchReviewsRequest,
   FetchReviewsResponse,
   ReviewsStatusResponse,
+  FetchTripAdvisorReviewsRequest,
+  FetchTripAdvisorReviewsResponse,
+  TripAdvisorReviewsStatusResponse,
 } from "./types";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
@@ -275,6 +278,42 @@ export const locationsApi = {
   async getReviewsStatus(id: number): Promise<ReviewsStatusResponse["data"]> {
     return apiGet<ReviewsStatusResponse["data"]>(
       API_ENDPOINTS.REVIEWS_STATUS(id)
+    );
+  },
+
+  // ============================================================================
+  // TRIPADVISOR REVIEWS
+  // ============================================================================
+
+  /**
+   * Fetch TripAdvisor reviews for a location
+   */
+  async fetchTripAdvisorReviews(
+    id: number,
+    params: FetchTripAdvisorReviewsRequest
+  ): Promise<FetchTripAdvisorReviewsResponse["data"]> {
+    return apiPost<FetchTripAdvisorReviewsResponse["data"]>(
+      API_ENDPOINTS.FETCH_TRIPADVISOR_REVIEWS(id),
+      params
+    );
+  },
+
+  /**
+   * Get TripAdvisor reviews download URL for a location
+   * @param lang Optional language code to download specific language, or all if not specified
+   */
+  getTripAdvisorReviewsDownloadUrl(id: number, lang?: string): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_TRIPADVISOR_REVIEWS(id, lang)}`;
+  },
+
+  /**
+   * Check if TripAdvisor reviews exist for a location
+   */
+  async getTripAdvisorReviewsStatus(
+    id: number
+  ): Promise<TripAdvisorReviewsStatusResponse["data"]> {
+    return apiGet<TripAdvisorReviewsStatusResponse["data"]>(
+      API_ENDPOINTS.TRIPADVISOR_REVIEWS_STATUS(id)
     );
   },
 };

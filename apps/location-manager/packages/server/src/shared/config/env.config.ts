@@ -4,6 +4,7 @@ export class EnvConfig {
   readonly GOOGLE_MAPS_API_KEY: string;
   readonly RAPID_API_KEY: string;
   readonly RAPIDAPI_REVIEWS_KEY: string;
+  readonly RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY: string;
   readonly GEOAPIFY_API_KEY: string;
   readonly PAYLOAD_API_URL: string;
   readonly PAYLOAD_SERVICE_EMAIL: string;
@@ -16,6 +17,7 @@ export class EnvConfig {
     this.GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
     this.RAPID_API_KEY = process.env.RAPID_API_KEY || "";
     this.RAPIDAPI_REVIEWS_KEY = process.env.RAPIDAPI_REVIEWS_KEY || "";
+    this.RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY = process.env.RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY || "";
     this.GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || "";
     this.PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || "";
     this.PAYLOAD_SERVICE_EMAIL = process.env.PAYLOAD_SERVICE_EMAIL || "";
@@ -49,6 +51,10 @@ export class EnvConfig {
       warnings.push("RAPIDAPI_REVIEWS_KEY not set - Google Reviews fetch disabled");
     }
 
+    if (!this.RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY) {
+      warnings.push("RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY not set - TripAdvisor Reviews fetch disabled");
+    }
+
     if (!this.GEOAPIFY_API_KEY) {
       warnings.push("GEOAPIFY_API_KEY not set - Brazil reverse geocoding may fail");
     }
@@ -72,6 +78,10 @@ export class EnvConfig {
 
   hasReviewsApiKey(): boolean {
     return !!this.RAPIDAPI_REVIEWS_KEY;
+  }
+
+  hasTripAdvisorReviewsApiKey(): boolean {
+    return !!this.RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY;
   }
 
   hasGeoapifyKey(): boolean {

@@ -22,6 +22,7 @@ import {
   postAddUpload, postAddUploadImageSet, postGenerateAltText, deleteUpload,
   serveImage,
   fetchReviews, downloadReviews, getReviewsStatus,
+  fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
 
   // Admin
   clearDatabase, scanOrphanedFiles, cleanupOrphanedFiles,
@@ -139,7 +140,12 @@ app.get("/api/payload/test-connection", getTestConnection);
 // Serve uploaded images
 app.get("/api/images/*", serveImage);
 
-// Reviews routes
+// Google Reviews routes
 app.post("/api/locations/:id/reviews/fetch", validateParams(deleteLocationIdSchema), fetchReviews);
 app.get("/api/locations/:id/reviews/download", validateParams(deleteLocationIdSchema), downloadReviews);
 app.get("/api/locations/:id/reviews/status", validateParams(deleteLocationIdSchema), getReviewsStatus);
+
+// TripAdvisor Reviews routes
+app.post("/api/locations/:id/tripadvisor-reviews/fetch", validateParams(deleteLocationIdSchema), fetchTripAdvisorReviews);
+app.get("/api/locations/:id/tripadvisor-reviews/download", validateParams(deleteLocationIdSchema), downloadTripAdvisorReviews);
+app.get("/api/locations/:id/tripadvisor-reviews/status", validateParams(deleteLocationIdSchema), getTripAdvisorReviewsStatus);

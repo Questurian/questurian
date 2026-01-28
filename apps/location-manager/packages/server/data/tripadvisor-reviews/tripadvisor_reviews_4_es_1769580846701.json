@@ -1,0 +1,923 @@
+{
+  "fetchedAt": "2026-01-28T06:14:06.701Z",
+  "locationId": 4,
+  "tripadvisorUrl": "https://www.tripadvisor.com/Restaurant_Review-g294316-d940762-Reviews-Mangos_Restaurante-Lima_Lima_Region.html",
+  "language": "es",
+  "totalPages": 173,
+  "totalReviews": 20,
+  "reviews": [
+    {
+      "review_id": 1047649690,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1047649690-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Tremenda experiencia",
+      "text": "Excelente experiencia. La comida estuvo espectacular, todo muy fresco y bien presentado. La atención de Dante fue tremenda, súper atento, amable y profesional; sin duda el mejor mesero. Volvería sin pensarlo. ⭐⭐⭐⭐⭐",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "795A45240D0A047884416E0EDB17FBCF",
+        "name": "Jose C",
+        "profile_link": "https://www.tripadvisor.com/Profile/josecI7540YM",
+        "username": "josecI7540YM",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/ed/00/default-avatar-2020-4.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2026-01-28",
+      "published_at_date": "2026-01-28"
+    },
+    {
+      "review_id": 1047624367,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1047624367-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Almuerzo en Mangos",
+      "text": "Buena atención por parte de Abel, estuvo muy atento en todo momento. La comida llegó rápido y estuvo deliciosa. Volveré, gracias.",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "friends",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "00D5F5205DDB77D007C2559D1672EF09",
+        "name": "CARLOS A",
+        "profile_link": "https://www.tripadvisor.com/Profile/carlosaW9480SI",
+        "username": "carlosaW9480SI",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/ef/73/default-avatar-2020-13.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2026-01-27",
+      "published_at_date": "2026-01-27"
+    },
+    {
+      "review_id": 1047441522,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1047441522-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Cena de amigos",
+      "text": "El lugar muy limpio y acogedor, la atención demasiado buena y la comida deliciosa, para compartir y probar de todo un poco. Los cocteles muy buenos",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "friends",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "BA88B65E02C05F9A2D1F786E6B953DA5",
+        "name": "Andrea S",
+        "profile_link": "https://www.tripadvisor.com/Profile/andreasI659RV",
+        "username": "andreasI659RV",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/eb/a3/default-avatar-2020-38.jpg",
+        "contribution_count": 17,
+        "hometown": {
+          "tripadvisor_entity_id": 294308,
+          "location_name": "Quito",
+          "location_name_detailed": "Quito, Ecuador"
+        },
+        "is_verified": false
+      },
+      "images": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4c/a5/b8/caption.jpg"
+      ],
+      "created_at_date": "2026-01-26",
+      "published_at_date": "2026-01-26"
+    },
+    {
+      "review_id": 1047437705,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1047437705-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Buena atencion",
+      "text": "El día viernes me acerque a Mangos para el evento del sunset summer , la experiencia super agradable , la atención 10000 puntos y sobre todo el apoyo y buena disposición del administrador Luis urcia que en todo momento estoy pendiente de nuestra mesa , recomendado volveré nuevamente",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "family",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "BB4B1C4CD561B874D6201C98587491D6",
+        "name": "Claudia C",
+        "profile_link": "https://www.tripadvisor.com/Profile/K1071ITclaudiac",
+        "username": "K1071ITclaudiac",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/77/ae/default-avatar-2020-2.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2026-01-26",
+      "published_at_date": "2026-01-26"
+    },
+    {
+      "review_id": 1047242342,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1047242342-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Grata experiencia",
+      "text": "Buenisima experiencia empezando por la atención de Dante, muy atento y amable, cócteles para recomendar y de la comida ni que decir 20 de 10.\nRecomiendo el ceviche al estilo Mango",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "D22C16E2C605C6586B1FE713555A7B8B",
+        "name": "diego p",
+        "profile_link": "https://www.tripadvisor.com/Profile/D9531JVdiegop",
+        "username": "D9531JVdiegop",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/f2/7a/default-avatar-2020-25.jpg",
+        "contribution_count": 1,
+        "hometown": {
+          "tripadvisor_entity_id": 294313,
+          "location_name": "Arequipa",
+          "location_name_detailed": "Arequipa, Peru"
+        },
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2026-01-25",
+      "published_at_date": "2026-01-25"
+    },
+    {
+      "review_id": 1047239523,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1047239523-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Atención excelente en el lugar",
+      "text": "El mesero dante fue excelente!!! Todo rico y todo estuvo excepcional hasta el lugar estuvo hermoso",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "family",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "B93BACF3F2A5626F766F8D739E1AC487",
+        "name": "Sadith Colin E",
+        "profile_link": "https://www.tripadvisor.com/Profile/sadithcoline",
+        "username": "sadithcoline",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/f4/20/default-avatar-2020-31.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/49/61/1f/caption.jpg"
+      ],
+      "created_at_date": "2026-01-25",
+      "published_at_date": "2026-01-25"
+    },
+    {
+      "review_id": 1047129165,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1047129165-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "En general el ambiente e grande, instagrameable, la carta variada, la comida muy buena a la vista y al paladar,",
+      "text": "Gracias Dante x una experiencia amena, personalizada, educada y genuina, claro q volvería a regresar",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "1CF5E5C79719ED2DEC60915278B017C3",
+        "name": "Fiorella S",
+        "profile_link": "https://www.tripadvisor.com/Profile/456fiorellas",
+        "username": "456fiorellas",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/e7/7b/default-avatar-2020-56.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/47/90/ed/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/47/90/ee/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/47/90/ef/caption.jpg"
+      ],
+      "created_at_date": "2026-01-24",
+      "published_at_date": "2026-01-24"
+    },
+    {
+      "review_id": 1046004856,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1046004856-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Encatadora",
+      "text": "Fue una experiencia encantadora",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "F9184C02C401F42D4A5E3710DF7362D5",
+        "name": "Melissa G",
+        "profile_link": "https://www.tripadvisor.com/Profile/T3767LMmelissag",
+        "username": "T3767LMmelissag",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/e2/11/default-avatar-2020-41.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2026-01-14",
+      "published_at_date": "2026-01-14"
+    },
+    {
+      "review_id": 1045981261,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1045981261-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Nuestro primer cerviche",
+      "text": "Muy buena comida! Joel ha estado muy atento y nos ha aconsejado genial",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 3
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "51625DA3646E9FC18E2D7420B95516C1",
+        "name": "Nerea G",
+        "profile_link": "https://www.tripadvisor.com/Profile/nereagV6653AO",
+        "username": "nereagV6653AO",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/ee/db/default-avatar-2020-10.jpg",
+        "contribution_count": 3,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2026-01-13",
+      "published_at_date": "2026-01-13"
+    },
+    {
+      "review_id": 1045765567,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1045765567-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Excelente lugar para visitar",
+      "text": "Nos atendió el mesero Dante, increíble servicio, nos dio buenas recomendaciones sobre platos y bebidas, estuvo muy atento a lo que necesitábamos, muy cordial y amigable. Lo recomiendo bastante",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2026-01-31"
+      },
+      "reviewer": {
+        "reviewer_id": "B74BEEEF72166B33B8D5D41E27F482E8",
+        "name": "Brunnella C",
+        "profile_link": "https://www.tripadvisor.com/Profile/brunnellac2026",
+        "username": "brunnellac2026",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/e4/2d/default-avatar-2020-48.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2026-01-11",
+      "published_at_date": "2026-01-12"
+    },
+    {
+      "review_id": 1044053901,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1044053901-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "La atención y el lugar A1",
+      "text": "Muy buena la experiencia y la atención increíble, cuando vallan pregunten por el mesero Dante, que te brindará una atención A1",
+      "review_tip": "Vallan y preguntén por Dante el los atenderá gustosamente ",
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "64C13E0FA1836FEEF194F2A41D824CCB",
+        "name": "Hamerlin P",
+        "profile_link": "https://www.tripadvisor.com/Profile/hamerlinp",
+        "username": "hamerlinp",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/e4/2d/default-avatar-2020-48.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2025-12-29",
+      "published_at_date": "2025-12-29"
+    },
+    {
+      "review_id": 1044031466,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1044031466-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Buena Experiencia",
+      "text": "Buena atención por parte de RENATO gran apoyo para poder colocar un detalle en el postre de mi enamorada, al igual que DANTE destacó La amabilidad de ambos colaboradores. Buena atención.",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 3
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 4
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "E47F9C7E2D8B448CBBAB1EDD4EAC6B96",
+        "name": "Journey59188406500",
+        "profile_link": "https://www.tripadvisor.com/Profile/Journey59188406500",
+        "username": "Journey59188406500",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/f3/23/default-avatar-2020-28.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2025-12-28",
+      "published_at_date": "2025-12-29"
+    },
+    {
+      "review_id": 1043911307,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1043911307-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Tarde familiar!!",
+      "text": "Una experiencia muy agradable, los platos atención muy perfecta!! Muchas gracias Luis por tu atención una eres muy amable!",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "family",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "46B19D7E4A7077CD75E0499B2271998E",
+        "name": "Josimar Q",
+        "profile_link": "https://www.tripadvisor.com/Profile/josimarq2025",
+        "username": "josimarq2025",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/f2/11/default-avatar-2020-23.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2025-12-28",
+      "published_at_date": "2025-12-28"
+    },
+    {
+      "review_id": 1043856702,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1043856702-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Agradable y rico",
+      "text": "Amplia variedad de platos dulces y salados,  circulación rápida de mesas. Todo rico!\nAbel el sr que nos atendió super atento.",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "family",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "85F77E570736B27F5C86694AEFDBF548",
+        "name": "Jessary L",
+        "profile_link": "https://www.tripadvisor.com/Profile/jessaryl2023",
+        "username": "jessaryl2023",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/f1/b8/default-avatar-2020-22.jpg",
+        "contribution_count": 2,
+        "hometown": {
+          "tripadvisor_entity_id": 294316,
+          "location_name": "Lima",
+          "location_name_detailed": "Lima, Peru"
+        },
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2025-12-27",
+      "published_at_date": "2025-12-27"
+    },
+    {
+      "review_id": 1043789489,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1043789489-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Muy buena experiencia",
+      "text": "Agradezco la buena atención, y la buena comida que nos han servido además la exelente vista a la playa,muchísimas gracias Dante por tu servicio",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 4
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 4
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "41E375286EE3D13BD634B60FEC85B3F1",
+        "name": "Yothuel G",
+        "profile_link": "https://www.tripadvisor.com/Profile/yothuelg",
+        "username": "yothuelg",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/e8/5b/default-avatar-2020-61.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2025-12-26",
+      "published_at_date": "2025-12-27"
+    },
+    {
+      "review_id": 1043292925,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1043292925-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "El joven Dante nos atendió de manera muy amable y cortés. La atención fue muy buena y la comida también.",
+      "text": "El joven Dante nos atendió de manera muy amable y cortés. La atención fue muy buena y la comida también. Pasamos una cena muy agradable con mi abuela",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "family",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "1C056FCDAB68EFD205C1A31DBF8CBD75",
+        "name": "Paula A",
+        "profile_link": "https://www.tripadvisor.com/Profile/paulaaN2838JN",
+        "username": "paulaaN2838JN",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/e7/3d/default-avatar-2020-55.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/08/4f/81/caption.jpg"
+      ],
+      "created_at_date": "2025-12-22",
+      "published_at_date": "2025-12-22"
+    },
+    {
+      "review_id": 1042858578,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1042858578-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Muy rico el restaurante y la atención de ronald fue excelente! Muy recomendado",
+      "text": "Muy buena la experiencia y la comida deliciosa! El ambiente del restaurante es adecuado para la zona y el tipo de comida!",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "friends",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "A74D19C6B7AAB4079F7A6A9D9E70D078",
+        "name": "Valentina M",
+        "profile_link": "https://www.tripadvisor.com/Profile/valentinamW1764XI",
+        "username": "valentinamW1764XI",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/f0/9f/default-avatar-2020-16.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2025-12-18",
+      "published_at_date": "2025-12-18"
+    },
+    {
+      "review_id": 1042530818,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1042530818-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Excelente lugar!",
+      "text": "¡Excelente atención del joven Dante, buen sabor de la comida y hermosa vista! Muy recomendable para toda la familia y amigos.",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 5
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 5
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "800A001D6BABBF9ADEC673C090F74F32",
+        "name": "America D",
+        "profile_link": "https://www.tripadvisor.com/Profile/122americad",
+        "username": "122americad",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/df/2b/default-avatar-2020-39.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [],
+      "created_at_date": "2025-12-15",
+      "published_at_date": "2025-12-15"
+    },
+    {
+      "review_id": 1042419961,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1042419961-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "Experiencia nocturna hermosa",
+      "text": "Dante fue un excelente anfitrión. Deliciosa la comidas y las bebidas. Perfecto el sabor y ambiente. Un poco de frío, pero los copteles y las comidas apaciguan.",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [
+        {
+          "name": "value",
+          "label": "Value",
+          "rating": 4
+        },
+        {
+          "name": "service",
+          "label": "Service",
+          "rating": 5
+        },
+        {
+          "name": "food",
+          "label": "Food",
+          "rating": 5
+        },
+        {
+          "name": "atmosphere",
+          "label": "Atmosphere",
+          "rating": 4
+        }
+      ],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "couples",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "16DD7F81F3F2061AA7D27694D7BF4C9F",
+        "name": "JUDITH ALEXANDR... G",
+        "profile_link": "https://www.tripadvisor.com/Profile/913judithalexandrag",
+        "username": "913judithalexandrag",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/e5/66/default-avatar-2020-53.jpg",
+        "contribution_count": 1,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/fa/ec/7d/caption.jpg"
+      ],
+      "created_at_date": "2025-12-14",
+      "published_at_date": "2025-12-14"
+    },
+    {
+      "review_id": 1042405523,
+      "review_link": "https://www.tripadvisor.com/ShowUserReviews-g294316-d940762-r1042405523-Mangos_Restaurante-Lima_Lima_Region.html",
+      "title": "No te pierdas la experiencia en mangos.",
+      "text": "Excelente sazón excelente atención y un trato cálido y amable y profesional de Roland El camarero de la mesa que nos atendió.",
+      "review_tip": null,
+      "rating": 5,
+      "subratings": [],
+      "like_count": 0,
+      "language": "es",
+      "is_translated": false,
+      "original_language": "es",
+      "owner_response": null,
+      "trip": {
+        "trip_type": "family",
+        "stay_date": "2025-12-31"
+      },
+      "reviewer": {
+        "reviewer_id": "EADAC601CECC7003F8C0495ADC6AB989",
+        "name": "jairo m",
+        "profile_link": "https://www.tripadvisor.com/Profile/jairomY8862UE",
+        "username": "jairomY8862UE",
+        "avatar": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/f6/de/0a/default-avatar-2020-35.jpg",
+        "contribution_count": 2,
+        "hometown": null,
+        "is_verified": false
+      },
+      "images": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/fa/a3/03/caption.jpg"
+      ],
+      "created_at_date": "2025-12-13",
+      "published_at_date": "2025-12-14"
+    }
+  ],
+  "location": {
+    "tripadvisor_entity_id": 940762,
+    "name": "Mangos Restaurante",
+    "link": "https://www.tripadvisor.com/Hotel_Review-d940762-Reviews-Mangos_Restaurante.html",
+    "reviews": 0,
+    "rating": null,
+    "place_type": "hotel"
+  },
+  "rating_distribution": {
+    "1": 118,
+    "2": 157,
+    "3": 488,
+    "4": 1610,
+    "5": 2523
+  }
+}

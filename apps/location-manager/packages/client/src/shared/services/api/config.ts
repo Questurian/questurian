@@ -56,8 +56,14 @@ export const API_ENDPOINTS = {
   OPEN_FOLDER: "/api/open-folder",
   IMAGES: "/api/images",
 
-  // Reviews
+  // Google Reviews
   FETCH_REVIEWS: (id: number) => `/api/locations/${id}/reviews/fetch`,
   DOWNLOAD_REVIEWS: (id: number) => `/api/locations/${id}/reviews/download`,
   REVIEWS_STATUS: (id: number) => `/api/locations/${id}/reviews/status`,
+
+  // TripAdvisor Reviews
+  FETCH_TRIPADVISOR_REVIEWS: (id: number) => `/api/locations/${id}/tripadvisor-reviews/fetch`,
+  DOWNLOAD_TRIPADVISOR_REVIEWS: (id: number, lang?: string) =>
+    `/api/locations/${id}/tripadvisor-reviews/download${lang ? `?lang=${lang}` : ""}`,
+  TRIPADVISOR_REVIEWS_STATUS: (id: number) => `/api/locations/${id}/tripadvisor-reviews/status`,
 } as const;
