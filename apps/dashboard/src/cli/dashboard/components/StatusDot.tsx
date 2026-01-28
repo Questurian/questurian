@@ -1,22 +1,21 @@
 import React from "react";
 import { Text } from "ink";
-import Spinner from "ink-spinner";
+import { ServiceStatus } from "../types";
 
 interface StatusDotProps {
-  status: "online" | "offline" | "checking";
+  status: ServiceStatus;
 }
 
 export function StatusDot({ status }: StatusDotProps) {
-  if (status === "checking") {
-    return (
-      <Text color="yellow">
-        <Spinner type="dots" />
-      </Text>
-    );
+  switch (status) {
+    case "checking":
+      return <Text color="yellow">○</Text>;
+    case "starting":
+      return <Text color="#FFA500">◐</Text>;
+    case "online":
+      return <Text color="greenBright">●</Text>;
+    case "offline":
+    default:
+      return <Text color="red">●</Text>;
   }
-  return status === "online" ? (
-    <Text color="greenBright">●</Text>
-  ) : (
-    <Text color="red">●</Text>
-  );
 }

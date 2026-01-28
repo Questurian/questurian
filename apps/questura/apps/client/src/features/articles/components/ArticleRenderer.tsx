@@ -1,0 +1,86 @@
+'use client'
+
+import React from 'react'
+import { TextBlock, ImageBlock } from './blocks'
+
+interface Block {
+  blockType?: string
+  slug?: string
+  text?: string
+  image?: any
+  alt?: string
+  [key: string]: any
+}
+
+interface Article {
+  id: string
+  title: string
+  description: string
+  featuredImage?: any
+  contentBlocks?: Block[]
+  author?: any
+  status: string
+  publishedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+interface ArticleRendererProps {
+  article: Article
+}
+
+/**
+ * Renders an article with its content blocks
+ * Supports text and image blocks
+ */
+export const ArticleRenderer: React.FC<ArticleRendererProps> = ({ article }) => {
+  if (!article.contentBlocks || article.contentBlocks.length === 0) {
+    return (
+      <article className="article-content">
+        <p className="text-gray-500">No content blocks</p>
+      </article>
+    )
+  }
+
+  return (
+    <article className="article-content max-w-3xl mx-auto">
+      {article.contentBlocks.map((block, index) => (
+        <RenderBlock key={block.id || index} block={block} />
+      ))}
+    </article>
+  )
+}
+
+/**
+ * Dispatcher that renders appropriate block component based on type
+ */
+interface RenderBlockProps {
+  block: Block
+}
+
+const RenderBlock: React.FC<RenderBlockProps> = ({ block }) => {
+  // Support both 'blockType' and 'slug' field names (slug is used in Payload blocks)
+  const blockType = block.blockType || block.slug
+
+  switch (blockType) {
+    case 'text':
+      return (
+        <TextBlock
+          content={block.content}
+          text={block.text || block.textContent}
+        />
+      )
+
+    case 'image':
+      return (
+        <ImageBlock
+          image={block.image || block.imageFile}
+          alt={block.alt || block.altText || 'Article image'}
+        />
+      )
+
+    default:
+      console.warn(`Unknown block type: ${blockType}`)
+      return null
+  }
+}

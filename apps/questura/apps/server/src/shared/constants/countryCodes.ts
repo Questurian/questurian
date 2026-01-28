@@ -1,0 +1,20 @@
+export const countryCodes = [
+  { label: 'United States (+1)', value: '+1' },
+  { label: 'United Kingdom (+44)', value: '+44' },
+  { label: 'Canada (+1)', value: '+1-CA' },
+  { label: 'Australia (+61)', value: '+61' },
+  { label: 'Germany (+49)', value: '+49' },
+  { label: 'France (+33)', value: '+33' },
+  { label: 'Italy (+39)', value: '+39' },
+  { label: 'Spain (+34)', value: '+34' },
+  { label: 'Brazil (+55)', value: '+55' },
+  { label: 'Mexico (+52)', value: '+52' },
+  { label: 'Japan (+81)', value: '+81' },
+  { label: 'China (+86)', value: '+86' },
+  { label: 'India (+91)', value: '+91' },
+  { label: 'Peru (+51)', value: '+51' },
+  { label: 'Colombia (+57)', value: '+57' },
+  { label: 'Argentina (+54)', value: '+54' },
+  { label: 'Chile (+56)', value: '+56' },
+]
+

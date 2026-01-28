@@ -1,12 +1,15 @@
 {
-  "name": "react-cleint",
+  "name": "@questurian/leads-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "../../scripts/show-commands.sh && vite",
+    "dev": "node ../../scripts/show-commands-client.cjs && vite",
+    "dev:clean": "lsof -ti:5173 | xargs kill -9 2>/dev/null || true; bun install && node ../../scripts/show-commands-client.cjs && vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "lint": "echo 'No linter configured'",
+    "test": "echo 'No tests configured'",
+    "dev:preview": "vite preview"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.66.0",

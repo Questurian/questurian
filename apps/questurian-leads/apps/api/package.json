@@ -1,7 +1,11 @@
 {
-  "name": "python-server",
+  "name": "@questurian/leads-server",
   "private": true,
   "scripts": {
-    "dev": "../../scripts/show-commands.sh && ../../.venv/bin/python -m uvicorn app.main:app --reload --port 4004"
+    "dev": "node ../../scripts/show-commands.cjs && ../../.venv/bin/python -m uvicorn app.main:app --reload --port 4004",
+    "dev:clean": "lsof -ti:4004 | xargs kill -9 2>/dev/null || true; ../../.venv/bin/pip install -r requirements.txt && node ../../scripts/show-commands.cjs && ../../.venv/bin/python -m uvicorn app.main:app --reload --port 4004",
+    "build": "echo 'No build step for Python'",
+    "lint": "echo 'No linter configured'",
+    "test": "echo 'No tests configured'"
   }
 }

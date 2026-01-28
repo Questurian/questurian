@@ -1,19 +1,16 @@
 # Questurian
 
-Nx monorepo for Questurian projects.
+Turborepo monorepo for Questurian projects.
 
 ## Running Projects
 
 ```bash
-# Run all servers
-nx run-many --target=serve
-
 # Run all in dev/watch mode
-nx run-many --target=dev
+turbo run dev
 
-# Run specific projects
-nx run-many --target=serve --projects=dashboard,api
+# Build everything
+turbo run build
 
-# Run single project
-nx serve dashboard
+# Run a single package (example: dashboard)
+turbo run dev --filter=@questurian/dashboard
 ```

@@ -30,7 +30,7 @@ app.route("/health", health);
 app.route("/commands", commands);
 app.route("/leads", leads);
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4500;
 
 // Render the Ink dashboard after a brief delay
 setTimeout(() => {

@@ -1,0 +1,109 @@
+/* Main container for location picker field */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Container for the three cascading dropdowns */
+.dropdownsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Wrapper for each select dropdown and its label */
+.selectInputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Select field label styling */
+.selectLabel {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--theme-elevation-800);
+  margin-bottom: 8px;
+}
+
+/* Select input styling with Payload theme variables */
+.selectInput {
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--theme-elevation-800);
+  background-color: var(--theme-input-bg, var(--theme-elevation-0));
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.selectInput:focus {
+  outline: none;
+  border-color: var(--theme-elevation-400);
+  box-shadow: 0 0 0 2px var(--theme-elevation-100);
+}
+
+.selectInput:disabled {
+  background-color: var(--theme-elevation-50);
+  color: var(--theme-elevation-500);
+  cursor: not-allowed;
+}
+
+/* Empty state message styling */
+.emptyStateText {
+  padding: 8px 12px;
+  color: var(--theme-elevation-600);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Location display box - shows selected location with neutral gray background */
+.displayBox {
+  padding: 8px 12px;
+  height: 40px;
+  background-color: var(--theme-elevation-50);
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+/* Location text within display box */
+.displayBoxText {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--theme-elevation-800);
+  flex: 1;
+}
+
+/* Container for buttons in display box */
+.displayBoxButtonContainer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Wrapper for add location button to control spacing */
+.addLocationButtonWrapper {
+  display: flex;
+  width: 100%;
+}
+
+/* Add location button styling (actual button is Payload Button component) */
+.addLocationButton {
+  /* Styling handled by @payloadcms/ui Button component */
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 15px !important;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 !important;
+}

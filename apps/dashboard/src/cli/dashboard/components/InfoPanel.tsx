@@ -4,21 +4,32 @@ import { Box, Text } from "ink";
 interface InfoPanelProps {
   title: string;
   children: React.ReactNode;
+  paddingX?: number;
+  paddingY?: number;
+  marginBottom?: number;
 }
 
-export function InfoPanel({ title, children }: InfoPanelProps) {
+export function InfoPanel({
+  title,
+  children,
+  paddingX = 1,
+  paddingY = 1,
+  marginBottom = 1,
+}: InfoPanelProps) {
   return (
     <Box
       flexDirection="column"
+      marginBottom={marginBottom}
+      paddingX={paddingX}
+      paddingY={paddingY}
       borderStyle="single"
       borderColor="gray"
-      paddingX={1}
-      marginBottom={1}
+      borderDimColor
     >
-      <Text color="#FF6B35" bold>
+      <Text color="#3B82F6" bold>
         {title}
       </Text>
-      <Box flexDirection="column" marginTop={0}>
+      <Box marginTop={1} flexDirection="column">
         {children}
       </Box>
     </Box>

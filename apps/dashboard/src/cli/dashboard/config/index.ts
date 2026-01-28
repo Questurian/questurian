@@ -1,2 +1,2 @@
-export { PROJECTS } from "./projects";
+export { PROJECTS, DEV_CLEAN_COMMANDS, GLOBAL_COMMANDS, ALL_PORTS } from "./projects";
 export { ASCII_ART, HEALTH_CHECK_INTERVAL, HEALTH_CHECK_TIMEOUT } from "./constants";

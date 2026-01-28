@@ -1,0 +1,1 @@
+export { SeoMetadata } from './SeoMetadata'

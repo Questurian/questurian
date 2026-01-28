@@ -1,20 +1,30 @@
 {
   "name": "@questurian/source",
   "version": "0.0.0",
+  "packageManager": "npm@10.2.4",
   "license": "MIT",
-  "scripts": {
-    "dev": "nx run-many --target=dev --parallel",
-    "build": "nx run-many --target=build",
-    "start": "nx run-many --target=start",
-    "docker:up": "nx run questurian-leads:docker:start",
-    "docker:down": "nx run questurian-leads:docker:stop",
-    "docker:logs": "nx run questurian-leads:docker:logs"
-  },
   "private": true,
+  "workspaces": [
+    "apps/dashboard",
+    "apps/ai-blog-writer",
+    "apps/questurian-leads/apps/*",
+    "apps/location-manager/packages/*",
+    "apps/questura/apps/*"
+  ],
+  "scripts": {
+    "dashboard": "turbo run dev --filter=@questurian/dashboard",
+    "dashboard:clean": "turbo run dev:clean --filter=@questurian/dashboard",
+    "questura": "turbo run dev --filter=@questura/client --filter=@questura/server",
+    "questura:client": "turbo run dev --filter=@questura/client",
+    "questura:server": "turbo run dev --filter=@questura/server",
+    "dev": "turbo run dev",
+    "dev:docker": "turbo run dev:docker --filter=@questurian/ai-blog-writer",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
   "dependencies": {},
   "devDependencies": {
-    "@nx/js": "22.4.0",
-    "@nx/workspace": "22.4.0",
-    "nx": "22.4.0"
+    "turbo": "^2.7.3"
   }
 }

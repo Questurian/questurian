@@ -1,0 +1,1 @@
+export { PerfectForTags } from './PerfectForTags'

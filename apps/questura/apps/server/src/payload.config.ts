@@ -1,0 +1,83 @@
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import { resendAdapter } from '@payloadcms/email-resend'
+import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
+import { bunnyStorage } from '@seshuk/payload-storage-bunny'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import path from 'path'
+import { buildConfig } from 'payload'
+import { fileURLToPath } from 'url'
+import sharp from 'sharp'
+
+import { Users } from './features/auth/collections/Users'
+import { MediaAsset } from './features/media/collections/MediaAsset'
+import { MediaSet } from './features/media/collections/MediaSet'
+import { Articles } from './features/articles/articles/collections/Articles'
+import { Rankings } from './features/articles/rankings/collections/Rankings'
+import { AffiliateArticles } from './features/articles/affiliate/collections/AffiliateArticles'
+import { Itineraries } from './features/articles/itineraries/collections/Itineraries'
+import { Locations } from './features/location/collections/Locations'
+import { Accommodations } from './features/data/accommodations/collections/Accommodations'
+import { Dining } from './features/data/dining/collections/Dining'
+import { Attractions } from './features/data/attractions/collections/Attractions'
+import { Nightlife } from './features/data/nightlife/collections/Nightlife'
+import { AffiliateProducts } from './features/data/affiliate/collections/AffiliateProducts'
+import { InstagramPosts } from './features/data/instagram/collections/InstagramPosts'
+import { PerfectForTags } from './features/shared/perfect-for/collections/PerfectForTags'
+import { Categories, Tags } from './features/shared/taxonomy/collections'
+import { SeoMetadata } from './features/seo/collections/SeoMetadata'
+import { APP_CONFIG, APP_URLS } from './shared/config'
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+export default buildConfig({
+  admin: {
+    user: Users.slug,
+    importMap: {
+      baseDir: path.resolve(dirname),
+    },
+    // Credentials (cookies) are handled automatically in Payload for admin requests
+  },
+  // For local dev, use localhost. For external services (Google, Stripe), they use ngrok via backendUrl()
+  // The admin panel runs locally and should use localhost to avoid CORS issues
+  serverURL: APP_URLS.backendLocal,
+  cors: APP_CONFIG.CORS_ORIGINS,
+  csrf: APP_CONFIG.CORS_ORIGINS,
+  collections: [Users, MediaAsset, MediaSet, Articles, Rankings, AffiliateArticles, Itineraries, Locations, SeoMetadata, Categories, Tags, Accommodations, Dining, Attractions, Nightlife, AffiliateProducts, InstagramPosts, PerfectForTags],
+  editor: lexicalEditor(),
+  secret: APP_CONFIG.payloadSecret,
+  typescript: {
+    outputFile: path.resolve(dirname, 'payload-types.ts'),
+  },
+  db: postgresAdapter({
+    push: true, // Automatically create/update schema from collection definitions (push mode)
+    pool: {
+      connectionString: APP_CONFIG.database.uri,
+      max: 20, // Maximum number of connections in the pool
+      min: 2, // Minimum number of connections to keep open
+      idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
+      connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
+    },
+  }),
+  email: resendAdapter({
+    defaultFromAddress: 'you@questurian.com',
+    defaultFromName: 'Questurian',
+    apiKey: APP_CONFIG.email.apiKey,
+  }),
+  sharp,
+  plugins: [
+    payloadCloudPlugin(),
+    bunnyStorage({
+      collections: {
+        'media-assets': {
+          prefix: 'media',
+        },
+      },
+      storage: {
+        apiKey: process.env.BUNNY_STORAGE_API_KEY || '',
+        hostname: process.env.BUNNY_STORAGE_HOSTNAME || '',
+        zoneName: process.env.BUNNY_STORAGE_ZONE_NAME || '',
+        region: 'ny',
+      },
+    }),
+  ],
+})
