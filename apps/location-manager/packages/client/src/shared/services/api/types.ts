@@ -1,0 +1,324 @@
+/**
+ * API types matching server responses
+ */
+
+import type { ImageSet } from "@questurian/lm-shared";
+
+export type Category = "dining" | "accommodations" | "attractions" | "nightlife";
+
+export interface ContactInfo {
+  countryCode: string;
+  phoneNumber: string | null;
+  website: string | null;
+  contactAddress: string;
+  url: string;
+}
+
+export interface Coordinates {
+  lat: number | null;
+  lng: number | null;
+}
+
+export interface SourceInfo {
+  name: string;
+  address: string;
+}
+
+export interface InstagramEmbed {
+  id?: number;
+  location_id: number;
+  username: string;
+  url: string;
+  embed_code: string;
+  instagram?: string | null;
+  images?: string[];
+  original_image_urls?: string[];
+  created_at?: string;
+}
+
+export interface ImageMetadata {
+  width: number;
+  height: number;
+  size: number; // bytes
+  format: string; // 'jpeg', 'png', 'webp', 'gif'
+}
+
+// ImageSet Upload format (multi-variant system)
+export interface ImageSetUpload {
+  id?: number;
+  location_id: number;
+  imageSet?: ImageSet;
+  created_at?: string;
+  format: 'imageset';
+}
+
+// Upload type - now only supports ImageSet format
+export type Upload = ImageSetUpload;
+
+export interface Location {
+  id: number;
+  title: string | null;
+  category: Category;
+  type: string | null;
+  locationKey: string;
+  tripadvisorUrl: string | null;
+  tripadvisorLocationId: string | null;
+  contact: ContactInfo;
+  coordinates: Coordinates;
+  source: SourceInfo;
+  instagram_embeds: InstagramEmbed[];
+  uploads: Upload[];
+  slug: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LocationsResponse {
+  locations: Location[];
+  cwd: string;
+}
+
+export interface LocationBasic {
+  id: number;
+  name: string;
+  title: string | null;
+  location: string | null;
+  category: Category;
+}
+
+export interface LocationContact {
+  countryCode: string | null;
+  phoneNumber: string | null;
+  website: string | null;
+  contactAddress: string | null;
+  url: string;
+}
+
+export interface LocationCoordinates {
+  lat: number | null;
+  lng: number | null;
+}
+
+export interface LocationSource {
+  name: string;
+  address: string;
+}
+
+export interface LocationResponse {
+  id: number;
+  title: string | null;
+  category: Category;
+  type: string | null;
+  locationKey: string | null;
+  district: string | null;
+  placeId: string | null;
+  tripadvisorUrl: string | null;
+  tripadvisorLocationId: string | null;
+  contact: LocationContact;
+  coordinates: LocationCoordinates;
+  source: LocationSource;
+  instagram_embeds: InstagramEmbed[];
+  uploads: Upload[];
+  slug: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LocationsBasicResponse {
+  locations: LocationBasic[];
+}
+
+export interface LocationEntryResponse {
+  entry: Location;
+}
+
+export interface InstagramEmbedResponse {
+  entry: InstagramEmbed;
+}
+
+export interface UploadResponse {
+  entry: Upload;
+}
+
+export interface CreateMapsRequest {
+  name: string;
+  address: string;
+  category: Category;
+  type?: string;
+  locationKey?: string;
+  title?: string;
+  contactAddress?: string;
+  countryCode?: string;
+  phoneNumber?: string;
+  website?: string;
+  tripadvisorUrl?: string;
+}
+
+export interface UpdateMapsRequest {
+  title?: string;
+  category?: Category;
+  type?: string;
+  locationKey?: string;
+  countryCode?: string;
+  phoneNumber?: string;
+  website?: string;
+  tripadvisorUrl?: string;
+}
+
+export interface AddInstagramRequest {
+  embedCode: string;
+}
+
+export interface OpenFolderRequest {
+  folderPath: string;
+}
+
+export interface SuccessResponse {
+  success: true;
+  message?: string;
+}
+
+export interface Neighborhood {
+  label: string;
+  value: string;
+}
+
+export interface City {
+  label: string;
+  value: string;
+  neighborhoods: Neighborhood[];
+}
+
+export interface Country {
+  code: string;
+  label: string;
+  cities: City[];
+}
+
+export interface LocationHierarchyItem {
+  id: number;
+  country: string;
+  city: string;
+  neighborhood: string;
+  locationKey: string;
+}
+
+export interface LocationHierarchyResponse {
+  locations: LocationHierarchyItem[];
+}
+
+export interface CountriesResponse {
+  countries: Country[];
+}
+
+export interface CitiesResponse {
+  cities: City[];
+}
+
+export interface NeighborhoodsResponse {
+  neighborhoods: Neighborhood[];
+}
+
+// ============================================================================
+// ADMIN TAXONOMY TYPES
+// ============================================================================
+
+export interface PendingTaxonomyEntry {
+  id: number;
+  country: string;
+  city: string | null;
+  neighborhood: string | null;
+  locationKey: string;
+  status: 'pending' | 'approved';
+  locationCount: number;
+  created_at: string;
+}
+
+export interface PendingTaxonomyResponse {
+  success: true;
+  data: {
+    entries: PendingTaxonomyEntry[];
+  };
+}
+
+export interface TaxonomyEntryResponse {
+  success: true;
+  data: {
+    entry: {
+      id: number;
+      country: string;
+      city: string | null;
+      neighborhood: string | null;
+      locationKey: string;
+      status: 'pending' | 'approved';
+      created_at: string;
+    };
+  };
+}
+
+export interface TaxonomyCorrectionRequest {
+  incorrect_value: string;
+  correct_value: string;
+  part_type: "country" | "city" | "neighborhood";
+}
+
+export interface TaxonomyCorrection extends TaxonomyCorrectionRequest {
+  id: number;
+  created_at: string;
+}
+
+export interface CorrectionPreview {
+  pendingTaxonomyCount: number;
+  pendingTaxonomySamples: string[];
+  locationCount: number;
+  locationSamples: Array<{
+    id: number;
+    name: string;
+    currentKey: string;
+    correctedKey: string;
+  }>;
+}
+
+export interface CorrectionResult {
+  correction: TaxonomyCorrection;
+  updatedPendingCount: number;
+  updatedLocationCount: number;
+}
+
+// ============================================================================
+// REVIEWS TYPES
+// ============================================================================
+
+export interface FetchReviewsRequest {
+  limit?: number;
+  cursor?: string;
+  translate_reviews?: boolean;
+  query?: string;
+  sort_by?: "most_relevant" | "newest" | "highest_ranking" | "lowest_ranking";
+  fields?: string;
+  region?: string;
+  language?: string;
+}
+
+export interface FetchReviewsResponse {
+  success: true;
+  data: {
+    message: string;
+    reviewCount: number;
+    totalReviews: number;
+    hasMore: boolean;
+    fetchedAt: string;
+  };
+}
+
+export interface ReviewsStatusResponse {
+  success: true;
+  data: {
+    hasReviews: boolean;
+    fetchedAt: string | null;
+    reviewCount: number;
+    totalReviews?: number;
+    rating?: number;
+    businessName?: string;
+  };
+}

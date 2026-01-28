@@ -1,0 +1,25 @@
+{
+  "name": "@questurian/lm-server",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/show-commands.cjs && bun run src/server/main.ts",
+    "dev:clean": "lsof -ti:4002 | xargs kill -9 2>/dev/null || true; bun install && node scripts/show-commands.cjs && bun run src/server/main.ts",
+    "build": "echo 'No build step needed for Bun'",
+    "lint": "echo 'No linter configured'",
+    "test": "echo 'No tests configured'"
+  },
+  "dependencies": {
+    "@questurian/lm-shared": "*",
+    "csv-parse": "^6.1.0",
+    "hono": "^4.10.8",
+    "prompts": "^2.4.2",
+    "sharp": "^0.34.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

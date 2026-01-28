@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #242424;
+  --color-foreground: rgba(255, 255, 255, 0.87);
+  --color-primary: #646cff;
+  --color-primary-foreground: #f8fafc;
+  --color-border: #333;
+  --color-input: #333;
+  --color-ring: #646cff;
+  --color-muted: #1a1a1a;
+  --color-muted-foreground: #a1a1aa;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #f8fafc;
+  --color-accent: #27272a;
+  --color-accent-foreground: #f8fafc;
+  --color-card: #242424;
+  --color-card-foreground: rgba(255, 255, 255, 0.87);
+  --color-popover: #242424;
+  --color-popover-foreground: rgba(255, 255, 255, 0.87);
+  --color-secondary: #3f3f46;
+  --color-secondary-foreground: #f8fafc;
+  --color-black: #000000;
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+
+}
+
+/* Custom variant definitions for component-level theming */
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Light theme color overrides */
+@layer base {
+  [data-theme="light"] {
+    --color-background: #ffffff;
+    --color-foreground: #0a0a0a;
+    --color-card: #ffffff;
+    --color-card-foreground: #0a0a0a;
+    --color-popover: #ffffff;
+    --color-popover-foreground: #0a0a0a;
+    --color-primary: #18181b;
+    --color-primary-foreground: #fafafa;
+    --color-secondary: #f4f4f5;
+    --color-secondary-foreground: #18181b;
+    --color-muted: #f4f4f5;
+    --color-muted-foreground: #71717a;
+    --color-accent: #f4f4f5;
+    --color-accent-foreground: #18181b;
+    --color-border: #e4e4e7;
+    --color-input: #e4e4e7;
+    --color-ring: #18181b;
+    --color-black: #000000;
+  }
+
+  [data-theme="dark"] {
+    --color-background: #242424;
+    --color-foreground: rgba(255, 255, 255, 0.87);
+    --color-card: #242424;
+    --color-card-foreground: rgba(255, 255, 255, 0.87);
+    --color-popover: #242424;
+    --color-popover-foreground: rgba(255, 255, 255, 0.87);
+    --color-primary: #646cff;
+    --color-primary-foreground: #f8fafc;
+    --color-secondary: #3f3f46;
+    --color-secondary-foreground: #f8fafc;
+    --color-muted: #1a1a1a;
+    --color-muted-foreground: #a1a1aa;
+    --color-accent: #27272a;
+    --color-accent-foreground: #f8fafc;
+    --color-border: #333;
+    --color-input: #333;
+    --color-ring: #646cff;
+    --color-black: #000000;
+  }
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+a {
+  color: var(--color-primary);
+  font-weight: 500;
+  text-decoration: inherit;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* Custom styles for Create Correction button */
+.custom-correction-button {
+  background-color: var(--color-black);
+  box-shadow: none;
+  border-width: 0px;
+  color: white;
+}

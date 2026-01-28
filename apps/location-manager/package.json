@@ -1,0 +1,22 @@
+{
+  "name": "@questurian/location-manager",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:clean": "turbo dev:clean",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "turbo": "^2.7.1",
+    "typescript": "^5.0.0"
+  }
+}

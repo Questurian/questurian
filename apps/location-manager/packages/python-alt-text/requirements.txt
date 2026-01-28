@@ -1,0 +1,11 @@
+fastapi==0.111.0
+uvicorn==0.30.1
+python-multipart==0.0.9
+pillow==10.4.0
+transformers==4.49.0
+torch==2.3.1
+torchvision==0.18.1
+accelerate>=0.26.0
+# MLX commented out for now
+# mlx
+# mlx-vlm==0.1.20
