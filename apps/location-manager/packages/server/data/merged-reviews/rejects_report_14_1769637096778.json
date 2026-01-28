@@ -1,0 +1,1515 @@
+{
+  "locationId": 14,
+  "generatedAt": "2026-01-28T21:51:36.780Z",
+  "summary": {
+    "totalRejected": 88,
+    "replacedWithEnglish": 88,
+    "rejectedNonEnglish": 0
+  },
+  "explanation": {
+    "why": "TripAdvisor returns the same reviews in different language files. Each review has a unique review_id that appears in multiple language files (e.g., both English and Spanish files).",
+    "whatWeDo": "We deduplicate by review_id, preferring English versions when available. This ensures each review appears only once in the final merged output.",
+    "actions": {
+      "replaced_with_english": "A non-English version was replaced with the English version of the same review",
+      "rejected_non_english": "A duplicate non-English version was rejected (we already had this review)"
+    }
+  },
+  "rejectedReviews": [
+    {
+      "review_id": "tripadvisor_1047215675",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Fresh and fun",
+        "review_text_preview": "A \"must\" in Lima to enjoy many of the great classics of Peruvian cuisine.  Reservations are not allo...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Fresco y divertido",
+        "review_text_preview": "Un \"must\" en Lima para disfrutar de muchos de los grandes clásicos de la cocina peruana.  No admiten...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046975242",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best Cevicheria! Totally worth the wait!",
+        "review_text_preview": "Delicious. When we got there, we were told the wait time was 2 hour. It actually ended up being long...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mejor Cevicheria! ¡Vale la pena esperar!",
+        "review_text_preview": "Deliciosa. Cuando llegamos allí, nos dijeron que el tiempo de espera era de 2 horas. En realidad ter...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042292102",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delicious fresh seafood!!",
+        "review_text_preview": "Out of this world delicious ceviche clásico and octopus À la Brasa! We are coming back to explore mo...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Deliciosos mariscos frescos!!",
+        "review_text_preview": "Fuera de este mundo delicioso ceviche clásico y pulpo a la Brasa! Estamos volviendo para explorar má...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041406106",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Modern Peruvian Cuisine",
+        "review_text_preview": "Great ceviche, excellent cocktails and attentive service. The waterfront setting adds a relaxed and ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cocina peruana moderna",
+        "review_text_preview": "Gran ceviche, excelentes cocteles y un servicio atento. El entorno frente al mar añade un toque rela...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040082746",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Late, folks.",
+        "review_text_preview": "The best seafood in the country without a doubt. From the entrance you are greeted with great friend...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tarde amigos",
+        "review_text_preview": "La mejor comida marina del país sin dudas. Desde la entrada te reciben con mucha amabilidad y tanto ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036253736",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good ceviche",
+        "review_text_preview": "The ceviche is fresh and tastes very good, the portions just right and the Mood always lively. Somet...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen ceviche",
+        "review_text_preview": "El ceviche es fresco y con muy buen sabor, las porciones justas y el ambiente siempre animado. A vec...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036155735",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Cebiche Central",
+        "review_text_preview": "Lively Miraflores spot where ultra fresh cebiche, tiraditos and a sharp pisco sour lead the show ser...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cebiche Central",
+        "review_text_preview": "El animado lugar de Miraflores, donde el cebiche ultra fresco, los tiraditos y el pisco agrio afilad...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035154400",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "GREAT RESTAURANT",
+        "review_text_preview": "We have eaten at La Mar Cebichería as a first introduction in Lima, and there is no better way to in...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "GRAN RESTAURANTE",
+        "review_text_preview": "Hemos comido en La Mar Cebichería como primera introducción en Lima, y no hay mejor manera de introd...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034366588",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A cuilinary experience you won't forget",
+        "review_text_preview": "Great food and service, convenient to Miraflores hotels. They're one of the few good restaurants ope...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia culinaria que no olvidarás",
+        "review_text_preview": "Gran comida y Servicio, conveniente para los hoteles Miraflores. Son uno de los pocos buenos restaur...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032601223",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Impressive",
+        "review_text_preview": "Whenever you go to sea, apart from trying fresh things at their best, the cooking technique is impre...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Impresionante",
+        "review_text_preview": "Siempre que uno va a la mar, aparte de que pruebas cosas frescas en su mejor momento, la técnica de ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1031804452",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Highly overrated",
+        "review_text_preview": "Way overated, do not live up to the hype, the last 3 time I not been happy and decided I not give it...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Altamente sobrevalorado",
+        "review_text_preview": "Demasiado exagerado, no estoy a la altura del bombo, la última 3 vez no estuve feliz y decidí no dar...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1025073478",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best fish/seafood in Lima",
+        "review_text_preview": "Fantastic fish and seafood place. The atmosphere is relaxed and the staff very attentive and helpful...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Los mejores pescados/mariscos en Lima",
+        "review_text_preview": "Fantástico lugar de pescado y marisco. El ambiente es relajado y el personal muy atento y servicial....",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1024109190",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Mandatory visit",
+        "review_text_preview": "If you want to taste the good taste of fish on the coast after an inland trip, coming to the Sea is ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Visita obligatoria",
+        "review_text_preview": "Si quieres probar el sabor bueno del pescado en la costa después de un viaje de interior, venir a la...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017720817",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lima top for lunch with friends or family",
+        "review_text_preview": "Ideal to go in large groups to lunch, order different dishes and taste everything... hearty and deli...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Top de Lima para almorzar con amigos o familia",
+        "review_text_preview": "Ideal para ir en grupos grandes a almorzar, pedir diferentes platos y probar todo… comida abundante ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1016277702",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Traditional in Lima",
+        "review_text_preview": "I've been there twice, and it's still a good choice for seafood. Ceviche, seafood rice, and others l...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tradicional en Lima",
+        "review_text_preview": "Fui en dos ocasiones y sigue siendo una buena opción de comida de mar. Ceviche, arroz con mariscos o...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1016074678",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The sea was calm and beautiful",
+        "review_text_preview": "The best I've tried in Lima, elegant ceviche, delicious octopus in olive oil, and chicharron de pesc...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La Mar estaba serena y hermosa",
+        "review_text_preview": "Lo mejor que he probado en Lima, ceviche una elegancia, pulpo al olivo una delicia y chicharron de p...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1014020290",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Spectacular flavors!!",
+        "review_text_preview": "We loved the food from this place!!: a very professional and friendly treatment and exquisite flavor...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sabores espectaculares!!",
+        "review_text_preview": "Nos encantó la comida de este sitio!!: un trato muy profesional y amable y los sabores exquisitos. E...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1011006651",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Disappointment on first visit.",
+        "review_text_preview": "- The atmosphere is extremely noisy, which generates discomfort (volume of the music excessively lou...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Decepción en la primera visita.",
+        "review_text_preview": "- EL Ambiente es extremadamente ruidoso, lo que  genera incomodidad (volumen de la música exvesivame...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1009008185",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Nice atmosphere ... excellent service ... we ate ceviche that was delicious ... a delicious seafood ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Lindo ambiente … excelente atención … comimos ceviche que estaba riquísimo … una plancha de mariscos...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1007539806",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good Chicha morada and ceviche",
+        "review_text_preview": "The food was quite good, I ordered a ceviche with its respective chicha morada and it was perfect. W...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena Chicha morada y ceviche",
+        "review_text_preview": "La comida era bastante buena, pedí un ceviche con su respectiva chicha morada y estaba perfecto. Tuv...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1005432025",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Iconic ceviche and cool cocktails",
+        "review_text_preview": "Excellent place to try a Peruvian food! There is a big menu - you’ll definitely not be disappointed ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ceviche icónico y cócteles frescos",
+        "review_text_preview": "Excelente lugar para probar una comida peruana! Hay un gran menú - definitivamente no se decepcionar...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1003350499",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best dining experience of my life!!",
+        "review_text_preview": "We arrive at 12 noon because there is usually waiting to get place (they do not take reservations) a...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor experiencia gastronómica de mi vida!!",
+        "review_text_preview": "Llegamos a las 12 del mediodia porque suele haber espera para conseguir lugar (no toman reservas) y ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1002224020",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "La Mar Experience",
+        "review_text_preview": "Good was really good, we did not like the Causa with crab, it was not good tbh. The rest just amazin...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia en La Mar",
+        "review_text_preview": "Lo bueno fue muy bueno, no nos gustó la Causa con cangrejo, no fue bueno tbh. El resto simplemente i...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1002136019",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Peruvian food reference",
+        "review_text_preview": "Since we went to lime we knew we wanted to go to the sea to eat. Excellent reference to local food ,...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Referente de comida peruana",
+        "review_text_preview": "Desde que fuimos a lima sabíamos que queríamos ir a la mar a comer. Excelente referente de la comida...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_999342383",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Hostess gave her number to my husband out of nowhere",
+        "review_text_preview": "The food and atmosphere were great. However I was really disappointed with the behaviour of the host...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La anfitriona le dio su número a mi marido de la nada",
+        "review_text_preview": "La comida y el ambiente eran geniales. Sin embargo, me decepcionó mucho el comportamiento de la chic...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_998716770",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Beautiful Restaurant but first impression not so well",
+        "review_text_preview": "This place was so beautiful and I went because the reviews were rated very highly but since I got th...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Hermoso restaurante, pero la primera impresión no tan bien",
+        "review_text_preview": "Este lugar era tan hermoso y fui porque las críticas fueron puntuadas muy alto pero desde que llegué...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_994692375",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Fresh and delicious!!",
+        "review_text_preview": "Got there at 11:30 am and a line quickly formed before it opened at noon. The dishes were fresh and ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Fresco y delicioso!!",
+        "review_text_preview": "Llegué a las 11: 30 am y rápidamente se formó una fila antes de que se abriera al mediodía. Los plat...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_993054626",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Amazing place with excellent service",
+        "review_text_preview": "Having come here for the first time, it was an amazing experience. Our waitress Isabel was outstandi...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Increíble lugar con un excelente servicio",
+        "review_text_preview": "Después de haber venido aquí por primera vez, fue una experiencia increíble. Nuestra camarera Isabel...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_992811392",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A first class lunch!!!!",
+        "review_text_preview": "First time I went and loved everything...the atmosphere, the first food and not to mention the atten...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un almuerzo de primera!!!!",
+        "review_text_preview": "Primera vez que iba y me encantó todo…el ambiente, la comida de primera y ni que decir de la atenció...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_992336610",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Fabulous Experience",
+        "review_text_preview": "This is the most amazing restaurant! Recommended by Peruvian friends in the UK and we absolutely LOV...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia fabulosa",
+        "review_text_preview": "Este es el restaurante más increíble! Recomendado por amigos peruanos en el Reino Unido y nos encant...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_988520342",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "VERY noisy atmosphere, not necessarily pleasant for foreigners",
+        "review_text_preview": "Very good food, however, the volume of the music is too high. If you are going with foreigners, ther...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ambiente MUY ruidoso, no necesariamente grato para extranjeros",
+        "review_text_preview": "La comida muy buena, sin embargo, el volumen de la música es demasiado alta. Si vas a ir con extranj...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_988213847",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "As always first rate",
+        "review_text_preview": "Exquisite Peruvian food is its splendor the flavors are exquisite , its fresh ceviches and the pisco...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Como siempre de primera",
+        "review_text_preview": "Exquisito la comida peruana es su esplendor los sabores son exquisitos , sus ceviches fresquisimos y...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_987959063",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great Food!",
+        "review_text_preview": "Excellent ceviche. Excellent Pisco Sour. Excellent service in a VERY busy restaurant! We waited 90mi...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran comida!",
+        "review_text_preview": "Excelente ceviche. Excelente Pisco Sour. Excelente servicio en un restaurante MUY ocupado! Esperamos...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_985778629",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Where is the Beef?",
+        "review_text_preview": "I enjoyed this restaurant. The only thing I did not like was the small portions for the price. Other...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "¿Dónde está la carne?",
+        "review_text_preview": "Disfruté de este restaurante. Lo único que no me gustó fueron las pequeñas porciones por el precio. ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_985072694",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Don't hesitate, go eat there!",
+        "review_text_preview": "I want to recognize the attention and good treatment to customers who go to the restaurant alone, I ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "No lo dudes, ve a comer ahí!",
+        "review_text_preview": "Quiero reconocer la atención y buen trato a clientes que van solos al restaurante, viajo mucho y com...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_980927623",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Memorable Peruvian cuisine",
+        "review_text_preview": "I researched and found a number restaurants in Lima that I wanted to try and selected this one.  I w...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cocina peruana memorable",
+        "review_text_preview": "Investigué y encontré varios restaurantes en Lima que quería probar y seleccioné este. Estaba muy co...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_979494928",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Outstanding fresh and delectable cuisine",
+        "review_text_preview": "Pisco sour cocktail is a great way to start and it’s perfect! The vibe is bustling and happy. The di...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente cocina fresca y deliciosa",
+        "review_text_preview": "¡El cóctel agrio de pisco es una excelente manera de comenzar y es perfecto! El ambiente es bullicio...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_979478475",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "In general, the well-run restaurants on this platform are not always the best. Well, La Mar met all ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "En general los restaurantes bien renqueados en esta plataforma no siempre son los mejores. Pues bien...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_979264546",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The Sea a thousand times",
+        "review_text_preview": "I've had the opportunity to travel and sit at the best tables, but as the\nSea, there is not, perhaps...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La Mar una y mil veces",
+        "review_text_preview": "He tenido la posibilidad de viajar y sentarme en las mejores mesas, pero como la\nMar, no hay, quizás...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_979039800",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great place when you get seated...",
+        "review_text_preview": "This is a walk in restaurant and they don't take reservations. The first time we went we arrived jus...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran lugar cuando te sientas...",
+        "review_text_preview": "Este es un paseo en restaurante y no aceptan reservas. La primera vez que fuimos llegamos justo ante...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_978024648",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Synonymous with good eating",
+        "review_text_preview": "It is among the best restaurants in Lima for its gastronomic level.\nYou always have to go with reser...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sinónimo del buen comer",
+        "review_text_preview": "Está dentro de los mejores restaurantes de Lima por su nivel gastronómico.\nSiempre tiene que ir  con...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_974844153",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good as ever",
+        "review_text_preview": "Despite the queue you have to wait, it is worth it because you know that dishes will not disappoint....",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buenísimo como siempre",
+        "review_text_preview": "A pesar de la cola que hay que esperar, merece la pena porque sabes que los platos no van a defrauda...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_973603171",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "We had our meal at the bar, with a number of fish watching us.  Really nice food.  Chilled atmosphere.",
+        "review_text_preview": "No booking, you turn up and queue.  Slot available at the bar, would have been 1 hour wait for a tab...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tuvimos nuestra comida en el bar, con varios peces mirándonos.  Muy buena comida.  Ambiente frío.",
+        "review_text_preview": "Sin reserva, apareces y haces cola. Ranura disponible en el bar, habría sido 1 hora de espera para u...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_973512331",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delicious ceviche in a nice setting .open for lunch only !",
+        "review_text_preview": "Great and friendly service service ! One can not reserve a table ! \nWe got there just after opening ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Delicioso ceviche en un ambiente agradable. abierto solo para el almuerzo!",
+        "review_text_preview": "Gran y amable servicio de atención! ¡Uno no puede reservar una mesa! \nLlegamos justo después de abri...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_972987345",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good",
+        "review_text_preview": "Excellent wonderful food, very good service? The person who attended me, did wonderfully the very go...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bueno ",
+        "review_text_preview": "Excelente  la comida  maravillosa, la atencion muy buena? La persona que me atendió, lo hizo de mara...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_972433653",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delights of the sea in every spoonful!",
+        "review_text_preview": "The reviews I've read about this restaurant don't do it justice.  My wife and I are seafood lovers a...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "¡Delicias del mar en cada cucharada!",
+        "review_text_preview": "Los reviews que he leído sobre este restaurante no le hacen justicia.  Mi esposa y yo somos amantes ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_972211973",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Ceviche and rich fish!",
+        "review_text_preview": "Very peculiar place, very cool! Super friendly waiters! Welcome chips with sauces, very delicious! T...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ceviche y pescado rico!",
+        "review_text_preview": "Lugar muy peculiar, muy cool! Camareros súper amables! Chips de bienvenida con salsas, muy rico! Lo ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_971770168",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Marine experience",
+        "review_text_preview": "The best ceviche and oysters in Lima.\nFresh oysters, fresh fishing and sea chorizo a delight.\nBalanc...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia marina",
+        "review_text_preview": "El mejor ceviche y ostras de Lima.\nOstras frescas, pescas frescas y el chorizo de mar una delicia.\nE...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_971569739",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best in Lima?",
+        "review_text_preview": "Must be Lima's best ceviche. It was very good. We also ate ravioli and pasta gratin with prawns. All...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "¿Mejor en Lima?",
+        "review_text_preview": "Debe ser el mejor ceviche de Lima. Fue muy bueno. También comimos raviolis y pasta gratinada con gam...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_970896329",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "WOW! WOW! WOW!",
+        "review_text_preview": "Absolutely sensational in every respect.  Just go.  We were with friends who were local, so that hel...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "WOW! WOW! WOW!",
+        "review_text_preview": "Absolutamente sensacional en todos los aspectos. Sólo vete. Estábamos con amigos que eran locales, a...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_969170611",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent!",
+        "review_text_preview": "We loved this restaurant. Seafood is fresh and flavorful. We tried the crab in sauce, and the grille...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente!",
+        "review_text_preview": "Nos encantó este restaurante. Los mariscos son frescos y sabrosos. Probamos el cangrejo en salsa, y ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_965533829",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "5 stars ceviche!",
+        "review_text_preview": "Amazing food and cocktails! Nice vibes and music as well.\nWe were looking for the best ceviche in to...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "5 estrellas ceviche!",
+        "review_text_preview": "Comida y cócteles increíbles! Bonito ambiente y música también. \nEstábamos buscando el mejor ceviche...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_965001889",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Earthbound Adventures tour",
+        "review_text_preview": "Been here few years ago and decided to visit absolutely did not disappoint and only get better you'l...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Earthbound Adventures tour",
+        "review_text_preview": "Estuve aquí hace unos años y decidí visitar absolutamente no decepcionó y solo mejorar tendrás que t...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_959642536",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "La Mar!",
+        "review_text_preview": "It's the richest cebiche we've ever eaten! Excellent service despite the crowded local. I recommend ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La Mar!",
+        "review_text_preview": "Es el cebiche más rico que hemos comido! Excelente atención pese a lo concurrido del local. Recomien...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_957391479",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unmissable",
+        "review_text_preview": "Extraordinary option to try Peruvian cuisine. Your ceviche is unmissable, anyone you order is amazin...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Imperdible",
+        "review_text_preview": "Extraordinaria opción para probar la gastronomía peruana. Su ceviche es imperdible, cualquiera que p...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_949199408",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Recommended",
+        "review_text_preview": "I hadn't gone in years because they had told me that the level had dropped a lot, but I was pleasant...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Recomendado",
+        "review_text_preview": "No iba hace años porque me habían dicho que el nivel había bajado bastante pero me lleve la grata so...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_946865837",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "AWFUL",
+        "review_text_preview": "I went with my dad to lunch, according to several comments we saw that it was good and that, even mo...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "HORRIBLE",
+        "review_text_preview": "Fui con mi papá a almorzar, según varios comentarios vimos que era buena y eso, más aún por ser de G...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_945640537",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Prices according to good taste",
+        "review_text_preview": "The location is very good, but unfortunately the waiting time is very long (they should improve the ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Precios acorde a un buen sabor ",
+        "review_text_preview": "La ubicación es muy buena, pero lamentablemente el tiempo de espera es muy largo (deberían de mejora...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_944331445",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "AWFUL",
+        "review_text_preview": "Today the staff admitted hundreds of diners, having registered our visit in advance. We couldn't eat...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "HORRIBLE",
+        "review_text_preview": "El día de hoy el personal ingreso a cientos de comensales habiendo nosotros registrado nuestra visit...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_943197090",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Family lunch",
+        "review_text_preview": "I went to visit Lima with my family, after a few years and they maintain their excellent quality and...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "almuerzo familiar",
+        "review_text_preview": "Fui de visita a Lima con mi familia, después de algunos años y mantienen su excelente calidad y serv...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_941818389",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Bad experience",
+        "review_text_preview": "Very bad service, not very tasty food, ceviche and leche de tigre don't taste good, we also ordered ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Pésima experiencia",
+        "review_text_preview": "Muy mala atención, comida no muy rica, ceviche y leche de tigre no tienen buen sabor, además le pedi...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_940925134",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The ceviche is very acidic and difficult to eat.",
+        "review_text_preview": "The ceviche was very acidic and not very tasty, I expected more from this restaurant, I was disappoi...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El ceviche muy acido y difícil de comer",
+        "review_text_preview": "El ceviche era muy acido y no muy rico, esperaba más de este restaurante, me decepcionó, lo demás pl...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_940225010",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unmissable in Lima",
+        "review_text_preview": "Bueno La Mar is a must in Lima, exquisite food, impeccable service!! Top of top!! I just love it!! A...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Imperdible en Lima",
+        "review_text_preview": "Bueno La Mar es un imperdible in Lima, exquisita comida, impecable servicio ñ!! Top de top!! Simplem...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_939908590",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Who would have thought they would try a fish and seafood choripán 🤣🙌🏻",
+        "review_text_preview": "We went to spend Father's Day in Lamar, and it was a very good recommendation.\n\nThe restaurant is sp...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Quien diría que probaría un choripán de pescado y mariscos 🤣🙌🏻",
+        "review_text_preview": "Fuimos a pasar el Día del padre en Lamar, y fue una recomendación muy acertada.\n\nEl restaurante es a...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_937014957",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Peruvian seafood A1",
+        "review_text_preview": "Great seafood!!!\nThe price is a bit expensive but the portions are generous. Everything is super fre...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida marina peruana A1",
+        "review_text_preview": "Comida marina buenísima!!! \nEl precio es algo costoso pero las porciones son generosas. Todo es supe...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_935223960",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good restaurant",
+        "review_text_preview": "Good restaurant, delicious food, however, you have to wait approximately an hour to enter, you canno...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen restaurant",
+        "review_text_preview": "Buen restaurant, la comida deliciosa, sin embargo, hay que esperar una hora aprox, para poder entrar...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_935058607",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good restaurant. He lives up to his fame",
+        "review_text_preview": "We went for lunch, it is located in the Miraflores sector, easy to get to. Good service, wait no mor...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buen restaurante.  Hace honor a su fama",
+        "review_text_preview": "Fuimos a almorzar, está situado en el sector de Miraflores, fácil de llegar. Buena atención, espera ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_934937579",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Despite waiting a long time for a table, it was worth it to savor the exquisite dishes they serve.",
+        "review_text_preview": "The food was spectacularly prepared and served, with an exquisite flavor and freshness of the fish.\n...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "A pesar de esperar para tener una mesa un buen rato , valio la pena para soborear los exquisitos platos que sirven.",
+        "review_text_preview": "La comida espectacularmente preparada y servida , cin un sabor exquisito, frecura de los pescados .\n...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_934170452",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "It's not a good restaurant",
+        "review_text_preview": "The food is not very good, the cocktails are tasteless, for what we ended up paying… it leaves a lot...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "No es un buen restaurante",
+        "review_text_preview": "La comida no es muy buena, los cocteles sin sabor, Para lo que terminamos pagando … deja mucho que d...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_932061091",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Ideal summer stop",
+        "review_text_preview": "Very comfortable terrace and indoor option in case of high heat, with a cool atmosphere ideal for su...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Parada ideal para el verano",
+        "review_text_preview": "Terraza muy cómoda y opción adentro en caso de mucho calor, con ambientación fresca ideal para veran...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_931181051",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Terrible attention! A shame in the past, the best restaurant in South America!",
+        "review_text_preview": "A total shame!! I came today with some foreign friends to let them try it since this restaurant seem...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Terrible atencion ! Una pena en antaño el mejor restaurante de sudamerica!",
+        "review_text_preview": "Una pena total!! Vine hoy con unos amigos extranjeros para hacerles probar ya que este restaurante m...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_931101637",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Terrible attention at the entrance from the “host” bad experience wanting to celebrate a birthday",
+        "review_text_preview": "What a shame… the experience we had was terrible, starting from the entrance with a girl who is call...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Pésima atención en la entrada de la “anfitriona” mala experiencia queriendo celebrar un cumpleaños",
+        "review_text_preview": "Que pena la mar… la experiencia que tuvimos fue terrible, comenzando desde la entrada con una chica ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_931100989",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good food but HORRIBLE SERVICE.",
+        "review_text_preview": "This restaurant stands out for the high quality of its dishes, however despite being listed as one o...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena comida pero HORRIBLE SERVICIO.",
+        "review_text_preview": "Este restaurante resalta por la alta calidad en sus platillos , sin embargo a pesar de estar catalog...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_931099420",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Bad experience - Terrible service.",
+        "review_text_preview": "We went to the sea today to celebrate my mother's birthday, to which the host Carolina received us, ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mala experiencia - Pésimo servicio.",
+        "review_text_preview": "Fuimos a la mar el día de hoy para celebrar el cumpleaños de mi madre , a lo cual nos recibió la anf...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_928432520",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best ceviche in the world",
+        "review_text_preview": "Where everything was born. Acurio's famous cebicheria that is a 10 in everything. As in all of Peru,...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mejor ceviche del mundo",
+        "review_text_preview": "Donde todo nació. La famosa cebicheria de Acurio que es un 10 en todo. Como en todo Peru la atención...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_927866225",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good",
+        "review_text_preview": "Very nice place, with excellent service.\nThe waiter gave us good advice and it was a pleasant meal.\n...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bien",
+        "review_text_preview": "Local muy agradable, con excelente atención.\nNos aconsejó bien el camarero y fue una comida agradabl...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_926175566",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent atention",
+        "review_text_preview": "Great experience. Black ravioli stuffed with prawns. Wonderful. Excellent silverside tiradito",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena atencion",
+        "review_text_preview": "Gran experiencia. Los Ravioles negros rellenos de langostinos. Maravilla. Tiradito de pejerrey excel...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_925804170",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best Peruvian restaurant!!",
+        "review_text_preview": "We come from Europe and the first thing we wanted to try was this restaurant since it has been highl...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El mejor restaurante peruano!!",
+        "review_text_preview": "Venimos desde Europa y lo primero que queríamos probar era este restaurante ya que nos lo han recome...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_924577694",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Nice",
+        "review_text_preview": "The mixed ceviche is exquisite, the grilled octopus has a native flavor with anticuchera sauce, pull...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Nice",
+        "review_text_preview": "El ceviche mixto es exquisito, el pulpo a la parrilla tiene un sabor autóctono con salsa anticuchera...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_922370906",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "EXQUISITE",
+        "review_text_preview": "We arrived without a reservation since we just landed in Lima that day, we did not have to wait for ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "EXQUISITO ",
+        "review_text_preview": "Llegamos sin reserva ya que apenas ese día aterrizamos en Lima, no tuvimos que esperar por una mesa,...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_921636193",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The Sea Lima",
+        "review_text_preview": "Delicious food and extensive menu, with reasonable prices according to the quality of their products...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La Mar Lima",
+        "review_text_preview": "Deliciosa comida y amplio menú, con precios razonables acorde a la calidad de sus productos.\nHorario...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_920397569",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The wait was worth it",
+        "review_text_preview": "The wait was long, but it was worth it, from the service at the entrance with the native chips, the ...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La espera valio la pena",
+        "review_text_preview": "La espera si fue larga,pero valio la pena,desde el servicio de la entrada con los chips nativos ,los...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_918881084",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Incredible",
+        "review_text_preview": "Everything was great and exceptional treatment. Always attentive and kind, the food is impressive, h...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Increíble ",
+        "review_text_preview": "Todo buenísimo y trato excepcional. Siempre atentos y gentiles, la comida impresionante, súper recom...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_917928955",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best cevicheria in Peru",
+        "review_text_preview": "Even though we arrived late, they served us super quickly, with super service and very delicious dis...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor cevicheria del Perú",
+        "review_text_preview": "Por más que llegamos tarde nos atendieron súper rápido un súper servicio y los platos  muy delicioso...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_917568660",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Perfect drinks, delicious food",
+        "review_text_preview": "Excellent food, highly recommended, the best aphrodisiac ceviche, we return in all ways.",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tragos perfectos, comida deliciosa ",
+        "review_text_preview": "Excelente comida muy recomendada, el cebiche afrodisíaco de lo mejor, volvemos de yodas maneras.    ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_911264076",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Essential",
+        "review_text_preview": "Fantastic place to eat ceviche and tiraditos. I have loved everything I have tried. Excellent price/...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Imprescindible",
+        "review_text_preview": "Fantástico sitio para comer ceviche y tiraditos. Toda lo que he probado me ha encantado. Excelente r...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_910595093",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Cevicheria not to be missed if you travel to Miraflores, Lima",
+        "review_text_preview": "Very good experience. Delicious food, prompt and very friendly service. Special mention for Willy, t...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cevichería imperdible si viajas a Miraflores, Lima",
+        "review_text_preview": "Buenísima experiencia. Comida deliciosa, atención expedita y muy amable. Mención aparte para Willy, ...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_909808305",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service",
+        "review_text_preview": "Very good service, good seasoning, local A1 I recommend them for all types of gatherings with family...",
+        "source_file": "tripadvisor_reviews_14_en_1769636986052.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente servicio",
+        "review_text_preview": "Muy buena atención , buena sazón , local A1 se los recomiendo para todo tipo de reunión en familia ,...",
+        "source_file": "tripadvisor_reviews_14_es_1769636993118.json"
+      }
+    }
+  ]
+}

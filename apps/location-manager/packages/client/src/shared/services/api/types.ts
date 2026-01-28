@@ -324,6 +324,75 @@ export interface ReviewsStatusResponse {
 }
 
 // ============================================================================
+// REVIEWS PIPELINE TYPES
+// ============================================================================
+
+export type ReviewSource = "google" | "tripadvisor";
+
+export interface FetchReviewsPipelineRequest {
+  sources: ReviewSource[];
+}
+
+export interface FetchReviewsPipelineWarning {
+  source: ReviewSource;
+  message: string;
+}
+
+export interface ReviewsPipelineResult {
+  message: string;
+  selectedSources: ReviewSource[];
+  fetched: {
+    google?: FetchReviewsResponse["data"];
+    tripadvisor?: FetchTripAdvisorReviewsResponse["data"];
+  };
+  merged: {
+    filename: string;
+    stats: MergedReviewsStats;
+    rejectsReport: RejectsReportSummary | null;
+  };
+  warnings: FetchReviewsPipelineWarning[] | null;
+}
+
+export type ReviewsPipelineStatus = "queued" | "running" | "completed" | "failed";
+
+export type ReviewsPipelineStep =
+  | "queued"
+  | "fetching_google"
+  | "fetching_tripadvisor"
+  | "translating_merging"
+  | "completed"
+  | "failed";
+
+export interface ReviewsPipelineJobStatus {
+  jobId: string;
+  status: ReviewsPipelineStatus;
+  step: ReviewsPipelineStep;
+  progress: number;
+  message: string | null;
+  warnings: FetchReviewsPipelineWarning[] | null;
+  result: ReviewsPipelineResult | null;
+  error: string | null;
+  startedAt: string;
+  updatedAt: string;
+}
+
+export interface FetchReviewsPipelineStartResponse {
+  success: true;
+  data: {
+    jobId: string;
+    status: ReviewsPipelineStatus;
+    step: ReviewsPipelineStep;
+    progress: number;
+    message: string | null;
+  };
+}
+
+export interface FetchReviewsPipelineStatusResponse {
+  success: true;
+  data: ReviewsPipelineJobStatus;
+}
+
+// ============================================================================
 // TRIPADVISOR REVIEWS TYPES
 // ============================================================================
 
@@ -363,5 +432,45 @@ export interface TripAdvisorReviewsStatusResponse {
     totalReviews: number;
     rating: number | null;
     locationName: string | null;
+  };
+}
+
+// ============================================================================
+// MERGED REVIEWS TYPES (translate & merge)
+// ============================================================================
+
+export interface MergedReviewsStats {
+  totalReviews: number;
+  googleReviews: number;
+  tripadvisorReviews: number;
+  translated: number;
+  alreadyEnglish: number;
+  errors: number;
+}
+
+export interface RejectsReportSummary {
+  filename: string;
+  totalRejected: number;
+  replacedWithEnglish: number;
+  rejectedNonEnglish: number;
+}
+
+export interface TranslateMergeReviewsResponse {
+  success: true;
+  data: {
+    message: string;
+    filename: string;
+    stats: MergedReviewsStats;
+    rejectsReport: RejectsReportSummary | null;
+  };
+}
+
+export interface MergedReviewsStatusResponse {
+  success: true;
+  data: {
+    hasMergedReviews: boolean;
+    filename: string | null;
+    mergedAt: string | null;
+    stats: MergedReviewsStats | null;
   };
 }

@@ -5,9 +5,13 @@ from features.translation.schema import (
     TranslationRequest,
     TranslationResponse,
     TranslationStats,
-    OverallStats
+    OverallStats,
+    TranslateReviewsRequest,
+    TranslateReviewsResponse,
+    TranslateReviewsItem,
 )
 from features.translation.service.content_translator import ContentTranslator
+from features.translation.service.translator import get_translator
 
 router = APIRouter(prefix="/translate", tags=["translation"])
 
@@ -115,3 +119,76 @@ def detect_missing_languages(force: bool = False):
         "instagram_updated": result["instagram_updated"],
         "reddit_updated": result["reddit_updated"]
     }
+
+
+@router.post("/reviews", response_model=TranslateReviewsResponse)
+def translate_reviews(request: TranslateReviewsRequest) -> TranslateReviewsResponse:
+    """
+    Translate review text and title fields to English.
+    """
+    translator = get_translator()
+    total = len(request.reviews)
+    translated = 0
+    already_english = 0
+    errors = 0
+    skipped = 0
+
+    translated_reviews: list[TranslateReviewsItem] = []
+
+    for review in request.reviews:
+        review_data = review.dict()
+        has_field = False
+        has_error = False
+        has_translation = False
+        has_already_english = False
+
+        for field in request.fields_to_translate:
+            value = review_data.get(field)
+            if value is None or (isinstance(value, str) and not value.strip()):
+                continue
+
+            has_field = True
+            translated_text, status = translator.translate_text(
+                value,
+                source=request.source_language or "auto",
+                target="en",
+            )
+
+            if status == "translated":
+                has_translation = True
+                review_data[field] = translated_text
+            elif status == "already_english":
+                has_already_english = True
+                review_data[field] = value
+            elif status == "empty":
+                review_data[field] = value
+            else:
+                has_error = True
+                review_data[field] = value
+
+        if not has_field:
+            skipped += 1
+        elif has_error:
+            errors += 1
+        elif has_translation:
+            translated += 1
+        elif has_already_english:
+            already_english += 1
+        else:
+            skipped += 1
+
+        translated_reviews.append(TranslateReviewsItem(**review_data))
+
+    stats = TranslationStats(
+        total=total,
+        translated=translated,
+        already_english=already_english,
+        errors=errors,
+        skipped=skipped,
+    )
+
+    return TranslateReviewsResponse(
+        reviews=translated_reviews,
+        stats=stats,
+        message=f"Translated {translated} reviews, {already_english} already in English",
+    )

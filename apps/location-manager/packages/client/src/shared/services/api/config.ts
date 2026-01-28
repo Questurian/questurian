@@ -58,6 +58,8 @@ export const API_ENDPOINTS = {
 
   // Google Reviews
   FETCH_REVIEWS: (id: number) => `/api/locations/${id}/reviews/fetch`,
+  FETCH_REVIEWS_PIPELINE: (id: number) => `/api/locations/${id}/reviews/fetch-pipeline`,
+  REVIEWS_PIPELINE_STATUS: (id: number, jobId: string) => `/api/locations/${id}/reviews/pipeline-status?jobId=${jobId}`,
   DOWNLOAD_REVIEWS: (id: number) => `/api/locations/${id}/reviews/download`,
   REVIEWS_STATUS: (id: number) => `/api/locations/${id}/reviews/status`,
 
@@ -66,4 +68,10 @@ export const API_ENDPOINTS = {
   DOWNLOAD_TRIPADVISOR_REVIEWS: (id: number, lang?: string) =>
     `/api/locations/${id}/tripadvisor-reviews/download${lang ? `?lang=${lang}` : ""}`,
   TRIPADVISOR_REVIEWS_STATUS: (id: number) => `/api/locations/${id}/tripadvisor-reviews/status`,
+
+  // Merged Reviews (translate & merge)
+  TRANSLATE_MERGE_REVIEWS: (id: number) => `/api/locations/${id}/reviews/translate-merge`,
+  DOWNLOAD_MERGED_REVIEWS: (id: number) => `/api/locations/${id}/reviews/merged/download`,
+  MERGED_REVIEWS_STATUS: (id: number) => `/api/locations/${id}/reviews/merged/status`,
+  DOWNLOAD_REJECTS_REPORT: (id: number) => `/api/locations/${id}/reviews/rejects/download`,
 } as const;

@@ -1,0 +1,1158 @@
+{
+  "locationId": 10,
+  "generatedAt": "2026-01-28T18:43:27.084Z",
+  "summary": {
+    "totalRejected": 67,
+    "replacedWithEnglish": 67,
+    "rejectedNonEnglish": 0
+  },
+  "explanation": {
+    "why": "TripAdvisor returns the same reviews in different language files. Each review has a unique review_id that appears in multiple language files (e.g., both English and Spanish files).",
+    "whatWeDo": "We deduplicate by review_id, preferring English versions when available. This ensures each review appears only once in the final merged output.",
+    "actions": {
+      "replaced_with_english": "A non-English version was replaced with the English version of the same review",
+      "rejected_non_english": "A duplicate non-English version was rejected (we already had this review)"
+    }
+  },
+  "rejectedReviews": [
+    {
+      "review_id": "tripadvisor_1047215476",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Magical Realism at its Best",
+        "review_text_preview": "An experience that will be present in my heart for a long time. A restaurant, in addition to food, h...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Realismo mágico en su máxima expresión",
+        "review_text_preview": "Una experiencia que quedará presente en mi corazón durante mucho tiempo. Un restaurante, además de l...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046951110",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Disappointing experience",
+        "review_text_preview": "Disappointed. Bad service, tasteless dishes and definitely overpriced restaurant.Over 600 US dollar ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia decepcionante",
+        "review_text_preview": "Decepcionado. Mal servicio, platos insípidos y restaurante sin duda caro. Más de 600 dólares estadou...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045193250",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "An experience of a lifetime...",
+        "review_text_preview": "We had an absolutely amazing experience at Central while we were visiting Lima. First of all, you wa...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia de toda la vida...",
+        "review_text_preview": "Tuvimos una experiencia absolutamente increíble en Central mientras estábamos visitando Lima. En pri...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044187901",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Professionalism, science, colors, flavors, smells and love",
+        "review_text_preview": "Central has earned its fame, simply IMPRESSIVE.  Cooking is an experience. The best restaurant in th...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Profesionalismo, ciencia , colores, sabores , olores y amor",
+        "review_text_preview": "Central se ha ganado su fama, sencillamente IMPRESIONANTE.  La cocina es una experiencia. El mejor r...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042858840",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Outstanding service",
+        "review_text_preview": "Excellent service. The sommelier was sooooo nice! We had the non-alcoholic pairing and some of them ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Servicio excepcional",
+        "review_text_preview": "Excelente servicio. ¡El sumiller era muy agradable! ¡Teníamos el maridaje sin alcohol y algunos de e...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041372552",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Dismal quality of food, attention and facilities are of the most basic",
+        "review_text_preview": "The food is very bad, regular attention but no one understood the friend mark in english had to be t...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Pesima calidad de alimetos, atencion e instalaciones son de lo mas basicas",
+        "review_text_preview": "La comida es malisima , atencion  regular pero nadieentenia a li amigo mark en ingles tenia que esta...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039154439",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A little disappointing",
+        "review_text_preview": "The food is fine, it would be missing more, but for that price one expects a two or three michelin s...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un poco decepcionante",
+        "review_text_preview": "La comida esta bien, faltaria mas, pero por ese precio uno espera un dos o tres estrella michelin y ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038229664",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unique experience",
+        "review_text_preview": "A unique experience, in a quiet place, with a very good Mood, where you can see how they cook and pr...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia única",
+        "review_text_preview": "Una experiencia única, en un lugar tranquilo, con muy buen ambiente, donde puedes ver como cocinan y...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038228428",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Connected to your Roots",
+        "review_text_preview": "At first we hesitated to go to the center, because really after watching a netflix documentary we we...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Conectado con sus Raíces",
+        "review_text_preview": "Al inicio dudamos de ir al central, porque realmente después de ver un documental del netflix nos de...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037002089",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good fish",
+        "review_text_preview": "The corvina was good, with consistency and a nice sauce.\nThe experience is a bit long in terms of ti...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen pescado",
+        "review_text_preview": "La corvina estuvo buena, con consistencia y una salsa agradable.\nLa experiencia es un poco larga en ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034537454",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Cool presentation of food",
+        "review_text_preview": "It’s cool to experience the “best” restaurant in the world but it comes with a high price tag. Over ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Presentación genial de los alimentos",
+        "review_text_preview": "Es genial experimentar el “mejor” restaurante del mundo, pero viene con un precio alto. Más de $ 120...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033636702",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Once in a lifetime",
+        "review_text_preview": "Just an amazing experience and one that I will always think about, truly champions biodiversity and ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una vez en la vida",
+        "review_text_preview": "Solo una experiencia increíble y en la que siempre pensaré, verdaderamente defiende la biodiversidad...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032539590",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Overrated.  Very expensive for what they offer",
+        "review_text_preview": "The decor is a little cold, I expected something more Latin American.  The hearts are kind.  The foo...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sobrevalorado.  Muy caro para lo que ofrecen",
+        "review_text_preview": "La decoración es un poco fría, me esperaba algo más latinoamericano.  Los garzones son amables.  La ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032508914",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Ultimate culinary experience",
+        "review_text_preview": "We were lucky to get a cancellation, having been on a waiting list. Glad we did, what an experience....",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia culinaria definitiva",
+        "review_text_preview": "Tuvimos suerte de conseguir una cancelación, después de haber estado en una lista de espera. Me aleg...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032074251",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Wonderful and unforgettable experience",
+        "review_text_preview": "Fantastic gastronomic experience, met our expectations in a great way, we knew that every detail was...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia maravillosa e inolvidable",
+        "review_text_preview": "Fantástica experiencia gastronómica, cubrió nuestras expectativas de gran manera, sabíamos que se ib...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1025623910",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Family of 5 dinner at ex-top world 2023 restaurant for more than $2.500",
+        "review_text_preview": "After visiting several restaurant from top Lima list we expected something unbelievable from Central...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cena familiar de 5 personas en el restaurante ex-top world 2023 por más de $2.500",
+        "review_text_preview": "Después de visitar varios restaurantes de la mejor lista de Lima esperábamos algo increíble de Centr...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021164435",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Disappointment",
+        "review_text_preview": "It gets quite long making you lose interest The pairing leaves enough to desire no wine surprised us...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Decepción",
+        "review_text_preview": "Se hace bastante largo haciéndote perder  el interés El maridaje deja bastante que desear ningún vin...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1019302402",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Central is The Best Restaurant in The World. Read My Review and Understand Why",
+        "review_text_preview": "Central is the best restaurant in the world that I have dined at. Not trying to sound conceited, but...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Central es el mejor restaurante del mundo. Lea mi reseña y entienda por qué",
+        "review_text_preview": "Central es el mejor restaurante del mundo que he cenado. No trato de sonar engreído, pero he cenado ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1019603698",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Nicceeee",
+        "review_text_preview": "Absolutely stunning experience.  Food, selection,portions, service, colors, experience, story. All w...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Nicceeee",
+        "review_text_preview": "Absolutamente impresionante experiencia. Comida, Selección, Porciones, Servicio, Colores, Experienci...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017723862",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The worst mistake of life",
+        "review_text_preview": "I'd just rescue the utensils, the slab and some things from the bathroom.\nFood... I wouldn’t call it...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El peor error de la vida",
+        "review_text_preview": "Sólo rescataría los utensilios, la losa y algunas cosas del baño.\nLa comida… no lo llamaría Comida a...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1016073616",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Nice restaurant",
+        "review_text_preview": "Everything in the restaurant is a work of art: the utensils, the dishes, even the bathroom... and th...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Bonito restaurante",
+        "review_text_preview": "Todo en el restaurante es una obra de arte: los utensilios, los platos, hasta el baño … y la atenció...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1015781234",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Well deserved the Best of the Best",
+        "review_text_preview": "Central was the main reason for our entire trip to Lima, and since we got the reservation was that I...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy merecido el Best of the Best",
+        "review_text_preview": "Central fue la razón principal de nuestro viaje entero a Lima, y desde que conseguimos la reserva fu...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1015302414",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A Memorable Experience for the Senses and the Mind ",
+        "review_text_preview": "Dining at Central was a refined experience rooted in precision and respect for Peruvian biodiversity...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia memorable para los sentidos y la mente",
+        "review_text_preview": "Cenar en Central fue una experiencia refinada basada en la precisión y el respeto por la biodiversid...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1014940052",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great Experience",
+        "review_text_preview": "It wasnt easy getting a reservation.  Obtaining a reservation took months of assistance.  The restur...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran experiencia",
+        "review_text_preview": "No fue fácil conseguir una reserva. La obtención de una reserva requiere meses de asistencia. La dec...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1009031145",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Central, a walk through the heights of Peru",
+        "review_text_preview": "Central is an amazing dining experience, you enter a place where they have a respect for ingredients...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Central, un paseo por las alturas del Perú ",
+        "review_text_preview": "Central es una experiencia gastronómica increíble, ingresas a un sitio donde poseen un respeto por l...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1008431355",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Amazing experience",
+        "review_text_preview": "Two Italians beginning their honey moon in Peru: What an incredible experience. We tried the ‘Mundo ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Increíble experiencia",
+        "review_text_preview": "Dos italianos comienzan su luna de miel en Perú: Qué experiencia tan increíble. Probamos el menú “Mu...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1007753128",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "It was an experience, but not the best we have ever had.",
+        "review_text_preview": "Everyone said Central is an experience and that it was. The experience of a fast paced 14 course app...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Fue una experiencia, pero no la mejor que hemos tenido.",
+        "review_text_preview": "Todo el mundo dijo que Central es una experiencia y que lo era. La experiencia de una comida rápida ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1006347186",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Perfect gastronomy experience",
+        "review_text_preview": "I highly recommend this place to know more about Peruvian culture and cuisine. Very good “Ecosystems...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia gastronómica perfecta",
+        "review_text_preview": "Recomiendo encarecidamente este lugar para conocer más sobre la cultura y cocina peruana. Muy buen c...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1005195629",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Central in Lima, Perú the best restaurant in the world, don’t miss it",
+        "review_text_preview": "The Best Dining Experience in the World\nCentral is, without a doubt, the number one restaurant on th...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Céntrico en Lima, Perú el mejor restaurante del mundo, no te lo pierdas",
+        "review_text_preview": "La mejor experiencia gastronómica del mundo\nCentral es, sin duda, el restaurante número uno del plan...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1005292232",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "One of a kind Culinary Experience in Lima, Peru",
+        "review_text_preview": "It has to be one of the top restaurant experiences in the world.  To say this place is outstanding i...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia culinaria única en Lima, Perú",
+        "review_text_preview": "Tiene que ser una de las mejores experiencias en restaurantes del mundo. Decir que este lugar es exc...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1004775025",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Gastronomic experience through Peru’s rich biodiversity. Deserved to be the best restaurant.",
+        "review_text_preview": "Dining at Central Restaurante in Lima is an extraordinary culinary journey through Peru’s diverse ec...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia gastronómica a través de la rica biodiversidad del Perú. Merecía ser el mejor restaurante.",
+        "review_text_preview": "Cenar en el Restaurante Central en Lima es un extraordinario viaje culinario por los diversos ecosis...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_999082316",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Food acceptable. Poor service. Embarrassing wine pairing",
+        "review_text_preview": "I had high expectations for Central, given its reputation, but unfortunately, it failed to deliver o...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida aceptable. Mal servicio. Maridaje de vinos embarazoso",
+        "review_text_preview": "Tenía grandes expectativas para Central, dada su reputación, pero desafortunadamente, no logró cumpl...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_996153926",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Beautiful restaurant, great service",
+        "review_text_preview": "The service from arrival to departure was the best I’ve ever experienced. The restaurant property is...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Hermoso restaurante, gran servicio",
+        "review_text_preview": "El servicio desde la llegada hasta la salida fue el mejor que he experimentado. La propiedad del res...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_994058395",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Never again",
+        "review_text_preview": "We started out enthusiastic and interested, embarking on the 13 course taster menu. After just four ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Nunca más",
+        "review_text_preview": "Empezamos entusiasmados e interesados, embarcados en el menú degustador de 13 platos. Después de sol...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_990654045",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best restaurant in the world",
+        "review_text_preview": "We went a year ago but the experience is still the best of my life. I think it's increased the price...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mejor restaurante del mundo",
+        "review_text_preview": "Fuimos hace ya un año pero la experiencia sigue siendo la mejor de mi vida. Creo que ha aumentado el...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_989753322",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "amazing experience",
+        "review_text_preview": "a place to visit at least once in your life dishes blow your mind really amazing all the work they d...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "increíble experiencia",
+        "review_text_preview": "un lugar para visitar por lo menos una vez en tu vida los platos te vuelan la cabeza realmente incre...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_988015573",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "very good and special restaurant in the world -it's good to tried",
+        "review_text_preview": "Was a very good experience for me and my daughter -we have a delicious lunch in the last day in PERU...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Restaurante muy bueno y especial del mundo -es bueno probar",
+        "review_text_preview": "Fue una muy buena experiencia para mí y mi hija - tenemos un delicioso almuerzo en el último día en ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_987868148",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delicious.",
+        "review_text_preview": "Simply amazed with the new alma mater tasting, Virgilio is a kingpin and the accompanying pairing is...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Delicioso.",
+        "review_text_preview": "Simplemente asombrado con la nuevas degustación alma mater , Virgilio es un capo y el maridaje que a...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_983355618",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "For those of us with knowledge of Peruvian cuisine, it is an exquisite experience. I loved one dish ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Para los que tenemos conocimiento de cocina peruana, es una exquisita experiencia. Me encantó un pla...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_983027176",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Don’t ignore the negatives",
+        "review_text_preview": "Thoroughly disappointed with our culinary experience at Central. \n\nMost of the dishes were way too s...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "No ignores lo negativo",
+        "review_text_preview": "Muy decepcionados con nuestra experiencia culinaria en Central. \n\nLa mayoría de los platos eran dema...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_981758246",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My experience",
+        "review_text_preview": "It's nice place the food came out very the waitress was very attentive the meals she recommended us ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mi experiencia ",
+        "review_text_preview": "Es lugar agradable la comida salió muy la moza estuvo muy atento las comidas q nos recomendó no gust...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_980676745",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Ignore the negatives, go for the experience and the amazing food",
+        "review_text_preview": "This restaurant is incredible if you truly appreciate good food. The tasting menu, wine, cocktails, ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ignora lo negativo, opta por la experiencia y la comida increíble",
+        "review_text_preview": "Este restaurante es increíble si realmente aprecias la buena comida. El menú degustación, vino, cóct...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_980435408",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Worth the Splurge!",
+        "review_text_preview": "Amazing detail and food.  The thought that goes into the meals is extraordinary!  Service was excell...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Vale la pena el derroche!",
+        "review_text_preview": "Increíble detalle y comida. ¡El pensamiento que entra en las comidas es extraordinario! El servicio ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_979427809",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A good but expensive experience",
+        "review_text_preview": "The rich, measured, unsurprising menu reminded me of Boragó in Chile.  Innovative food, but it can i...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia buena pero cara",
+        "review_text_preview": "El menú rico, mesurado, nada sorprendente, me recordó al Boragó en Chile.  Comida inovadora, pero pu...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_979153948",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "the Black rocks : sargassum clams and squid stands out as my most memorable flavour that my taste buds recalluds",
+        "review_text_preview": "I am from Jamaica and part of a delegation invited by the Government of Peru. We had lunch on Octobe...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "las rocas Negras : el sargazo almejas y calamares destaca como mi sabor más memorable que mis papilas gustativas recuerdauds",
+        "review_text_preview": "Soy de Jamaica y parte de una delegación invitada por el Gobierno del Perú. Almorzamos el 30 de octu...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_977062658",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "It’s a joke",
+        "review_text_preview": "It’s a joke. \n\nWe came to eat at Central in 2019  for the first time.\n\nEverything was great… the foo...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Es una broma",
+        "review_text_preview": "Es una broma. \n\nVinimos a comer a Central en 2019 por primera vez. \n\nTodo estaba genial... la comida...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_976511004",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A culinary journey through Peru",
+        "review_text_preview": "I'm no food critic, but given the opportunity to dine at Central, elected the world's second best re...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un viaje culinario por Perú",
+        "review_text_preview": "No soy crítico gastronómico, pero dada la oportunidad de cenar en Central, elegido el segundo mejor ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_974962351",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Overrated and a huge disappointment",
+        "review_text_preview": "For what was meant to be the highlight of our trip to Peru, dining at Central (the #1 restaurant in ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sobrevalorado y una gran decepción",
+        "review_text_preview": "Para lo que se suponía que iba a ser el punto culminante de nuestro viaje a Perú, cenar en Central (...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_974878747",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Should have walked out and gotten pizza",
+        "review_text_preview": "If you’re seeking a dining experience that leaves you questioning your life choices, look no further...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Debí haber salido y cogido pizza.",
+        "review_text_preview": "Si estás buscando una experiencia gastronómica que te deje cuestionando tus opciones de vida, no bus...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_974211028",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Avoid this overpriced, mediocre restaurant",
+        "review_text_preview": "Way overpriced for the quality and experience. Big disappointment! No way this is a top world restau...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Evita este restaurante caro y mediocre",
+        "review_text_preview": "Muy caro por la calidad y la experiencia. ¡Gran decepción! De ninguna manera este es un restaurante ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_974005335",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great experience",
+        "review_text_preview": "Came with my wife while we were on a family trip to Peru. Great atmosphere, the introduction to the ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran experiencia",
+        "review_text_preview": "Vine con mi esposa mientras estábamos en un viaje familiar a Perú. Gran ambiente, la introducción a ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_973455960",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The most stunning, beautiful and weirdest flavor journey you might ever have.",
+        "review_text_preview": "Amazing journey, full of surprising, punchy flavors.\n\nThe ambiance was perfect, big open kitchen, in...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El viaje de sabor más impresionante, hermoso y extraño que puedas tener.",
+        "review_text_preview": "Increíble viaje, lleno de sabores sorprendentes y ponzoñosos. \n\nEl ambiente era perfecto, gran cocin...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_970890470",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience in Central Restaurant Barrancos Lima Peru.",
+        "review_text_preview": "For those who enjoy molecular food and fusions of elements of the Altiplan culture, they offer a 14-...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia en Restaurante Central Barrancos Lima Perú.",
+        "review_text_preview": "Para quienes disfrutan de la comida molecular y de fusiones de elementos propios de la cultura altip...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_969496284",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delighted with customer service.",
+        "review_text_preview": "Excellent attention from the team very professional and helpful, they guided us in every detail of t...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Encantados con el servicio al cliente.",
+        "review_text_preview": "Excelente atención del equipo muy profesionales y serviciales, nos orientaron en cada detalle de los...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_961559888",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Nice experience",
+        "review_text_preview": "Very good, we chose the 14-step menu with pairing. It is good to live this experience, the guys are ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una linda experiencia",
+        "review_text_preview": "Muy bueno, elegimos el menú de 14 pasos con maridaje. Está bueno vivir esta experiencia, los chicos ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_959040608",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A pleasure for all the senses",
+        "review_text_preview": "The decoration that is the first thing you receive when you enter, the furniture, the sobriety of th...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un placer para todos los sentidos",
+        "review_text_preview": "La decoración que es lo primero que recibes al entrar, los muebles, la sobriedad de los uniformes de...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_949961319",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best culinary experience",
+        "review_text_preview": "The experience is 100 percent worth it, the food is not always super tasty but it is different and t...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor experiencia culinaria",
+        "review_text_preview": "La experiencia vale 100 por ciento la pena, la comida no siempre es súper sabrosa pero si diferente ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_941332031",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "It's normal that it's the best in the world",
+        "review_text_preview": "Well yes, we have been one of the privileged ones to have made an appointment to try the best restau...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Normal que sea el mejor del mundo",
+        "review_text_preview": "Pues sí, hemos sido de los privilegiados que hemos conseguido una cita para probar el mejor restaura...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_939054867",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "To live once",
+        "review_text_preview": "The place is very nice, upon arrival they welcome you very well and give you all the explanations ab...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Para vivir una vez",
+        "review_text_preview": "El lugar muy bonito , a la llegada te reciben muy bien y dan todas las explicaciones del fundamento ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_938805481",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Concept!",
+        "review_text_preview": "At first we did not understand the concept, the Netflix documentaries helped us a lot and it is very...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Concepto!",
+        "review_text_preview": "Al principio no entendimos el concepto, nos ayudó mucho los documentales de Netflix y es muy bueno q...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_935541745",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I wish we would have liked it🥲",
+        "review_text_preview": "Let's start with the good:\n\nThe entire staff 10/10! From the moment you walk in, everyone is very fr...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ojalá nos hubiera gustado🥲",
+        "review_text_preview": "Vamos a empezar por lo bueno:\n\nTodo el staff 10/10! Desde que entras todos son muy amables, super co...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_925091517",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Innovative proposal",
+        "review_text_preview": "It is a place where you live an experience that is the result of an effort to research indigenous in...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Innovadora propuesta",
+        "review_text_preview": "Es un sitio donde se vive una experiencia producto de un esfuerzo de investigación   de los ingredie...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_923988815",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Central: A Gastronomic Experience That Defies Expectations",
+        "review_text_preview": "Central, Virgilio Martínez's restaurant, far exceeded my expectations during my recent visit. Althou...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Central: Una Experiencia Gastronómica que Desafía las Expectativas",
+        "review_text_preview": "Central, el restaurante de Virgilio Martínez, superó con creces mis expectativas durante mi reciente...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_923354792",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent, exquisite, refined, welcoming",
+        "review_text_preview": "I was very lucky to fall in love with a Peruvian and begin to get to know their culture and gastrono...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente, exquisito, refinado, acojedor",
+        "review_text_preview": "Tuve la gran suerte de enamorarme de un peruano y comenzar a conocer su cultura y gastronomía y ya n...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_922830463",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Terrible customer service",
+        "review_text_preview": "I wanted to give my brother, who is visiting Peru, the wonderful experience of dining at this restau...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Terrible atención al publico",
+        "review_text_preview": "Quise regalarle a mi hermano quien está visitando Peru, la maravillosa experiencia de cenar en este ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_918614316",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good experience, a little slow",
+        "review_text_preview": "Definitely the place is a total experience, but it seems to me that for us Peruvians having so much ...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena experiencia, un poco lenta ",
+        "review_text_preview": "Definitivamente el lugar es una experiencia total, pero me parece que para nosotros los peruanos ten...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_917274464",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience",
+        "review_text_preview": "We went in pairs and it was an experience from start to finish. From how they explain the inputs and...",
+        "source_file": "tripadvisor_reviews_10_en_1769625800288.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia",
+        "review_text_preview": "Fuimos en parejas y fue todo una experiencia de principio a fin. Desde cómo te explican los insumos ...",
+        "source_file": "tripadvisor_reviews_10_es_1769625807051.json"
+      }
+    }
+  ]
+}

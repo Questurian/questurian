@@ -20,9 +20,15 @@ import type {
   FetchReviewsRequest,
   FetchReviewsResponse,
   ReviewsStatusResponse,
+  FetchReviewsPipelineRequest,
+  FetchReviewsPipelineStartResponse,
+  FetchReviewsPipelineStatusResponse,
+  ReviewsPipelineJobStatus,
   FetchTripAdvisorReviewsRequest,
   FetchTripAdvisorReviewsResponse,
   TripAdvisorReviewsStatusResponse,
+  TranslateMergeReviewsResponse,
+  MergedReviewsStatusResponse,
 } from "./types";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
@@ -266,6 +272,31 @@ export const locationsApi = {
   },
 
   /**
+   * Fetch reviews from selected sources, then translate and merge into a single dataset
+   */
+  async fetchReviewsPipeline(
+    id: number,
+    params: FetchReviewsPipelineRequest
+  ): Promise<FetchReviewsPipelineStartResponse["data"]> {
+    return apiPost<FetchReviewsPipelineStartResponse["data"]>(
+      API_ENDPOINTS.FETCH_REVIEWS_PIPELINE(id),
+      params
+    );
+  },
+
+  /**
+   * Get reviews pipeline job status
+   */
+  async getReviewsPipelineStatus(
+    id: number,
+    jobId: string
+  ): Promise<ReviewsPipelineJobStatus> {
+    return apiGet<FetchReviewsPipelineStatusResponse["data"]>(
+      API_ENDPOINTS.REVIEWS_PIPELINE_STATUS(id, jobId)
+    );
+  },
+
+  /**
    * Get reviews download URL for a location
    */
   getReviewsDownloadUrl(id: number): string {
@@ -315,5 +346,46 @@ export const locationsApi = {
     return apiGet<TripAdvisorReviewsStatusResponse["data"]>(
       API_ENDPOINTS.TRIPADVISOR_REVIEWS_STATUS(id)
     );
+  },
+
+  // ============================================================================
+  // MERGED REVIEWS (TRANSLATE & MERGE)
+  // ============================================================================
+
+  /**
+   * Translate and merge all reviews (Google + TripAdvisor) for a location
+   */
+  async translateAndMergeReviews(
+    id: number
+  ): Promise<TranslateMergeReviewsResponse["data"]> {
+    return apiPost<TranslateMergeReviewsResponse["data"]>(
+      API_ENDPOINTS.TRANSLATE_MERGE_REVIEWS(id),
+      {}
+    );
+  },
+
+  /**
+   * Get merged reviews download URL for a location
+   */
+  getMergedReviewsDownloadUrl(id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_MERGED_REVIEWS(id)}`;
+  },
+
+  /**
+   * Check if merged reviews exist for a location
+   */
+  async getMergedReviewsStatus(
+    id: number
+  ): Promise<MergedReviewsStatusResponse["data"]> {
+    return apiGet<MergedReviewsStatusResponse["data"]>(
+      API_ENDPOINTS.MERGED_REVIEWS_STATUS(id)
+    );
+  },
+
+  /**
+   * Get rejects report download URL for a location
+   */
+  getRejectsReportDownloadUrl(id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_REJECTS_REPORT(id)}`;
   },
 };

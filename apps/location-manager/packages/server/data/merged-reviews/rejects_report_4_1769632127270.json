@@ -1,0 +1,2297 @@
+{
+  "locationId": 4,
+  "generatedAt": "2026-01-28T20:28:47.273Z",
+  "summary": {
+    "totalRejected": 134,
+    "replacedWithEnglish": 134,
+    "rejectedNonEnglish": 0
+  },
+  "explanation": {
+    "why": "TripAdvisor returns the same reviews in different language files. Each review has a unique review_id that appears in multiple language files (e.g., both English and Spanish files).",
+    "whatWeDo": "We deduplicate by review_id, preferring English versions when available. This ensures each review appears only once in the final merged output.",
+    "actions": {
+      "replaced_with_english": "A non-English version was replaced with the English version of the same review",
+      "rejected_non_english": "A duplicate non-English version was rejected (we already had this review)"
+    }
+  },
+  "rejectedReviews": [
+    {
+      "review_id": "tripadvisor_1047242342",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Pleasant experience",
+        "review_text_preview": "Great experience starting with the attention of Dante, very attentive and friendly, cocktails to rec...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Grata experiencia",
+        "review_text_preview": "Buenisima experiencia empezando por la atención de Dante, muy atento y amable, cócteles para recomen...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047239523",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service on site",
+        "review_text_preview": "The waiter dante was excellent!!! All rich and everything was outstanding until the place was beauti...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Atención excelente en el lugar",
+        "review_text_preview": "El mesero dante fue excelente!!! Todo rico y todo estuvo excepcional hasta el lugar estuvo hermoso",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047129165",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Overall the atmosphere e large, instagrammable, varied menu, very good food to the eye and the palate,",
+        "review_text_preview": "Thank you Dante x a pleasant, personalized, polite and genuine experience, of course I would return ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "En general el ambiente e grande, instagrameable, la carta variada, la comida muy buena a la vista y al paladar,",
+        "review_text_preview": "Gracias Dante x una experiencia amena, personalizada, educada y genuina, claro q volvería a regresar",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046004856",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Charming",
+        "review_text_preview": "It was a lovely experience",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Encatadora",
+        "review_text_preview": "Fue una experiencia encantadora",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045981261",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Our first cerviche",
+        "review_text_preview": "Very good food! Joel has been very attentive and advised us great",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Nuestro primer cerviche",
+        "review_text_preview": "Muy buena comida! Joel ha estado muy atento y nos ha aconsejado genial",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045765567",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent place to visit",
+        "review_text_preview": "We were attended by waiter Dante, amazing service, gave us good recommendations on dishes and drinks...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente lugar para visitar",
+        "review_text_preview": "Nos atendió el mesero Dante, increíble servicio, nos dio buenas recomendaciones sobre platos y bebid...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044053901",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Attention and place A1",
+        "review_text_preview": "Very good experience and amazing care, when they go ask for the waiter Dante, who will provide you w...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La atención y el lugar A1",
+        "review_text_preview": "Muy buena la experiencia y la atención increíble, cuando vallan pregunten por el mesero Dante, que t...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044031466",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good Experience",
+        "review_text_preview": "Good attention from RENATO great support to be able to place a detail in the dessert of my lover, as...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena Experiencia",
+        "review_text_preview": "Buena atención por parte de RENATO gran apoyo para poder colocar un detalle en el postre de mi enamo...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043911307",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Family afternoon!!",
+        "review_text_preview": "A very pleasant experience, dishes very perfect attention!! Thank you very much Luis for your attent...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tarde familiar!!",
+        "review_text_preview": "Una experiencia muy agradable, los platos atención muy perfecta!! Muchas gracias Luis por tu atenció...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043856702",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Nice and rich",
+        "review_text_preview": "Wide variety of sweet and savoury dishes, fast circulation of tables. All rich!\nAbel the sir who att...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Agradable y rico",
+        "review_text_preview": "Amplia variedad de platos dulces y salados,  circulación rápida de mesas. Todo rico!\nAbel el sr que ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043789489",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good experience",
+        "review_text_preview": "Thank you for the good service, and the good food that have served us the excellent view of the beac...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena experiencia",
+        "review_text_preview": "Agradezco la buena atención, y la buena comida que nos han servido además la exelente vista a la pla...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043292925",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Young Dante attended us very kindly and courteous. The service was very good and so was the food.",
+        "review_text_preview": "Young Dante attended us very kindly and courteous. The service was very good and so was the food. We...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El joven Dante nos atendió de manera muy amable y cortés. La atención fue muy buena y la comida también.",
+        "review_text_preview": "El joven Dante nos atendió de manera muy amable y cortés. La atención fue muy buena y la comida tamb...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042858578",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very rich the restaurant and the ronald service was excellent! Highly recommended",
+        "review_text_preview": "Very good experience and delicious food! The restaurant atmosphere is suitable for the area and the ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy rico el restaurante y la atención de ronald fue excelente! Muy recomendado",
+        "review_text_preview": "Muy buena la experiencia y la comida deliciosa! El ambiente del restaurante es adecuado para la zona...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042530818",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent place!",
+        "review_text_preview": "Excellent attention from young Dante, good taste of food and beautiful view! Highly recommended for ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente lugar!",
+        "review_text_preview": "¡Excelente atención del joven Dante, buen sabor de la comida y hermosa vista! Muy recomendable para ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042419961",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Beautiful night experience",
+        "review_text_preview": "Dante was an excellent host. Delicious food and drinks. Perfect taste and atmosphere. A little cold,...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia nocturna hermosa",
+        "review_text_preview": "Dante fue un excelente anfitrión. Deliciosa la comidas y las bebidas. Perfecto el sabor y ambiente. ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042405523",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Don't miss the mango experience.",
+        "review_text_preview": "Excellent seasoning excellent service and a warm and friendly and professional treatment from Roland...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "No te pierdas la experiencia en mangos.",
+        "review_text_preview": "Excelente sazón excelente atención y un trato cálido y amable y profesional de Roland El camarero de...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042405473",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "After touring several restaurants. Mangos was the perfect choice for birthday celebration.",
+        "review_text_preview": "We were attended by Ronal, excellent care, very warm, clear and good advice. Wonderful food, delicio...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Después de recorrer varios restaurantes. Mangos fue la elección perfecta para la celebración del cumpleaños..",
+        "review_text_preview": "Nos atendió Ronal, excelente atención, muy cálida, clara y buena asesoria.La alimentación maravillos...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042189299",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Beautiful",
+        "review_text_preview": "Nice atmosphere and good personal treatment, a recognition for Dante who behaved very well since we ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Hermoso",
+        "review_text_preview": "Bonito ambiente y buen trato personal, un reconocimiento para Dante que se comportó muy bien desde q...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041736679",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience and outstanding attention from Dante",
+        "review_text_preview": "The experience at Mango Restaurant was excellent. The atmosphere is nice, the food of very good stan...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia y atención destacada de Dante",
+        "review_text_preview": "La experiencia en Restaurante Mango fue excelente. El ambiente es agradable, la comida de muy buen n...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041609298",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Loved the place and the attention, from Dante very attentive and friendly.",
+        "review_text_preview": "Excellent service , from the staff who attended us, (Dante) very friendly and attentive to everythin...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Me encantó el lugar y la atención , de Dante muy atento y amable .",
+        "review_text_preview": "Excelente servicio , del personal que nos atendió , ( Dante ) muy amable y atento a todo . Gracias p...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041484199",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Celebrate my birthday very nice detail",
+        "review_text_preview": "excellent attention from young Dante \nExcellent service , very friendly and attentive the best custo...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Celebre mi cumpleaños muy bonito detalle",
+        "review_text_preview": "excelente la atención del joven Dante \nUn excelente servicio , muy amable y atento la mejor experien...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040576234",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Fascinating experience",
+        "review_text_preview": "Ecstatic food, delicious drinks and the best service with Fabio. Thank you for such a great experien...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia fascinante",
+        "review_text_preview": "Comida extasiante, bebidas deliciosas  y el mejor servicio con Fabio. Gracias por tan buena experien...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040573116",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Spectacular and unmemorable food",
+        "review_text_preview": "I went with my wife and it was an experience we will never forget. Jair attended us wonderfully and ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida espectacular e inmemorable",
+        "review_text_preview": "Fui con mi esposa y fue una experiencia que jamás olvidaremos. Jair nos atendió de maravilla y fue d...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040450667",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A place to connect with lime",
+        "review_text_preview": "Excellent place.  Very beautiful view. Very good food.  Jair took care of us. Excellent. He'd be bac...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un lugar para conectar con lima",
+        "review_text_preview": "Excelente lugar.  Muy bella vista. Muy rica la comida.  Jair nos atendió.excelente.  volvería mil ve...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039336951",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Amazing!",
+        "review_text_preview": "Excellent service. Restaurant overlooking the sea.The bartenders are super attentive, recommend you ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Amazing!",
+        "review_text_preview": "Excelente atencion. Restaurante con vista al mar. Los Camareros son súper atentos, te recomiendan si...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039281461",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "All excellent!!  Food, attention and location to see a beautiful clean sunset. 😉",
+        "review_text_preview": "Excellent food, delicious!!!! and very good service from Dante a very friendly and professional pers...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Todo excente!!  La comida, la atención  y ls ubicación para ver un hermoso atardecer limpio. 😉",
+        "review_text_preview": "Excelente la comida, deliciosa!!!! y muy buena atención por parte de Dante  una persona muy amable y...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039280639",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service",
+        "review_text_preview": "Very good service, very friendly Mr. Louis who attended us, everything perfectly and clearly with to...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente servicio",
+        "review_text_preview": "Muy buena atención, muy amable el sr.Luis que nos atendio, todo perfecto y claramente con demasiado ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039157237",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Exquisite food",
+        "review_text_preview": "It is my first time in Lima, we tried 3 dishes and everyone was exquisite.\nNice atmosphere, with exc...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida exquisita",
+        "review_text_preview": "Es mi primera vez en Lima, probamos 3 platillos y todos estuvieron exquisitos.\nAmbiente agradable, c...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039148826",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Excellent atmosphere, food, drink and above all, excellent treatment and attention from Dante. The o...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Excelente ambiente, comida, bebida y sobre todo, excelente trato y atención de Dante. La vista al ma...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039102805",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Recommended",
+        "review_text_preview": "Very nice place and excellent care by Abel, variety of food , beautiful view and with activities for...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Recomendado",
+        "review_text_preview": "Muy lindo lugar y excelente atención a cargo de Abel, variedad de comida , hermosa vista y con activ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039021857",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good experience in Mangos",
+        "review_text_preview": "Good customer service. Mr. Christian a gentleman. Very helpful. Attention 10/10. He was always atten...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena experiencia en Mangos",
+        "review_text_preview": "Buena atención al cliente. El señor Christian un caballero. Muy servicial. Atención 10/10. Siempre e...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039008899",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Daniel is a super helpful person and the food is delicious, I recommend",
+        "review_text_preview": "Daniel is a super helpful and attentive person, the space is quite cute and the food is delicious, I...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Daniel es una persona súper servicial y la comida es deliciosa, recomendadisimo",
+        "review_text_preview": "Daniel es una persona súper servicial y atento, el espacio es bastante lindo y la comida es delicios...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039004975",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good dinner",
+        "review_text_preview": "Good place to eat. And the waiter's attention Edduar excellent 10/10 his recommendations were accord...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena cena",
+        "review_text_preview": "Un buen lugar rica la comida. Y la atención del mesero Edduar excelente 10/10 sus recomendaciones fu...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038915514",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "We came to celebrate an anniversary and we were very well served",
+        "review_text_preview": "Excellent service from Edduar and the food very well. I recommend to come with friends or partner. N...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Vinimos a celebrar un aniversario y nos atendieron muy bien",
+        "review_text_preview": "Excelente servicio de Edduar y la comida muy bien. Recomendadisimo para venir con amigos o pareja. U...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038780176",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unique experience",
+        "review_text_preview": "Don Edduar attended us very well and the restaurant beautiful view, the food very delicious we visit...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia unica",
+        "review_text_preview": "Don Edduar nos atendio muy bien y el restaurantebuna hermosa vista, la comida bien deliciosa los vis...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038778810",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I'd come back here 😍",
+        "review_text_preview": "Excellent food!!! Very well served by Renato. Its sea view is great!!!! From q you enter... All the ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Volvería aquí 😍",
+        "review_text_preview": "Excelente comida!!! Muy bien atendidos por Renato. Su vista al mar es genial!!!! Desde q entras … To...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038706041",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Mangos   Peruvian a must try in  Lima",
+        "review_text_preview": "EDDUAR made our experience  great .due to his warm friendly sprit made us visit Mangos  several time...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mangos Peruanos a probar en Lima",
+        "review_text_preview": "EDDUAR hizo que nuestra experiencia fuera genial. debido a su cálido espíritu amable nos hizo visita...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038662830",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Muy buen lugar, me atendieron bien, y Linda vista",
+        "review_text_preview": "Very good! Buenaso los cocktailes. Dante fue muy amigable y me atendio bien cordial y atentamente. T...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buen lugar, me atendieron bien, y Linda vista",
+        "review_text_preview": "¡Muy bien! Buenaso los cocktails. Dante fue muy amable y me atendio bien cordial y atentamente. La v...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038334222",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good",
+        "review_text_preview": "Menu accessed via a QR code. \nNeeded something quick to eat as just arrived in Lima late.\nChose a  p...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Bien.",
+        "review_text_preview": "Menú al que se accede a través de un código QR. \nNecesitaba algo rápido para comer ya que acaba de l...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038259337",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good experience.",
+        "review_text_preview": "Dante was very helpful, friendly and gentle at all times, he was always aware if something was missi...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena experiencia.",
+        "review_text_preview": "Dante fue muy servicial, amable y gentil en todo momento, siempre estaba al tanto si faltaba algo, l...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038252455",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "An afternoon in Mangos",
+        "review_text_preview": "At first I had to wait some time for a table but then the attention was very good, the flight attend...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una tarde en Mangos",
+        "review_text_preview": "Al principio tuve que esperar cierto tiempo para una mesa pero luego la atención estuvo muy bien, el...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038249232",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "AMAZING",
+        "review_text_preview": "I liked the place and the experience. Excellent food. Perfect to spend with your partner, friends an...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "AMAZING",
+        "review_text_preview": "Me gusto el lugar y la experiencia. Excelente comida. Perfecto para pasarlo en pareja, amigos y fami...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038248451",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "AMAZING",
+        "review_text_preview": "Loved the Place, the Food and the Mood. Perfect for a date, celebrate a special day or for a meeting...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "INCREIBLE",
+        "review_text_preview": "Me encantó el lugar, la comida y el ambiente. Perfecto para una cita, celebrar un día especial o par...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038127471",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Experience with Dante",
+        "review_text_preview": "This is my first time visiting Mangos in Lima, Peru. The menu is shale with many options. \n\nDante wa...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente Experiencia con Dante",
+        "review_text_preview": "Es mi primera vez visitando Mangos en Lima, Perú. El menú es esquisto con muchas opciones. \n\nDante f...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038022590",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Afternoon of Friends!",
+        "review_text_preview": "We arrived a group of friends with many expectations, and really was very pleasant the experience we...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tarde de Amigas!",
+        "review_text_preview": "Llegamos un grupo de amigos con muchas expectativas, y realmente fue muy grata la experiencia que vi...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037871245",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My best service experience so far in Peru",
+        "review_text_preview": "Our waiter was Marcelino, we had a wonderful time there, the food was insanely good and the quantity...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mi mejor Servicio hasta ahora en Perú",
+        "review_text_preview": "Nuestro camarero era Marcelino, nos lo pasamos de maravilla allí, la comida era increíblemente buena...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037778529",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "100% recommended",
+        "review_text_preview": "Our waiter Ronald provided us with excellent Service, very friendly all the staff and delicious food...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "100% recomendable",
+        "review_text_preview": "Nuestro mesero Ronald nos brindó un excelente servicio, muy amable todo el personal y la comida deli...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037778075",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Special experience",
+        "review_text_preview": "This was a special experience with friends. The food was exquisite and artfully presented. Our waite...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia especial",
+        "review_text_preview": "Esta fue una experiencia especial con amigos. La comida era exquisita y ingeniosamente presentada. N...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037660157",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Dinner rich in Mangos",
+        "review_text_preview": "Excellent place to dine as a couple or as a family, delicious food and Dante's attention was phenome...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cena rica en Mangos",
+        "review_text_preview": "Excelente lugar para cenar en pareja o en familia, comida deliciosa y la atención de Dante fue fenom...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037360027",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service",
+        "review_text_preview": "Menu with varied options and exquisite food! Giankarlo attended us excellent!!! He passed the restau...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente atención",
+        "review_text_preview": "Carta con variadas opciones y la comida exquisita! Giankarlo nos atendió excelente!!! Se pasó el res...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037343809",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Creole food.",
+        "review_text_preview": "Excellent Creole food in three moments, very good recommendation and advice from Renato and his Serv...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente comida criolla.",
+        "review_text_preview": "Excelente comida criolla en tres momentos , muy buena recomendación  y consejo de Renato y su servic...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037318562",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Family breakfast",
+        "review_text_preview": "Good variety of dishes and Jonathan's attention was A1, he is very friendly. \nThe anticuchos were go...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Desayuno familiar",
+        "review_text_preview": "Buena variedad de platos y la atención de Jonathan fue A1, es muy amable. \nLos anticuchos estuvieron...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037244916",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A1 dante Service",
+        "review_text_preview": "Dante's attention was amazing very helpful and always came close to knowing if we needed anything th...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Servicio A1 de dante",
+        "review_text_preview": "La atención de dante fue increíble muy servicial y siempre se acercaba a saber si necesitábamos algo...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037244900",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good service",
+        "review_text_preview": "Very good service, very rich and fast food, very attentive and friendly waiter Dante, I highly recom...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena atención",
+        "review_text_preview": "Muy buena atención , la comida muy rica y rápido  , el mozo Dante muy atento y amable , lo recomiend...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037243776",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "10/10",
+        "review_text_preview": "I thought it was super good, Dante's attention was 10/10, very friendly and made us have a good time...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "10/10",
+        "review_text_preview": "Me pareció súper bien, la atención de Dante fue 10/10,  muy amable y nos hizo pasar buen rato, buena...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037216594",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I'll be back!",
+        "review_text_preview": "Ideal place, view, Ricardo Service, very good Mangos ceviche, good Tequeños and Pisco well. Just mis...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Yo vuelvo!",
+        "review_text_preview": "Sitio ideal, vista, servicio de Ricardo, el ceviche Mangos muy bueno, los tequeños buenos y el Pisco...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036967057",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Excellent Service, attention, proximity and especially your food. \n\nBest Victor, professional and cl...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Excelente servicio, atención, cercanía y sobre todo su comida. \n\nLo mejor Victor, profesional y cerc...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036560272",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "About the very good service, the waiter Dante very friendly and attentive",
+        "review_text_preview": "Decrease the salt in the meals, is the second time I come and my dishes are very balanced, maybe you...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sobre la atención muy buena, el mesero Dante muy amable y atento",
+        "review_text_preview": "Disminuir la sal en las comidas, es la segunda vez que vengo y mis platos son muy saldos, quizá pued...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036547775",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very happy of Mr. Don Luis and all the attention of mangoes",
+        "review_text_preview": "After two years we returned to mangoes and the truth is that I feel very happy because the personali...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy felices del señor don Luis y toda la atención de mangos",
+        "review_text_preview": "Después de dos años regresamos a mangos y la verdad me siento muy feliz porque la atención personali...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036503290",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good, I'll go back to my family",
+        "review_text_preview": "Very good, the waiter very friendly and attentive !!! Variety of meals, desserts and tb there are di...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena, volveré con mi familia",
+        "review_text_preview": "Muy buena, el mesero muy amable y atento !!! Variedad de comidas, postres y tb hay platos como para ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036502795",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I went to celebrate my birthday and they took care of me very well",
+        "review_text_preview": "The waiter's service was very good, very attentive. His name is Jhonatan and he was always on the lo...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Fui a celebrar mi cumpleaños y me atendieron muy bien",
+        "review_text_preview": "La atención del mesero fue muy buena, muy atento. Se llama Jhonatan y siempre estuvo pendiente de lo...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036489108",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good",
+        "review_text_preview": "Good service from Jonatan the best of the best of the waiters very attentive and made us feel very i...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bueno",
+        "review_text_preview": "Buena atención de Jonatan el mejor de lo  mejor de los meseros muy atento y nos hizo sentir muy impo...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036410898",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My Birthday in Mangos and Outstanding Service from Dante",
+        "review_text_preview": "I came to Mangos with my partner and a friend to celebrate my birthday, and Dante an excellent gastr...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mi cumpleaños en Mangos y excepcional servicio de Dante",
+        "review_text_preview": "Vine a Mangos con mi pareja y una amiga a festejar mi cumpleaños, y Dante un excelente asesor gastro...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036410890",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Visit mangoes!! And definitely an amazing experience!!!",
+        "review_text_preview": "Service from waiter Dante was amazing!! A very professional person and trained to give a Service wit...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Visite mangos !! Y sin duda una experiencia increíble !!!",
+        "review_text_preview": "El servicio del camarero Dante fue increíble !! Una persona muy profesional y capacitada para dar un...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036395315",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I really liked the friendliness of the waiter, his suggestions about the food, excellent location, good Mood",
+        "review_text_preview": "Excellent service , wonderful food, a beautiful place to enjoy delicious food, very good service fro...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La verdad me gustó mucho la amabilidad del mesero, sus sugerencias sobre la comida, excelente locación, buen ambiente",
+        "review_text_preview": "Atención excelente , la comida maravillosa, un lugar hermoso para disfrutar un comida deliciosa, muy...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036274765",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The server Dante was super attentive and curiously,   not too happy with the food was a bit salty and  not so fresh,",
+        "review_text_preview": "I wish the food was alot better , sad to say it was a bit salty and not as expected in flavor, the s...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El servidor Dante era super atento y curiosamente, no demasiado contento con la comida era un poco salado y no tan fresco,",
+        "review_text_preview": "Desearía que la comida fuera mucho mejor, triste decir que era un poco salada y no como se esperaba ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036230591",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Rich food lovely attention",
+        "review_text_preview": "Too Rich Food, Mood and Attention. Ronald attended us and was very nice and friendly we asked 50 que...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida rica  atención encantadora",
+        "review_text_preview": "Demasiada rica la comida, el ambiente y la atención. Ronald nos atendió y fue muy agradable y amable...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036128323",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A pleasant night in Mangos",
+        "review_text_preview": "Very good attention from Dante and super rich food, super recommended, very nice and comfortable Moo...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una noche agradable en Mangos",
+        "review_text_preview": "Muy buena la atención de Dante y la comida súper rica, súper recomendado, el ambiente muy agradable ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036126520",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Service",
+        "review_text_preview": "Excellent experience. Edduar was very friendly and was very nice to answer all our questions! I reco...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente servicio",
+        "review_text_preview": "Un excelente experiencia. Edduar fue muy amable y fue muy lindo en contestar todas nuestras pregunta...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035990055",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very nice the attention and place especially the staff who receive you a lot of sympathy",
+        "review_text_preview": "Very nice experience too Attention highly recommended especially desserts and food has very good and...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bonita  la atención y el lugar sobre todo el personal que te recibe mucha simpatía",
+        "review_text_preview": "Muy bonita la experiencia también Atencion  muy recomendado sobre todo los postres y la comida tiene...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035986815",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My wife's birthday",
+        "review_text_preview": "Excellent service, the food was great and Mr. Ronald's personalized attention was of the best, the e...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cumpleaños de mi esposa",
+        "review_text_preview": "Excelente atención, la comida estuvo estupenda y la atención personalizada del señor Ronald estuvo d...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035986751",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Wonderful afternoon at Mango’s!",
+        "review_text_preview": "This restaurant is very nice! The food is excellent the drinks also. Our server was Fabio he wa exce...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Maravillosa tarde en Mango’s!",
+        "review_text_preview": "Este restaurante es muy agradable! La comida es excelente las bebidas también. Nuestro servidor era ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035853967",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience Restaurant Mangos",
+        "review_text_preview": "Excellent! We came for a few days to Lima and this restaurant was far and away the best both for Ser...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia Restaurante Mangos",
+        "review_text_preview": "Excelente! Vinimos por unos días a Lima y este restaurante fue lejos el mejor tanto por servicio y g...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035850708",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent! I recommend",
+        "review_text_preview": "Very delicious food with spectacular view of the Pacific!\nRonal's attention excellent!\nI highly reco...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente! recomiendo",
+        "review_text_preview": "Comida muy deliciosa con vista espectacular del Pacífico!\nLa atención de Ronal excelente !\nRecomiend...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035810433",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Share very nice",
+        "review_text_preview": "We came to celebrate my wife's birthday. Everything went very well, special point to Jonathan's atte...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Compartir muy agradable",
+        "review_text_preview": "Vinimos a celebrar el cumpleaños de mi esposa. Todo salio muy bien, punto especial a la atención de ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035579930",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Birthday lunch",
+        "review_text_preview": "Very nice food and we were given a birthday detail. Dante took care of us very well. Good choice for...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzo cumpleaños",
+        "review_text_preview": "Muy rica la comida y nos dieron un detalle por cumpleaños. Dante nos atendió muy bien. Buena opción ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035568776",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Family meal",
+        "review_text_preview": "The food is very rich, along with the scenery is a good place to go to eat with the family as well a...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida en familia",
+        "review_text_preview": "La comida es muy rica, junto con el paisaje es un buen lugar para ir a comer en familia además de te...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035441541",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Mangos For Sure Visit",
+        "review_text_preview": "The food was fabulous, the service was above par, the food was off the hook. The atmosphere was fant...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mangos para una visita segura",
+        "review_text_preview": "La comida era fabulosa, el Servicio estaba por encima de la par, la comida estaba descolgada. El amb...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035435546",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Chile",
+        "review_text_preview": "Good service, very kind the lady who attended us. I give us information about the dishes we would li...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Chile",
+        "review_text_preview": "Buena atención, muy amable la señorita que nos atendió. Nos entrego información sobre los platos que...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035298703",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Holidays",
+        "review_text_preview": "Dante was an excellent host with good attention in a place highly recommended by Mexican friends, Da...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Vacaciones",
+        "review_text_preview": "Dante fue un excelente anfitrión con una buena atención en un local muy recomendable por amigos mexi...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035295392",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience",
+        "review_text_preview": "Excellent service and food!. Very attentive and all very good quality. The person who attended us Sa...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia",
+        "review_text_preview": "Excelente atención y comida!. Muy atentos y todo muy buena calidad. La persona que nos atendió Sandr...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035293263",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good experience",
+        "review_text_preview": "Friendly and attentive staff. Very good Service. The food arrived within the expected time frame. Ve...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena experiencia",
+        "review_text_preview": "Personal amable y atento. Muy buen servicio. La comida llego dentro del plazo de tiempo esperado. Mu...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035293205",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good care from Dante",
+        "review_text_preview": "I really liked the attention of Dante, we just came with my family because we are celebrating neithe...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena atención de Dante",
+        "review_text_preview": "Me gusto mucho la atención de Dante, justamente venimos con mi familia porque estamos festejando ni ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035150273",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Wonderful experience",
+        "review_text_preview": "The ceviche mangos is delicious and the attention of the staff very friendly, Ronald was aware all a...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Maravillosa experiencia",
+        "review_text_preview": "El ceviche mangos es delicioso y la atención del personal muy amable, Ronald estuvo pendiente todo e...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035150218",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience",
+        "review_text_preview": "Excellent Service, ordered the pizza meat lover is super rich, super recommend!\nThe view of the rest...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia",
+        "review_text_preview": "Excelente servicio, pedí la pizza meat lover es súper rica, la súper recomiendo!\nLa vista del restau...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035124340",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good experience",
+        "review_text_preview": "All very good and the perfect service, recommended. \nGood attention from Jonathan and high level of ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena experiencia",
+        "review_text_preview": "Todo muy bueno y la atención perfecta, recomendado. \nBuena atención de Jonathan y alto nivel de amab...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035023833",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Service",
+        "review_text_preview": "Sandra was very friendly, very attentive and helpful staff, delicious food, unique cocktails a wonde...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente servicio",
+        "review_text_preview": "Sandra fue muy amable, el personal muy atento y servicial, la comida deliciosa, los cocktails únicos...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035010757",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good experience",
+        "review_text_preview": "It was a good experience, I really enjoyed the food, waiter Victor attended me and was very friendly...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena experiencia",
+        "review_text_preview": "Fue una buena experiencia, disfruté mucho la comida, me atendió el mesero Victor y fue muy amable. E...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035010650",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent dining experience",
+        "review_text_preview": "Excellent Service, we were attended by Joel who was super efficient and friendly. The food was too g...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia gastronómica",
+        "review_text_preview": "Excelente servicio, nos atendió Joel que fue super eficiente y amable. La comida estaba demasiado bu...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035003856",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service!! And Good Food 👍🏻",
+        "review_text_preview": "Excellent attention! \nDaniel took care of us very kindly, made his recommendations. \nVery good food....",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente atención !! Y Buena comida 👍🏻",
+        "review_text_preview": "Excelente atención ! \nDaniel nos atendió con mucha amabilidad, hizo sus recomendaciones. \nMuy buena ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034883578",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Excellent Service from Ronald and all the staff, Very Attentive and Good Food, Good View and Mood. E...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Excelente servicio de Ronald y todo el personal, muy atentos y buena comida, buena vista y ambiente....",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034880478",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great place. Thank you.",
+        "review_text_preview": "The super nice modern place, nice, with sea view, music, Service from the team that attended us, won...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Estupendo lugar. Gracias",
+        "review_text_preview": "El lugar súper bonito moderno, agradable, con la vista al mar, la música, el servicio de el equipo q...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034879110",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Spectacular",
+        "review_text_preview": "A place with very rich food! Service very good, Sandra the waitress gave us very good recommendation...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Espectacular",
+        "review_text_preview": "Un lugar con comida muy rica! El servicio muy bueno, Sandra la mesera nos dio recomendaciones muy bu...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034849569",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "More than satisfied",
+        "review_text_preview": "To come to Peru and not come to this restaurant is not to have come to Lima. 6 stars the attention J...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Más que satisfechos",
+        "review_text_preview": "Venir a Peru y no venir a este restaurante es no haber venido a Lima. 6 estrellas la atención Jair e...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034740964",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Anniversary celebration",
+        "review_text_preview": "Terrace heating good location\nCareful of young Dante in the attention\nDishes left early without much...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Celebración de aniversario",
+        "review_text_preview": "La calefacción de la terraza buena ubicación\nEsmero del joven Dante en la atención\nLos platos salier...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034733498",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best Peruvian ceviche ever.... The flavors we have been looking for so much in Peru.",
+        "review_text_preview": "Yhodiyn the waiter was amazing with us. Their recommendations with house ceviche, drinks, entrees we...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El mejor ceviche peruano ever…. Los sabores que tanto estuvimos buscando en el Perú.",
+        "review_text_preview": "Yhodiyn el mesero fue increíble con nosotros. Sus recomendaciones con el ceviche de la casa, las beb...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034586640",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Dinner in Mangos",
+        "review_text_preview": "Excellent attention, especially from Luis, very friendly and attentive at all times. Mood is nice, r...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cena en Mangos",
+        "review_text_preview": "Excelente atención, especialmente por parte de Luis, muy amable y atento en todo momento. El ambient...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034586533",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good Service",
+        "review_text_preview": "Excellent Service, Mr. Luis was very friendly and hospitable. The food was delicious and the place v...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen servicio",
+        "review_text_preview": "Excelente servicio, el señor Luis fue muy amable y hospitalario. La comida estuvo rica y el lugar mu...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034580925",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent attention from yhordyn if you need anything I recommend asking for yhordyn",
+        "review_text_preview": "Excellent had an extraordinary time and very friendly hordyn was attentive to everything offered us ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Execelente atención de yhordyn si necesitas algo el recomiendo preguntar por yhordyn",
+        "review_text_preview": "Excelente la pasamos extraordinario yhordyn muy amable estuvo al pendiente de todo nos ofreció pesca...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034383686",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great service for 25 people",
+        "review_text_preview": "Great variety in the breakfast buffet and high quality of Service for the group of 25 people\nAll the...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran atención para 25 personas",
+        "review_text_preview": "Gran variedad en el buffet de desayuno y alta calidad de servicio para el grupo de 25 personas\nTodos...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034154197",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good.",
+        "review_text_preview": "Very good experience recommended good attention from young Victor also to Mr. Luis urcia very good a...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena",
+        "review_text_preview": "Muy buena experiencia recomendable buena atención del joven Víctor también al Señor Luis urcia muy b...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034153632",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service",
+        "review_text_preview": "Excellent attention from edduard! Excellent food and drinks, perfect for killing the night where it ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente atención",
+        "review_text_preview": "Excelente atencion por parte de edduard! Excelente comida y bebestibles, perfecto para matar la noch...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034153623",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent place",
+        "review_text_preview": "Excellent place. We were very friendly Edduar, he recommended dishes and drinks. Very good food and ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente lugar",
+        "review_text_preview": "Excelente lugar. Nos atendió Edduar muy simpático, nos recomendó platos y tragos. La comida muy buen...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034149833",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "It was magic.",
+        "review_text_preview": "It was a very cozy, friendly and comfortable restaurant .where special moments were spent next to th...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Fue mágico",
+        "review_text_preview": "Fue una restaurante muy acogedor, amigable y cómodo .donde se pasó momentos especiales a lado de la ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034146000",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Super Good Service",
+        "review_text_preview": "We went with a group of friends Flavio and giancarlo were super friendly and attentive, we had a gre...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Súper buen servicio",
+        "review_text_preview": "Fuimos con un grupo de amistades Flavio y giancarlo fueron súper simpáticos y atentos, pasamos un ra...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034008588",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Service and Care",
+        "review_text_preview": "Excellent service, very good Service. The food tastes great.\nThe waiter very attentive and friendly....",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Servicio y atención excelente",
+        "review_text_preview": "Excelentes atención, muy buen servicio. La comida con muy buen sabor.\nEl camarero muy atento y amabl...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034008460",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A lovely experience",
+        "review_text_preview": "Excellent Customer Service, waiter Edduard made this a perfect experience by suggesting food dishes,...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia encantadora",
+        "review_text_preview": "Excelente servicio al cliente, el mesero Edduard hizo esto una perfecta experiencia al sugerirnos pl...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033887898",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Our waiter Dante gave us 10/10 attention, very attentive and very considerate. By far the best care.",
+        "review_text_preview": "Excellent food and excellent service, Dante gave us a beautiful evening, not counting that the food ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Nuestro mesero Dante nos dio una atención 10/10, muy atento y muy considerado. Por mucho, la mejor atención.",
+        "review_text_preview": "Excelente comida y excelente atención, Dante nos regaló una hermosa velada, sin contar que la comida...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033887864",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Service 10/10",
+        "review_text_preview": "We were attended by Dante, he was super friendly and always asking if everything was okay. Service 1...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Servicio 10/10",
+        "review_text_preview": "Nos atendió Dante, fue súper amable y siempre preguntando si todo estaba bien. Servicio 10/10. Since...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033879373",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very nice",
+        "review_text_preview": "Excellent food and excellent place excellent service pleased me when ordering a product that was not...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy agradable",
+        "review_text_preview": "Excelente comida y excelente lugar excelente atención me complacieron al solicitar un producto que n...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033876052",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good service from Edduar",
+        "review_text_preview": "Excellent Service from Edduar, Very Good Food, and Very Good Mood, I recommend it and would visit ag...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen serviocio departe de Edduar",
+        "review_text_preview": "Un excelente servicio de parte de edduar, la comida muy buena, y muy buen ambiente, lo recomiendo y ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033873941",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good",
+        "review_text_preview": "Delicious, recommended \nVictor attended us very well, very friendly a nice\nWe ate mango ceviche and ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bueno",
+        "review_text_preview": "Delicioso, recomendado \nNos atendió Victor muy bien, muy simpático un agrado\nComimos ceviche mangos ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033868897",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My mother's birthday",
+        "review_text_preview": "Attentive and gentle young Dante \nThank you very much for your attention!!! \nVery attentive and alwa...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cumpleaños de mi madre",
+        "review_text_preview": "Atento y gentil el joven Dante \nAgradecer totalmente su atención !!! \nMuy atento y siempre preguntan...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033543377",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A+ Food, Service and View",
+        "review_text_preview": "Diego was my waiter and he was excellent the service was A+. very helpful with the choices. Had the ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "A+ Comida, Servicio y Vista",
+        "review_text_preview": "Diego era mi camarero y era excelente el Servicio fue A+. muy servicial con las elecciones. Tuve la ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033285778",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Ask for advice Yhordyn",
+        "review_text_preview": "Excellent attention from Yhordyn and the Chef's recommendations delicious: Sautéed loin of tacu tacu...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Pídele consejo Yhordyn",
+        "review_text_preview": "Excelente atención de Yhordyn y las recomendaciones del Chef deliciosas: Lomo saltado de tacu tacu, ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033285536",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Service",
+        "review_text_preview": "The food and Service is excellent, we came as a couple and we are foreigners, Yhordyn's attention is...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente servicio",
+        "review_text_preview": "La comida y el servicio es excelente, vinimos en pareja y somos extranjeros , la atención de Yhordyn...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033284925",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Phenomenal",
+        "review_text_preview": "Attention A1, Dante! Humble and attentive person in everything, excellent Service (: I hope to see h...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Fenomenal",
+        "review_text_preview": "La atención A1, Dante! Persona humilde y atento en todo, excelente servicio (: Espero volver a verlo...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033283929",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good experience",
+        "review_text_preview": "Sharp Service, Don Luis highly recommends and explains how dishes and drinks are and his recommendat...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena experiencia",
+        "review_text_preview": "Nitido el servicio, don Luis recomienda muy bien y explica cómo son los platos y las bebidas y sus r...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033283571",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent!",
+        "review_text_preview": "Excellent food and attention from Luis. Very good drinks too. We order varied dishes to share in the...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente!",
+        "review_text_preview": "Excelente comida y la atención de Luis. Las bebidas también muy buenas. Pedimos platos variados para...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033156607",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unforgettable experience",
+        "review_text_preview": "We had a very nice evening! The delicious food. Dante's attention spectacular. He was very attentive...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia inolvidable",
+        "review_text_preview": "Pasamos una velada muy linda! La comida deliciosa. La atención de Dante espectacular. Estuvo muy al ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033146542",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good weather",
+        "review_text_preview": "Edduar has very good attention, we liked the Parmesan shells too much and the day was beautiful. We ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen tiempo",
+        "review_text_preview": "Edduar tiene muy buena atención, nos gustó demasiado las conchas a la parmesana y el día estaba prec...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033029491",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unique experience!",
+        "review_text_preview": "Delicious Food, Excellent Service, Wonderful Mood.  And exceptional attention from the waiter and ad...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia unica!",
+        "review_text_preview": "Comida deliciosa, servicio excelente, ambiente maravilloso.  Y una atención excepcional del mozo y a...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032752239",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "We arrived in Peru to know its customs its history and its people.It met our expectations very well",
+        "review_text_preview": "Excellent !!!! we were attended by Favio who gave us an explanation of all the foods and drinks we c...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Llegsmos a Perú para conocer sus costumbres su historia y su gente.Cumplió  muy bien con nuestras expectativas",
+        "review_text_preview": "Exelente !!!!nos atendió Favio que nos dió una explicación de todos las comidas y bebidas que podíam...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032588510",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good service from waiter Giankarlo",
+        "review_text_preview": "Very good service, I went for my mom's birthday and they gave her a complimentary dessert \nAll very ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena atención de parte del mesero Giankarlo",
+        "review_text_preview": "Muy buena la atención, fui por el cumpleaños de mi mamá y le obsequiaron un postre de cortesía \nTodo...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032279947",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Meeting between friends",
+        "review_text_preview": "Nice place above all very friendly attention from Dante! Recommended \nWe had a reunion and he gave u...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Reencuentro entre amigas",
+        "review_text_preview": "Lindo lugar sobre todo la atención muy amable de Dante! Recomendado \nTeníamos un reencuentro y nos d...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032279940",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Meeting of friends",
+        "review_text_preview": "It's always nice to come to Mangos! Dante's attention was excellent, very attentive to everything an...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Reencuentro de amigas",
+        "review_text_preview": "Siempre es lindo venir a Mangos! La atención de Dante fue excelente, muy atento a todo y amable. Nos...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032279930",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent for friends meeting",
+        "review_text_preview": "We shared a pleasant time in a reunion of friends, Dante's attention was excellent and complemented ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente para reunión de amigas",
+        "review_text_preview": "Compartimos un momento agradable en un reencuentro de amigas, la atención de Dante fue excelente y c...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032277565",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best was Ronald.",
+        "review_text_preview": "Good pisco sour but the best thing was Ronald's attention. If you are looking for a Quiet Place with...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Lo mejor fue Ronald",
+        "review_text_preview": "buen pisco sour pero lo mejor fue la atención de Ronald. Si buscas un lugar tranquilo con buen ambie...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032275708",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delicious Food and Impeccable Service",
+        "review_text_preview": "Excellent service since we arrived at the restaurant take the time so you can enjoy this experience ...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida deliciosa y servicio impecable",
+        "review_text_preview": "Excelente atención desde que llegamos al restaurante se toman el tiempo para que puedas disfrutar es...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032257780",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent decision",
+        "review_text_preview": "Renato loved your attention. We came from Colombia and the experience in every sense was spectacular...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente decisión",
+        "review_text_preview": "Renato nos encantó tu atención . Venimos desde Colombia y la experiencia en todos los sentidos fue e...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032235663",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent option in Miraflores",
+        "review_text_preview": "Very good experience. We were attended by Renato, who recommended the vegetarian options on the menu...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente opción en Miraflores",
+        "review_text_preview": "Muy buena experiencia. Fuimos atendidos por Renato, quien nos recomendó las opciones vegetarianas de...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1031992266",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good everything and the attention of gentleman Dante",
+        "review_text_preview": "I really liked the Mood and the rice with pork, it was on point, the service was quality and the dis...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bueno todo  y la atención del caballero Dante",
+        "review_text_preview": "Me gusto mucho el ambiente y el arroz con chancho, estuvo en su punto, la atención fue de calidad y ...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1031992241",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "2 out of 10 the two points for rice with pork",
+        "review_text_preview": "Good donor care.\n The.best dish, rice with chancho \nThe faintest skipped back \nNormal Chaufa.\nVery b...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "2 de 10 los dos puntos por el arroz con chancho",
+        "review_text_preview": "La atención de dante buena.\n El.mejor plato, arroz con chancho \nEl mas débil lomo saltado \nChaufa no...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1031845123",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good Service",
+        "review_text_preview": "Excellent Attention Service and Friendliness I felt very comfortable with the service of my waiter \n...",
+        "source_file": "tripadvisor_reviews_4_en_1769632104460.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen servicio",
+        "review_text_preview": "Excelente atencion servicio y amabilidad me sentí muy comoda con la atencion  de el servicio de mi m...",
+        "source_file": "tripadvisor_reviews_4_es_1769632109031.json"
+      }
+    }
+  ]
+}

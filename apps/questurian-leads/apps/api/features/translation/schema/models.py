@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Optional, Literal, Union, List
 from pydantic import BaseModel
 
 
@@ -30,3 +30,24 @@ class OverallStats(BaseModel):
     leads: dict
     instagram_posts: dict
     reddit_posts: dict
+
+
+class TranslateReviewsItem(BaseModel):
+    """Single review item for translation."""
+    id: Optional[Union[str, int]] = None
+    review_text: Optional[str] = None
+    title: Optional[str] = None
+
+
+class TranslateReviewsRequest(BaseModel):
+    """Request to translate a batch of reviews."""
+    reviews: List[TranslateReviewsItem]
+    fields_to_translate: List[Literal["review_text", "title"]]
+    source_language: Optional[str] = "auto"
+
+
+class TranslateReviewsResponse(BaseModel):
+    """Response from review translation."""
+    reviews: List[TranslateReviewsItem]
+    stats: TranslationStats
+    message: str

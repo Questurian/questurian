@@ -311,7 +311,7 @@ export class TripAdvisorReviewsApiClient {
       }
 
       // Parse: tripadvisor_reviews_{locationId}_{language}_{timestamp}.json
-      const match = file.match(/^tripadvisor_reviews_\d+_([a-z]+)_(\d+)\.json$/);
+      const match = file.match(/^tripadvisor_reviews_\d+_([a-z-]+)_(\d+)\.json$/i);
       if (!match) continue;
 
       const language = match[1]!;

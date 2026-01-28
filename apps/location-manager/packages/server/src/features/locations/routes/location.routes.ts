@@ -21,8 +21,9 @@ import {
   postAddInstagram, deleteInstagramEmbed,
   postAddUpload, postAddUploadImageSet, postGenerateAltText, deleteUpload,
   serveImage,
-  fetchReviews, downloadReviews, getReviewsStatus,
+  fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
   fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
+  translateAndMergeReviews, downloadMergedReviews, getMergedReviewsStatus, downloadRejectsReport,
 
   // Admin
   clearDatabase, scanOrphanedFiles, cleanupOrphanedFiles,
@@ -142,6 +143,8 @@ app.get("/api/images/*", serveImage);
 
 // Google Reviews routes
 app.post("/api/locations/:id/reviews/fetch", validateParams(deleteLocationIdSchema), fetchReviews);
+app.post("/api/locations/:id/reviews/fetch-pipeline", validateParams(deleteLocationIdSchema), fetchReviewsPipeline);
+app.get("/api/locations/:id/reviews/pipeline-status", validateParams(deleteLocationIdSchema), getReviewsPipelineStatus);
 app.get("/api/locations/:id/reviews/download", validateParams(deleteLocationIdSchema), downloadReviews);
 app.get("/api/locations/:id/reviews/status", validateParams(deleteLocationIdSchema), getReviewsStatus);
 
@@ -149,3 +152,9 @@ app.get("/api/locations/:id/reviews/status", validateParams(deleteLocationIdSche
 app.post("/api/locations/:id/tripadvisor-reviews/fetch", validateParams(deleteLocationIdSchema), fetchTripAdvisorReviews);
 app.get("/api/locations/:id/tripadvisor-reviews/download", validateParams(deleteLocationIdSchema), downloadTripAdvisorReviews);
 app.get("/api/locations/:id/tripadvisor-reviews/status", validateParams(deleteLocationIdSchema), getTripAdvisorReviewsStatus);
+
+// Merged Reviews routes (translate & merge)
+app.post("/api/locations/:id/reviews/translate-merge", validateParams(deleteLocationIdSchema), translateAndMergeReviews);
+app.get("/api/locations/:id/reviews/merged/download", validateParams(deleteLocationIdSchema), downloadMergedReviews);
+app.get("/api/locations/:id/reviews/merged/status", validateParams(deleteLocationIdSchema), getMergedReviewsStatus);
+app.get("/api/locations/:id/reviews/rejects/download", validateParams(deleteLocationIdSchema), downloadRejectsReport);

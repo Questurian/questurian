@@ -1,22 +1,21 @@
 import { useState } from "react";
-import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed, FetchReviewsRequest, FetchTripAdvisorReviewsRequest } from "@client/shared/services/api/types";
+import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed, FetchReviewsPipelineRequest, ReviewsPipelineJobStatus } from "@client/shared/services/api/types";
 import type { ImageVariant } from "@questurian/lm-shared";
 import { truncateUrl } from "../../utils";
 import { DetailField } from "./DetailField";
 import { AddInstagramEmbedForm } from "../forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "../forms/AddUploadFilesForm";
 import { ImageLightbox } from "../ui/ImageLightbox";
-import { FetchReviewsModal } from "../ui/FetchReviewsModal";
-import { FetchTripAdvisorReviewsModal } from "../ui/FetchTripAdvisorReviewsModal";
+import { FetchReviewsPipelineModal } from "../ui/FetchReviewsPipelineModal";
 import { Button } from "@client/components/ui/button";
 import { Input } from "@client/components/ui/input";
-import { X, RefreshCw, Star, Download, Loader2 } from "lucide-react";
+import { X, RefreshCw, Star, Loader2 } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
+import { useDownloadMergedReviews, useMergedReviewsStatus } from "@client/shared/services/api/hooks/useMergedReviews";
 import { useRefetchPlaceId } from "@client/shared/services/api/hooks/useRefetchPlaceId";
-import { useFetchReviews, useReviewsStatus, useDownloadReviews } from "@client/shared/services/api/hooks/useReviews";
-import { useFetchTripAdvisorReviews, useTripAdvisorReviewsStatus, useDownloadTripAdvisorReviews } from "@client/shared/services/api/hooks/useTripAdvisorReviews";
+import { useFetchReviewsPipeline } from "@client/shared/services/api/hooks/useReviewsPipeline";
 import { useUpdateLocation } from "@client/shared/services/api";
 
 interface LocationDetailViewProps {
@@ -66,6 +65,13 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     },
   });
 
+  // Reviews state and hooks
+  const [isReviewsPipelineModalOpen, setIsReviewsPipelineModalOpen] = useState(false);
+  const [tripadvisorUrlInput, setTripadvisorUrlInput] = useState("");
+  const [pipelineStatus, setPipelineStatus] = useState<ReviewsPipelineJobStatus | null>(null);
+
+  const updateLocationMutation = useUpdateLocation();
+
   const refetchPlaceIdMutation = useRefetchPlaceId({
     locationId: locationDetail?.id || 0,
     onSuccess: (placeId) => {
@@ -78,53 +84,38 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     },
   });
 
-  // Reviews state and hooks
-  const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
-  const [isTripAdvisorReviewsModalOpen, setIsTripAdvisorReviewsModalOpen] = useState(false);
-  const [tripadvisorUrlInput, setTripadvisorUrlInput] = useState("");
+  const canFetchGoogle = Boolean(locationDetail?.placeId);
+  const canFetchTripadvisor = Boolean(locationDetail?.tripadvisorUrl);
+  const canRunPipeline = canFetchGoogle || canFetchTripadvisor;
 
-  const updateLocationMutation = useUpdateLocation();
-
-  const { data: reviewsStatus } = useReviewsStatus({
+  const mergedReviewsStatusQuery = useMergedReviewsStatus({
     locationId: locationDetail?.id || 0,
-    enabled: !!locationDetail?.id,
+    enabled: Boolean(locationDetail?.id),
   });
+  const downloadMergedReviews = useDownloadMergedReviews();
 
-  const fetchReviewsMutation = useFetchReviews({
+  const fetchReviewsPipelineMutation = useFetchReviewsPipeline({
     locationId: locationDetail?.id || 0,
     onSuccess: (data) => {
+      setPipelineStatus(null);
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(`Fetched ${data.reviewCount} reviews successfully!`, centerPosition);
-      setIsReviewsModalOpen(false);
+      let message = data.message;
+      if (data.warnings && data.warnings.length > 0) {
+        message += ` (${data.warnings.length} warning${data.warnings.length > 1 ? "s" : ""})`;
+      }
+      showToast(message, centerPosition);
+      setIsReviewsPipelineModalOpen(false);
     },
     onError: (error) => {
+      setPipelineStatus(null);
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       showToast(error.message || "Failed to fetch reviews", centerPosition);
     },
-  });
-
-  const { download: downloadReviews } = useDownloadReviews();
-
-  // TripAdvisor Reviews hooks
-  const { data: tripAdvisorReviewsStatus } = useTripAdvisorReviewsStatus({
-    locationId: locationDetail?.id || 0,
-    enabled: !!locationDetail?.id && !!locationDetail?.tripadvisorLocationId,
-  });
-
-  const fetchTripAdvisorReviewsMutation = useFetchTripAdvisorReviews({
-    locationId: locationDetail?.id || 0,
-    onSuccess: (data) => {
-      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(`Fetched ${data.totalReviews} TripAdvisor reviews across ${data.languages.length} languages!`, centerPosition);
-      setIsTripAdvisorReviewsModalOpen(false);
+    onProgress: (status) => {
+      setPipelineStatus(status);
     },
-    onError: (error) => {
-      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(error.message || "Failed to fetch TripAdvisor reviews", centerPosition);
-    },
+    onSettled: () => undefined,
   });
-
-  const { download: downloadTripAdvisorReviews } = useDownloadTripAdvisorReviews();
 
   function handleImageSetClick(upload: Upload) {
     if ('imageSet' in upload && upload.imageSet) {
@@ -194,24 +185,8 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     }
   }
 
-  function handleFetchReviews(params: FetchReviewsRequest) {
-    fetchReviewsMutation.mutate(params);
-  }
-
-  function handleDownloadReviews() {
-    if (locationDetail?.id) {
-      downloadReviews(locationDetail.id);
-    }
-  }
-
-  function handleFetchTripAdvisorReviews(params: FetchTripAdvisorReviewsRequest) {
-    fetchTripAdvisorReviewsMutation.mutate(params);
-  }
-
-  function handleDownloadTripAdvisorReviews(lang?: string) {
-    if (locationDetail?.id) {
-      downloadTripAdvisorReviews(locationDetail.id, lang);
-    }
+  function handleFetchReviewsPipeline(params: FetchReviewsPipelineRequest) {
+    fetchReviewsPipelineMutation.mutate(params);
   }
 
   function handleSaveTripadvisorUrl() {
@@ -363,8 +338,8 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
               disabled={refetchPlaceIdMutation.isPending}
               title={locationDetail.placeId ? "Refetch Place ID from Google" : "Fetch Place ID from Google"}
             >
-              <RefreshCw className={`h-3 w-3 mr-1 ${refetchPlaceIdMutation.isPending ? 'animate-spin' : ''}`} />
-              {refetchPlaceIdMutation.isPending ? 'Fetching...' : 'Refetch'}
+              <RefreshCw className={`h-3 w-3 mr-1 ${refetchPlaceIdMutation.isPending ? "animate-spin" : ""}`} />
+              {refetchPlaceIdMutation.isPending ? "Fetching..." : "Refetch"}
             </Button>
           </div>
         </div>
@@ -395,107 +370,43 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
           </div>
         )}
 
-        {/* Google Reviews Section */}
+        {/* Reviews Pipeline Section */}
         <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Google Reviews:
+            Reviews Pipeline:
           </span>
           <div className="flex items-center gap-2">
-            {reviewsStatus?.hasReviews ? (
-              <>
-                <span className="text-sm text-gray-600">
-                  {reviewsStatus.reviewCount} reviews fetched
-                  {reviewsStatus.rating && (
-                    <span className="ml-1 inline-flex items-center">
-                      (<Star className="h-3 w-3 inline text-yellow-500 mr-0.5" />{reviewsStatus.rating.toFixed(1)})
-                    </span>
-                  )}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={handleDownloadReviews}
-                >
-                  <Download className="h-3 w-3 mr-1" />
-                  Download
-                </Button>
-              </>
-            ) : (
-              <span className="text-sm text-gray-400 italic">No reviews fetched</span>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => setIsReviewsModalOpen(true)}
-              disabled={!locationDetail.placeId}
-              title={locationDetail.placeId ? "Fetch reviews from Google" : "Place ID required to fetch reviews"}
-            >
-              <Star className="h-3 w-3 mr-1" />
-              {reviewsStatus?.hasReviews ? "Refetch" : "Fetch Reviews"}
-            </Button>
-          </div>
-        </div>
-
-        {/* TripAdvisor Reviews Section */}
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            TripAdvisor Reviews:
-          </span>
-          <div className="flex items-center gap-2 flex-wrap">
-            {fetchTripAdvisorReviewsMutation.isPending ? (
+            {fetchReviewsPipelineMutation.isPending ? (
               <span className="text-sm text-blue-600 inline-flex items-center">
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                Fetching reviews... (this may take a while)
+                {pipelineStatus?.message || "Running pipeline..."}
               </span>
-            ) : fetchTripAdvisorReviewsMutation.isError ? (
-              <span className="text-sm text-red-600">
-                Error: {fetchTripAdvisorReviewsMutation.error?.message || "Failed to fetch reviews"}
-              </span>
-            ) : tripAdvisorReviewsStatus?.hasReviews ? (
-              <>
-                <span className="text-sm text-gray-600">
-                  {tripAdvisorReviewsStatus.totalReviews} reviews
-                  {tripAdvisorReviewsStatus.languages.length > 0 && (
-                    <span className="ml-1">
-                      ({tripAdvisorReviewsStatus.languages.map(l => l.language).join(", ")})
-                    </span>
-                  )}
-                  {tripAdvisorReviewsStatus.rating && (
-                    <span className="ml-1 inline-flex items-center">
-                      (<Star className="h-3 w-3 inline text-yellow-500 mr-0.5" />{tripAdvisorReviewsStatus.rating.toFixed(1)})
-                    </span>
-                  )}
-                </span>
-                {tripAdvisorReviewsStatus.languages.length > 0 && tripAdvisorReviewsStatus.languages.map((langInfo) => (
-                  <Button
-                    key={langInfo.language}
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => handleDownloadTripAdvisorReviews(langInfo.language)}
-                    title={`Download ${langInfo.language} reviews`}
-                  >
-                    <Download className="h-3 w-3 mr-1" />
-                    Download {langInfo.language.toUpperCase()}
-                  </Button>
-                ))}
-              </>
             ) : (
-              <span className="text-sm text-gray-400 italic">No reviews fetched</span>
+              <span className="text-sm text-gray-400 italic">Ready</span>
             )}
             <Button
               variant="outline"
               size="sm"
               className="h-6 px-2 text-xs"
-              onClick={() => setIsTripAdvisorReviewsModalOpen(true)}
-              disabled={!locationDetail.tripadvisorLocationId || fetchTripAdvisorReviewsMutation.isPending}
-              title={locationDetail.tripadvisorLocationId ? "Fetch reviews from TripAdvisor" : "TripAdvisor Location ID required"}
+              onClick={() => setIsReviewsPipelineModalOpen(true)}
+              disabled={fetchReviewsPipelineMutation.isPending || !canRunPipeline}
+              title={canRunPipeline ? "Fetch reviews and build the merged dataset" : "Add a Google Place ID or TripAdvisor URL first"}
             >
               <Star className="h-3 w-3 mr-1" />
-              {tripAdvisorReviewsStatus?.hasReviews ? "Refetch" : "Fetch Reviews"}
+              Fetch Reviews
             </Button>
+            {mergedReviewsStatusQuery.data?.hasMergedReviews && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => downloadMergedReviews.download(locationDetail.id)}
+                disabled={fetchReviewsPipelineMutation.isPending}
+                title="Download the latest merged reviews file"
+              >
+                Download Merged
+              </Button>
+            )}
           </div>
         </div>
 
@@ -628,22 +539,16 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         />
       )}
 
-      {/* Fetch Reviews Modal */}
-      <FetchReviewsModal
-        isOpen={isReviewsModalOpen}
-        onClose={() => setIsReviewsModalOpen(false)}
-        onFetch={handleFetchReviews}
-        isPending={fetchReviewsMutation.isPending}
+      {/* Fetch Reviews Pipeline Modal */}
+      <FetchReviewsPipelineModal
+        isOpen={isReviewsPipelineModalOpen}
+        onClose={() => setIsReviewsPipelineModalOpen(false)}
+        onFetch={handleFetchReviewsPipeline}
+        isPending={fetchReviewsPipelineMutation.isPending}
         locationName={locationDetail.source?.name}
-      />
-
-      {/* Fetch TripAdvisor Reviews Modal */}
-      <FetchTripAdvisorReviewsModal
-        isOpen={isTripAdvisorReviewsModalOpen}
-        onClose={() => setIsTripAdvisorReviewsModalOpen(false)}
-        onFetch={handleFetchTripAdvisorReviews}
-        isPending={fetchTripAdvisorReviewsMutation.isPending}
-        locationName={locationDetail.source?.name}
+        googleAvailable={canFetchGoogle}
+        tripadvisorAvailable={canFetchTripadvisor}
+        statusMessage={pipelineStatus?.message}
       />
     </div>
   );
