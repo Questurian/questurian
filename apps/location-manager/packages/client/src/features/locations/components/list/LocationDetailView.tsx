@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed } from "@client/shared/services/api/types";
 import type { ImageVariant } from "@questurian/lm-shared";
-import { truncateUrl } from "../../utils";
 import { DetailField } from "./DetailField";
 import { AddInstagramEmbedForm } from "../forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "../forms/AddUploadFilesForm";
 import { ImageLightbox } from "../ui/ImageLightbox";
 import { Button } from "@client/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
@@ -115,6 +114,10 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
   );
   const isComplete = missingFields.length === 0;
 
+  // Expand when incomplete, collapse when complete; user can override via toggle
+  const [completenessExpanded, setCompletenessExpanded] = useState<boolean | undefined>(undefined);
+  const isCompletenessExpanded = completenessExpanded ?? !isComplete;
+
   function handleImageSetClick(upload: Upload) {
     if ('imageSet' in upload && upload.imageSet) {
       const imageSet = upload.imageSet;
@@ -215,51 +218,76 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     <div className="mt-4 pt-4 border-t border-gray-200">
       <div className="space-y-3">
         <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-xs font-semibold px-2 py-1 rounded ${
-                isComplete
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {isComplete ? "Complete" : "Missing data"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {isComplete
-                ? "All required fields present"
-                : `${missingFields.length} required field${
-                    missingFields.length === 1 ? "" : "s"
-                  } missing`}
-            </span>
-          </div>
-          {!isComplete && (
-            <div className="flex flex-wrap gap-1">
-              {missingFields.map((field) => (
-                <span
-                  key={field.key}
-                  className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-700"
-                >
-                  {field.label}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {requiredFields.map((field) => (
-              <div
-                key={field.key}
-                className={`flex items-center gap-2 rounded border px-2 py-1 text-xs ${
-                  field.present
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-amber-200 bg-amber-50 text-amber-700"
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className={`text-xs font-semibold px-2 py-1 rounded shrink-0 ${
+                  isComplete
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
                 }`}
               >
-                {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                <span>{field.label}</span>
-              </div>
-            ))}
+                {isComplete ? "Complete" : "Missing data"}
+              </span>
+              <span className="text-xs text-muted-foreground truncate">
+                {isComplete
+                  ? "All required fields present"
+                  : `${missingFields.length} required field${
+                      missingFields.length === 1 ? "" : "s"
+                    } missing`}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 h-7 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setCompletenessExpanded(!isCompletenessExpanded)}
+              aria-expanded={isCompletenessExpanded}
+            >
+              {isCompletenessExpanded ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5 mr-0.5" />
+                  Hide
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5 mr-0.5" />
+                  Expand
+                </>
+              )}
+            </Button>
           </div>
+          {isCompletenessExpanded && (
+            <>
+              {!isComplete && (
+                <div className="flex flex-wrap gap-1">
+                  {missingFields.map((field) => (
+                    <span
+                      key={field.key}
+                      className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-700"
+                    >
+                      {field.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {requiredFields.map((field) => (
+                  <div
+                    key={field.key}
+                    className={`flex items-center gap-2 rounded border px-2 py-1 text-xs ${
+                      field.present
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>{field.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Title field - only show if different from source name */}
@@ -267,15 +295,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
           <DetailField
             label="Title"
             value={locationDetail.title}
-          />
-        )}
-
-        {showSourceAddress && (
-          <DetailField
-            label="Source Address"
-            value={sourceAddress}
-            onClick={(e) => onCopyField(sourceAddress!, e)}
-            title="Click to copy source address"
           />
         )}
 
@@ -288,83 +307,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
           />
         )}
 
-
-        {/* Phone number field */}
-        {locationDetail.contact?.phoneNumber && (
-          <DetailField
-            label="Phone"
-            value={locationDetail.contact.phoneNumber}
-            onClick={(e) => onCopyField(locationDetail.contact!.phoneNumber!, e)}
-            title="Click to copy phone number"
-          />
-        )}
-
-        {/* Website field */}
-        {locationDetail.contact?.website && (
-          <DetailField
-            label="Website"
-            value={truncateUrl(locationDetail.contact.website)}
-            onClick={(e) => onCopyField(locationDetail.contact.website, e)}
-            title="Click to copy website URL"
-            valueClassName="text-sm text-blue-600 hover:text-blue-700 cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors break-all"
-          />
-        )}
-
-        {/* Email field */}
-        {locationDetail.contact?.email && (
-          <DetailField
-            label="Email"
-            value={locationDetail.contact.email}
-            onClick={(e) => onCopyField(locationDetail.contact.email, e)}
-            title="Click to copy email"
-            valueClassName="text-sm text-blue-600 hover:text-blue-700 cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors break-all"
-          />
-        )}
-
-        {/* Google Maps URL field */}
-        {locationDetail.contact?.url && (
-          <DetailField
-            label="Google URL"
-            value={truncateUrl(locationDetail.contact.url)}
-            onClick={(e) => onCopyField(locationDetail.contact.url, e)}
-            title="Click to copy Google Maps URL"
-            valueClassName="text-sm text-blue-600 hover:text-blue-700 cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors break-all"
-          />
-        )}
-
-        {locationDetail.coordinates?.lat != null && locationDetail.coordinates?.lng != null && (
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-fit">
-              Coordinates:
-            </span>
-            <div className="flex gap-1 items-baseline">
-              <span
-                className="text-sm text-gray-900 font-mono cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors"
-                onClick={(e) => onCopyField(locationDetail.coordinates?.lat?.toString() || "", e)}
-                title="Click to copy latitude"
-              >
-                {locationDetail.coordinates.lat}
-              </span>
-              <span className="text-sm text-gray-500">, </span>
-              <span
-                className="text-sm text-gray-900 font-mono cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors"
-                onClick={(e) => onCopyField(locationDetail.coordinates?.lng?.toString() || "", e)}
-                title="Click to copy longitude"
-              >
-                {locationDetail.coordinates.lng}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {locationDetail.ianaTimeId && (
-          <DetailField
-            label="Time Zone (IANA)"
-            value={locationDetail.ianaTimeId}
-            onClick={(e) => onCopyField(locationDetail.ianaTimeId!, e)}
-            title="Click to copy IANA time zone"
-          />
-        )}
 
         {/* Existing Uploads Gallery - above add forms */}
         {locationDetail.uploads && locationDetail.uploads.length > 0 && (
