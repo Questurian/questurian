@@ -168,6 +168,15 @@ export function generateLocationCombinations(countries: CountryData[]): Location
  * @returns Transformed location response with nested objects
  */
 export function transformLocationToResponse(location: LocationWithNested): LocationResponse {
+  const parseOperationHours = (hoursJson?: string | null): Record<string, unknown> | null => {
+    if (!hoursJson) return null;
+    try {
+      return JSON.parse(hoursJson) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
   return {
     id: location.id!,
     title: location.title || null,
@@ -175,14 +184,18 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     type: location.type || null,
     locationKey: location.locationKey || null,
     district: location.district || null,
+    ianaTimeId: location.ianaTimeId || null,
     placeId: location.placeId || null,
     tripadvisorUrl: location.tripadvisorUrl || null,
     tripadvisorLocationId: location.tripadvisorLocationId || null,
     payload_location_ref: location.payload_location_ref || null,
+    neighborhoodDescription: location.neighborhoodDescription || null,
+    operationHours: parseOperationHours(location.hoursJson || null),
     contact: {
       countryCode: location.countryCode || null,
       phoneNumber: location.phoneNumber || null,
       website: location.website || null,
+      email: location.email || null,
       contactAddress: location.contactAddress || null,
       url: location.url,
     },

@@ -20,6 +20,7 @@ import {
 } from "../../hooks";
 import { LocationItemMenu } from "./LocationItemMenu";
 import { LocationDetailView } from "./LocationDetailView";
+import { AdvancedDataModal } from "./AdvancedDataModal";
 
 interface LocationListItemProps {
   location: {
@@ -34,10 +35,13 @@ interface LocationListItemProps {
 
 export function LocationListItem({ location, onClick }: LocationListItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const navigate = useNavigate();
 
   // Custom hooks
-  const { data: locationDetail, isLoading, error } = useLocationDetail(isExpanded ? location.id : null);
+  const { data: locationDetail, isLoading, error } = useLocationDetail(
+    isExpanded || isAdvancedOpen ? location.id : null
+  );
   const { isMenuOpen, menuRef, toggleMenu, closeMenu } = useLocationItemMenu();
   const { copyToClipboard } = useClipboardCopy();
   const {
@@ -66,6 +70,12 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
     navigate(`/edit/${location.id}`);
   };
 
+  const handleAdvancedClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    closeMenu();
+    setIsAdvancedOpen(true);
+  };
+
   return (
     <div data-theme="light" className="border border-border rounded-lg p-4 bg-background transition-all duration-200 hover:shadow-sm hover:border-border">
       {/* Header Section */}
@@ -91,6 +101,7 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
               toggleMenu();
             }}
             onEdit={handleEditClick}
+            onAdvanced={handleAdvancedClick}
             onDelete={handleDeleteClick}
             menuRef={menuRef}
           />
@@ -109,6 +120,15 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
           onCopyField={copyToClipboard}
         />
       )}
+
+      <AdvancedDataModal
+        isOpen={isAdvancedOpen}
+        onOpenChange={setIsAdvancedOpen}
+        locationDetail={locationDetail}
+        isLoading={isLoading}
+        error={error}
+        onCopyField={copyToClipboard}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

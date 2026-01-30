@@ -5,15 +5,16 @@ interface LocationItemMenuProps {
   isOpen: boolean;
   onToggle: (e: React.MouseEvent) => void;
   onEdit: (e: React.MouseEvent) => void;
+  onAdvanced: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
   menuRef: RefObject<HTMLDivElement | null>;
 }
 
 /**
  * Settings menu component for location list items
- * Shows Edit and Delete options in a dropdown
+ * Shows Edit, Advanced Data, and Delete options in a dropdown
  */
-export function LocationItemMenu({ isOpen, onToggle, onEdit, onDelete, menuRef }: LocationItemMenuProps) {
+export function LocationItemMenu({ isOpen, onToggle, onEdit, onAdvanced, onDelete, menuRef }: LocationItemMenuProps) {
   return (
     <div className="relative" ref={menuRef}>
       <Settings
@@ -22,15 +23,21 @@ export function LocationItemMenu({ isOpen, onToggle, onEdit, onDelete, menuRef }
         onClick={onToggle}
       />
       {isOpen && (
-        <div data-theme="light" className="absolute right-full mr-2 top-0 z-10 bg-background border border-border rounded py-0.5 min-w-[80px] max-h-[77px]">
+        <div data-theme="light" className="absolute right-full mr-2 top-0 z-10 bg-background border border-border rounded-md py-1 min-w-[160px] shadow-sm">
           <button
-            className="w-full text-left px-2 py-1 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors whitespace-nowrap"
             onClick={onEdit}
           >
             Edit
           </button>
           <button
-            className="w-full text-left px-2 py-1 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors whitespace-nowrap"
+            onClick={onAdvanced}
+          >
+            Advanced Data
+          </button>
+          <button
+            className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors whitespace-nowrap"
             onClick={onDelete}
           >
             Delete

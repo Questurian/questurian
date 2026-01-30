@@ -31,6 +31,24 @@ export class MapsService {
     private readonly payloadClient: PayloadApiClient
   ) {}
 
+  private normalizeOperationHours(
+    input?: Record<string, unknown> | string | null
+  ): string | null | undefined {
+    if (input === undefined) return undefined;
+    if (input === null) return null;
+    if (typeof input === "string") {
+      const trimmed = input.trim();
+      if (!trimmed) return null;
+      try {
+        JSON.parse(trimmed);
+      } catch {
+        throw new BadRequestError("Operation hours must be valid JSON");
+      }
+      return trimmed;
+    }
+    return JSON.stringify(input);
+  }
+
   private resolveTripadvisorFields(tripadvisorUrl?: string | null): { tripadvisorUrl?: string | null; tripadvisorLocationId?: string | null } {
     if (tripadvisorUrl === undefined) {
       return {};
@@ -69,28 +87,22 @@ export class MapsService {
     const entry = await createFromMaps(payload.name, payload.address, apiKey, category, payload.type);
     const tripadvisorFields = this.resolveTripadvisorFields(payload.tripadvisorUrl);
     Object.assign(entry, tripadvisorFields);
+    if (payload.email) {
+      entry.email = payload.email;
+    }
+    if (payload.neighborhoodDescription) {
+      entry.neighborhoodDescription = payload.neighborhoodDescription;
+    }
+    const hoursJson = this.normalizeOperationHours(payload.operationHours);
+    if (hoursJson !== undefined) {
+      entry.hoursJson = hoursJson;
+    }
 
     // Apply corrections and ensure taxonomy entry exists (create as pending if new)
     if (entry.locationKey) {
       // Apply corrections BEFORE ensuring taxonomy
       entry.locationKey = this.taxonomyCorrectionService.applyCorrections(entry.locationKey);
       this.taxonomyService.ensureTaxonomyEntry(entry.locationKey);
-
-      // NEW: Resolve Payload locationRef (REQUIRED if Payload is configured)
-      if (this.payloadClient.isConfigured()) {
-        const { resolvePayloadLocationRef } = await import('./resolvers');
-        const locationRef = await resolvePayloadLocationRef(entry, this.payloadClient);
-
-        if (!locationRef) {
-          throw new BadRequestError(
-            `Failed to resolve Payload location for locationKey: ${entry.locationKey}. ` +
-            `Ensure the location hierarchy exists in Payload CMS.`
-          );
-        }
-
-        entry.payload_location_ref = locationRef;
-        console.log(`✓ Resolved Payload locationRef: ${locationRef}`);
-      }
     }
 
     const savedId = saveLocation(entry);
@@ -123,6 +135,10 @@ export class MapsService {
     // Validate category if provided
     const category = updates.category ? validateCategory(updates.category) : undefined;
 
+    const nextName = updates.name ?? currentLocation.name;
+    const nextAddress = updates.address ?? currentLocation.address;
+    const shouldUpdateUrl = updates.name !== undefined || updates.address !== undefined;
+
     // If updating locationKey, apply corrections and ensure taxonomy entry exists
     if (updates.locationKey !== undefined && updates.locationKey) {
       // Apply corrections BEFORE ensuring taxonomy
@@ -131,15 +147,25 @@ export class MapsService {
     }
 
     // Perform partial update - only update provided fields
+    const hoursJson = this.normalizeOperationHours(updates.operationHours);
     const updateData = {
+      ...(updates.name !== undefined && { name: updates.name }),
+      ...(updates.address !== undefined && { address: updates.address }),
       ...(updates.title !== undefined && { title: updates.title }),
       ...(category !== undefined && { category }),
       ...(updates.type !== undefined && { type: updates.type }),
       ...(updates.locationKey !== undefined && { locationKey: updates.locationKey }),
+      ...(updates.district !== undefined && { district: updates.district }),
       ...(updates.contactAddress !== undefined && { contactAddress: updates.contactAddress }),
       ...(updates.countryCode !== undefined && { countryCode: updates.countryCode }),
+      ...(updates.ianaTimeId !== undefined && { ianaTimeId: updates.ianaTimeId }),
       ...(updates.phoneNumber !== undefined && { phoneNumber: updates.phoneNumber }),
       ...(updates.website !== undefined && { website: updates.website }),
+      ...(updates.email !== undefined && { email: updates.email }),
+      ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
+      ...(hoursJson !== undefined && { hoursJson }),
+      ...(updates.placeId !== undefined && { placeId: updates.placeId }),
+      ...(shouldUpdateUrl && { url: generateGoogleMapsUrl(nextName, nextAddress) }),
       ...(updates.tripadvisorUrl !== undefined && this.resolveTripadvisorFields(updates.tripadvisorUrl)),
     };
 

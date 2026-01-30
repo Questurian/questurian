@@ -45,8 +45,18 @@ export interface BigDataCloudResponse {
   };
 }
 
+export interface BigDataCloudTimezoneResponse {
+  ianaTimeId?: string;
+  timeZoneName?: string;
+  localityName?: string;
+  countryCode?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export class BigDataCloudClient {
   private readonly baseUrl = "https://api.bigdatacloud.net/data/reverse-geocode-client";
+  private readonly timezoneUrl = "https://api.bigdatacloud.net/data/timezone-by-location";
 
   /**
    * Reverse geocode coordinates to location data
@@ -67,6 +77,29 @@ export class BigDataCloudClient {
       return data;
     } catch (error) {
       console.error("[BigDataCloudClient] Reverse geocoding failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch timezone info for coordinates
+   * @param latitude - Latitude coordinate
+   * @param longitude - Longitude coordinate
+   * @returns BigDataCloud timezone response (includes ianaTimeId when available)
+   */
+  async getTimezone(latitude: number, longitude: number): Promise<BigDataCloudTimezoneResponse> {
+    try {
+      const url = `${this.timezoneUrl}?latitude=${latitude}&longitude=${longitude}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`BigDataCloud Timezone API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as BigDataCloudTimezoneResponse;
+      return data;
+    } catch (error) {
+      console.error("[BigDataCloudClient] Timezone lookup failed:", error);
       throw error;
     }
   }

@@ -46,8 +46,12 @@ export interface Location {
   district?: string | null;
   contactAddress?: string | null;
   countryCode?: string | null;
+  ianaTimeId?: string | null;
   phoneNumber?: string | null;
   website?: string | null;
+  email?: string | null;
+  hoursJson?: string | null;
+  neighborhoodDescription?: string | null;
   slug?: string | null;
   placeId?: string | null;  // Google Place ID
   tripadvisorUrl?: string | null;
@@ -115,6 +119,9 @@ export interface CreateMapsRequest {
   category: LocationCategory;
   type?: string;
   tripadvisorUrl?: string;
+  email?: string;
+  neighborhoodDescription?: string;
+  operationHours?: Record<string, unknown> | string;
 }
 
 
@@ -130,6 +137,7 @@ export interface LocationContact {
   countryCode: string | null;
   phoneNumber: string | null;
   website: string | null;
+  email: string | null;
   contactAddress: string | null;
   url: string;
 }
@@ -151,10 +159,13 @@ export interface LocationResponse {
   type: string | null;
   locationKey: string | null;
   district: string | null;
+  ianaTimeId: string | null;
   placeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
+  neighborhoodDescription: string | null;
+  operationHours: Record<string, unknown> | null;
   contact: LocationContact;
   coordinates: LocationCoordinates;
   source: LocationSource;

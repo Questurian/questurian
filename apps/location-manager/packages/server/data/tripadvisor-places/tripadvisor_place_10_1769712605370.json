@@ -1,0 +1,46 @@
+{
+  "fetchedAt": "2026-01-29T18:50:05.369Z",
+  "locationId": 10,
+  "tripadvisorPlaceId": "1798176",
+  "placeResult": {
+    "name": "Central Restaurante",
+    "rating": 4.4,
+    "website": "http://www.centralrestaurante.com.pe/",
+    "phone": "+51 1 2428515",
+    "email": "reservas@centralrestaurante.com.pe",
+    "operation_hours": {
+      "currently_open": false,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "Closed"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:45:00 - 13:30:00, 19:00:00 - 20:30:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:45:00 - 13:30:00, 19:00:00 - 20:30:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:45:00 - 13:30:00, 19:00:00 - 20:30:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:45:00 - 13:30:00, 19:00:00 - 20:30:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:45:00 - 13:30:00, 19:00:00 - 20:30:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:45:00 - 13:30:00, 19:00:00 - 20:30:00"
+        }
+      ]
+    },
+    "reviews_summary": "Central Restaurante earns praise from travelers for its innovative tasting menu that showcases unique Peruvian ingredients and artistic presentation. While most find the culinary experience exceptional, some guests feel certain flavors do not meet expectations. The service is often described as polished and attentive, though occasional lapses are noted. The elegant decor impresses many, although a few find it somewhat clinical. While many view the high price as justified by the world-class experience, some caution that it may seem excessive if expectations fall short."
+  }
+}
