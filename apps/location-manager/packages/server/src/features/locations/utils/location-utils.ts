@@ -210,6 +210,11 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     instagram_embeds: location.instagram_embeds || [],
     uploads: location.uploads || [],
     slug: location.slug || null,
+    // Reviews tracking fields
+    reviewsFetchedAt: location.reviewsFetchedAt || null,
+    reviewsCount: location.reviewsCount ?? null,
+    reviewsGoogleCount: location.reviewsGoogleCount ?? null,
+    reviewsTripadvisorCount: location.reviewsTripadvisorCount ?? null,
     created_at: location.created_at || new Date().toISOString(),
     updated_at: location.updated_at || location.created_at || new Date().toISOString(),
   };
@@ -228,6 +233,11 @@ export function transformLocationToBasicResponse(location: import('../models/loc
     title: location.title ?? null,
     location: location.locationKey ? formatLocationForDisplay(location.locationKey) : null,
     category: location.category || 'attractions',
+    // Reviews tracking fields
+    reviewsFetchedAt: location.reviewsFetchedAt || null,
+    reviewsCount: location.reviewsCount ?? null,
+    reviewsGoogleCount: location.reviewsGoogleCount ?? null,
+    reviewsTripadvisorCount: location.reviewsTripadvisorCount ?? null,
   };
 }
 

@@ -186,6 +186,22 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
       setClause.push("tripadvisor_location_id = $tripadvisor_location_id");
       params.$tripadvisor_location_id = updates.tripadvisorLocationId;
     }
+    if (updates.reviewsFetchedAt !== undefined) {
+      setClause.push("reviews_fetched_at = $reviews_fetched_at");
+      params.$reviews_fetched_at = updates.reviewsFetchedAt;
+    }
+    if (updates.reviewsCount !== undefined) {
+      setClause.push("reviews_count = $reviews_count");
+      params.$reviews_count = updates.reviewsCount;
+    }
+    if (updates.reviewsGoogleCount !== undefined) {
+      setClause.push("reviews_google_count = $reviews_google_count");
+      params.$reviews_google_count = updates.reviewsGoogleCount;
+    }
+    if (updates.reviewsTripadvisorCount !== undefined) {
+      setClause.push("reviews_tripadvisor_count = $reviews_tripadvisor_count");
+      params.$reviews_tripadvisor_count = updates.reviewsTripadvisorCount;
+    }
     if (updates.updated_at !== undefined) {
       setClause.push("updated_at = $updated_at");
       params.$updated_at = updates.updated_at;
@@ -231,7 +247,9 @@ export function getAllLocations(): Location[] {
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
-           l.payload_location_ref, l.created_at, l.updated_at
+           l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
+           l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
+           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at
     FROM locations l
     LEFT JOIN location_taxonomy t ON l.locationKey = t.locationKey
     WHERE l.locationKey IS NULL OR t.status = 'approved'
@@ -254,7 +272,9 @@ export function getLocationsByCategory(category: string): Location[] {
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
-           l.payload_location_ref, l.created_at, l.updated_at
+           l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
+           l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
+           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at
     FROM locations l
     LEFT JOIN location_taxonomy t ON l.locationKey = t.locationKey
     WHERE l.category = $category
@@ -278,7 +298,9 @@ export function getLocationById(id: number): Location | null {
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
-           l.payload_location_ref, l.created_at, l.updated_at
+           l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
+           l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
+           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at
     FROM locations l
     LEFT JOIN location_taxonomy t ON l.locationKey = t.locationKey
     WHERE l.id = $id
@@ -299,7 +321,9 @@ export function getLocationByIdForUpdate(id: number): Location | null {
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
-           l.payload_location_ref, l.created_at, l.updated_at
+           l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
+           l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
+           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at
     FROM locations l
     LEFT JOIN location_taxonomy t ON l.locationKey = t.locationKey
     WHERE l.id = $id
@@ -316,7 +340,16 @@ export function getLocationByIdForUpdate(id: number): Location | null {
  */
 export function getLocationBySlug(slug: string): Location | null {
   const db = getDb();
-    const query = db.query("SELECT id, name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id as ianaTimeId, phoneNumber, website, email, hours_json as hoursJson, neighborhood_description as neighborhoodDescription, slug, place_id as placeId, tripadvisor_url as tripadvisorUrl, tripadvisor_location_id as tripadvisorLocationId, payload_location_ref, created_at, updated_at FROM locations WHERE slug = $slug");
+  const query = db.query(`
+    SELECT id, name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress,
+           countryCode, iana_time_id as ianaTimeId, phoneNumber, website, email, hours_json as hoursJson,
+           neighborhood_description as neighborhoodDescription, slug, place_id as placeId,
+           tripadvisor_url as tripadvisorUrl, tripadvisor_location_id as tripadvisorLocationId,
+           payload_location_ref, reviews_fetched_at as reviewsFetchedAt,
+           reviews_count as reviewsCount, reviews_google_count as reviewsGoogleCount,
+           reviews_tripadvisor_count as reviewsTripadvisorCount, created_at, updated_at
+    FROM locations WHERE slug = $slug
+  `);
   const row = query.get({ $slug: slug }) as Location | undefined;
   return row || null;
 }

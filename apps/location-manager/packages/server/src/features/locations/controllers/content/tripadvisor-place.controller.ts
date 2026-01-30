@@ -1,4 +1,7 @@
 import type { Context } from "hono";
+import path from "node:path";
+import { existsSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { EnvConfig } from "@server/shared/config/env.config";
 import { SerpApiTripAdvisorClient } from "@server/shared/services/external/serpapi-tripadvisor.client";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
@@ -14,6 +17,61 @@ import type { TripAdvisorPlaceResult } from "@server/shared/services/external/se
 const config = EnvConfig.getInstance();
 const serpApiClient = new SerpApiTripAdvisorClient(config);
 const container = ServiceContainer.getInstance();
+const MERGED_REVIEWS_DIR = path.join(process.cwd(), "data", "merged-reviews");
+
+interface MinimalReview {
+  text: string;
+  rating: number;
+  date: string;
+}
+
+interface AiJsonPayload {
+  id: number;
+  name: string | null;
+  district: string | null;
+  neighborhoodDescription: string | null;
+  description: string | null;
+  reviews_summary: string | null;
+  reviews: MinimalReview[];
+}
+
+async function loadLatestMergedReviews(locationId: number): Promise<MinimalReview[] | null> {
+  if (!existsSync(MERGED_REVIEWS_DIR)) {
+    return null;
+  }
+
+  const files = await readdir(MERGED_REVIEWS_DIR);
+  const locationFiles = files
+    .filter((f) => f.startsWith(`merged_reviews_${locationId}_`) && f.endsWith(".json"))
+    .sort()
+    .reverse();
+
+  if (locationFiles.length === 0) {
+    return null;
+  }
+
+  const filepath = path.join(MERGED_REVIEWS_DIR, locationFiles[0]!);
+  const content = await Bun.file(filepath).text();
+  const data = JSON.parse(content) as {
+    reviews?: Array<{
+      review_text?: string | null;
+      rating?: number | null;
+      review_datetime_utc?: string | null;
+    }>;
+  };
+
+  if (!Array.isArray(data.reviews)) {
+    return [];
+  }
+
+  return data.reviews
+    .filter((review) => typeof review.review_text === "string" && review.review_text.trim().length > 0)
+    .map((review) => ({
+      text: review.review_text ?? "",
+      rating: review.rating ?? 0,
+      date: review.review_datetime_utc ?? "",
+    }));
+}
 
 function mergeTripAdvisorPlaceIntoLocation(locationId: number, placeResult: TripAdvisorPlaceResult) {
   const current = getLocationByIdForUpdate(locationId);
@@ -227,6 +285,63 @@ export async function downloadLocationExport(c: Context) {
   c.header("Content-Disposition", `attachment; filename="${filename}"`);
 
   return c.body(JSON.stringify(exportData, null, 2));
+}
+
+/**
+ * GET /api/locations/:id/ai-json/download
+ * Download AI-ready JSON (core TripAdvisor fields + filtered reviews)
+ */
+export async function downloadAiJson(c: Context) {
+  const locationId = parseInt(c.req.param("id"));
+
+  const location = container.locationQueryService.getLocationById(locationId);
+  if (!location) {
+    return c.json(errorResponse("Location not found"), 404);
+  }
+
+  // Get TripAdvisor place data (required)
+  const dbData = getTripAdvisorPlaceByLocationId(locationId);
+  const placeData = dbData?.place_data ?? (await serpApiClient.getPlaceData(locationId))?.placeResult ?? null;
+
+  if (!placeData) {
+    return c.json(
+      errorResponse("No TripAdvisor place data found. Please fetch place data first."),
+      404
+    );
+  }
+
+  // Get merged reviews (required)
+  const reviews = await loadLatestMergedReviews(locationId);
+  if (!reviews) {
+    return c.json(
+      errorResponse("No merged reviews found. Please run translate & merge first."),
+      404
+    );
+  }
+
+  const name = location.source?.name ?? location.title ?? null;
+  const descriptionValue = (placeData as { description?: unknown }).description;
+  const reviewsSummaryValue = (placeData as { reviews_summary?: unknown }).reviews_summary;
+  const description = typeof descriptionValue === "string" ? descriptionValue : null;
+  const reviewsSummary = typeof reviewsSummaryValue === "string" ? reviewsSummaryValue : null;
+
+  const payload: AiJsonPayload = {
+    id: location.id,
+    name,
+    district: location.district ?? null,
+    neighborhoodDescription: location.neighborhoodDescription ?? null,
+    description,
+    reviews_summary: reviewsSummary,
+    reviews,
+  };
+
+  const sanitizedName = sanitizeFilename(name ?? `location-${locationId}`);
+  const filename = `${sanitizedName}-ai-json.json`;
+
+  c.header("Content-Type", "application/json");
+  c.header("Content-Disposition", `attachment; filename="${filename}"`);
+
+  return c.body(JSON.stringify(payload, null, 2));
 }
 
 /**

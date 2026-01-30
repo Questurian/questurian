@@ -76,6 +76,7 @@ export const API_ENDPOINTS = {
 
   // Location Export (location + TripAdvisor place, no reviews)
   DOWNLOAD_LOCATION_EXPORT: (id: number) => `/api/locations/${id}/export`,
+  DOWNLOAD_AI_JSON: (id: number) => `/api/locations/${id}/ai-json/download`,
 
   // Merged Reviews (translate & merge)
   TRANSLATE_MERGE_REVIEWS: (id: number) => `/api/locations/${id}/reviews/translate-merge`,
@@ -83,4 +84,7 @@ export const API_ENDPOINTS = {
   MERGED_REVIEWS_STATUS: (id: number) => `/api/locations/${id}/reviews/merged/status`,
   MERGED_REVIEWS_REPORT: (id: number) => `/api/locations/${id}/reviews/merged/report`,
   DOWNLOAD_REJECTS_REPORT: (id: number) => `/api/locations/${id}/reviews/rejects/download`,
+
+  // Health checks
+  LEADS_API_HEALTH: "/api/health/leads-api",
 } as const;

@@ -43,7 +43,7 @@ export class ServiceContainer {
     this.imageStorage = new ImageStorageService();
     this.instagramApi = new InstagramApiClient(this.config);
     this.payloadApi = new PayloadApiClient(this.config);
-    this.bigDataCloudClient = new BigDataCloudClient();
+    this.bigDataCloudClient = new BigDataCloudClient(this.config.BIGDATACLOUD_API_KEY);
     this.geoapifyClient = new GeoapifyClient(this.config.GEOAPIFY_API_KEY || "");
     this.altTextApiClient = new AltTextApiClient(this.config.altTextApiUrl);
     this.districtExtractionService = new DistrictExtractionService();

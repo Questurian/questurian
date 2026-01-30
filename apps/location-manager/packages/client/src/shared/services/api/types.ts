@@ -88,6 +88,11 @@ export interface LocationBasic {
   title: string | null;
   location: string | null;
   category: Category;
+  // Reviews tracking fields
+  reviewsFetchedAt: string | null;
+  reviewsCount: number | null;
+  reviewsGoogleCount: number | null;
+  reviewsTripadvisorCount: number | null;
 }
 
 export interface LocationContact {
@@ -128,6 +133,11 @@ export interface LocationResponse {
   instagram_embeds: InstagramEmbed[];
   uploads: Upload[];
   slug: string | null;
+  // Reviews tracking fields
+  reviewsFetchedAt: string | null;
+  reviewsCount: number | null;
+  reviewsGoogleCount: number | null;
+  reviewsTripadvisorCount: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -538,5 +548,17 @@ export interface TripAdvisorPlaceStatusResponse {
     placeTitle: string | null;
     rating: number | null;
     reviewCount: number | null;
+  };
+}
+
+// ============================================================================
+// LEADS API HEALTH TYPES
+// ============================================================================
+
+export interface LeadsApiHealthResponse {
+  success: true;
+  data: {
+    healthy: boolean;
+    error?: string;
   };
 }

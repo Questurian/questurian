@@ -5,11 +5,13 @@ import { DetailField } from "./DetailField";
 import { AddInstagramEmbedForm } from "../forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "../forms/AddUploadFilesForm";
 import { ImageLightbox } from "../ui/ImageLightbox";
+import { ReviewsStatusBadge } from "../ui/ReviewsStatusBadge";
 import { Button } from "@client/components/ui/button";
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, X, Download } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
+import { locationsApi } from "@client/shared/services/api/locations.api";
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -287,6 +289,35 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
                 ))}
               </div>
             </>
+          )}
+        </div>
+
+        {/* Reviews Section - Separate from Completeness */}
+        <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Reviews</span>
+            <ReviewsStatusBadge
+              hasReviews={!!locationDetail.reviewsFetchedAt}
+              reviewsCount={locationDetail.reviewsCount}
+              reviewsFetchedAt={locationDetail.reviewsFetchedAt}
+            />
+          </div>
+          {locationDetail.reviewsFetchedAt && (
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>Google: {locationDetail.reviewsGoogleCount || 0}</span>
+              <span>TripAdvisor: {locationDetail.reviewsTripadvisorCount || 0}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs"
+                onClick={() => {
+                  window.open(locationsApi.getMergedReviewsDownloadUrl(locationDetail.id), "_blank");
+                }}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
+            </div>
           )}
         </div>
 

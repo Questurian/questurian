@@ -1,0 +1,104 @@
+{
+  "locationId": 21,
+  "generatedAt": "2026-01-30T05:11:39.325Z",
+  "summary": {
+    "totalRejected": 5,
+    "replacedWithEnglish": 5,
+    "rejectedNonEnglish": 0
+  },
+  "explanation": {
+    "why": "TripAdvisor returns the same reviews in different language files. Each review has a unique review_id that appears in multiple language files (e.g., both English and Spanish files).",
+    "whatWeDo": "We deduplicate by review_id, preferring English versions when available. This ensures each review appears only once in the final merged output.",
+    "actions": {
+      "replaced_with_english": "A non-English version was replaced with the English version of the same review",
+      "rejected_non_english": "A duplicate non-English version was rejected (we already had this review)"
+    }
+  },
+  "rejectedReviews": [
+    {
+      "review_id": "tripadvisor_1024263666",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Super happy",
+        "review_text_preview": "Since we arrived the attention was impeccable the. staff is friendly always willing to recommend the...",
+        "source_file": "tripadvisor_reviews_21_en_1769749899057.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Super contenta",
+        "review_text_preview": "Desde que llegamos la atencion fue impecable el. personal es amable siempre dispuesto a recomendar l...",
+        "source_file": "tripadvisor_reviews_21_es_1769749899315.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_985380388",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Poor care",
+        "review_text_preview": "The food very good but the attention of the Local Saltao de Refugio was regrettable, the cashier a d...",
+        "source_file": "tripadvisor_reviews_21_en_1769749899057.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mala atención",
+        "review_text_preview": "La comida muy buena pero la atención del Local Saltao de Refugio fue lamentable, la cajera una perso...",
+        "source_file": "tripadvisor_reviews_21_es_1769749899315.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_969868841",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Assorted drink and meal options",
+        "review_text_preview": "Chilcanos in TAMARINDO, very good, classic and pineapple. Afterwards in CAJA CHINA CREOLE, we ordere...",
+        "source_file": "tripadvisor_reviews_21_en_1769749899057.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Surtidas opciones de bebidas y comidas",
+        "review_text_preview": "Unos chilcanos en TAMARINDO, muy buenos, clásico y de piña. Después en CAJA CHINA CRIOLLA, pedimos p...",
+        "source_file": "tripadvisor_reviews_21_es_1769749899315.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_951998537",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent place !!!!",
+        "review_text_preview": "A variety of Peruvian and international food in one place, a nice and relaxed atmosphere. Ample park...",
+        "source_file": "tripadvisor_reviews_21_en_1769749899057.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente lugar !!!!",
+        "review_text_preview": "Una variedad de comida peruana e internacional  en un solo lugar, una ambiente lindo y relajado. Est...",
+        "source_file": "tripadvisor_reviews_21_es_1769749899315.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_943214722",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Simply Extraordinary - Amazing Experience",
+        "review_text_preview": "Refugio is a forest where Peruvian gastronomy is born and enchants you with everything it offers. Th...",
+        "source_file": "tripadvisor_reviews_21_en_1769749899057.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Simplemente Extraordinario - Amazing Experience",
+        "review_text_preview": "Refugio es un bosque donde nace la gastronomía Peruana y te hechiza con todo lo que ofrece. La zona ...",
+        "source_file": "tripadvisor_reviews_21_es_1769749899315.json"
+      }
+    }
+  ]
+}

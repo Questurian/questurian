@@ -32,6 +32,7 @@ import type {
   MergedReviewsReportResponse,
   FetchTripAdvisorPlaceResponse,
   TripAdvisorPlaceStatusResponse,
+  LeadsApiHealthResponse,
 } from "./types";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
@@ -442,5 +443,23 @@ export const locationsApi = {
    */
   getLocationExportDownloadUrl(id: number): string {
     return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_LOCATION_EXPORT(id)}`;
+  },
+
+  /**
+   * Get AI-JSON download URL (core TripAdvisor fields + filtered reviews)
+   */
+  getAiJsonDownloadUrl(id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_AI_JSON(id)}`;
+  },
+
+  // ============================================================================
+  // HEALTH CHECKS
+  // ============================================================================
+
+  /**
+   * Check if the leads API is healthy
+   */
+  async checkLeadsApiHealth(): Promise<LeadsApiHealthResponse["data"]> {
+    return apiGet<LeadsApiHealthResponse["data"]>(API_ENDPOINTS.LEADS_API_HEALTH);
   },
 };

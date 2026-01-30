@@ -27,6 +27,7 @@ import { addLocationIanaTimeId } from "./migrations/add-location-iana-time-id";
 import { addTripadvisorFields } from "./migrations/add-tripadvisor-fields";
 import { addTripadvisorPlacesTable } from "./migrations/add-tripadvisor-places-table";
 import { addLocationEnrichmentFields } from "./migrations/add-location-enrichment-fields";
+import { addReviewsTracking } from "./migrations/add-reviews-tracking";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -241,6 +242,9 @@ export function initDb() {
 
   // Run migration to add enrichment fields to locations table
   addLocationEnrichmentFields(database);
+
+  // Run migration to add reviews tracking fields to locations table
+  addReviewsTracking(database);
 }
 
 export function getDb(): Database {

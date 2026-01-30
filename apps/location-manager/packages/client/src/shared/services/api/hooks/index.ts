@@ -38,3 +38,7 @@ export {
   useDownloadTripAdvisorPlace,
   TRIPADVISOR_PLACE_STATUS_QUERY_KEY,
 } from "./useTripAdvisorPlace";
+export {
+  useLeadsApiHealth,
+  LEADS_API_HEALTH_QUERY_KEY,
+} from "./useLeadsApiHealth";

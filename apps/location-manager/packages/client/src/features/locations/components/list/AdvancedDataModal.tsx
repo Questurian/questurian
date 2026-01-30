@@ -82,6 +82,10 @@ export function AdvancedDataModal({
     enabled: isOpen && Boolean(locationDetail?.id),
   });
   const downloadTripAdvisorPlace = useDownloadTripAdvisorPlace();
+  const canDownloadAiJson = Boolean(
+    tripAdvisorPlaceStatusQuery.data?.hasPlaceData &&
+      mergedReviewsStatusQuery.data?.hasMergedReviews
+  );
 
   const refetchPlaceIdMutation = useRefetchPlaceId({
     locationId: locationDetail?.id || 0,
@@ -391,15 +395,31 @@ export function AdvancedDataModal({
               <span className="text-sm font-semibold text-foreground">
                 Export
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-3 text-sm"
-                onClick={() => window.open(locationsApi.getLocationExportDownloadUrl(locationDetail.id), "_blank")}
-                title="Download location data with TripAdvisor place info (no reviews)"
-              >
-                Export Location
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-3 text-sm"
+                  onClick={() => window.open(locationsApi.getLocationExportDownloadUrl(locationDetail.id), "_blank")}
+                  title="Download location data with TripAdvisor place info (no reviews)"
+                >
+                  Export Location
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-3 text-sm"
+                  onClick={() => window.open(locationsApi.getAiJsonDownloadUrl(locationDetail.id), "_blank")}
+                  disabled={!canDownloadAiJson}
+                  title={
+                    canDownloadAiJson
+                      ? "Download AI-JSON (core TripAdvisor fields + filtered reviews)"
+                      : "Requires TripAdvisor place data and merged reviews"
+                  }
+                >
+                  AI-JSON
+                </Button>
+              </div>
             </section>
           </div>
         )}

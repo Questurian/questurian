@@ -9,13 +9,22 @@ import { MapPin, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { LocationCategory } from "@shared/types/location-category";
+import { ReviewsFetchPhase } from "../components/add/ReviewsFetchPhase";
 
-type Phase = "add" | "confirm" | "success";
+type Phase = "add" | "confirm" | "reviews" | "success";
 
 export function AddLocation() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("add");
-  const [createdLocation, setCreatedLocation] = useState<{ id: number; name: string; title: string; phoneNumber?: string; website?: string } | null>(null);
+  const [createdLocation, setCreatedLocation] = useState<{
+    id: number;
+    name: string;
+    title: string;
+    phoneNumber?: string;
+    website?: string;
+    tripadvisorUrl?: string | null;
+    placeId?: string | null;
+  } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LocationCategory | undefined>(undefined);
 
   const { mutate: createLocation, isPending: isCreating, error: createError } = useCreateLocation();
@@ -61,6 +70,8 @@ export function AddLocation() {
           title: response.title || response.source.name,
           phoneNumber: response.contact?.phoneNumber || undefined,
           website: response.contact?.website || undefined,
+          tripadvisorUrl: response.tripadvisorUrl,
+          placeId: response.placeId,
         });
         confirmForm.setValue("title", response.title || response.source.name);
         confirmForm.setValue("phoneNumber", response.contact?.phoneNumber || "");
@@ -86,8 +97,8 @@ export function AddLocation() {
       }
     }, {
       onSuccess: () => {
-        // Go to success phase
-        setPhase("success");
+        // Go to reviews phase instead of success
+        setPhase("reviews");
       },
       onError: (error) => {
         console.error("Update location error:", error);
@@ -164,6 +175,19 @@ export function AddLocation() {
           </form>
         </div>
       </div>
+    );
+  }
+
+  if (phase === "reviews" && createdLocation) {
+    return (
+      <ReviewsFetchPhase
+        locationId={createdLocation.id}
+        locationName={createdLocation.title || createdLocation.name}
+        tripadvisorUrl={createdLocation.tripadvisorUrl || null}
+        placeId={createdLocation.placeId || null}
+        onComplete={() => setPhase("success")}
+        onSkip={() => setPhase("success")}
+      />
     );
   }
 

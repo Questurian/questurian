@@ -6,6 +6,7 @@ import { TripAdvisorReviewsApiClient } from "@server/shared/services/external/tr
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 import { runTranslateAndMergeReviews, type ReviewSource } from "./translate-merge-reviews.controller";
+import { updateLocationById } from "../../repositories/core";
 
 const config = EnvConfig.getInstance();
 const reviewsClient = new ReviewsApiClient(config);
@@ -380,6 +381,18 @@ async function runPipelineJob(job: ReviewsPipelineJob, location: NonNullable<Ret
       defaultDependencies(),
       (update) => updateJob(job.id, { ...update })
     );
+
+    // Save reviews stats to location record
+    const reviewsUpdateSuccess = updateLocationById(job.locationId, {
+      reviewsFetchedAt: nowIso(),
+      reviewsCount: result.merged.stats.totalReviews,
+      reviewsGoogleCount: result.merged.stats.googleReviews,
+      reviewsTripadvisorCount: result.merged.stats.tripadvisorReviews,
+    });
+
+    if (!reviewsUpdateSuccess) {
+      console.error(`Failed to update reviews stats for location ${job.locationId}`);
+    }
 
     updateJob(job.id, {
       status: "completed",

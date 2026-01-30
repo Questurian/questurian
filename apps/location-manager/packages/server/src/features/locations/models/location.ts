@@ -57,6 +57,11 @@ export interface Location {
   tripadvisorUrl?: string | null;
   tripadvisorLocationId?: string | null;
   payload_location_ref?: string | null;  // Payload CMS location hierarchy ID
+  // Reviews tracking fields
+  reviewsFetchedAt?: string | null;      // Timestamp of last fetch
+  reviewsCount?: number | null;          // Total merged reviews
+  reviewsGoogleCount?: number | null;    // From Google
+  reviewsTripadvisorCount?: number | null; // From TripAdvisor
   created_at?: string;
   updated_at?: string;
 }
@@ -172,6 +177,11 @@ export interface LocationResponse {
   instagram_embeds: InstagramEmbed[];
   uploads: Upload[];
   slug: string | null;
+  // Reviews tracking fields
+  reviewsFetchedAt: string | null;
+  reviewsCount: number | null;
+  reviewsGoogleCount: number | null;
+  reviewsTripadvisorCount: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -185,4 +195,9 @@ export interface LocationBasic {
   title: string | null;
   location: string | null;
   category: LocationCategory;
+  // Reviews tracking fields
+  reviewsFetchedAt: string | null;
+  reviewsCount: number | null;
+  reviewsGoogleCount: number | null;
+  reviewsTripadvisorCount: number | null;
 }
