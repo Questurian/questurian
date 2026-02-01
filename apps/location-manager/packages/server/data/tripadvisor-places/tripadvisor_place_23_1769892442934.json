@@ -1,0 +1,52 @@
+{
+  "fetchedAt": "2026-01-31T20:47:22.934Z",
+  "locationId": 23,
+  "tripadvisorPlaceId": "1391731",
+  "placeResult": {
+    "name": "Panchita",
+    "rating": 4.5,
+    "website": "http://panchita.mesa247.pe/reservas/#/panchita-miraflores",
+    "menu": {
+      "link": "https://pedidos.panchita.pe/pedir"
+    },
+    "phone": "+51 1 2425957",
+    "email": "reservas@panchita.com.pe",
+    "description": "We cook ancient and contemporary Peruvian Creole food, and honor the tradition and culture of Lima. We imprint flavor onto high-level products, sometimes with a slow burn and other times with a vivid flame. One thing remains unchanged: we cook with the same passion our grandmothers did and preserve their seasoning. Our cuisine is ​bold, roguish and generous, just like Marthita, our chef, who is as mischievous as a good jarana limeña.",
+    "neighborhood": "Miraflores",
+    "neighborhood_description": "Miraflores is a gem of Lima, a district renowned for its beautiful parks, stunning ocean views, and rich cultural scene. Stroll through the verdant Parque Kennedy, a favorite local hangout filled with charming cats and vibrant street artists. Explore the Huaca Pucllana, an ancient archaeological site, or peruse the Larcomar, a cliffside shopping center overlooking the Pacific Ocean. With a flourishing culinary landscape featuring world-class restaurants like Maido and Central, it's no surprise that Miraflores is considered a foodie paradise. Accessibility is a breeze with the Metropolitano bus system whisking visitors around the city with ease.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 18:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 23:00:00"
+        }
+      ]
+    },
+    "reviews_summary": "Panchita is celebrated for its authentic Peruvian flavors and generous portions, earning rave reviews from many travelers despite occasional inconsistencies. The warm and friendly service is often praised, though some warn of slower service during peak times. With its vibrant decor and lively atmosphere, the restaurant enhances the dining experience, according to guests. Reviewers mention lengthy wait times without reservations, yet the quality and portion sizes are seen as offering good value, though some note inconsistent pricing."
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "locationId": 22,
+  "generatedAt": "2026-01-31T03:01:10.238Z",
+  "summary": {
+    "totalRejected": 9,
+    "replacedWithEnglish": 9,
+    "rejectedNonEnglish": 0
+  },
+  "explanation": {
+    "why": "TripAdvisor returns the same reviews in different language files. Each review has a unique review_id that appears in multiple language files (e.g., both English and Spanish files).",
+    "whatWeDo": "We deduplicate by review_id, preferring English versions when available. This ensures each review appears only once in the final merged output.",
+    "actions": {
+      "replaced_with_english": "A non-English version was replaced with the English version of the same review",
+      "rejected_non_english": "A duplicate non-English version was rejected (we already had this review)"
+    }
+  },
+  "rejectedReviews": [
+    {
+      "review_id": "tripadvisor_1033738785",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "EXCELLENT CARE",
+        "review_text_preview": "Excellent Service, very friendly staff, A1 food, A1 cocktails. \nOverall the excellent experience. \nG...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "EXCELENTE ATENCION",
+        "review_text_preview": "El servicio excelente , personal muy amable , la comida A1 , cócteles A1 . \nEn general la experienci...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1024192406",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Hidden Gem in Miraflores",
+        "review_text_preview": "Stumbled on this place by accident one Saturday afternoon. Food was excellent,  shared three tapas d...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Joyas Ocultas en Miraflores",
+        "review_text_preview": "Tropecé con este lugar por accidente un sábado por la tarde. La comida era excelente, compartimos tr...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_989517586",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Hot spot",
+        "review_text_preview": "This place is a hidden gem!!! And it’s no reason this place isn’t packed! The staff is great, the pl...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Punto caliente",
+        "review_text_preview": "¡Este lugar es una joya escondida! ¡Y no hay razón para que este lugar no esté lleno! El personal es...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_988879860",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Get the mushroom tapas omg!",
+        "review_text_preview": "Omg this place was a blast! It was really nobody else there when we went except another couple. But ...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "¡Consigue las tapas de setas omg!",
+        "review_text_preview": "¡Omg este lugar fue una explosión! No había nadie más allí cuando fuimos excepto otra pareja. Pero e...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_983211577",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best Dinner & Drinks in Lima",
+        "review_text_preview": "Local well located and super \"instagrammable\". All the drinks (especially pisco!!) and piqueos, are ...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El mejor \"Dinner & drinks\" en Lima ",
+        "review_text_preview": "Local bien ubicado y super  \"instagrameable\". Todos los tragos (sobre todo a base de pisco!!) y piqu...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_965877297",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Bar without wave",
+        "review_text_preview": "We went with friends on a Thursday night. The place is nice, the waitress attentive and the drinks g...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Bar sin onda",
+        "review_text_preview": "Fuimos con amigas un jueves en la noche. El lugar es lindo, la mesera atenta y los tragos buenos. Al...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_945615912",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great experience",
+        "review_text_preview": "Going to Sayani is having a great experience from start to finish. The cocktails are exceptional, th...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran experiencia",
+        "review_text_preview": "Ir a Sayani es vivir una gran experiencia de inicio a fin. La coctelería es excepcional, el ambiente...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_945614171",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Beautiful bar",
+        "review_text_preview": "I love the atmosphere, the excellent service from the moment you enter the bar. It is a beautiful pl...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Hermoso bar",
+        "review_text_preview": "Amo el ambiente, la excelente atención desde que uno ingresa al bar. Es un hermoso lugar para conver...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_945613516",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A1 service and drinks",
+        "review_text_preview": "A very cozy place in the heart of Miraflores, good drinks and service, perfect place to share with f...",
+        "source_file": "tripadvisor_reviews_22_en_1769828469766.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Servicio y bebidas A1",
+        "review_text_preview": "Un lugar muy acogedor en el corazón de Miraflores , buenas bebidas y servicio , lugar perfecto para ...",
+        "source_file": "tripadvisor_reviews_22_es_1769828470226.json"
+      }
+    }
+  ]
+}

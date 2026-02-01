@@ -1,0 +1,109 @@
+{
+  "locationId": 22,
+  "mergedAt": "2026-01-31T03:01:10.237Z",
+  "stats": {
+    "totalReviews": 7,
+    "googleReviews": 0,
+    "tripadvisorReviews": 7,
+    "translated": 0,
+    "alreadyEnglish": 7,
+    "errors": 0
+  },
+  "reviews": [
+    {
+      "id": "tripadvisor_1024192406",
+      "source": "tripadvisor",
+      "review_text": "Stumbled on this place by accident one Saturday afternoon. Food was excellent,  shared three tapas dishes between us. A decent Argentinian Malbec available by the glass, lovely decor, quiet at that time of day and service was attentive without being overbearing.\nOnly downside was they don't serve coffee to end the eating which was a minor disappointment.\nIt is a hidden gem in Miraflores only a few hundred metres from where we live so it will be getting regular visits from us in the future",
+      "title": "Hidden Gem in Miraflores",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-13",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ken M"
+    },
+    {
+      "id": "tripadvisor_989517586",
+      "source": "tripadvisor",
+      "review_text": "This place is a hidden gem!!! And it’s no reason this place isn’t packed! The staff is great, the place is hella cute, the drinks are 🔥 and that mushroom tapa omg👌🏾! I’m thinking it about now !",
+      "title": "Hot spot",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-17",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Black Travel Experiences"
+    },
+    {
+      "id": "tripadvisor_988879860",
+      "source": "tripadvisor",
+      "review_text": "Omg this place was a blast! It was really nobody else there when we went except another couple. But the staff made us feel like VIP! The atmosphere of the place is great and cute! The drinks were a hit and you have to get the mushrooms tapas it was so good I wanted to come back the next day just for that dish! It was so good omg!!!",
+      "title": "Get the mushroom tapas omg!",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-14",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/8f/92/e0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/8f/92/e1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/8f/92/e2/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alex"
+    },
+    {
+      "id": "tripadvisor_965877297",
+      "source": "tripadvisor",
+      "review_text": "We went with friends on a Thursday night. The place is nice, the waitress attentive and the drinks good. Somewhat slow in bringing things to the table and the atmosphere, very boring. There was no one else! If you are looking for a lively place, this is not the right place.",
+      "title": "Bar without wave",
+      "rating": 3,
+      "review_datetime_utc": "2024-08-20",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "SCL"
+    },
+    {
+      "id": "tripadvisor_945615912",
+      "source": "tripadvisor",
+      "review_text": "Going to Sayani is having a great experience from start to finish. The cocktails are exceptional, the atmosphere is very nice and the treatment from the serving staff is very warm. It is a different and quite innovative concept.",
+      "title": "Great experience",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alexandra G"
+    },
+    {
+      "id": "tripadvisor_945614171",
+      "source": "tripadvisor",
+      "review_text": "I love the atmosphere, the excellent service from the moment you enter the bar. It is a beautiful place to talk, have a good time with friends and enjoy the best cocktails. 1000% recommended.",
+      "title": "Beautiful bar",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ce/68/d2/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Beatriz S"
+    },
+    {
+      "id": "tripadvisor_945613516",
+      "source": "tripadvisor",
+      "review_text": "A very cozy place in the heart of Miraflores, good drinks and service, perfect place to share with friends and family in its environments, mainly the private room!",
+      "title": "A1 service and drinks",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ce/65/59/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ce/65/5a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ce/66/ae/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ce/66/af/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Frank A"
+    }
+  ]
+}

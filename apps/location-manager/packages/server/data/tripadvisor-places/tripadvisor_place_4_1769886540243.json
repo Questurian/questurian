@@ -1,0 +1,51 @@
+{
+  "fetchedAt": "2026-01-31T19:09:00.243Z",
+  "locationId": 4,
+  "tripadvisorPlaceId": "940762",
+  "placeResult": {
+    "name": "Mangos Restaurante",
+    "rating": 4.3,
+    "website": "http://www.mangosperu.com/",
+    "menu": {
+      "link": "https://mangos-restaurante.cluvi.pe/"
+    },
+    "phone": "+51 1 2428110",
+    "email": "reservas@mangosperu.com",
+    "neighborhood": "Miraflores",
+    "neighborhood_description": "Miraflores is a gem of Lima, a district renowned for its beautiful parks, stunning ocean views, and rich cultural scene. Stroll through the verdant Parque Kennedy, a favorite local hangout filled with charming cats and vibrant street artists. Explore the Huaca Pucllana, an ancient archaeological site, or peruse the Larcomar, a cliffside shopping center overlooking the Pacific Ocean. With a flourishing culinary landscape featuring world-class restaurants like Maido and Central, it's no surprise that Miraflores is considered a foodie paradise. Accessibility is a breeze with the Metropolitano bus system whisking visitors around the city with ease.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "08:30:00 - 00:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "08:30:00 - 01:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "08:30:00 - 01:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "08:30:00 - 01:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "08:30:00 - 01:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "08:30:00 - 02:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "08:30:00 - 02:00:00"
+        }
+      ]
+    },
+    "reviews_summary": "Mangos Restaurante earns praise from many travelers for its inviting atmosphere, with cozy vibes and stunning ocean views, though some note issues with loud music. The menu, featuring Peruvian and seafood dishes, is celebrated for generous portions and beautiful presentation, though a few mention inconsistencies in temperature or taste. Service is often highlighted as attentive and friendly, although some report delays. While many find the prices justified by the quality and setting, others feel they can be steep."
+  }
+}

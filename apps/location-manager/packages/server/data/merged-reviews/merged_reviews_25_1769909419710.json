@@ -1,0 +1,1853 @@
+{
+  "locationId": 25,
+  "mergedAt": "2026-02-01T01:30:19.710Z",
+  "stats": {
+    "totalReviews": 135,
+    "googleReviews": 0,
+    "tripadvisorReviews": 135,
+    "translated": 41,
+    "alreadyEnglish": 94,
+    "errors": 0
+  },
+  "reviews": [
+    {
+      "id": "tripadvisor_1047488038",
+      "source": "tripadvisor",
+      "review_text": "We arrived at the open time.  The hostess seated us right away.  My  husband and I preferred to seat outside.  Our waiter Yul was so polite and courteous.\nService 5 stars\nFood. 5 stars \nHighly recommended",
+      "title": "Service was excellent.. food was delicious… highly recommended",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-27",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4d/6a/50/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4d/6a/51/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4d/6a/52/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alley Cat"
+    },
+    {
+      "id": "tripadvisor_1047243661",
+      "source": "tripadvisor",
+      "review_text": "Super nice experience, very striking and welcoming place. Exquisite food and spectacular service, recommended! We were attended by Saby, very gentle and attentive. Thanks for the experience",
+      "title": "Excellent experience, thank you Saby.",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Francisca S"
+    },
+    {
+      "id": "tripadvisor_1047120471",
+      "source": "tripadvisor",
+      "review_text": "It is a spectacular experience, excellent service from Sergio and also the hostess that greeted us, the menu is varied but the best options are written on the board, the food left us pleasantly surprised",
+      "title": "Great food and service, worth what counts",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-24",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/47/5e/81/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/47/5e/82/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/47/5e/83/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/47/5e/84/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Juanito P"
+    },
+    {
+      "id": "tripadvisor_1046905475",
+      "source": "tripadvisor",
+      "review_text": "the wonderful food and the attention of Franciscan phenomenal, besides very very friendly had a finished handling of all the dishes making excellent recommendations",
+      "title": "a pleasure to the palate",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-22",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/43/7e/32/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/43/7e/33/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Karina H"
+    },
+    {
+      "id": "tripadvisor_1046901579",
+      "source": "tripadvisor",
+      "review_text": "Isolina lived up to the hype! The lomo saltado was incredible—rich, flavorful, and perfectly prepared. On top of that, the service was excellent and very warm and welcoming. One of my favorite meals in Lima—can’t wait to come back!",
+      "title": "One of My Favorite Meals in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-22",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/43/6d/35/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Footprints304808"
+    },
+    {
+      "id": "tripadvisor_1046655348",
+      "source": "tripadvisor",
+      "review_text": "Generous dishes. Delicious food. Very nice atmosphere. We loved it. Of course we highly recommend it. We ordered a super fresh salad. And delicious dessert.",
+      "title": "We loved it.",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-19",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3e/e2/60/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3e/e2/61/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ale L"
+    },
+    {
+      "id": "tripadvisor_1046535856",
+      "source": "tripadvisor",
+      "review_text": "Crazy everything, an explosion of flavors and colors. Super relaxed and local atmosphere. Super cool. Francisco our waiter recommended us the dishes to try... he was right in EVERYTHING. Thank you Francisco we appreciate your impeccable attention and kindness! 10 points",
+      "title": "Spectacular",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-18",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/18/7d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/18/7e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/18/7f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/18/80/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/18/81/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/18/82/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "GASTON V"
+    },
+    {
+      "id": "tripadvisor_1046528473",
+      "source": "tripadvisor",
+      "review_text": "The best restaurant in Lima. The food here is definitely worth it. The service is perfect! Francis is very good at attending and gives excellent recommendations.",
+      "title": "Excellent food and attention",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-18",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/00/75/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/00/76/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3d/00/77/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Milch"
+    },
+    {
+      "id": "tripadvisor_1046523799",
+      "source": "tripadvisor",
+      "review_text": "Authentic Peruvian flavors in a cozy, welcoming spot. The food is worth the wait, even if there’s a line and the attentive service makes the experience even better. Highly recommended!",
+      "title": "Authentic Peruvian cuisine",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-18",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/3c/f1/4e/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mehdi I"
+    },
+    {
+      "id": "tripadvisor_1046318430",
+      "source": "tripadvisor",
+      "review_text": "Very good attention from Oscar, very friendly and attentive at all times, delicious food, stuffed potato and sautéed loin was the choice, we will definitely return in a next time.",
+      "title": "Good experience",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-17",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Valentina F"
+    },
+    {
+      "id": "tripadvisor_1046203609",
+      "source": "tripadvisor",
+      "review_text": "Food was delicious, starters were huge and good thing we didn't order mains. Service is excellent, so is atmosphere. We went on a Thursday afternoon, looked rather full, but we had our starters within 20 minutes of ordering.",
+      "title": "Honest Review",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-16",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/37/92/ba/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/37/92/bb/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Tourist17045283398"
+    },
+    {
+      "id": "tripadvisor_1045652646",
+      "source": "tripadvisor",
+      "review_text": "Tudo very rich! Excellent food and has vegetarian option! Waiter very receptive, he has changed the dish for us who are vegetarian! The seasoning was very delicious, the dish was well served and fair price! The flirts were very refreshing!!",
+      "title": "Tudo very rich! Excellent food and has vegetarian option! Waiter very receptive, he has changed the plate for us q",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-11",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2e/34/dd/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Amanda B"
+    },
+    {
+      "id": "tripadvisor_1045544335",
+      "source": "tripadvisor",
+      "review_text": "Excellent restaurant, classics of historic Peruvian food to a high standard. Great attention from waiter Francisco, who made great recommendations and was very attentive.",
+      "title": "FABULOUS",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Francisco B"
+    },
+    {
+      "id": "tripadvisor_1045537588",
+      "source": "tripadvisor",
+      "review_text": "Spectacular experience. The best place to eat original Peruvian food as it should be. My waiter was Francisco and the attention and recommendations were perfect. Highly recommended.",
+      "title": "The best authentic Peruvian food site",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/56/6d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/56/6e/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Travel48414736966"
+    },
+    {
+      "id": "tripadvisor_1045628962",
+      "source": "tripadvisor",
+      "review_text": "The Isolina is a restaurant of simple structure, installed in an old, demolished house, with traditional construction and layout. The environment is rustic, without sophistication, reminiscent of a classic tavern, with nearby tables and family atmosphere.\n\nThe menu is not easy to understand for those who are not familiar with Peruvian cuisine, since most of the dishes are typical of the country and bring little known names to foreigners. Still, it is worth insisting: the food is full and very tasty.\n\nThe portions are large, clearly designed to be shared. The recommendation is to divide the dishes, avoiding waste. Desserts follow the same logic — the pudding is huge, quietly serves several people.\n\nThe service is good and attentive, but the staff speaks Spanish very quickly, which can make communication difficult for those who do not master the language well.\n\nThe house usually gets full, especially from local families and customers, which reinforces the authentic character of the place. Therefore, the ideal is to arrive between 12h and at most 12h30, to get a table without having to wait.\n\nAmong the dishes we have tasted, I highlight the crisp langostino, served differently: it is presented in a cup, accompanied by avocado sauce with spices, a very tasty combination. The cocktail also deserves to be highlighted — excellent and very well prepared.\n\nThe restaurant is very well located, about 5 minutes walk from the main sights of Barranco, such as the Puente de los Suspiros, which makes it easy to include in the neighborhood itinerary.\n\nConclusion:\nIt is a place worth visiting on the itinerary, for authenticity and gastronomic experience, but not necessarily to return on the same journey. Honest, abundant and delicious food in a simple and traditional atmosphere. Go early, share dishes and enjoy the local experience.",
+      "title": "Good food in rustic and crowded environment",
+      "rating": 4,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2d/b5/1a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2d/b5/1b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2d/b5/1c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2d/b5/1d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2d/b5/1e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2d/b5/1f/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Denize T"
+    },
+    {
+      "id": "tripadvisor_1045541448",
+      "source": "tripadvisor",
+      "review_text": "Got the marinated fish in aji Amarillo as my app and lomo saltado as my main. We loved it. Service was excellent, great recommendations and responsive to allergies. Francisco was our server. Polite, quick, and spoke English. Great guy. Can’t wait to return",
+      "title": "Great spot",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Kevin B"
+    },
+    {
+      "id": "tripadvisor_1045539503",
+      "source": "tripadvisor",
+      "review_text": "Greta food and great service. The ceviche was th best we had in Lima and the entrees were very filling and tasty. They even went out of their way to give special dessert for girlfriend and I anniversary",
+      "title": "Great food great service",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/5d/6e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/5d/6f/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ben M"
+    },
+    {
+      "id": "tripadvisor_1045535405",
+      "source": "tripadvisor",
+      "review_text": "Beautiful atmosphere, authentic Peruvian food, very friendly and knowledgeable staff. 10/10, I highly recommend coming here with friends, family, or solo!",
+      "title": "10/10",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Brianne"
+    },
+    {
+      "id": "tripadvisor_1045535383",
+      "source": "tripadvisor",
+      "review_text": "Had an amazing experience at Isolina in Barranco. The seco was outstanding rich, tender, and full of flavour  and the papa a la huancaína was equally excellent. Everything felt authentic and well prepared.\nSpecial thanks to Francisco, our server, who was attentive and made the experience even better.\nHighly recommend if you’re in the area.",
+      "title": "Must Visit spot in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/4d/e5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/4d/e6/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/4d/e7/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Bryan R"
+    },
+    {
+      "id": "tripadvisor_1045083711",
+      "source": "tripadvisor",
+      "review_text": "Amazing food and service! One of the best meals I had in Peru! Get the Seco de Asasdo! The pisco sour was also a favorite. Make sure to get a reservation.",
+      "title": "Isolina - 5 stars",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Daniel M"
+    },
+    {
+      "id": "tripadvisor_1045078415",
+      "source": "tripadvisor",
+      "review_text": "Great food - attentive very friendly staff ‚Francisco‘ was wonderful and took best care of us to make our stay in this unique place a unique and unforgettable experience. We came by recommendation and had no idea how good the meals they serve would be. The long queue was a good indication and we’ve had a very good time.l.",
+      "title": "Definitely a must do if n your ‘Best of Lima’ - list",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/23/49/eb/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Christine B"
+    },
+    {
+      "id": "tripadvisor_1044775541",
+      "source": "tripadvisor",
+      "review_text": "We had a wonderful experience at this restaurant. The service was excellent, and the food was outstanding. Our server, Francisco, did a fantastic job explaining the dishes and drinks, making the experience even more enjoyable. Overall, a great experience—highly recommended.",
+      "title": "Best place in Barranco",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-03",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/1f/21/18/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Silvana F"
+    },
+    {
+      "id": "tripadvisor_1044144440",
+      "source": "tripadvisor",
+      "review_text": "I would rate this experience a 10,000 out of 10 but I want the experienced travelers to know THIS is the place to go. The waiter Yul gave us amazing recommendations. The food.....top-tier. The wait staff... Top-tier. The drinks... Top-tier. Travelers and locals go here alike. My two only qualms about this place is that the locals will do their best to cut you in line before the place opens so arrive 30 minutes before opening or be prepared wait in a line. My other qualm is that this place doesn't have more locations. It's too good to only be in Peru. The portions are perfect but don't order too much! The inside seating is better than the outside seating. It's a wonderful place to be before exploring the street art or enjoying the beach. As me and my partner have been all over the world, I can guarantee we will be comparing restaurants to Isolina for years. Ps. Get the pisco sour.",
+      "title": "Travelers? Locals? Everyone should and can come here.",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-29",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/16/04/38/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Nomad54783824939"
+    },
+    {
+      "id": "tripadvisor_1044144199",
+      "source": "tripadvisor",
+      "review_text": "Isolina is the best restaurant we ate at during our 3 week trip to Peru. The drinks were consistently phenomenal and the main courses were prepared perfectly. The staff was extremely friendly and our waiter Yul gave us excellent recommendations each time we ate here! I would recommend showing up at 11:40 as Isolina is extremely popular (for good reason) and lines can form.",
+      "title": "Must go in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Evan S"
+    },
+    {
+      "id": "tripadvisor_1044010372",
+      "source": "tripadvisor",
+      "review_text": "We had a fantastic experience at Isolina. The food was amazing, full of authentic flavors and generous portions, but the highlight of the evening was the service from our server Francisco. He was friendly, attentive, and professional at all times, with great recommendations and a warm attitude. Thanks to him, our experience was even more enjoyable. We will definitely be back!",
+      "title": "Amazing experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-28",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Claudia L"
+    },
+    {
+      "id": "tripadvisor_1043524606",
+      "source": "tripadvisor",
+      "review_text": "A trendy place, you have to wait a while if you don't book. The dishes in large and individual version, are very rich and good size to share, sour was fine (I have tried more delicious), good service. Nice atmosphere, full of tourists. In prices is above average but as they are good size you can share even the single version for 2.a single plate approx , 30 dollars",
+      "title": "Expensive, but rich rich",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-24",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0d/05/e9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0d/05/ea/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "MARAYAStgoChile"
+    },
+    {
+      "id": "tripadvisor_1042962967",
+      "source": "tripadvisor",
+      "review_text": "The food itself was excellent. There was also a clear wine list, but the wines were well selected. There were three of us and everyone ordered something different. We were all satisfied, although the food might have been slightly better seasoned. Overall, however, a very great atmosphere with (and this must be emphasized), very particularly friendly and competent service",
+      "title": "Last day Lima",
+      "rating": 4,
+      "review_datetime_utc": "2025-12-19",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Clemens"
+    },
+    {
+      "id": "tripadvisor_1042944738",
+      "source": "tripadvisor",
+      "review_text": "An exceptional service, with Francisco I felt like family. Being Peruvian and residing in France I don’t know the details of Peruvian cuisine, he explained to me in detail the preparation and essence of the cuisine of the dishes, without stopping there, the savior is delicious 😋, I thought I could not finish due to quantity but quality took precedence and I let myself go in this huge and delicious dish which is “Adobo de Codillo Bebe”. \nThank you Francisco, never change and that the rest of the world recognizes your service value🙏🔥",
+      "title": "Excelente comida y excellent service from Francisco",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-18",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Passport26629824307"
+    },
+    {
+      "id": "tripadvisor_1042840748",
+      "source": "tripadvisor",
+      "review_text": "The waiter's attention was 100 points: very friendly and attentive, with excellent recommendations for dishes. The food tasted nice and authentic. Anyway, belly full heart happy 😉😋👌 a restaurant of traditional food totally recommended.",
+      "title": "Review of Papitas Wine",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/01/38/34/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/01/38/35/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sightseer58179207307"
+    },
+    {
+      "id": "tripadvisor_1042526493",
+      "source": "tripadvisor",
+      "review_text": "The cocktails = super delicious \nScallops as if from heaven\nThe meat was just super tender. \n\nThe service is very pleasant and you feel directly welcome and well looked after. \n\nA great choice in Lima 👌",
+      "title": "Buenaso",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Elena G"
+    },
+    {
+      "id": "tripadvisor_1042518814",
+      "source": "tripadvisor",
+      "review_text": "Service was amazing and kind, food was also nice and with quality and portions were huge ! We definitely recommend if you want to experience Peruvian food  !",
+      "title": "You should definitely eat here 🙂",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-15",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/fc/44/73/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sightseer47813078292"
+    },
+    {
+      "id": "tripadvisor_1042299589",
+      "source": "tripadvisor",
+      "review_text": "Franciso was a wonderful server. Food and drinks were delicious. Also perfectly accommodated my onion allergy which has been difficult at other restaurants. 10/10!",
+      "title": "10/10 for food and service!",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f8/df/63/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Shannon E"
+    },
+    {
+      "id": "tripadvisor_1042189940",
+      "source": "tripadvisor",
+      "review_text": "Amazing food and service! Highly recommend when in Lima. Large portions and delicious drinks. Francisco was a great server and made excellent recommendations - we will be back!",
+      "title": "Amazing food & service",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-12",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Talia B"
+    },
+    {
+      "id": "tripadvisor_1042162176",
+      "source": "tripadvisor",
+      "review_text": "Really great atmosphere, food, drinks, and service! I met someone in the beach who recommended and came by just to kill some time and read my book. Gorgeous and authentic\nInterior and wonderful vibe",
+      "title": "Highly recommend",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-11",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f6/6c/6c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f6/6c/6d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f6/6c/6e/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Kellyn B"
+    },
+    {
+      "id": "tripadvisor_1041836433",
+      "source": "tripadvisor",
+      "review_text": "Great food and attentive service from Oscar. El lomo saltado is lo menor... El ceviche was very well tempered. There Chicha from the house was delicious.",
+      "title": "Great traditional food.",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-08",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f0/d8/6c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f0/d8/6d/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Tomás F"
+    },
+    {
+      "id": "tripadvisor_1041580902",
+      "source": "tripadvisor",
+      "review_text": "Spectacular! The indescribable flavors.. we ate: shells chalaca, ceviche and a sublime shrimp sautéed...\nIt highlights the attention, concern, kindness and professionalism of YUL.. the experience would not have been the same without your careful attention.\nAlejandra.Chile",
+      "title": "Sublime flavor experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-07",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "alejandra c"
+    },
+    {
+      "id": "tripadvisor_1041580152",
+      "source": "tripadvisor",
+      "review_text": "To be brief, if your business has employee of the month, Francisco the waiter on the top floor deserves that bonus. Excellent service, take care of it.",
+      "title": "Excellent experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Xabier G"
+    },
+    {
+      "id": "tripadvisor_1041483008",
+      "source": "tripadvisor",
+      "review_text": "They recommended this place and we went there while we were in Barranco. Our waiter Oscar was nice and explained us the dishes and what he recommends.  We didn’t want to eat meat so we ordered the ceviche with fried octopus and corn. Ceviche (mahi mahi) was really good. Fried octopus ok. Then we had a traditional peruvian dish with fried fish and sweet potato and yuka in a yellow “tiger” sauce. The portion although it was for one person it was quite big. It was good, nothing super special. The ambience was ok. It’s a bit pricey for what you get. There were a lot of people and without reservation you might have to wait a while.",
+      "title": "Good food but a bit pricey",
+      "rating": 4,
+      "review_datetime_utc": "2025-12-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Evi"
+    },
+    {
+      "id": "tripadvisor_1041378316",
+      "source": "tripadvisor",
+      "review_text": "We’re still @ the restaurant…don’t want to leave! The food melts in your mouth; criollo dishes cooked to perfection (with a few surprise twists that will please you more than words can describe). Now, possibly the real star here is the service! Our server, Yul was stellar! He anticipated our every need & his menu recommendations were spot on! We will absolutely be dreaming of Isolina for nights to come. Thank you!",
+      "title": "Bueno Sueños de Isolina",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-05",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e9/ac/af/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e9/ac/b0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e9/ac/b1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e9/ac/b2/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Matthew D"
+    },
+    {
+      "id": "tripadvisor_1041268404",
+      "source": "tripadvisor",
+      "review_text": "Wonderful Francis' attention indeed the recommendation and the fact of knowing everything and being able to give us details was extremely important for the experience",
+      "title": "Wonderful.",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Juan Jose G"
+    },
+    {
+      "id": "tripadvisor_1041273487",
+      "source": "tripadvisor",
+      "review_text": "I had a great time in Isolina. We returned for the excellent care of Francisco, our waiter. It’s a restaurant you should try, with delicious food and great customer service!",
+      "title": "Excellent restaurant!",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Chris K"
+    },
+    {
+      "id": "tripadvisor_1041265958",
+      "source": "tripadvisor",
+      "review_text": "Delicious food and super attention especially from Francisco, he recommended several things and explained everything with a lot of patience! Thank you!!",
+      "title": "Ale",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-04",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e6/13/52/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alejandra M"
+    },
+    {
+      "id": "tripadvisor_1041268920",
+      "source": "tripadvisor",
+      "review_text": "Excellent. Great representative of high quality Peruvian food.\n\nMy recommendations: ceviche con pulpo, lomo saltado, y papa rellena.\nAs well as a good pisco sour or maracuya sour (passion fruit).\n\nThank you Francisco for the great service",
+      "title": "Outstanding flavors",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alessia C"
+    },
+    {
+      "id": "tripadvisor_1041035220",
+      "source": "tripadvisor",
+      "review_text": "Yul was the best server ever. I came for my birthday and this place was highly recommended. Yul took so well care of me. I highly recommend the food as it is very authentic Peruvian food!",
+      "title": "Yul is the best and the food is excellent!",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e2/29/3e/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Dennis P"
+    },
+    {
+      "id": "tripadvisor_1041026399",
+      "source": "tripadvisor",
+      "review_text": "Ceviche wonderful, I also recommend res doted costillado. Nice place and very friendly service!!! Besides, Barranco is a very charming neighborhood to walk around!!!",
+      "title": "To enjoy!!!",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e2/08/3a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e2/08/3b/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Marilia C"
+    },
+    {
+      "id": "tripadvisor_1040783351",
+      "source": "tripadvisor",
+      "review_text": "Very good experience. We could only try two dishes because they were giant and we were recommended to try two and if we wanted more order later and less because we ended up full. Very rich ossobuco and potato stuffing. Recommended!",
+      "title": "Worth it.",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Carlos F"
+    },
+    {
+      "id": "tripadvisor_1040687836",
+      "source": "tripadvisor",
+      "review_text": "Fantastic dining experience! We asked for pescatarian suggestions and were thrilled with the dishes our waiter Francisco helped us pick. We stayed for 3 hours on the second floor for our drinks, appetizers, main course, tea, and desserts. Great spot!",
+      "title": "Cozy dining experience with authentic Peruvian dishes",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Shannon G"
+    },
+    {
+      "id": "tripadvisor_1037033331",
+      "source": "tripadvisor",
+      "review_text": "Beautiful décor and excellent service. Traditional Peruvian “criolla” cuisine with generous, flavorful dishes. The stuffed scallops – yummy yummy! – and the ceviche with crispy octopus were both outstanding. The pisco sour was delicious and generously served.\nOverall, great quality, more emblematic and iconic than a hidden local spot, but be prepared for European prices!",
+      "title": "Great peruvian culinary experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/98/4e/da/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/98/4e/db/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/98/4e/dc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/98/4e/dd/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Willgem"
+    },
+    {
+      "id": "tripadvisor_1034010166",
+      "source": "tripadvisor",
+      "review_text": "Very popular with queues outside when other nearby restaurants have plenty of empty tables. We went early evening before the queue started. We shared a Lobo Saltado. It was nice, but nothing special. Plates were cold and the food was lukewarm which was not good. We enjoyed excellent house wines   There is a wide choice of Peruvian dishes on offer, so a good choice if you want offal or cow’s feet for example. There’s something for everyone.",
+      "title": "Good, but not worth queuing for.",
+      "rating": 4,
+      "review_datetime_utc": "2025-10-09",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RoverP"
+    },
+    {
+      "id": "tripadvisor_1032997096",
+      "source": "tripadvisor",
+      "review_text": "We tasted ceviche with fried octopus and it is simply spexracular.\nWe also ate the sauteed loin and loved it.\nWe arrived with my wife on a Sunday afternoon and had to wait 45 minutes that passed us super fast because we took the opportunity to go to the square that is a few meters away and had crafts.",
+      "title": "The best of Peruvian food",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/46/96/95/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/46/96/96/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Carlos L"
+    },
+    {
+      "id": "tripadvisor_1030264527",
+      "source": "tripadvisor",
+      "review_text": "Bustling, popular, tavern in Barranco. No reservations, and the wait list can be long, depending on the hour (some outdoor seating). Rustic presentations of good food in generous portions, strong drinks, nice staff (like Sergio).",
+      "title": "Good",
+      "rating": 4,
+      "review_datetime_utc": "2025-09-14",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/1a/2b/a0/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "L H"
+    },
+    {
+      "id": "tripadvisor_1029456888",
+      "source": "tripadvisor",
+      "review_text": "This place is very local and rustic, on the very border of being too rustic (paper napkins, tables and chairs that are a little bit wobbly and unmatched), but I will forgive any of that because when paired with good food, that all becomes part of the charm. In this case, it was definitely charming. We were able to get a table for 2 as a walk in, which I guess is just dumb luck as i've seen other reviews say they had to wait a while. We had the ceviche and their chicken stew. The ceviche was very surprising. Unlike the many ceviche dishes we tried throughout our trip, this one came out not with a traditional leche de tigre sauce but instead with what seemed to be a thicker orange sauce. I was at first a bit disappointed because I like my traditional ceviche, but one bite changed my mind completely. I have no idea what they make that sauce with, but that dish immediately became a favorite of the entire trip. Unlike any other ceviche I've had. Well worth it. The chicken stew wasn't quite as mind blowing but it was still very good. And really large portions on that stew. Easily could have been shared by 4-6 people. Overall, really good food. Not high end, definitely rustic and feels more \"homemade\" local than elevated dining. But I enjoyed that aspect very much.",
+      "title": "Rustic Food and Charm",
+      "rating": 4,
+      "review_datetime_utc": "2025-09-08",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/0d/5e/ca/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/0d/5e/cb/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mikalako"
+    },
+    {
+      "id": "tripadvisor_1028743488",
+      "source": "tripadvisor",
+      "review_text": "This is my first trip to Peru and we made a reservation about a month in advance. We were early for our 7pm reservation and was shown to our table upstairs very quickly. On the table, there was a card that congratulate us on our wedding anniversary day. And we were given 2 complimentary Pisco Sour. Our staff was Rosa L and she was very friendly and attentive throughout the dinner. My husband ordered a cocktail. Knowing that the food portion is huge, we only ordered the Ceviche and Tripe Stew to share. Rosa checked to make sure we eat tripe before she confirmed the order. We thought that it was an interesting combination of cured fish with fried octopus but it works. We finished everything on the plate. When the tripe stew came, it was a lot and came with rice too. The tripe was so tender. I was caught by surprise by the stir fry chicken blood. It had been chopped into small pieces. My husband thought it was stir fry minced meat. I ended up eating the chopped chicken blood that paired so well with the rice. Unfortunately we didn't get a chance to try dessert as we were so full and felt bad that we had leftovers of the chicken blood. Given that the food portion is huge (could be eaten by 3 or 4 people), I think the prices are reasonable. I think it would be good to give diners an option to order half portion so they get to try other dishes and reduce food wastage. Overall, the experience has been great and we would be happy to return for another meal in future",
+      "title": "Good service, tasty food to be shared",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-04",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/02/95/ec/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/02/95/ed/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/02/95/ee/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/02/95/ef/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Tulip4178"
+    },
+    {
+      "id": "tripadvisor_1028416698",
+      "source": "tripadvisor",
+      "review_text": "Restaurant recommended by local operator fi high level ( Belmond) , absolutely not in line with expectations.\nApproximate Service, equipment with small, cheap paper towels. \nAverage food",
+      "title": "Disappointed",
+      "rating": 2,
+      "review_datetime_utc": "2025-09-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "annas"
+    },
+    {
+      "id": "tripadvisor_1028075119",
+      "source": "tripadvisor",
+      "review_text": "I don't recommend it. Price/quality is a NO. What stands out most is the attitude of the staff, they are not friendly and make faces that bother them when you make requests.",
+      "title": "Average but expensive restaurant",
+      "rating": 3,
+      "review_datetime_utc": "2025-09-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/fc/93/51/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Adventure672023"
+    },
+    {
+      "id": "tripadvisor_1027140388",
+      "source": "tripadvisor",
+      "review_text": "One of those mythical restaurants where you can enjoy the mythical cuisine of Peru, with typical recipes of a lifetime, traditional flavors and good treatment in a charming place. Highly recommended.",
+      "title": "Peruvian food",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-27",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ee/c4/6c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ee/c4/6d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ee/c4/6e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ee/c4/6f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ee/c4/70/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Juanjo P"
+    },
+    {
+      "id": "tripadvisor_1026300997",
+      "source": "tripadvisor",
+      "review_text": "A waste of food. Even for large groups, I saw several leave food behind. \nIt doesn't have the Peruvian spice I ate in other Peruvian cities. I ordered a chicken Aji and it was pretty weak. They don't explain that the dishes are giant. Very bad service. I don't tell anyone. Must be better in Lima.",
+      "title": "Weak spice and food waste",
+      "rating": 1,
+      "review_datetime_utc": "2025-08-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/e5/53/29/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Janaina S"
+    },
+    {
+      "id": "tripadvisor_1025573611",
+      "source": "tripadvisor",
+      "review_text": "Drinks, Dishes, Service and Mood, everything was there! We had pisco and meats and everything was very well cooked, great fusion cuisine.\nThank Yul S. for his Service.",
+      "title": "Everything was perfect!",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-19",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "stéphanie t"
+    },
+    {
+      "id": "tripadvisor_1024094816",
+      "source": "tripadvisor",
+      "review_text": "Rustic, friendly ambience, great service, and great food at moderate prices. Most servings are for 4 persons, so ask before you order any dish!  The bathrooms and premises are clean.",
+      "title": "Where the Locals go",
+      "rating": 4,
+      "review_datetime_utc": "2025-08-13",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "rexpig"
+    },
+    {
+      "id": "tripadvisor_1023849260",
+      "source": "tripadvisor",
+      "review_text": "After waiting an hour they sat us down with a pillar in between. I find that disrespectful. My friend wanted to eat there so badly that I accepted. I'd be gone. The ceviche well and the dry that is nothing more than a meat juiced with beans and rice. Ridiculous. The staff like all my experience in Peru are very friendly and friendly.",
+      "title": "Disappointment",
+      "rating": 3,
+      "review_datetime_utc": "2025-08-11",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "ouc22"
+    },
+    {
+      "id": "tripadvisor_1023706771",
+      "source": "tripadvisor",
+      "review_text": "Order before 7pm closing time of the kitchens on Sunday evening but do not miss out and it queues up! 2 small portion dishes are more than enough for 3 so hearty. Everything is divine and Service very kind. Unbeatable Price quality ratio!",
+      "title": "Fabuleux",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-11",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/c2/4c/41/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/c2/4c/42/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/c2/4c/43/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ofely1984"
+    },
+    {
+      "id": "tripadvisor_1023327044",
+      "source": "tripadvisor",
+      "review_text": "I was there with a very dear friend, making great memories. The food was incredible, a lot of food and extremely flavory. The people working there were very kind and professional and the environment in general very highly pleasing. I would highly recommend this place if you want to have a taste of what the Peruvian cuisine tastes like. Highly recommended!",
+      "title": "Awesome spot!",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-08",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RJ"
+    },
+    {
+      "id": "tripadvisor_1021234488",
+      "source": "tripadvisor",
+      "review_text": "The dishes are very abundant, classic Peruvian cuisine very well prepared. High prices, we ordered several dishes and the waiters did not indicate their size. We ended up leaving half the meal, sometimes, by selling more they can be wrong nobody likes to leave because they didn't notice that the dishes were for 2 or even 3. \nOutside that Service attentive and pisco sour very good. I'd come back safe if I go Lima again.",
+      "title": "Hearty and tasty cuisine",
+      "rating": 4,
+      "review_datetime_utc": "2025-07-28",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Tomas Escaida"
+    },
+    {
+      "id": "tripadvisor_1020920285",
+      "source": "tripadvisor",
+      "review_text": "Great spot in Barranco.  Small foot print.  Service was average for top end restaurant.\nLomo Saltado was fantastic!!! Wish there was more meat. Drinks were good but not top end.  Food was Good but not GREAT!!",
+      "title": "Good place to eat at Barranco",
+      "rating": 4,
+      "review_datetime_utc": "2025-07-26",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "jboyhoya20"
+    },
+    {
+      "id": "tripadvisor_1019327201",
+      "source": "tripadvisor",
+      "review_text": "Our best gastronomic experience in Lima! Exceptional food! We ate salted lomo and ceviche. All very well prepared and tasty. The Mood is relaxed and the service very attentive. The Isolina beer is very good! I recommend!",
+      "title": "Imperfect experience in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-19",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/84/34/fa/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Claudia P"
+    },
+    {
+      "id": "tripadvisor_1019276930",
+      "source": "tripadvisor",
+      "review_text": "We were recommended by the locals to try this restaurant which had been visited by Robert De Niro and Lenny Kravitz. I want mostly because it was recommended by a local, but Mr. De Niro knows cuisine as well. Both the food and the service was excellent. Every dish we tried was very flavorful. Beware that all dishes were large and can be shared by 2-3 people. The waiters will also recommend not ordering too many plates.",
+      "title": "Great Place To Eat in Barranco Peru",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-18",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "FPAdventurer"
+    },
+    {
+      "id": "tripadvisor_1018022914",
+      "source": "tripadvisor",
+      "review_text": "Exquisite food, a place where you can eat typical Peruvian food. Rustic decoration inspired by tavern, the best pisco sour and lime sigh. Excellent attention from Nick, sound recommendations, knowledge of the whole letter and very friendly.",
+      "title": "Lunch in Isolina",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-13",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Maria B"
+    },
+    {
+      "id": "tripadvisor_1017407806",
+      "source": "tripadvisor",
+      "review_text": "We loved it!! Spectacular 😻, everything was delicious! We even ordered dishes to share because the rib plate was quite large.\n\nWe made reservations months in advance, but they also accept small groups downstairs.",
+      "title": "I WOULD COME BACK 1 AND 10 TIMES MORE",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/ad/6b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/ad/6c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/ad/6d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/ad/6e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/ad/6f/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Valeria R"
+    },
+    {
+      "id": "tripadvisor_1016280122",
+      "source": "tripadvisor",
+      "review_text": "We went for the sancochado, it was delicious but there was very little meat, especially since we ordered one for two people. The service was a bit arrogant, it didn't feel affectionate, the atmosphere was noisy. We wouldn't go back. There are better ones in Lima.",
+      "title": "Good food bad atmosphere",
+      "rating": 3,
+      "review_datetime_utc": "2025-07-03",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Gabriel f"
+    },
+    {
+      "id": "tripadvisor_1015781471",
+      "source": "tripadvisor",
+      "review_text": "A classic in Barranco and Lima in general. A 'tavern' so it is obviously a much more casual and relaxed atmosphere than some other. It was next to our B hotel in Barranco. Very comfortable.\nThe restaurant is not great and has a great bar downstairs.\nThe impeccable attention of our waiter who knew everything perfectly. Excellent recommendations.\nAmazing pisco sour.\nUnmissable lime sigh too.",
+      "title": "Excellent Peruvian classic",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/67/86/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/67/87/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/67/88/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/67/89/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/67/8a/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sergei PT"
+    },
+    {
+      "id": "tripadvisor_1014287612",
+      "source": "tripadvisor",
+      "review_text": "Located in the Barranco neighborhood, it is a must-stop place during your stay in Lima. It was our last dinner in Peru after a month touring it and everything we asked for was very good, and abundant.\n\nPrices are European (30-40€ person).",
+      "title": "Top!!",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3f/32/6f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3f/32/70/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3f/32/71/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3f/32/72/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3f/32/73/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3f/32/74/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3f/32/75/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Nomad27092844099"
+    },
+    {
+      "id": "tripadvisor_1014221300",
+      "source": "tripadvisor",
+      "review_text": "It was the best Lomo jumped I've ever eaten in Peru. The point of the meat was impeccable. The food very well presented.\nThe taste was simply delicious.\nThe service was great, the Pisco Sour was excellent.\nThe restaurant has an old vibe, very charming.",
+      "title": "The restaurant is small and you may have to wait a long time to get a table, but it's worth it.",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-22",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Juliana"
+    },
+    {
+      "id": "tripadvisor_1013680325",
+      "source": "tripadvisor",
+      "review_text": "We had booked well in advance in this place, due to the high demand. We were expecting to eat delicious typical Peruvian food. \n Upon arriving at the restaurant, the hostess tells us that everything was Barranco without water, so the bathrooms were not enabled. First thing negative, which we could have been advised to cancel the reservation, since we came from walking a lot and eager to go to the bathroom, which prevented us from being able to ask for the longed pisco sour, we could not drink anything in all the food. \n The place is generally very cold, ugly. \n We ordered the dishes, fried pejerreyes that were very good and loin skipped. For bad luck the sautéed back came with a hair. \n They didn’t know how to handle the situation very well, as they chose to change the skipped back but charge it the same way. They made up for it by giving away a dessert.\n Really impressive, they don’t have bathrooms and they don’t warn and even more so they charge the dish that came with a hair, this means they don’t want to lose money anywhere. \n In these types of restaurants you can tell when influencers make posts of them, without any heart. They recommend him for doing a job. \n This place is a real offense to Peruvian cuisine. You can eat so much better, in little known places and so much cheaper.",
+      "title": "Trap for tourists",
+      "rating": 1,
+      "review_datetime_utc": "2025-06-19",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ana A"
+    },
+    {
+      "id": "tripadvisor_1007430853",
+      "source": "tripadvisor",
+      "review_text": "Very rich! Super Generous!\nI went to the place on Av El Polo. \nWe moved tables because there was a lot of noise, they had the patience to place us in a less noisy and more lit place. Hearty and very well prepared dishes. I'll come back of course!",
+      "title": "I'll be back!",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/db/54/b6/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/db/54/b7/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Choripolmi"
+    },
+    {
+      "id": "tripadvisor_1006582136",
+      "source": "tripadvisor",
+      "review_text": "The food is quite normal for their prices and the quantities are excessively large. With one person's serving, they can eat three. It is more about quantity and not quality. The service and customer service (waiters and reception girls) is quite poor, if not almost non-existent. Unfortunately, I would not recommend this site to anyone. Unless you order a dish for one person, which can easily be shared with a minimum of two people, (and my husband and I are people who have a big appetite) but the waiters won’t let you know about this. Disappointing place!",
+      "title": "Bad experience",
+      "rating": 1,
+      "review_datetime_utc": "2025-05-09",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "BELLA S"
+    },
+    {
+      "id": "tripadvisor_1005160200",
+      "source": "tripadvisor",
+      "review_text": "Fun, tavern-style spot. Came in to try the traditional Peruvian dish, Loma Saltado, on a recommendation from a local. Delicious! It was huge! We split it and still couldn’t finish it. Sat at an outside table and thoroughly enjoyed the experience.",
+      "title": "Try the Lomo Saltado!",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-30",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Julie W"
+    },
+    {
+      "id": "tripadvisor_1002413104",
+      "source": "tripadvisor",
+      "review_text": "Deception\n Less waiting, as there are many people in this restaurant, but we were touted enough when it came to giving dinner to the six friends we were going. They conditioned the order a bit, offering us an off-carte dish from Ossobuco, which happened to be worth more than any dish on the menu. It was unsmokable, we left it whole, and they didn't worry about anything but saying if they wanted to warm it up. They couldn't even break the meat. It's hard to eat badly in Lima, but right here it was horrible.",
+      "title": "Deception",
+      "rating": 1,
+      "review_datetime_utc": "2025-04-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Dario H"
+    },
+    {
+      "id": "tripadvisor_1001881140",
+      "source": "tripadvisor",
+      "review_text": "Restaurant with typical Peruvian dishes, with taste of family food. Excellent service. Interesting to make a reservation, as it is busy. Well served dishes.",
+      "title": "Typical Peruvian food.",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-11",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/92/79/f5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/92/79/f6/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Andressa P"
+    },
+    {
+      "id": "tripadvisor_997323017",
+      "source": "tripadvisor",
+      "review_text": "The service was fine.  The food was tasty.   The reason for the single-star review is the debilitating food poisoning that left me and my boyfriend in bed all the next day and hospitalized the day after that.   It was almost immediate.  We both tested positive for bacterial infections and have been on antibiotics since.   Before that, it was a great experience. “So, Mrs. Lincoln, how was the show?”",
+      "title": "Restaurant.  Bed.  Hospital.",
+      "rating": 1,
+      "review_datetime_utc": "2025-03-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "itswhatevery"
+    },
+    {
+      "id": "tripadvisor_998146828",
+      "source": "tripadvisor",
+      "review_text": "Amazing service, lovely wine choices and exquisite food.  Portion were very large (and we ordered the smaller single sizes) but they happily packed up the surplus and we’re looking forward to a delightful second meal.\n\nWe ordered:\n- Causa Limena\n- Rocoto Rellano (outstanding!!)\n- aji de gallena\n- Chinese/Peruvian beef stir fry on noodles",
+      "title": "Amazing experience!",
+      "rating": 5,
+      "review_datetime_utc": "2025-03-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "workingmomof2"
+    },
+    {
+      "id": "tripadvisor_996512518",
+      "source": "tripadvisor",
+      "review_text": "The restaurant opens at 12 a.m. and about 15 minutes before it was already in line. The restaurant is simple, but the food is a thousand note, so I found out why the queue. Enormous dishes, medium service, good price and excellent location. I loved to meet",
+      "title": "Now I know why there was a queue at the door",
+      "rating": 5,
+      "review_datetime_utc": "2025-03-03",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "71flavia"
+    },
+    {
+      "id": "tripadvisor_993716091",
+      "source": "tripadvisor",
+      "review_text": "To help celebrate my 80th birthday, my daughter did a lot of homework from her home in Calgary, searching for a good restaurant in Baranco, and three months ahead, and satisfied that Isolina would meet our needs, made a reservation for dinner for seven of my family on 7th February. She later  flew to Lima with her partner, to spend time with my wife and I.\nOn the date in question, we duly ordered a selection of dishes, including Osso Buco and Seco de Carne.\nOnly after we had all made significant progress eating, a few hints and comments arose about the degree of saltiness in seemingly every dish. Including, the beans, mashed potatoes, the rice and the salad, and most of all, the meat dishes. The family were reluctant to make comments in fear of spoiling the dinner, for all. Of course, by this time we had passed the point of no return, but we carried on regardless.\nBefore the waiter collected the remnants, I asked to speak to him, explaining our concerns and dissatisfaction, and asking for somebody in authority to sample the food remnants, in order to verify our concern. No comment was forthcoming, no excuse was made, and only on leaving did we get an opportunity to voice our concerns to the manager on duty, whom had little of substance to say except that they were trying to improve,\nIn all my years of living and visiting Peru with my Peruvian wife, I have never felt the need or urge to complain about food quality, but I must be frank in saying that the meal was the worst ever experienced.\nBut what was the most annoying issue, was that there was absolutely no hint of an apology or excuse. And it all made for an exceptionally distressing experience for my daughter, who had gone to such great lengths to make it all an enjoyable and memorable event.\nI earnestly request that Management read these comments, and provide some form of comment on how this could occur in what might reasonably be expected in a restaurant that seemingly enjoys an otherwise a reasonable reputation, although I am not sure how.",
+      "title": "A most unsatisfactory experience in Baranco",
+      "rating": 1,
+      "review_datetime_utc": "2025-02-13",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Robert H"
+    },
+    {
+      "id": "tripadvisor_992320413",
+      "source": "tripadvisor",
+      "review_text": "We loved our lunch at this charming restaurant in Barranco.    We walked past the side entrance and saw a long line of people waiting for the restaurant to open for lunch.   My husband stood in the lineup while I walked around this interesting area.   We got a table pretty quickly as most people wanted to be seated inside.    \nWe had an amazing lunch.  My husband had the traditional Peruvian  pork sandwich and I ordered the ceviche with yellow Amarillo pepper sauce.   Not only were our meals very beautifully presented but they tasted amazing.   The ceviche was delicious.   Very happy we stood inline and had a meal here.   If we had have been in Barranco another time, we would have eaten here again!   Great service as well.",
+      "title": "Saw the lineup before the restaurant opened and glad we waited",
+      "rating": 5,
+      "review_datetime_utc": "2025-02-07",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Laurie e"
+    },
+    {
+      "id": "tripadvisor_990670642",
+      "source": "tripadvisor",
+      "review_text": "What a cracking place. The plate serves are very large but they have what they refer to as personal serves - so if want to share get a normal serve but otherwise the personal plates are the way to go. The lomo saltado and rice dishes we had were both very good. The place is very popular and by the time we left people were queuing to get in. Service was excellent - precise, prompt and helpful re dish choices. Go here for quality cuisine and great value. But make sure you do not over order given serving  sizes.",
+      "title": "Still great and really good value",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-26",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Goldrichie"
+    },
+    {
+      "id": "tripadvisor_990507038",
+      "source": "tripadvisor",
+      "review_text": "This restaurant is very hyped and the atmosphere there is warm and buzzing. It is very popular and there seems to be a line there at all times, so do book your table in advance if you want to visit! We unfortunately couldn't do that since our schedule in Lima was unclear. We decided to give it a shot anyway and were pleased when we did get a table outside (was pretty chilly in the evening, but that's on us).\n Service was friendly but not as attentive as we already had gotten a little used too in Lima. Out of the two dishes we ordered one was a little disappointing, mostly for lack of seasoning. Also, the wine we ordered was definitely not the best, drinkable. \nOverall not a bad experience, but for this price and much lower you can get such delicious food in this city, we were perhaps expecting a bit more.",
+      "title": "Traditional and popular restaurant",
+      "rating": 3,
+      "review_datetime_utc": "2025-01-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jenda"
+    },
+    {
+      "id": "tripadvisor_989357277",
+      "source": "tripadvisor",
+      "review_text": "Hello, the restaurant has always been my favorite and I go whenever I can. However, I must mention that the chicken pepper was quite salty, as was the accompanying rice.\n\nOn the other hand, we understand that it is a house and that those who visit the local Barranco do it because we like the place, but the restaurant is not exactly economical, so the hygienic services should be in better condition.\n\nYesterday, in the women's room, there was no light; only a lamp that barely illuminated. In addition, the toilet had traces of everything, apparently due to lack of water. When trying to wash my hands, I encountered a similar problem: almost no water was falling. The bathroom door was also broken at the bottom.\n\nI believe that, because of the restaurant’s reputation (which doesn’t just depend on its food), it is important to take care of all the details of the services to make the experience really good.",
+      "title": "Regular",
+      "rating": 3,
+      "review_datetime_utc": "2025-01-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Stay48045411971"
+    },
+    {
+      "id": "tripadvisor_988924569",
+      "source": "tripadvisor",
+      "review_text": "We arrived at the restaurant after several indications.\nBut it was a big disappointment: starting with a menu with few options, waiters with poor and time-consuming care.\nThe food was the worst part of the experience. No taste, we ordered a ceviche that included fried pulp. We've never eaten a dough that hard and tasteless.\nMuch fame and bad quality.\nNo recommend",
+      "title": "Poor gastronomic experience in Lima",
+      "rating": 1,
+      "review_datetime_utc": "2025-01-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "ana rita m"
+    },
+    {
+      "id": "tripadvisor_988913903",
+      "source": "tripadvisor",
+      "review_text": "My reservation was for Friday, January 10 2025 for 2 people at 7pm, reservation was under my name. (Isolina Barranco 2nd floor) we had a terrible experience, we requested to speak to a manager cause the table next to us was meant to be for 4 people, and they had 7 people seating there waiting for a bigger table to be made, this was a safety issue, and people that were going to the restrooms kept hitting me every time they  pass, the so called manager named Geraldine refused to correct the issue, and  made up a story. Food was ok, but i’ll never be back for sure. I request upper management to look into this issue, our waitress admitted the manager made a mistake.",
+      "title": "Go somewhere else",
+      "rating": 1,
+      "review_datetime_utc": "2025-01-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Anthony T"
+    },
+    {
+      "id": "tripadvisor_988397316",
+      "source": "tripadvisor",
+      "review_text": "Polo's place. Only quantity not quality. Your pickle of pretty salty. Looks like the cook dropped the salt bowl on the plate. The best waters I had at the end.",
+      "title": "Pure salt. Is quantity not quality",
+      "rating": 1,
+      "review_datetime_utc": "2025-01-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fernando A"
+    },
+    {
+      "id": "tripadvisor_987857776",
+      "source": "tripadvisor",
+      "review_text": "On Sundays you can not make reservations, what a horror to have to queue and wait 2 hours and a half for lunch!! we ended up going to lunch at one of the thousands of extraordinary restaurants in Lima! how disorganized in Isolina, with a little order things would be better!",
+      "title": "Too much waiting",
+      "rating": 1,
+      "review_datetime_utc": "2025-01-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Giuliana R"
+    },
+    {
+      "id": "tripadvisor_987277215",
+      "source": "tripadvisor",
+      "review_text": "On our tour of Barranco we visit Isolina, an emblematic restaurant of Peruvian cuisine. We can highlight its warm and welcoming atmosphere, with a decoration that highlights the traditional character. Isolina offers an authentic culinary experience that evokes the homemade flavors of Peruvian cuisine and that reflect its rich culinary tradition. In Isolina you can try the typical dishes of Peru as the limestone cause and the tiraditos with a modern touch, fusing tradition and modernity in a delicious way, the cocktails also stand out for their variety and flavor. It is an ideal place for those looking to enjoy the authentic flavors of Peruvian cuisine and have a special time.",
+      "title": "Emblematic Limeña Tavern.",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/5e/17/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/5e/31/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/5e/58/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/5e/62/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/5f/86/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/5f/97/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/5f/b9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/77/60/10/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RodSaint71"
+    },
+    {
+      "id": "tripadvisor_986908527",
+      "source": "tripadvisor",
+      "review_text": "Went there for dinner on a Sunday evening. Short wait and overall quick service. Got apps and dinner no drinks. \n\nThe apps were solid. Had the civiche and it was awesome. Great flavors and the fried octopus in it was incredible. \n\nDinners are huge and meant to be family style. We were not really warned of this and ordered 3 meals for a family of 5 after 3 apps thinking we would go light. The food could have easily fed 10 for dinner. We barely ate half. \n\nHad the osobucco  special. Taste was bland and meat was some of the toughest osobucco I’ve had.  Also had the fried rice dish which was really good. Highly recommend this one. Also had the shredded chicken stew which was so so. Flavor was good but a lot of gravy on it. \n\nI feel that overall the restaurant is a bit overrated for all of the hype and recommendations.",
+      "title": "A bit overrated family style meals",
+      "rating": 3,
+      "review_datetime_utc": "2024-12-30",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Chris H"
+    },
+    {
+      "id": "tripadvisor_985603779",
+      "source": "tripadvisor",
+      "review_text": "The food's good, I ordered a ceviche and a bread with chicharrón. I wanted to eat together with my friend and it turns out that the ceviche arrived first and 10/15 minutes later my bread with chicharrón arrived. That doesn't make sense, people win to eat together not to see how the other eats. And yes, there was a problem at least to warn, but it wasn't my case.",
+      "title": "Improve the coordination of orders so that food comes out together.",
+      "rating": 4,
+      "review_datetime_utc": "2024-12-21",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/64/6a/5b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/64/6a/5c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/64/6a/5d/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "kob"
+    },
+    {
+      "id": "tripadvisor_984655443",
+      "source": "tripadvisor",
+      "review_text": "We went to dinner at the recommendation of a friend and exceeded our expectations. Nick the waiter very friendly and attentive at all times. Large portions, the best rocoto we tasted. There were 4-5 vegetarian options, the exquisite vegetarian cause. Recommended 100%.",
+      "title": "100% recommended, vegetarian options very good",
+      "rating": 5,
+      "review_datetime_utc": "2024-12-13",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Lorea G"
+    },
+    {
+      "id": "tripadvisor_983919594",
+      "source": "tripadvisor",
+      "review_text": "Cozy atmosphere, delicious food, amazing drinks and friendly staff. Isolina located in the district Barranco, the historic district of Lima, is one of my favorite restaurants in Lima. Your menu is full of traditional and delicious dishes. Carapulcra with Dry Soup is highly recommended.",
+      "title": "Isolina restaurant in Barranco, authentic and vibrant food!",
+      "rating": 5,
+      "review_datetime_utc": "2024-12-11",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/51/86/e2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/51/87/87/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/51/88/69/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/51/88/d9/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Alicia Cristina"
+    },
+    {
+      "id": "tripadvisor_979006712",
+      "source": "tripadvisor",
+      "review_text": "This restaurant came very recommended, and we would certainly support it. We couldn't get into the main dining room upstairs, so we ate at the bar. The atmosphere was great; the food was better. The service was kind and attentive. It's worth a trip to eat here.",
+      "title": "Excellent food and environment",
+      "rating": 5,
+      "review_datetime_utc": "2024-11-07",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "JFBell"
+    },
+    {
+      "id": "tripadvisor_978061483",
+      "source": "tripadvisor",
+      "review_text": "One of my favorites in Barranco Peru. I have gone every time I visit Peru (5th time) and has not fallen in quality. Many places disappoint after being in business for a while and keeping up with the rhythm. This place has maintained its style, quality and taste over time. We've been there since 2012. I would recommend it to everyone. From a food snob to a person of burgers and fries. You'll like this place. Book in advance",
+      "title": "We haven't been disappointed.",
+      "rating": 5,
+      "review_datetime_utc": "2024-10-31",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "jammon83"
+    },
+    {
+      "id": "tripadvisor_976901541",
+      "source": "tripadvisor",
+      "review_text": "The original Isolina, located in Barranco, is outstanding. The location in El Polo is disappointing. The food was good, but not exceptional. The service was bad. An ice request three times was only completed after an independent approach to the bartender. I'm not coming back. There are a lot of better places in the neighborhood.",
+      "title": "This is for the Monterrico location (El Polo)",
+      "rating": 3,
+      "review_datetime_utc": "2024-10-28",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Carlos M"
+    },
+    {
+      "id": "tripadvisor_976772973",
+      "source": "tripadvisor",
+      "review_text": "Full dad was a change of life. The portions are huge! This cozy restaurant has a warm and cozy atmosphere that makes you feel like you're enjoying home-cooked food, cooked directly from your aunt or grandmother's kitchen.",
+      "title": "Delicious comforting food!",
+      "rating": 5,
+      "review_datetime_utc": "2024-10-27",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/e9/05/62/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/e9/05/63/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/e9/05/64/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/e9/05/65/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/e9/05/66/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Yvan"
+    },
+    {
+      "id": "tripadvisor_974398151",
+      "source": "tripadvisor",
+      "review_text": "This restaurant serves truly Peruvian food, with a home taste. With my girlfriend we asked for a dish of carapulcra with dry soup which was too rich and strong, we noticed that the portions of all the dishes were very generous. In addition, the pisco sour of the place is exquisite, as in all of Lima. Recommended.",
+      "title": "Well, rich, cheap and well located.",
+      "rating": 5,
+      "review_datetime_utc": "2024-10-18",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Felipe Varela"
+    },
+    {
+      "id": "tripadvisor_972720514",
+      "source": "tripadvisor",
+      "review_text": "Excellent food, the dishes are huge. Creole and tasty food. Nice place, beautiful environment and good attention.\nWe ate a fountain of chorrillana chancho, and a dessert of limeño chirimoya. Maracujah juices and abode chicha.",
+      "title": "Abundant and good Creole food.",
+      "rating": 5,
+      "review_datetime_utc": "2024-10-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/b6/6d/59/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/b6/6d/5a/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Marion G"
+    },
+    {
+      "id": "tripadvisor_972198859",
+      "source": "tripadvisor",
+      "review_text": "It is very good, classic Peruvian comfy, from all parts of the country, the portions are great and very suitable prices. It's well located, the place is nice.",
+      "title": "Very but very good",
+      "rating": 5,
+      "review_datetime_utc": "2024-10-01",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Paula Arango V"
+    },
+    {
+      "id": "tripadvisor_972165184",
+      "source": "tripadvisor",
+      "review_text": "The host's attention was terrible. He told us that there were no tables available, only in the columns. A next couple of tourists arrived, and at the touch offered them a table in the outside area. We complained because we had not offered, and he put his face up!!! not a single apology! just said q thought q was full, and asked us if we wanted her... obviously we wanted her, for something we didn't go to that place!!! I took us' to the table area on the outside and there were 4 empty... it was terrible and uncomfortable! From that moment on, I was given a taste and I didn't enjoy my dinner at all. We asked for the complaint book, but they had us waiting about 25 minutes for the supervisor to arrive...\nIf you're going to charge this expensive, and you're going to want to position yourself as one of the best restaurants in Lima, start by improving your ATTENTION QUALITY. A good restaurant is not only COMIDA, but SERVICE.\nI don't recommend it.",
+      "title": "- I'M SORRY.",
+      "rating": 1,
+      "review_datetime_utc": "2024-10-01",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Vania P"
+    },
+    {
+      "id": "tripadvisor_966887294",
+      "source": "tripadvisor",
+      "review_text": "Restaurant with very good food, eye, the dishes are quite large and you can pass by when you ask..: and better the top floor, much more comfortable than on the bottom floor, which may pass some cold because the doors are open. The dry of the very good ones the ceviche of fried octopus. Incredible... a place to go totally safe",
+      "title": "Magnifico",
+      "rating": 5,
+      "review_datetime_utc": "2024-08-26",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Juan diego F"
+    },
+    {
+      "id": "tripadvisor_964952446",
+      "source": "tripadvisor",
+      "review_text": "Very nice and popular place - you will have to book well in advance as they have only limited space to walk in. Menu has enough for all tastes and this is one of the best restaurants in Barranco.",
+      "title": "Nice place",
+      "rating": 4,
+      "review_datetime_utc": "2024-08-15",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Philip M"
+    },
+    {
+      "id": "tripadvisor_964617700",
+      "source": "tripadvisor",
+      "review_text": "We came here for a reference from a friend.\nThe place is very nice and cozy. The super friendly entry service.\nThe hostel made us room for 4 without reservation, thank you very much!\nThe tickets arrived super fast: cause and ceviche, excellent.\nThe hot dishes came a little late but it was worth the wait: chaufa and sauté.\nUnbelievable.\nSaby was the one who took care of us, very nice and efficient.\nWe asked for a cake for my birthday and also helped us with the order.\nI only got one point because they didn't ask us what portion we wanted, we were going to share, but that didn't mean they had to serve us the biggest. I think it's always important to ask the client instead of assuming why we end up paying more.\nClearly the food was so rich that we finished everything but we ended up super full and no room for a dessert.\nThe drinks: pisco and bleeding delicious and super strong.\nThe place, food, fully recommended attention.",
+      "title": "Un lugar para visitar",
+      "rating": 4,
+      "review_datetime_utc": "2024-08-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/23/70/61/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/23/70/62/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/23/70/63/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Valentina V"
+    },
+    {
+      "id": "tripadvisor_961790228",
+      "source": "tripadvisor",
+      "review_text": "The creole food is very rich and the attention is very good. The quality and price ratio is correct and many dishes are large and can be shared. It's better if you make a reservation. We went to the Polo's place",
+      "title": "Good food",
+      "rating": 4,
+      "review_datetime_utc": "2024-07-27",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Rosa G"
+    },
+    {
+      "id": "tripadvisor_960126277",
+      "source": "tripadvisor",
+      "review_text": "They had recommended it to me, but it was a bad experience from the very beginning, the host who accommodates at the tables a poor educated. The food of very poor quality, without taste. The cause seemed to be mashed of potato and the ceviche without taste, the camote unopened. The desserts unopened and small. The only good thing was the attention of the young man and the lemonade.",
+      "title": "Isoline in the regresaret!",
+      "rating": 2,
+      "review_datetime_utc": "2024-07-20",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "mariawww2017"
+    },
+    {
+      "id": "tripadvisor_958154764",
+      "source": "tripadvisor",
+      "review_text": "The basic taste mondonguito and the very salty green carving, the attention of the terrible young, I had to wait more than half an hour for a carving... lousy!!! I don't recommend it",
+      "title": "DEFRAUDADO DEL SABOR Y LA ATENCIÓN",
+      "rating": 1,
+      "review_datetime_utc": "2024-07-05",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c2/60/ea/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Daniel C"
+    },
+    {
+      "id": "tripadvisor_957870847",
+      "source": "tripadvisor",
+      "review_text": "Fuckin 'lousy, service in Monterrico, I always ravine fan! Let's go years ago, a thousand times! But I'm allergic to the grains and menestas then I get it with lettuce and tomato! I still eat the big, 89 suns.\nAn account between two not low of 300 soles...\nI was on the pole and we went into Isolina! I was told that it was not impossible to make change! Even the Christian waiter couldn't solve even the semi-manfilo commissioned Melissa who never approached... not even coming back... what a shame that when the chefs grow up they lose that affection and quality...\nI had a reservation in Barranco tomorrow! I don't know if I'm going... I'm so sad!",
+      "title": "Heavy service on the Pole",
+      "rating": 1,
+      "review_datetime_utc": "2024-07-03",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Barbara Vieira"
+    },
+    {
+      "id": "tripadvisor_955983128",
+      "source": "tripadvisor",
+      "review_text": "We had been particularly recommended\nthe place is very well located, in the center of Barranco\nthe gentle staff, attentive\nthe very good drinks, the best of our visit\nwith regard to food,\nthe bread with chicharron was very tasty\nthe potatoes with huancaine and ocupa, loose... my name is the attention for such a traditional dish\nthe appropriate yellow aji tiradite\nWell, maybe we didn't get lucky with the election...",
+      "title": "a classic place in Barranco",
+      "rating": 4,
+      "review_datetime_utc": "2024-06-21",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "dolopuente"
+    },
+    {
+      "id": "tripadvisor_954999661",
+      "source": "tripadvisor",
+      "review_text": "Must visit best restaurant in Lima we come from Marco Island Florida I'd go back to Lima just to eat the food. The staff the quality of the food, the environment the host everyone was wonderful one of the best meals I've had in my whole life.",
+      "title": "I've come from Florida is worth it!!",
+      "rating": 5,
+      "review_datetime_utc": "2024-06-14",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Lauren M"
+    },
+    {
+      "id": "tripadvisor_953746170",
+      "source": "tripadvisor",
+      "review_text": "We enjoy our food here.\nModern comforting food\nHe likes cocktails.\nI had the stuffed potato to start with (a little bit like a recess cake - yummmmm) and chicken stew for main that I didn't like so much: portion was huge too and it felt a little waste: I could certainly have asked for less.\n\nWe enjoyed food and service well: but I wouldn't say it's worth the bulb",
+      "title": "Modern shabby chic",
+      "rating": 4,
+      "review_datetime_utc": "2024-06-04",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/7b/5c/3c/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "L4U"
+    },
+    {
+      "id": "tripadvisor_944147415",
+      "source": "tripadvisor",
+      "review_text": "Restaurant overrated, I have gone to the two premises and in both I have been very disappointed. The salted loin seemed to me very bad with French fries for a long time all watered and a meat of very poor quality. The Pope fills equally disappointing. These are locals that make fame and then the quality falls to the ground.",
+      "title": "A great disappointment.",
+      "rating": 3,
+      "review_datetime_utc": "2024-03-27",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Juan M"
+    },
+    {
+      "id": "tripadvisor_940444938",
+      "source": "tripadvisor",
+      "review_text": "The strong portions, the very good prices for the quality of flavors and the quantity on each dish, everything is rich, from marine food, to reaching the creole that is of the best, the waiting service to get a table if you did not reserve, is fast and the attention very kind.",
+      "title": "An ideal environment for any food of the day.",
+      "rating": 5,
+      "review_datetime_utc": "2024-03-02",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "La Vieja"
+    },
+    {
+      "id": "tripadvisor_935602485",
+      "source": "tripadvisor",
+      "review_text": "We loved it, we asked for a wide variety of dishes since we were 6 and we liked everything. Most dishes are huge, to share.\nThe young man took care of us very well, he knows the letter perfectly well.",
+      "title": "Great",
+      "rating": 5,
+      "review_datetime_utc": "2024-01-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4c/40/c5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4c/40/c6/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4c/40/c7/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Lu Groppelli"
+    },
+    {
+      "id": "tripadvisor_934735427",
+      "source": "tripadvisor",
+      "review_text": "i was asked my name and after waiting i was told there in that corner there is a place but the way i was doing a favor... i would all go along and take it to a second floor where i understand the view is better... down all empty and lugubre... so i decided to go to another restaurant with better atmosphere and better treatment... so much propaganda",
+      "title": "attention",
+      "rating": 1,
+      "review_datetime_utc": "2024-01-20",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "ROSA P"
+    },
+    {
+      "id": "tripadvisor_932063818",
+      "source": "tripadvisor",
+      "review_text": "On this occasion we find that they have neglected food. The fish of the ceviche did not end up thawing or something, because the lemon did not get impregnated (not that we wanted xq to be cooked that would be worse), and the loin of the loin was hard, and the loin potatoes, were the worst, dry, seemed to be collected. We indicated this to the young man, but there was no change. The shells, the clams, the strip roast, the cause of octopus and the cause of chicken, rich. Oh, and the cherry is they forgot to bring the chicken bean. No way.",
+      "title": "In the family, it could have been better.",
+      "rating": 3,
+      "review_datetime_utc": "2024-01-02",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/22/c8/69/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Joselynvt"
+    },
+    {
+      "id": "tripadvisor_931213657",
+      "source": "tripadvisor",
+      "review_text": "The first time I was there, the food was half-way down. I still wanted to give them a second chance. I made an online reservation for December 26, 2023. I had to cancel it and I did it by leaving a phone message and through the confirmation mail. I was still charged a penalty because they said it was a \"no show.\" Don't trust this kind of business. As much reputation as they can have, they always try to get money out of it not because of the customers. That's a great experience. And the phones where they claim never answer.",
+      "title": "More experiences",
+      "rating": 1,
+      "review_datetime_utc": "2023-12-28",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Departure68719300514"
+    },
+    {
+      "id": "tripadvisor_929564707",
+      "source": "tripadvisor",
+      "review_text": "For me I'm gluten free and re Carnivora there's not much I can ask for, I got the 400-pound that comes with beans that I don't eat and they put a salad on it. And it's a little bit of a little saint and a brain omelet.\nThe bad thing is that the young people are not sure how food is made and that it really contains.\nThe good coffee\nWater\nThe environment and good service sympatic\nKitchen, old but a lot of flour and a lot of flour and starch in everything.\nBut it wasn't my turn to go with friends and I did my best and I had fun.\nIt's expensive for the kind of food but who's looking at that?\nPeruvian gastronomical yes and without cojude mergers of the elegant chefs! It's like house....",
+      "title": "Looking for the appropriate gluten free",
+      "rating": 5,
+      "review_datetime_utc": "2023-12-15",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/06/9e/d0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/06/9e/d1/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Barbara Vieira"
+    },
+    {
+      "id": "tripadvisor_928921295",
+      "source": "tripadvisor",
+      "review_text": "We didn't have a good experience, we had to book with more than a month in advance and expectations in high, but when we arrived we found two garzones, obviously a little tired, the food was not good, we ate ceviche, chicken bean and stuffed potatoes, we really think it's an overrated restaurant, we don't recommend it.",
+      "title": "An overrated restaurant",
+      "rating": 2,
+      "review_datetime_utc": "2023-12-09",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/fa/0b/38/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Victor F"
+    },
+    {
+      "id": "tripadvisor_927627145",
+      "source": "tripadvisor",
+      "review_text": "The best place of Peruvian food that exists, I love, every time I go it's delicious every silver and the atmosphere is a wonder, I went to celebrate patriotic parties and we had a Creole music show.",
+      "title": "VIVA EL PERÚ Y SUS PLATOS",
+      "rating": 5,
+      "review_datetime_utc": "2023-11-27",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/e6/12/e8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/e6/12/e9/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "diegomavila"
+    },
+    {
+      "id": "tripadvisor_924012310",
+      "source": "tripadvisor",
+      "review_text": "The best dinner we had in Lima, the best ceviche, not to mention chicken bean, the super delicious home girl, we can't eat dessert because the dishes are well complete, very good service",
+      "title": "Best dinner in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2023-11-01",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Emily M"
+    },
+    {
+      "id": "tripadvisor_918500008",
+      "source": "tripadvisor",
+      "review_text": "The restaurant was half empty as well I was mistreated waiting twenty or more minutes for a table finally asked for a peeled chicken aji and half regular hard egg but not the best Panchita was much better",
+      "title": "NOTHING OF THE WORLD AND WAIT FOR THE GOOD...",
+      "rating": 3,
+      "review_datetime_utc": "2023-09-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/6e/35/75/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "David L"
+    },
+    {
+      "id": "tripadvisor_917739659",
+      "source": "tripadvisor",
+      "review_text": "Of the most recommended to taste Peruvian food! Nice place, cozy in its upper floor room, the food is in abundance and the richest. The man who attended to us seems to have been a love there all his life! Book in advance",
+      "title": "Not to miss a dinner at this rich restaurant!",
+      "rating": 4,
+      "review_datetime_utc": "2023-09-21",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Vânia L"
+    },
+    {
+      "id": "tripadvisor_915737518",
+      "source": "tripadvisor",
+      "review_text": "The best. You eat rich, rich, rich, so rich you get happy. The drinks are also good, the pisco sour, the pisco Punch, la algarrobina, etc.\nand the cream turned, of the best.",
+      "title": "Of the best",
+      "rating": 5,
+      "review_datetime_utc": "2023-09-10",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Joselynvt"
+    },
+    {
+      "id": "tripadvisor_909169342",
+      "source": "tripadvisor",
+      "review_text": "I was moved to see the flattened source in which the Causes and the Ocopa appeared, it was like the ones used by my grandmother and my mother ess vision made me relive moments of my childhood.\nAll the other very well-cared dishes, the fully personalized attention. We remembered my dear mother's birthday 02 / 08.",
+      "title": "A different birthday",
+      "rating": 5,
+      "review_datetime_utc": "2023-08-10",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Milagros O"
+    },
+    {
+      "id": "tripadvisor_908240021",
+      "source": "tripadvisor",
+      "review_text": "Ideal place to try typical Peruvian food. It is very crowded in the area of Barranco. The dishes are plenty to share. I asked for an individual ration and so it was all huge.\nIt's very busy, if you go at night you should book.",
+      "title": "Very good choice",
+      "rating": 4,
+      "review_datetime_utc": "2023-08-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f7/0d/db/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f7/0d/dc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f7/0d/dd/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "noeliagp"
+    },
+    {
+      "id": "tripadvisor_908102591",
+      "source": "tripadvisor",
+      "review_text": "On July 24, my co-workers took me to celebrate my birthday at the Isolina del Polo Restaurant, I didn't know that place and md seemed nice and very welcoming, but the really highlight was food. From all that we asked, I must place in the first place the Asado de Tira which was soft tn that was coming out of the bone, very generous, delicious and juicy, second \"La papa filled\" which had a delicious, crising on the outside and with a golf sauce which accompanied it very well and wn third place * The leaped loin, \"the natural potatoes and the very soft loin, everything was delicious. If they're Dyers' customers, they give you a cocktail, the one I chose was\" La Perricholi \"was super good, refreshing and imposing, I'd come back to try it again.\nFor my birthday I was invited a turned cream that was spectacular, and I recommend it, in a very good place, to share, celebrate and eat very well.",
+      "title": "Top quality food and cozy atmosphere",
+      "rating": 5,
+      "review_datetime_utc": "2023-08-05",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f5/d4/85/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f5/d4/86/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f5/d4/87/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f5/d4/88/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f5/d4/89/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/f5/d4/8a/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Silvia V"
+    },
+    {
+      "id": "tripadvisor_903951760",
+      "source": "tripadvisor",
+      "review_text": "Here not only is the traditional Lazon limena highlighted. Besides, his way of serving it, that is, in sources where one shares food with the rest of the beginning. Something very personal, ask for a pejerrey bread, I made my childhood remember",
+      "title": "amazon extraordinarily light",
+      "rating": 5,
+      "review_datetime_utc": "2023-07-18",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/c9/9a/74/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "jorge luis morales salmon"
+    },
+    {
+      "id": "tripadvisor_900018768",
+      "source": "tripadvisor",
+      "review_text": "If there's nothing better than eating a good creole dish that tastes like home. Do it with who you love completely changes the experience.\nAnd that's what ISOLINA gave us. Travelling to the past with the decoration and feeling the affection in each bite is an experience that should not be left for special occasions.\n10",
+      "title": "Recordar es volver a vivir",
+      "rating": 5,
+      "review_datetime_utc": "2023-07-03",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/a4/f4/d1/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Antu1807"
+    },
+    {
+      "id": "tripadvisor_895973013",
+      "source": "tripadvisor",
+      "review_text": "Simple place in its distribution, wide on the second floor, where we were located. We asked for beer from the house and aperol, well achieved both, shells with villa and fresh salad: excellent. Pope filled not very remarkable but pure kidneys was excellent. We ask for a typical purple dessert: nice and sweet.\nIn sum very good food, recommended 100%",
+      "title": "Rica food",
+      "rating": 5,
+      "review_datetime_utc": "2023-06-20",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "alvaro d"
+    },
+    {
+      "id": "tripadvisor_894812671",
+      "source": "tripadvisor",
+      "review_text": "It has good location and attention is nice but food is not good, not even regular. The salted back is pure potato, onion and at most 6 meats, the potato fills huge but insipid. The place is filled fast and narrow, you move with difficulty between the tables. The dirty bathroom. Totally overrated.",
+      "title": "Bad",
+      "rating": 2,
+      "review_datetime_utc": "2023-06-13",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Javier B"
+    },
+    {
+      "id": "tripadvisor_892489950",
+      "source": "tripadvisor",
+      "review_text": "Very recommended restaurant. We got here at 12: 00 in the day so we don't have to line up. The service is excellent, always very concerned that nothing was missing. We asked for a cause of chicken, which was good but not excellent, would give it a 7 / 10. Then we moved on to a skipped mill that was delicious!!! And the dish was giant. This one deserved a 10 / 10. A 9 / 10 flushed milk. Recommended",
+      "title": "Excellent atmosphere and service. High-end salted tallarin",
+      "rating": 5,
+      "review_datetime_utc": "2023-05-29",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/53/ce/c8/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "David_A_M_PSU"
+    },
+    {
+      "id": "tripadvisor_891195544",
+      "source": "tripadvisor",
+      "review_text": "With very good luck we arrived in Isolina as we had not made a reservation we were willing to wait but at the moment of arriving immediately they passed us to the living room and began our journey through typical Peruvian cuisine! What a delight from the shells to the chancho and the chicken to the aji all accompanied by a typical and well prepared pisco sour! It was a very pleasant and unforgettable experience that would no doubt return from my beloved Mexico to repeat it! Thank you very much Isolina!!",
+      "title": "A traditional Peruvian food snack!",
+      "rating": 5,
+      "review_datetime_utc": "2023-05-20",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/39/b8/9d/isolina-taberna-peruana.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/39/b8/cd/isolina-taberna-peruana.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/39/b8/ce/isolina-taberna-peruana.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Rene B"
+    }
+  ]
+}

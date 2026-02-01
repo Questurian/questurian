@@ -1,0 +1,51 @@
+{
+  "fetchedAt": "2026-01-31T19:27:21.474Z",
+  "locationId": 2,
+  "tripadvisorPlaceId": "15149517",
+  "placeResult": {
+    "name": "Mérito",
+    "rating": 4.7,
+    "website": "http://meritorestaurante.com",
+    "menu": {
+      "link": "http://www.meritorestaurante.com"
+    },
+    "phone": "+51 1 2771628",
+    "email": "merito@meritorestaurante.com",
+    "description": "MERITO's unassuming two-story space wants to stay as far away as possible from pretention and formality, using natural materials that give a cozy yet simple ambience. The kitchen is exposed for everyone to see and has a coal oven that uses carob tree wood. Every dish served in this restaurant passes through the coal oven. The Merito experience can be quite close and personal when seated by the bar. You will witness every move the kitchen team makes while prepping, cooking and plating each dish. MERITO is a contemporary and modern space, that reflect a feel of easiness. Its cuisine’s creativity and heart beats through the blends and fusions of the origins of the South American continent, it’s common ground, to go back to the basics in order to transform what’s daily and common into magic.",
+    "neighborhood": "Barranco",
+    "neighborhood_description": "Barranco stands as Lima's bohemian hub, where artists and musicians flock to find inspiration amongst the colorful colonial architecture and beautiful sea views. The area's main square, Plaza de Barranco, is surrounded by charming cafes and hip bars, with the iconic Puente de los Suspiros or \"Bridge of Sighs\" offering a romantic walkway above. The Museo de Arte Contemporaneo and the Pedro de Osma Museum present rotating exhibits of modern and colonial art respectively, while the Dedalo Arte craft store offers unique artisanal treasures. Culinary enthusiasts can indulge in Peruvian delicacies at Isolina or sample craft beers at Barranco Beer Company. Conveniently, the neighborhood is easily accessible via the Metropolitano rapid bus system.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "Closed"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        }
+      ]
+    }
+  }
+}

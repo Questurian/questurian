@@ -10,9 +10,6 @@ import {
   saveTripAdvisorPlace,
   getTripAdvisorPlaceByLocationId,
 } from "../../repositories/content/tripadvisor-place.repository";
-import { getLocationByIdForUpdate, updateLocationById } from "../../repositories/core";
-import type { Location } from "../../models/location";
-import type { TripAdvisorPlaceResult } from "@server/shared/services/external/serpapi-tripadvisor.client";
 
 const config = EnvConfig.getInstance();
 const serpApiClient = new SerpApiTripAdvisorClient(config);
@@ -71,45 +68,6 @@ async function loadLatestMergedReviews(locationId: number): Promise<MinimalRevie
       rating: review.rating ?? 0,
       date: review.review_datetime_utc ?? "",
     }));
-}
-
-function mergeTripAdvisorPlaceIntoLocation(locationId: number, placeResult: TripAdvisorPlaceResult) {
-  const current = getLocationByIdForUpdate(locationId);
-  if (!current) return;
-
-  const updates: Partial<Location> = {};
-
-  const email = typeof placeResult.email === "string" ? placeResult.email.trim() : null;
-  const neighborhoodDescription =
-    typeof placeResult.neighborhood_description === "string"
-      ? placeResult.neighborhood_description.trim()
-      : null;
-  const operationHours =
-    typeof placeResult.operation_hours === "object" && placeResult.operation_hours !== null
-      ? placeResult.operation_hours
-      : null;
-  const phone = typeof placeResult.phone === "string" ? placeResult.phone.trim() : null;
-  const website = typeof placeResult.website === "string" ? placeResult.website.trim() : null;
-
-  if (!current.email && email) {
-    updates.email = email;
-  }
-  if (!current.neighborhoodDescription && neighborhoodDescription) {
-    updates.neighborhoodDescription = neighborhoodDescription;
-  }
-  if (!current.hoursJson && operationHours) {
-    updates.hoursJson = JSON.stringify(operationHours);
-  }
-  if (!current.phoneNumber && phone) {
-    updates.phoneNumber = phone;
-  }
-  if (!current.website && website) {
-    updates.website = website;
-  }
-
-  if (Object.keys(updates).length > 0) {
-    updateLocationById(locationId, updates);
-  }
 }
 
 /**
@@ -173,7 +131,7 @@ export async function fetchTripAdvisorPlace(c: Context) {
     }
 
     // Merge select TripAdvisor fields into the location record (fill empty only)
-    mergeTripAdvisorPlaceIntoLocation(locationId, storedData.placeResult);
+    container.tripAdvisorPlaceService.mergePlaceDataIntoLocation(locationId, storedData.placeResult);
 
     return c.json(
       successResponse({

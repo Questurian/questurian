@@ -14,7 +14,8 @@ import {
   TaxonomyService,
   DistrictExtractionService,
   TaxonomyCorrectionService,
-  PayloadSyncService
+  PayloadSyncService,
+  TripAdvisorPlaceService
 } from "../services";
 
 export class ServiceContainer {
@@ -36,6 +37,7 @@ export class ServiceContainer {
   readonly locationQueryService: LocationQueryService;
   readonly locationMutationService: LocationMutationService;
   readonly payloadSyncService: PayloadSyncService;
+  readonly tripAdvisorPlaceService: TripAdvisorPlaceService;
 
   private constructor() {
     // Singletons
@@ -49,13 +51,15 @@ export class ServiceContainer {
     this.districtExtractionService = new DistrictExtractionService();
     this.taxonomyService = new TaxonomyService();
     this.taxonomyCorrectionService = new TaxonomyCorrectionService();
+    this.tripAdvisorPlaceService = new TripAdvisorPlaceService(this.config);
 
     // Services with dependencies
     this.mapsService = new MapsService(
       this.config,
       this.taxonomyService,
       this.taxonomyCorrectionService,
-      this.payloadApi
+      this.payloadApi,
+      this.tripAdvisorPlaceService
     );
     this.instagramService = new InstagramService(
       this.instagramApi,

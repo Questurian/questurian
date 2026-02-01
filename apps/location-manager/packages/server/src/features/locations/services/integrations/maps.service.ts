@@ -20,6 +20,7 @@ import { validateCategory, validateCategoryWithDefault } from "../../utils/categ
 import { TaxonomyService } from "../taxonomy/taxonomy.service";
 import { TaxonomyCorrectionService } from "../taxonomy/taxonomy-correction.service";
 import { extractTripadvisorLocationId, normalizeTripadvisorUrl } from "../../utils/tripadvisor-utils";
+import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
 
 import type { PayloadApiClient } from "@server/shared/services/external/payload-api.client";
 
@@ -28,7 +29,8 @@ export class MapsService {
     private readonly config: EnvConfig,
     private readonly taxonomyService: TaxonomyService,
     private readonly taxonomyCorrectionService: TaxonomyCorrectionService,
-    private readonly payloadClient: PayloadApiClient
+    private readonly payloadClient: PayloadApiClient,
+    private readonly tripAdvisorPlaceService: TripAdvisorPlaceService
   ) {}
 
   private normalizeOperationHours(
@@ -113,9 +115,23 @@ export class MapsService {
     // Update entry with the saved ID
     entry.id = savedId;
 
+    // Auto-fetch TripAdvisor place data if tripadvisorLocationId is available
+    if (entry.tripadvisorLocationId) {
+      try {
+        await this.tripAdvisorPlaceService.fetchAndMergePlaceData(savedId, entry.tripadvisorLocationId);
+      } catch (error) {
+        // Log but don't fail the request - TripAdvisor data is supplementary
+        console.error(`[MapsService] TripAdvisor auto-fetch failed for location ${savedId}:`, error);
+      }
+    }
+
+    // Re-fetch the location to get any updates from TripAdvisor merge
+    const updatedEntry = getLocationByIdForUpdate(savedId);
+    const finalEntry = updatedEntry || entry;
+
     // Transform to response format
     const locationWithNested = {
-      ...entry,
+      ...finalEntry,
       instagram_embeds: [],
       uploads: [],
     };
