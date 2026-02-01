@@ -38,6 +38,12 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Environment files - NEVER commit these
+.env
+.env.local
+.env.*.local
+*.pem
+
 .nx/cache
 .nx/workspace-data
 
