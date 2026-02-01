@@ -10,6 +10,7 @@ export interface ContactInfo {
   countryCode: string;
   phoneNumber: string | null;
   website: string | null;
+  email: string | null;
   contactAddress: string;
   url: string;
 }
@@ -61,8 +62,11 @@ export interface Location {
   category: Category;
   type: string | null;
   locationKey: string;
+  ianaTimeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  neighborhoodDescription: string | null;
+  operationHours: Record<string, unknown> | null;
   contact: ContactInfo;
   coordinates: Coordinates;
   source: SourceInfo;
@@ -84,12 +88,18 @@ export interface LocationBasic {
   title: string | null;
   location: string | null;
   category: Category;
+  // Reviews tracking fields
+  reviewsFetchedAt: string | null;
+  reviewsCount: number | null;
+  reviewsGoogleCount: number | null;
+  reviewsTripadvisorCount: number | null;
 }
 
 export interface LocationContact {
   countryCode: string | null;
   phoneNumber: string | null;
   website: string | null;
+  email: string | null;
   contactAddress: string | null;
   url: string;
 }
@@ -111,15 +121,23 @@ export interface LocationResponse {
   type: string | null;
   locationKey: string | null;
   district: string | null;
+  ianaTimeId: string | null;
   placeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  neighborhoodDescription: string | null;
+  operationHours: Record<string, unknown> | null;
   contact: LocationContact;
   coordinates: LocationCoordinates;
   source: LocationSource;
   instagram_embeds: InstagramEmbed[];
   uploads: Upload[];
   slug: string | null;
+  // Reviews tracking fields
+  reviewsFetchedAt: string | null;
+  reviewsCount: number | null;
+  reviewsGoogleCount: number | null;
+  reviewsTripadvisorCount: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -152,17 +170,29 @@ export interface CreateMapsRequest {
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string;
+  email?: string;
+  neighborhoodDescription?: string;
+  operationHours?: Record<string, unknown> | string;
 }
 
 export interface UpdateMapsRequest {
+  name?: string;
+  address?: string;
   title?: string;
   category?: Category;
   type?: string;
   locationKey?: string;
+  district?: string | null;
+  contactAddress?: string | null;
   countryCode?: string;
+  ianaTimeId?: string | null;
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string;
+  email?: string;
+  neighborhoodDescription?: string;
+  operationHours?: Record<string, unknown> | string;
+  placeId?: string | null;
 }
 
 export interface AddInstagramRequest {
@@ -489,4 +519,46 @@ export interface MergedReviewsReportData {
 export interface MergedReviewsReportResponse {
   success: true;
   data: MergedReviewsReportData;
+}
+
+// ============================================================================
+// TRIPADVISOR PLACE TYPES (SerpAPI)
+// ============================================================================
+
+export interface FetchTripAdvisorPlaceResponse {
+  success: true;
+  data: {
+    message: string;
+    locationId: number;
+    tripadvisorPlaceId: string;
+    fetchedAt: string;
+    placeTitle: string | null;
+    rating: number | null;
+    reviewCount: number | null;
+  };
+}
+
+export interface TripAdvisorPlaceStatusResponse {
+  success: true;
+  data: {
+    hasPlaceData: boolean;
+    source: "database" | "file" | null;
+    fetchedAt: string | null;
+    tripadvisorPlaceId: string | null;
+    placeTitle: string | null;
+    rating: number | null;
+    reviewCount: number | null;
+  };
+}
+
+// ============================================================================
+// LEADS API HEALTH TYPES
+// ============================================================================
+
+export interface LeadsApiHealthResponse {
+  success: true;
+  data: {
+    healthy: boolean;
+    error?: string;
+  };
 }

@@ -1,0 +1,168 @@
+{
+  "fetchedAt": "2026-02-01T01:27:35.767Z",
+  "locationId": 25,
+  "tripadvisorPlaceId": "7624206",
+  "placeResult": {
+    "name": "Isolina - Barranco",
+    "rating": 4.5,
+    "website": "http://www.isolina.pe",
+    "menu": {
+      "provider": "TripadvisorMC",
+      "categories": [
+        {
+          "name": "Comida",
+          "sections": [
+            {
+              "name": " Entradas:",
+              "items": [
+                {
+                  "name": "Escabeche de Bonito",
+                  "price": 54
+                },
+                {
+                  "name": "Pan con Pejerrey",
+                  "price": 27
+                },
+                {
+                  "name": "Butifarra de Lechón Enrollado",
+                  "price": 29
+                },
+                {
+                  "name": "Pan con Chicharrón",
+                  "price": 27
+                },
+                {
+                  "name": "Ensalada Mixta",
+                  "price": 30
+                },
+                {
+                  "name": "Papa Rellena con Harto Relleno",
+                  "price": 54
+                },
+                {
+                  "name": "Cebiche con Chicharrón de Pulpo",
+                  "price": 97
+                },
+                {
+                  "name": "Causa Limeña rellena de Pollo y Palta",
+                  "price": 54
+                },
+                {
+                  "name": "Papas y Choclos con Huancaína y Ocopa",
+                  "price": 44
+                },
+                {
+                  "name": "Tiradito al Ají Amarillo",
+                  "price": 84
+                }
+              ]
+            },
+            {
+              "name": " Fondos:",
+              "items": [
+                {
+                  "name": "Cau Cau con Sangrecita",
+                  "price": 59
+                },
+                {
+                  "name": "Guiso de Mollejitas",
+                  "price": 49
+                },
+                {
+                  "name": "Patita con Maní",
+                  "price": 59
+                },
+                {
+                  "name": "Lomo Saltado Clásico",
+                  "price": 94
+                },
+                {
+                  "name": "Tallarín Saltado a la Criolla",
+                  "price": 94
+                },
+                {
+                  "name": "Arroz Tapado con Huevo y Plátano Frito",
+                  "price": 59
+                },
+                {
+                  "name": "Tallarines Verdes con Lomo Fino Apanado",
+                  "price": 94
+                },
+                {
+                  "name": "Mondonguito a la Italiana",
+                  "price": 62
+                },
+                {
+                  "name": "Hígado Encebollado con Tacu Tacu de Frijoles Negros",
+                  "price": 79
+                },
+                {
+                  "name": "Chaufa de Lomo con Huevo y Plátano Frito",
+                  "price": 89
+                }
+              ]
+            },
+            {
+              "name": "Nuestras Fuentes para Compartir:",
+              "items": [
+                {
+                  "name": "Fuente de Seco de Asado de Tira con Arroz y Frijoles",
+                  "price": 139
+                },
+                {
+                  "name": "Fuente de Costillar de Chancho a la Chorrillana",
+                  "price": 129
+                },
+                {
+                  "name": "Fuente de Estofado de Osobuco",
+                  "price": 129
+                },
+                {
+                  "name": "Fuente de Carapulcra con Sopa Seca y Chancho",
+                  "price": 139
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "phone": "+51 943 833 031",
+    "email": "reservas@isolina.pe",
+    "description": "At Isolina, we pay sincere homage to those recipes lovingly jotted down in a notebook. Here, each dish evokes the generous portions served at home, keeping the tradition of old-fashioned cooking alive. A place to eat, drink, and have a good time. Here we celebrate spontaneous laughter, a lively party, and the freedom to eat however you like. Long live the taverns!",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "09:00:00 - 11:00:00, 12:00:00 - 19:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 22:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 22:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 22:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "09:00:00 - 11:00:00, 12:00:00 - 23:00:00"
+        }
+      ]
+    },
+    "reviews_summary": "Isolina - Barranco is celebrated by many travelers for its rustic and welcoming tavern atmosphere, offering a casual and local vibe. While the food earns high praise for its authentic Peruvian flavors and generous portions, reviewers note the potential for long wait times, especially without reservations. The value is seen as reasonable given the portion sizes, though some caution about potential food waste. Service is generally praised for being friendly and attentive, despite occasional language barriers."
+  }
+}

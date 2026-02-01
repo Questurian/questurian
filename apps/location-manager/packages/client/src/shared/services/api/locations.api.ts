@@ -30,6 +30,9 @@ import type {
   TranslateMergeReviewsResponse,
   MergedReviewsStatusResponse,
   MergedReviewsReportResponse,
+  FetchTripAdvisorPlaceResponse,
+  TripAdvisorPlaceStatusResponse,
+  LeadsApiHealthResponse,
 } from "./types";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
@@ -399,5 +402,64 @@ export const locationsApi = {
    */
   getRejectsReportDownloadUrl(id: number): string {
     return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_REJECTS_REPORT(id)}`;
+  },
+
+  // ============================================================================
+  // TRIPADVISOR PLACE (SerpAPI)
+  // ============================================================================
+
+  /**
+   * Fetch TripAdvisor place data from SerpAPI for a location
+   */
+  async fetchTripAdvisorPlace(
+    id: number
+  ): Promise<FetchTripAdvisorPlaceResponse["data"]> {
+    return apiPost<FetchTripAdvisorPlaceResponse["data"]>(
+      API_ENDPOINTS.FETCH_TRIPADVISOR_PLACE(id),
+      {}
+    );
+  },
+
+  /**
+   * Get TripAdvisor place data download URL for a location
+   */
+  getTripAdvisorPlaceDownloadUrl(id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_TRIPADVISOR_PLACE(id)}`;
+  },
+
+  /**
+   * Check if TripAdvisor place data exists for a location
+   */
+  async getTripAdvisorPlaceStatus(
+    id: number
+  ): Promise<TripAdvisorPlaceStatusResponse["data"]> {
+    return apiGet<TripAdvisorPlaceStatusResponse["data"]>(
+      API_ENDPOINTS.TRIPADVISOR_PLACE_STATUS(id)
+    );
+  },
+
+  /**
+   * Get location export download URL (location + TripAdvisor place data, no reviews)
+   */
+  getLocationExportDownloadUrl(id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_LOCATION_EXPORT(id)}`;
+  },
+
+  /**
+   * Get AI-JSON download URL (core TripAdvisor fields + filtered reviews)
+   */
+  getAiJsonDownloadUrl(id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_AI_JSON(id)}`;
+  },
+
+  // ============================================================================
+  // HEALTH CHECKS
+  // ============================================================================
+
+  /**
+   * Check if the leads API is healthy
+   */
+  async checkLeadsApiHealth(): Promise<LeadsApiHealthResponse["data"]> {
+    return apiGet<LeadsApiHealthResponse["data"]>(API_ENDPOINTS.LEADS_API_HEALTH);
   },
 };

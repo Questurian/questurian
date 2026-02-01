@@ -66,6 +66,8 @@ class TranslateMergeError extends Error {
 const GOOGLE_REVIEWS_DIR = path.join(process.cwd(), "data", "reviews");
 const TRIPADVISOR_REVIEWS_DIR = path.join(process.cwd(), "data", "tripadvisor-reviews");
 const MERGED_REVIEWS_DIR = path.join(process.cwd(), "data", "merged-reviews");
+const MIN_REVIEW_CHAR_COUNT = 150;
+const MIN_REVIEW_DATE_TIMESTAMP = Date.UTC(2023, 0, 1);
 
 function normalizeLanguage(value?: string | null): string | null {
   if (!value) return null;
@@ -103,6 +105,20 @@ function looksLikeEnglishText(text?: string | null): boolean {
   if (hits >= 2) return true;
   return hits / tokens.length >= 0.08;
 }
+
+function isReviewLongEnough(review: UnifiedReview): boolean {
+  const text = review.review_text?.trim() ?? "";
+  return text.length >= MIN_REVIEW_CHAR_COUNT;
+}
+
+function getReviewTimestamp(review: UnifiedReview): number | null {
+  const dateValue = review.review_datetime_utc?.trim();
+  if (!dateValue) return null;
+  const timestamp = Date.parse(dateValue);
+  if (Number.isNaN(timestamp)) return null;
+  return timestamp;
+}
+
 
 async function ensureDir(dir: string): Promise<void> {
   if (!existsSync(dir)) {
@@ -562,22 +578,53 @@ export async function runTranslateAndMergeReviews(
     console.log(`[Translate & Merge]   WARNING: Lost ${mergedReviews.length - uniqueReviews.length} reviews in final dedup!`);
   }
 
-  // 7. Sort by date (newest first)
-  uniqueReviews.sort((a, b) => {
+  // 7. Filter for thoughtful, recent reviews
+  let filteredOutShort = 0;
+  let filteredOutOld = 0;
+  let filteredOutInvalidDate = 0;
+  const filteredReviews: UnifiedReview[] = [];
+
+  for (const review of uniqueReviews) {
+    if (!isReviewLongEnough(review)) {
+      filteredOutShort += 1;
+      continue;
+    }
+    const timestamp = getReviewTimestamp(review);
+    if (timestamp === null) {
+      filteredOutInvalidDate += 1;
+      continue;
+    }
+    if (timestamp < MIN_REVIEW_DATE_TIMESTAMP) {
+      filteredOutOld += 1;
+      continue;
+    }
+    filteredReviews.push(review);
+  }
+
+  console.log(
+    `[Translate & Merge] Filtered reviews: kept ${filteredReviews.length}/${uniqueReviews.length} (short: ${filteredOutShort}, old: ${filteredOutOld}, invalid date: ${filteredOutInvalidDate})`
+  );
+
+  if (filteredReviews.length === 0) {
+    console.warn("[Translate & Merge] All reviews were filtered out by length/date criteria");
+  }
+
+  // 8. Sort by date (newest first)
+  filteredReviews.sort((a, b) => {
     const dateA = a.review_datetime_utc ? new Date(a.review_datetime_utc).getTime() : 0;
     const dateB = b.review_datetime_utc ? new Date(b.review_datetime_utc).getTime() : 0;
     return dateB - dateA;
   });
 
-  // 8. Calculate final stats
-  const finalGoogleCount = uniqueReviews.filter((r) => r.source === "google").length;
-  const finalTripAdvisorCount = uniqueReviews.filter((r) => r.source === "tripadvisor").length;
-  const finalTranslatedCount = uniqueReviews.filter((r) => r.was_translated).length;
-  const finalAlreadyEnglishCount = uniqueReviews.filter((r) => !r.was_translated).length;
+  // 9. Calculate final stats
+  const finalGoogleCount = filteredReviews.filter((r) => r.source === "google").length;
+  const finalTripAdvisorCount = filteredReviews.filter((r) => r.source === "tripadvisor").length;
+  const finalTranslatedCount = filteredReviews.filter((r) => r.was_translated).length;
+  const finalAlreadyEnglishCount = filteredReviews.filter((r) => !r.was_translated).length;
 
-  console.log(`[Translate & Merge] Final counts - Google: ${finalGoogleCount}, TripAdvisor: ${finalTripAdvisorCount}, Total: ${uniqueReviews.length}`);
+  console.log(`[Translate & Merge] Final counts - Google: ${finalGoogleCount}, TripAdvisor: ${finalTripAdvisorCount}, Total: ${filteredReviews.length}`);
 
-  // 9. Save merged reviews
+  // 10. Save merged reviews
   await ensureDir(MERGED_REVIEWS_DIR);
   const timestamp = Date.now();
   const filename = `merged_reviews_${locationId}_${timestamp}.json`;
@@ -587,19 +634,19 @@ export async function runTranslateAndMergeReviews(
     locationId,
     mergedAt: new Date().toISOString(),
     stats: {
-      totalReviews: uniqueReviews.length,
+      totalReviews: filteredReviews.length,
       googleReviews: finalGoogleCount,
       tripadvisorReviews: finalTripAdvisorCount,
       translated: finalTranslatedCount,
       alreadyEnglish: finalAlreadyEnglishCount,
       errors: stats.errors,
     },
-    reviews: uniqueReviews,
+    reviews: filteredReviews,
   };
 
   await Bun.write(filepath, JSON.stringify(outputData, null, 2));
 
-  // 10. Save rejects report (if any duplicates were found)
+  // 11. Save rejects report (if any duplicates were found)
   if (rejectedReviews.length > 0) {
     const rejectsFilename = `rejects_report_${locationId}_${timestamp}.json`;
     const rejectsFilepath = path.join(MERGED_REVIEWS_DIR, rejectsFilename);
@@ -627,7 +674,7 @@ export async function runTranslateAndMergeReviews(
     console.log(`[Translate & Merge] Saved rejects report with ${rejectedReviews.length} entries to ${rejectsFilename}`);
   }
 
-  console.log(`[Translate & Merge] Saved ${uniqueReviews.length} merged reviews to ${filename}`);
+  console.log(`[Translate & Merge] Saved ${filteredReviews.length} merged reviews to ${filename}`);
 
   const rejectsReportSummary = rejectedReviews.length > 0
     ? {
@@ -639,7 +686,7 @@ export async function runTranslateAndMergeReviews(
     : null;
 
   return {
-    message: `Successfully merged ${uniqueReviews.length} reviews`,
+    message: `Successfully merged ${filteredReviews.length} reviews`,
     filename,
     stats: outputData.stats,
     rejectsReport: rejectsReportSummary,

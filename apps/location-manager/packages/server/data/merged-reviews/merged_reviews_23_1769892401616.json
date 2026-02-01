@@ -1,0 +1,2119 @@
+{
+  "locationId": 23,
+  "mergedAt": "2026-01-31T20:46:41.617Z",
+  "stats": {
+    "totalReviews": 150,
+    "googleReviews": 0,
+    "tripadvisorReviews": 150,
+    "translated": 20,
+    "alreadyEnglish": 130,
+    "errors": 0
+  },
+  "reviews": [
+    {
+      "id": "tripadvisor_1047441259",
+      "source": "tripadvisor",
+      "review_text": "Attention very good, but the food is not far behind, it is delicious, you can order to share and taste everything and so you are not left wanting, the suggestions of the waiters helps enough to choose a dish",
+      "title": "Outing of friends",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4c/a5/16/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4c/a5/17/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4c/a5/18/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/4c/a5/1c/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Andrea S"
+    },
+    {
+      "id": "tripadvisor_1047244932",
+      "source": "tripadvisor",
+      "review_text": "Excellent culinary experience , the service is first class, as well as the food , Felix's service stands out, an expert, guided us very. I finally experience",
+      "title": "A magical experience",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-25",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/49/77/58/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/49/77/59/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/49/77/5a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/49/77/5b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/49/77/5c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/49/77/5d/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Juanito P"
+    },
+    {
+      "id": "tripadvisor_1045984617",
+      "source": "tripadvisor",
+      "review_text": "From the entrance to the restaurant begins the dining experience, a cordial greeting for a special date noted from the reservation can be a great way to start, the service a little inattentive, I suppose due to the influx of people in the restaurant at that time, although if each waiter has 2 runners it would be good a better address for them, I ordered some spoons and they did not bring them to me, in addition to it, after the entrance they removed a knife which did not return to my table again.\nThe portions of the dishes were very large, all good, but if I wanted to have been warned that it was a lot of food, maybe that way I would have eaten a dessert too.\nOutside of it the atmosphere is nice and has a suitable music for the type of food they offer, air conditioning at its point and there was no mix of smells on site.\nThe food very good mostly, the pig of the breast spot (carapulcra) was perfect.\nDrinks were fine, but not surprising.\nAlmost in the end they brought me some complimentary alcoholic drinks for my anniversary, grateful for that detail, although if it was something “robotic” the way they gave them, a smile makes a difference.",
+      "title": "A different afternoon",
+      "rating": 4,
+      "review_datetime_utc": "2026-01-16",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/33/7f/4e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/33/7f/4f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/33/7f/50/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/33/7f/51/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/33/7f/52/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Lucas A"
+    },
+    {
+      "id": "tripadvisor_1046219380",
+      "source": "tripadvisor",
+      "review_text": "Toooo salty!  Whe we were paying for the dinner the waiter told us you can ask for los salt option and also if you try your plate and taste salty you can ask for change of plate.",
+      "title": "Too salty",
+      "rating": 2,
+      "review_datetime_utc": "2026-01-16",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ni L"
+    },
+    {
+      "id": "tripadvisor_1044337369",
+      "source": "tripadvisor",
+      "review_text": "I went to Panchita and I really liked the experience. The criolla food is delicious the environment is nice and the service works well. A great place to know Peruvian cuisine.",
+      "title": "I recommend",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-31",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Bruno C"
+    },
+    {
+      "id": "tripadvisor_1043050661",
+      "source": "tripadvisor",
+      "review_text": "Bad experience – bad food\n\nWe visited Panchita (Av. Dos de Mayo, Miraflores) around 10:00 p.m. for a late dinner, and the experience was frankly deplorable.\n\nNot only was the attention poor and selfless, but the food turned out to be a real stomach pump.\nMy companion ordered a chicken pepper and I ordered a stir-fried noodle. Hours later, we both started to feel really bad.\n\nMy companion ended up with a fever of 39.5 °C and severe diarrhea, and had to take antibiotics (Bactrim). In my case, I suffered an intense upset stomach for almost three days. Clearly, something was not right with the food served that night.\n\nMy recommendation is very clear:\n👉 If it is late, DO NOT offer dishes that may deteriorate or are not in optimal condition.\nFood safety is non-negotiable, especially in a restaurant of this level and reputation.\n\nConclusion: a terrible experience, totally disappointing and dangerous for health. I wouldn't come back.",
+      "title": "ON TOP OF THAT CHICKEN AJI HAD FUR!!! AGGGG",
+      "rating": 1,
+      "review_datetime_utc": "2025-12-19",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Carlos S"
+    },
+    {
+      "id": "tripadvisor_1042167454",
+      "source": "tripadvisor",
+      "review_text": "It’s  is a fantastic spot for authentic Peruvian cuisine. The food is genuinely delicious , Portions are generous and everything tastes fresh and homemade.\nThe service stands out as warm, attentive, and genuinely friendly – the staff make you feel welcome from the moment you walk in, happily explaining dishes and checking in without being intrusive. \nThe lively atmosphere, with its colorful decor and open kitchen, adds to the experience.\nGreat value for the quality, highly recommended. Definitely one of the best criollo restaurants in Lima!",
+      "title": "Authentic Peruvian",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-11",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f6/7f/17/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f6/7f/18/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f6/7f/19/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/f6/7f/1a/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sourabh S"
+    },
+    {
+      "id": "tripadvisor_1041115597",
+      "source": "tripadvisor",
+      "review_text": "A friendly and lively restaurant serving hearty Peruvian dishes with strong, homestyle flavours. The anticuchos and the breads are especially delicious.",
+      "title": "Traditional Peruvian Comfort Food With Big Portions",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-02",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Christopher H"
+    },
+    {
+      "id": "tripadvisor_1040770348",
+      "source": "tripadvisor",
+      "review_text": "Quality restaurant, quality ratio right price, spacious space, tables with plenty of space, clean, sensational food, the fabulous mixed lime ceviche, tasty beef tenderloin strip, juicy grilled chicken and in its place, and more sensational dishes. \nWe had dinner on the first day we arrived and ate on the last day. The best thing to go with time, the restaurant fills up soon.",
+      "title": "POSITIVE EXPERIENCE",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "MIGUEL C"
+    },
+    {
+      "id": "tripadvisor_1040247573",
+      "source": "tripadvisor",
+      "review_text": "We had one dinner night in Miraflores, and wanted a place within walking distance of our hotel (INNsiDE), mid-range price and authenic Peruvian cuisine. Pachita checked all the boxes. The restaurant was very busy and service was initially slow, but once we ordered, everything was fine. Fun atmosphere, good food, reasonable prices.",
+      "title": "Fun atmosphere, good food, reasonable prices.",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Tom42532"
+    },
+    {
+      "id": "tripadvisor_1040053886",
+      "source": "tripadvisor",
+      "review_text": "Extremely Disappointing Experience\n\nI’ve never had such an unacceptable dining experience. We waited almost two and a half hours and still never received our main courses, despite asking multiple times. All we ever got was water, bread, and the appetizers.\n\nWhen we finally decided to leave and simply pay for what we had actually consumed, even getting the bill became a challenge. Several servers tried to find a manager, and we waited another 15 minutes just for someone to speak with us. When the manager finally arrived, she told us, “OK, you don’t have to pay, just go.” That wasn’t even what we wanted—we just wanted our bill so we could settle up and leave.\n\nThe whole situation made it abundantly clear that this restaurant does not care at all about its customers, their time, or their experience. Truly disappointing from start to finish.",
+      "title": "Poor Service",
+      "rating": 1,
+      "review_datetime_utc": "2025-11-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Prav S"
+    },
+    {
+      "id": "tripadvisor_1039280093",
+      "source": "tripadvisor",
+      "review_text": "We shared a few appetizers and I ordered the ossobuco special (pictured) which was just too much food for me, especially with the side of pasta. To note: the lomo saltado was excellent and highly recommended!!\n\nThe ambiance and decor is top notch and very welcoming. Overall, this restaurant is great for gringos who want to avoid some of the grittiness of Lima - and is priced accordingly.",
+      "title": "Nice ambiance, good Peruvian food but pricey.",
+      "rating": 4,
+      "review_datetime_utc": "2025-11-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/c4/f9/35/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/c4/f9/36/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Joe M"
+    },
+    {
+      "id": "tripadvisor_1039031803",
+      "source": "tripadvisor",
+      "review_text": "Recently I went to eat at a restaurant, Panchina, but unfortunately the experience was disappointing. The kitchen seemed more quantity-oriented than quality-oriented, lacking the passion and care you would expect. In addition, the booking was complicated and, in the end, I was very dissatisfied with the meal, so much so that I would not recommend it. I expected typical cuisine that reflected local traditions and genuineness, but unfortunately this was not the case.",
+      "title": "Fabulously Noooo",
+      "rating": 1,
+      "review_datetime_utc": "2025-11-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "alberto f"
+    },
+    {
+      "id": "tripadvisor_1037191615",
+      "source": "tripadvisor",
+      "review_text": "Best lomo salteado and pisco sour! The service is great and big dishes served fresh from the kitchen to the table! Waiting for a table of 5 was quick! Celebrating your birthday there is a festivity.",
+      "title": "From appetizers to desserts a 5 💫",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-31",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/9b/05/dd/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/9b/05/de/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/9b/05/df/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/9b/05/e0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/9b/05/e1/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Min C"
+    },
+    {
+      "id": "tripadvisor_1036709334",
+      "source": "tripadvisor",
+      "review_text": "Just a great dining experience. Great atmosphere, food, drinks ,service .it's a wonderful dining space .we had an amazing dinner . The portions are very generous so think about sharing plates.\nOther people have long since discovered this gem so please book. I highly recommend this restaurant.",
+      "title": "Fabulous dining experience just book now",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-28",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "alistairb"
+    },
+    {
+      "id": "tripadvisor_1035457597",
+      "source": "tripadvisor",
+      "review_text": "The food has a wonderful flavor. Portions are large, and everything is well seasoned. The duck with rice is delicious and enough for two or three people. The picarones are some of the best I’ve had in Lima. My only recommendation is to go with a reservation — I had to wait 40 minutes because of the high demand.",
+      "title": "Flavorful Peruvian Dishes",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-19",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/72/c0/d1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/72/c0/d2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/72/c0/d3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/72/c0/d4/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jonathan Cazares"
+    },
+    {
+      "id": "tripadvisor_1034815521",
+      "source": "tripadvisor",
+      "review_text": "Very excellent food and wide menu. Were there 2 times and each time a direct hit, from the starters to the desserts. Absolutely recommended, also staff very accommodating. Nothing works without a reservation, masses are already waiting in the vestibule.",
+      "title": "Excellent",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Martin B"
+    },
+    {
+      "id": "tripadvisor_1034624989",
+      "source": "tripadvisor",
+      "review_text": "Excellent restaurant in Miraflores to try the typical Peruvian cuisine. The dishes are very nice and really tasty. The staff is friendly and very attentive to needs. \nI highly recommend",
+      "title": "Typical cuisine in Miraflores",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/60/7e/01/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/60/7e/02/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "C91_Irene"
+    },
+    {
+      "id": "tripadvisor_1033590013",
+      "source": "tripadvisor",
+      "review_text": "Had dinner here on a Saturday night ~9:45pm. No reservation, arrived as just two. We were able to get a table with < 5-minute wait. Our server was Jorge Torres who I can’t say enough great things about. He helped us pick out traditional / unique Peruvian items on the menu to ensure we got a great taste of what Panchita could offer. We tried the Argentina Steak, Empanada, and a chicken rice dish suggested by Jorge. All the food was incredible, truly an experience we will always remember when thinking about our time in Peru.",
+      "title": "The taste of Peru",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/50/31/d8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/50/31/d9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/50/31/da/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/50/31/db/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/50/31/dc/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Colby S"
+    },
+    {
+      "id": "tripadvisor_1032284362",
+      "source": "tripadvisor",
+      "review_text": "The truth is that I was very disappointed with the restaurant.At first everything fine, the food very rich, the problem came in dessert. Nobody wanted anything anymore because the dishes are very generous but the waiter insisted on trying you nougat. And so as not to make him ugly I chose to order a ration just to taste it. Then I find the surprise that he brings me a box which I did not ask for and I stressed to the waiter that I just wanted a ration which he said yes. At the time of payment I happen to be charged the whole box. And I specified that we only ate one ration and he told me that the ration was the whole box. Where I have seen that a ration is a whole box and I tell you in detail why a day earlier I went to eat so much salaverry and there I ordered a ration and they brought me a piece that is a ration. I understand it belongs to the same chain and for so much the ration is as it should be and in panchita the ration is a box\n I'm outraged as I felt ripped off in every way because on top of that they rip you off like that. I didn't put up a claim sheet at the time because it was late. And the tip thing that I know is not mandatory is the will that one has. I travel many places and I know what I am talking about.Only in some countries is it mandatory. So I think this is a top thing I don't think the waiter dares make such a scam without the knowledge of the owners, so please rate my opinion and don't let this happen again. Because for my part they've lost a client and her whole family. And as I recommend to other people, so the same thing will happen. I guess you guys know what a waiter he is because he's a snake charmer. Please keep this in mind as this modality may cause many customers to lose.",
+      "title": "Disappointment in the way you sell nougat",
+      "rating": 2,
+      "review_datetime_utc": "2025-09-27",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mirnaly D"
+    },
+    {
+      "id": "tripadvisor_1031970120",
+      "source": "tripadvisor",
+      "review_text": "Well worth the experience. The restaurant was decorated beautifully with vibrant colors. The service was outstanding and the attention to detail was unmatched.",
+      "title": "Great flavors, generous portions.",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-24",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/36/e7/8a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/36/e7/8b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/36/e7/8c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/36/e7/8d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/36/e7/8e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/36/e7/8f/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "GoPlaces58996613872"
+    },
+    {
+      "id": "tripadvisor_1030765254",
+      "source": "tripadvisor",
+      "review_text": "What an amazing restaurant! The service was incredible (the waiters were so tolerant of our pathetic attempts of Spanish!) and the food and wine & drinks were amazing! What a treat. Such an atmosphere - it was buzzing!",
+      "title": "What a meal!",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-17",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Tracey H"
+    },
+    {
+      "id": "tripadvisor_1030215027",
+      "source": "tripadvisor",
+      "review_text": "Environment is good, but when you order Perunian dishes, they said it is gone, then they recommended something is easy to cook but very expensive one. In the final, they added 20% tip. that is forced and sucks.\nWill not recommend to friends.",
+      "title": "dont recommend to friends",
+      "rating": 3,
+      "review_datetime_utc": "2025-09-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/19/59/44/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "David k"
+    },
+    {
+      "id": "tripadvisor_1028416511",
+      "source": "tripadvisor",
+      "review_text": "Absurd noise level, too long waiting times (one hour, half-empty restaurant commanda, 6.15pm).\nDisappointing cuisine.\nI'm sorry about our evening, I don't know if the restaurant caters to local clientele. We are a copy of Italian tourists, we do not recommend it.",
+      "title": "Disappointed",
+      "rating": 1,
+      "review_datetime_utc": "2025-09-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "annas"
+    },
+    {
+      "id": "tripadvisor_1027050902",
+      "source": "tripadvisor",
+      "review_text": "Our guide took us here to Panchita and my wife and I, after waiting 40 minutes, actually went to the craft market a 10-minute walk away, we took the sautéed loin for my wife the aja galina. Both dishes were superlative. For dessert we had the piè de lemon, a typical Peruvian dessert. That's good, too.",
+      "title": "Great restaurant in Lima's Miraflores neighborhood",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ed/6c/9f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ed/6c/a0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/ed/6c/a1/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Luigi S"
+    },
+    {
+      "id": "tripadvisor_1026013607",
+      "source": "tripadvisor",
+      "review_text": "Great Peruvian options with Veg. Choices, the restaurant is great to eat out in two. Still it is huge and still great for huge groups. As it is popular, a reservation is recommendend + it could be crowded. The food was excellent and the size of the portions was huge.",
+      "title": "Do not miss",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-22",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Nana_Graz"
+    },
+    {
+      "id": "tripadvisor_1024002809",
+      "source": "tripadvisor",
+      "review_text": "Extensive gastronomic proposal, they consider food allergies and an immersive decoration that complements the concept of the premises.\n\nWe tried the crab cause (one of the biggest I've ever seen), plus a sautéed loin and a sting called Panchito.\n\nI had a dry gin with tonic water.\n\nFrom the access, the service is friendly. Walk with time because there is waiting list and the outside area to wait, lacks enough chairs for the number of people we were waiting. The approximate wait was half an hour.\n\nThe table allocated was cute, with comfortable seating and excellent service. To my liking, the birthday celebration format is exaggeratedly loud. You could sing and bring a cupcake with candle, but at our evening, at least they sang 20 times!!! The voice of the attendees is lost and the noise is loud, intense and breaks any kind of conversation. So, if you’re taking customers, you’d better look for another quieter place. It's the lowest point of the whole experience.\n\nThe dishes arrived on time, with the right temperature and cute presentation, as did the drinks. I've had a lot of gin and this one didn't surprise me, there's no great variety in this cocktail and the almost winning option everywhere, didn't completely please me. He wasn’t untouchable either, but he lacked affection.\n\nThe prices are high, but for my taste, proportional to the size of the dishes. Waiters don’t force tipping and even with that scoop, they have a very high Standard of Service.\n\nI would return, but afraid to meet again with so many birthday celebrations, that they break into the evening with little tint.",
+      "title": "Very noisy, rich food and upgradable cocktails",
+      "rating": 4,
+      "review_datetime_utc": "2025-08-12",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/c6/5e/e7/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "María José"
+    },
+    {
+      "id": "tripadvisor_1022944808",
+      "source": "tripadvisor",
+      "review_text": "I went to Panchita last friday August 1st to have lunch with my family and a dear friend of mine, as my farewell lunch.  \nI ordered a Lomo saltado dish and asked for the waiter for the dish to come without cilantro, when the dish came it came “with” cilantro. He allegedly said that the dish had to come with cilantro because Gaston Acurio could show up at any minute and complain the dish was without cilantro.  This is unacceptable!!!\nYou can’t force a customer to eat a plate with cilantro if she doesn’t want it.",
+      "title": "Bad experience at Panchita !",
+      "rating": 2,
+      "review_datetime_utc": "2025-08-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/b5/0c/84/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/b5/10/08/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Paula O"
+    },
+    {
+      "id": "tripadvisor_1021852227",
+      "source": "tripadvisor",
+      "review_text": "The cocktails were amazing! Our food was also delicious but the portions are so large. We felt bad leaving so much food but you can take it away with you. We could have easily shared a main. When we arrived there was a queue and the lady said a 15 minute wait but we were seating in less than 5 mins. They do have English menus as well and staff were very nice.",
+      "title": "Lovely dinner",
+      "rating": 4,
+      "review_datetime_utc": "2025-07-31",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/a4/f1/75/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ellie S"
+    },
+    {
+      "id": "tripadvisor_1020494861",
+      "source": "tripadvisor",
+      "review_text": "First night in Lima and we were exhausted from our flight from the UK. Read good things online and walked down to try the restaurant. Long queue made us nervous about a wait, but an indicator of a popular spot. They apologised and said there might be a short wait - two minutes later we were seated. \nThe staff were lovely and provided us with English menus. They also spoke decent English to put us to shame. The portions are large so the three of us shared huancaina with ocopa sauces as a starter.  I had Arroz don Jose as a main - beautifully cooked chicken with creole green rice. Nice Chilean wine to accompany. \nPerfect spot for three tired travellers.",
+      "title": "lovely Lima spot",
+      "rating": 4,
+      "review_datetime_utc": "2025-07-24",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "KevinCoaker"
+    },
+    {
+      "id": "tripadvisor_1019560415",
+      "source": "tripadvisor",
+      "review_text": "Excellent Service and presentation. We went without reservation and were treated at once. We got a waiter named Jorge which was excellent and his recommendations were very good. Order the octopus and ceviche from the second.",
+      "title": "Anniversary trip",
+      "rating": 4,
+      "review_datetime_utc": "2025-07-20",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Benjamin P"
+    },
+    {
+      "id": "tripadvisor_1018010386",
+      "source": "tripadvisor",
+      "review_text": "I speak and I understand Spanish but not fluently to decipher a menu in a few minutes.   My choice of meal was okay, the pina colada could have had more rum for the price charged.  I won't grumble, they were able to seat me without a reservation albeit at the bar.  I was later joined by two other solo diners so my guess is that they don't really cater to solo's; always a downside for me. Two other tourists suggested Panchita. It was fine just nothing to write home about. ",
+      "title": "A menu in English would be nice",
+      "rating": 3,
+      "review_datetime_utc": "2025-07-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/76/10/6c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/76/10/6d/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Onelifeliveit"
+    },
+    {
+      "id": "tripadvisor_1017375422",
+      "source": "tripadvisor",
+      "review_text": "Everything was excellent, you must come if you pass through Lima! My family group of 9 and I really liked it. They are all very helpful and the food is exquisite and good value for money! The dishes are huge!",
+      "title": "Stop by this restaurant!",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-09",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/10/29/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/10/2a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/10/2b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/10/2c/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Valeria R"
+    },
+    {
+      "id": "tripadvisor_1017338406",
+      "source": "tripadvisor",
+      "review_text": "The place is beautiful.  The quality of food and service is amazing.  This was recommended by out tour guide and it was a great recommendation.  I will share something that is odd; most of the people thought by the name that this is a Mexican restaurant.  We had to tell many no, this is Peruvian cuisine.  TThings take time but it was so good that the wait was worth.",
+      "title": "Must visit while in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-09",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "AidaMari"
+    },
+    {
+      "id": "tripadvisor_1016418428",
+      "source": "tripadvisor",
+      "review_text": "The place is nice. The meals are well made. The bad thing is that they charge things that as a tourist you don't understand as tips for those who work inside, they say more tips for waiters. The restaurant is not cheap in terms of price and quality.",
+      "title": "Lunch at Panchita",
+      "rating": 4,
+      "review_datetime_utc": "2025-07-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "alejandro varas"
+    },
+    {
+      "id": "tripadvisor_1016277500",
+      "source": "tripadvisor",
+      "review_text": "Excellent typical food. A group of 9 of us ordered so many appetizers that we didn't have room for main courses.\nDelicious heart-shaped anticuchos, tequeños filled with ají de gallina, snacks with parmesan shells, ceviche, squid chicharrón, well-assorted and delicious.\nGood atmosphere and nice decoration",
+      "title": "To repeat",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-03",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jorge Santos"
+    },
+    {
+      "id": "tripadvisor_1015792092",
+      "source": "tripadvisor",
+      "review_text": "I made my reservation online and only had to wait 10 minutes for our table to be given. From here everything was spectacular. We ordered dishes to share such as anticuchos, sauteed loin, potato huancaina and dessert chops to finish. Everything was delicious and with a great presentation. 100% recommended!",
+      "title": "Simply delicious",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/a1/e3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/a1/e4/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/53/a1/e5/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Carlos Solórzano"
+    },
+    {
+      "id": "tripadvisor_1015144054",
+      "source": "tripadvisor",
+      "review_text": "We have gone with my sister and our husbands the last two times we have been to Lima, the dishes are huge and delicious, the cocktails too. We would return without hesitation",
+      "title": "We'd come back.",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-26",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Lauchita"
+    },
+    {
+      "id": "tripadvisor_1015119664",
+      "source": "tripadvisor",
+      "review_text": "I had a wonderful dinner at Panchita in Miraflores. The food was rich, generous, and full of traditional Peruvian flavors—especially the pulpo and the hearty portions. The atmosphere felt warm and welcoming. During the meal, I mentioned a minor dental discomfort to the waiter, and they kindly offered local suggestions and their concern. It turned an already great evening into something more reassuring. Highly recommended for travelers who want tasty criolla cuisine in a friendly setting.",
+      "title": "Delicious traditional food — great support when needed",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Risco Diaz M"
+    },
+    {
+      "id": "tripadvisor_1014999463",
+      "source": "tripadvisor",
+      "review_text": "The food is incredibly delicious; the best Peruvian ceviche I have ever tasted. \n\nThe octopus is also delicious; really everything we tasted was very delicious. \n\nThe place is super nice.",
+      "title": "They have the best Peruvian ceviche I've ever tasted",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-25",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/44/c5/d9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/44/c5/da/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/44/c5/db/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/44/c5/dc/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Cindy C"
+    },
+    {
+      "id": "tripadvisor_1014946822",
+      "source": "tripadvisor",
+      "review_text": "The Peruvians who took us to Panchita said that there are dishes of Peruvian cuisine with Chinese influence. I loved it. Actually, I ate the best bull tongue of my life. Spectacular! Dishes well served and very well made.",
+      "title": "Peruvian food with Chinese influence",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-24",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/43/d4/2b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/43/d4/31/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/43/d4/36/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/43/d4/61/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "fabito2015"
+    },
+    {
+      "id": "tripadvisor_1014814165",
+      "source": "tripadvisor",
+      "review_text": "On recommendation from the hotel I stayed at in Lima, I ate at this restaurant. I had a pork type stew. The pork was mostly fat.  Within hours of eating at panchita I became very sick. I was very poorly for almost 48 hours! Not a great way to start my trip in Peru.",
+      "title": "Not good",
+      "rating": 2,
+      "review_datetime_utc": "2025-06-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "chip60"
+    },
+    {
+      "id": "tripadvisor_1014773913",
+      "source": "tripadvisor",
+      "review_text": "We closed our trip at this restaurant. The best option. If not booked, you must arrive early to get in. The decor and atmosphere of the site are phenomenal. The broad letter. The staff is very good. Pepe attended us, his suggestions were spectacular. Tickets to share and taste typical Peruvian dishes are winning. The pancetta is another level and the desserts to share must be missed. I'd come back whenever I got the chance",
+      "title": "Unmissable in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/41/13/e7/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Luz stella O"
+    },
+    {
+      "id": "tripadvisor_1014190203",
+      "source": "tripadvisor",
+      "review_text": "Great service,large selection on menu ,huge portions, gourmet tastes , traditional options and new creations,excellent drinks ,loved the Sangrona . Try it . Save room for tempting desserts . In a very good area ,also near shops to enjoy after the meal, beautiful decor .",
+      "title": "A must try option",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-22",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/3d/c3/64/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "James Crocco"
+    },
+    {
+      "id": "tripadvisor_1013976379",
+      "source": "tripadvisor",
+      "review_text": "Great food and atmosphere\nWaiter spoke English which was very helpful as we don’t speak Spanish, recommended some great dishes \nThe place was packed and everyone had huge meals \nTastefully done inside",
+      "title": "Great restaurant",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-21",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "FamilyOE_10"
+    },
+    {
+      "id": "tripadvisor_1013817811",
+      "source": "tripadvisor",
+      "review_text": "Typical Peruvian food, our first meal in Lima, Peru and we started off on the right foot, everything we tried was delicious, but if something you can't miss if it's your first time in Peru it's fried Cuy, and yellow potatoes, this food was just spectacular!, nice restaurant, cozy and with great service, 100 recommended!",
+      "title": "You have to try Cuy Frito, just spectacular!!!",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-20",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/37/d3/54/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/37/d3/55/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/37/d3/56/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/37/d3/57/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/37/d3/58/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/37/d3/59/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/37/d3/5a/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Poly"
+    },
+    {
+      "id": "tripadvisor_1013933804",
+      "source": "tripadvisor",
+      "review_text": "Excellent environment and Peruvian spice! It's the food of the gods! It's worth it! Environment is super disputed but worth booking, pq ceviche is authentic, with affordable prices",
+      "title": "Environment and spice top",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-20",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mariane t"
+    },
+    {
+      "id": "tripadvisor_1013465938",
+      "source": "tripadvisor",
+      "review_text": "This restaurant is a must-visit for anyone craving truly amazing food. Every dish we tried was full of flavor and clearly made with care. The menu offers a fantastic variety. There’s something for everyone, whether you’re a picky eater or an adventurous foodie.\n\nThe service was just as impressive. Warm, attentive, and genuinely friendly. From start to finish, the experience was relaxed, satisfying, and memorable. A must try for sure!",
+      "title": "⭐️⭐️⭐️⭐️⭐️ The Reputation is Real!",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/31/60/07/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/31/60/08/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/31/60/09/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "NoOneCares"
+    },
+    {
+      "id": "tripadvisor_1010825837",
+      "source": "tripadvisor",
+      "review_text": "Unfortunately I was served undercooked pork and was sick for almost 72 hours. Perú doesn’t have health inspections like the US does or this probably wouldn’t have happened. A 4” think chunk of pork that is crunchy on the outside and white as snow on the inside should have been a red flag. But the dim lighting inside made it difficult to see that it was undercooked. Stay away from the Panceta de lechon crocante. Most of the other food I tried was good but serving poisoned food to customers erases any good parts to my visit. If you must visit this restaurant, just stick to drinks and cocktails.",
+      "title": "Undercooked pork",
+      "rating": 1,
+      "review_datetime_utc": "2025-06-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "George M"
+    },
+    {
+      "id": "tripadvisor_1010227114",
+      "source": "tripadvisor",
+      "review_text": "Our reservation was for 7:00pm but they were  willing to acomódate us earlier, even thought we were. I tried the pancetta, chicharrón with bread, and the alfajore limeño. Everyone of my group were amazed. The food and service was espectacular.",
+      "title": "Great experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/02/f6/15/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/02/f6/16/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "glennmatias"
+    },
+    {
+      "id": "tripadvisor_1010028957",
+      "source": "tripadvisor",
+      "review_text": "For the cost the food is no wonder, the catch of the day rips very good, but lanquished pancha nothing extraordinary, I expected something much better",
+      "title": "I don't recommend it.",
+      "rating": 2,
+      "review_datetime_utc": "2025-05-28",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/ff/90/81/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "María Fernanda L"
+    },
+    {
+      "id": "tripadvisor_1008632128",
+      "source": "tripadvisor",
+      "review_text": "The restaurant's fame is not reflected. Food is fine, but nothing otherworldly as you would expect. \n\nThe portions are giant, to the point of being inedible if you go as a couple. 2 courses are for 4 or 5 people, they could sell smaller portions and improve the experience. I feel they compensate for the average quality with huge portions.",
+      "title": "Nothing from the other world",
+      "rating": 3,
+      "review_datetime_utc": "2025-05-22",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/ef/2a/d7/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Nicolas A"
+    },
+    {
+      "id": "tripadvisor_1007578085",
+      "source": "tripadvisor",
+      "review_text": "Food, drinks delicious, and service 👍the atmosphere Peruvian decoration, I recommend it, the pizco sour the kindness in your attention, and typical Peruvian food deli deli!",
+      "title": "Great experience in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "janeth h"
+    },
+    {
+      "id": "tripadvisor_1007068152",
+      "source": "tripadvisor",
+      "review_text": "Without a doubt one of the best restaurants options in Lima for those who want to eat well and not pay the fortune of other renowned restaurants, we asked Lomo Saltado and Ceviche that were delicious, the drinks from Pisco sensational...we even tried to come back another day but because it was Mother's Day was impossible to get a table",
+      "title": "Restaurants in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/da/6a/73/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/da/6a/74/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/da/6a/75/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/da/6a/76/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Luiz Henrique l M"
+    },
+    {
+      "id": "tripadvisor_1004785797",
+      "source": "tripadvisor",
+      "review_text": "The food was amazing.   The meats( beef tenderloin and pork) cooked to perfection  seasoned with skilled hand were worth savoring.   My husband has celiac and they had the knowledge and made the effort to prepare safe food for him.  Tge portion sizes were good to generous.  We all were to full yo Try desserts.  Ceasar our waiter was excellente.   ",
+      "title": "Amazing food prepared to perfection in generous portions with friendly and helpful staff",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-29",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/ba/64/6f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/ba/64/70/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/ba/64/71/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Carol R"
+    },
+    {
+      "id": "tripadvisor_1004785078",
+      "source": "tripadvisor",
+      "review_text": "We had one of our best meals in a long time here! The menu was quite varied and plenty of options.  We started with the causa, a new dish foe us and loved it! The mains and sides were both incredible for all of us! The portions were generous and very affordable.  There was so much good food that we didn't have room for desert (not typical for our family). And the service was terrific.  Caesar took really good care of us ,especially with a dietary restriction (gluten-free for celiac disease). We can't wait to go back!",
+      "title": "Beyond Fantastic!",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "goneinaheartbeat"
+    },
+    {
+      "id": "tripadvisor_1004165966",
+      "source": "tripadvisor",
+      "review_text": "The food is very tasty and well served, with enough dishes for two people. There are several options on the menu and the environment is beautiful. It is a bit away from most tourist attractions, which favors being a native restaurant and focused on quality.",
+      "title": "Worth a visit",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Neto"
+    },
+    {
+      "id": "tripadvisor_1004068848",
+      "source": "tripadvisor",
+      "review_text": "1.0 General Impression\n1.1 Rating & Justification\nOverall Rating: 2.5 out of 5 stars\n\nReasoning: The rating reflects strong positives in aesthetics and service quality, but significant negatives in food taste and quality.\n\n2.0 Positive Highlights\n2.1 Ambience & Presentation\nExterior & Interior Design: Immaculate; both outside and inside design felt upscale and thoughtfully curated.\n\nTable Setup: Elegant presentation of napkins, utensils, and table layout enhanced the dining experience visually.\n\n2.2 Service\nServer Attention: Exceptional service; the waiter was attentive, respectful, and contributed positively to the experience.\n\n2.3 Beverages\nChicha Morada & Jugo de Maracuyá: Enjoyable and well-prepared; both drinks were praised and even reordered.\n\n3.0 Negative Highlights\n3.1 Food Quality & Flavor\nCausa: Presentation was okay; taste unremarkable.\n\nAnticuchos: Described as bland and flavorless, with hard potatoes and tasteless corn. Even the sauce couldn't redeem it.\n\nAjí de Gallina: Disappointing, described as having no flavor despite being a traditionally rich dish.\n\nArroz con Pollo: Similarly lacked flavor; overall taste profile did not meet expectations.\n\nWings: Acceptable, but generic – not part of traditional Peruvian fare and nothing special.\n\n3.2 Comparative Disappointment\nVisited both cheaper and more expensive restaurants nearby, all of which outperformed Panchita in flavor and food quality.\n\nThe high online ratings (e.g., 4.5 on TripAdvisor, “Travelers’ Choice 2024”) did not align with the actual experience.\n\n4.0 Cultural Context & Final Thoughts\n4.1 Expectations vs. Reality\nFamily of native Peruvians used to eating Peruvian food daily at home—felt this restaurant did not meet traditional flavor standards.\n\nDespite visual appeal and hype, the food did not deliver in authenticity or taste.\n\nLeft disappointed to the point of giving away leftovers and not photographing subsequent meals.\n\n4.2 Future Consideration\nI might be willing to return under different circumstances.\n\nFamily members unlikely to revisit due to strong dissatisfaction.\n\n5.0 Conclusion\nRecommendation: Not recommended for those seeking authentic Peruvian flavors or value for money.\n\nSummary Sentence: Panchita impresses in aesthetics and service, but disappoints profoundly in culinary execution—especially for locals accustomed to genuine Peruvian cuisine.",
+      "title": "Panchita Restaurant Review",
+      "rating": 3,
+      "review_datetime_utc": "2025-04-24",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/d3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/d4/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/d5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/d6/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/d7/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/d8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/d9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/da/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/af/c5/db/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Miguel H"
+    },
+    {
+      "id": "tripadvisor_1002422996",
+      "source": "tripadvisor",
+      "review_text": "We have been on Monday, April 2 at 2.30pm and the receptionist was a very arrogant spoilt. Dismal customer service, seconded by a young man whose attitude to having to find us a table made us feel like he was doing us a favor. We will not return because being the first impression when receiving the customer, the feeling they left was very unpleasant, and it is a shame because La Panchita was always a reference of good food, good care and quality that is now no longer reflected.",
+      "title": "Dismal reception and attitude",
+      "rating": 1,
+      "review_datetime_utc": "2025-04-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Guenther Duersteler"
+    },
+    {
+      "id": "tripadvisor_1002119842",
+      "source": "tripadvisor",
+      "review_text": "Spacious restaurant with nice decoration. Good service. Creole cuisine with a lot of variety. I would highlight the octopus strip and the rice with duck and coriander, very good. Exceptional desserts I recommend sharing portions as they are abundant.",
+      "title": "CREOLE CUISINE IN VERY GOOD ENVIRONMENT",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-12",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/96/1b/77/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "jcpLleida"
+    },
+    {
+      "id": "tripadvisor_1000691449",
+      "source": "tripadvisor",
+      "review_text": "Terrible place , no good service at all  , the food horrible  Ugg too laud , we wait for about 30 minutes for a table when they have it empty  tables  so I don’t understand  I’ll never come back horrible food",
+      "title": "Awful experience awful taste",
+      "rating": 1,
+      "review_datetime_utc": "2025-04-01",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Maria D"
+    },
+    {
+      "id": "tripadvisor_1000057452",
+      "source": "tripadvisor",
+      "review_text": "Joyful environment with colorful decoration.  The lunch was delicious, but the highlight was the dessert, I suck to the limeña, this will stay in the tasteful memory.  Fortunately, I arrived early, about half a day, soon after the restaurant was crowded and a queue was formed.",
+      "title": "Not to forget",
+      "rating": 5,
+      "review_datetime_utc": "2025-03-27",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/75/40/61/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/75/40/62/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/75/40/63/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/75/40/64/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Terezinha Santos"
+    },
+    {
+      "id": "tripadvisor_999190275",
+      "source": "tripadvisor",
+      "review_text": "We ate in a few really good places in Peru but Panchita was the best of them all. The restaurant is very tastefully decorated and the food was on another level! Our food was cooked perfectly and even the bread beforehand….that could be a meal itself it’s that good. \nThis place is a must while in Lima 10/10!",
+      "title": "The best we had in Peru!",
+      "rating": 5,
+      "review_datetime_utc": "2025-03-22",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/6a/3c/04/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/6a/3c/05/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/6a/3c/06/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/6a/3c/07/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/6a/3c/08/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "PaddyAdvice"
+    },
+    {
+      "id": "tripadvisor_997420993",
+      "source": "tripadvisor",
+      "review_text": "My friend wanted to try this restaurant and so we ended up going there. We had to wait for 30 mins to get a table on a weekend for lunch. Sadly for me as a Vegetarian I had very limited options. But I loved the vibes and ambiance of the place. I also get to witness how Peruvians celebrate their birthday. The staff was playing the music and people were dancing. I tried a traditional Arequipan dessert Queso Helado here which tasted like a Coconut IceCream. The taste was fine. I didn’t have anything else here.",
+      "title": "Nice atmosphere",
+      "rating": 4,
+      "review_datetime_utc": "2025-03-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/45/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/46/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/47/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/48/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/49/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/4a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/4b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/4c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/44/95/4d/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "vip_foodie"
+    },
+    {
+      "id": "tripadvisor_997320400",
+      "source": "tripadvisor",
+      "review_text": "Although I'd heard about how great Peruvian food was, most of my experience had been so-so (with a few exceptions) until coming here. W o w. Food, drinks, everything was impeccable. The rocoto relleno appetizer is outstanding. I enjoyed the anticuchos and arroz don Jose as well. No misses in the meal at all.",
+      "title": "incredible rocoto relleno",
+      "rating": 5,
+      "review_datetime_utc": "2025-03-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "August"
+    },
+    {
+      "id": "tripadvisor_997184162",
+      "source": "tripadvisor",
+      "review_text": "Food of ten, attention on the part of Caesar L exquisite and recommendation of dishes unbeatable. Of course, you have to go hungry because the portions are giant!!",
+      "title": "Experience of 10",
+      "rating": 5,
+      "review_datetime_utc": "2025-03-09",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/3f/ae/ef/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/3f/ae/f0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/3f/ae/f1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/3f/ae/f2/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ana F"
+    },
+    {
+      "id": "tripadvisor_995114402",
+      "source": "tripadvisor",
+      "review_text": "The food was exquisite and the service and atmosphere excellent. We had sea bass and pork chicharron, both attractively presented and tasty   Our waiter, Pepe, was attentive but not intrusive and offered suggestions about the food. The Cabernet Franc that was served was full bodied and wonderfully balanced. Our dessert, Suspiro ala Limena, a splendid concoction of caramel and meringue was a perfect ending to a great eating experience.",
+      "title": "Wonderful Peruvian food in a pleasant atmosphere.",
+      "rating": 5,
+      "review_datetime_utc": "2025-02-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "DL2Some"
+    },
+    {
+      "id": "tripadvisor_994059582",
+      "source": "tripadvisor",
+      "review_text": "I found it a fairly regular restaurant in its quality of food , perhaps there is a lot of marketing behind but when it comes to eating one simply does not notice that for the price they charge the quality stands out from other restaurants in the area, I would even say that the quality is below the average of the area . I already inform that for each dish 2 or 3 people can eat , that is, the ration is quite abundant but the quality is regular only. It is not a restaurant where you can notice the hand of a chef and I would not recommend it for those who value the quality of food as an essential part of their trip.",
+      "title": "I don't recommend it.",
+      "rating": 2,
+      "review_datetime_utc": "2025-02-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Daniel G"
+    },
+    {
+      "id": "tripadvisor_990834624",
+      "source": "tripadvisor",
+      "review_text": "Excellent Peruvian food, the place is very nice and the service very good, The sautéed loin is the best I have ever eaten, and the portions are very abundant. The price is according to the quality received.",
+      "title": "Excellent",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-28",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Eduardo7676"
+    },
+    {
+      "id": "tripadvisor_990230459",
+      "source": "tripadvisor",
+      "review_text": "The good :\nThe drinks and service were very good .   Food was very tasty, and prices not terrible.\nThe bad:\nNOISE level.  VERY Loud. Need to work on the acoustics. It’s a beautiful restaurant, but  they didn’t work on better acoustics.  Can’t hear across the.table.\nThere was an extra service fee on beill - we have been in Lima for days, that we never saw at another restaurant.  Asked the server who could not explain very well. Asked for someone to explain in English please. He said he’d send someone.  Waited 10 minutes after we paid and finished. No one came. Don’t know what that charge was.",
+      "title": "Good but NOISY",
+      "rating": 4,
+      "review_datetime_utc": "2025-01-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RobinfromCa"
+    },
+    {
+      "id": "tripadvisor_990226051",
+      "source": "tripadvisor",
+      "review_text": "Taste is known to be very individual and for some, the portion size alone is a measure of quality. If you judge like that, you'll be in good hands here. If, on the other hand, you place more emphasis on differentiated and subtler taste nuances, you should go further! Just as an example: Ají de gallina is synonymous here with a sauce orgy that poses maximum challenges to the stomach but leaves the taste buds largely untroubled. The braised beef rib shines through perfectly summed up taste boredom, only the ceviche can inspire without restriction, although the seafood portion is not marinated in it, but cooked. The fact that the starter and main course are applied with only a few minutes of delay can no more improve the overall impression than the fact that the noise level can certainly compete with that of a bus station.",
+      "title": "Nothing special",
+      "rating": 3,
+      "review_datetime_utc": "2025-01-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Yonoso"
+    },
+    {
+      "id": "tripadvisor_990092845",
+      "source": "tripadvisor",
+      "review_text": "Another amazing restaurant by Gastón Acurio, the best chef in Peru! I love this place, everything on the menu is delicious. It’s one of the best spot for Peruvian food! The soups are flavorful, the anticuchos are delicious, and the lomo saltado is a must-try. The drinks are great, the service is very attentive and friendly, and the decor has a beautiful Peruvian touch. This restaurant is a must-visit when in Lima!",
+      "title": "Delicious Food!",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-22",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/26/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/27/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/28/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/29/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/2a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/2b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/2c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/2d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/2e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/2f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/30/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/31/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9d/59/32/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mayi Barov"
+    },
+    {
+      "id": "tripadvisor_988076366",
+      "source": "tripadvisor",
+      "review_text": "This is a very well-known restaurant and we were lucky to get a table for 2 without having reservations. The ambiance is very nice and service is great. Lots of interesting items on the menu and portions are very big. The seafood rice and clams with cheese were supreme. There was absutlely no place for dessert. Service was very good and prices are on the higher side.",
+      "title": "A popular place in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-07",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/82/d3/91/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/82/d3/92/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/82/d3/93/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/82/d3/94/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/82/d3/95/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/82/d3/96/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "dxbdoc"
+    },
+    {
+      "id": "tripadvisor_987844381",
+      "source": "tripadvisor",
+      "review_text": "Restaurant Pachita is excellent, with varied meals and typical Peruvian dishes, all imperative. The Piqueo dish gives us the opportunity to try several different foods in the same dish.",
+      "title": "Great place to have lunch or dinner.",
+      "rating": 5,
+      "review_datetime_utc": "2025-01-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Vinicius J"
+    },
+    {
+      "id": "tripadvisor_985842060",
+      "source": "tripadvisor",
+      "review_text": "This is not the first time I have lunch at Panchita when in Lima. I like their food, but over the past few years, I have noticed that the quality of the food has been diminishing. To begin, the quality of the potatoes they use is the worst. If someone chooses to go to a good Peruvian restaurant in Lima, it is to taste the best potatoes we have in town, not the watery, sticky ones. Their cocktails are also watery. It is sad to see that such a great restaurant is lowering its standards.",
+      "title": "The quality of the food is not as it used to be",
+      "rating": 3,
+      "review_datetime_utc": "2024-12-24",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Gisela C"
+    },
+    {
+      "id": "tripadvisor_985799286",
+      "source": "tripadvisor",
+      "review_text": "Very nice inside, quiet fancy, even though a little too loud. Great service, great food, very generous quantity. The price for the quantity is quiet fair. Had a very good time.",
+      "title": "Very good place",
+      "rating": 4,
+      "review_datetime_utc": "2024-12-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "JD"
+    },
+    {
+      "id": "tripadvisor_985684581",
+      "source": "tripadvisor",
+      "review_text": "Comida top. Price above market average but worth it. The body pancetta and very good and the cevite as well. A delicious food beautiful restaurant and very nice service",
+      "title": "Special restaurant in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2024-12-22",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Deomar Barroso"
+    },
+    {
+      "id": "tripadvisor_983658747",
+      "source": "tripadvisor",
+      "review_text": "OMG .  SO good!  After a week in Lima and a whole lotta cevihe, which I love, I wanted meat.  They did not disappoint.  I had a wonderful Argentinian steak and delicious pisco sour.  I am gluten free due to Celiac, which they fully understood (I had a translation card with me).  My husband ordered cuy, which I wasn't able to try do to it not being gluten free, but he enjoyed it.  \n\nBe sure to make a reservation though!    We didn't, and ended up waiting about 40 minutes on a Wednesday night.",
+      "title": "Amazing!",
+      "rating": 5,
+      "review_datetime_utc": "2024-12-09",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Phyllis K"
+    },
+    {
+      "id": "tripadvisor_983425996",
+      "source": "tripadvisor",
+      "review_text": "Best food in Lima, and probably in Peru. Ruben Javier is an excellent waiter, ask for him!\n\nThe best food in Lima, and probably in Peru. Ruben Javier is an excellent waiter, ask for him!",
+      "title": "Dinner at Panchite",
+      "rating": 5,
+      "review_datetime_utc": "2024-12-07",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "EddOrSan"
+    },
+    {
+      "id": "tripadvisor_981942033",
+      "source": "tripadvisor",
+      "review_text": "I find the food pretty good overall. The prices are not so low but it has correlation with the quality of the food and the service.\n\nThe service is very friendly and the local is cute",
+      "title": "Rich food in panchita",
+      "rating": 4,
+      "review_datetime_utc": "2024-11-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/36/d9/01/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Diego Villegas"
+    },
+    {
+      "id": "tripadvisor_980907827",
+      "source": "tripadvisor",
+      "review_text": "Disappointing experience !! I made a reservation well in advance, The restaurant cancelled the reservation approx. 1 hr before reservation time.  Reason? “Legal reasons.” How is this even possible ?? Very unprofessional.",
+      "title": "Disappointing - cancelled reservation 1 hr in advance due to “legal reasons.” Incredible.",
+      "rating": 1,
+      "review_datetime_utc": "2024-11-18",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Gunnar A"
+    },
+    {
+      "id": "tripadvisor_980803522",
+      "source": "tripadvisor",
+      "review_text": "We went to celebrate my birthday in Lima and on 2 occasions we went to this restaurant. It is incredibly good, very rich and varied foods, very good taste and size. And above all the attention of the hearts... on my birthday they sang and carried\nA nice dessert. I totally recommend it",
+      "title": "Food and sublime attention!!",
+      "rating": 5,
+      "review_datetime_utc": "2024-11-18",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/a5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/a6/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/a7/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/a8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/a9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/aa/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/ab/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/27/20/ac/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Enriquedechile"
+    },
+    {
+      "id": "tripadvisor_980739635",
+      "source": "tripadvisor",
+      "review_text": "Very good and tasty food. Very clean place and very quick service. The waiters don't have much patience. The portions are very generous and the beer well frozen.",
+      "title": "Good food and fair price. Pleasant environment",
+      "rating": 4,
+      "review_datetime_utc": "2024-11-17",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "JOSE RENATO S"
+    },
+    {
+      "id": "tripadvisor_979171903",
+      "source": "tripadvisor",
+      "review_text": "We were there to celebrate my wife’s birthday. Food was delicious and the service from our server Emily exceeded our expectations with the right recommendations and also arranging a birthday day celebration for my wife.  Staff were genuinely interested in customers.",
+      "title": "Great birthday celebration",
+      "rating": 5,
+      "review_datetime_utc": "2024-11-09",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/10/af/3e/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Raj H"
+    },
+    {
+      "id": "tripadvisor_978262441",
+      "source": "tripadvisor",
+      "review_text": "Great food and ambiance! The waiting was like 10 minutes at lunch time week day. Our waiter was amazing and the food was delicious. I’m Peruvian and totally recommend this place if you want to try good Peruvian food.",
+      "title": "Great Peruvian restaurant",
+      "rating": 5,
+      "review_datetime_utc": "2024-11-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/f7/83/c8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/f7/83/c9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/f7/83/ca/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/f7/83/cb/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Daniela N"
+    },
+    {
+      "id": "tripadvisor_977131045",
+      "source": "tripadvisor",
+      "review_text": "Excellent service, great food, is a mandatory in lime seasoning, presentation, decoration, consulting, complete setting, a restaurant that will leave no doubt about its quality, I only have a but and it is the logistics and charging of salads, if or if they would pay all diners if only serve one person .at least so let it be known so that they do not.\nThe rest is great",
+      "title": "Birthday",
+      "rating": 4,
+      "review_datetime_utc": "2024-10-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Andres Mauricio C"
+    },
+    {
+      "id": "tripadvisor_976309593",
+      "source": "tripadvisor",
+      "review_text": "We went to celebrate my chicken's birthday. The staff was super good. We asked for dish recommendations, as we didn’t want the typical fish (because we had already had lunch that). The food is blunt so I recommend either asking for funds or first share something and see if you have room for more food. We ordered a lime cause, which was huge and some croquettes filled with chickpea, that to share, all super rich! And in the background Lomo Saltado and Tacu Tacu with loin. I am a fan of Tacu Tacu and I loved it. Since it was birthday at the reservation I explained the reason and the staff sang happy birthday and brought us a dessert to share by the house. It was entertaining! I recommend going and don't forget to book as there are always quite a lot of people in the place.",
+      "title": "Birthday celebration in Panchita.",
+      "rating": 5,
+      "review_datetime_utc": "2024-10-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/df/03/47/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/df/03/48/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Rodrigo Yáñez"
+    },
+    {
+      "id": "tripadvisor_974949337",
+      "source": "tripadvisor",
+      "review_text": "Dessert was delicious, I felt the creamy texture and taste balanced between the sweet and the bitter of tiramisu. Their combination of coffee, mascarpone cheese and cocoa powder is simply irresistible.",
+      "title": "I felt the creamy texture and taste balanced between the sweet and the bitter of tiramisu",
+      "rating": 3,
+      "review_datetime_utc": "2024-10-22",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Roam50122753139"
+    },
+    {
+      "id": "tripadvisor_973329489",
+      "source": "tripadvisor",
+      "review_text": "Excellent place to eat, rich, abundant and excellent attention, delicious drinks and very cute presentation, great variety of dishes, the attention is friendly.",
+      "title": "Exquisite food",
+      "rating": 5,
+      "review_datetime_utc": "2024-10-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/c0/06/65/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/c0/06/66/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Valeria R"
+    },
+    {
+      "id": "tripadvisor_973223950",
+      "source": "tripadvisor",
+      "review_text": "The fried soft pork was delicious. The atmosphere was relaxing yet vibrant. The server was good and they did their best to accommodate our need to understand the Spanish. A English menu was available and it was very helpful.",
+      "title": "Dinner in Lima",
+      "rating": 4,
+      "review_datetime_utc": "2024-10-09",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Rayjay35"
+    },
+    {
+      "id": "tripadvisor_971782089",
+      "source": "tripadvisor",
+      "review_text": "I ordered pure chicken leftover chicken. Not a piece of breast puts you pure leftover chicken. They shouldn't. It's low quality. They should warn the starter that chicken leftover chicken is pure leftover chicken.",
+      "title": "Poor quality of food puts you leftover chicken",
+      "rating": 2,
+      "review_datetime_utc": "2024-09-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Rob A"
+    },
+    {
+      "id": "tripadvisor_970622846",
+      "source": "tripadvisor",
+      "review_text": "Atmosphere, food and first class care. We ordered Trio of Huancaines and Ocopa, Lemon Tellarines and Picarones with honey of fig leaves and spices. All excellent!",
+      "title": "Unmissable!",
+      "rating": 4,
+      "review_datetime_utc": "2024-09-21",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "JorBer"
+    },
+    {
+      "id": "tripadvisor_969763151",
+      "source": "tripadvisor",
+      "review_text": "Much fame for little delivery.\nThere are much better restaurants in town. \nKkkkk would not return under any circumstances.\nThe ceviche\nIt was delicious, but we ate better in\nOther places. The dick tasty but has better and sincerely galetto?! Do not eat galetto in Lima kkkkkkkk",
+      "title": "I may have asked wrong, but I ⁇ 't come back. Kkk",
+      "rating": 3,
+      "review_datetime_utc": "2024-09-15",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/77/89/aa/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/77/89/ab/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Roberta B"
+    },
+    {
+      "id": "tripadvisor_968798476",
+      "source": "tripadvisor",
+      "review_text": "We went for a Sunday lunch and were not disappointed. We were a party of 9 and everyone left happy. There is a large menu that should suit everyone. The Lamo and Pollo Saltado were excellent. The portions are enormous, so splitting could be better for some people. The only disappoinement were the desserts.",
+      "title": "A large traditional Peruvian restaurant serving great classics by well trained staff.",
+      "rating": 4,
+      "review_datetime_utc": "2024-09-08",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "monalinda100"
+    },
+    {
+      "id": "tripadvisor_968349616",
+      "source": "tripadvisor",
+      "review_text": "Best restaurant I’ve visited in Lima. It was extremely busy, but was able to get a spot on the bar as a solo traveler. The wait staff were very attentive and helped me navigate the menu. Food was spectacular.",
+      "title": "Amazing food",
+      "rating": 5,
+      "review_datetime_utc": "2024-09-05",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ben G"
+    },
+    {
+      "id": "tripadvisor_968105979",
+      "source": "tripadvisor",
+      "review_text": "The restaurant has a very nice decor, the food is good, but not the best in the world, there are other places much more interesting, and the service ends up leaving the experience boring. The service is slow, we almost had to beg for us to be served and even so with a half rough air, would not return!",
+      "title": "Wouldn't come back",
+      "rating": 3,
+      "review_datetime_utc": "2024-09-03",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/58/79/c1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/58/79/c2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/58/79/c3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/58/79/c4/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/58/79/c5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/58/79/c6/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Renata"
+    },
+    {
+      "id": "tripadvisor_967744654",
+      "source": "tripadvisor",
+      "review_text": "We ordered a creole ossobuco that gave to 2 people for 78 souls. It came very fast and was very tasty.\nWe only find the environment noisy because of the families.",
+      "title": "Large dishes",
+      "rating": 4,
+      "review_datetime_utc": "2024-09-01",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Vitor P"
+    },
+    {
+      "id": "tripadvisor_966897744",
+      "source": "tripadvisor",
+      "review_text": "We highly recommended this restaurant located in the upper part of Miraflores. On the weekend, from what we were told at the door, they do not take reservations, but it is on a first-come, first-served basis. They kept us waiting half an hour even though there were several empty tables, I think it is part of the experience, and they sat us in a separate piece, which did not have the same imprint of the main hall. On the contrary, it was rather unwelcoming and ugly. The waiter, very assemblage but insistent, I try that we ask a lot and most expensive. Will you be paid extra for the value of the account?  Be careful! The dishes are huge. Rich and not expensive considering the amount. Ideal to go in large groups and share. If you're looking for something finer, this isn't the place.",
+      "title": "Very good, very good.",
+      "rating": 4,
+      "review_datetime_utc": "2024-08-26",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jacqueline L"
+    },
+    {
+      "id": "tripadvisor_964651817",
+      "source": "tripadvisor",
+      "review_text": "The restaurant provided an excellent environment. The service was excellent, and the food was incredible. Considering the excellent reviews, this restaurant lived up to the expectations.",
+      "title": "Worth a visit when in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2024-08-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/23/f3/24/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/23/f3/25/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/23/f3/26/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/23/f3/27/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "David B"
+    },
+    {
+      "id": "tripadvisor_963672885",
+      "source": "tripadvisor",
+      "review_text": "Very good quality meat, especially the Argentine steak was very good otherwise all the starters were quality. The only catch was the deal, it was too charged and irritating on occasion.",
+      "title": "Good experience",
+      "rating": 4,
+      "review_datetime_utc": "2024-08-07",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mario"
+    },
+    {
+      "id": "tripadvisor_960933299",
+      "source": "tripadvisor",
+      "review_text": "Food very good but time-consuming to reach the table and service leaves to be desired, very slow, we ordered 3 wines each took 20 minutes to be served",
+      "title": "Good food but slow service",
+      "rating": 4,
+      "review_datetime_utc": "2024-07-24",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Paulo S"
+    },
+    {
+      "id": "tripadvisor_959955541",
+      "source": "tripadvisor",
+      "review_text": "I was frustrated with the quality of food. I found the food coarse, not as refined as Peruvian food should be. The ambiance is nice and service cordial",
+      "title": "Disappointing",
+      "rating": 3,
+      "review_datetime_utc": "2024-07-20",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Maria Alice S"
+    },
+    {
+      "id": "tripadvisor_959967825",
+      "source": "tripadvisor",
+      "review_text": "Delicious dishes, pleasant atmosphere and excellent attention. Very generous in the portions would say that to share the most. Suitable balance between quality and price.",
+      "title": "Excellent",
+      "rating": 5,
+      "review_datetime_utc": "2024-07-20",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/e1/1a/0f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/e1/1a/10/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/e1/1a/11/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Pily A"
+    },
+    {
+      "id": "tripadvisor_958790289",
+      "source": "tripadvisor",
+      "review_text": "Large gastronomic point miraflorino, of varied Peruvian Creole dishes, in a very suitable atmosphere, taste tasty dishes. Recommended beef tongue, chicken chili, northern goat and anticuchos",
+      "title": "Variety and tasty of Peruvian Creole dishes, not cheap at all",
+      "rating": 4,
+      "review_datetime_utc": "2024-07-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alejandro JANO León"
+    },
+    {
+      "id": "tripadvisor_958316039",
+      "source": "tripadvisor",
+      "review_text": "It’s a big classic Peruvian restaurant.  Worth trying if new to Peru. Big portions and has many of the classic Peruvian dishes. Recommend the cow heart skewers and duck rice.",
+      "title": "A big classic pervuian restaurant",
+      "rating": 4,
+      "review_datetime_utc": "2024-07-07",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c5/cf/03/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c5/cf/04/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c5/cf/05/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c5/cf/06/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c5/cf/07/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c5/cf/08/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/c5/cf/09/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "proshares"
+    },
+    {
+      "id": "tripadvisor_957267383",
+      "source": "tripadvisor",
+      "review_text": "This place was a find. We were lucky, because there was a big queue and it ended up freeing up a seat. \nNice, the service was very good and the food was flawless. \nBe careful what you ask for, the portions are huge.\nWe ordered a limeña cause of entry, reminds a bit of the salty pie from Brazil made with cream potatoes. But it was almost such a big meal. \nThey offer a puppy at first, but don't be mistaken, it will be charged.",
+      "title": "Excellent restaurant and very well served",
+      "rating": 5,
+      "review_datetime_utc": "2024-06-29",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/b3/e6/b5/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Luiza Boa Nova"
+    },
+    {
+      "id": "tripadvisor_956834691",
+      "source": "tripadvisor",
+      "review_text": "The experience was not very good this opportunity, this is the second time I come to this place in Miraflores and you have to wait for your food to reach your table more than 1 hour",
+      "title": "Very bad.",
+      "rating": 1,
+      "review_datetime_utc": "2024-06-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/ac/94/1c/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Eduardo C"
+    },
+    {
+      "id": "tripadvisor_953782299",
+      "source": "tripadvisor",
+      "review_text": "We had a delicious Lomo Saltado, typical beef dish with onions, tomatoes, French fries and rice. The meet was lovely. Service was very flawless and friendly. The decoration is very nice as well",
+      "title": "Great Lomo Saltado",
+      "rating": 5,
+      "review_datetime_utc": "2024-06-05",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/7b/f9/29/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Els D"
+    },
+    {
+      "id": "tripadvisor_953497687",
+      "source": "tripadvisor",
+      "review_text": "Traditional Peruvian food and drinks with excellent flavors, presentation, portions, atmosphere and very good service.\nIt has several locations. \nWhenever you visit Lima, be sure to eat at this place.",
+      "title": "Peruvian tradition that you should always visit.",
+      "rating": 5,
+      "review_datetime_utc": "2024-06-03",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/76/db/a7/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "FannyS"
+    },
+    {
+      "id": "tripadvisor_952936051",
+      "source": "tripadvisor",
+      "review_text": "5 stars meal, great service, a bit slow but totally understandable why. Food was just outstanding, the octopus was to die for. \nHave to have the Pachamanca.",
+      "title": "Excellent gourmet that doesn’t make you feel like having a McDonald’s afterwards",
+      "rating": 5,
+      "review_datetime_utc": "2024-05-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/6d/32/b4/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "dicaroline"
+    },
+    {
+      "id": "tripadvisor_952802050",
+      "source": "tripadvisor",
+      "review_text": "Excellent cuisine, friendly staff and very, very tasty! The main emphasis is on meat dishes, the restaurant is very popular, so make a reservation in advance.",
+      "title": "Cuisine with national flavor",
+      "rating": 5,
+      "review_datetime_utc": "2024-05-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "kort03"
+    },
+    {
+      "id": "tripadvisor_952067549",
+      "source": "tripadvisor",
+      "review_text": "Really nice meal at the end of our trip. We had a 5:00 reservation. The place was really filling up when we left just before 7:00.  The portions are huge. My husband and I split the arroz donmiguero (half a chicken, enough rice for 4 people). Really good. Also tried a chicha morada. This Peruvian drink reminds me of Christmas because of the cinnamon and cloves in it. Because we were leaving for the airport after dinner the staff let us pay part of our bill in cash and the balance with a card which was appreciated (we tipped in cash). A nice dinner.",
+      "title": "You Won't Leave Hungry",
+      "rating": 4,
+      "review_datetime_utc": "2024-05-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "madbeck"
+    },
+    {
+      "id": "tripadvisor_951127318",
+      "source": "tripadvisor",
+      "review_text": "Great option in Lima! The waiting line is a bit confusing and there is no option to follow online, but the food is worth the wait. The drinks are delicious and the food, in addition to being tasty, is very well served, we regret not sharing, there was plenty of food left over. The atmosphere is very charming and the service is very friendly!",
+      "title": "Great option in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2024-05-16",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ariella Ramos"
+    },
+    {
+      "id": "tripadvisor_949958116",
+      "source": "tripadvisor",
+      "review_text": "Great experience in this restaurant, quality menus and simply gigantic portions!! You can have 1 dish for 2 without problem\nMagnificent setting\nCorrect price",
+      "title": "Go for it, it’s worth the detour",
+      "rating": 5,
+      "review_datetime_utc": "2024-05-08",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/18/9b/13/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/18/9b/14/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/18/9b/15/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "li2li6"
+    },
+    {
+      "id": "tripadvisor_949807026",
+      "source": "tripadvisor",
+      "review_text": "Some friends went to eat typical Peruvian food, on the recommendation of others. The truth is that it does not disappoint.\n\nThe kitchen is excellent and the service unbeatable.\n\nThe portions are super abundant, very colorful and tasty. We had corn pie (delicious), ceviche, sautéed loin with vegetables, chicken cracklings, causa and roasted bacon. Everything was spectacular, as well as tasty and on point. For dessert we had some delicious donuts with fig honey. All accompanied by pisco sour and water.\n\nIt is worth visiting the place and trying its delicious dishes.",
+      "title": "Fabulous food and unbeatable service!",
+      "rating": 5,
+      "review_datetime_utc": "2024-05-07",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/84/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/85/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/86/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/87/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/88/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/89/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/8a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/8b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/8c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/8d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/14/56/8e/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RitaGP"
+    },
+    {
+      "id": "tripadvisor_949492336",
+      "source": "tripadvisor",
+      "review_text": "Magnificent experience, we had crispy bacon, octopus and bolyucas for dinner, we drank Cuzco beer and orange juice and we had the best attention from our waiter Félix, very friendly and attentive and very knowledgeable about the dishes we tasted, his recommendations were excellent, highly recommended",
+      "title": "Excellent dinner in Miraflores",
+      "rating": 5,
+      "review_datetime_utc": "2024-05-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Juan Ramón C"
+    },
+    {
+      "id": "tripadvisor_949132950",
+      "source": "tripadvisor",
+      "review_text": "The restaurant is decorated super beautifully and is cozy, the staff is very attentive and the food is super good and abundant.\nWe tried the octopus, grilled chicken and a cheese and coconut ice cream dessert… a spectacle of flavors!!",
+      "title": "A success !",
+      "rating": 5,
+      "review_datetime_utc": "2024-05-02",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/08/79/20/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/08/79/21/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/08/79/22/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/08/79/23/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "MarNG"
+    },
+    {
+      "id": "tripadvisor_947423049",
+      "source": "tripadvisor",
+      "review_text": "In the 10 days I was in Peru it was my best meal.\n\nThey serve very regional Creole cuisine, everything is very tasty,\n\nWaiter Anderson's service is impeccable",
+      "title": "Best chocro empanada ever",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-19",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/e8/52/2c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/e8/52/2d/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Bruno Rafael"
+    },
+    {
+      "id": "tripadvisor_947064893",
+      "source": "tripadvisor",
+      "review_text": "A very large selection of traditional peruvian dishes. It was very good. We had the Lomo Saltado and the Cebiche. Very tasty. We got a table without a reservation although a lot of people seem to have reservations. The service was good as well. A bit slow but we were not in a hurry. The waiters were very good at answering our questions and a couple spoke English. The prices were a bit high but the quality was good. It was located in Miraflores near our hotel. I highly recommend.",
+      "title": "Traditional peruvian food",
+      "rating": 4,
+      "review_datetime_utc": "2024-04-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/e3/cb/66/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/e3/cb/67/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/e3/cb/68/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RinaColorado"
+    },
+    {
+      "id": "tripadvisor_946600385",
+      "source": "tripadvisor",
+      "review_text": "We went to eat there based on a recommendation from the Ikonik hotel. Place with a beautiful decoration, they helped us choose the dishes since we didn't know what they were about and everything was very good. Excellent service!",
+      "title": "Authentic experience",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "FC"
+    },
+    {
+      "id": "tripadvisor_946365882",
+      "source": "tripadvisor",
+      "review_text": "Excellent local dishes of very high quality, generous, top-notch service with a dedicated server who introduces himself and takes care of the table from start to finish. Real customer service! Room has a very noisy atmosphere.",
+      "title": "top",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-12",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Carmen"
+    },
+    {
+      "id": "tripadvisor_945774185",
+      "source": "tripadvisor",
+      "review_text": "The food was exquisite, tasty, adequate portion, I found the pisco sour a little stronger and drier.\nVery good attention from the waiters, totally recommended.",
+      "title": "delicious lunch",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-08",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "MACIEL M"
+    },
+    {
+      "id": "tripadvisor_945299294",
+      "source": "tripadvisor",
+      "review_text": "Honestly, it was not one of the best restaurants I tried during my trip to Peru.\nThe food is not remarkable, rather very average, we ordered a large mixed dish and there was nothing that we loved, chicha morada drink.\nThe place is nice but... little else",
+      "title": "Nothing to highlight, very average food",
+      "rating": 3,
+      "review_datetime_utc": "2024-04-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Rocio E"
+    },
+    {
+      "id": "tripadvisor_944985822",
+      "source": "tripadvisor",
+      "review_text": "Food is amazing.  Authentic Peruvian place. Great atmosphere and friendly staff.  Five stars for sure.  Different locations, reservation suggested or required for most of them.",
+      "title": "Great authentic food",
+      "rating": 5,
+      "review_datetime_utc": "2024-04-02",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/c6/5f/9c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/c6/5f/9d/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sandro"
+    },
+    {
+      "id": "tripadvisor_944375254",
+      "source": "tripadvisor",
+      "review_text": "Going to Panchita is evoking the flavors of my childhood, they offer a wide variety of Peruvian Creole dishes, from chicharrones, ají de gallina and the delicious picarones, highly recommended, it's worth the wait",
+      "title": "Unforgetable experience",
+      "rating": 5,
+      "review_datetime_utc": "2024-03-29",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sandra Arevalo"
+    },
+    {
+      "id": "tripadvisor_943471769",
+      "source": "tripadvisor",
+      "review_text": "Great restaurant.  Food was delicious and the staff were amazing.   I was there for my 50 th birthday and they made it special.  A special thanks to Jorge T who was our server.",
+      "title": "Great place to celebrate and eat.",
+      "rating": 5,
+      "review_datetime_utc": "2024-03-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/b1/35/d2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/b1/35/d3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/b1/35/d4/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Marc G"
+    },
+    {
+      "id": "tripadvisor_937974150",
+      "source": "tripadvisor",
+      "review_text": "This place is a good place if you want to enjoy those types of dishes that are too big for a normal person ....\n\nIt was a good place to go, with good food, but it’s normal food in huge plates ... you must share not eat by yourself... something we could have been warned by the staff but they didn’t ....\n\nI don’t think we are repeating this place.",
+      "title": "Good food, nothing spectacular (except for the size)",
+      "rating": 4,
+      "review_datetime_utc": "2024-02-13",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "C V"
+    },
+    {
+      "id": "tripadvisor_937579532",
+      "source": "tripadvisor",
+      "review_text": "Horrible experience!\n1. Waiter took forever to take our order.\n2. We did ask for ice and hot sauce that never came\n3. I asked to pack a piece of chicken to take home, but I was given nothing (the last person to get our money didn’t know about it)\nI wouldn’t recommend this place. They just want our money and their service is poor",
+      "title": "Terrible experience",
+      "rating": 1,
+      "review_datetime_utc": "2024-02-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Getaway59490725658"
+    },
+    {
+      "id": "tripadvisor_936466989",
+      "source": "tripadvisor",
+      "review_text": "The food was excellent, the service was less than average. Our server Félix was very unprofessional. After I offered the normal 10% tip in Lima, he suggested that a 15% would be a better tip and he also requested the tip to be in cash.",
+      "title": "Begging for cash",
+      "rating": 3,
+      "review_datetime_utc": "2024-02-01",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Armando N"
+    },
+    {
+      "id": "tripadvisor_935464141",
+      "source": "tripadvisor",
+      "review_text": "We chose Panchita for our last dinner in Lima. We were apprehensive of the long waiting of 45-60 minutes but were lucky to get a table for 4 instantly. This is huge restaurant with large capacity but despite the large noodles guests they work with precision. As soon as we sat, Caesar came to us and introduced himself as our dedicated waiter. It was heartening to see that he had time and patience to explain the Peruvian dishes and drinks  in English. Then there was supervisor Carlos who was checking on each table. The drinks were amazing ( inka punch, Sangria ). The food was also outstanding ( please see pics ) The bill was reasonable   around 600 sols. This food experience will stay in our memories for long.",
+      "title": "Best food experience in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2024-01-25",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4a/05/ed/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4a/05/ee/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4a/05/ef/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4a/05/f0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/4a/05/f1/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RajaSekhri"
+    },
+    {
+      "id": "tripadvisor_934825764",
+      "source": "tripadvisor",
+      "review_text": "Excellent dishes and drinks. The food was very good in terms of quality, presentation and quantity. Garzon/Bartender Anthony was always very attentive to us and made the visit very enjoyable, thank you very much.'",
+      "title": "Excellent meal",
+      "rating": 5,
+      "review_datetime_utc": "2024-01-21",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jorge A"
+    },
+    {
+      "id": "tripadvisor_934822376",
+      "source": "tripadvisor",
+      "review_text": "We order Peco and Rice Handle with Duck. The Pecho Mancha was 5 of 5, but the Rice with Duck (much more expensive than the Pecho Mancha) was disappointing. I don't recommend it at all.\nThen the drinks were super and the attention was good.\nCome, but don't ask for Rice with Duck.",
+      "title": "All rich but the Rice with Duck",
+      "rating": 4,
+      "review_datetime_utc": "2024-01-21",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/43/1f/94/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Alexánder B"
+    },
+    {
+      "id": "tripadvisor_931119437",
+      "source": "tripadvisor",
+      "review_text": "Very good attention. The rich and abundant food. Very good Picaroni and some new dishes. The cause is filled, and a chicken bean presented as croquettes with a very rich and novel olive sauce.",
+      "title": "Good experience",
+      "rating": 5,
+      "review_datetime_utc": "2023-12-27",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Silvia S"
+    },
+    {
+      "id": "tripadvisor_929254547",
+      "source": "tripadvisor",
+      "review_text": "The attention is especially good. The atmosphere is noisy and fun. Let's not expect much intimacy. The place is nice. The food is good, although we didn't find it spectacular if you come from regions where you eat well.",
+      "title": "Okay, but it's not spectacular",
+      "rating": 3,
+      "review_datetime_utc": "2023-12-12",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Maria"
+    },
+    {
+      "id": "tripadvisor_925485824",
+      "source": "tripadvisor",
+      "review_text": "Bad attention... and also with my husband we intoxicated ourselves we spent two lousy days.. we arrived that day.. it was the only place we visited.. and we ended up sick.. bad experience.. I don't recommend it",
+      "title": "Mala.experience",
+      "rating": 2,
+      "review_datetime_utc": "2023-11-11",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Luz Marina S"
+    },
+    {
+      "id": "tripadvisor_925091463",
+      "source": "tripadvisor",
+      "review_text": "It is a \"fashionable\" restaurant, as the fancy, pretty, pretty people attend with their iphone to take selfies every 3 seconds and take 23 photos to the food (I post respectovo in IG). But speaking of what's interesting, we try several dishes, including the skipped back, a re back, some tickets and of course we ask for Fishes. The truth didn't seem to me anything from the other world, but the bill does... they charge you a lot for a very average meal, it's more fashion than anything else. I'd come back, not on my own initiative... but it's the typical restaurant to do business.",
+      "title": "Caro, average conida, not worth it.",
+      "rating": 3,
+      "review_datetime_utc": "2023-11-09",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "carlosandresrc"
+    },
+    {
+      "id": "tripadvisor_919527133",
+      "source": "tripadvisor",
+      "review_text": "After a long time I met with a colleague at work, we decided to go to pancake and enjoy a good lunch. As always, it doesn't disappoint food. Thanks to the young man who served us, Anderson, super kind and helpful.\nHighly recommended.",
+      "title": "DELICIOUS",
+      "rating": 5,
+      "review_datetime_utc": "2023-10-03",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/7c/88/f9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/7c/88/fa/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/7c/88/fb/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Milutza Susan Armas"
+    },
+    {
+      "id": "tripadvisor_916773871",
+      "source": "tripadvisor",
+      "review_text": "I asked for a reservation and they gave it to me by 10 pm, after arriving with some foreign friends we made the respective orders for tickets, seconds and drinks. When they asked for coffee and desserts, they told us that they could not take care of us because when they were 11: 00 pm they no longer attended, by demanding that they explain the reason, they told us that it was a policy of the company and that we could not even take care of our request for soda and lemonade, which demonstrated a discriminatory act. When he asked for an interview with the manager, he told us that they were working until 11: 00, asking that he should have told us that when he entered or made the reservation, he didn't know what to explain. While there were other diners that if they attended. By telling him that all we were asking for was our drinks and desserts, he told us that he could only give us rice and milk. The truth is a total disappointment. You never know in La Panchita, the totally dismotivated, untiring and discriminating staff. Never again",
+      "title": "Weak experience and discrimination",
+      "rating": 1,
+      "review_datetime_utc": "2023-09-16",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Vladimir P"
+    },
+    {
+      "id": "tripadvisor_916438192",
+      "source": "tripadvisor",
+      "review_text": "Good for dinner with friends, family. We went without reservation and we were treated quickly considering the great influx there was. The Creole season stands out in the traditional dishes served with good presentation and abundance. The large and very rich cocktails, we ask the traditional pisco sour excellent preparation and another with fruit juice and chicha traditional abode of Peru. Just like the heart antiques that is classic and another of octopus, good taste and exact cooking. Also rice with duck melose texture and a lot of flavor, but the leg I would like without bone to facilitate. It is a place to return and recommend to the fans of the Peruvian season, in addition to the seafood. In addition, Jorge T. attended us very diligently because we had little time; very attentive and explaining each dish. It also helps to call safe taxi for return.",
+      "title": "To come back and enjoy",
+      "rating": 5,
+      "review_datetime_utc": "2023-09-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/53/6f/59/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/53/6f/5a/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "xlavidaaprendiendo"
+    },
+    {
+      "id": "tripadvisor_915897074",
+      "source": "tripadvisor",
+      "review_text": "Local with charm and pleasant decoration.\nExcellent staff treatment, always attentive.\nThe food is good, tasty and very abundant.\nThe desserts are magnificent.\nTotally recommended.\nIt is advisable to make a reservation, there is always a tail.\n.",
+      "title": "Rico y abundante ",
+      "rating": 5,
+      "review_datetime_utc": "2023-09-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/4c/ec/52/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/4c/ec/53/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/4c/ec/54/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/4c/ec/55/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/4c/ec/56/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Daniel V"
+    },
+    {
+      "id": "tripadvisor_913894385",
+      "source": "tripadvisor",
+      "review_text": "Good food, good attention, the only loose point was the wine that was hot when they served it.\nThe dishes are big, even the tickets, that helps to share and try several things",
+      "title": "Good food and good attention.",
+      "rating": 4,
+      "review_datetime_utc": "2023-08-30",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "MatiasRFernandez"
+    },
+    {
+      "id": "tripadvisor_910080507",
+      "source": "tripadvisor",
+      "review_text": "I arrived with my family at the restaurant at 1: 25 pm (with an adult over 85 years old) we were informed that it would be preferential to be with an older adult. However, more than an hour passed and we keep waiting. I still see people who came after us and came in first. I suggest improving care for people with preferential care.",
+      "title": "Improving care for Older Adults",
+      "rating": 1,
+      "review_datetime_utc": "2023-08-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/09/dd/8b/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Susana A"
+    },
+    {
+      "id": "tripadvisor_908378892",
+      "source": "tripadvisor",
+      "review_text": "Excellent food. All wonderful very good attention and service. The place was full offered us the bar to eat and still the 10 / 10 service. Food 10 / 10 desserts 10 / 10. Raul's attention and recommendations in the great bar certainly good experience eating in pachita.",
+      "title": "10/10 en general",
+      "rating": 5,
+      "review_datetime_utc": "2023-08-06",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Alejandro R"
+    },
+    {
+      "id": "tripadvisor_907006431",
+      "source": "tripadvisor",
+      "review_text": "i've been to this place twice and i can say that it's a must when it comes to food. from attention to dessert and drinks, everything stands out, i recommend to first order the tickets that are giant and then decide whether to order a main, all too good, 1000% recommended.",
+      "title": "Excellent place, an indispensable",
+      "rating": 5,
+      "review_datetime_utc": "2023-07-31",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/e9/9c/d0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/e9/9c/d1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/29/e9/9c/d2/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Geraldine"
+    },
+    {
+      "id": "tripadvisor_901562443",
+      "source": "tripadvisor",
+      "review_text": "The food was very good, it was quite, it took a while to get there but it was worth it, however the restaurant indicates it's pet friendly, they only have two tables where they \"accept\" dogs, people who come with dogs have to wait twice as long as others, I went with my dog and made me wait an hour and a half to get a table, while about 8 people came in while waiting.",
+      "title": "The restaurant is not pet friendly",
+      "rating": 3,
+      "review_datetime_utc": "2023-07-09",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Xabier C"
+    },
+    {
+      "id": "tripadvisor_900197024",
+      "source": "tripadvisor",
+      "review_text": "We went to the Panchita de Miraflores for lunch, on the terrace that is supposed to be PET friendly, taking advantage that my little dog was at the spa. We had already had lunch, and as they were late in bringing dessert, I went to pick it up in the car, and when I brought it I had the unpleasant surprise that the young man, without any tint, told me that the dog could not be there, that of the whole terrace only the two tables in the background were PET friendly. Totally out of place for a restaurant that calls itself pet friendly on its social networks. I'll never go to that restaurant again.",
+      "title": "Miraflores' Panchita is not PET friendly",
+      "rating": 1,
+      "review_datetime_utc": "2023-07-04",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Mirko V"
+    },
+    {
+      "id": "tripadvisor_891662238",
+      "source": "tripadvisor",
+      "review_text": "We went to Panchita because we were recommended by Peruvian Creole dishes and the truth we were delighted with so many variety and spectacular dishes of Aí de Gallina",
+      "title": "El mejor Aji de Gallina que probé",
+      "rating": 5,
+      "review_datetime_utc": "2023-05-24",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Anthony Toribio Lino"
+    },
+    {
+      "id": "tripadvisor_889715060",
+      "source": "tripadvisor",
+      "review_text": "After reading the opinions, I really expected a delicious meal. The truth doesn't get so much, it's not bad; but there are things that could improve, like the salt point a little too much, maybe lower the amount and thus improve the price.\n\n",
+      "title": "I was hoping for something very good",
+      "rating": 3,
+      "review_datetime_utc": "2023-05-09",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Stella V"
+    },
+    {
+      "id": "tripadvisor_884717767",
+      "source": "tripadvisor",
+      "review_text": "Excellent service, the taste of the dishes, the size of the portions and the attention of the staff is amazing. The presentation of the place in love.",
+      "title": "100 points in service",
+      "rating": 5,
+      "review_datetime_utc": "2023-04-04",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Mauricio Solís"
+    },
+    {
+      "id": "tripadvisor_873654616",
+      "source": "tripadvisor",
+      "review_text": "An experience to go with wide clothes, as you will not be able to stop trying your exquisite dishes.\nSour a delight.\nAnd the Huyyyy desserts.\nYou can't miss it",
+      "title": "Un restaurant imperdible",
+      "rating": 5,
+      "review_datetime_utc": "2023-01-02",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/27/a8/26/c7/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/27/a8/26/c8/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Pattyea"
+    }
+  ]
+}

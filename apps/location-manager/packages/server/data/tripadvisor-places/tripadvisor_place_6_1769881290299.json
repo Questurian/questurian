@@ -1,0 +1,46 @@
+{
+  "fetchedAt": "2026-01-31T17:41:30.299Z",
+  "locationId": 6,
+  "tripadvisorPlaceId": "33209797",
+  "placeResult": {
+    "name": "La Capitana Surquillo",
+    "rating": 3.5,
+    "website": "https://www.instagram.com/la_capitana_surquillo?igsh=a2y4ejnmetc5njhv",
+    "phone": "+51 956 236 402",
+    "email": "paola@lacapitanalima.com",
+    "description": "✨ La Capitana – Peruvian flavor with a young soul At La Capitana, we celebrate classic Peruvian criolla cuisine, and we dare to take it to the next level. Here you’ll find those dishes that feel like home – but with a modern, creative, and delicious twist. Our menu is full of Peruvian classics with personality: fresh market ingredients, thoughtful techniques, and that special touch that makes every visit feel new. We’re a restaurant with a young spirit, where the food is great, the service is warm, and the vibe is always good. Perfect for flavorful lunches, stylish dinners, or simply treating yourself — just because you deserve it. Come see why so many say that at La Capitana… the food is in charge.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "Closed"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 17:00:00"
+        }
+      ]
+    }
+  }
+}

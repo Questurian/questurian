@@ -197,6 +197,9 @@ export interface PayloadEntryData {
   countryCode?: string;
   phoneNumber?: string;
   website?: string;
+  email?: string;
+  neighborhoodDescription?: string;
+  operationHours?: Record<string, unknown>;
   latitude?: number;
   longitude?: number;
   status: "draft" | "published";

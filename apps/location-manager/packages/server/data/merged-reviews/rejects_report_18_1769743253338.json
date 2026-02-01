@@ -1,0 +1,2178 @@
+{
+  "locationId": 18,
+  "generatedAt": "2026-01-30T03:20:53.339Z",
+  "summary": {
+    "totalRejected": 127,
+    "replacedWithEnglish": 127,
+    "rejectedNonEnglish": 0
+  },
+  "explanation": {
+    "why": "TripAdvisor returns the same reviews in different language files. Each review has a unique review_id that appears in multiple language files (e.g., both English and Spanish files).",
+    "whatWeDo": "We deduplicate by review_id, preferring English versions when available. This ensures each review appears only once in the final merged output.",
+    "actions": {
+      "replaced_with_english": "A non-English version was replaced with the English version of the same review",
+      "rejected_non_english": "A duplicate non-English version was rejected (we already had this review)"
+    }
+  },
+  "rejectedReviews": [
+    {
+      "review_id": "tripadvisor_1047634454",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Don't miss it!!!!",
+        "review_text_preview": "Very rich everything! The super warm attention from the moment you enter the place, we ate delicious...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "No te lo pierdas!!!!",
+        "review_text_preview": "Riquísimo todo! La atención super cálida desde que entras al local, comimos delicioso y la pasamos m...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047633773",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Nice experience, spectacular attention thanks to Kesia!!!!! Super good food, super recommended! 😊 The place m",
+        "review_text_preview": "Nice experience, spectacular attention thanks to Kesia!!!!! Super good food, super recommended!😊 Th...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Linda experiencia, la atención espectacular gracias a Kesia!!!!! La comida súper buena, súper recomendado! 😊 El lugar m",
+        "review_text_preview": "Linda experiencia, la atención espectacular gracias a Kesia!!!!! La comida súper buena, súper recome...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047347572",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy Picanteria",
+        "review_text_preview": "A very different experience in Lima, we close a very impressive gastronomic weekend in this that is ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría Picanteria",
+        "review_text_preview": "Una experiencia muy distinta en Lima, cerramos un fin de semana gastronómico muy impresionante en es...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047347475",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent restaurant",
+        "review_text_preview": "The restaurant surprised me from the start by its familiarity, the food was a very different experie...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente restaurante",
+        "review_text_preview": "El restaurante me sorprendió desde el inicio por su familiaridad, la comida fue una experiencia muy ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047347472",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best joy of Peru!!!!",
+        "review_text_preview": "The best waitress Magali, exquisite food and attention 100/10!!! Nice atmosphere with view to barten...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor alegria del Perú!!!!",
+        "review_text_preview": "La mejor camarera Magali, comida esquisita y atencion 100/10!!! Ambiente agradable con vista a barte...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047160158",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delicious experience in the restaurant Alegria - what a delicious piuran food!",
+        "review_text_preview": "On January 19th my husband and I and family went to lunch to say goodbye to Peru after having spent ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Deliciosa experiencia en el restaurante Alegria -que rica comida piurana !",
+        "review_text_preview": "El 19 de enero fuimos mi esposo y yo y familia a almorzar para despedirnos de Perú después de haber ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047009657",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Beautiful experience",
+        "review_text_preview": "Beautiful experience and beautiful taste. The attention of David and all the amazing staff, the atmo...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Hermosa experiencia",
+        "review_text_preview": "Hermosa experiencia y hermoso sabor. La atención de David y todo el personal increíbles , el ambient...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046988510",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Highly recommended place",
+        "review_text_preview": "Everything great, the food, the attention, the experience very good. \nThe only advice would be bette...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Lugar muy recomendable",
+        "review_text_preview": "Todo genial, la comida, la atención, la experiencia muy buena. \nEl único consejo sería mejor la vent...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046877429",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Very good service at all times. Jorge was very friendly and attentive, always with an excellent disp...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Muy buena atención en todo momento. Jorge fue muy amable y atento, siempre con una excelente disposi...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046777657",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Come eat here!!",
+        "review_text_preview": "Cheerful atmosphere, amazing food, and excellent service. Our waiter Italo is very attentive and fri...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Vengan a comer acá!!",
+        "review_text_preview": "Alegre atmósfera, comida increíble, y servicio excelente. Nuestro mesero Italo es muy atento y amabl...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046769258",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Celebrating in a good place",
+        "review_text_preview": "Very good food and good atmosphere. The service was very welcoming and there was a nice birthday det...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Celebrando en un buen lugar",
+        "review_text_preview": "Muy buena comida y buen ambiente. El servicio fue muy acogedor y hubo un lindo detalle de cumpleaños...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046769130",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best rice with seafood!",
+        "review_text_preview": "The seafood rice was spectacular! And the service was super welcoming ❤️\nThe atmosphere is super nic...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El mejor arroz con mariscos!",
+        "review_text_preview": "El arroz con mariscos estaba espectacular! Y el servicio fue súper acogedor ❤️\nEl ambiente es súper ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046765185",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Place",
+        "review_text_preview": "Excellent service and gastronomy \nEl Javier 10 out of 10",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excellent Place",
+        "review_text_preview": "Excelente servicio y gastronomía \nEl Javier 10 de 10",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046765005",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The El Javier service was perfect from start to finish",
+        "review_text_preview": "All excellent, food service and attention 100 points",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El servicio de El Javier estuvo perfecto de inicio a fin",
+        "review_text_preview": "Todo excelente, la comida el servicio y la atención 100 puntos",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046660426",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best experience",
+        "review_text_preview": "The food was very delicious and David's attention is the best, you feel the nice energy and vibe tha...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor experiencia",
+        "review_text_preview": "Estuvo muy rica la comida y la atención de David es la mejor, se siente la bonita energía y vibra qu...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046659720",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Piuran experience",
+        "review_text_preview": "Excellent service and quality of food. Venue lit and airy. The dishes with a very similar flavor to ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia piurana",
+        "review_text_preview": "Excelente atención, servicio y calidad de la comida. Local iluminado y ventilado. Los platos con una...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046656182",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy - Picanteria",
+        "review_text_preview": "The food was exquisite, we ordered ceviche, green and dry tamale of chavelo. I invite everyone to co...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría - Picanteria",
+        "review_text_preview": "La comida estuvo exquisita, pedimos ceviche, tamal verde y seco de chavelo. Invito a todos a venir y...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046541507",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Rich!",
+        "review_text_preview": "Very good everything, the portions are very generous, the dishes come out fast and taste great!",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Rico!",
+        "review_text_preview": "Buenísimo todo, las porciones son bien generosas, los platos salen rápido y tienen un gran sabor!",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046404163",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A day in joy",
+        "review_text_preview": "Hi! All super rich, we order goat dry, rice with faggot, tacu tacu deli! And excellent magali attent...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un dia en alegria",
+        "review_text_preview": "Hola! Todo super rico, pedimos seco de cabrito, arroz con mariaco, el tacu tacu deli! Y la atencion ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046306113",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Spectacular",
+        "review_text_preview": "All good, the food, the atmosphere, the service. Magali made us lunch, all spectacular.",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Spectacular",
+        "review_text_preview": "Todo buenaso, la comida, el ambiente, el servicio. Magali nos hizo el almuerzo, todo espectacular.",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046111608",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Just like Piura",
+        "review_text_preview": "Everything was very rich reminded me of Piura, excellent service and food, David's attention was fir...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Igual a Piura",
+        "review_text_preview": "Todo estuvo muy rico me recordó a Piura, excelente la atención y la comida, la atención de David fue...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046111587",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "SPECTACULAR",
+        "review_text_preview": "Spectacular, David our Host, very good attention, the smallest details were attended, and as a piura...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "ESPECTACULAR",
+        "review_text_preview": "Espectacular, David nuestro Anfitrión, muy buena su atención, los mas mínimos detalles fueron atendi...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1046093102",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good place",
+        "review_text_preview": "Wonderful food, different flavors but wonderful, I want to highlight David's attention, excellent se...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buenísimo lugar",
+        "review_text_preview": "Maravillosa la comida, sabores diferentes pero maravillosos,  quiero destacar la atención de David, ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045978552",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Piuranazooo!!!!",
+        "review_text_preview": "The food was great, the place lovely and the attention of Monica 100%. Super recommended for all tho...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Piuranazooo!!!!",
+        "review_text_preview": "La comida estuvo buenísima, el lugar encantador y la atención de Monica 100%. Súper recomendado para...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045752691",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best restaurant with northern flavor",
+        "review_text_preview": "Very nice food, 5/5, very good attention, especially from Mr. Javier who offered us personalized att...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El mejor restaurante con sabor norteño",
+        "review_text_preview": "Muy agradable la comida, 5/5, la atención muy buena, en especial del señor Javier que nos ofreció un...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045740341",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "All great",
+        "review_text_preview": "We ordered ceviche and rice with duck. All great and rich. Monica 10/10 attention. We just went to t...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Todo genial",
+        "review_text_preview": "Pedimos ceviche y arroz con pato. Todo genial y rico. Monica 10/10 atención . Justo fuimos el día de...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045739934",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellence",
+        "review_text_preview": "Good location.\nExcellent seasoning, magnifies your organization and exceptional attention I suggest ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelencia",
+        "review_text_preview": "Buena ubicación.\nExcelente sazón,  magnifica tu organización y excepcional atención les sugiero pedi...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045522006",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Rich piuran lunch! Thanks Enrique.",
+        "review_text_preview": "Very good lunch! \nThe fishing ceviche of the day spectacular, like the mackerel. Memories of my trav...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Rico almuerzo piurano ! Gracias Enrique",
+        "review_text_preview": "Muy buen almuerzo ! \nEl ceviche de pesca del día espectacular, de igual manera el de caballa. Recuer...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045517866",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Loved it!!",
+        "review_text_preview": "David's first-rate service made us feel at home. Very friendly and warm treatment.\nThe spectacular f...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Me encantó !!",
+        "review_text_preview": "El servicio de David, de primera, nos hizo sentir en casa. Muy amable y de trato cálido.\nLa comida e...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045515491",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "First visit",
+        "review_text_preview": "Very good experience in Alegria. Excellent service, very attentive staff. Well served and authentic ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Primera visita",
+        "review_text_preview": "Muy buena experiencia en Alegria. Excelente servicio, personal muy atento. Comida bien servida y aut...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045196096",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Successes",
+        "review_text_preview": "A spectacular experience, delicious food, and spectacular attention. An unparalleled experience. I w...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Exitos",
+        "review_text_preview": "Una experiencia espectacular, la comida deliciosa, y la atencion espectacular. Una experiencia sin i...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044782802",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Spectacular!!! Best in Lima!!",
+        "review_text_preview": "Spectacular! The truth is that of the most delicious thing in Lima! You can’t stop eating the green ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Espectacular!!! De lo mejor en Lima!!",
+        "review_text_preview": "Espectacular! La verdad es que de lo más delicioso que hay en Lima! No puedes dejar de comer los tam...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044775510",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Full joy",
+        "review_text_preview": "Food a delight, ceviche in its most natural way, barley, tamarind and mango plum soft drink a deligh...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Full alegría",
+        "review_text_preview": "La comida una delicia, el ceviche en su modo más natural, el refresco de cebada, tamarindo y mango c...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044772642",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best flipped cream of my life",
+        "review_text_preview": "The best flipped cream I've ever tasted 🤤 delicious ceviche ❤️ excellent Monica's attention ❤️ woul...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor crema volteada de mi vida",
+        "review_text_preview": "La mejor crema volteada que he probado en mi vida 🤤 el ceviche delicioso ❤️ la atención de Mónica e...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043850063",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A gem of Piuran cuisine with exceptional service.",
+        "review_text_preview": "A gem of Piuran cuisine with exceptional service\nWe visited Alegria Picantería Piurana accompanied b...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una joya de la cocina piurana con un servicio excepcional.",
+        "review_text_preview": "Una joya de la cocina piurana con un servicio excepcional\nVisitamos Alegría Picantería Piurana acomp...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043269474",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Loved it!",
+        "review_text_preview": "Excellent food! Order the tacu tacu, 1000 points! And Javier's attention too super! I highly recomme...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Me encantó !",
+        "review_text_preview": "La comida excelente! Pidan el tacu tacu, 1000 puntos! Y la atención de Javier también súper! Lo reco...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043249760",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Happy environment",
+        "review_text_preview": "What a treat of food. The waiters explain each of the dishes in detail. Super recommended the piscos...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ambiente feliz",
+        "review_text_preview": "Que delicia de comida. Los meseros explican cada uno de los platos detalladamente. Super recomenfado...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042748319",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Very rich everything and especially very warm the waitress, everyone from the start attends you very...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Muy rico todo y sobre todo muy cálida la moza, todos desde el ingreso te atienden muy bien, fue rápi...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042743761",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy I took when I came",
+        "review_text_preview": "The service is very good, everyone is super friendly and the food is short words to express how deli...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría me llevé cuando vine",
+        "review_text_preview": "La atención es buenísima, todos son súper amables y la comida se quedan cortas las palabras para exp...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042513990",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The restaurant must have more Javier in its local",
+        "review_text_preview": "The experience was spectacular, the food even to talk about, Javier attended us super well, made our...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El restaurante debe tener más Javier en su local",
+        "review_text_preview": "La experiencia fue espectacular, la comida ni que hablar , Javier nos atendió súper súper bien , hiz...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042513718",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent Place",
+        "review_text_preview": "El Javier alias El Nerito, the excellent attention with the recommendations with a great charisma to...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente Lugar",
+        "review_text_preview": "El Javier alias el Nerito, la atención excelente con las recomendaciones  con un gran carisma para d...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042513662",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Pleasant experience",
+        "review_text_preview": "Very rich the piuran dishes and especially the service and recommendations of the Javier. Always fri...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Grata experiencia",
+        "review_text_preview": "Muy ricos los platos piuranos y sobre todo el servicio y recomendaciones del Javier. Siempre amable ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042513583",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Recommended!",
+        "review_text_preview": "Spectacular food, from the entrances such as tamalito verde to the background dishes such as ceviche...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Recomendado!",
+        "review_text_preview": "Espectacular la comida, desde la entradas como el tamalito verde hasta los platos de fondo como el c...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042513569",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best is “El Javier”",
+        "review_text_preview": "We came 8 people and helped us even when it was rush hour and the restaurant was too crowded, and th...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El mejor es “El Javier”",
+        "review_text_preview": "Vinimos 8 personas y nos ayudaron aun cuando era hora punta y el restaurante estaba demasiado lleno,...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042504322",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I liked Kesia's attention",
+        "review_text_preview": "I liked ceviche and beef jerky with very rich beans, Kesia's attention was very good and good barten...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Me gustó la atención de Kesia",
+        "review_text_preview": "Me gustó el ceviche y el seco de res con frijoles  muy rico , la atención de Kesia fue muy buena y b...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042406309",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Of course.",
+        "review_text_preview": "Coming to Alegria is an incredible journey from the moment you enter, the friendliness and hospitali...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "De li cio sooooo",
+        "review_text_preview": "Venir a Alegría es un viaje increíble desde el momento que entras, la amabilidad y hospitalidad de l...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042406078",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Kesia is a queen",
+        "review_text_preview": "The food is a dream and the service even better. Kesia a top! You can really tell that she loves her...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Kesia is a queen",
+        "review_text_preview": "La comida es un sueño y la atención mejor aún. Kesia una top! Realmente se nota que ama su trabajo y...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042401755",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Sabadito",
+        "review_text_preview": "Javier a kingpin in attention. I hope the next time you return you will attend to us with that kindn...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sabadito",
+        "review_text_preview": "Javier un capo en la atención. Espero que la próxima vez que regrese nos atienda con esa amabilidad ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042394887",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good culinary experience",
+        "review_text_preview": "Very rich everything, the green tamalitos the best, very nice place and Monica's attention was perfe...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena experiencia culinaria",
+        "review_text_preview": "Muy rico todo, los tamalitos verdes los mejores,  muy agradable el lugar y la atención de Monica fue...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042393016",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Food experience, good atmosphere, good service, spectacular food. Our waiter was Javier, great chari...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Experiencia gastronómica, buen ambiente, buen servicio, comida espectacular. Nuestro mozo fue Javier...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042388031",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent in everything",
+        "review_text_preview": "Very good in the attention, and in the food of the best of the Peruvian North, with power and tasty....",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente en todo",
+        "review_text_preview": "Muy bueno en la atención, y en la comida de lo mejor del Norte peruano, con potencia y sabrosura. La...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042384242",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy",
+        "review_text_preview": "We really enjoyed the food, everything very rich and the excellent service. \nWe spent a nice birthda...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegria",
+        "review_text_preview": "Disfrutamos mucho la comida, todo muy rico y la atención excelente. \nPasamos un lindo día de cumplea...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042288219",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A wonder",
+        "review_text_preview": "Javier the waiter, attended us wonderfully, a thousand points, the food, the service, spectacular, m...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una maravilla",
+        "review_text_preview": "Javier el mesero, nos atendió de maravilla, mil puntos, la comida, el servicio, espectacular, mi lug...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042274876",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Food and Service",
+        "review_text_preview": "Amazing experience. The food was very good. My waitress Monica was very friendly and attentive!  My ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida y Servicio",
+        "review_text_preview": "Increíble experiencia. La comida estuvo muy rica. Mi camarera Mónica era muy amable y atenta!  Mi fa...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042272464",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good experience.",
+        "review_text_preview": "Delicious and good service from the waiter (Javier). I would recommend other people to enjoy their d...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena experiencia.",
+        "review_text_preview": "Delicioso y buena atención del mozo (Javier). Recomendaría a otras personas a disfrutar para disfrut...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042163456",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy",
+        "review_text_preview": "Very nice place, super abundant food and unbeatable La Monica attention. Thank you La Monica for mak...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegria",
+        "review_text_preview": "El lugar muy agradable, la comida super abundante y la atención de La Monica inmejorable. Gracias La...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042162335",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy gets the top mark in attention and food!",
+        "review_text_preview": "Excellent service, unsurpassed food and best served by Jorge, impossible! Thanks for all Joy! I'll b...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría se lleva la nota máxima en atención y comida!",
+        "review_text_preview": "Excelente atención, la comida insuperable y mejor atendidas por Jorge, imposible! Gracias por todo A...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042160558",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A trip north to Peru",
+        "review_text_preview": "Excellent experience, Mariuh recommend us an amazing experience, mixed ceviche, shells and rice with...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un viaje al norte el Peru",
+        "review_text_preview": "Excelente experiencia, Mariuh nos recomendo una experiencia increible, ceviche mixto, conchas y arro...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042088099",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Loved it.",
+        "review_text_preview": "Excellent attention from Monica and John, the food tastes exquisite and they supported us in choosin...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Me encantó",
+        "review_text_preview": "Excelente atención por parte de Monica y John, la comida sabe exquisita y nos apoyaron en elegir la ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041966968",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Family in Alegria",
+        "review_text_preview": "Great food and service. Special mention to La Monica who attended us very well during our stay in th...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Familia en Alegría",
+        "review_text_preview": "Buenísima la comida y la atención. Mención especial a La Mónica que nos atendió muy bien durante nue...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041962545",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good north.",
+        "review_text_preview": "Everything was delicious, good attention from Javier. \nThe food is well served and they give you goo...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Bien norteño",
+        "review_text_preview": "Todo estuvo delicioso, buena atención de Javier. \nLa comida es bien servida y te dan buenas cortesía...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041954267",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Remembering is living again",
+        "review_text_preview": "Excellent food,\nI could remember the flavors and meals we had at home as a child\nKid's dry was the f...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Recordar es volver a vivir",
+        "review_text_preview": "La comida excelente,\nPude recordar los sabores y comidas que teníamos en casa cuando era niña\nEl sec...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041846140",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "10/10",
+        "review_text_preview": "The food was spectacular and the service very good. Javier is very friendly, he always kept an eye o...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "10/10",
+        "review_text_preview": "La comida estuvo espectacular y la atención muy buena. Javier es muy amable, siempre estuvo pendient...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041842637",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The excellent La Monica, the “sebiche”, the clarito and kid with delicious beans, graci",
+        "review_text_preview": "The attention of La Monica super and the staff too, the clarito, the sebiche” and the cabrito delis ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La atención de La Mónica excelente, el “sebiche”, el clarito y cabrito con frijoles delicioso, graci",
+        "review_text_preview": "La atención de La Mónica super y del personal también, el clarito, el sebiche” y el cabrito delis , ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041832568",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Attention and taste 5/5",
+        "review_text_preview": "I really enjoyed the attention received, Jorge is very attentive and was watching our table at all t...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Atención y sabor 5/5",
+        "review_text_preview": "Me gustó mucho la atención recibida, Jorge es muy atento y estuvo pendiente de nuestra mesa a todo m...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041824956",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best Chiclayana food",
+        "review_text_preview": "Food, attention and atmosphere are part of the best experience in Huariques de lima. This restaurant...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor comida Chiclayana",
+        "review_text_preview": "La comida, la atención y el ambiente son parte de la mejor experiencia en Huariques de lima. Este re...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041824924",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good service from Monica and excellent food",
+        "review_text_preview": "The food and service was spectacular. We tried ceviche, rice with faggot and meat mince. All these d...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen servicio por parte de Mónica y excelente comida",
+        "review_text_preview": "La comida y el servicio estuvo espectacular. Probamos ceviche, arroz con marizco y picadito de carne...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041713419",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very friendly treatment and delicious food",
+        "review_text_preview": "I recommend it, very delicious piurana food, very friendly treatment since we arrived. I appreciate ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Trato muy amable y comida deliciosa",
+        "review_text_preview": "Lo recomiendo,  comida piurana muy rica, el trato muy amable desde que llegamos. Agradezco la atenci...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041713036",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent food and even better customer service, a place to eat delicious and have a good family time",
+        "review_text_preview": "Very good and warm attention, very good food, excellent everything, attention from Javier very good ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida exacelnte y atención al cliente aún mejor, un lugar para comer riquísimo y pasar un buen momento en familia",
+        "review_text_preview": "Muy buena y cálida la atención, la comida muy buena, excelente todo, la atención de Javier muy buena...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041706176",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "True Piuran Flavor",
+        "review_text_preview": "Good piuran seasoning and excellent service from Javier!! The place is quite comfortable and there i...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Verdadero Sabor Piurano",
+        "review_text_preview": "Buena sazón piurana y excelente servicio de Javier!! El local es bastante cómodo y hay diversidad de...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041457807",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Where there's chiffon there's smile",
+        "review_text_preview": "Excellent place, all very rich. Excellent service, especially from Kesia, who explained each dish. T...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Donde hay chifle hay sonrisa",
+        "review_text_preview": "Excelente lugar, todo muy rico. La atención excelente, sobre todo de Kesia, que nos explicó cada pla...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041457773",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "<3",
+        "review_text_preview": "Excellent service, tasty food and wonderful pisco sour added to incredible attention, very attentive...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "<3",
+        "review_text_preview": "Excelente servicio, la comida sabrosisisima y los pisco sour maravillosos sumado a una atención incr...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041457712",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "10/10",
+        "review_text_preview": "Very good food! Rich place, very good attention from Kesia, definitely back\nOf the best we have tast...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "10/10",
+        "review_text_preview": "Muy rica comida! Rico el lugar, muy buena atención de Kesia, sin duda volvemos\nDe lo mejor que hemos...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041451796",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Very good outside the food very rich the attention of the waiters and their friendliness highlights ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Muy buena fuera de la comida muy rica la atención de los mozos y su amabilidad resalta el nombre de ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041368115",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Very delicious food, all dishes very delicious. Jorge attended us and guided us with the choice of P...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Comida muy rica, todo los platos muy deliciososo . Jorge nos atendió y nos guió con la elección de l...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041263251",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Highly recommended",
+        "review_text_preview": "The food and attention are excellent, highly recommended, is to enjoy some Piura in Lima.\n\nManuel's ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy recomendable",
+        "review_text_preview": "La comida y la atención son excelentes, muy recomendable, es disfrutar algo de Piura en Lima.\n\nLa at...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041165273",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Pleasant experience",
+        "review_text_preview": "Wonderful atmosphere, great experience and very good attention from David.  The tacu tacu was delici...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Grata experiencia",
+        "review_text_preview": "Maravilloso ambiente, gran experiencia y una muy buena atención de David.  El tacu tacu estaba delic...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041140510",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Outstanding",
+        "review_text_preview": "We were attended by Monica and made the already fantastic experience unforgettable. The food 10/10, ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Outstanding",
+        "review_text_preview": "Nos atendió Mónica e hizo que la experiencia ya fantástica se convirtiera en inolvidable. La comida ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041030753",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "10 points!!",
+        "review_text_preview": "Excellent everything!! David a crack!! The best waiter in the place, the attention is perfect. Atten...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "10 puntos!!",
+        "review_text_preview": "Excelente todo!! David un crack!! El mejor mozo en el local, la atencion es perfecta. Atento en todo...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041030738",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "We'll be back!",
+        "review_text_preview": "Excellent food! The starter ceviche and the amazing wood-fired octopus in the background. But the be...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Volveremos!",
+        "review_text_preview": "Excelente la comida! El ceviche de entrada y el pulpo a la leña de fondo increíble. Pero lo mejor fu...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040763392",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Extraordinary!",
+        "review_text_preview": "The food is delicious, the atmosphere great and the attention second to none!!! Third time I come an...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Extraordinario!",
+        "review_text_preview": "La comida es deliciosa, el ambiente genial y la atención insuperable!!! Tercera vez que vengo y cont...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040789001",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "El Piura in Lima",
+        "review_text_preview": "Delicious and very fresh food. In addition, excellent care, very attentive and helpful. \nThe place v...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El Piura en Lima",
+        "review_text_preview": "La comida deliciosa y muy fresca. Además, la atención excelente, muy atentos y serviciales. \nEl luga...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040781551",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delicious! We'll be back.",
+        "review_text_preview": "Very good service from Mariuh! And delicious food. I recommend the cold pickle, the rice with black ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Delicioso! Volveremos",
+        "review_text_preview": "Muy Buena atención de Mariuh! Y comida riquísima. Recomiendo el piqueo de fríos, el arroz con concha...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040780923",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great experience",
+        "review_text_preview": "It has been a great experience from start to finish. They give you chiffons to wait and drink by the...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran experiencia",
+        "review_text_preview": "Ha sido una gran experiencia desde inicio a fin. Te dan chifles para la espera y bebida por el calor...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040774762",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Tasty food , Tamalitos delis",
+        "review_text_preview": "All rich, but the consistency of the cassava mash is not that of the north, it's like liquefied, and...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida rica , Tamalitos delis",
+        "review_text_preview": "Todo rico , pero la consistencia del majado de yuca no es la del norte , está como licuado , y no ch...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040764728",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A birthday lunch with Alegria",
+        "review_text_preview": "I used the whatsapp of the restaurant to book a table on weekdays (Tuesdays), I recommend to do it i...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una almuerzo cumpleañero con Alegría",
+        "review_text_preview": "Usé el whatsapp del restaurante para reservar una mesa en día de semana (martes), recomiendo hacerlo...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040660137",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "EXCELLENT NORTHERN PERUVIAN FOOD",
+        "review_text_preview": "Excellent service and spectacular food, ceviche great! Rice with amazing duck and rice with exquisit...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "EXCELENTE COMIDA NORTEÑA DEL PERÚ",
+        "review_text_preview": "Excelente servicio y comida espectacular, ceviche buenísimo! Arroz con pato asombroso y arroz con ce...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040470558",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great experience",
+        "review_text_preview": "Excellent food, atmosphere and service! Jorge made us feel great. We will come back for sure, to try...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran experiencia",
+        "review_text_preview": "Excelente comida, ambiente y servicio! Jorge nos hizo sentir muy bien. Volveremos seguro, para proba...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040455528",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good experience!",
+        "review_text_preview": "Very good food; tastes of Piura that led me to my childhood visits. Javier's attention was excellent...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena experiencia!",
+        "review_text_preview": "Muy buena la comida;sabores de Piura que me llevaron a mis visitas de niñez. La atención de Javier f...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040365835",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Attention 11/10",
+        "review_text_preview": "The atmosphere is very warm, all people are very friendly and you can feel that atmosphere at home, ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Atención 11/10",
+        "review_text_preview": "El ambiente es muy cálido, todas las personas son muy amables y se logra poder sentir ese ambiente c...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040364168",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Ceviche top 1",
+        "review_text_preview": "The attention of David A1, super attentive and pending to my table. The food needless to say, indisp...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ceviche top 1",
+        "review_text_preview": "La atención de David A1, súper atento y pendiente a mi mesa. La comida ni que hablar, indiscutibleme...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040246820",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I missed Piuran food",
+        "review_text_preview": "Very good atmosphere\nLocal very well decorated\nVery friendly and super attentive staff\nThe varied me...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Extrañaba la comida Piurana",
+        "review_text_preview": "Muy buen ambiente\nLocal muy bien decorado\nPersonal muy amable y súper atentos\nLa carta variada centr...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040229013",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Views",
+        "review_text_preview": "Amazing attention, the food was delicious.\nWe were always greeted by George with a smile ..............",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Opiniones",
+        "review_text_preview": "Increíble atención, la comida estuvo rica.\nNos atendió el Jorge siempre con una sonrisa ………………………………...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040228917",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Excellent service, we were attended by El Jorge, very charismatic and friendly, we will return.\nNice...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Excelente servicio, nos atendió El Jorge, muy carismático y amable, volveremos.\nLindo lugar.\nComida ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040109306",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The rumors were true, it's a hit the place.",
+        "review_text_preview": "Delicious food and attention from LA Monica, spectacular. Super recommended. The best way to start m...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Los rumores eran ciertos, es un éxito el lugar.",
+        "review_text_preview": "La comida deliciosa y la atención de LA Mónica, espectacular. Súper recomendado. La mejor forma de e...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040105537",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good food",
+        "review_text_preview": "Good atmosphere, good food, reminds a lot of piura, give you little things before and after the meal...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena comida",
+        "review_text_preview": "Buen ambiente, buena comida, hace recordar mucho a piura, te dan cositas de cortesía antes y después...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040104843",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "All good.",
+        "review_text_preview": "Good food, amazing service, all very friendly, nice and comfortable local, wait was completely worth...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Todo bien",
+        "review_text_preview": "La comida buenasa, la atención increíble, todos muy amables, el local bonito y cómodo, la espera val...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040103933",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Excellent. George provided A1 care. Ceviche is pure flavor and natural. The xopen in point. I spent ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Excelente. Jorge brindó una atención A1. El ceviche es puro sabor y natural. El xabrito en su punto....",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040103283",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience",
+        "review_text_preview": "Jorge provides excellent care!\nThe food is very good and the atmosphere is very nice fresh. The wait...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia",
+        "review_text_preview": "Jorge brinda una excelente atención!\nLa comida es muy buena y el ambiente es muy bonito fresco. El t...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040085713",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy",
+        "review_text_preview": "Very nice food, had a very nice time. The goat dry was amazing and the black shell ceviche 100 out o...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría",
+        "review_text_preview": "La comida muy agradable, pasé un momento muy bonito. El seco de cabrito estuvo increíble y el cevich...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039843273",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Piuran food in Lima",
+        "review_text_preview": "A very good experience, the extraordinary food and the attention of El Javier first!. Top-notch Piur...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida piurana en Lima",
+        "review_text_preview": "Una muy buena experiencia, La comida extraordinaria y la atención de El Javier de primera!. Comida p...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039753364",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Wonderful and unforgettable experience 👏💖🐨",
+        "review_text_preview": "Home Very welcoming joy.Exquisite delights, attention from Kesia 100/100.Let's go for more successes...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Maravillosa e inolvidable experiencia 👏💖🐨",
+        "review_text_preview": "El hogar Alegría muy acogedor.Exquisítas delícias, la atención de Kesia 100/100.Vamos por más éxitos...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039753344",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellence",
+        "review_text_preview": "I feel blessed to have come to eat ha joy was the most wonderful experience from the entrance so fri...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La excelencia",
+        "review_text_preview": "Me siento bendecido de haber venido a comer ha alegría fue la experiencia más maravillosa desde la e...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039752728",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy, the best restaurant that enters",
+        "review_text_preview": "It feels cheerful atmosphere and is everywhere, even in the food, what is very good, such as green t...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría, el mejor restaurante que entre",
+        "review_text_preview": "Se siente ambiente alegre y esta en todos lados, incluso en la comida, qué está muy bueno, como el t...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039625248",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good atmosphere and food",
+        "review_text_preview": "We visited the Alegria restaurant in Lima and were delighted. The food was really delicious and the ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen ambiente y comida",
+        "review_text_preview": "Visitamos el restaurante Alegría en Lima y quedamos encantados. La comida estuvo realmente deliciosa...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039625192",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Really a joy",
+        "review_text_preview": "Everything was spectacular, the comfortable amazing and the atmosphere 10/10. Excellent attention an...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Realmente una alegría",
+        "review_text_preview": "Todo estuvo espectacular, la cómoda increíble y el ambiente 10/10. Excelente atención y El Javier se...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039541606",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The north in all its expression. I love his beef jerky with beans, his cream flipped, his fish chip.",
+        "review_text_preview": "Good service! Warm place and food true to its northern essence.\nJavier made us feel at home. The ser...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "El norte en toda su expresión. Me encanta su seco de res con frijoles, su crema volteada, su chicharrón de pescado.",
+        "review_text_preview": "Buena atención! Lugar cálido y la comida fiel a su esencia norteña.\nJavier nos hizo sentir como en c...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039541530",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Warmth quality and taste",
+        "review_text_preview": "Excellent service! Very very good dishes! Excellent duck with pepian, dry with beans, round of pique...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Calidez calidad y sabor",
+        "review_text_preview": "Excelente atención! Los platos muy muy buenos! Excelente pato con pepian, seco con frejoles, ronda d...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039518902",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A lot of joy",
+        "review_text_preview": "Delicious food and extraordinary service.  Javier was an excellent host with very good recommendatio...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mucha alegría",
+        "review_text_preview": "La comida deliciosa y extraordinario servicio.  Javier fue un excelente anfitrión con muy buenas rec...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039518833",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy",
+        "review_text_preview": "Javier's attention was 10/10. Very cheerful, very attentive and recommended us super well. The food ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría",
+        "review_text_preview": "La atención de Javier fue 10/10. Muy alegre, muy atento y nos recomendó súper bien. La comida estuvo...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039516028",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good service",
+        "review_text_preview": "Super good service, great food \nThe attention of first class javier always friendly and attentive \nA...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Atención buenísima",
+        "review_text_preview": "Super buen servicio , comida buenísima \nLa atención de javier de primera siempre amable y atento \nAl...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039394860",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best food",
+        "review_text_preview": "Very good food and attention from Javier, the best, always attentive to what we needed, because we c...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La mejor comida",
+        "review_text_preview": "La comida muy buena y la atención de Javier, la mejor, siempre pendiente de lo que necesitábamos, pu...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039394835",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good place",
+        "review_text_preview": "Excellent food and atmosphere. The service for Javier was very good, very friendly and cordial. Defi...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buen local",
+        "review_text_preview": "Excelente comida y ambiente. La atención por Javier fue muy buena, muy amable y cordial. Definitivam...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039268066",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "🤤🤤🤤",
+        "review_text_preview": "Good guy! We ordered cassava with Chabelo dry and goat dry a la norteña. And with Magali's attention...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "🤤🤤🤤",
+        "review_text_preview": "Buenardo! Pedimos Majado de yuca con seco de Chabelo y seco de cabrito a la norteña. Y con la atenci...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039264912",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Food to the height",
+        "review_text_preview": "I loved the attention of Garzón Javier. A very friendly and attentive person. I ordered a goat dry a...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Comida a la altura",
+        "review_text_preview": "Me encantó la atención del Garzón Javier . Una persona muy amable y atenta. Pedí una seco de cabrito...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039264642",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience",
+        "review_text_preview": "Excellent attention for Javier and spectacular food. We asked for the chop joy and black shells, eve...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia",
+        "review_text_preview": "Excelente atención por Javier y la comida espectacular. Pedimos el picadillo alegría y conchas negra...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039254580",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I recommend!!",
+        "review_text_preview": "Javier took care of us very well! He advised us with our order and was very friendly and attentive! ...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Recomiendo!!",
+        "review_text_preview": "Javier nos atendió muy bien! Nos aconsejó con nuestro pedido y fue muy amable y atento! Recomiendo p...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039133704",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Joy from start to finish",
+        "review_text_preview": "The delicious food, the delicious ceviche! from the entrance you can feel the joy of the north, we w...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Alegría de inicio a fin",
+        "review_text_preview": "La comida deliciosa, el ceviche riquísimo! desde el ingreso se siente la alegría del norte, nos aten...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039130961",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Delicious!!",
+        "review_text_preview": "Everything IS PEC TA CU LAR!!!! The attention and affection Piurano super present, Monica the most!!...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Delicioso!!",
+        "review_text_preview": "Todo ES PEC TA CU LAR!!!! La atención y el cariño Piurano super presente, Mónica lo máximo!! Delicio...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039127825",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service",
+        "review_text_preview": "Excellent service and very good dishes. You have to wait a while to enter but once at table the dish...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente servicio",
+        "review_text_preview": "Excelente servicio y los platos muy buenos. Se tiene que esperar un poco para ingresar pero una vez ...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039127733",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent food and attention",
+        "review_text_preview": "The food was very good and the service is excellent. We were attended by Monica, she was very friend...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente comida y atención",
+        "review_text_preview": "La comida estuvo muy rica y la atención es excelente. Nos atendió Monica, fue muy amable y estuvo at...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038879802",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "From jorge's attention and the whole experience was amazing. Thank you very much.  Octopus was the top1",
+        "review_text_preview": "Quality food with family flavor. We missed trying more dishes. He was left on the lookout for the sh...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Desde la atención de jorge y toda la experiencia fue increíble. Muchas gracias.  El pulpo fue el top1",
+        "review_text_preview": "Comida de calidad con sabor familiar. Faltó probar más platos. Quedó pendiente del seco de chabelo y...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038879748",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "All amazing",
+        "review_text_preview": "It was all delicious I recommend the octopus uffff delicious and the normal ceviche and black shells...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Todo increíble",
+        "review_text_preview": "Estuvo todo delicioso les recomiendo el pulpo uffff riquísimo y el ceviche normal y de conchas negra...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038650671",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent service",
+        "review_text_preview": "very good atmosphere, good food and excellent service provided by Javier. The whole experience was e...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente servicio",
+        "review_text_preview": "muy buen ambiente, buena comida y excelente servicio brindado por Javier. La experiencia completa es...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038515309",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Sure repeat.",
+        "review_text_preview": "The food is delicious. The real regional taste throughout and the first-rate attention, Javier has b...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Seguro repito",
+        "review_text_preview": "La comida es deliciosa. El verdadero sabor regional en todo y la atención de primera, Javier ha sido...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038381815",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience Joy",
+        "review_text_preview": "The experience was very good, from waiting where we were courteous for waiting and retreating.\nThe f...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia Alegría",
+        "review_text_preview": "La experiencia fue muy buena, desde la espera donde nos dieron cortesía por esperar y al retirarnos....",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038376202",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lunch spec!",
+        "review_text_preview": "Everything super good! The javier 10/10! Really spectacular food and super personalized attention. T...",
+        "source_file": "tripadvisor_reviews_18_en_1769743178628.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzo espec!",
+        "review_text_preview": "Todo super bien! El javier 10/10! La comida realmente espectacular y la atención super personalizada...",
+        "source_file": "tripadvisor_reviews_18_es_1769743185237.json"
+      }
+    }
+  ]
+}

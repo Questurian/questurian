@@ -1,0 +1,46 @@
+{
+  "fetchedAt": "2026-01-31T16:56:56.097Z",
+  "locationId": 18,
+  "tripadvisorPlaceId": "31492169",
+  "placeResult": {
+    "name": "Alegria Picantería Piurana",
+    "rating": 4.9,
+    "website": "https://wa.me/+51984338433",
+    "phone": "+51 984 338 433",
+    "description": "De las costumbres de la abuela y las picanteras con las que crecimos, trayendo el norte del Perú a los almuerzos de Lima. Somos un restaurante piurano con harta Alegría y mucha sazón ☀️",
+    "operation_hours": {
+      "currently_open": false,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 22:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 22:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 22:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 22:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 22:00:00"
+        }
+      ]
+    },
+    "reviews_summary": "Alegria Picantería Piurana is a culinary gem celebrated for its authentic northern Peruvian flavors, particularly its ceviche, tamalitos, and rice with duck, which many travelers find unforgettable. The inviting atmosphere, enhanced by playful decor and aromatic touches, adds to the charm. Service is often praised for its warmth and attentiveness, though some mention occasional delays. Despite potential long waits during peak times, the value is considered remarkable, with generous portions and quality dishes impressing most guests."
+  }
+}

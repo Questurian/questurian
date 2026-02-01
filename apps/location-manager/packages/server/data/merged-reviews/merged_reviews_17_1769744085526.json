@@ -1,0 +1,1573 @@
+{
+  "locationId": 17,
+  "mergedAt": "2026-01-30T03:34:45.527Z",
+  "stats": {
+    "totalReviews": 111,
+    "googleReviews": 0,
+    "tripadvisorReviews": 111,
+    "translated": 22,
+    "alreadyEnglish": 89,
+    "errors": 0
+  },
+  "reviews": [
+    {
+      "id": "tripadvisor_1047859946",
+      "source": "tripadvisor",
+      "review_text": "Excellent dinner . We have enjoyed the experience of this creative restaurant. The service was perfect . The starters the main course were delicious  and limited selection of wines but good ones .",
+      "title": "Excellent expérience .",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-30",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jean-Francois F"
+    },
+    {
+      "id": "tripadvisor_1047827912",
+      "source": "tripadvisor",
+      "review_text": "Relaxing atmosphere, very professional waiter, excellent food especially duck.\n\nThe explanations of the very professional dishes, very friendly staff and a great congratulations to the young man for the flag dish of Xoma which is the Duck.",
+      "title": "Excellent experience",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-29",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Walter"
+    },
+    {
+      "id": "tripadvisor_1047012364",
+      "source": "tripadvisor",
+      "review_text": "The attention was super attentive and impeccable, the dishes were delicious, mixing splendid textures and flavors, the duck fuagra was very juicy, and not to mention sustainable fishing, its delicacy and flavors were fascinating.",
+      "title": "A splendid dining experience",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/45/70/5d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/45/70/5e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/45/70/5f/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Edsgar C"
+    },
+    {
+      "id": "tripadvisor_1045775138",
+      "source": "tripadvisor",
+      "review_text": "Cma grata surprise. The existing reviews do not yet justify what the restaurant actually delivers.\n\nThe service was spectacular since the arrival. Already at the entrance we were welcomed with attention and care, and that only improved when we got to the salon. My husband was not feeling well, and we asked the chef for something lighter off the menu. With a lot of sensitivity and professionalism, he prepared a fish in the plate accompanied by rice and puré — simple, delicate and perfect for the moment. A gesture that demonstrates genuine respect for the client.\n\nThe environment is beautiful, welcoming, well cared for and conveys comfort. The prices are fair to the standard of the restaurant — it is not cheap, but it is definitely not expensive in view of the quality offered, both in food and service.\n\nIt was an experience that marked the trip positively. I'd come back a thousand times and give all the good grades possible. A restaurant that deserves to be better known and appreciated.",
+      "title": "Impermeable!",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-12",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/30/18/88/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/30/18/89/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/30/18/8a/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Denize T"
+    },
+    {
+      "id": "tripadvisor_1045547743",
+      "source": "tripadvisor",
+      "review_text": "Excellent atmosphere and delicious dishes.  I came with my partner from England and he was delighted.  All the explanation in English and exquisitely decorated dishes. Congratulations!!!",
+      "title": "Great Atmosphere!!!",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/97/d0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/97/d1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/97/d2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/97/d3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/97/d4/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/2c/97/d5/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Susan O"
+    },
+    {
+      "id": "tripadvisor_1044944190",
+      "source": "tripadvisor",
+      "review_text": "It is one of the best culinary experiences in Lima. I came to postpone this visit a few months ago and I regret it, I should have tried it before. Everything is exquisite.",
+      "title": "You have to prove it!",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-05",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/21/92/8d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/21/92/8e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/21/92/8f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/21/92/90/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/21/92/91/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "akira"
+    },
+    {
+      "id": "tripadvisor_1044803163",
+      "source": "tripadvisor",
+      "review_text": "Incredible atmosphere, exceptional attention, excellent representation of Peruvian gastronomy a great place to have lunch. An authentic gastronomy experience.",
+      "title": "Gastronomy lunches",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "OnAir03850204032"
+    },
+    {
+      "id": "tripadvisor_1044803006",
+      "source": "tripadvisor",
+      "review_text": "The best lunch in Lima, a real wonder in every way. The food is delicious, well presented and full of flavor, with fresh ingredients and impeccable attention that makes the experience unforgettable.",
+      "title": "Time to eat",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "alexis k"
+    },
+    {
+      "id": "tripadvisor_1044802957",
+      "source": "tripadvisor",
+      "review_text": "I really enjoyed the lunch there. Food and the experience was amazing. Best restaurant i visit when I was in Lima. It's a must stop if you are in Lima.",
+      "title": "Best food ever!!!!",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Andre D"
+    },
+    {
+      "id": "tripadvisor_1044540754",
+      "source": "tripadvisor",
+      "review_text": "This was an amazing dinning experience that greatly surpassed my expectations. I was surprised with an incredibly creative and y delightful fusion of flavors exploding at the ach bite. I have recommended this place to all my friends and family",
+      "title": "AMAZING DINNING EXPERIENCE",
+      "rating": 5,
+      "review_datetime_utc": "2026-01-02",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Javier U"
+    },
+    {
+      "id": "tripadvisor_1043877961",
+      "source": "tripadvisor",
+      "review_text": "Continue with that level of attention and preparation in dishes and drinks 🙌🏻 \nThank you very much for your staff's attention to the customer and for the information in your letter.",
+      "title": "We were surprised by the flavors of the dishes and the presentation of the drinks.",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-27",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Rodrigo B"
+    },
+    {
+      "id": "tripadvisor_1043489944",
+      "source": "tripadvisor",
+      "review_text": "The food experience was fantastic and beautiful. The service was A1 under Piero. The head chef Ralf gave us a great welcome experience. The food experience was well explained and the cocktails excellent.",
+      "title": "Family birthday celebration",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/2d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/2e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/2f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/30/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/31/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/32/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/33/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/0c/5e/35/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Diana_p07"
+    },
+    {
+      "id": "tripadvisor_1042764254",
+      "source": "tripadvisor",
+      "review_text": "It was very good and the food very rich and from Mayra very good waitress, something that if it could improve was perhaps the intense flavor of 25 spices but still everything was rich.",
+      "title": "My parents' anniversary culinary experience",
+      "rating": 4,
+      "review_datetime_utc": "2025-12-17",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sebastian Aleja... C"
+    },
+    {
+      "id": "tripadvisor_1042642559",
+      "source": "tripadvisor",
+      "review_text": "My partner and I came here for our two year anniversary. The staff especially our waiter Lucas made sure to accommodate us and make us feel comfortable and special while celebrating the entire staff was extremely professional, and the food was absolutely incredible. The duck ceviche was out of this world thank you so much!",
+      "title": "Fantastic atmosphere and even better food",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-16",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/fe/03/7f/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ori b"
+    },
+    {
+      "id": "tripadvisor_1042533485",
+      "source": "tripadvisor",
+      "review_text": "The place very good, has a good architecture, the lighting makes everything more intimate, the music generates a more casual atmosphere and the wooden furniture according to the decoration.  \nVery rich food, portions are correct as are the flavors of each dish.",
+      "title": "Very good",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-15",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/fc/76/bf/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "alvaro e"
+    },
+    {
+      "id": "tripadvisor_1041732699",
+      "source": "tripadvisor",
+      "review_text": "Good place with good atmosphere. And Lucas explained well to us all. The alpaca entry was the best but my boyfriend says the kitchen invitation was the best!!",
+      "title": "Lucas the best 😘",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-08",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ef/4b/b0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ef/4b/b1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ef/4b/b2/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Lizeth Carolina G"
+    },
+    {
+      "id": "tripadvisor_1041729997",
+      "source": "tripadvisor",
+      "review_text": "We loved everything about our experience this evening. The staff were highly attentive and detail oriented. The food was amazing I'm not sure how this place is not yet Michelin rated. It will be soon. From the presentation to the fresh local ingredients to the creative dishes and blending of flavors everything was absolutely wonderful. Highly recommend without reservation.",
+      "title": "An absolute experience from beginning to end.",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-08",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ef/34/0f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ef/34/10/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ef/34/11/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ef/34/12/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Robert G"
+    },
+    {
+      "id": "tripadvisor_1041687811",
+      "source": "tripadvisor",
+      "review_text": "Third visit to Xoma. Both the restaurant and its hidden bar are great. Excellent as ever.  A unique experience.  Don't forget to try their unique drinks and dishes!!! It's great.",
+      "title": "Excellent",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-07",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ee/b2/40/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ee/b2/41/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ee/b2/42/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Atento Producci... A"
+    },
+    {
+      "id": "tripadvisor_1041341160",
+      "source": "tripadvisor",
+      "review_text": "It was very nice the experience, from the welcome, the history they gave to each dish and drink they served us, the treatment of waiters and flight attendants, the atmosphere and musical background accompanied by the themed dishes and drinks, very nice experience the truth",
+      "title": "Experience in xoma",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-04",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Adolfo J"
+    },
+    {
+      "id": "tripadvisor_1041334172",
+      "source": "tripadvisor",
+      "review_text": "deliciously prepared food, very friendly and attentive service, an atmospheric dining hall and a visible kitchen (separated by a glass wall). The ‘pesca sostenible’ was out of this world.",
+      "title": "Absolutely delicious",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-04",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e8/b3/1c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e8/b3/1d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e8/b3/1e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e8/b3/1f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e8/b3/20/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/e8/b3/21/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Erik P"
+    },
+    {
+      "id": "tripadvisor_1041060238",
+      "source": "tripadvisor",
+      "review_text": "I would have liked to buy a bottle of rosé wine the orange one with flowers I think it was, and the one they recommended was very good next to dessert. Thank you very much for welcoming us and for the time on each plate.",
+      "title": "I loved the intensity and texture play, how they use inputs and variants to achieve amazing dishes.",
+      "rating": 5,
+      "review_datetime_utc": "2025-12-02",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Juan Carlos L"
+    },
+    {
+      "id": "tripadvisor_1040670230",
+      "source": "tripadvisor",
+      "review_text": "“I loved it! The food was exquisite and the service was the best. All very friendly and attentive. The place has a beautiful atmosphere that makes one want to stay longer.",
+      "title": "Culinary experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-28",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/dc/a5/af/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/dc/a5/b0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/dc/a5/b1/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fiorela G"
+    },
+    {
+      "id": "tripadvisor_1039999292",
+      "source": "tripadvisor",
+      "review_text": "Lack of flavor in the dishes (we tried paiche, thousand potatoes and duck ceviche, you could improve on that, lack of description of the dishes in the menu,",
+      "title": "Good dinner.",
+      "rating": 3,
+      "review_datetime_utc": "2025-11-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Road47122838987"
+    },
+    {
+      "id": "tripadvisor_1039876362",
+      "source": "tripadvisor",
+      "review_text": "We had an excellent time at Xoma. The food was very well executed and thought out, one of the highlights of our weeklong stay in Lima. Our server Lucas was very informative in telling us more about the dishes and drinks, particularly the details of the Peruvian ingredients and their inspiration to the chef.",
+      "title": "Fine Dining Experience in Lima!",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-22",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/cf/04/f8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/cf/04/f9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/cf/04/fa/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Greg K"
+    },
+    {
+      "id": "tripadvisor_1039427245",
+      "source": "tripadvisor",
+      "review_text": "The treatment of the staff is A1. The food was delicious and interesting. Many details can be seen when it comes to attending to diners by service personnel. The facilities very clean and suitable for the place.",
+      "title": "New culinary experience",
+      "rating": 4,
+      "review_datetime_utc": "2025-11-18",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alex M"
+    },
+    {
+      "id": "tripadvisor_1039286013",
+      "source": "tripadvisor",
+      "review_text": "It was an amazing experience, we had a great time, the staff very attentive to the details, the a,splendid atmosphere, and the very good food (however the lamb was a little dry), I was also in doubt if the proportion of the portions of the entrance is the right, if they are only 2 portions maybe they should be a little more generous.",
+      "title": "the overall experience was great, it was complete, thank you.",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-17",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Giancarlo P"
+    },
+    {
+      "id": "tripadvisor_1039279260",
+      "source": "tripadvisor",
+      "review_text": "Delicious food, fruit drinks had a very strong pulpy taste (I loved it)! They helped me save a special cake for my sister, they were definitely very attentive. Thank you.",
+      "title": "Magnificent birthday",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/c4/f5/fb/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/c4/f5/fc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/c4/f5/fd/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/c4/f6/63/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Kiari R"
+    },
+    {
+      "id": "tripadvisor_1039276583",
+      "source": "tripadvisor",
+      "review_text": "I liked the duck and also the shell set was a good experience you could taste the Peruvian flavors in a slightly different and elevated version if you respect the Peruvian traditions in this place and if I come away happy with everything I experienced and thank you also for the courtesy of nougat totally grateful.",
+      "title": "1 time",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/c4/c8/46/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Camper55681072932"
+    },
+    {
+      "id": "tripadvisor_1039107984",
+      "source": "tripadvisor",
+      "review_text": "The restaurant is very high quality and modern !! The menu was very unusual and new for us.. very delicious .. ONLY the music was very loud and could even not communicate us well with operator",
+      "title": "The music was veryrrr loud",
+      "rating": 4,
+      "review_datetime_utc": "2025-11-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Kianoush M"
+    },
+    {
+      "id": "tripadvisor_1038748983",
+      "source": "tripadvisor",
+      "review_text": "Excellent service, the dishes explained in detail, use quite a lot of Peruvian inputs even the few known. Its dish \"sustainable fishing\", and vegan dish \"Chirimoya\" spectacular.",
+      "title": "Creativity and innovation",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-12",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "EderZ."
+    },
+    {
+      "id": "tripadvisor_1038537984",
+      "source": "tripadvisor",
+      "review_text": "We didn't like the experience at all. The staff was friendly but not trained to recommend and cater to diners. \nWe asked for a foamer and when we opened the bottle it exploded and got lost a lot. We were offered another bottle but it took so long that we had to change our options. \nThey brought us a bottle of white wine they had by the glass and they didn't offer to taste it. Wine didn't go with food at all.\nAs for the food it was only \"fine\", nothing spectacular. There were dishes full of flavors and one was so cold that you totally lost its original flavors. \nWe asked for recommendations on the quantities we were asking for and it was very disproportionate.  It was our anniversary and they didn't have any special details.  We didn't like it at all. I wouldn't come back.",
+      "title": "Bad. Not worth what they charge",
+      "rating": 1,
+      "review_datetime_utc": "2025-11-11",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Consuelo G"
+    },
+    {
+      "id": "tripadvisor_1038393687",
+      "source": "tripadvisor",
+      "review_text": "It was an incredible experience. The food is so delicious and the service was really good. The place is so fancy and the drinks were very unique. \n\nI really recommend this experience.",
+      "title": "Xoma Experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ae/fc/b9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ae/fc/ba/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ae/fc/bb/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ae/fc/bc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/ae/fc/bd/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Camila D"
+    },
+    {
+      "id": "tripadvisor_1037781284",
+      "source": "tripadvisor",
+      "review_text": "Excellent Very Good Food and Service \nThe spectacular experience, the waiters with lots of knowledge, and the chef comes to the table to recommend. \n10 out of 10",
+      "title": "Unique",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-05",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jose G"
+    },
+    {
+      "id": "tripadvisor_1037601434",
+      "source": "tripadvisor",
+      "review_text": "Xoma is a pearl!! From those amazing restaurants with authoritarian gastronomy full of taste and personality.\nStay in Miraflores, quite easy to reach. Your intimate Mood is super romantic. The service was quick and super kind.\nWe ate an amazing sequence, with well served and delicious portions, in addition to the special and caprichous presentation.\nNo doubt a place to meet in Lima! The drinks are also a strong point, especially that of the house that comes inside a beautiful little house, all are inspired by movies.\nWe love it! Make a reservation to secure your seat.",
+      "title": "Requirement and taste",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-04",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b4/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b6/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b7/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/b9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/ba/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/bb/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/a0/d6/bc/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Destinados Blog"
+    },
+    {
+      "id": "tripadvisor_1037379686",
+      "source": "tripadvisor",
+      "review_text": "I went with my partner to a lunch, the attention 20/10, the exquisite food and the very welcoming Mood, I will recommend it with my friends and family, do not miss the experience of Xoma, it is unforgettable",
+      "title": "Unforgettable lunch",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-02",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Piero A"
+    },
+    {
+      "id": "tripadvisor_1037379337",
+      "source": "tripadvisor",
+      "review_text": "Very good attention and very rich dishes, rating the quality of the inputs and very nice experience, ideal if you want to go with your family or partner",
+      "title": "super good",
+      "rating": 5,
+      "review_datetime_utc": "2025-11-02",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ariana B"
+    },
+    {
+      "id": "tripadvisor_1037115236",
+      "source": "tripadvisor",
+      "review_text": "Of the\nBest restaurants in Miraflores, unbeatable food , spectacular treatment \nAll the staff are super friendly attentive and professional \nWithout a doubt, place that can not fail every time I am in Lima\nCongratulations Xoma family!!",
+      "title": "Experience Miraflores",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-31",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ivan Beti A"
+    },
+    {
+      "id": "tripadvisor_1036532259",
+      "source": "tripadvisor",
+      "review_text": "Excellent, very grateful for such a beautiful and rich experience, 100% recommended and worth repeating, congratulations to the Kitchen and Table Service team.",
+      "title": "Great proposal 10/10",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/84/d3/48/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/84/d3/49/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Eduardo J"
+    },
+    {
+      "id": "tripadvisor_1036404810",
+      "source": "tripadvisor",
+      "review_text": "We celebrated my birthday at XOMA and it was such a great evening. Ambiance, flavor, and service was 10 out of 10. The staff walks you through a dining experience - not your usual restaurant. You’re in for a treat!",
+      "title": "Excellent ambiance, flavor, and service",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-26",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/82/f6/d5/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Kurtis D"
+    },
+    {
+      "id": "tripadvisor_1036267364",
+      "source": "tripadvisor",
+      "review_text": "Since I arrived it felt a beautiful energy very friendly, the food from the entrance to dessert was super delicious I loved their cocktails Lucas' recommendation and Jaquelin's attention were wonderful, I would definitely come back!",
+      "title": "Wonderful experience!",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-25",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/80/cd/a2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/80/cd/a3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/80/cd/a4/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/80/cd/a5/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/80/cd/a6/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Xavier R"
+    },
+    {
+      "id": "tripadvisor_1036265441",
+      "source": "tripadvisor",
+      "review_text": "I found it a very good experience very good care and the food 10 out of 10 thanks to your very friendly and nice staff thank you very much I will be back soon",
+      "title": "My XOMA experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Marylin B"
+    },
+    {
+      "id": "tripadvisor_1036265384",
+      "source": "tripadvisor",
+      "review_text": "It was a very nice experience, enjoying the best author food, it is something unforgettable, we enjoyed a lot in addition to a very good first level care",
+      "title": "The best flavors",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Dreamer06935127896"
+    },
+    {
+      "id": "tripadvisor_1036265342",
+      "source": "tripadvisor",
+      "review_text": "Thank you all for the excellent care, you have been very warm and kind to me and my family, highly recommended for those looking for good care and good food.",
+      "title": "An important date outside the routine",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-25",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fabian T"
+    },
+    {
+      "id": "tripadvisor_1036132693",
+      "source": "tripadvisor",
+      "review_text": "Excellent, the place the innovative, creative gastronomy, the quality of the products used and the architecture of the place. I would return until you taste everything offered in your letter! But I live in Argentina!!",
+      "title": "Magic Experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-24",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fátima lopez"
+    },
+    {
+      "id": "tripadvisor_1035998555",
+      "source": "tripadvisor",
+      "review_text": "We really enjoyed our visit to Xoma, from the moment we arrived until the farewell, everything was flawless. The staff was excellent and very warm, and every detail made the experience very pleasant.\nThe background music helped create a lovely Mood, and the food was exquisite. The only detail we think could improve a bit is the taste of the squid, but everything else, including the drinks, which were a work of art in presentation and taste, was spectacular.\nWe very much appreciate the experience and certainly plan to come back soon. Congratulations to the whole team!",
+      "title": "Warm and pleasant dinner",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-23",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Stewart Edgar J... A"
+    },
+    {
+      "id": "tripadvisor_1035725721",
+      "source": "tripadvisor",
+      "review_text": "Place the details of the ingredients on the menu as this avoids constantly asking what you are consuming. Have a dessert menu.\nThe dish called \"Alpaca\" felt that the mixture of flavors was unpleasant.\nDesserts are at the right point of sweetness, it is rich but you can not say excellent, it would be taken more as a good experience.\nThe bottom dishes were excellent.\nThe H.P. Liquor does not feel the taste of water, it tastes more banana.",
+      "title": "Good.",
+      "rating": 4,
+      "review_datetime_utc": "2025-10-21",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Miguel S"
+    },
+    {
+      "id": "tripadvisor_1035595365",
+      "source": "tripadvisor",
+      "review_text": "The concept they convey of each meal is a total experience. On the other hand the Mood and attention had no loss, it was a wonderful experience. I recommend it for special occasions whether they are celebrations or something similar.",
+      "title": "New experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-20",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/74/d1/05/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/74/d1/06/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fernanda"
+    },
+    {
+      "id": "tripadvisor_1035134730",
+      "source": "tripadvisor",
+      "review_text": "We really enjoyed the meal, the restaurant had a lovely atmosphere and the waitress spoke English for us which was much appreciated. Excellent food, superb taste and amazing presentation. We loved the speak easy bar for cocktails too after the meal! Thank you for a lovely evening.",
+      "title": "Fantastic meal and cocktails",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-16",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "PaulaHM"
+    },
+    {
+      "id": "tripadvisor_1035006308",
+      "source": "tripadvisor",
+      "review_text": "Very friendly welcome. Beautiful restaurant, but most importantly delicious food!\nThe taste combination was superb. \nGood service and absolutely not disturbing. Refill the wine and water on time. \nPrice quality was very good. In the Netherlands you pay double incl wines and coffee. \n90 euro pp",
+      "title": "Delicious special food",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-16",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/2c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/2d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/2e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/2f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/30/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/31/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/32/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/33/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/34/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/69/61/35/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "cunera2017"
+    },
+    {
+      "id": "tripadvisor_1034871223",
+      "source": "tripadvisor",
+      "review_text": "Definitely recommended, we felt very comfortable and the service was very good. The taste, presentation and texture of the dishes have been very good, we have felt well received",
+      "title": "Fantastic experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-15",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Sebastian Z"
+    },
+    {
+      "id": "tripadvisor_1034736085",
+      "source": "tripadvisor",
+      "review_text": "Services are excellent, foods are taste good. Romantic areas, restaurants are located in city center, good recommendations to come to this restaurant.",
+      "title": "Recommend to come to this restaurant",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fong Y"
+    },
+    {
+      "id": "tripadvisor_1034432810",
+      "source": "tripadvisor",
+      "review_text": "An exceptional dining experience in Xoma. The creativity in each dish is admirable: the ceviche and oysters were spectacular, and the house-style cause was truly amazing. The duck rice was unforgettable, full of flavor and perfectly prepared.\nThe signature cocktails are a true work of art, original and full of personality. I am especially grateful that they were kindly adapted to the menu for my young daughter, and that my husband enjoyed his birthday with such pleasure.\nExcellent Care, Cozy Mood and a Culinary Proposal that deserves to be recognized. I'll definitely be back!",
+      "title": "Wonderful❤️",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-12",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/30/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/31/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/32/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/33/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/34/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/35/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/36/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/37/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/38/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/39/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/5d/f0/3a/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Maricarmen D"
+    },
+    {
+      "id": "tripadvisor_1033590765",
+      "source": "tripadvisor",
+      "review_text": "Great costumer service. The moment you walk in everyone devote their attention to you. Making sure you enjoy it to the max. They offer a variety of courtesy recipes as well for costumers to try. Overall THE FOOD WAS DELICIOUS!",
+      "title": "DELICIOUS FOOD!",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Leidy V"
+    },
+    {
+      "id": "tripadvisor_1033432074",
+      "source": "tripadvisor",
+      "review_text": "Beyond the spectacle, the flavors were impeccable — ultra-fresh ingredients, thoughtful seasoning, and elegant contrasts of warm and cold elements. Service: staff eager to explain the inspiration behind each dish. Very original and excellent!!!",
+      "title": "Where the Ocean Meets Imagination",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-05",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/4d/e9/22/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/4d/e9/23/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/4d/e9/24/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/4d/e9/25/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jacqueline G"
+    },
+    {
+      "id": "tripadvisor_1032974701",
+      "source": "tripadvisor",
+      "review_text": "A pleasant experience, I really like the Quiet Mood and the vibe they inspire, the attention is warm and friendly, their drinks are very creative. Although the most pleasant thing about this lunch were its dishes, each with a great taste and a care of details that leaves very satisfied with the whole Service. Recommended",
+      "title": "Excellent lunch",
+      "rating": 5,
+      "review_datetime_utc": "2025-10-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/46/43/ea/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Claudia V"
+    },
+    {
+      "id": "tripadvisor_1032750626",
+      "source": "tripadvisor",
+      "review_text": "The experience at Xoma was flawless from start to finish. From our arrival, the attention was correct in every way: friendly, attentive and with special care for details. Each dish was very well thought out, with a presentation that surprised as much as the flavors.\n\nThe first bite, served on ice, showed freshness and delicacy in each element; a perfect balance between textures and nuances. Then, the marine proposal with light frying proved a striking contrast, combining croquency and softness in a harmony that made clear the level of technique and creativity in the kitchen.\n\nWithout a doubt, a visit that leaves you wanting to come back and continue discovering more.",
+      "title": "Xoma: Happiness within you",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/db/6b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/db/6c/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mayra L"
+    },
+    {
+      "id": "tripadvisor_1032747124",
+      "source": "tripadvisor",
+      "review_text": "Everything was excellent, you should definitely try the suckling pig with humita foam, the place is very cute, you can observe the chefs preparing the dishes",
+      "title": "Super recommended",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/cd/bc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/cd/bd/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/cd/be/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/cd/bf/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jael V"
+    },
+    {
+      "id": "tripadvisor_1032745603",
+      "source": "tripadvisor",
+      "review_text": "A pleasant experience, I really like the Quiet Mood they handle and the attention, their drinks are very creative, although the most pleasant thing about this death or were the dishes, each with great flavor and a care of details that leaves very satisfied with the whole Service. Recommended",
+      "title": "Great lunch in Xoma",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/c7/c9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/c7/cb/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/c7/dc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/31/42/c7/f1/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Eduardo S"
+    },
+    {
+      "id": "tripadvisor_1029123499",
+      "source": "tripadvisor",
+      "review_text": "Very nice experience. Highly recommended. The attention and presentation of the letter very good. I congratulate the creation of these dishes with Peruvian flavor and respecting tradition.",
+      "title": "Recommended",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Angela P"
+    },
+    {
+      "id": "tripadvisor_1028989027",
+      "source": "tripadvisor",
+      "review_text": "The alpaca was a little bit too much on the taste but the res was excellent. My drink, camu camu, was a little bit strong on taste but was great taste.",
+      "title": "First time on Xoma",
+      "rating": 4,
+      "review_datetime_utc": "2025-09-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fernando Daniel M"
+    },
+    {
+      "id": "tripadvisor_1028987678",
+      "source": "tripadvisor",
+      "review_text": "Perfect evening, with very special and delicious dishes. Lucas' attention was excellent, with the precision of the dishes and the friendliness that characterizes him.",
+      "title": "Excellent and beautiful restaurant",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-06",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Paolo S"
+    },
+    {
+      "id": "tripadvisor_1027935346",
+      "source": "tripadvisor",
+      "review_text": "We took the tasting menu \"Simplicity\" and loved it from start to finish. The waiter, Lucas, has been very nice and explained the values of the restaurant and elaboration of each dish in a very interesting way between each pass. We were celebrating a birthday and have been presented with a dessert courtesy of the house. An experience of 10 for our last night in Lima.",
+      "title": "An experience of 10",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-01",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/fa/2b/27/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/fa/2b/28/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/fa/2b/29/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Leyre T"
+    },
+    {
+      "id": "tripadvisor_1027934431",
+      "source": "tripadvisor",
+      "review_text": "I recommend 100%, we were served like princes by the whole team. Special thanks to Lucas who made our experience unique. Food offers an incredible taste and visual experience with unique flavors. Be sure to dress well because it is cool in August!",
+      "title": "Sublimes",
+      "rating": 5,
+      "review_datetime_utc": "2025-09-01",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Léa C"
+    },
+    {
+      "id": "tripadvisor_1027759360",
+      "source": "tripadvisor",
+      "review_text": "Phenomenal ambience and experience through and through. Recommended dishes include oysters (5x), alpaca, squid, guinea pig, lamb, shrimp, and the UP/HP cocktails. Vladimir was nothing short of excellent. \n\nCheers from Texas,\nAK",
+      "title": "XOMA Excellente",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-31",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Andrew K"
+    },
+    {
+      "id": "tripadvisor_1027758062",
+      "source": "tripadvisor",
+      "review_text": "Incredible oysters. Great service. Amazing drinks. We even got to meet the chef, and he was a delightful person! Would recommend coming in around 8:30pm",
+      "title": "Great Dinner spot!",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-31",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Joey W"
+    },
+    {
+      "id": "tripadvisor_1026150881",
+      "source": "tripadvisor",
+      "review_text": "Amazing food and presentation, lovely\nambience and excellent service. Many thanks to the talented chef and the kitchen team and to our lovely hostess Jacqueline, who looked after us very well at lunch today. Until next time!",
+      "title": "Fabulous!",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-23",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/e3/20/ba/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/e3/20/bb/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Marwa S"
+    },
+    {
+      "id": "tripadvisor_1025001044",
+      "source": "tripadvisor",
+      "review_text": "Really awesome experience. It is a splurge but worth it.\n\nThe duck in particular may have been the very best I have ever had. The alpaca was also a can’t miss.",
+      "title": "Worth it.",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-18",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Andy S"
+    },
+    {
+      "id": "tripadvisor_1024996939",
+      "source": "tripadvisor",
+      "review_text": "I have come several times and this time for your blind experience. A dimly lit, intimate place with incredible inputs and first-rate care. I will always come back and live that tartare 🤍🤍🤍🤍 thanks to lion for the cocktails, Lucas for his attention and the super chef for each dish 🧑‍🍳",
+      "title": "Xoma, again and again.",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-18",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d5/d7/05/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d5/d7/06/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d5/d7/07/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d5/d7/08/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "RCARMONA C"
+    },
+    {
+      "id": "tripadvisor_1024709416",
+      "source": "tripadvisor",
+      "review_text": "The attendance of Romario and Lucas was hopeful. It was an incredible experience. Extremely creative dishes with technical beauty and excellent taste. The place is very beautiful too.",
+      "title": "Enchantment",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-16",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d1/c8/e7/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d1/c8/e8/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d1/c8/e9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d1/c8/ea/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/d1/c8/eb/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Vanessa V"
+    },
+    {
+      "id": "tripadvisor_1024247597",
+      "source": "tripadvisor",
+      "review_text": "Xoma is one of those places you come with expectations and exceeds them, in very few places I have received as much hospitality as here. Thanks to all the team, I really enjoyed the experience and the amazing food.  A different, fresh and original proposal.  Ideal to go in a group or couple and enjoy a memorable moment.\nI'll definitely be back.",
+      "title": "LUNCH IN XOMA",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-13",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Henry Iván A"
+    },
+    {
+      "id": "tripadvisor_1024070351",
+      "source": "tripadvisor",
+      "review_text": "I was in Xoma with my wife celebrating our anniversary. We were very well received and kindly attended to throughout the experience. The food was excellent, what I liked the most was the lamb and the kid. I'll definitely be back.",
+      "title": "Lunch 10/10",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-12",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Black C"
+    },
+    {
+      "id": "tripadvisor_1023666539",
+      "source": "tripadvisor",
+      "review_text": "Mood and attention are excellent. The presentation of the dishes very showy. The omakase was fresh and delicious. The 25-spice dish (a very interesting version of the sautéed loin). They took care to give us a very special experience, we are grateful.\nCertainly a place to go as a couple to celebrate special moments and live new experiences.",
+      "title": "Excellent place to live new experiences",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/c1/aa/5a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/c1/aa/5b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/c1/aa/5c/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "NWUY"
+    },
+    {
+      "id": "tripadvisor_1023506252",
+      "source": "tripadvisor",
+      "review_text": "A spectacular culinary experience. From starter to dessert, each dish was full of flavor and perfectly presented. The use of fresh ingredients and respect for traditional Peruvian cuisine is rating, with a modern twist that makes it even more special.",
+      "title": "Peruvian flavor that falls in love",
+      "rating": 4,
+      "review_datetime_utc": "2025-08-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "monica garcia"
+    },
+    {
+      "id": "tripadvisor_1023353473",
+      "source": "tripadvisor",
+      "review_text": "Super good drinks and very friendly, neat and polite attention. They managed to create the experience. Recommended for a few drinks with your favorite person.",
+      "title": "Good drinks.",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-09",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Cinthia Irma N"
+    },
+    {
+      "id": "tripadvisor_1023012113",
+      "source": "tripadvisor",
+      "review_text": "My experience at Xoma is one of the best I have had lately, I went for lunch and from the Welcoming was nice, we were made to feel comfortable, the Service was very attentive and friendly, we tried different dishes and each was better than the other I tried the shells and clams and they were spectacular and the octopus too. All very fresh. I'll definitely be back.",
+      "title": "Exceptional experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-07",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jazir O"
+    },
+    {
+      "id": "tripadvisor_1022802564",
+      "source": "tripadvisor",
+      "review_text": "Super good food. Felt innovative and clearly wanted to do something special. Cozy room, slightly loud volume. Very nice waitress, felt a bit inexperienced and insecure but that can be how it is.",
+      "title": "🔥",
+      "rating": 4,
+      "review_datetime_utc": "2025-08-05",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jesper H"
+    },
+    {
+      "id": "tripadvisor_1022667346",
+      "source": "tripadvisor",
+      "review_text": "Amazing food, drinks, and experience.. fresh seafood, friendly waiters and chef! If you order a virgin drink you get the fun “Up” experience. 10 out of 10",
+      "title": "Tantalizing experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-05",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Laura A"
+    },
+    {
+      "id": "tripadvisor_1021630164",
+      "source": "tripadvisor",
+      "review_text": "Last week I visited Xoma and enjoyed the experience. The Service was splendid, the advisors gave me first-rate recommendations. My top 3 is taken by the razors, a thousand potatoes and octopus, the presentation of the dishes was interesting and not to mention the taste. Xoma 10/10.",
+      "title": "My experience in Xoma",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-30",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Jackeline F"
+    },
+    {
+      "id": "tripadvisor_1021629573",
+      "source": "tripadvisor",
+      "review_text": "Returning to Xoma with the new dishes was a total success! When ordering oysters I really liked the taste, especially the freshness, very good experience",
+      "title": "Good experience!",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-30",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Gabriel O"
+    },
+    {
+      "id": "tripadvisor_1021221608",
+      "source": "tripadvisor",
+      "review_text": "I really wanted to meet Xoma and I really loved it \n\nFrom the moment you arrive, the Mood surrounds you: warm, with a different style than the usual. It is one of those places where everything looks beautiful, but without losing that cozy touch.\n\nThe service was excellent. Our advisor suggested several dishes and we decided to get carried away with his recommendations... and it was a total success!\n\nI tried a shrimp paste that was delicious. The perfect texture, fresh shrimp and a creamy sauce with a lot of flavor and suckling pig with humita foam... what a delight. Crispy on the outside, soft inside and with that sweet touch of humita that made it unique. Really, a combination that surprises and charms.\n\nEverything arrived in good weather and with explanation through which it complemented the experience.\nI totally recommend Xoma✨ Whether to go alone to enjoy, date, with friends or celebrate something special. Delicious food, A1 service and everything super well thought out.",
+      "title": "Taste, style and warmth in one place",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-28",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Mayra L"
+    },
+    {
+      "id": "tripadvisor_1021216013",
+      "source": "tripadvisor",
+      "review_text": "An unforgettable culinary experience Xoma is on another level, dining at Xoma was truly one of the best experiences I’ve ever had.A must for any food lovers!!!",
+      "title": "Unforgettable experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-28",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/9c/2f/ad/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/9c/2f/ae/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/9c/2f/af/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/9c/2f/b0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/9c/2f/b1/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Ibrahim O"
+    },
+    {
+      "id": "tripadvisor_1020519662",
+      "source": "tripadvisor",
+      "review_text": "Excellent place, the extraordinary food, a totally recommended experience. Xoma definitely 100/100. Thank you Vladimir for such magnificent attention. \n\nHope to be back soon, thanks Xoma ✨",
+      "title": "",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-24",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Maria A"
+    },
+    {
+      "id": "tripadvisor_1019859447",
+      "source": "tripadvisor",
+      "review_text": "Quiet spot for a very nice dinner:) All the appetizers were great - interesting original dishes with fancy presentation, and the lamb, goat, paella main courses were good too. Service was very good.",
+      "title": "",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-21",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/8b/d7/01/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/8b/d7/02/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/8b/d7/03/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Biana Z"
+    },
+    {
+      "id": "tripadvisor_1019504312",
+      "source": "tripadvisor",
+      "review_text": "This is a MUST when you are in LIMA! \n\nEvery step of the way was a beautiful experience, the service was phenomenal but honestly that was just a sprinkle in the background on the stunning limelight that the food took.",
+      "title": "Top Spot in Lima!",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-20",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Curiosity07907657477"
+    },
+    {
+      "id": "tripadvisor_1017415591",
+      "source": "tripadvisor",
+      "review_text": "It is a very welcoming place and the service is excellent, in fact I would recommend the place and would return. You live a very nice experience.. the food is delicious",
+      "title": "Spectacular",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/cb/43/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Fiorella C"
+    },
+    {
+      "id": "tripadvisor_1017410049",
+      "source": "tripadvisor",
+      "review_text": "A great experience, I loved the boldness!!!  The mix of flavors and foods make it unique.  I will definitely return when I visit Peru again.\n\nThe place is very nice and nice!!!",
+      "title": "The Rome recommendations were sound and very good",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-10",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Luis Miguel"
+    },
+    {
+      "id": "tripadvisor_1017407745",
+      "source": "tripadvisor",
+      "review_text": "We ate dinner on Wednesday evening. Presentation was 10/10. we had a carpaccia potato appetizer which was unbelievable. I had a white fish with green herbs. Very nice: the pisco sours were quite strong so be aware :)\nThis place had a unique sense of vibe and uses a creative mindset to serve food.",
+      "title": "Dinner on wednesday",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-10",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/6c/ac/88/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Layla"
+    },
+    {
+      "id": "tripadvisor_1017097099",
+      "source": "tripadvisor",
+      "review_text": "Everything was extraordinary, the evening was beyond wonderful, thanks to Gastronomic Advisor Romario for such extraordinary attention 1000/100. Without a doubt, Xoma is one of the best restaurants in Peru.",
+      "title": "Xoma 100/100 Extraordinary evening",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-08",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Hilario V"
+    },
+    {
+      "id": "tripadvisor_1016883097",
+      "source": "tripadvisor",
+      "review_text": "The food was delicious with a lot of complexity in the sauce. This certain reflects the effort of the chef. The dining environment is extremely comfortable and service is definitely on a high standard. I really enjoy the meal and would highly recommend the restaurant.",
+      "title": "Amazing lunch",
+      "rating": 5,
+      "review_datetime_utc": "2025-07-06",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/b9/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/ba/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/bb/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/bc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/bd/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/be/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/bf/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/c0/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/64/ae/c1/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Chris"
+    },
+    {
+      "id": "tripadvisor_1015457491",
+      "source": "tripadvisor",
+      "review_text": "It was a stunning experience, Vladimir's attention worthy of star michellin!!! \nDishes with interesting presentations and very much in line with the ingredients, well executed cocktails, perfect atmosphere, sound and lighting.",
+      "title": "Vladimir! Excellent service",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-28",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Julian G"
+    },
+    {
+      "id": "tripadvisor_1014091146",
+      "source": "tripadvisor",
+      "review_text": "I went to Xoma for a special dinner with Vale and exceeded all our expectations. The atmosphere is intimate and elegant, ideal for a romantic night. Each dish was a sensory experience, full of details and flavors that surprise. The service was impeccable, always attentive without interrupting. No doubt, a night to remember.",
+      "title": "Perfect dinner for a special night",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-21",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Cesar F"
+    },
+    {
+      "id": "tripadvisor_1014085835",
+      "source": "tripadvisor",
+      "review_text": "Xoma was a pleasant surprise at Miraflores. Each menu dish was an explosion of flavors, with creative combinations and modern techniques that enhance the best of Peruvian cuisine. Care is noted in every detail: from presentation to the balance of flavors.\n\nThe experience itself goes beyond the traditional; it is sensory, immersive and very well thought out. The service was excellent: attentive, knowledgeable and friendly at all times. The atmosphere also comes with warm, elegant and quiet.\n\nA mandatory stop if you like to discover new ways to enjoy Peruvian cuisine.",
+      "title": "A unique gastronomic experience in Lima",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-21",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Paolo R"
+    },
+    {
+      "id": "tripadvisor_1013981289",
+      "source": "tripadvisor",
+      "review_text": "If I could give zero stars, I would. This was one of the most frustrating gastronomic experiences I've ever had.\n\nThe menu design was a disaster - while the source was legible, it was messy and confused to navigate.\n\nThen wait for it: an hour and a half for the food to come. No updates, no urgency, and the room was freezing all the time.\n\nWhen the food finally came, it was absurdly cold, as if it had been sitting for centuries. My steak was ordered medium and was almost raw, closer to the jar than anything remotely edible. In addition to that, several orders were completely wrong.\n\nThe service was non-existent, and the whole experience felt like a bad joke. Save time, money and frustration: go literally anywhere else.",
+      "title": "The worst restaurant experience in Lima",
+      "rating": 1,
+      "review_datetime_utc": "2025-06-21",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Traveler27621111782"
+    },
+    {
+      "id": "tripadvisor_1013980992",
+      "source": "tripadvisor",
+      "review_text": "1: Food took forever\n2: The restaurant was frozen inside\n3: I asked for medium in my rib, it was weird\n4: the menu is difficult to read and no description of the food\nEXPERIENCE",
+      "title": "The worst restaurant in Lima",
+      "rating": 1,
+      "review_datetime_utc": "2025-06-21",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Wesley S"
+    },
+    {
+      "id": "tripadvisor_1013387160",
+      "source": "tripadvisor",
+      "review_text": "The spectacular food, every bite is an explosion of taste, all exquisite. The attention of Lucas and Jaqueline was the best, they certainly provided us with a more than excellent service.",
+      "title": "Exquisite and spectacular",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/30/3d/b0/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Celeste Paola V"
+    },
+    {
+      "id": "tripadvisor_1013372054",
+      "source": "tripadvisor",
+      "review_text": "Fantastic food and service at this first-class restaurant. The best food we've had in Peru.\nVery creative menu full of surprises. Food at a very reasonable price (although wine is a little expensive) makes this a great option. Very recommended.",
+      "title": "Excellent Peruvian cuisine",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-17",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/2f/f3/a1/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/2f/f3/a2/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/2f/f3/a3/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/2f/f3/a4/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/2f/f3/a5/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Paul H"
+    },
+    {
+      "id": "tripadvisor_1012913391",
+      "source": "tripadvisor",
+      "review_text": "It's a unique and spectacular experience. It blends Andean flavors of the chef's origins which generates an explosion in the mouth. It's very creative, too",
+      "title": "Birthday experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-14",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Stefany V"
+    },
+    {
+      "id": "tripadvisor_1011573326",
+      "source": "tripadvisor",
+      "review_text": "Wooow, 3 times Woow. Excellent attention. Thank Lucas very much. The food was very deli. Things I've never eaten before in my life. We have to go back",
+      "title": "wooow",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-08",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "DominicMoschner"
+    },
+    {
+      "id": "tripadvisor_1011154353",
+      "source": "tripadvisor",
+      "review_text": "This place was a unique experience. From the reception, the dishes a delight, the environment, especially the flavors. I admire and congratulate the fact that young people are in the kitchen and care. I'd be back",
+      "title": "An elixir of Peruvian food fusion",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-05",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/11/e0/24/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/11/e0/25/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/11/e0/26/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "sofia c"
+    },
+    {
+      "id": "tripadvisor_1011131840",
+      "source": "tripadvisor",
+      "review_text": "Excellent experience. The tasty dishes, the perfect environment.\nRomario's attention was impeccable.\nAdequate time in order delivery and always attentive staff",
+      "title": "Place to add to favorites.",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-04",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Claudia Patrici... P"
+    },
+    {
+      "id": "tripadvisor_1010534504",
+      "source": "tripadvisor",
+      "review_text": "Very good service. I really liked the food above all the cause and the 25-spice pan, I recommend coming with hunger because they are dishes that fill you and make you satisfied",
+      "title": "Good food and experience in Xoma",
+      "rating": 5,
+      "review_datetime_utc": "2025-06-01",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Miguel T"
+    },
+    {
+      "id": "tripadvisor_1010375676",
+      "source": "tripadvisor",
+      "review_text": "I came with my husband to celebrate the 5 years together.\nThe experience was wonderful the food is an art in a coma, delicious and with a presentation from another world, the attention is of the best and the warm atmosphere very modern\nWe love it",
+      "title": "Excellent for a special date",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-31",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "AIRA P"
+    },
+    {
+      "id": "tripadvisor_1010374319",
+      "source": "tripadvisor",
+      "review_text": "The food was delicious! Without a doubt one of our favorites through our entire trip to Peru! Vladimir was very kind and attentive; he made great recommendations and we enjoyed every dish! Oysters and the palette were our favorite! Thank you so much for making our anniversary so special",
+      "title": "First level vladmir service and amazing taste! Michelin waiting!",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-31",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/05/67/fc/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/05/67/fd/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/05/67/fe/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/05/67/ff/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/05/68/00/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/05/68/01/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Landy T"
+    },
+    {
+      "id": "tripadvisor_1010210767",
+      "source": "tripadvisor",
+      "review_text": "A super EXPERIENCE, the duck pan is out of order, the decoration of the place. The attention is special, all the dishes are copyright and one better than another.",
+      "title": "XOMA, UN LUGAR FUERA DE SERIE",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-30",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/02/a2/8f/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "fmacedoderivero"
+    },
+    {
+      "id": "tripadvisor_1010073476",
+      "source": "tripadvisor",
+      "review_text": "A long time ago I did not enjoy a wonderful experience as satisfying from the taste of food as the recommended service 100% a special mention to the creativity of its dishes a combinations that I did not think would give such delicious results.",
+      "title": "Simplemente extraordinario",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-29",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Gisella C"
+    },
+    {
+      "id": "tripadvisor_1007616490",
+      "source": "tripadvisor",
+      "review_text": "Excellent attention from the entrance to the restaurant, that is from the parking lot of the vehicle, cozy atmosphere and not to say of the dishes, that is DELICIOUS!!!!\n100% recommended",
+      "title": "Delicious lunch",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-14",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/de/a4/cd/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/de/a4/ce/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Climber12955322190"
+    },
+    {
+      "id": "tripadvisor_1007075381",
+      "source": "tripadvisor",
+      "review_text": "We went to the family to celebrate the mother's day. The experience was complete. The dishes of amazing flavors and excellent presentation. A welcoming atmosphere and friendly attention.\nVladimir attended us, with efficiency and good explanations (I asked him for his name at the end of the meal, he never asked to be mentioned)\nThe prices were reasonable for quality, with the exception of wine per glass where I think they were slightly exceeded.\nWe all get very happy and looking forward to coming back.",
+      "title": "MUCHAS GRACIAS POR UN INOLVIDABLE DÍA DE LA MADRE",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-13",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "ADOLFODLC"
+    },
+    {
+      "id": "tripadvisor_1006625351",
+      "source": "tripadvisor",
+      "review_text": "The experience lived in Xoma was too spectacular, everything really amazing, from food, environment and service 100 / 100 thanks to our Roman gastronomic advisor for such incredible experience.\n\nWe will certainly return 100 / 100",
+      "title": "Spectacular Xoma",
+      "rating": 5,
+      "review_datetime_utc": "2025-05-10",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Hilario V"
+    },
+    {
+      "id": "tripadvisor_1003736193",
+      "source": "tripadvisor",
+      "review_text": "The gastronomy was excellent! And the spectacular service!! Every detail was exceptional I recommend!! When they come to Peru they should prar here for a relaxing and deicious dinner!",
+      "title": "Excellent service and food",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-22",
+      "review_photos": null,
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Adriana P"
+    },
+    {
+      "id": "tripadvisor_1002308186",
+      "source": "tripadvisor",
+      "review_text": "Great! A pleasant gastronomic experience!!!! Each dish is a unique experience! I can't decide what my favorite of all was, but the duck pan takes a special place on my back... the best I've had in Lima so far! The exquisite service, Lucas gave us. Lucas was super kind, he detailed the preparation of every dish we chose and his suggestions were the best!",
+      "title": "Great gastronomic experience!",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-14",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/53/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/54/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/55/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/56/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/57/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/58/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/59/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/98/ea/5a/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Cristina B"
+    },
+    {
+      "id": "tripadvisor_1002164526",
+      "source": "tripadvisor",
+      "review_text": "A unique and unforgettable experience. We were lucky enough to share an incredible moment with the family in this restaurant in Lima, where not only the food was exceptional, but also the service. We would especially like to highlight Vladimir, who was the true host of our experience. He explained to us in detail every dish of the letter and recommended us exactly what to ask to enjoy to the maximum. Thanks to him, we were able to taste the best of the essence of Peru: from fresh ceviches to fish, meat and much more. Undoubtedly, a place we would recommend once and a thousand times.",
+      "title": "Unique Gastronomical Experience",
+      "rating": 5,
+      "review_datetime_utc": "2025-04-13",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/96/cd/7e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/96/cd/7f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/96/cd/80/caption.jpg"
+      ],
+      "original_language": "es",
+      "was_translated": true,
+      "author_name": "Joaquin F"
+    }
+  ]
+}

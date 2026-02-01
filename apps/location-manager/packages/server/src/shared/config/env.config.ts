@@ -6,6 +6,8 @@ export class EnvConfig {
   readonly RAPIDAPI_REVIEWS_KEY: string;
   readonly RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY: string;
   readonly GEOAPIFY_API_KEY: string;
+  readonly BIGDATACLOUD_API_KEY: string;
+  readonly SERPAPI_KEY: string;
   readonly PAYLOAD_API_URL: string;
   readonly PAYLOAD_SERVICE_EMAIL: string;
   readonly PAYLOAD_SERVICE_PASSWORD: string;
@@ -20,6 +22,8 @@ export class EnvConfig {
     this.RAPIDAPI_REVIEWS_KEY = process.env.RAPIDAPI_REVIEWS_KEY || "";
     this.RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY = process.env.RAPIDAPI_TRIP_ADVISOR_REVIEWS_KEY || "";
     this.GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || "";
+    this.BIGDATACLOUD_API_KEY = process.env.BIGDATACLOUD_API_KEY || "";
+    this.SERPAPI_KEY = process.env.SERPAPI_KEY || "";
     this.PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || "";
     this.PAYLOAD_SERVICE_EMAIL = process.env.PAYLOAD_SERVICE_EMAIL || "";
     this.PAYLOAD_SERVICE_PASSWORD = process.env.PAYLOAD_SERVICE_PASSWORD || "";
@@ -61,6 +65,14 @@ export class EnvConfig {
       warnings.push("GEOAPIFY_API_KEY not set - Brazil reverse geocoding may fail");
     }
 
+    if (!this.BIGDATACLOUD_API_KEY) {
+      warnings.push("BIGDATACLOUD_API_KEY not set - timezone lookup may fail");
+    }
+
+    if (!this.SERPAPI_KEY) {
+      warnings.push("SERPAPI_KEY not set - TripAdvisor place data fetch disabled");
+    }
+
     if (!this.PAYLOAD_API_URL || !this.PAYLOAD_SERVICE_EMAIL || !this.PAYLOAD_SERVICE_PASSWORD) {
       warnings.push("Payload CMS not configured - sync to Payload disabled");
     }
@@ -90,6 +102,14 @@ export class EnvConfig {
 
   hasGeoapifyKey(): boolean {
     return !!this.GEOAPIFY_API_KEY;
+  }
+
+  hasBigDataCloudKey(): boolean {
+    return !!this.BIGDATACLOUD_API_KEY;
+  }
+
+  hasSerpApiKey(): boolean {
+    return !!this.SERPAPI_KEY;
   }
 
   isPayloadConfigured(): boolean {

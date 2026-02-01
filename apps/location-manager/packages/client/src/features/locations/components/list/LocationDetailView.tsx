@@ -1,23 +1,17 @@
-import { useState } from "react";
-import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed, FetchReviewsPipelineRequest, ReviewsPipelineJobStatus } from "@client/shared/services/api/types";
+import { useMemo, useState } from "react";
+import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed } from "@client/shared/services/api/types";
 import type { ImageVariant } from "@questurian/lm-shared";
-import { truncateUrl } from "../../utils";
 import { DetailField } from "./DetailField";
 import { AddInstagramEmbedForm } from "../forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "../forms/AddUploadFilesForm";
 import { ImageLightbox } from "../ui/ImageLightbox";
-import { FetchReviewsPipelineModal } from "../ui/FetchReviewsPipelineModal";
-import { ReviewsReportDialog } from "../ui/ReviewsReportDialog";
+import { ReviewsStatusBadge } from "../ui/ReviewsStatusBadge";
 import { Button } from "@client/components/ui/button";
-import { Input } from "@client/components/ui/input";
-import { X, RefreshCw, Star, Loader2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, X, Download } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
-import { useDownloadMergedReviews, useMergedReviewsStatus, useMergedReviewsReport } from "@client/shared/services/api/hooks/useMergedReviews";
-import { useRefetchPlaceId } from "@client/shared/services/api/hooks/useRefetchPlaceId";
-import { useFetchReviewsPipeline } from "@client/shared/services/api/hooks/useReviewsPipeline";
-import { useUpdateLocation } from "@client/shared/services/api";
+import { locationsApi } from "@client/shared/services/api/locations.api";
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -28,7 +22,7 @@ interface LocationDetailViewProps {
 
 /**
  * Component for displaying expanded location details
- * Shows all location fields, Instagram embeds, and uploads
+ * Shows core fields, completeness status, Instagram embeds, and uploads
  */
 export function LocationDetailView({ locationDetail, isLoading, error, onCopyField }: LocationDetailViewProps) {
   const { showToast } = useToast();
@@ -66,62 +60,65 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     },
   });
 
-  // Reviews state and hooks
-  const [isReviewsPipelineModalOpen, setIsReviewsPipelineModalOpen] = useState(false);
-  const [isReviewsReportDialogOpen, setIsReviewsReportDialogOpen] = useState(false);
-  const [tripadvisorUrlInput, setTripadvisorUrlInput] = useState("");
-  const [pipelineStatus, setPipelineStatus] = useState<ReviewsPipelineJobStatus | null>(null);
+  const requiredFields = useMemo(() => {
+    if (!locationDetail) return [];
 
-  const updateLocationMutation = useUpdateLocation();
+    const contact = locationDetail.contact || {};
+    const source = locationDetail.source || {};
+    const hasOperationHours = Boolean(
+      locationDetail.operationHours &&
+        (typeof locationDetail.operationHours === "string"
+          ? locationDetail.operationHours.trim().length > 0
+          : Object.keys(locationDetail.operationHours).length > 0)
+    );
 
-  const refetchPlaceIdMutation = useRefetchPlaceId({
-    locationId: locationDetail?.id || 0,
-    onSuccess: (placeId) => {
-      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(placeId ? `Place ID updated: ${placeId}` : "No Place ID found", centerPosition);
-    },
-    onError: (error) => {
-      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(error.message || "Failed to refetch Place ID", centerPosition);
-    },
-  });
+    const hasMedia =
+      (locationDetail.uploads && locationDetail.uploads.length > 0) ||
+      (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0);
 
-  const canFetchGoogle = Boolean(locationDetail?.placeId);
-  const canFetchTripadvisor = Boolean(locationDetail?.tripadvisorUrl);
-  const canRunPipeline = canFetchGoogle || canFetchTripadvisor;
+    return [
+      { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
+      { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
+      { key: "sourceAddress", label: "Source Address", present: Boolean(source.address?.trim()) },
+      { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+      { key: "type", label: "Type", present: Boolean(locationDetail.type?.trim()) },
+      { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
+      { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
+      { key: "slug", label: "Slug", present: Boolean(locationDetail.slug?.trim()) },
+      {
+        key: "coordinates",
+        label: "Coordinates",
+        present: locationDetail.coordinates?.lat != null && locationDetail.coordinates?.lng != null,
+      },
+      {
+        key: "ianaTimeId",
+        label: "Time Zone (IANA)",
+        present: Boolean(locationDetail.ianaTimeId?.trim()),
+      },
+      { key: "countryCode", label: "Country Code", present: Boolean(contact.countryCode?.trim()) },
+      { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim()) },
+      { key: "website", label: "Website", present: Boolean(contact.website?.trim()) },
+      { key: "contactAddress", label: "Contact Address", present: Boolean(contact.contactAddress?.trim()) },
+      { key: "contactUrl", label: "Google URL", present: Boolean(contact.url?.trim()) },
+      {
+        key: "neighborhoodDescription",
+        label: "Neighborhood",
+        present: Boolean(locationDetail.neighborhoodDescription?.trim()),
+      },
+      { key: "operationHours", label: "Hours", present: hasOperationHours },
+      { key: "media", label: "Images/Instagram", present: hasMedia },
+    ];
+  }, [locationDetail]);
 
-  const mergedReviewsStatusQuery = useMergedReviewsStatus({
-    locationId: locationDetail?.id || 0,
-    enabled: Boolean(locationDetail?.id),
-  });
-  const mergedReviewsReportQuery = useMergedReviewsReport({
-    locationId: locationDetail?.id || 0,
-    enabled: isReviewsReportDialogOpen && Boolean(locationDetail?.id),
-  });
-  const downloadMergedReviews = useDownloadMergedReviews();
+  const missingFields = useMemo(
+    () => requiredFields.filter((field) => !field.present),
+    [requiredFields]
+  );
+  const isComplete = missingFields.length === 0;
 
-  const fetchReviewsPipelineMutation = useFetchReviewsPipeline({
-    locationId: locationDetail?.id || 0,
-    onSuccess: (data) => {
-      setPipelineStatus(null);
-      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      let message = data.message;
-      if (data.warnings && data.warnings.length > 0) {
-        message += ` (${data.warnings.length} warning${data.warnings.length > 1 ? "s" : ""})`;
-      }
-      showToast(message, centerPosition);
-      setIsReviewsPipelineModalOpen(false);
-    },
-    onError: (error) => {
-      setPipelineStatus(null);
-      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(error.message || "Failed to fetch reviews", centerPosition);
-    },
-    onProgress: (status) => {
-      setPipelineStatus(status);
-    },
-    onSettled: () => undefined,
-  });
+  // Expand when incomplete, collapse when complete; user can override via toggle
+  const [completenessExpanded, setCompletenessExpanded] = useState<boolean | undefined>(undefined);
+  const isCompletenessExpanded = completenessExpanded ?? !isComplete;
 
   function handleImageSetClick(upload: Upload) {
     if ('imageSet' in upload && upload.imageSet) {
@@ -191,34 +188,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     }
   }
 
-  function handleFetchReviewsPipeline(params: FetchReviewsPipelineRequest) {
-    fetchReviewsPipelineMutation.mutate(params);
-  }
-
-  function handleSaveTripadvisorUrl() {
-    if (!locationDetail?.id) return;
-    const trimmed = tripadvisorUrlInput.trim();
-    const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-
-    if (!trimmed) {
-      showToast("TripAdvisor URL is required", centerPosition);
-      return;
-    }
-
-    updateLocationMutation.mutate(
-      { id: locationDetail.id, data: { tripadvisorUrl: trimmed } },
-      {
-        onSuccess: () => {
-          showToast("TripAdvisor URL saved successfully", centerPosition);
-          setTripadvisorUrlInput("");
-        },
-        onError: (error) => {
-          showToast(error.message || "Failed to save TripAdvisor URL", centerPosition);
-        },
-      }
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="mt-4 pt-4 border-t border-gray-200">
@@ -241,9 +210,117 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     return null;
   }
 
+  const sourceAddress = locationDetail.source?.address?.trim();
+  const contactAddress = locationDetail.contact?.contactAddress?.trim();
+  const showSourceAddress = Boolean(sourceAddress);
+  const showContactAddress = Boolean(contactAddress) && contactAddress !== sourceAddress;
+  const contactAddressLabel = showSourceAddress ? "Contact Address" : "Address";
+
   return (
     <div className="mt-4 pt-4 border-t border-gray-200">
       <div className="space-y-3">
+        <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className={`text-xs font-semibold px-2 py-1 rounded shrink-0 ${
+                  isComplete
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {isComplete ? "Complete" : "Missing data"}
+              </span>
+              <span className="text-xs text-muted-foreground truncate">
+                {isComplete
+                  ? "All required fields present"
+                  : `${missingFields.length} required field${
+                      missingFields.length === 1 ? "" : "s"
+                    } missing`}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 h-7 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setCompletenessExpanded(!isCompletenessExpanded)}
+              aria-expanded={isCompletenessExpanded}
+            >
+              {isCompletenessExpanded ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5 mr-0.5" />
+                  Hide
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5 mr-0.5" />
+                  Expand
+                </>
+              )}
+            </Button>
+          </div>
+          {isCompletenessExpanded && (
+            <>
+              {!isComplete && (
+                <div className="flex flex-wrap gap-1">
+                  {missingFields.map((field) => (
+                    <span
+                      key={field.key}
+                      className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-700"
+                    >
+                      {field.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {requiredFields.map((field) => (
+                  <div
+                    key={field.key}
+                    className={`flex items-center gap-2 rounded border px-2 py-1 text-xs ${
+                      field.present
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>{field.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Reviews Section - Separate from Completeness */}
+        <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Reviews</span>
+            <ReviewsStatusBadge
+              hasReviews={!!locationDetail.reviewsFetchedAt}
+              reviewsCount={locationDetail.reviewsCount}
+              reviewsFetchedAt={locationDetail.reviewsFetchedAt}
+            />
+          </div>
+          {locationDetail.reviewsFetchedAt && (
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>Google: {locationDetail.reviewsGoogleCount || 0}</span>
+              <span>TripAdvisor: {locationDetail.reviewsTripadvisorCount || 0}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs"
+                onClick={() => {
+                  window.open(locationsApi.getMergedReviewsDownloadUrl(locationDetail.id), "_blank");
+                }}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Title field - only show if different from source name */}
         {locationDetail.title && locationDetail.title !== locationDetail.source?.name && (
           <DetailField
@@ -252,196 +329,17 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
           />
         )}
 
-
-        {/* Phone number field */}
-        {locationDetail.contact?.phoneNumber && (
+        {showContactAddress && (
           <DetailField
-            label="Phone"
-            value={locationDetail.contact.phoneNumber}
-            onClick={(e) => onCopyField(locationDetail.contact!.phoneNumber!, e)}
-            title="Click to copy phone number"
+            label={contactAddressLabel}
+            value={contactAddress}
+            onClick={(e) => onCopyField(contactAddress!, e)}
+            title="Click to copy contact address"
           />
         )}
 
-        {/* Website field */}
-        {locationDetail.contact?.website && (
-          <DetailField
-            label="Website"
-            value={truncateUrl(locationDetail.contact.website)}
-            onClick={(e) => onCopyField(locationDetail.contact.website, e)}
-            title="Click to copy website URL"
-            valueClassName="text-sm text-blue-600 hover:text-blue-700 cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors break-all"
-          />
-        )}
 
-        {/* Google Maps URL field */}
-        {locationDetail.contact?.url && (
-          <DetailField
-            label="Google URL"
-            value={truncateUrl(locationDetail.contact.url)}
-            onClick={(e) => onCopyField(locationDetail.contact.url, e)}
-            title="Click to copy Google Maps URL"
-            valueClassName="text-sm text-blue-600 hover:text-blue-700 cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors break-all"
-          />
-        )}
-
-        {/* TripAdvisor */}
-        {locationDetail.tripadvisorLocationId ? (
-          <DetailField
-            label="TripAdvisor ID"
-            value={locationDetail.tripadvisorLocationId}
-            onClick={(e) => onCopyField(locationDetail.tripadvisorLocationId!, e)}
-            title="Click to copy TripAdvisor location ID"
-            valueClassName="text-sm text-gray-900 font-mono cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors"
-          />
-        ) : (
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-fit">
-              TripAdvisor URL:
-            </span>
-            <div className="flex items-center gap-2 w-full">
-              <Input
-                value={tripadvisorUrlInput}
-                onChange={(e) => setTripadvisorUrlInput(e.target.value)}
-                placeholder="https://www.tripadvisor.com/..."
-                className="h-8 text-sm"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-2 text-xs"
-                onClick={handleSaveTripadvisorUrl}
-                disabled={updateLocationMutation.isPending}
-              >
-                {updateLocationMutation.isPending ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Google Place ID field */}
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-fit">
-            Place ID:
-          </span>
-          <div className="flex items-center gap-2">
-            {locationDetail.placeId ? (
-              <span
-                className="text-sm text-gray-900 font-mono cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors"
-                onClick={(e) => onCopyField(locationDetail.placeId!, e)}
-                title="Click to copy Google Place ID"
-              >
-                {locationDetail.placeId}
-              </span>
-            ) : (
-              <span className="text-sm text-gray-400 italic">Not available</span>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => refetchPlaceIdMutation.mutate()}
-              disabled={refetchPlaceIdMutation.isPending}
-              title={locationDetail.placeId ? "Refetch Place ID from Google" : "Fetch Place ID from Google"}
-            >
-              <RefreshCw className={`h-3 w-3 mr-1 ${refetchPlaceIdMutation.isPending ? "animate-spin" : ""}`} />
-              {refetchPlaceIdMutation.isPending ? "Fetching..." : "Refetch"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Coordinates field - special handling for lat/lng */}
-        {locationDetail.coordinates?.lat && locationDetail.coordinates?.lng && (
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-fit">
-              Coordinates:
-            </span>
-            <div className="flex gap-1 items-baseline">
-              <span
-                className="text-sm text-gray-900 font-mono cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors"
-                onClick={(e) => onCopyField(locationDetail.coordinates?.lat?.toString() || '', e)}
-                title="Click to copy latitude"
-              >
-                {locationDetail.coordinates.lat}
-              </span>
-              <span className="text-sm text-gray-500">, </span>
-              <span
-                className="text-sm text-gray-900 font-mono cursor-pointer underline underline-offset-2 decoration-gray-400 hover:decoration-gray-600 transition-colors"
-                onClick={(e) => onCopyField(locationDetail.coordinates?.lng?.toString() || '', e)}
-                title="Click to copy longitude"
-              >
-                {locationDetail.coordinates.lng}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Reviews Pipeline Section */}
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Reviews Pipeline:
-          </span>
-          <div className="flex items-center gap-2">
-            {fetchReviewsPipelineMutation.isPending ? (
-              <span className="text-sm text-blue-600 inline-flex items-center">
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                {pipelineStatus?.message || "Running pipeline..."}
-              </span>
-            ) : (
-              <span className="text-sm text-gray-400 italic">Ready</span>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => setIsReviewsPipelineModalOpen(true)}
-              disabled={fetchReviewsPipelineMutation.isPending || !canRunPipeline}
-              title={canRunPipeline ? "Fetch reviews and build the merged dataset" : "Add a Google Place ID or TripAdvisor URL first"}
-            >
-              <Star className="h-3 w-3 mr-1" />
-              Fetch Reviews
-            </Button>
-            {mergedReviewsStatusQuery.data?.hasMergedReviews && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setIsReviewsReportDialogOpen(true)}
-                  disabled={fetchReviewsPipelineMutation.isPending}
-                  title="View pipeline report (stats, translations, errors)"
-                >
-                  View Report
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => downloadMergedReviews.download(locationDetail.id)}
-                  disabled={fetchReviewsPipelineMutation.isPending}
-                  title="Download the latest merged reviews file"
-                >
-                  Download
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Instagram and Upload Forms: Side by side */}
-        <div className="flex gap-4">
-          {/* Instagram Section: Form only */}
-          <div className="flex-1">
-            <AddInstagramEmbedForm locationId={locationDetail.id} />
-          </div>
-
-          {/* Upload Section: Form only */}
-          <div className="flex-1">
-            <AddUploadFilesForm locationId={locationDetail.id} />
-          </div>
-        </div>
-
-        {/* Existing Uploads Gallery */}
+        {/* Existing Uploads Gallery - above add forms */}
         {locationDetail.uploads && locationDetail.uploads.length > 0 && (
           <div className="space-y-2">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -492,7 +390,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
           </div>
         )}
 
-        {/* Existing Instagram Embeds List */}
+        {/* Existing Instagram Embeds List - above add forms */}
         {locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0 && (
           <div className="space-y-2">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -536,6 +434,19 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
             </ul>
           </div>
         )}
+
+        {/* Instagram and Upload Forms: Side by side - below existing content */}
+        <div className="flex gap-4">
+          {/* Instagram Section: Form only */}
+          <div className="flex-1">
+            <AddInstagramEmbedForm locationId={locationDetail.id} />
+          </div>
+
+          {/* Upload Section: Form only */}
+          <div className="flex-1">
+            <AddUploadFilesForm locationId={locationDetail.id} />
+          </div>
+        </div>
       </div>
 
       {/* Image Lightbox */}
@@ -557,27 +468,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         />
       )}
 
-      {/* Fetch Reviews Pipeline Modal */}
-      <FetchReviewsPipelineModal
-        isOpen={isReviewsPipelineModalOpen}
-        onClose={() => setIsReviewsPipelineModalOpen(false)}
-        onFetch={handleFetchReviewsPipeline}
-        isPending={fetchReviewsPipelineMutation.isPending}
-        locationName={locationDetail.source?.name}
-        googleAvailable={canFetchGoogle}
-        tripadvisorAvailable={canFetchTripadvisor}
-        statusMessage={pipelineStatus?.message}
-      />
-
-      {/* Reviews Report Dialog */}
-      <ReviewsReportDialog
-        isOpen={isReviewsReportDialogOpen}
-        onClose={() => setIsReviewsReportDialogOpen(false)}
-        report={mergedReviewsReportQuery.data}
-        isLoading={mergedReviewsReportQuery.isLoading}
-        error={mergedReviewsReportQuery.error}
-        locationName={locationDetail.source?.name}
-      />
     </div>
   );
 }

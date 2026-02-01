@@ -1,0 +1,2110 @@
+{
+  "locationId": 17,
+  "generatedAt": "2026-01-30T03:34:45.530Z",
+  "summary": {
+    "totalRejected": 123,
+    "replacedWithEnglish": 123,
+    "rejectedNonEnglish": 0
+  },
+  "explanation": {
+    "why": "TripAdvisor returns the same reviews in different language files. Each review has a unique review_id that appears in multiple language files (e.g., both English and Spanish files).",
+    "whatWeDo": "We deduplicate by review_id, preferring English versions when available. This ensures each review appears only once in the final merged output.",
+    "actions": {
+      "replaced_with_english": "A non-English version was replaced with the English version of the same review",
+      "rejected_non_english": "A duplicate non-English version was rejected (we already had this review)"
+    }
+  },
+  "rejectedReviews": [
+    {
+      "review_id": "tripadvisor_1047337587",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Top",
+        "review_text_preview": "very good service and food too rich, mild and other intense flavors in the same dish, plus good port...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Top",
+        "review_text_preview": "muy buena atención y la comida demasiado rica, sabores suaves y otros intensos en el mismo plato, ad...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1047012364",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A splendid dining experience",
+        "review_text_preview": "The attention was super attentive and impeccable, the dishes were delicious, mixing splendid texture...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia gastronómica espléndida",
+        "review_text_preview": "La atención fue súper atenta e impecable, los platos eran deliciosos, mezclando texturas y sabores e...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045661259",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Wonderful.",
+        "review_text_preview": "Very good service, excellent dishes, a very pleasant experience, the very cozy place with different ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Maravillosa",
+        "review_text_preview": "Muy buena atención , excelente platos , una experiencias muy agradable , el lugar muy acogedor con d...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045661257",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Exquisite",
+        "review_text_preview": "Very exquisite food, the Parmesan shells a very rich dish, very welcoming atmosphere and first-rate ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Exquisito",
+        "review_text_preview": "Comida muy exquisita, la conchas a la parmesana un plato muy rico , ambiente muy acogedor y una aten...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045598706",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very nice experience",
+        "review_text_preview": "Everything was very good, the food was very delicious, the first-rate care, unique experience, we en...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bonita experiencia",
+        "review_text_preview": "Todo fue muy bueno, la comida estuvo muy rica, la atención de primera, experiencia única, disfrutamo...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1045547743",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great Atmosphere!!!",
+        "review_text_preview": "Excellent atmosphere and delicious dishes.  I came with my partner from England and he was delighted...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Great Atmosphere!!!",
+        "review_text_preview": "Excelente atmósfera y  deliciosos platos.  Vine con mi pareja de inglaterra y quedó encantado.  Toda...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044944190",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "You have to prove it!",
+        "review_text_preview": "It is one of the best culinary experiences in Lima. I came to postpone this visit a few months ago a...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tienen que probarlo !",
+        "review_text_preview": "Es una de las mejores experiencias culinarias de Lima. Vine postergando esta visita hace unos meses ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044909967",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Sublime",
+        "review_text_preview": "Wonderful. All perfect. An ideal New Year's Eve dinner. Chef Ralf explained that he had been in Astu...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sublime",
+        "review_text_preview": "Maravilloso. Todo perfecto. Una cena d fin de año ideal. El chef Ralf nos explicó que había estado e...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044803163",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Gastronomy lunches",
+        "review_text_preview": "Incredible atmosphere, exceptional attention, excellent representation of Peruvian gastronomy a grea...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzos gastronómicos",
+        "review_text_preview": "Increíble ambiente, excepcional atencion, excelente representación de la gastronomía peruana un geni...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1044803006",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Time to eat",
+        "review_text_preview": "The best lunch in Lima, a real wonder in every way. The food is delicious, well presented and full o...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Hora de comer",
+        "review_text_preview": "El mejor almuerzo de Lima, una verdadera maravilla en todo sentido. La comida es deliciosa, bien pre...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043888593",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Personal opinion",
+        "review_text_preview": "Very good place to live an experience with your partner or close people, the A1 attention, and excel...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Opinión personal",
+        "review_text_preview": "Muy buen lugar para poder vivir una experiencia con tu pareja o personas cercanas, la atención A1, y...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043877961",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "We were surprised by the flavors of the dishes and the presentation of the drinks.",
+        "review_text_preview": "Continue with that level of attention and preparation in dishes and drinks 🙌🏻 \nThank you very much...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Nos sorprendió los sabores de los platos y la presentación de las bebidas .",
+        "review_text_preview": "Continúen con ese nivel de atención y preparación en los platos y bebidas 🙌🏻 \nMuchas gracias por l...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043153633",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very Enjoyable",
+        "review_text_preview": "Great experience; the service and food were excellent. High level but understated, great. Mira and P...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy agradable",
+        "review_text_preview": "Gran experiencia; el servicio y la comida eran excelentes. Alto nivel pero discreto, genial. Mira y ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1043073061",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Culinary experience",
+        "review_text_preview": "A very interesting culinary experience, good drinks and tickets.  Mayra was a good culinary advisor ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia culinaria",
+        "review_text_preview": "Una experiencia culinaria muy interesante, buenas bebidas y entradas.  Mayra fue una buena asesora c...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042764578",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Anniversary in Xoma",
+        "review_text_preview": "Excellent service, a different experience, some dishes really surprised us! Thank you x all the deta...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Aniversario en Xoma",
+        "review_text_preview": "Excelente atención, una experiencia diferente, algunos platos realmente nos sorprendieron! Gracias x...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042764254",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My parents' anniversary culinary experience",
+        "review_text_preview": "It was very good and the food very rich and from Mayra very good waitress, something that if it coul...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia culinario del aniversario de mis papás",
+        "review_text_preview": "Fue muy bueno y la comida muy rica y por parte de Mayra muy buena mesera, algo q si pudo mejorar fue...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042764195",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Highly recommended",
+        "review_text_preview": "intense and peculiar flavors, really a gastronomic experience. The service from the first moment ver...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy recomendable",
+        "review_text_preview": "sabores intensos y peculiares, realmente una experiencia gastronómica. La atención desde el primer m...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042642559",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Fantastic atmosphere and even better food",
+        "review_text_preview": "My partner and I came here for our two year anniversary. The staff especially our waiter Lucas made ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Ambiente fantástico y comida aún mejor",
+        "review_text_preview": "Mi pareja y yo vinimos aquí por nuestro aniversario de dos años. El personal, especialmente nuestro ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042533485",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good",
+        "review_text_preview": "The place very good, has a good architecture, the lighting makes everything more intimate, the music...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy bueno",
+        "review_text_preview": "El local muy bueno, tiene una buena arquitectura, la iluminación hace que todo sea más íntimo, la mú...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042420140",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Its dishes are very rich, excellent attention from Miss Jackelin and dishes of Author",
+        "review_text_preview": "Exquisite, a nice experience. The place is beautiful and Instagrammable. I highly recommend it espec...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sus platos son muy ricos, excelente atención de la señorita Jackelin y platos de Autor",
+        "review_text_preview": "Exquisito, una bonita experiencia. El lugar es precioso e instagramiable. Lo recomiendo muchísimo en...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1042299669",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good lunch",
+        "review_text_preview": "I visited the restaurant for lunch, from the entrance the super warm staff. My favorite dishes were ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buenísimo almueerzoo",
+        "review_text_preview": "Visité el restaurante para un almuerzo, desde el ingreso el personal súper cálido. Mis platos favori...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041732699",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lucas the best 😘",
+        "review_text_preview": "Good place with good atmosphere. And Lucas explained well to us all. The alpaca entry was the best b...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Lucas el mejor 😘",
+        "review_text_preview": "Buen lugar con buen ambiente. Y Lucas nos explicó bien a todos. La entrada de alpaca fue la mejor pe...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041729997",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "An absolute experience from beginning to end.",
+        "review_text_preview": "We loved everything about our experience this evening. The staff were highly attentive and detail or...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia absoluta de principio a fin.",
+        "review_text_preview": "Nos encantó todo sobre nuestra experiencia de esta noche. El personal era muy atento y orientado al ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041687811",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent",
+        "review_text_preview": "Third visit to Xoma. Both the restaurant and its hidden bar are great. Excellent as ever.  A unique ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente",
+        "review_text_preview": "Tercera visita a Xoma. Tanto el restaurante como su bar oculto son geniales. Excelente como siempre....",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041341160",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience in xoma",
+        "review_text_preview": "It was very nice the experience, from the welcome, the history they gave to each dish and drink they...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia en xoma",
+        "review_text_preview": "Fue muy bonita la experiencia, desde la bienvenida, la historia que le daban a cada plato y bebida q...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041334172",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Absolutely delicious",
+        "review_text_preview": "deliciously prepared food, very friendly and attentive service, an atmospheric dining hall and a vis...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Absolutamente delicioso",
+        "review_text_preview": "Comida deliciosamente preparada, servicio muy amable y atento, un comedor atmosférico y una cocina v...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041244602",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "In taste heaven, I liked it a lot",
+        "review_text_preview": "Loved the atmosphere and the super good service, especially the A1 food, I know I will be back soon,...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "En el cielo del sabor, me gustó mucho mucho",
+        "review_text_preview": "Me encantó el ambiente y la atención súper buena, sobre todo la comida A1, se que volveré pronto, gr...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1041060238",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I loved the intensity and texture play, how they use inputs and variants to achieve amazing dishes.",
+        "review_text_preview": "I would have liked to buy a bottle of rosé wine the orange one with flowers I think it was, and the ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Me encanto la intensidad y el juego de texturas, como usan los insumos y variantes para lograr platos increíbles.",
+        "review_text_preview": "Me hubiese gustado comprar una botella de vino rosado la de naranja con flores creo que era, y la qu...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040806202",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "How amazing delicious",
+        "review_text_preview": "Good service from Romario and all meals is very rich. I would recommend everyone to eat here. It's a...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Qué increíble delicioso",
+        "review_text_preview": "Bueno servicio de Romario y todas las comidas es muy rico. Recomendaría a todo el mundo que comiera ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1040670230",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Culinary experience",
+        "review_text_preview": "“I loved it! The food was exquisite and the service was the best. All very friendly and attentive. T...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia culinaria",
+        "review_text_preview": "“¡Me encantó! La comida estaba exquisita y el servicio fue de lo mejor. Todos muy amables y atentos....",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039999292",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good dinner.",
+        "review_text_preview": "Lack of flavor in the dishes (we tried paiche, thousand potatoes and duck ceviche, you could improve...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una buena cena",
+        "review_text_preview": "Faltó sabor en los platos (probamos paiche, mil papas y ceviche de pato, se podría mejorar en eso, f...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039427245",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "New culinary experience",
+        "review_text_preview": "The treatment of the staff is A1. The food was delicious and interesting. Many details can be seen w...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Nueva experiencia culinaria",
+        "review_text_preview": "El trato del personal es A1. La comida estuvo rica e interesante. Se ven muchos detalles a la hora d...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039286013",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "the overall experience was great, it was complete, thank you.",
+        "review_text_preview": "It was an amazing experience, we had a great time, the staff very attentive to the details, the a,sp...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "la experiencia en general  fue estupenda, estuvo completa, gracias.",
+        "review_text_preview": "fue una experiencia increíble, la pasmos muy agusto, el personal muy atento a los detalles, el a,mbi...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039279260",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Magnificent birthday",
+        "review_text_preview": "Delicious food, fruit drinks had a very strong pulpy taste (I loved it)! They helped me save a speci...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Magnifico cumpleaños",
+        "review_text_preview": "La comida deliciosa, las bebidas de fruta tenian un sabor muy fuerte a pulpa (me encanto)! Me ayudar...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039276583",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "1 time",
+        "review_text_preview": "I liked the duck and also the shell set was a good experience you could taste the Peruvian flavors i...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "1 vez",
+        "review_text_preview": "Yo mira le gustó los he pato y también el plató de concha fue una buena experiencia podías probar lo...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039160649",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "An unforgettable experience",
+        "review_text_preview": "Today my son surprised me by bringing me to XOMA. Incredible, unusual experience, every plating and ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia inolvidable",
+        "review_text_preview": "Hoy mi hijo me sorprendió trayéndome a XOMA. Experiencia increíble, inusual, cada emplatado y cada s...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039035422",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Worth it",
+        "review_text_preview": "Very good service and nice atmosphere. \nMusic, decoration and presentation of dishes is excellent. I...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Vale la pena",
+        "review_text_preview": "Muy buen servicio y bonito ambiente. \nMúsica, decoración y la presentación de los platos es excelent...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039034346",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "MAGNIFICENT",
+        "review_text_preview": "It is very good, an unforgettable experience, very good drinks, excellent new entrances and an exqui...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "MAGNÍFICO",
+        "review_text_preview": "Es muy bueno, una experiencia inolvidable, muy buenos tragos, excelentes entradas nuevas y un sabor ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1039034340",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The Joker",
+        "review_text_preview": "Good food and drinks. Luca helped a lot in choosing the sets. The best thing was the duck and the ce...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "The Joker",
+        "review_text_preview": "Buena comida y tragos. Luca ayudó mucho en la elección de los platós. Lo mejor fue el pato y el cevi...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038748983",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Creativity and innovation",
+        "review_text_preview": "Excellent service, the dishes explained in detail, use quite a lot of Peruvian inputs even the few k...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Creatividad e innovación",
+        "review_text_preview": "La atención excelente, me explicaron a detalle los platos, usan bastante insumos del Perú incluso  l...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038652340",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Charming experience",
+        "review_text_preview": "Nice experience, from entry to dessert! Original flavors from cocktails to dessert stand out! Plus t...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia encantadora",
+        "review_text_preview": "Linda experiencia, desde el ingreso hasta el postre! Resaltan sabores originales desde los cocktails...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038621967",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The food 10/10 ✨ and the service very good, it has been a nice experience, I would return to try the rest of the dishes",
+        "review_text_preview": "Good service, every dish was explained was explained by Lucas, was attentive with orders, super reco...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "La comida 10/10 ✨ y la atención muy buena, ha sido una bonita experiencia, regresaría para probar el resto de los platos",
+        "review_text_preview": "Buen servicio, cada plato fue explicado fue explicado por Lucas, fue atento con los pedidos, súper r...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1038537984",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Bad. Not worth what they charge",
+        "review_text_preview": "We didn't like the experience at all. The staff was friendly but not trained to recommend and cater ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Malo. No vale lo que cobran",
+        "review_text_preview": "No nos gustó nada la experiencia. El personal fue amable pero nada capacitado para recomendar y aten...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037782005",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "They have to come.",
+        "review_text_preview": "Sensitive experience full of flavors, colors, smells, different based on innovation, creativity and ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Tienen que venir",
+        "review_text_preview": "Experiencia sensitiva llena de sabores, colores, olores, distintos basados en la innovación, la crea...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037781284",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unique",
+        "review_text_preview": "Excellent Very Good Food and Service \nThe spectacular experience, the waiters with lots of knowledge...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Única",
+        "review_text_preview": "Excelente muy buena comida y servicio \nLa experiencia espectacular, los camareros con mucho conocimi...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037752424",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Loved Xoma",
+        "review_text_preview": "Excellent dining experience. They make an explanation and origin of each dish. Loved the drink of UP...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Me encantó Xoma",
+        "review_text_preview": "Excelente experiencia gastronómica. Hacen una explicación y origen de cada plato. Me encantó el trag...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037379686",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unforgettable lunch",
+        "review_text_preview": "I went with my partner to a lunch, the attention 20/10, the exquisite food and the very welcoming Mo...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzo inolvidable",
+        "review_text_preview": "Fui con mi pareja a un almuerzo , la atención 20/10 , la comida exquisita y el ambiente muy acojedor...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037379337",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "super good",
+        "review_text_preview": "Very good attention and very rich dishes, rating the quality of the inputs and very nice experience,...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "super buena",
+        "review_text_preview": "Muy buena la atencion y muy rico los platos, se nota la calidad de los insumos y muy bonita la exper...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037379132",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Discovering new flavors, welcome alpaca to my palate.",
+        "review_text_preview": "Cozy and warm, I was delighted with Up, because it made my lunch a playful experience. I first taste...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Descubriendo nuevos sabores, bienvenida la alpaca a mi paladar.",
+        "review_text_preview": "Acogedor y cálido, me quedé encantada con Up, porque hizo de mi almuerzo una experiencia lúdica. Pro...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1037115236",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience Miraflores",
+        "review_text_preview": "Of the\nBest restaurants in Miraflores, unbeatable food , spectacular treatment \nAll the staff are su...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia Miraflores",
+        "review_text_preview": "De los\nMejores restaurantes de Miraflores, comida inmejorable , el trato espectacular \nTodo el equip...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036643915",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lunch in xoma",
+        "review_text_preview": "Incredible experience, everything lived in the restaurant is wonderful, I recommend visiting this pl...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzo en xoma",
+        "review_text_preview": "Experiencia increíble, todo lo vivido en el restaurante es maravilloso, recomiendo visitar este luga...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036560479",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Anniversary",
+        "review_text_preview": "We loved the experience, all too rich, the food , the drinks and the service very friendly. They mak...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Aniversario",
+        "review_text_preview": "Nos encantó la experiencia, todo demasiado rico, la comida , los tragos y la atención muy cordial. T...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036532259",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great proposal 10/10",
+        "review_text_preview": "Excellent, very grateful for such a beautiful and rich experience, 100% recommended and worth repeat...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran propuesta 10/10",
+        "review_text_preview": "Excelente, muy agradecidos por tan hermosa y rica experiencia, 100% recomendable y digna de repetir,...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036267364",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Wonderful experience!",
+        "review_text_preview": "Since I arrived it felt a beautiful energy very friendly, the food from the entrance to dessert was ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Maravillosa experiencia!",
+        "review_text_preview": "Desde que llegué se sintió una hermosa energía muy amables, la comida desde la entrada hasta el post...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036265860",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Very good experience",
+        "review_text_preview": "It was worth everything I did to be here I hope I can come back soon and enjoy the same experience.....",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Muy buena experiencia",
+        "review_text_preview": "Valió la pena todo lo que hice para estar aquí espero pueda regresar pronto y disfrutar de la misma ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036265441",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My XOMA experience",
+        "review_text_preview": "I found it a very good experience very good care and the food 10 out of 10 thanks to your very frien...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mi experiencia XOMA",
+        "review_text_preview": "Me pareció una  experiencia  buenísima muy buena atención y la comida 10 de10 gracias a su personal ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036265384",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The best flavors",
+        "review_text_preview": "It was a very nice experience, enjoying the best author food, it is something unforgettable, we enjo...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Los mejores sabores",
+        "review_text_preview": "Fue una experiencia muy bonita, disfrutando de la mejor comida de autor, es algo inolvidable, disfru...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036265342",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "An important date outside the routine",
+        "review_text_preview": "Thank you all for the excellent care, you have been very warm and kind to me and my family, highly r...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una fecha importante fuera de la rutina",
+        "review_text_preview": "Gracias a todos por la excelente atención, han sido muy cálidos y amables conmigo y mi familia, muy ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036265232",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My best experience",
+        "review_text_preview": "I loved the attention from start to finish just like the food, all very friendly.Very cordial, the e...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mi mejor experiencia",
+        "review_text_preview": "me encantó la atención de inicio a fin igual que la comida ,todos muy amables.Muy cordiales,la exper...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036242377",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "All amazing. From the central or husband level. We surprised. Lucas didn't explain everything. Really a great experience",
+        "review_text_preview": "All amazing. From the central or husband level. We surprised. Lucas didn't explain everything. Reall...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Todo increíble. Del nivel de central o marido. Sorprendidisimos. Lucas no explicó todo. Realmente una gran experiencia",
+        "review_text_preview": "Todo increíble. Del nivel de central o marido. Sorprendidisimos. Lucas no explicó todo. Realmente un...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1036132693",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Magic Experience",
+        "review_text_preview": "Excellent, the place the innovative, creative gastronomy, the quality of the products used and the a...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia Mágica",
+        "review_text_preview": "Excelente, el lugar la   gastronomía innovadora , creativa  , la calidad de los productos utilizados...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035998555",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Warm and pleasant dinner",
+        "review_text_preview": "We really enjoyed our visit to Xoma, from the moment we arrived until the farewell, everything was f...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cena cálida y grata",
+        "review_text_preview": "Realmente disfrutamos mucho nuestra visita a Xoma, desde el momento en que llegamos hasta la despedi...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035725721",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good.",
+        "review_text_preview": "Place the details of the ingredients on the menu as this avoids constantly asking what you are consu...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Good",
+        "review_text_preview": "Colocar el detalle de los ingredientes en la carta ya que asi se evita preguntar constantemente lo q...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035595365",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "New experience",
+        "review_text_preview": "The concept they convey of each meal is a total experience. On the other hand the Mood and attention...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "New experience",
+        "review_text_preview": "El concepto que transmiten de cada comida es una experiencia total. Por otro lado el ambiente y la a...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035595355",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "New experience",
+        "review_text_preview": "I loved the UP reference, the movie, and the overall attention was excellent. Presentation was prett...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia nueva",
+        "review_text_preview": "Me encantó la referencia de UP, la película, y la atención en general fue excelente. La presentación...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1035414384",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "If you find yourself in Lima and you have the opportunity, I recommend stopping by because you will not disappoint.",
+        "review_text_preview": "It’s been an amazing experience in terms of food, but Lucas’ explanations have made us feel the dish...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Si te encuentras por Lima i tienes la oportunidad, recomiendo pasar por aqui porque no va a defraudar.",
+        "review_text_preview": "Ha sido una experiencia increible en cuanto a comida, pero las explicaciones de Lucas nos han hecho ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034887412",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent!",
+        "review_text_preview": "I always come, and always the food is amazing! Ralf and his team are very professional and I am hone...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente!",
+        "review_text_preview": "Siempre vengo, y siempre la comida es increíble! Ralf y su equipo son muy profesionales y honestamen...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034871223",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Fantastic experience",
+        "review_text_preview": "Definitely recommended, we felt very comfortable and the service was very good. The taste, presentat...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia fantástica",
+        "review_text_preview": "Definitivamente recomendado, nos hemos sentido muy cómodos y la atención ha sido muy buena. El sabor...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1034432810",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Wonderful❤️",
+        "review_text_preview": "An exceptional dining experience in Xoma. The creativity in each dish is admirable: the ceviche and ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Maravillosa❤️",
+        "review_text_preview": "Una experiencia gastronómica excepcional en Xoma. La creatividad en cada plato es admirable: el cevi...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033743601",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A unique experience 💜",
+        "review_text_preview": "Mayra's attention was amazing, good advice and good vibe! \nIt is so cozy and with excellent decor. \n...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia única 💜",
+        "review_text_preview": "La atención de Mayra fue increíble, buen asesoramiento y buena onda! \nEs tan acogedor y con una exce...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033590765",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "DELICIOUS FOOD!",
+        "review_text_preview": "Great costumer service. The moment you walk in everyone devote their attention to you. Making sure y...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "DELICIOSA COMIDA!",
+        "review_text_preview": "Gran Servicio cliente. En el momento en que entras todos dedican su atención a ti. Asegurarse de que...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033568192",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience",
+        "review_text_preview": "Excellent place unique food and first class attention, very rich mocktails and lasagna we also liked...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia",
+        "review_text_preview": "Excelente lugar comida única y atención de primera, los mocktails muy ricos y la lasagna también nos...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033428801",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A dream place",
+        "review_text_preview": "Beautiful experience. Elegant. Delicious food. The music and theme of the drinks give a mystical tou...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un lugar de ensueño",
+        "review_text_preview": "Hermosa experiencia. Elegante. Comida deliciosa. La música y la temática de los tragos le dan un toq...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033028090",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unforgettable experience",
+        "review_text_preview": "Very delicious food, very friendly attention and unforgettable experience. We had a great time celeb...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia inolvidable",
+        "review_text_preview": "Muy deliciosa la comida, la atención muy amable y la experiencia inolvidable. La pasamos muy bien ce...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1033028056",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "A different place to live the different experience...",
+        "review_text_preview": "Delicious food. Cozy and updated Mood. 100% romantic experiences top notch care and exquisite food",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Un lugar diferente para vivir la experiencia diferente...",
+        "review_text_preview": "Comida deliciosa. Ambiente acogedor y actualizado. Experiencias románticas al 100%  la atención de p...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032974701",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent lunch",
+        "review_text_preview": "A pleasant experience, I really like the Quiet Mood and the vibe they inspire, the attention is warm...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente almuerzo",
+        "review_text_preview": "Una grata experiencia, me gusta mucho el ambiente tranquilo y la vibra que inspiran, la atención es ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032750626",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Xoma: Happiness within you",
+        "review_text_preview": "The experience at Xoma was flawless from start to finish. From our arrival, the attention was correc...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Xoma: La felicidad dentro de ti",
+        "review_text_preview": "La experiencia en Xoma fue impecable de principio a fin. Desde nuestra llegada, la atención fue corr...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032747124",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Super recommended",
+        "review_text_preview": "Everything was excellent, you should definitely try the suckling pig with humita foam, the place is ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Súper recomendado",
+        "review_text_preview": "Todo estuvo excelente, sin duda deben probar el cochinillo con espuma de humita, el lugar es muy lin...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1032745603",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Great lunch in Xoma",
+        "review_text_preview": "A pleasant experience, I really like the Quiet Mood they handle and the attention, their drinks are ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Gran almuerzo en Xoma",
+        "review_text_preview": "Una grata experiencia, me gusta mucha el ambiente tranquilo que manejan y la atención, sus bebidas s...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1031847752",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Extraordinary",
+        "review_text_preview": "Spectacular experience. A must on a visit to Peru. Much more than we expected. We were surprised by ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Extraordinario",
+        "review_text_preview": "Espectacular experiencia. Un imperdible en una visita a Perú. Mucho más delo que esperábamos. Nos so...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1031204308",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Best ever!",
+        "review_text_preview": "Jackeline was a rockstar and the best server I ever had! Thank you so much for an amazing service!! ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "¡El mejor!",
+        "review_text_preview": "Jackeline era una estrella de rock y el mejor servidor que he tenido! Muchas Gracias por un Servicio...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1031031413",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Top experience in every way!! An experience that everyone should visit if they are in Lima - Peru!",
+        "review_text_preview": "Nothing to correct. A unique experience that you have to live at least once in the\nLife!! Service, q...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia top en todos los sentidos!! Una experiencia que todos deben visitar si están en Lima - Peru!",
+        "review_text_preview": "Nada por corregir. Una experiencia única que tienes que vivir al menos una vez en la\nVida!! El servi...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1030751990",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Nice experience",
+        "review_text_preview": "Great Service, rich food, fun drinks. I ordered the drink of harry potter and up, they serve it to y...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Linda experiencia",
+        "review_text_preview": "El servicio genial, la comida rica, los tragos divertidos. Me pedí el trago de harry potter y de up,...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1030433257",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Food, place and service far superior to what I expected",
+        "review_text_preview": "Excellent Food and Service Very Nice Mood Extraordinary attention, adapted dishes to our needs and a...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cocina, lugar y atención muy superior a lo que me esperaba",
+        "review_text_preview": "Excelente la comida y el servicio El ambiente muy agradable La atención extraordinaria, adaptaron lo...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1029123499",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Recommended",
+        "review_text_preview": "Very nice experience. Highly recommended. The attention and presentation of the letter very good. I ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Recomendado",
+        "review_text_preview": "Muy linda experiencia. Muy recomendable. La atención y exposición de la carta muy buena. Felicito la...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1028989027",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "First time on Xoma",
+        "review_text_preview": "The alpaca was a little bit too much on the taste but the res was excellent. My drink, camu camu, wa...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Primera vez en Xoma",
+        "review_text_preview": "La alpaca era un poco demasiado en el sabor, pero la reserva era excelente. Mi bebida, camu camu, er...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1028987678",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent and beautiful restaurant",
+        "review_text_preview": "Perfect evening, with very special and delicious dishes. Lucas' attention was excellent, with the pr...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente y hermoso restaurante",
+        "review_text_preview": "Perfecta velada, con platillos muy especiales y deliciosos. La atención de Lucas fue excelente, con ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1027935346",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "An experience of 10",
+        "review_text_preview": "We took the tasting menu \"Simplicity\" and loved it from start to finish. The waiter, Lucas, has been...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una experiencia de 10",
+        "review_text_preview": "Hemos tomado el menú degustación \"Simplicity\" y nos ha encantado de principio a fin. El camarero, Lu...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1027928980",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Cena",
+        "review_text_preview": "Perfecto! Great design, great food philosophy and very attentive and professional service. Loved rhe...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Cena",
+        "review_text_preview": "Perfecto! Gran diseño, gran filosofía alimentaria y Servicio muy atento y profesional. Me encantó la...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1027902260",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lunch",
+        "review_text_preview": "All very good and innovative. I liked clams and alpaca, they were very rich entrees although it is t...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzo",
+        "review_text_preview": "Todo muy bueno e innovador. Me gustó las almejas y la alpaca, fueron entradas muy ricas si bien es c...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1027759360",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "XOMA Excellente",
+        "review_text_preview": "Phenomenal ambience and experience through and through. Recommended dishes include oysters (5x), alp...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "XOMA Excellente",
+        "review_text_preview": "Ambiente fenomenal y experiencia a través y a través. Los platos recomendados incluyen ostras (5 x),...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1027594679",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Amazing.",
+        "review_text_preview": "I really liked the food and attention, the wonderful food, the presentation and the out of focus fla...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Increíble",
+        "review_text_preview": "Me gustó mucho la comida y la atención, la comida maravillosa, la presentación y los sabores fuera d...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1025202403",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "I recommend the place to go to eat",
+        "review_text_preview": "I liked the place, it's not big I would have at most 10 tables in the place the place is dark and gi...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Recomiendo el lugar para ir a comer",
+        "review_text_preview": "Me gustó el lugar, no es grande tendría como máximo 10 mesas en el lugar el lugar es oscura y da esa...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1025001044",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Worth it.",
+        "review_text_preview": "Really awesome experience. It is a splurge but worth it.\n\nThe duck in particular may have been the v...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Vale la pena.",
+        "review_text_preview": "Realmente impresionante experiencia. Es un derroche, pero vale la pena. \n\nEl pato en particular pued...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1024996939",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Xoma, again and again.",
+        "review_text_preview": "I have come several times and this time for your blind experience. A dimly lit, intimate place with ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Xoma, una y otra vez.",
+        "review_text_preview": "He venido varias veces y en esta oportunidad por su experiencia a ciegas. Un lugar con poca luz, ínt...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1024811745",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Life experiences",
+        "review_text_preview": "Excellent Mood experience, dinner, drinks, highly recommended to live moments with family and/or fri...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencias de vida",
+        "review_text_preview": "Excelente experiencia ambiente, cena, tragos, muy recomendado para vivir momentos en familia y/o ami...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1024622904",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Anniversary experience",
+        "review_text_preview": "Good experience to celebrate our anniversary, from start to dessert, guided by excellent table servi...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia en aniversario",
+        "review_text_preview": "Buena experiencia para celebrar nuestro aniversario, desde la entrada hasta el postre, guiado por un...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1024247597",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "LUNCH IN XOMA",
+        "review_text_preview": "Xoma is one of those places you come with expectations and exceeds them, in very few places I have r...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "ALMUERZO EN XOMA",
+        "review_text_preview": "Xoma es de esos lugares que llegas con expectativas y las supera , en muy pocos lugares he recibido ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1024070351",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lunch 10/10",
+        "review_text_preview": "I was in Xoma with my wife celebrating our anniversary. We were very well received and kindly attend...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzo 10/10",
+        "review_text_preview": "Estuve en Xoma con mi esposa celebrando nuestro aniversario. Nos recibieron muy bien y nos atendiero...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1023901946",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Unique and exceptional",
+        "review_text_preview": "Excellent Service, the taste and presentation of its dishes is exceptional, unique and wonderful exp...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Única y excepcional",
+        "review_text_preview": "Excelente servicio, el sabor y presentación de sus platos es excepcional, única y maravillosa experi...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1023666539",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent place to live new experiences",
+        "review_text_preview": "Mood and attention are excellent. The presentation of the dishes very showy. The omakase was fresh a...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente lugar para vivir nuevas experiencias",
+        "review_text_preview": "El ambiente y la atención son excelentes. La presentación de los platos muy vistosa. El omakase esta...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1023506252",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Peruvian flavor that falls in love",
+        "review_text_preview": "A spectacular culinary experience. From starter to dessert, each dish was full of flavor and perfect...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sabor peruano que enamora",
+        "review_text_preview": "Una experiencia culinaria espectacular. Desde la entrada hasta el postre, cada plato estaba lleno de...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1023488835",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience",
+        "review_text_preview": "Spectacular experience, delicious food, explain what you will eat and Good Mood, the recommended alo...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia",
+        "review_text_preview": "Espectacular experiencia, deliciosa comida, te explican lo que vas a comer y buen ambiente, el aloe ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1023353473",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good drinks.",
+        "review_text_preview": "Super good drinks and very friendly, neat and polite attention. They managed to create the experienc...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buenos tragos",
+        "review_text_preview": "Los tragos súper buenos y la atención muy cordial, prolija y educada. Lograron crear la experiencia....",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1023012113",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Exceptional experience",
+        "review_text_preview": "My experience at Xoma is one of the best I have had lately, I went for lunch and from the Welcoming ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excepcional experiencia",
+        "review_text_preview": "Mi experiencia en Xoma es una de las mejores que he tenido últimamente , fui para el almuerzo y desd...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021736347",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Experience assured",
+        "review_text_preview": "The tickets I ordered, spectacular: shells and razors; but the suckling pig was the dish that made m...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Experiencia asegurada",
+        "review_text_preview": "Las entradas que pedí, espectaculares: conchas y navajas; pero el cochinillo fue el plato que me hiz...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021630164",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "My experience in Xoma",
+        "review_text_preview": "Last week I visited Xoma and enjoyed the experience. The Service was splendid, the advisors gave me ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Mi experiencia en Xoma",
+        "review_text_preview": "La semana pasada visité Xoma y disfruté la experiencia. El servicio fue espléndido, los asesores me ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021629573",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good experience!",
+        "review_text_preview": "Returning to Xoma with the new dishes was a total success! When ordering oysters I really liked the ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena experiencia!",
+        "review_text_preview": "Volver a Xoma con los nuevos platos fue un acierto total! Al pedir las ostras me gustó mucho el sabo...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021544856",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lunch in Xoma",
+        "review_text_preview": "The food was excellent, I went to lunch and the peaceful raw experience was amazing, a very good cho...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerzo en Xoma",
+        "review_text_preview": "La comida estuvo excelente, fui a almorzar y la experiencia crudos de pacífico fue increíble, una mu...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021406361",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Lunch",
+        "review_text_preview": "Great Lunch with Pacific Crude Experience, Amazing Mood and Taste of the Best to Come With Friends o...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Almuerza",
+        "review_text_preview": "Gran almuerzo con la experiencia de crudos del pacifico , increíble ambiente y sabor de lo mejor par...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021221608",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Taste, style and warmth in one place",
+        "review_text_preview": "I really wanted to meet Xoma and I really loved it \n\nFrom the moment you arrive, the Mood surrounds ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Sabor, estilo y calidez en un solo lugar",
+        "review_text_preview": "Tenía muchas ganas de conocer Xoma y la verdad es que me encantó \n\nDesde que llegas, el ambiente te ...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1021030217",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience",
+        "review_text_preview": "Jackeline was very attentive to us, recommended excellent dishes and her attention was first rate. Q...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Una excelente experiencia",
+        "review_text_preview": "Jackeline fue muy atenta con nosotros, nos recomendó platos excelentes y su atención fue de primera....",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1020519662",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "",
+        "review_text_preview": "Excellent place, the extraordinary food, a totally recommended experience. Xoma definitely 100/100. ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "",
+        "review_text_preview": "Excelente lugar, la comida extraordinaria, una experiencia totalmentete recomendada. Xoma sin duda 1...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017891898",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Good Food and Good Service",
+        "review_text_preview": "Excellent Service. From the entrance all the staff were very friendly. The food was delicious. Even ...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Buena comida y buen servicio",
+        "review_text_preview": "Excelente servicio. Desde la entrada todo el personal fueron muy amables. La comida estuvo rica. Las...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017891817",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Excellent experience",
+        "review_text_preview": "Excellent experience from the start to the end. Delicious food and very good service...All the staff...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Excelente experiencia",
+        "review_text_preview": "Excelente experiencia desde el ingreso hasta el final. La comida deliciosa y la atención muy buena.....",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017415591",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Spectacular",
+        "review_text_preview": "It is a very welcoming place and the service is excellent, in fact I would recommend the place and w...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Espectacular",
+        "review_text_preview": "Es un lugar muy acogedor y la atención es excelente, de hecho recomendaría el lugar y regresaría. Se...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017410049",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "The Rome recommendations were sound and very good",
+        "review_text_preview": "A great experience, I loved the boldness!!!  The mix of flavors and foods make it unique.  I will de...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Las recomendaciones de Romario fueron acertadas y muy buenas",
+        "review_text_preview": "Una gran experiencia, me encanto la audacia!!!  La mezcla de sabores y alimentos lo hacen unico.  Si...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017097099",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Xoma 100/100 Extraordinary evening",
+        "review_text_preview": "Everything was extraordinary, the evening was beyond wonderful, thanks to Gastronomic Advisor Romari...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Xoma 100/100 Velada extraordinaria",
+        "review_text_preview": "Todo estuvo extraordinario, la velada estuvo más que estupenda, gracias al asesor Gastronómico Romar...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1017081609",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Romantic",
+        "review_text_preview": "Relaxed and romantic atmosphere, delicious food and excellent service, Lucas is a very good host!\nHi...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Romantico",
+        "review_text_preview": "Ambiente relajado y romántico , comida deliciosa y excelente atención , Lucas muy buen anfitrión!\nRe...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1015457491",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Vladimir! Excellent service",
+        "review_text_preview": "It was a stunning experience, Vladimir's attention worthy of star michellin!!! \nDishes with interest...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Vladimir! Excelente servicio",
+        "review_text_preview": "Fue una experiencia impresionante, la atención de Vladimir digna de estrella michellin!!! \nLos plato...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1014133578",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "It is a very nice place, where you can spend a nice time together with friends and/or family and very good attention",
+        "review_text_preview": "It is a very good place to enjoy a different experience, in a welcoming atmosphere and with a relaxi...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Es un ugar muy bonito,  dónde puedes pasar un momento agradable junto con amigos y/o familiares y una atención muy buena",
+        "review_text_preview": "Es un lugar muy bueno para disfrutar una experiencia distinta , en un ambiente acogedor y con una mú...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1014133463",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Xoma made me feel at home",
+        "review_text_preview": "Loved the experience, especially Lucas' attention, would come back again and again...✨ The cozy plac...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Xoma me hizo sentir como en casa",
+        "review_text_preview": "Me encantó la experiencia, sobre todo la atención de Lucas, volvería una y otra vez…✨ El lugar acoge...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    },
+    {
+      "review_id": "tripadvisor_1014133261",
+      "action": "replaced_with_english",
+      "reason": "English version preferred over es version",
+      "kept": {
+        "language": "en",
+        "title": "Amazing.",
+        "review_text_preview": "Loche and razors very nice both although the loche really impressed me the combination of flavors wa...",
+        "source_file": "tripadvisor_reviews_17_en_1769744013177.json"
+      },
+      "rejected": {
+        "language": "es",
+        "title": "Increíbles",
+        "review_text_preview": "Loche y navajas muy agradables ambos aun que el loche realmente me impresiono la combinación de sabo...",
+        "source_file": "tripadvisor_reviews_17_es_1769744020313.json"
+      }
+    }
+  ]
+}

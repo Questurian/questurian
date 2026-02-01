@@ -235,6 +235,21 @@ async function reverseGeocodeWithRouting(
   }
 }
 
+async function fetchTimezoneIanaTimeId(
+  latitude: number,
+  longitude: number
+): Promise<string | null> {
+  try {
+    const { ServiceContainer } = await import('@server/features/locations/container/service-container');
+    const container = ServiceContainer.getInstance();
+    const timezone = await container.bigDataCloudClient.getTimezone(latitude, longitude);
+    return timezone.ianaTimeId || null;
+  } catch (error) {
+    console.error("Error fetching BigDataCloud timezone:", error);
+    return null;
+  }
+}
+
 export function extractInstagramData(html: string): { url: string | null; author: string | null } {
   const permalinkMatch = html.match(/data-instgrm-permalink="([^"]+)"/);
   let url = permalinkMatch ? permalinkMatch[1] : null;
@@ -283,6 +298,7 @@ export async function createFromMaps(
     type: type || null,
     locationKey: null,
     placeId: null,
+    ianaTimeId: null,
   };
 
   if (!apiKey) {
@@ -324,6 +340,15 @@ export async function createFromMaps(
         }
       } catch (reverseGeoError) {
         // locationKey and district stay null if reverse geocoding fails
+      }
+
+      try {
+        const ianaTimeId = await fetchTimezoneIanaTimeId(coords.lat, coords.lng);
+        if (ianaTimeId) {
+          entry.ianaTimeId = ianaTimeId;
+        }
+      } catch {
+        // timezone stays null if lookup fails
       }
     }
 

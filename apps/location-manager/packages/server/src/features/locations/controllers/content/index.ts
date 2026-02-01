@@ -5,3 +5,4 @@ export * from "./reviews.controller";
 export * from "./reviews-pipeline.controller";
 export * from "./tripadvisor-reviews.controller";
 export * from "./translate-merge-reviews.controller";
+export * from "./tripadvisor-place.controller";

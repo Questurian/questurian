@@ -1,0 +1,99 @@
+{
+  "locationId": 21,
+  "mergedAt": "2026-01-30T05:11:39.324Z",
+  "stats": {
+    "totalReviews": 5,
+    "googleReviews": 0,
+    "tripadvisorReviews": 5,
+    "translated": 0,
+    "alreadyEnglish": 5,
+    "errors": 0
+  },
+  "reviews": [
+    {
+      "id": "tripadvisor_1024263666",
+      "source": "tripadvisor",
+      "review_text": "Since we arrived the attention was impeccable the. staff is friendly always willing to recommend the best of the menu \nThe food was an amazing experience",
+      "title": "Super happy",
+      "rating": 5,
+      "review_datetime_utc": "2025-08-14",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Kiara Russelvet"
+    },
+    {
+      "id": "tripadvisor_985380388",
+      "source": "tripadvisor",
+      "review_text": "The food very good but the attention of the Local Saltao de Refugio was regrettable, the cashier a disrespectful and bad-tempered person, I greeted her twice and she never responded, she did not say a word just collect and deliver the voucher like a machine",
+      "title": "Poor care",
+      "rating": 2,
+      "review_datetime_utc": "2024-12-19",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "david a"
+    },
+    {
+      "id": "tripadvisor_969868841",
+      "source": "tripadvisor",
+      "review_text": "Chilcanos in TAMARINDO, very good, classic and pineapple. Afterwards in CAJA CHINA CREOLE, we ordered pancetta accompanied by chaufa rice or potatoes, along with sauces, highly recommended",
+      "title": "Assorted drink and meal options",
+      "rating": 4,
+      "review_datetime_utc": "2024-09-15",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/79/2e/90/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/79/2e/91/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/79/2e/92/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Alejandro JANO León"
+    },
+    {
+      "id": "tripadvisor_943214722",
+      "source": "tripadvisor",
+      "review_text": "Refugio is a forest where Peruvian gastronomy is born and enchants you with everything it offers. The area for children and its services is amazing. The shows are phenomenal, the food is worth repeating every day since you have many options. The best of all is that you always have somewhere to sit. Simply spectacular.\nRefugio is a jungle where Peruvian Gastronomic was born and bewiches you with everything it has. The children place and facilities are amazing. The music shows are spectacular, the food it's to repeat every day. Finally it's wonderfull when you have seat always.",
+      "title": "Simply Extraordinary - Amazing Experience",
+      "rating": 5,
+      "review_datetime_utc": "2024-03-21",
+      "review_photos": [
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/66/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/67/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/68/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/69/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/6a/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/6b/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/6c/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/6d/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/6e/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/6f/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/70/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/71/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/72/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/73/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/74/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/76/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/77/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/78/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/79/caption.jpg",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/ad/09/7a/caption.jpg"
+      ],
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "dario m"
+    },
+    {
+      "id": "tripadvisor_942830689",
+      "source": "tripadvisor",
+      "review_text": "Best place to have a nice time with friends, have some drinks listen to nice music and lot of options of really nice restaurants!!.....Also it has a Kids playground",
+      "title": "Nice place for Food & Drinks for all ages",
+      "rating": 5,
+      "review_datetime_utc": "2024-03-19",
+      "review_photos": null,
+      "original_language": "en",
+      "was_translated": false,
+      "author_name": "Giancarlo B"
+    }
+  ]
+}

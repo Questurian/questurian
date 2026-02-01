@@ -1,0 +1,49 @@
+{
+  "fetchedAt": "2026-01-30T07:18:42.633Z",
+  "locationId": 19,
+  "tripadvisorPlaceId": "7243521",
+  "placeResult": {
+    "name": "Social Bar And Restaurant",
+    "rating": 4.8,
+    "website": "https://www.hilton.com/en/hotels/limmfhh-hilton-lima-miraflores/dining/?y_source=1_mjy1odkzotatnzy5lwxvy2f0aw9ulndlynnpdgu%3d",
+    "menu": {
+      "link": "https://social.cluvi.pe/"
+    },
+    "phone": "+51 1 2008000",
+    "email": "socialrestaurantbar@hilton.com",
+    "operation_hours": {
+      "currently_open": false,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "06:30:00 - 23:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "06:30:00 - 23:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "06:30:00 - 23:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "06:30:00 - 23:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "06:30:00 - 23:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "06:30:00 - 23:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "06:30:00 - 23:00:00"
+        }
+      ]
+    },
+    "reviews_summary": "Social Bar And Restaurant is lauded by many travelers for its warm and inviting atmosphere, often featuring live music and beautiful decor that fosters a peaceful, home-like environment. The food earns rave reviews, particularly the fresh and flavorful ceviche and breakfast options. Service is frequently highlighted for its exceptional attentiveness and friendliness, with staff known for going above and beyond. Guests also appreciate the excellent value, noting reasonable prices and generous portions, which enhance the overall dining experience."
+  }
+}

@@ -45,8 +45,29 @@ export interface BigDataCloudResponse {
   };
 }
 
+export interface BigDataCloudTimezoneResponse {
+  ianaTimeId?: string;
+  timeZoneName?: string;
+  localityName?: string;
+  countryCode?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export class BigDataCloudClient {
   private readonly baseUrl = "https://api.bigdatacloud.net/data/reverse-geocode-client";
+  private readonly timezoneUrl = "https://api.bigdatacloud.net/data/timezone-by-location";
+  private readonly apiKey?: string;
+
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey || undefined;
+  }
+
+  private withApiKey(url: string): string {
+    if (!this.apiKey) return url;
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}key=${encodeURIComponent(this.apiKey)}`;
+  }
 
   /**
    * Reverse geocode coordinates to location data
@@ -56,7 +77,9 @@ export class BigDataCloudClient {
    */
   async reverseGeocode(latitude: number, longitude: number): Promise<BigDataCloudResponse> {
     try {
-      const url = `${this.baseUrl}?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
+      const url = this.withApiKey(
+        `${this.baseUrl}?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+      );
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -67,6 +90,29 @@ export class BigDataCloudClient {
       return data;
     } catch (error) {
       console.error("[BigDataCloudClient] Reverse geocoding failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch timezone info for coordinates
+   * @param latitude - Latitude coordinate
+   * @param longitude - Longitude coordinate
+   * @returns BigDataCloud timezone response (includes ianaTimeId when available)
+   */
+  async getTimezone(latitude: number, longitude: number): Promise<BigDataCloudTimezoneResponse> {
+    try {
+      const url = this.withApiKey(`${this.timezoneUrl}?latitude=${latitude}&longitude=${longitude}`);
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`BigDataCloud Timezone API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as BigDataCloudTimezoneResponse;
+      return data;
+    } catch (error) {
+      console.error("[BigDataCloudClient] Timezone lookup failed:", error);
       throw error;
     }
   }

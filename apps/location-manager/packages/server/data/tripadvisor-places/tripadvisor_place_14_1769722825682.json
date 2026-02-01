@@ -1,0 +1,50 @@
+{
+  "fetchedAt": "2026-01-29T21:40:25.682Z",
+  "locationId": 14,
+  "tripadvisorPlaceId": "779051",
+  "placeResult": {
+    "name": "La Mar Cevichería Peruana",
+    "rating": 4.6,
+    "website": "https://www.lamarcebicheria.com/peru/",
+    "menu": {
+      "link": "https://lamarcebicheria.com/Cartas/Peru/lamar_esp.pdf"
+    },
+    "phone": "+51 1 4213365",
+    "email": "lamar@lamarcebicheria.com.pe",
+    "neighborhood": "Miraflores",
+    "neighborhood_description": "Miraflores is a gem of Lima, a district renowned for its beautiful parks, stunning ocean views, and rich cultural scene. Stroll through the verdant Parque Kennedy, a favorite local hangout filled with charming cats and vibrant street artists. Explore the Huaca Pucllana, an ancient archaeological site, or peruse the Larcomar, a cliffside shopping center overlooking the Pacific Ocean. With a flourishing culinary landscape featuring world-class restaurants like Maido and Central, it's no surprise that Miraflores is considered a foodie paradise. Accessibility is a breeze with the Metropolitano bus system whisking visitors around the city with ease.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "11:30:00 - 17:30:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 19:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "11:30:00 - 17:30:00"
+        }
+      ]
+    }
+  }
+}

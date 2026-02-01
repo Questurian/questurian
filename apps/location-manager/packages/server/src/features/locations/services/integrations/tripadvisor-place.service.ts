@@ -1,0 +1,110 @@
+import type { Location } from "../../models/location";
+import type { TripAdvisorPlaceResult } from "@server/shared/services/external/serpapi-tripadvisor.client";
+import { SerpApiTripAdvisorClient } from "@server/shared/services/external/serpapi-tripadvisor.client";
+import { EnvConfig } from "@server/shared/config/env.config";
+import { getLocationByIdForUpdate, updateLocationById } from "../../repositories/core";
+import { saveTripAdvisorPlace } from "../../repositories/content/tripadvisor-place.repository";
+
+export class TripAdvisorPlaceService {
+  private readonly serpApiClient: SerpApiTripAdvisorClient;
+
+  constructor(config: EnvConfig) {
+    this.serpApiClient = new SerpApiTripAdvisorClient(config);
+  }
+
+  isConfigured(): boolean {
+    return this.serpApiClient.isConfigured();
+  }
+
+  /**
+   * Merge TripAdvisor place data into a location record.
+   * Only fills empty fields (does not overwrite existing data).
+   * Includes district fallback from TripAdvisor neighborhood.
+   */
+  mergePlaceDataIntoLocation(locationId: number, placeResult: TripAdvisorPlaceResult): void {
+    const current = getLocationByIdForUpdate(locationId);
+    if (!current) return;
+
+    const updates: Partial<Location> = {};
+
+    // Extract fields from TripAdvisor response
+    const email = typeof placeResult.email === "string" ? placeResult.email.trim() : null;
+    const neighborhoodDescription =
+      typeof placeResult.neighborhood_description === "string"
+        ? placeResult.neighborhood_description.trim()
+        : null;
+    const operationHours =
+      typeof placeResult.operation_hours === "object" && placeResult.operation_hours !== null
+        ? placeResult.operation_hours
+        : null;
+    const phone = typeof placeResult.phone === "string" ? placeResult.phone.trim() : null;
+    const website = typeof placeResult.website === "string" ? placeResult.website.trim() : null;
+    const neighborhood = typeof placeResult.neighborhood === "string" ? placeResult.neighborhood.trim() : null;
+
+    // Fill empty fields only
+    if (!current.email && email) {
+      updates.email = email;
+    }
+    if (!current.neighborhoodDescription && neighborhoodDescription) {
+      updates.neighborhoodDescription = neighborhoodDescription;
+    }
+    if (!current.hoursJson && operationHours) {
+      updates.hoursJson = JSON.stringify(operationHours);
+    }
+    if (!current.phoneNumber && phone) {
+      updates.phoneNumber = phone;
+    }
+    if (!current.website && website) {
+      updates.website = website;
+    }
+
+    // District fallback: use TripAdvisor neighborhood if district is empty
+    if (!current.district && neighborhood) {
+      updates.district = neighborhood;
+      console.log(`[TripAdvisor] Using neighborhood "${neighborhood}" as district fallback for location ${locationId}`);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateLocationById(locationId, updates);
+      console.log(`[TripAdvisor] Merged ${Object.keys(updates).length} fields into location ${locationId}:`, Object.keys(updates));
+    }
+  }
+
+  /**
+   * Fetch TripAdvisor place data and merge it into the location.
+   * Returns true if successful, false otherwise.
+   */
+  async fetchAndMergePlaceData(locationId: number, tripadvisorLocationId: string): Promise<boolean> {
+    if (!this.isConfigured()) {
+      console.log(`[TripAdvisor] SerpAPI not configured, skipping auto-fetch for location ${locationId}`);
+      return false;
+    }
+
+    try {
+      console.log(`[TripAdvisor] Auto-fetching place data for location ${locationId} (TA ID: ${tripadvisorLocationId})`);
+
+      // Fetch and save place data
+      const storedData = await this.serpApiClient.fetchAndSavePlaceData(locationId, tripadvisorLocationId);
+
+      // Save to database
+      const savedId = saveTripAdvisorPlace({
+        location_id: locationId,
+        tripadvisor_place_id: tripadvisorLocationId,
+        place_data: storedData.placeResult,
+      });
+
+      if (savedId === false) {
+        console.error(`[TripAdvisor] Failed to save place data to database for location ${locationId}`);
+      }
+
+      // Merge into location record
+      this.mergePlaceDataIntoLocation(locationId, storedData.placeResult);
+
+      console.log(`[TripAdvisor] Successfully fetched and merged place data for location ${locationId}`);
+      return true;
+    } catch (error) {
+      console.error(`[TripAdvisor] Error fetching place data for location ${locationId}:`, error);
+      return false;
+    }
+  }
+}

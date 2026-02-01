@@ -30,6 +30,9 @@ export function mapLocationToPayloadFormat(
     longitude: location.coordinates.lng || undefined,
     status: "published" as const,
     ...(location.type ? { type: location.type } : {}),
+    ...(location.contact.email ? { email: location.contact.email } : {}),
+    ...(location.neighborhoodDescription ? { neighborhoodDescription: location.neighborhoodDescription } : {}),
+    ...(location.operationHours ? { operationHours: location.operationHours } : {}),
   };
 }
 

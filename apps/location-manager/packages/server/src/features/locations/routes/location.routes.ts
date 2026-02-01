@@ -23,6 +23,7 @@ import {
   serveImage,
   fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
   fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
+  fetchTripAdvisorPlace, downloadTripAdvisorPlace, getTripAdvisorPlaceStatus, downloadLocationExport, downloadAiJson,
   translateAndMergeReviews, downloadMergedReviews, getMergedReviewsStatus, getMergedReviewsReport, downloadRejectsReport,
 
   // Admin
@@ -30,6 +31,7 @@ import {
   getPendingTaxonomy, approveTaxonomy, rejectTaxonomy,
   getAllCorrections, previewCorrection, createCorrection, deleteCorrection,
   getPayloadLocationRefs,
+  checkLeadsApiHealth,
 
   // Integration
   postSyncLocation, postSyncAll, getSyncStatus, getTestConnection,
@@ -75,6 +77,9 @@ app.get("/api/clear-db", clearDatabase);
 // Admin orphan cleanup routes
 app.get("/api/admin/orphaned-files", scanOrphanedFiles);
 app.post("/api/admin/orphaned-files/cleanup", cleanupOrphanedFiles);
+
+// Health check routes
+app.get("/api/health/leads-api", checkLeadsApiHealth);
 
 // Admin payload location refs route
 app.get("/api/admin/payload-location-refs", getPayloadLocationRefs);
@@ -152,6 +157,15 @@ app.get("/api/locations/:id/reviews/status", validateParams(deleteLocationIdSche
 app.post("/api/locations/:id/tripadvisor-reviews/fetch", validateParams(deleteLocationIdSchema), fetchTripAdvisorReviews);
 app.get("/api/locations/:id/tripadvisor-reviews/download", validateParams(deleteLocationIdSchema), downloadTripAdvisorReviews);
 app.get("/api/locations/:id/tripadvisor-reviews/status", validateParams(deleteLocationIdSchema), getTripAdvisorReviewsStatus);
+
+// TripAdvisor Place routes (SerpAPI)
+app.post("/api/locations/:id/tripadvisor-place/fetch", validateParams(deleteLocationIdSchema), fetchTripAdvisorPlace);
+app.get("/api/locations/:id/tripadvisor-place/download", validateParams(deleteLocationIdSchema), downloadTripAdvisorPlace);
+app.get("/api/locations/:id/tripadvisor-place/status", validateParams(deleteLocationIdSchema), getTripAdvisorPlaceStatus);
+
+// Location export (location + TripAdvisor place data, no reviews)
+app.get("/api/locations/:id/export", validateParams(deleteLocationIdSchema), downloadLocationExport);
+app.get("/api/locations/:id/ai-json/download", validateParams(deleteLocationIdSchema), downloadAiJson);
 
 // Merged Reviews routes (translate & merge)
 app.post("/api/locations/:id/reviews/translate-merge", validateParams(deleteLocationIdSchema), translateAndMergeReviews);

@@ -23,7 +23,11 @@ import { convertImageSetsToSingleObject } from "./migrations/convert-imagesets-t
 import { addPayloadLocationRef } from "./migrations/add-payload-location-ref";
 import { addLocationUpdatedAt } from "./migrations/add-location-updated-at";
 import { addLocationPlaceId } from "./migrations/add-location-place-id";
+import { addLocationIanaTimeId } from "./migrations/add-location-iana-time-id";
 import { addTripadvisorFields } from "./migrations/add-tripadvisor-fields";
+import { addTripadvisorPlacesTable } from "./migrations/add-tripadvisor-places-table";
+import { addLocationEnrichmentFields } from "./migrations/add-location-enrichment-fields";
+import { addReviewsTracking } from "./migrations/add-reviews-tracking";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -114,8 +118,12 @@ export function initDb() {
       district TEXT,
       contactAddress TEXT,
       countryCode TEXT,
+      iana_time_id TEXT,
       phoneNumber TEXT,
       website TEXT,
+      email TEXT,
+      hours_json TEXT,
+      neighborhood_description TEXT,
       slug TEXT UNIQUE,
       tripadvisor_url TEXT,
       tripadvisor_location_id TEXT,
@@ -223,8 +231,20 @@ export function initDb() {
   // Run migration to add place_id column to locations table
   addLocationPlaceId(database);
 
+  // Run migration to add iana_time_id column to locations table
+  addLocationIanaTimeId(database);
+
   // Run migration to add TripAdvisor fields to locations table
   addTripadvisorFields(database);
+
+  // Run migration to add tripadvisor_places table for SerpAPI data
+  addTripadvisorPlacesTable(database);
+
+  // Run migration to add enrichment fields to locations table
+  addLocationEnrichmentFields(database);
+
+  // Run migration to add reviews tracking fields to locations table
+  addReviewsTracking(database);
 }
 
 export function getDb(): Database {
