@@ -33,7 +33,7 @@ const PROJECTS: ProjectConfig[] = [
     name: "Questurian Leads",
     client: { url: "http://localhost:3004" },
     server: { url: "http://localhost:4004", healthPath: "/health" },
-    commands: ["npm run dev"],
+    commands: ["pnpm run dev"],
   },
 ];
 

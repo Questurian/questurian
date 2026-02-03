@@ -40,10 +40,7 @@ export const LocationPickerField = (props: LocationPickerFieldProps) => {
   const { setValue: setLocationRef } = useField<string | number | null>({
     path: locationRefPath,
   })
-  const {
-    value: _locationFinalized,
-    setValue: setLocationFinalized,
-  } = useField<boolean>({
+  const { setValue: setLocationFinalized } = useField<boolean>({
     path: path ? `${path}_finalized` : 'location_finalized',
   })
 

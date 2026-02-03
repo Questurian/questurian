@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "dev:clean": "bun install && bun run --watch src/index.ts",
+    "dev:clean": "pnpm install --filter @questurian/dashboard... && bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
-    "lint": "echo 'No linter configured'",
-    "test": "echo 'No tests configured'"
+    "lint": "pnpm exec tsc --noEmit -p tsconfig.json",
+    "test": "echo 'No tests configured yet for dashboard (explicitly skipped)'"
   },
   "dependencies": {
     "hono": "^4.6.0",
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/react": "^19.2.9"
+    "@types/react": "^19.2.9",
+    "typescript": "^5.9.3"
   }
 }

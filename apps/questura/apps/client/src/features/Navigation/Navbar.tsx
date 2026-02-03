@@ -5,8 +5,6 @@ import MobileNavbar from "./Mobile/MobileNavbar";
 import { SubNav } from "./components/SubNav";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useAuth, useLogoutMutation } from "@/lib/user/hooks";
-import { useLoginModalStore } from "@/lib/stores/loginModalStore";
 
 export default function Navbar() {
   // Prevent hydration mismatch by only showing auth state after mount

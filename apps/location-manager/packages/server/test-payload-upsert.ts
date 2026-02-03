@@ -5,7 +5,7 @@
  * 1. First call: Entry doesn't exist → CREATE
  * 2. Second call: Entry exists → UPDATE
  *
- * Run with: bun run packages/server/test-payload-upsert.ts
+ * Run with: pnpm run packages/server/test-payload-upsert.ts
  */
 
 import { PayloadApiClient } from "./src/shared/services/external/payload-api.client";

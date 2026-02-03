@@ -1,0 +1,6 @@
+packages:
+  - "apps/dashboard"
+  - "apps/ai-blog-writer"
+  - "apps/questurian-leads/apps/*"
+  - "apps/location-manager/packages/*"
+  - "apps/questura/apps/*"

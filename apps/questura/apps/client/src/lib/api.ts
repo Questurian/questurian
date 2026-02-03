@@ -2,8 +2,6 @@
  * Shared API utilities for making authenticated requests to the backend
  */
 
-import { config } from './config';
-
 /**
  * Custom error class for API errors that includes status code
  */

@@ -2,9 +2,9 @@
  * Backfill iana_time_id for locations using BigDataCloud timezone API.
  *
  * Usage:
- *   bun run packages/server/src/features/locations/scripts/backfill-timezones.ts
- *   bun run packages/server/src/features/locations/scripts/backfill-timezones.ts --dry-run
- *   bun run packages/server/src/features/locations/scripts/backfill-timezones.ts --limit=50 --sleep=300
+ *   pnpm run packages/server/src/features/locations/scripts/backfill-timezones.ts
+ *   pnpm run packages/server/src/features/locations/scripts/backfill-timezones.ts --dry-run
+ *   pnpm run packages/server/src/features/locations/scripts/backfill-timezones.ts --limit=50 --sleep=300
  */
 
 import { initDb, getDb } from "@server/shared/db/client";

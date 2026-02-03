@@ -55,7 +55,6 @@ type ItemPreviewProps = {
 
 export const ItemPreview: React.FC<ItemPreviewProps> = ({
   item,
-  collectionLabel,
   selectedGalleryIndices = [],
   selectedInstagramIndex = null,
 }) => {

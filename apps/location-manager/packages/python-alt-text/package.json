@@ -6,7 +6,7 @@
     "dev": "node scripts/show-commands.cjs && uvicorn app:app --host 0.0.0.0 --port 8642 --reload",
     "dev:clean": "lsof -ti:8642 | xargs kill -9 2>/dev/null || true; pip3 install -r requirements.txt && node scripts/show-commands.cjs && uvicorn app:app --host 0.0.0.0 --port 8642 --reload",
     "build": "echo 'No build step for Python'",
-    "lint": "echo 'No linter configured'",
+    "lint": "python3 -m py_compile app.py",
     "test": "python3 -c \"print('Python 3 available'); import sys; print(f'Version: {sys.version}')\"",
     "py:dev": "python3 app.py",
     "py:install": "python3 -m pip install --user -r requirements.txt",

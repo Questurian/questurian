@@ -1,16 +1,9 @@
 {
   "name": "@questurian/source",
   "version": "0.0.0",
-  "packageManager": "npm@10.2.4",
+  "packageManager": "pnpm@10.0.0",
   "license": "MIT",
   "private": true,
-  "workspaces": [
-    "apps/dashboard",
-    "apps/ai-blog-writer",
-    "apps/questurian-leads/apps/*",
-    "apps/location-manager/packages/*",
-    "apps/questura/apps/*"
-  ],
   "scripts": {
     "dashboard": "turbo run dev --filter=@questurian/dashboard",
     "dashboard:clean": "turbo run dev:clean --filter=@questurian/dashboard",
@@ -26,5 +19,13 @@
   "dependencies": {},
   "devDependencies": {
     "turbo": "^2.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "nx",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }

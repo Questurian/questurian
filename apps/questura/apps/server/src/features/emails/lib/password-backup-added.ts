@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE, type BaseEmailData, type EmailResult } from './email-utils'
 
-interface PasswordBackupAddedEmailData extends BaseEmailData {}
+type PasswordBackupAddedEmailData = BaseEmailData
 
 export async function sendPasswordBackupAddedEmail(
   payload: Payload,

@@ -7,16 +7,12 @@ import {
   SignInButton,
   UserIcon,
 } from "./components";
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useAuth, useLogoutMutation } from "@/lib/user/hooks";
-import { useLoginModalStore } from "@/lib/stores/loginModalStore";
+import { useAuth } from "@/lib/user/hooks";
 import LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
 
 export default function MobileNavbar() {
   const { user, loading, isAuthenticated } = useAuth();
-  const logoutMutation = useLogoutMutation();
-  const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
 
   return (
     <nav className="w-full h-[55px]  bg-[rgb(31,31,31)] flex items-center px-4 justify-between">

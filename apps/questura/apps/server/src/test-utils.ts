@@ -171,10 +171,14 @@ export const mockWebhookEvents = {
  * In real implementation, use Stripe's webhook signing library
  */
 export function verifyWebhookSignature(
-  body: string,
-  signature: string,
-  secret: string
+  _body: string,
+  _signature: string,
+  _secret: string
 ): boolean {
+  void _body;
+  void _signature;
+  void _secret;
+
   // In test environment, we'll mock this
   // In production, use: stripe.webhooks.constructEvent(body, signature, secret)
   return true;
@@ -186,4 +190,3 @@ export function verifyWebhookSignature(
 export async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-

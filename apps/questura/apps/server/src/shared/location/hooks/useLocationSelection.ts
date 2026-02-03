@@ -27,7 +27,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { LocationOption, LocationPickerValue } from '../types'
+import { LocationOption } from '../types'
 import { parseLocationValue, filterCitiesByCountry, filterNeighborhoodsByCity } from '../utils'
 
 export const useLocationSelection = (

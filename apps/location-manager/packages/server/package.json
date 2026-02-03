@@ -5,13 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/show-commands.cjs && bun run src/server/main.ts",
-    "dev:clean": "lsof -ti:4002 | xargs kill -9 2>/dev/null || true; bun install && node scripts/show-commands.cjs && bun run src/server/main.ts",
+    "dev:clean": "lsof -ti:4002 | xargs kill -9 2>/dev/null || true; pnpm install --filter @questurian/lm-server... && node scripts/show-commands.cjs && bun run src/server/main.ts",
     "build": "echo 'No build step needed for Bun'",
-    "lint": "echo 'No linter configured'",
-    "test": "echo 'No tests configured'"
+    "lint": "echo 'Lint intentionally skipped for lm-server (TypeScript baseline not yet clean)'",
+    "test": "bun test"
   },
   "dependencies": {
-    "@questurian/lm-shared": "*",
+    "@questurian/lm-shared": "workspace:*",
     "csv-parse": "^6.1.0",
     "hono": "^4.10.8",
     "prompts": "^2.4.2",

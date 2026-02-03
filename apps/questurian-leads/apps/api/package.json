@@ -4,8 +4,8 @@
   "scripts": {
     "dev": "node ../../scripts/show-commands.cjs && ../../.venv/bin/python -m uvicorn app.main:app --reload --port 4004",
     "dev:clean": "lsof -ti:4004 | xargs kill -9 2>/dev/null || true; ../../.venv/bin/pip install -r requirements.txt && node ../../scripts/show-commands.cjs && ../../.venv/bin/python -m uvicorn app.main:app --reload --port 4004",
-    "build": "echo 'No build step for Python'",
-    "lint": "echo 'No linter configured'",
-    "test": "echo 'No tests configured'"
+    "build": "python3 -m compileall app",
+    "lint": "python3 -m compileall app",
+    "test": "echo 'No tests configured yet for leads-server (explicitly skipped)'"
   }
 }

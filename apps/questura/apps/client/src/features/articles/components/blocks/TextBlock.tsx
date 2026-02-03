@@ -4,7 +4,7 @@ import { SerializeLexicalToReact } from '@payloadcms/richtext-lexical/react'
 import { defaultHTMLConverters } from '@payloadcms/richtext-lexical/html'
 
 interface TextBlockProps {
-  content?: any
+  content?: unknown
   text?: string
 }
 

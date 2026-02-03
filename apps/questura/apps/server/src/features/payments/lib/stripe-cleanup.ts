@@ -1,5 +1,4 @@
 import { stripe } from './stripe'
-import { APP_CONFIG } from '@/shared/config'
 
 export interface StripeCleanupResult {
   success: boolean
@@ -80,4 +79,3 @@ export async function cleanupStripeCustomer(stripeCustomerId: string): Promise<S
 
   return result
 }
-

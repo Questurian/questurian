@@ -1,6 +1,5 @@
-import type { Access, AccessArgs } from 'payload'
+import type { AccessArgs } from 'payload'
 import { isAdmin } from '../../access/isAdmin'
-import { isAdminOrSelf } from '../../access/isAdminOrSelf'
 
 /**
  * Collection-level access control for Users

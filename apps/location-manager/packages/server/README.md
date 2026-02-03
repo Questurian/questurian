@@ -3,13 +3,13 @@
 To install dependencies:
 
 ```bash
-bun install
+pnpm install
 ```
 
 To run:
 
 ```bash
-bun run index.ts
+pnpm run index.ts
 ```
 
-This project was created using `bun init` in bun v1.3.0. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+This package is managed with [pnpm](https://pnpm.io) in the monorepo.

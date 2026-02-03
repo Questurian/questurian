@@ -14,8 +14,6 @@
  * ```
  */
 
-import type { User } from '@/payload-types'
-
 export type UserRole = 'admin' | 'editor' | 'user'
 
 /**

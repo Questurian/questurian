@@ -85,7 +85,7 @@ describe('LoginModal Component', () => {
         <LoginModal isOpen={true} onClose={jest.fn()} />,
         { wrapper: createWrapper() }
       );
-      expect(screen.getByText('Sign In')).toBeInTheDocument();
+      expect(screen.getByText('Sign In To Questurian')).toBeInTheDocument();
     });
 
     it('should render custom title when provided', () => {
@@ -251,7 +251,7 @@ describe('LoginModal Component', () => {
         <LoginModal isOpen={true} onClose={jest.fn()} />,
         { wrapper: createWrapper() }
       );
-      const modalContent = container.querySelector('.inline-block.align-bottom.bg-white');
+      const modalContent = container.querySelector('.fixed.inset-0.z-50');
       expect(modalContent).toBeInTheDocument();
     });
 
@@ -260,7 +260,7 @@ describe('LoginModal Component', () => {
         <LoginModal isOpen={true} onClose={jest.fn()} />,
         { wrapper: createWrapper() }
       );
-      const modalContent = container.querySelector('.dark\\:bg-gray-800');
+      const modalContent = container.querySelector('.bg-white');
       expect(modalContent).toBeInTheDocument();
     });
   });

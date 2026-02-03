@@ -1,7 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { stripe } from './stripe'
-import type Stripe from 'stripe'
 import type { StripePriceWithProduct } from '../types'
 
 /**

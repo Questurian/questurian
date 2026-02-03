@@ -56,6 +56,7 @@ export function useUserQuery() {
     // Refetch on reconnect to detect if backend is back online
     refetchOnReconnect: true,
   });
+  const { isError, refetch } = query;
 
   // Smart window focus refetch: only refetch if previous request failed
   // This handles backend recovery without constant unnecessary API calls
@@ -63,8 +64,8 @@ export function useUserQuery() {
     const handleWindowFocus = () => {
       // Only refetch if the query is in an error state
       // This detects when backend comes back online after being down
-      if (query.isError) {
-        query.refetch();
+      if (isError) {
+        refetch();
       }
     };
 
@@ -72,7 +73,7 @@ export function useUserQuery() {
     return () => {
       window.removeEventListener('focus', handleWindowFocus);
     };
-  }, [query.refetch, query.isError]);
+  }, [isError, refetch]);
 
   return query;
 }
@@ -90,8 +91,6 @@ interface LoginResponse {
 }
 
 export function useLoginMutation() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (variables: LoginVariables): Promise<LoginResponse> => {
       try {
@@ -161,8 +160,6 @@ interface SignupResponse {
 }
 
 export function useSignupMutation() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (variables: SignupVariables): Promise<SignupResponse> => {
       try {

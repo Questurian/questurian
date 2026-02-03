@@ -8,7 +8,7 @@
  * To:
  *   https://www.google.com/maps/search/?api=1&query=Name%2C%20Address
  *
- * Usage: bun run packages/server/src/shared/db/migrations/fix-google-maps-urls.ts
+ * Usage: pnpm run packages/server/src/shared/db/migrations/fix-google-maps-urls.ts
  */
 
 import { getDb } from '../client';

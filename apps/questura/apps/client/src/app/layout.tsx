@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Roboto } from "next/font/google";
 import "./globals.css";
-import Navbar from "../components/layout/Navbar";
 import { Navbar as NewNavbar } from "../features/Navigation";
 import LoginModalRenderer from "../components/layout/LoginModalRenderer";
 import PasswordResetModalRenderer from "../components/layout/PasswordResetModalRenderer";

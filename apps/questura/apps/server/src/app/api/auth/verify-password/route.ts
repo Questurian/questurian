@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import bcrypt from 'bcryptjs'
 import { createAuthErrorResponse } from '@/auth/lib/auth-errors'
 import { authenticateRequest, getCorsHeaders, handleCorsOptions } from '@/auth/lib/auth-middleware'
 

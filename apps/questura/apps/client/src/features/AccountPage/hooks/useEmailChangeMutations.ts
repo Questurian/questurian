@@ -5,7 +5,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { post, isServiceUnavailableError } from '@/lib/api';
-import { queryKeys } from '@/lib/react-query';
 
 /**
  * Verify password mutation (step 1)

@@ -10,7 +10,7 @@
     "devsafe": "rm -rf .next && node scripts/show-commands.cjs && cross-env NODE_OPTIONS=--no-deprecation next dev -p 4000",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
-    "lint": "cross-env NODE_OPTIONS=--no-deprecation next lint",
+    "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "backfill:rankings": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/backfill-rankings-created-by.ts",
     "clear:test": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/clear-test-collections.ts",
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.64.0",
-    "@payloadcms/email-resend": "^3.64.0",
+    "@payloadcms/email-resend": "3.64.0",
     "@payloadcms/next": "3.64.0",
     "@payloadcms/payload-cloud": "3.64.0",
     "@payloadcms/plugin-cloud-storage": "3.64.0",
@@ -47,8 +47,8 @@
     "@types/react": "19.1.8",
     "@types/react-dom": "19.1.6",
     "@vitejs/plugin-react": "4.5.2",
-    "eslint": "^9.16.0",
-    "eslint-config-next": "15.4.4",
+    "eslint": "9.16.0",
+    "eslint-config-next": "15.5.9",
     "jsdom": "26.1.0",
     "prettier": "^3.4.2",
     "stripe": "^18.4.0",
@@ -59,12 +59,5 @@
   "engines": {
     "node": "^18.20.2 || >=20.9.0",
     "pnpm": "^9 || ^10"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp",
-      "esbuild",
-      "unrs-resolver"
-    ]
   }
 }

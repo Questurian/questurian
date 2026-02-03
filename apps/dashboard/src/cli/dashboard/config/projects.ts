@@ -20,23 +20,23 @@ export const PROJECTS: ProjectConfig[] = [
     },
     commands: {
       dev: {
-        cmd: "cd apps/location-manager && npm run dev",
+        cmd: "cd apps/location-manager && pnpm run dev",
         description: "Start all LM services via Turbo (client, server, python)",
       },
       devClean: {
-        cmd: "cd apps/location-manager && npm run dev:clean",
+        cmd: "cd apps/location-manager && pnpm run dev:clean",
         description: "Kill ports, install deps, then start all services",
       },
       build: {
-        cmd: "cd apps/location-manager && npm run build",
+        cmd: "cd apps/location-manager && pnpm run build",
         description: "Build all packages for production",
       },
       lint: {
-        cmd: "cd apps/location-manager && npm run lint",
+        cmd: "cd apps/location-manager && pnpm run lint",
         description: "Run ESLint on all packages",
       },
       test: {
-        cmd: "cd apps/location-manager && npm run test",
+        cmd: "cd apps/location-manager && pnpm run test",
         description: "Run tests across all packages",
       },
     },
@@ -55,19 +55,19 @@ export const PROJECTS: ProjectConfig[] = [
     },
     commands: {
       dev: {
-        cmd: "cd apps/location-manager/packages/python-alt-text && npm run dev",
+        cmd: "cd apps/location-manager/packages/python-alt-text && pnpm run dev",
         description: "Start uvicorn server with hot reload on port 8642",
       },
       devClean: {
-        cmd: "cd apps/location-manager/packages/python-alt-text && npm run dev:clean",
+        cmd: "cd apps/location-manager/packages/python-alt-text && pnpm run dev:clean",
         description: "Kill port 8642, pip install requirements, start server",
       },
       "py:install": {
-        cmd: "cd apps/location-manager/packages/python-alt-text && npm run py:install",
+        cmd: "cd apps/location-manager/packages/python-alt-text && pnpm run py:install",
         description: "Install Python deps to user site-packages",
       },
       "py:install:system": {
-        cmd: "cd apps/location-manager/packages/python-alt-text && npm run py:install:system",
+        cmd: "cd apps/location-manager/packages/python-alt-text && pnpm run py:install:system",
         description: "Install Python deps system-wide (requires sudo)",
       },
     },
@@ -91,27 +91,27 @@ export const PROJECTS: ProjectConfig[] = [
     },
     commands: {
       dev: {
-        cmd: "cd apps/ai-blog-writer && npm run dev",
+        cmd: "cd apps/ai-blog-writer && pnpm run dev",
         description: "Start frontend (3003) and backend (4003) via Nx",
       },
       devClean: {
-        cmd: "cd apps/ai-blog-writer && npm run dev:clean",
-        description: "Kill ports 3003/4003, npm + pip install, start via Nx",
+        cmd: "cd apps/ai-blog-writer && pnpm run dev:clean",
+        description: "Kill ports 3003/4003, pnpm + pip install, start via Nx",
       },
       build: {
-        cmd: "cd apps/ai-blog-writer && npm run build",
+        cmd: "cd apps/ai-blog-writer && pnpm run build",
         description: "Build frontend and compile Python bytecode",
       },
       lint: {
-        cmd: "cd apps/ai-blog-writer && npm run lint",
+        cmd: "cd apps/ai-blog-writer && pnpm run lint",
         description: "Run ESLint (frontend) and flake8 (backend)",
       },
       test: {
-        cmd: "cd apps/ai-blog-writer && npm run test",
+        cmd: "cd apps/ai-blog-writer && pnpm run test",
         description: "Run pytest on backend tests",
       },
       "dev:docker": {
-        cmd: "cd apps/ai-blog-writer && npm run dev:docker",
+        cmd: "cd apps/ai-blog-writer && pnpm run dev:docker",
         description: "Build and run with Docker Compose (includes Weaviate)",
       },
     },
@@ -135,27 +135,27 @@ export const PROJECTS: ProjectConfig[] = [
     },
     commands: {
       dev: {
-        cmd: "cd apps/questurian-leads/apps/api && npm run dev",
+        cmd: "cd apps/questurian-leads/apps/api && pnpm run dev",
         description: "Start API server with uvicorn on port 4004",
       },
       devClean: {
-        cmd: "cd apps/questurian-leads/apps/api && npm run dev:clean",
+        cmd: "cd apps/questurian-leads/apps/api && pnpm run dev:clean",
         description: "Kill port 4004, pip install in venv, start server",
       },
       "client:dev": {
-        cmd: "cd apps/questurian-leads/apps/client && npm run dev",
+        cmd: "cd apps/questurian-leads/apps/client && pnpm run dev",
         description: "Start Vite dev server on port 5173",
       },
       "client:devClean": {
-        cmd: "cd apps/questurian-leads/apps/client && npm run dev:clean",
-        description: "Kill port 5173, bun install, start Vite",
+        cmd: "cd apps/questurian-leads/apps/client && pnpm run dev:clean",
+        description: "Kill port 5173, install deps, start Vite",
       },
       "docker:start": {
-        cmd: "cd apps/questurian-leads && bun run docker:start",
+        cmd: "cd apps/questurian-leads && docker compose up -d libretranslate",
         description: "Start LibreTranslate container on port 5001",
       },
       "docker:stop": {
-        cmd: "cd apps/questurian-leads && bun run docker:stop",
+        cmd: "cd apps/questurian-leads && docker compose stop libretranslate",
         description: "Stop LibreTranslate container",
       },
     },
@@ -173,15 +173,15 @@ export const PROJECTS: ProjectConfig[] = [
     },
     commands: {
       dev: {
-        cmd: "cd apps/dashboard && npm run dev",
+        cmd: "cd apps/dashboard && pnpm run dev",
         description: "Start dashboard with hot reload",
       },
       devClean: {
-        cmd: "cd apps/dashboard && npm run dev:clean",
-        description: "Bun install and start dashboard",
+        cmd: "cd apps/dashboard && pnpm run dev:clean",
+        description: "Install deps and start dashboard",
       },
       build: {
-        cmd: "cd apps/dashboard && npm run build",
+        cmd: "cd apps/dashboard && pnpm run build",
         description: "Bundle dashboard for production",
       },
     },
@@ -205,24 +205,24 @@ export const PROJECTS: ProjectConfig[] = [
     },
     commands: {
       dev: {
-        cmd: "cd apps/questura && pnpm run dev",
+        cmd: "pnpm run questura",
         description: "Start client (3000) and server (4000) via Turbo",
       },
       devClean: {
-        cmd: "cd apps/questura && pnpm install && pnpm run dev",
-        description: "Install deps and start all services",
+        cmd: "pnpm install --filter @questura/client... --filter @questura/server... && pnpm run questura",
+        description: "Install deps and start client + server",
       },
       build: {
-        cmd: "cd apps/questura && pnpm run build",
-        description: "Build client and server for production",
+        cmd: "pnpm turbo run build --filter=@questura/client --filter=@questura/server",
+        description: "Build Questura client and server for production",
       },
       lint: {
-        cmd: "cd apps/questura && pnpm run lint",
-        description: "Run ESLint on all packages",
+        cmd: "pnpm turbo run lint --filter=@questura/client --filter=@questura/server",
+        description: "Run lint for Questura packages",
       },
       test: {
-        cmd: "cd apps/questura && pnpm run test",
-        description: "Run tests across all packages",
+        cmd: "pnpm turbo run test --filter=@questura/client --filter=@questura/server",
+        description: "Run tests for Questura packages",
       },
     },
   },

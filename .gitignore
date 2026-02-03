@@ -8,6 +8,12 @@ out-tsc
 # dependencies
 node_modules
 
+# lockfile policy (pnpm only)
+package-lock.json
+**/package-lock.json
+**/bun.lock
+**/bun.lockb
+
 # IDEs and editors
 /.idea
 .project

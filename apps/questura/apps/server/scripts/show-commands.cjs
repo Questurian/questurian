@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Display available npm scripts and system info on server startup
+ * Display available project scripts and system info on server startup
  */
 
 const { execSync } = require('child_process')

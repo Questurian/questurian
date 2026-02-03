@@ -1,9 +1,7 @@
 import { CollectionConfig } from 'payload'
-import { isAdminFieldLevel } from './access/fieldLevel'
 import { collectionAccess } from './access/collectionLevel'
 import { userCollectionHooks } from './hooks'
 import { basicFields, authenticationFields, membershipFields, profileFields } from './fields'
-import { membershipStatusSummaryHook } from './hooks/beforeChange/membershipStatusSummary'
 
 /**
  * Users Collection - Main entry point assembling all modular components

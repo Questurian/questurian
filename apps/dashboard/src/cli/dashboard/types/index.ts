@@ -2,7 +2,7 @@ export interface ServiceConfig {
   url: string;
   healthPath?: string;
   port: number;
-  type: "python" | "bun" | "node" | "vite";
+  type: "python" | "bun" | "node" | "vite" | "next" | "payload";
   description: string;
   /** If true, show "starting" instead of "offline" for initial grace period (default 60s) */
   slowStartup?: boolean;

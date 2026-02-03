@@ -46,4 +46,4 @@ services:
       - /repo/apps/client/node_modules
     depends_on:
       - api
-    command: sh -c "bun install --frozen-lockfile && bun --cwd apps/client run dev -- --host 0.0.0.0 --port 5317"
+    command: sh -c "corepack enable && pnpm --dir apps/client install && pnpm --dir apps/client run dev -- --host 0.0.0.0 --port 5317"

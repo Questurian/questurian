@@ -6,9 +6,18 @@ interface SignInButtonProps {
 
 export default function SignInButton({ onClick }: SignInButtonProps) {
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+      return;
+    }
+
+    openLoginModal();
+  };
+
   return (
     <button
-      onClick={() => openLoginModal()}
+      onClick={handleClick}
       className={`
         /* Base styles */
         cursor-pointer

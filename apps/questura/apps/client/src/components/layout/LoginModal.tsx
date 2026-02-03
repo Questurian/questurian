@@ -12,17 +12,6 @@ interface LoginModalProps {
   errorMessage?: string;
   prefillEmail?: string;
 }
-
-
-
-const BackArrow = () => {
-  return (
-    <ChevronsLeft className="w-6 h-6" />
-  );
-};
-
-
-
 export default function LoginModal({
   isOpen,
   onClose,

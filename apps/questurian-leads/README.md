@@ -29,7 +29,7 @@ A full-stack application for managing RSS feeds, organizing them by categories a
 ### Prerequisites
 
 - Python 3.8+
-- Bun (or npm/yarn)
+- pnpm
 
 ### Installation
 
@@ -52,7 +52,7 @@ A full-stack application for managing RSS feeds, organizing them by categories a
 
 4. **Install frontend dependencies**
    ```bash
-   bun install
+   pnpm install
    ```
 
 ### Running the Application
@@ -62,14 +62,14 @@ A full-stack application for managing RSS feeds, organizing them by categories a
 Terminal 1 - Backend:
 ```bash
 cd apps/api
-bun run dev
+pnpm run dev
 ```
 Backend runs on http://localhost:8428
 
 Terminal 2 - Frontend:
 ```bash
 cd apps/client
-bun run dev
+pnpm run dev
 ```
 Frontend runs on http://localhost:5317
 
@@ -77,7 +77,7 @@ Frontend runs on http://localhost:5317
 
 From the root directory:
 ```bash
-bun run dev
+pnpm run dev
 ```
 
 This starts both the backend and frontend concurrently.

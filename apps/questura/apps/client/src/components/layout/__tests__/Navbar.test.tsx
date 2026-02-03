@@ -459,8 +459,9 @@ describe('Navbar Component', () => {
       const navbar = screen.getByRole('navigation');
       const spinner = navbar.querySelector('.animate-spin');
       expect(spinner).toBeInTheDocument();
-      // Spinner should have small size classes
-      expect(spinner).toHaveClass('h-4', 'w-4');
+      // Small spinner renders at 16px in the current LoadingSpinner implementation
+      expect(spinner).toHaveAttribute('width', '16');
+      expect(spinner).toHaveAttribute('height', '16');
     });
   });
 

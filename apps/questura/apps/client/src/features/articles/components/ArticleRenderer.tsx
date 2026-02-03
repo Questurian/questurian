@@ -4,21 +4,26 @@ import React from 'react'
 import { TextBlock, ImageBlock } from './blocks'
 
 interface Block {
+  id?: string | number
   blockType?: string
   slug?: string
+  content?: unknown
   text?: string
-  image?: any
+  textContent?: string
+  image?: unknown
+  imageFile?: unknown
   alt?: string
-  [key: string]: any
+  altText?: string
+  [key: string]: unknown
 }
 
 interface Article {
   id: string
   title: string
   description: string
-  featuredImage?: any
+  featuredImage?: unknown
   contentBlocks?: Block[]
-  author?: any
+  author?: unknown
   status: string
   publishedAt?: string
   createdAt?: string

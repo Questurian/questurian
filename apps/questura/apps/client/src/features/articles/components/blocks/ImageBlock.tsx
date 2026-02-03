@@ -1,7 +1,5 @@
 'use client'
 
-import Image from 'next/image'
-
 interface MediaAsset {
   id: string
   filename?: string
@@ -24,7 +22,6 @@ export const ImageBlock: React.FC<ImageBlockProps> = ({ image, alt }) => {
     return null
   }
 
-  const imageUrl = `${BUNNY_CDN_URL}/${filename}`
   const responsiveUrl = `${BUNNY_CDN_URL}/${filename}?width=800&aspect_ratio=16:9`
 
   return (

@@ -5,12 +5,15 @@ Turborepo monorepo for Questurian projects.
 ## Running Projects
 
 ```bash
+# Install all workspace dependencies
+pnpm install
+
 # Run all in dev/watch mode
-turbo run dev
+pnpm run dev
 
 # Build everything
-turbo run build
+pnpm run build
 
 # Run a single package (example: dashboard)
-turbo run dev --filter=@questurian/dashboard
+pnpm turbo run dev --filter=@questurian/dashboard
 ```
