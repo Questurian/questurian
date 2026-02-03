@@ -44,7 +44,34 @@ Thumbs.db
 .env.*.local
 *.pem
 
+# AI assistant local docs/config
+AGENTS.md
+agents.md
+CLAUDE.md
+claude.md
+.claude/settings.local.json
+
 .nx/cache
 .nx/workspace-data
 
 .turbo/
+
+# Meta-repo safety: block generated artifacts from nested repos
+**/node_modules/
+**/.turbo/
+**/.nx/cache/
+**/.nx/workspace-data/
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+!**/.env.template
+**/*.log
+
+# Runtime/generated data (location-manager)
+apps/location-manager/packages/server/data/location.sqlite
+apps/location-manager/packages/server/src/data/location.sqlite
+apps/location-manager/packages/server/data/reviews/
+apps/location-manager/packages/server/data/merged-reviews/
+apps/location-manager/packages/server/data/tripadvisor-places/
+apps/location-manager/packages/server/data/tripadvisor-reviews/
