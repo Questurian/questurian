@@ -1,0 +1,16 @@
+{
+  "name": "google-img-monorepo",
+  "private": true,
+  "packageManager": "npm@10.9.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "check": "turbo run check"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.8"
+  }
+}

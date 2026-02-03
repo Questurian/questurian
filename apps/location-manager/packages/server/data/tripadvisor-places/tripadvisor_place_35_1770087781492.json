@@ -1,0 +1,45 @@
+{
+  "fetchedAt": "2026-02-03T03:03:01.492Z",
+  "locationId": 35,
+  "tripadvisorPlaceId": "1065426",
+  "placeResult": {
+    "name": "El Merlin de Cabo Blanco - Lince",
+    "rating": 4.8,
+    "website": "http://www.elmerlin.com",
+    "phone": "+51 946 621 570",
+    "email": "reservas@elmerlin.com",
+    "operation_hours": {
+      "currently_open": false,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 16:30:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "Closed"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 16:30:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 16:30:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 16:30:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 16:30:00, 19:00:00 - 23:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 16:30:00, 19:00:00 - 23:00:00"
+        }
+      ]
+    }
+  }
+}

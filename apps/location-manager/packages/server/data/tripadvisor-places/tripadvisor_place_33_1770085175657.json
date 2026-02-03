@@ -1,0 +1,49 @@
+{
+  "fetchedAt": "2026-02-03T02:19:35.657Z",
+  "locationId": 33,
+  "tripadvisorPlaceId": "33032318",
+  "placeResult": {
+    "name": "Dörcher Bier Miraflores",
+    "rating": 4.9,
+    "website": "https://www.instagram.com/dorchertap_miraflores/",
+    "menu": {
+      "link": "https://dorcher-tap-room.cluvi.pe/dorcher-bier-miraflores/menu-digital/home"
+    },
+    "phone": "+51 913 366 006",
+    "email": "dorcherbiermiraflores@gmail.com",
+    "description": "A restaurant, bar, and craft brewery inspired by Pozuzo — the only Austro-German colony in the world, located in the central jungle of Peru. Dörcher Tap Room is located in the heart of Peru’s most touristic district: Miraflores. Our rooftop offers a friendly terrace with a beautiful view and a cozy atmosphere to enjoy a meal, sip on cocktails, or try a variety of craft beers. Peru is an ancient country with rich culinary diversity, and Dörcher Tap Room is no exception. We offer a sample of Pozucina cuisine alongside iconic Peruvian dishes, a wide selection of classic and signature cocktails, and 13 taps of craft beer — featuring the best Peruvian brews, served straight from the barrel and chilled in a special cold chamber so you can enjoy them the way they’re meant to be. A welcoming environment where great food, exceptional drinks, and warm service come together to deliver a truly unique and unforgettable experience.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 03:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 03:00:00"
+        }
+      ]
+    }
+  }
+}

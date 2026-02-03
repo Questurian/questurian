@@ -1,0 +1,46 @@
+{
+  "fetchedAt": "2026-02-03T00:20:29.068Z",
+  "locationId": 29,
+  "tripadvisorPlaceId": "17757260",
+  "placeResult": {
+    "name": "Insumo",
+    "rating": 4.8,
+    "menu": {
+      "link": "https://www.intursa.com.pe/outlets-ac/"
+    },
+    "phone": "+51 924 547 424",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "13:00:00 - 22:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "13:00:00 - 00:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "13:00:00 - 00:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "13:00:00 - 00:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "13:00:00 - 00:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "13:00:00 - 01:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "13:00:00 - 01:00:00"
+        }
+      ]
+    }
+  }
+}

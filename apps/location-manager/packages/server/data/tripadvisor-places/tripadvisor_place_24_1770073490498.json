@@ -1,0 +1,51 @@
+{
+  "fetchedAt": "2026-02-02T23:04:50.498Z",
+  "locationId": 24,
+  "tripadvisorPlaceId": "910146",
+  "placeResult": {
+    "name": "Cala Restaurante",
+    "rating": 4.4,
+    "website": "http://www.calarestaurante.com",
+    "menu": {
+      "link": "https://cala-restaurante-lounge.cluvi.pe/"
+    },
+    "phone": "+51 1 4772020",
+    "email": "reservas@calarestaurante.com",
+    "neighborhood": "Barranco",
+    "neighborhood_description": "Barranco stands as Lima's bohemian hub, where artists and musicians flock to find inspiration amongst the colorful colonial architecture and beautiful sea views. The area's main square, Plaza de Barranco, is surrounded by charming cafes and hip bars, with the iconic Puente de los Suspiros or \"Bridge of Sighs\" offering a romantic walkway above. The Museo de Arte Contemporaneo and the Pedro de Osma Museum present rotating exhibits of modern and colonial art respectively, while the Dedalo Arte craft store offers unique artisanal treasures. Culinary enthusiasts can indulge in Peruvian delicacies at Isolina or sample craft beers at Barranco Beer Company. Conveniently, the neighborhood is easily accessible via the Metropolitano rapid bus system.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 01:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 03:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 03:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 03:00:00"
+        }
+      ]
+    },
+    "reviews_summary": "Cala Restaurante is often described by travelers as a high-end dining experience, with many noting its pricey menu items and some questioning the value. The service typically earns praise for being attentive and friendly, though occasional lapses are mentioned. The sophisticated atmosphere, complete with beautiful decor and sea views, makes meals memorable according to reviews. While the food often impresses with fresh ingredients and creative Peruvian dishes, some travelers note inconsistencies in presentation and quality."
+  }
+}

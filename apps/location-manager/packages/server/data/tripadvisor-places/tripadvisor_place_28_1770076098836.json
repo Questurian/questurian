@@ -1,0 +1,47 @@
+{
+  "fetchedAt": "2026-02-02T23:48:18.836Z",
+  "locationId": 28,
+  "tripadvisorPlaceId": "969815",
+  "placeResult": {
+    "name": "La Rosa Náutica",
+    "rating": 4.2,
+    "website": "http://www.facebook.com/larosanauticaperu/",
+    "phone": "+51 1 4450149",
+    "email": "reservas@larosanautica.com",
+    "description": "Sea food ... dishes with fish, seafood, meat, pasta and specialties of Peruvian cuisine: a luxury for the palate.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 21:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 23:00:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 23:00:00"
+        }
+      ]
+    },
+    "reviews_summary": "La Rosa Náutica, a popular choice in Lima, is celebrated for its stunning oceanfront location, offering breathtaking views that many travelers find memorable. While the ambiance and decor are often praised for their inviting and unique atmosphere, some notice worn elements. Service generally earns high marks for attentiveness, though inconsistencies are noted. The Peruvian cuisine impresses many with its presentation and flavor, particularly desserts and seafood, but some travelers caution about high prices and variable quality."
+  }
+}

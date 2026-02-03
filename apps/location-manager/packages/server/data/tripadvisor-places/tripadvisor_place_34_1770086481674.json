@@ -1,0 +1,216 @@
+{
+  "fetchedAt": "2026-02-03T02:41:21.674Z",
+  "locationId": 34,
+  "tripadvisorPlaceId": "26587858",
+  "placeResult": {
+    "name": "Gaijin cocina Nikkei",
+    "rating": 5,
+    "website": "http://gaijin.mesa247.pe",
+    "menu": {
+      "provider": "TripadvisorMC",
+      "categories": [
+        {
+          "name": "Carta Gaijin",
+          "sections": [
+            {
+              "items": [
+                {
+                  "name": "Ceviche de Pulpo y Tomates Rostizados",
+                  "price": 45
+                },
+                {
+                  "name": "Tiradito de ají amarillo",
+                  "price": 55
+                },
+                {
+                  "name": "Tartare de Toro",
+                  "price": 110
+                },
+                {
+                  "name": "Tartare de atún",
+                  "price": 60
+                },
+                {
+                  "name": "Tostadas XO (2und)",
+                  "price": 39
+                },
+                {
+                  "name": "Taquito Murazaki (2unds)",
+                  "price": 39
+                },
+                {
+                  "name": "Gaijin-Dog (2unds)",
+                  "price": 39
+                },
+                {
+                  "name": "Baos de Pejerrey Tempura / De Cerdo Kakuni (2und)",
+                  "price": 39
+                },
+                {
+                  "name": "Dumpling de la Obachan",
+                  "price": 39
+                },
+                {
+                  "name": "Conchas a la Robata (2unds)",
+                  "price": 39
+                }
+              ]
+            },
+            {
+              "name": "Makis",
+              "description": "5 pzas",
+              "items": [
+                {
+                  "name": "Makis",
+                  "price": 27
+                }
+              ]
+            },
+            {
+              "name": "Barra Sushi",
+              "items": [
+                {
+                  "name": "Sashimi Moriawase",
+                  "description": "12 Cortes Entre Pescados y Mariscos del Día a Elección del Itamae",
+                  "price": 89
+                },
+                {
+                  "name": "Sashimi Toro",
+                  "price": 29
+                }
+              ]
+            },
+            {
+              "items": [
+                {
+                  "name": "Acevichado",
+                  "description": "langostino empanizado, Palta, Pesca del Día, Acevichado y Chalaquita."
+                },
+                {
+                  "name": "Parrillero",
+                  "description": "langostino empanizado, Palta, Queso Crema, Chimichurri Nikkei, Salsa Anguila"
+                },
+                {
+                  "name": "Spicy Kani",
+                  "description": "langostino empanizado, Palta, Cangrejo con Salsa Spicy, Salsa de Anguila"
+                },
+                {
+                  "name": "Yukke",
+                  "description": "pescado empanizado, Palta, Pesca del Día, Salsa Yukke, Chalaquita"
+                },
+                {
+                  "name": "Karai",
+                  "description": "Langostino Empanizado, Palta, Cubierto con Salmón, Emulsión anticuchera, Salsa de Anguila"
+                },
+                {
+                  "name": "Tartar",
+                  "description": "langostino empanizado, Palta, Tartar de Salmón y Salsa de Anguila"
+                }
+              ]
+            },
+            {
+              "name": "Nigiris",
+              "items": [
+                {
+                  "name": "Toro tradicional",
+                  "price": 55
+                }
+              ]
+            },
+            {
+              "items": [
+                {
+                  "name": "Gunkan de negitoro / Toro con yemas",
+                  "price": 60
+                },
+                {
+                  "name": "Gunkan / TNT de Conchas, Langostino, Cangrejo",
+                  "price": 35
+                },
+                {
+                  "name": "Hotate Bearnesa / Conchas de Paracas, Bearnesa de Chicha de Jora y Rocoto Nikkei",
+                  "price": 30
+                },
+                {
+                  "name": "Tako y Loche / Pulpo, Crema de Loche Ahumado y Chimichurri Nikkei",
+                  "price": 30
+                },
+                {
+                  "name": "El gaijin/ foie gras, sacha-tare y sal de maras",
+                  "price": 65
+                },
+                {
+                  "name": "Crispy Shiitake / Chicharrón de Shiitake, Cangrejo, Chili-Garlic y Salsa de Anguila",
+                  "price": 30
+                },
+                {
+                  "name": "Ebi Anticuchero / Langostino, Emulsión Anticuchera, Chalaquita, salsa de anguila",
+                  "price": 30
+                },
+                {
+                  "name": "Salmon y Foie / Salmón, Foie Gras, Sacha-tare y Piel Crujiente de Salmón",
+                  "price": 45
+                },
+                {
+                  "name": "Maguro / Atún, Salsa de Yemas Curadas, Rocoto Parrillero, Aceite de Trufa",
+                  "price": 40
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "popular_dishes": [
+        {
+          "name": "dumpling de la obachan"
+        },
+        {
+          "name": "tostadas xo (2und)"
+        },
+        {
+          "name": "makis",
+          "images": [
+            "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/c9/e2/50/makis.jpg"
+          ]
+        }
+      ]
+    },
+    "phone": "+51 913 560 658",
+    "email": "gerencia.gaijin@gmail.com",
+    "description": "Gaijin is a culinary space that reimagines Nikkei cuisine through a creative, contemporary, and authentic approach. Led by chefs Sergio Nakamura and Jun Oshiro, former colleagues at prestigious restaurants, Gaijin masterfully fuses Japanese and Peruvian traditions into a dining experience that celebrates innovation and flavor. Each dish tells a story — one shaped by travel, experience, and constant evolution. The result is a sensory journey that transcends borders, where every bite reveals the perfect harmony between technique, emotion, and culture.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "Closed"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:00:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:00:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:00:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:30:00 - 15:30:00, 19:00:00 - 22:30:00"
+        }
+      ]
+    },
+    "reviews_summary": "Gaijin cocina Nikkei is a popular spot for many travelers, earning rave reviews for its modern and elegant atmosphere. Guests often mention the cozy yet sophisticated environment as perfect for a memorable meal. The service is consistently praised for being attentive and knowledgeable, although a few note minor inconsistencies. The food, featuring innovative Nikkei fusion, delights with its exceptional flavors and artistic presentation. According to numerous reviewers, the restaurant offers exceptional value, standing out even among pricier alternatives."
+  }
+}

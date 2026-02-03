@@ -1,0 +1,49 @@
+{
+  "fetchedAt": "2026-02-03T01:13:51.939Z",
+  "locationId": 31,
+  "tripadvisorPlaceId": "1740648",
+  "placeResult": {
+    "name": "Amoramar",
+    "rating": 4.5,
+    "website": "http://www.amoramar.com",
+    "menu": {
+      "link": "https://drive.google.com/file/d/1YGZtymMMeXtcFWv_It3aBCQAbKkYR7FU/view"
+    },
+    "phone": "+51 955 372 225",
+    "email": "contacto@amoramar.pe",
+    "description": "Located in the heart of San Isidro, Amoramar is a restaurant full of love. Love for the freshest ingredients, quality and service. Love for the talent of a team that always makes good things better. Love for everything that our sea and land gives us daily to make the Amoramar experience possible.",
+    "operation_hours": {
+      "currently_open": true,
+      "hours": [
+        {
+          "day": "Sunday",
+          "hours": "12:00:00 - 17:00:00"
+        },
+        {
+          "day": "Monday",
+          "hours": "12:00:00 - 23:30:00"
+        },
+        {
+          "day": "Tuesday",
+          "hours": "12:00:00 - 23:30:00"
+        },
+        {
+          "day": "Wednesday",
+          "hours": "12:00:00 - 23:30:00"
+        },
+        {
+          "day": "Thursday",
+          "hours": "12:00:00 - 00:30:00"
+        },
+        {
+          "day": "Friday",
+          "hours": "12:00:00 - 00:30:00"
+        },
+        {
+          "day": "Saturday",
+          "hours": "12:00:00 - 00:30:00"
+        }
+      ]
+    }
+  }
+}
