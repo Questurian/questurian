@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
 import type { FetchTripAdvisorPlaceResponse } from "../types";
+import { LOCATIONS_QUERY_KEY } from "./useLocations";
+import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
+import { LOCATION_BY_ID_QUERY_KEY } from "./useLocationById";
 
 export const TRIPADVISOR_PLACE_STATUS_QUERY_KEY = "tripadvisor-place-status";
 
@@ -20,6 +23,11 @@ export function useFetchTripAdvisorPlace(options: UseFetchTripAdvisorPlaceOption
       queryClient.invalidateQueries({
         queryKey: [TRIPADVISOR_PLACE_STATUS_QUERY_KEY, options.locationId],
       });
+      // Refresh location data because TripAdvisor fetch merges fields into the location record.
+      queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: LOCATIONS_BASIC_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: LOCATION_BY_ID_QUERY_KEY(options.locationId) });
+      queryClient.invalidateQueries({ queryKey: ["location-detail", options.locationId] });
       options.onSuccess?.(data);
     },
     onError: (error) => {

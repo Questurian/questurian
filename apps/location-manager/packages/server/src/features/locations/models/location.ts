@@ -52,6 +52,9 @@ export interface Location {
   email?: string | null;
   hoursJson?: string | null;
   neighborhoodDescription?: string | null;
+  tripadvisorMealTypesJson?: string | null;
+  tripadvisorCuisinesJson?: string | null;
+  tripadvisorFeaturesJson?: string | null;
   slug?: string | null;
   placeId?: string | null;  // Google Place ID
   tripadvisorUrl?: string | null;
@@ -127,6 +130,9 @@ export interface CreateMapsRequest {
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;
+  tripadvisorMealTypes?: string[] | string;
+  tripadvisorCuisines?: string[] | string;
+  tripadvisorFeatures?: string[] | string;
 }
 
 
@@ -171,6 +177,9 @@ export interface LocationResponse {
   payload_location_ref: string | null;
   neighborhoodDescription: string | null;
   operationHours: Record<string, unknown> | null;
+  tripadvisorMealTypes: string[] | null;
+  tripadvisorCuisines: string[] | null;
+  tripadvisorFeatures: string[] | null;
   contact: LocationContact;
   coordinates: LocationCoordinates;
   source: LocationSource;

@@ -7,6 +7,7 @@ import type {
   LocationResponse
 } from '../models/location';
 import { formatLocationName } from '@questurian/lm-shared';
+import { parseTripadvisorStringListJson } from './tripadvisor-utils';
 
 /**
  * Parse a pipe-delimited location key into its components
@@ -191,6 +192,9 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     payload_location_ref: location.payload_location_ref || null,
     neighborhoodDescription: location.neighborhoodDescription || null,
     operationHours: parseOperationHours(location.hoursJson || null),
+    tripadvisorMealTypes: parseTripadvisorStringListJson(location.tripadvisorMealTypesJson || null),
+    tripadvisorCuisines: parseTripadvisorStringListJson(location.tripadvisorCuisinesJson || null),
+    tripadvisorFeatures: parseTripadvisorStringListJson(location.tripadvisorFeaturesJson || null),
     contact: {
       countryCode: location.countryCode || null,
       phoneNumber: location.phoneNumber || null,

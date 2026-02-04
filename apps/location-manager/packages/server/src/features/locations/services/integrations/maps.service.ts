@@ -19,7 +19,12 @@ import { transformLocationToResponse } from "../../utils/location-utils";
 import { validateCategory, validateCategoryWithDefault } from "../../utils/category-utils";
 import { TaxonomyService } from "../taxonomy/taxonomy.service";
 import { TaxonomyCorrectionService } from "../taxonomy/taxonomy-correction.service";
-import { extractTripadvisorLocationId, normalizeTripadvisorUrl } from "../../utils/tripadvisor-utils";
+import {
+  extractTripadvisorLocationId,
+  filterTripadvisorFeatures,
+  normalizeTripadvisorUrl,
+  normalizeTripadvisorStringList,
+} from "../../utils/tripadvisor-utils";
 import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
 
 import type { PayloadApiClient } from "@server/shared/services/external/payload-api.client";
@@ -77,6 +82,49 @@ export class MapsService {
     };
   }
 
+  private normalizeTripadvisorList(
+    input?: string[] | string | null,
+    options?: { filterFeatures?: boolean }
+  ): string | null | undefined {
+    if (input === undefined) return undefined;
+    if (input === null) return null;
+
+    const normalizeAndStringify = (raw: unknown): string | null => {
+      const normalized = normalizeTripadvisorStringList(raw);
+      const processed = options?.filterFeatures
+        ? filterTripadvisorFeatures(normalized)
+        : normalized;
+      return processed ? JSON.stringify(processed) : null;
+    };
+
+    if (Array.isArray(input)) {
+      return normalizeAndStringify(input);
+    }
+
+    const trimmed = input.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    // Accept either JSON arrays or comma/newline-separated input.
+    try {
+      const parsed = JSON.parse(trimmed);
+      const fromJson = normalizeAndStringify(parsed);
+      if (fromJson !== null) {
+        return fromJson;
+      }
+    } catch {
+      // Fall through to delimiter-based parsing.
+    }
+
+    const split = trimmed
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+
+    return normalizeAndStringify(split);
+  }
+
   async addMapsLocation(payload: CreateMapsRequest): Promise<LocationResponse> {
     if (!payload.name || !payload.address) {
       throw new BadRequestError("Name and address required");
@@ -96,8 +144,22 @@ export class MapsService {
       entry.neighborhoodDescription = payload.neighborhoodDescription;
     }
     const hoursJson = this.normalizeOperationHours(payload.operationHours);
+    const tripadvisorMealTypesJson = this.normalizeTripadvisorList(payload.tripadvisorMealTypes);
+    const tripadvisorCuisinesJson = this.normalizeTripadvisorList(payload.tripadvisorCuisines);
+    const tripadvisorFeaturesJson = this.normalizeTripadvisorList(payload.tripadvisorFeatures, {
+      filterFeatures: true,
+    });
     if (hoursJson !== undefined) {
       entry.hoursJson = hoursJson;
+    }
+    if (tripadvisorMealTypesJson !== undefined) {
+      entry.tripadvisorMealTypesJson = tripadvisorMealTypesJson;
+    }
+    if (tripadvisorCuisinesJson !== undefined) {
+      entry.tripadvisorCuisinesJson = tripadvisorCuisinesJson;
+    }
+    if (tripadvisorFeaturesJson !== undefined) {
+      entry.tripadvisorFeaturesJson = tripadvisorFeaturesJson;
     }
 
     // Apply corrections and ensure taxonomy entry exists (create as pending if new)
@@ -164,6 +226,11 @@ export class MapsService {
 
     // Perform partial update - only update provided fields
     const hoursJson = this.normalizeOperationHours(updates.operationHours);
+    const tripadvisorMealTypesJson = this.normalizeTripadvisorList(updates.tripadvisorMealTypes);
+    const tripadvisorCuisinesJson = this.normalizeTripadvisorList(updates.tripadvisorCuisines);
+    const tripadvisorFeaturesJson = this.normalizeTripadvisorList(updates.tripadvisorFeatures, {
+      filterFeatures: true,
+    });
     const updateData = {
       ...(updates.name !== undefined && { name: updates.name }),
       ...(updates.address !== undefined && { address: updates.address }),
@@ -180,6 +247,9 @@ export class MapsService {
       ...(updates.email !== undefined && { email: updates.email }),
       ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
       ...(hoursJson !== undefined && { hoursJson }),
+      ...(tripadvisorMealTypesJson !== undefined && { tripadvisorMealTypesJson }),
+      ...(tripadvisorCuisinesJson !== undefined && { tripadvisorCuisinesJson }),
+      ...(tripadvisorFeaturesJson !== undefined && { tripadvisorFeaturesJson }),
       ...(updates.placeId !== undefined && { placeId: updates.placeId }),
       ...(shouldUpdateUrl && { url: generateGoogleMapsUrl(nextName, nextAddress) }),
       ...(updates.tripadvisorUrl !== undefined && this.resolveTripadvisorFields(updates.tripadvisorUrl)),

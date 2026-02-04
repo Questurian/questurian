@@ -4,12 +4,22 @@ import { SerpApiTripAdvisorClient } from "@server/shared/services/external/serpa
 import { EnvConfig } from "@server/shared/config/env.config";
 import { getLocationByIdForUpdate, updateLocationById } from "../../repositories/core";
 import { saveTripAdvisorPlace } from "../../repositories/content/tripadvisor-place.repository";
+import {
+  filterTripadvisorFeatures,
+  normalizeTripadvisorStringList,
+  parseTripadvisorStringListJson,
+} from "../../utils/tripadvisor-utils";
 
 export class TripAdvisorPlaceService {
   private readonly serpApiClient: SerpApiTripAdvisorClient;
 
   constructor(config: EnvConfig) {
     this.serpApiClient = new SerpApiTripAdvisorClient(config);
+  }
+
+  private hasStoredTripadvisorList(value?: string | null): boolean {
+    const parsed = parseTripadvisorStringListJson(value ?? null);
+    return Array.isArray(parsed) && parsed.length > 0;
   }
 
   isConfigured(): boolean {
@@ -40,6 +50,17 @@ export class TripAdvisorPlaceService {
     const phone = typeof placeResult.phone === "string" ? placeResult.phone.trim() : null;
     const website = typeof placeResult.website === "string" ? placeResult.website.trim() : null;
     const neighborhood = typeof placeResult.neighborhood === "string" ? placeResult.neighborhood.trim() : null;
+    const mealTypes =
+      normalizeTripadvisorStringList(placeResult.meal_types) ??
+      normalizeTripadvisorStringList(placeResult.mealtypes);
+    const cuisines = normalizeTripadvisorStringList(placeResult.cuisines);
+    const hasIncomingFeatureCandidates =
+      Array.isArray(placeResult.features) ||
+      Array.isArray(placeResult.dining_options);
+    const rawFeatures =
+      normalizeTripadvisorStringList(placeResult.features) ??
+      normalizeTripadvisorStringList(placeResult.dining_options);
+    const features = filterTripadvisorFeatures(rawFeatures);
 
     // Fill empty fields only
     if (!current.email && email) {
@@ -56,6 +77,18 @@ export class TripAdvisorPlaceService {
     }
     if (!current.website && website) {
       updates.website = website;
+    }
+    if (!this.hasStoredTripadvisorList(current.tripadvisorMealTypesJson) && mealTypes) {
+      updates.tripadvisorMealTypesJson = JSON.stringify(mealTypes);
+    }
+    if (!this.hasStoredTripadvisorList(current.tripadvisorCuisinesJson) && cuisines) {
+      updates.tripadvisorCuisinesJson = JSON.stringify(cuisines);
+    }
+    if (hasIncomingFeatureCandidates) {
+      const nextFeaturesJson = features ? JSON.stringify(features) : null;
+      if (current.tripadvisorFeaturesJson !== nextFeaturesJson) {
+        updates.tripadvisorFeaturesJson = nextFeaturesJson;
+      }
     }
 
     // District fallback: use TripAdvisor neighborhood if district is empty

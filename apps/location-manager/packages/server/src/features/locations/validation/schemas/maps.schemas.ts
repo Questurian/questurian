@@ -20,6 +20,18 @@ export const createMapsSchema = z.object({
     z.record(z.any()),
     z.string().trim(),
   ]).optional(),
+  tripadvisorMealTypes: z.union([
+    z.array(z.string().trim()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  tripadvisorCuisines: z.union([
+    z.array(z.string().trim()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  tripadvisorFeatures: z.union([
+    z.array(z.string().trim()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
 });
 
 // PATCH /api/maps/:id schema - only updatable fields allowed
@@ -45,6 +57,18 @@ export const patchMapsSchema = z.object({
     z.record(z.any()),
     z.string().trim(),
   ]).optional(),
+  tripadvisorMealTypes: z.union([
+    z.array(z.string().trim()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  tripadvisorCuisines: z.union([
+    z.array(z.string().trim()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  tripadvisorFeatures: z.union([
+    z.array(z.string().trim()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
 
   // Reject immutable fields - these should not be present in request body
   id: z.never().optional(),
@@ -77,7 +101,10 @@ export const patchMapsSchema = z.object({
          data.tripadvisorUrl !== undefined ||
          data.email !== undefined ||
          data.neighborhoodDescription !== undefined ||
-         data.operationHours !== undefined;
+         data.operationHours !== undefined ||
+         data.tripadvisorMealTypes !== undefined ||
+         data.tripadvisorCuisines !== undefined ||
+         data.tripadvisorFeatures !== undefined;
 }, {
   message: "At least one field must be provided for update"
 });

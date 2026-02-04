@@ -22,8 +22,8 @@ export function saveLocation(location: Location): number | boolean {
   try {
     const db = getDb();
     const query = db.query(`
-      INSERT INTO locations (name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
-      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
+      INSERT INTO locations (name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
+      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $tripadvisor_meal_types, $tripadvisor_cuisines, $tripadvisor_features, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
       ON CONFLICT(name, address) DO UPDATE SET
         title = excluded.title,
         url = excluded.url,
@@ -41,6 +41,9 @@ export function saveLocation(location: Location): number | boolean {
         email = excluded.email,
         hours_json = excluded.hours_json,
         neighborhood_description = excluded.neighborhood_description,
+        tripadvisor_meal_types = excluded.tripadvisor_meal_types,
+        tripadvisor_cuisines = excluded.tripadvisor_cuisines,
+        tripadvisor_features = excluded.tripadvisor_features,
         slug = excluded.slug,
         place_id = excluded.place_id,
         tripadvisor_url = excluded.tripadvisor_url,
@@ -67,6 +70,9 @@ export function saveLocation(location: Location): number | boolean {
       $email: location.email || null,
       $hours_json: location.hoursJson || null,
       $neighborhood_description: location.neighborhoodDescription || null,
+      $tripadvisor_meal_types: location.tripadvisorMealTypesJson || null,
+      $tripadvisor_cuisines: location.tripadvisorCuisinesJson || null,
+      $tripadvisor_features: location.tripadvisorFeaturesJson || null,
       $slug: location.slug || null,
       $place_id: location.placeId || null,
       $tripadvisor_url: location.tripadvisorUrl || null,
@@ -170,6 +176,18 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
       setClause.push("neighborhood_description = $neighborhood_description");
       params.$neighborhood_description = updates.neighborhoodDescription;
     }
+    if (updates.tripadvisorMealTypesJson !== undefined) {
+      setClause.push("tripadvisor_meal_types = $tripadvisor_meal_types");
+      params.$tripadvisor_meal_types = updates.tripadvisorMealTypesJson;
+    }
+    if (updates.tripadvisorCuisinesJson !== undefined) {
+      setClause.push("tripadvisor_cuisines = $tripadvisor_cuisines");
+      params.$tripadvisor_cuisines = updates.tripadvisorCuisinesJson;
+    }
+    if (updates.tripadvisorFeaturesJson !== undefined) {
+      setClause.push("tripadvisor_features = $tripadvisor_features");
+      params.$tripadvisor_features = updates.tripadvisorFeaturesJson;
+    }
     if (updates.payload_location_ref !== undefined) {
       setClause.push("payload_location_ref = $payload_location_ref");
       params.$payload_location_ref = updates.payload_location_ref;
@@ -245,7 +263,11 @@ export function getAllLocations(): Location[] {
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
            l.category, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
-           l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
+           l.neighborhood_description as neighborhoodDescription,
+           l.tripadvisor_meal_types as tripadvisorMealTypesJson,
+           l.tripadvisor_cuisines as tripadvisorCuisinesJson,
+           l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
            l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
@@ -270,7 +292,11 @@ export function getLocationsByCategory(category: string): Location[] {
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
            l.category, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
-           l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
+           l.neighborhood_description as neighborhoodDescription,
+           l.tripadvisor_meal_types as tripadvisorMealTypesJson,
+           l.tripadvisor_cuisines as tripadvisorCuisinesJson,
+           l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
            l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
@@ -296,7 +322,11 @@ export function getLocationById(id: number): Location | null {
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
            l.category, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
-           l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
+           l.neighborhood_description as neighborhoodDescription,
+           l.tripadvisor_meal_types as tripadvisorMealTypesJson,
+           l.tripadvisor_cuisines as tripadvisorCuisinesJson,
+           l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
            l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
@@ -319,7 +349,11 @@ export function getLocationByIdForUpdate(id: number): Location | null {
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
            l.category, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
-           l.neighborhood_description as neighborhoodDescription, l.slug, l.place_id as placeId,
+           l.neighborhood_description as neighborhoodDescription,
+           l.tripadvisor_meal_types as tripadvisorMealTypesJson,
+           l.tripadvisor_cuisines as tripadvisorCuisinesJson,
+           l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
            l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
@@ -343,7 +377,11 @@ export function getLocationBySlug(slug: string): Location | null {
   const query = db.query(`
     SELECT id, name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress,
            countryCode, iana_time_id as ianaTimeId, phoneNumber, website, email, hours_json as hoursJson,
-           neighborhood_description as neighborhoodDescription, slug, place_id as placeId,
+           neighborhood_description as neighborhoodDescription,
+           tripadvisor_meal_types as tripadvisorMealTypesJson,
+           tripadvisor_cuisines as tripadvisorCuisinesJson,
+           tripadvisor_features as tripadvisorFeaturesJson,
+           slug, place_id as placeId,
            tripadvisor_url as tripadvisorUrl, tripadvisor_location_id as tripadvisorLocationId,
            payload_location_ref, reviews_fetched_at as reviewsFetchedAt,
            reviews_count as reviewsCount, reviews_google_count as reviewsGoogleCount,

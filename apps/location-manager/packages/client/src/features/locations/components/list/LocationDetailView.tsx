@@ -75,6 +75,18 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     const hasMedia =
       (locationDetail.uploads && locationDetail.uploads.length > 0) ||
       (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0);
+    const hasTripadvisorMealTypes = Boolean(
+      Array.isArray(locationDetail.tripadvisorMealTypes) &&
+      locationDetail.tripadvisorMealTypes.length > 0
+    );
+    const hasTripadvisorCuisines = Boolean(
+      Array.isArray(locationDetail.tripadvisorCuisines) &&
+      locationDetail.tripadvisorCuisines.length > 0
+    );
+    const hasTripadvisorFeatures = Boolean(
+      Array.isArray(locationDetail.tripadvisorFeatures) &&
+      locationDetail.tripadvisorFeatures.length > 0
+    );
 
     return [
       { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
@@ -106,6 +118,9 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         present: Boolean(locationDetail.neighborhoodDescription?.trim()),
       },
       { key: "operationHours", label: "Hours", present: hasOperationHours },
+      { key: "tripadvisorMealTypes", label: "Meal Types", present: hasTripadvisorMealTypes },
+      { key: "tripadvisorCuisines", label: "Cuisines", present: hasTripadvisorCuisines },
+      { key: "tripadvisorFeatures", label: "Features", present: hasTripadvisorFeatures },
       { key: "media", label: "Images/Instagram", present: hasMedia },
     ];
   }, [locationDetail]);
@@ -319,6 +334,30 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
               </Button>
             </div>
           )}
+        </div>
+
+        <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+          <span className="text-sm font-medium">TripAdvisor Taxonomy</span>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>
+              Meal types:{" "}
+              {locationDetail.tripadvisorMealTypes?.length
+                ? locationDetail.tripadvisorMealTypes.join(", ")
+                : "Missing"}
+            </div>
+            <div>
+              Cuisines:{" "}
+              {locationDetail.tripadvisorCuisines?.length
+                ? locationDetail.tripadvisorCuisines.join(", ")
+                : "Missing"}
+            </div>
+            <div>
+              Features:{" "}
+              {locationDetail.tripadvisorFeatures?.length
+                ? locationDetail.tripadvisorFeatures.join(", ")
+                : "Missing"}
+            </div>
+          </div>
         </div>
 
         {/* Title field - only show if different from source name */}

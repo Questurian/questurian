@@ -56,6 +56,9 @@ export function EditLocation() {
       neighborhoodDescription: "",
       operationHours: "",
       tripadvisorUrl: "",
+      tripadvisorMealTypes: "",
+      tripadvisorCuisines: "",
+      tripadvisorFeatures: "",
     },
   });
 
@@ -83,6 +86,9 @@ export function EditLocation() {
           ? JSON.stringify(location.operationHours, null, 2)
           : "",
         tripadvisorUrl: location.tripadvisorUrl || "",
+        tripadvisorMealTypes: location.tripadvisorMealTypes?.join(", ") || "",
+        tripadvisorCuisines: location.tripadvisorCuisines?.join(", ") || "",
+        tripadvisorFeatures: location.tripadvisorFeatures?.join(", ") || "",
       });
 
       console.log("📦 Form reset complete. Category value:", form.getValues("category"), "Type value:", form.getValues("type"));
@@ -349,6 +355,33 @@ export function EditLocation() {
             label="TripAdvisor URL"
             control={form.control}
             placeholder="https://www.tripadvisor.com/..."
+          />
+
+          <FormTextarea
+            name="tripadvisorMealTypes"
+            label="TripAdvisor Meal Types"
+            control={form.control}
+            placeholder="Comma or line-separated (e.g. Lunch, Dinner, Drinks)"
+            description="Safety override. Leave blank to keep current value."
+            rows={2}
+          />
+
+          <FormTextarea
+            name="tripadvisorCuisines"
+            label="TripAdvisor Cuisines"
+            control={form.control}
+            placeholder="Comma or line-separated cuisines"
+            description="Safety override. Leave blank to keep current value."
+            rows={2}
+          />
+
+          <FormTextarea
+            name="tripadvisorFeatures"
+            label="TripAdvisor Features"
+            control={form.control}
+            placeholder="Comma or line-separated features"
+            description="Safety override. Leave blank to keep current value."
+            rows={3}
           />
         </div>
 

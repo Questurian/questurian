@@ -6,6 +6,7 @@ import { EnvConfig } from "@server/shared/config/env.config";
 import { SerpApiTripAdvisorClient } from "@server/shared/services/external/serpapi-tripadvisor.client";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
+import { filterTripadvisorFeatures, normalizeTripadvisorStringList } from "../../utils/tripadvisor-utils";
 import {
   saveTripAdvisorPlace,
   getTripAdvisorPlaceByLocationId,
@@ -29,6 +30,9 @@ interface AiJsonPayload {
   neighborhoodDescription: string | null;
   description: string | null;
   reviews_summary: string | null;
+  meal_types: string[] | null;
+  cuisines: string[] | null;
+  features: string[] | null;
   reviews: MinimalReview[];
 }
 
@@ -231,6 +235,9 @@ export async function downloadLocationExport(c: Context) {
     tripadvisorLocationId: location.tripadvisorLocationId,
     neighborhoodDescription: location.neighborhoodDescription,
     operationHours: location.operationHours,
+    tripadvisorMealTypes: location.tripadvisorMealTypes,
+    tripadvisorCuisines: location.tripadvisorCuisines,
+    tripadvisorFeatures: location.tripadvisorFeatures,
     created_at: location.created_at,
     updated_at: location.updated_at,
     // TripAdvisor place data
@@ -282,6 +289,19 @@ export async function downloadAiJson(c: Context) {
   const reviewsSummaryValue = (placeData as { reviews_summary?: unknown }).reviews_summary;
   const description = typeof descriptionValue === "string" ? descriptionValue : null;
   const reviewsSummary = typeof reviewsSummaryValue === "string" ? reviewsSummaryValue : null;
+  const mealTypes =
+    location.tripadvisorMealTypes ??
+    normalizeTripadvisorStringList((placeData as { meal_types?: unknown }).meal_types) ??
+    normalizeTripadvisorStringList((placeData as { mealtypes?: unknown }).mealtypes);
+  const cuisines =
+    location.tripadvisorCuisines ??
+    normalizeTripadvisorStringList((placeData as { cuisines?: unknown }).cuisines);
+  const features =
+    location.tripadvisorFeatures ??
+    filterTripadvisorFeatures(
+      normalizeTripadvisorStringList((placeData as { features?: unknown }).features) ??
+      normalizeTripadvisorStringList((placeData as { dining_options?: unknown }).dining_options)
+    );
 
   const payload: AiJsonPayload = {
     id: location.id,
@@ -290,6 +310,9 @@ export async function downloadAiJson(c: Context) {
     neighborhoodDescription: location.neighborhoodDescription ?? null,
     description,
     reviews_summary: reviewsSummary,
+    meal_types: mealTypes,
+    cuisines,
+    features,
     reviews,
   };
 

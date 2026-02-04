@@ -67,6 +67,9 @@ export interface Location {
   tripadvisorLocationId: string | null;
   neighborhoodDescription: string | null;
   operationHours: Record<string, unknown> | null;
+  tripadvisorMealTypes: string[] | null;
+  tripadvisorCuisines: string[] | null;
+  tripadvisorFeatures: string[] | null;
   contact: ContactInfo;
   coordinates: Coordinates;
   source: SourceInfo;
@@ -127,6 +130,9 @@ export interface LocationResponse {
   tripadvisorLocationId: string | null;
   neighborhoodDescription: string | null;
   operationHours: Record<string, unknown> | null;
+  tripadvisorMealTypes: string[] | null;
+  tripadvisorCuisines: string[] | null;
+  tripadvisorFeatures: string[] | null;
   contact: LocationContact;
   coordinates: LocationCoordinates;
   source: LocationSource;
@@ -173,6 +179,9 @@ export interface CreateMapsRequest {
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;
+  tripadvisorMealTypes?: string[] | string;
+  tripadvisorCuisines?: string[] | string;
+  tripadvisorFeatures?: string[] | string;
 }
 
 export interface UpdateMapsRequest {
@@ -192,6 +201,9 @@ export interface UpdateMapsRequest {
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;
+  tripadvisorMealTypes?: string[] | string | null;
+  tripadvisorCuisines?: string[] | string | null;
+  tripadvisorFeatures?: string[] | string | null;
   placeId?: string | null;
 }
 

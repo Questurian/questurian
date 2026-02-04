@@ -2,6 +2,7 @@ import { EnvConfig } from "../../config/env.config";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { filterTripadvisorFeatures } from "@server/features/locations/utils/tripadvisor-utils";
 
 export interface SerpApiTripAdvisorParams {
   place_id: string;
@@ -20,6 +21,10 @@ export interface TripAdvisorPlaceResult {
   neighborhood_description?: string;
   operation_hours?: Record<string, unknown>;
   hours?: Record<string, string>;
+  meal_types?: string[];
+  mealtypes?: string[];
+  cuisines?: string[];
+  dining_options?: string[];
   features?: string[];
   top_tags?: Array<{
     text: string;
@@ -80,12 +85,9 @@ const EXCLUDED_FIELDS = [
   "images",
   "address",
   "address_link",
-  "meal_types",
-  "mealtypes",
   "dining_options",
   "diets",
   "special_diets",
-  "cuisines",
   "reviews_highlights",
 ];
 
@@ -115,7 +117,64 @@ export class SerpApiTripAdvisorClient {
       }
     }
 
+    // Normalize aliases to keep a stable schema while preserving filtered payload size.
+    const mealTypes =
+      this.normalizeStringArray(placeResult.meal_types) ??
+      this.normalizeStringArray(placeResult.mealtypes);
+    if (mealTypes) {
+      filtered.meal_types = mealTypes;
+    }
+
+    const cuisines = this.normalizeStringArray(placeResult.cuisines);
+    if (cuisines) {
+      filtered.cuisines = cuisines;
+    }
+
+    // Some TripAdvisor places expose "Features" as dining_options.
+    const hasRawFeatures = Array.isArray(placeResult.features) || Array.isArray(placeResult.dining_options);
+    const rawFeatures =
+      this.normalizeStringArray(placeResult.features) ??
+      this.normalizeStringArray(placeResult.dining_options);
+    if (hasRawFeatures) {
+      filtered.features = filterTripadvisorFeatures(rawFeatures ?? []) ?? [];
+    }
+
     return filtered;
+  }
+
+  private normalizeStringArray(value: unknown): string[] | null {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+
+    const normalized = value
+      .map((item) => {
+        if (typeof item === "string") {
+          const trimmed = item.trim();
+          return trimmed.length > 0 ? trimmed : null;
+        }
+
+        if (item && typeof item === "object") {
+          const text = (item as { text?: unknown }).text;
+          if (typeof text === "string" && text.trim().length > 0) {
+            return text.trim();
+          }
+
+          const name = (item as { name?: unknown }).name;
+          if (typeof name === "string" && name.trim().length > 0) {
+            return name.trim();
+          }
+        }
+
+        return null;
+      })
+      .filter((item): item is string => item !== null);
+
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    return Array.from(new Set(normalized));
   }
 
   private async ensureDataDir(): Promise<void> {

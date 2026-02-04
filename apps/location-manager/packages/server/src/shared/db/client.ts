@@ -26,6 +26,7 @@ import { addLocationPlaceId } from "./migrations/add-location-place-id";
 import { addLocationIanaTimeId } from "./migrations/add-location-iana-time-id";
 import { addTripadvisorFields } from "./migrations/add-tripadvisor-fields";
 import { addTripadvisorPlacesTable } from "./migrations/add-tripadvisor-places-table";
+import { addTripadvisorTaxonomyFields } from "./migrations/add-tripadvisor-taxonomy-fields";
 import { addLocationEnrichmentFields } from "./migrations/add-location-enrichment-fields";
 import { addReviewsTracking } from "./migrations/add-reviews-tracking";
 
@@ -124,6 +125,9 @@ export function initDb() {
       email TEXT,
       hours_json TEXT,
       neighborhood_description TEXT,
+      tripadvisor_meal_types TEXT,
+      tripadvisor_cuisines TEXT,
+      tripadvisor_features TEXT,
       slug TEXT UNIQUE,
       tripadvisor_url TEXT,
       tripadvisor_location_id TEXT,
@@ -242,6 +246,9 @@ export function initDb() {
 
   // Run migration to add enrichment fields to locations table
   addLocationEnrichmentFields(database);
+
+  // Run migration to add TripAdvisor taxonomy fields to locations table
+  addTripadvisorTaxonomyFields(database);
 
   // Run migration to add reviews tracking fields to locations table
   addReviewsTracking(database);

@@ -68,6 +68,21 @@ export const editLocationSchema = z.object({
     .url("TripAdvisor URL must be a valid URL")
     .optional()
     .or(z.literal("")),
+  tripadvisorMealTypes: z
+    .string()
+    .max(2000, "Meal types must be less than 2000 characters")
+    .optional()
+    .or(z.literal("")),
+  tripadvisorCuisines: z
+    .string()
+    .max(2000, "Cuisines must be less than 2000 characters")
+    .optional()
+    .or(z.literal("")),
+  tripadvisorFeatures: z
+    .string()
+    .max(4000, "Features must be less than 4000 characters")
+    .optional()
+    .or(z.literal("")),
 });
 
 export type EditLocationFormData = z.infer<typeof editLocationSchema>;
