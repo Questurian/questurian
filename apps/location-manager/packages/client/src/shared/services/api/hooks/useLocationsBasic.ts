@@ -12,7 +12,7 @@ export function useLocationsBasic(params?: {
     queryKey: ["locations-basic", params?.category, params?.locationKey],
     queryFn: () => locationsApi.getLocationsBasic(params),
     enabled: true, // Always enabled - show all locations by default
+    refetchOnMount: "always",
   });
 }
-
 

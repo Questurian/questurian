@@ -11,16 +11,27 @@ export function useUpdateLocation() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateMapsRequest }) =>
       locationsApi.updateLocation(id, data),
-    onSuccess: (data, { id }) => {
+    onSuccess: async (data, { id }) => {
       // Update cached detail queries immediately
       queryClient.setQueryData(LOCATION_BY_ID_QUERY_KEY(id), data);
       queryClient.setQueryData(["location-detail", id], data);
 
-      // Invalidate and refetch locations and the specific location
-      queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: LOCATIONS_BASIC_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: LOCATION_BY_ID_QUERY_KEY(id) });
-      queryClient.invalidateQueries({ queryKey: ["location-detail", id] });
+      // Force-refresh all related queries so Home/detail views show latest values immediately after navigation.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY, refetchType: "all" }),
+        queryClient.invalidateQueries({
+          queryKey: LOCATIONS_BASIC_QUERY_KEY,
+          refetchType: "all",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: LOCATION_BY_ID_QUERY_KEY(id),
+          refetchType: "all",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["location-detail", id],
+          refetchType: "all",
+        }),
+      ]);
     },
   });
 }

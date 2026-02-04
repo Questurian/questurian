@@ -29,6 +29,9 @@ export const IDEAL_FOR_TAGS = [
   "Lunch",
   "Pre-Theater",
   "Private Dining",
+  "Catch-Up Conversations",
+  "Friends' Night Out",
+  "Late-Night Cravings",
   "Takeout & Delivery",
   "Outdoor Seating",
   "Special Occasions",
@@ -38,3 +41,73 @@ export const IDEAL_FOR_TAGS = [
 ] as const;
 
 export type IdealForTag = typeof IDEAL_FOR_TAGS[number];
+
+export const IDEAL_FOR_TAG_GROUPS = [
+  {
+    label: "Occasions & Company",
+    tags: [
+      "Birthdays & Celebrations",
+      "Business Dining",
+      "Date Nights",
+      "Family-Friendly",
+      "First Dates",
+      "Impressing Visitors",
+      "Large Groups & Parties",
+      "Pre-Theater",
+      "Private Dining",
+      "Catch-Up Conversations",
+      "Friends' Night Out",
+      "Solo Dining",
+      "Special Occasions",
+    ],
+  },
+  {
+    label: "Meal Moments",
+    tags: [
+      "Afternoon & Daytime Drinks",
+      "Breakfast",
+      "Brunch",
+      "Coffee & Light Bites",
+      "Happy Hour",
+      "Late-Night & Party Scene",
+      "Late-Night Cravings",
+      "Lunch",
+    ],
+  },
+  {
+    label: "Dining Style",
+    tags: [
+      "Budget-Friendly",
+      "Casual Dining",
+      "Classic & Traditional",
+      "Experiential Dining",
+      "Fine Dining",
+      "Healthy Eating",
+      "Tapas & Small Plates",
+    ],
+  },
+  {
+    label: "Drinks & Nightlife",
+    tags: [
+      "Craft Beer",
+      "Craft Cocktails",
+      "Live Music",
+      "Sports Bar",
+      "Trendy Hot Spots",
+      "Wine Bars",
+    ],
+  },
+  {
+    label: "Service & Atmosphere",
+    tags: [
+      "BYOB-Friendly",
+      "Bar Seating",
+      "Outdoor Seating",
+      "Takeout & Delivery",
+      "Walk-In Friendly",
+    ],
+  },
+] as const satisfies readonly {
+  label: string;
+  tags: readonly IdealForTag[];
+}[];

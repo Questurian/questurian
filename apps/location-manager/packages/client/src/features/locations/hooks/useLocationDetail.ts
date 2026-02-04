@@ -8,5 +8,6 @@ export function useLocationDetail(id: number | null, enabled = true) {
     queryKey: ["location-detail", id],
     queryFn: () => locationsApi.getLocationById(id!),
     enabled: enabled && id !== null,
+    refetchOnMount: "always",
   });
 }

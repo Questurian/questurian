@@ -9,11 +9,14 @@ import { MapPin, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { LocationCategory } from "@shared/types/location-category";
-import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
+import { IDEAL_FOR_TAG_GROUPS } from "@shared/types/location-ideal-for";
 import { ReviewsFetchPhase } from "../components/add/ReviewsFetchPhase";
 
 type Phase = "add" | "confirm" | "reviews" | "success";
-const IDEAL_FOR_OPTIONS = IDEAL_FOR_TAGS.map((tag) => ({ value: tag, label: tag }));
+const IDEAL_FOR_OPTION_GROUPS = IDEAL_FOR_TAG_GROUPS.map((group) => ({
+  label: group.label,
+  options: group.tags.map((tag) => ({ value: tag, label: tag })),
+}));
 
 export function AddLocation() {
   const navigate = useNavigate();
@@ -290,7 +293,7 @@ export function AddLocation() {
             name="idealFor"
             label="Ideal For"
             control={addForm.control}
-            options={IDEAL_FOR_OPTIONS}
+            optionGroups={IDEAL_FOR_OPTION_GROUPS}
             maxSelections={4}
             description="Choose 1 to 4 tags"
           />

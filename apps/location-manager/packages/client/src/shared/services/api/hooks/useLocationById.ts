@@ -8,13 +8,6 @@ export function useLocationById(id: number | null) {
     queryKey: LOCATION_BY_ID_QUERY_KEY(id!),
     queryFn: () => locationsApi.getLocationById(id!),
     enabled: id !== null,
+    refetchOnMount: "always",
   });
 }
-
-
-
-
-
-
-
-

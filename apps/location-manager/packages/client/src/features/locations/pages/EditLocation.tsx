@@ -10,7 +10,7 @@ import { Button, SelectItem } from "@client/components/ui";
 import { Field, FieldLabel } from "@client/shared/components/ui";
 import { SubmitButton } from "@client/shared/components/ui";
 import type { LocationCategory } from "@shared/types/location-category";
-import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
+import { IDEAL_FOR_TAG_GROUPS } from "@shared/types/location-ideal-for";
 
 const OperationHoursModal = lazy(
   () =>
@@ -19,7 +19,10 @@ const OperationHoursModal = lazy(
     }))
 );
 
-const IDEAL_FOR_OPTIONS = IDEAL_FOR_TAGS.map((tag) => ({ value: tag, label: tag }));
+const IDEAL_FOR_OPTION_GROUPS = IDEAL_FOR_TAG_GROUPS.map((group) => ({
+  label: group.label,
+  options: group.tags.map((tag) => ({ value: tag, label: tag })),
+}));
 
 export function EditLocation() {
   const { id } = useParams<{ id: string }>();
@@ -223,7 +226,7 @@ export function EditLocation() {
             name="idealFor"
             label="Ideal For"
             control={form.control}
-            options={IDEAL_FOR_OPTIONS}
+            optionGroups={IDEAL_FOR_OPTION_GROUPS}
             maxSelections={4}
             description="Choose 1 to 4 tags"
           />
