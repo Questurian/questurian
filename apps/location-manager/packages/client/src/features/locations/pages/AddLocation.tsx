@@ -1,11 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addLocationSchema, confirmLocationSchema, batchUploadSchema, type AddLocationFormData, type ConfirmLocationFormData, type BatchItem } from "../validation/add-location.schema";
-import { useCreateLocation, useUpdateLocation, useLocationTypes } from "@client/shared/services/api";
+import { useCreateLocation, useUpdateLocation, useLocationTypes, locationsApi } from "@client/shared/services/api";
 import { FormInput, FormSelect, FormTagMultiSelect } from "@client/shared/components/forms";
 import { SelectItem } from "@client/components/ui";
 import { SubmitButton } from "@client/shared/components/ui";
-import { MapPin, Check, Upload, FileJson, Copy, CheckCheck } from "lucide-react";
+import { MapPin, Check, Upload, FileJson, Copy, CheckCheck, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { LocationCategory } from "@shared/types/location-category";
@@ -13,6 +13,9 @@ import { IDEAL_FOR_TAG_GROUPS } from "@shared/types/location-ideal-for";
 import { ReviewsFetchPhase } from "../components/add/ReviewsFetchPhase";
 import { BatchUploadPhase, type BatchResult } from "../components/add/BatchUploadPhase";
 import { Button } from "@client/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@client/components/ui/dialog";
+import { useCountries } from "../hooks/useCountries";
+import { extractCitiesForCountry, buildLocationKey } from "../utils/filter-utils";
 
 type Phase = "add" | "confirm" | "reviews" | "success" | "batch-input" | "batch-processing" | "batch-complete";
 const IDEAL_FOR_OPTION_GROUPS = IDEAL_FOR_TAG_GROUPS.map((group) => ({
@@ -39,7 +42,16 @@ export function AddLocation() {
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
   const [jsonInput, setJsonInput] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [isJsonValid, setIsJsonValid] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+
+  // City selection dialog state for "Copy for AI"
+  const [isCityDialogOpen, setIsCityDialogOpen] = useState(false);
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
+  const [selectedCityValue, setSelectedCityValue] = useState<string | null>(null);
+  const [selectedDialogCategory, setSelectedDialogCategory] = useState<LocationCategory | null>(null);
+  const [isFetchingLocations, setIsFetchingLocations] = useState(false);
+  const { data: countries = [] } = useCountries();
 
   const { mutate: createLocation, isPending: isCreating, error: createError } = useCreateLocation();
   const { mutate: updateLocation, isPending: isUpdating, error: updateError } = useUpdateLocation();
@@ -123,21 +135,44 @@ export function AddLocation() {
     });
   }
 
-  // Batch JSON input phase
-  const handleJsonValidation = () => {
-    setJsonError(null);
+  // Real-time JSON validation
+  const validateJsonInput = (input: string) => {
+    if (!input.trim()) {
+      setJsonError(null);
+      setIsJsonValid(false);
+      return;
+    }
+
     try {
-      const parsed = JSON.parse(jsonInput);
+      const parsed = JSON.parse(input);
       const result = batchUploadSchema.safeParse(parsed);
       if (!result.success) {
         const errorMessages = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ");
         setJsonError(`Validation error: ${errorMessages}`);
+        setIsJsonValid(false);
         return;
       }
-      setBatchItems(result.data);
-      setPhase("batch-processing");
+      setJsonError(null);
+      setIsJsonValid(true);
     } catch {
       setJsonError("Invalid JSON format. Please check your input.");
+      setIsJsonValid(false);
+    }
+  };
+
+  // Batch JSON input phase - start upload
+  const handleStartUpload = () => {
+    if (!isJsonValid) return;
+
+    try {
+      const parsed = JSON.parse(jsonInput);
+      const result = batchUploadSchema.safeParse(parsed);
+      if (result.success) {
+        setBatchItems(result.data);
+        setPhase("batch-processing");
+      }
+    } catch {
+      // Already validated, this shouldn't happen
     }
   };
 
@@ -151,6 +186,7 @@ export function AddLocation() {
     setBatchItems([]);
     setJsonInput("");
     setJsonError(null);
+    setIsJsonValid(false);
   };
 
   const AI_PROMPT_TEMPLATE = `I need you to generate a JSON array for batch uploading locations. Here's the format:
@@ -207,13 +243,71 @@ Breakdown:
 Please generate the JSON for these locations:
 [PASTE YOUR LOCATIONS HERE]`;
 
-  const handleCopyForAI = async () => {
+  // Open the city selection dialog
+  const handleCopyForAI = () => {
+    setIsCityDialogOpen(true);
+  };
+
+  // Get cities for selected country
+  const availableCities = selectedCountryCode
+    ? extractCitiesForCountry(countries, selectedCountryCode)
+    : [];
+
+  // Handle the actual copy after city selection
+  const handleConfirmCityAndCopy = async () => {
+    if (!selectedCountryCode || !selectedCityValue) return;
+
+    setIsFetchingLocations(true);
+
     try {
-      await navigator.clipboard.writeText(AI_PROMPT_TEMPLATE);
+      // Build locationKey for the selected city
+      const locationKey = buildLocationKey(countries, selectedCountryCode, selectedCityValue, null);
+
+      // Fetch existing locations for this city (optionally filtered by category)
+      const response = await locationsApi.getLocationsBasic({
+        locationKey,
+        ...(selectedDialogCategory && { category: selectedDialogCategory }),
+      });
+      const existingNames = response.locations.map((loc) => loc.title || loc.name);
+
+      // Find the city label for display
+      const selectedCity = availableCities.find((c) => c.value === selectedCityValue);
+      const cityLabel = selectedCity?.label || selectedCityValue;
+      const countryLabel = countries.find((c) => c.code === selectedCountryCode)?.label || selectedCountryCode;
+
+      // Build category label for display
+      const categoryLabel = selectedDialogCategory
+        ? selectedDialogCategory.charAt(0).toUpperCase() + selectedDialogCategory.slice(1)
+        : "All Categories";
+
+      // Build enhanced prompt with existing locations
+      const locationDescription = selectedDialogCategory
+        ? `${categoryLabel} in ${cityLabel}, ${countryLabel}`
+        : `${cityLabel}, ${countryLabel}`;
+
+      const existingLocationsSection = existingNames.length > 0
+        ? `\n\n## IMPORTANT - Existing ${categoryLabel} Locations in ${cityLabel}, ${countryLabel}:\nThe following locations are ALREADY in the database. Do NOT include these in your output:\n${existingNames.map((name) => `- ${name}`).join("\n")}\n`
+        : `\n\n## Note: No existing ${categoryLabel.toLowerCase()} locations found for ${cityLabel}, ${countryLabel}\n`;
+
+      const enhancedPrompt = AI_PROMPT_TEMPLATE.replace(
+        "[PASTE YOUR LOCATIONS HERE]",
+        `[PASTE YOUR ${selectedDialogCategory ? selectedDialogCategory.toUpperCase() + " " : ""}LOCATIONS FOR ${cityLabel.toUpperCase()}, ${countryLabel.toUpperCase()} HERE]`
+      ) + existingLocationsSection;
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(enhancedPrompt);
       setCopiedToClipboard(true);
       setTimeout(() => setCopiedToClipboard(false), 2000);
+
+      // Close dialog and reset
+      setIsCityDialogOpen(false);
+      setSelectedCountryCode(null);
+      setSelectedCityValue(null);
+      setSelectedDialogCategory(null);
     } catch (err) {
-      console.error("Failed to copy:", err);
+      console.error("Failed to fetch locations or copy:", err);
+    } finally {
+      setIsFetchingLocations(false);
     }
   };
 
@@ -299,17 +393,28 @@ Please generate the JSON for these locations:
 
           {/* JSON input */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              JSON Data
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-foreground">
+                JSON Data
+              </label>
+              {jsonInput.trim() && !jsonError && isJsonValid && (
+                <span className="text-xs text-green-600 font-medium">✓ Valid JSON</span>
+              )}
+            </div>
             <textarea
               value={jsonInput}
               onChange={(e) => {
                 setJsonInput(e.target.value);
-                setJsonError(null);
+                validateJsonInput(e.target.value);
               }}
               placeholder="Paste your JSON array here..."
-              className="w-full h-48 p-3 text-sm font-mono border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full h-48 p-3 text-sm font-mono border rounded-md bg-white text-gray-900 resize-none focus:outline-none focus:ring-2 ${
+                jsonError
+                  ? "border-red-300 focus:ring-red-500"
+                  : isJsonValid
+                    ? "border-green-300 focus:ring-green-500"
+                    : "focus:ring-blue-500"
+              }`}
             />
           </div>
 
@@ -327,6 +432,7 @@ Please generate the JSON for these locations:
                 setPhase("add");
                 setJsonInput("");
                 setJsonError(null);
+                setIsJsonValid(false);
               }}
               variant="outline"
               className="flex-1"
@@ -334,14 +440,116 @@ Please generate the JSON for these locations:
               Cancel
             </Button>
             <Button
-              onClick={handleJsonValidation}
-              disabled={!jsonInput.trim()}
+              onClick={handleStartUpload}
+              disabled={!isJsonValid}
               className="flex-1"
             >
               Start Upload
             </Button>
           </div>
         </div>
+
+        {/* City Selection Dialog for Copy for AI */}
+        <Dialog open={isCityDialogOpen} onOpenChange={setIsCityDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Select City for AI Prompt</DialogTitle>
+              <DialogDescription>
+                Choose a city to include existing locations in the AI prompt. This helps avoid duplicate entries.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Country Selection */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Country
+                </label>
+                <select
+                  value={selectedCountryCode || ""}
+                  onChange={(e) => {
+                    setSelectedCountryCode(e.target.value || null);
+                    setSelectedCityValue(null);
+                  }}
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a country...</option>
+                  {countries.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* City Selection */}
+              {selectedCountryCode && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    City
+                  </label>
+                  <select
+                    value={selectedCityValue || ""}
+                    onChange={(e) => setSelectedCityValue(e.target.value || null)}
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a city...</option>
+                    {availableCities.map((city) => (
+                      <option key={city.value} value={city.value}>
+                        {city.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Category Selection (Optional) */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Category <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <select
+                  value={selectedDialogCategory || ""}
+                  onChange={(e) => setSelectedDialogCategory((e.target.value || null) as LocationCategory | null)}
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All categories</option>
+                  <option value="dining">Dining</option>
+                  <option value="accommodations">Accommodations</option>
+                  <option value="attractions">Attractions</option>
+                  <option value="nightlife">Nightlife</option>
+                </select>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCityDialogOpen(false);
+                  setSelectedCountryCode(null);
+                  setSelectedCityValue(null);
+                  setSelectedDialogCategory(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmCityAndCopy}
+                disabled={!selectedCountryCode || !selectedCityValue || isFetchingLocations}
+              >
+                {isFetchingLocations ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Copy Prompt"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -427,6 +635,8 @@ Please generate the JSON for these locations:
                 setBatchItems([]);
                 setBatchResults([]);
                 setJsonInput("");
+                setJsonError(null);
+                setIsJsonValid(false);
               }}
               variant="outline"
               className="flex-1"
