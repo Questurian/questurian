@@ -9,6 +9,7 @@ import type {
 import { formatLocationName } from '@questurian/lm-shared';
 import { filterTripadvisorFeatures, parseTripadvisorStringListJson } from './tripadvisor-utils';
 import { IDEAL_FOR_TAGS, type IdealForTag } from "@shared/types/location-ideal-for";
+import { parseCategoryListJson } from "./category-utils";
 
 const IDEAL_FOR_TAG_SET = new Set<string>(IDEAL_FOR_TAGS);
 
@@ -199,10 +200,14 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
+  const categories = parseCategoryListJson(location.categoriesJson, location.category);
+  const primaryCategory = categories[0] || "attractions";
+
   return {
     id: location.id!,
     title: location.title || null,
-    category: location.category || 'attractions',
+    category: primaryCategory,
+    categories,
     type: location.type || null,
     locationKey: location.locationKey || null,
     district: location.district || null,
@@ -255,12 +260,16 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
  * @returns Basic location info with id, name, location, and category
  */
 export function transformLocationToBasicResponse(location: import('../models/location').Location): import('../models/location').LocationBasic {
+  const categories = parseCategoryListJson(location.categoriesJson, location.category);
+  const primaryCategory = categories[0] || "attractions";
+
   return {
     id: location.id!,
     name: location.name,
     title: location.title ?? null,
     location: location.locationKey ? formatLocationForDisplay(location.locationKey) : null,
-    category: location.category || 'attractions',
+    category: primaryCategory,
+    categories,
     // Reviews tracking fields
     reviewsFetchedAt: location.reviewsFetchedAt || null,
     reviewsCount: location.reviewsCount ?? null,

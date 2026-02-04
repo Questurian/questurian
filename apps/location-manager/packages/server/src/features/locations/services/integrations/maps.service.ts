@@ -8,7 +8,7 @@ import {
   geocode,
 } from "../geocoding/location-geocoding.helper";
 import {
-  getLocationById,
+  findPotentialDuplicateLocations,
   getLocationByIdForUpdate,
   saveLocation,
   updateLocationById,
@@ -16,7 +16,13 @@ import {
 import { getInstagramEmbedsByLocationId } from "../../repositories/content";
 import { getUploadsByLocationId } from "../../repositories/content";
 import { transformLocationToResponse } from "../../utils/location-utils";
-import { validateCategory, validateCategoryWithDefault } from "../../utils/category-utils";
+import {
+  mergeCategoryLists,
+  normalizeCategoryList,
+  parseCategoryListJson,
+  toCategoryListJson,
+  validateCategory,
+} from "../../utils/category-utils";
 import { TaxonomyService } from "../taxonomy/taxonomy.service";
 import { TaxonomyCorrectionService } from "../taxonomy/taxonomy-correction.service";
 import {
@@ -26,6 +32,7 @@ import {
   normalizeTripadvisorStringList,
 } from "../../utils/tripadvisor-utils";
 import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
+import type { LocationCategory } from "@shared/types/location-category";
 
 import type { PayloadApiClient } from "@server/shared/services/external/payload-api.client";
 
@@ -130,16 +137,233 @@ export class MapsService {
     return JSON.stringify(Array.from(new Set(input)));
   }
 
+  private normalizeAddressForDuplicateCheck(address: string): string {
+    return address
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  private parseStringArrayJson(input?: string | null): string[] {
+    if (!input) return [];
+
+    try {
+      const parsed = JSON.parse(input);
+      if (!Array.isArray(parsed)) return [];
+
+      return Array.from(
+        new Set(
+          parsed
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0)
+        )
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  private mergeStringArrayJson(
+    existingJson?: string | null,
+    incomingJson?: string | null,
+    maxItems?: number
+  ): string | undefined {
+    const incoming = this.parseStringArrayJson(incomingJson);
+    if (incoming.length === 0) return undefined;
+
+    const existing = this.parseStringArrayJson(existingJson);
+    const merged = Array.from(new Set([...existing, ...incoming]));
+    const limited = maxItems ? merged.slice(0, maxItems) : merged;
+
+    if (limited.length === 0 || limited.join("|") === existing.join("|")) {
+      return undefined;
+    }
+
+    return JSON.stringify(limited);
+  }
+
+  private resolveRequestedCategories(input: {
+    category?: LocationCategory;
+    categories?: LocationCategory[];
+  }): LocationCategory[] {
+    if (input.categories && input.categories.length > 0) {
+      return normalizeCategoryList(input.categories, input.category ?? input.categories[0]);
+    }
+
+    if (input.category) {
+      return [validateCategory(input.category)];
+    }
+
+    throw new BadRequestError("At least one category is required");
+  }
+
+  private scoreDuplicateCandidate(entry: Location, candidate: Location): number {
+    let score = 0;
+    const normalizedEntryAddress = this.normalizeAddressForDuplicateCheck(entry.address);
+    const normalizedCandidateAddress = this.normalizeAddressForDuplicateCheck(candidate.address);
+
+    if (normalizedEntryAddress === normalizedCandidateAddress) {
+      score += 40;
+    }
+
+    if (
+      entry.tripadvisorLocationId &&
+      candidate.tripadvisorLocationId &&
+      entry.tripadvisorLocationId === candidate.tripadvisorLocationId
+    ) {
+      score += 100;
+    }
+
+    if (entry.tripadvisorUrl && candidate.tripadvisorUrl) {
+      const entryUrl = normalizeTripadvisorUrl(entry.tripadvisorUrl);
+      const candidateUrl = normalizeTripadvisorUrl(candidate.tripadvisorUrl);
+
+      if (entryUrl === candidateUrl) {
+        score += 70;
+      }
+    }
+
+    return score;
+  }
+
+  private findDuplicateCandidate(entry: Location): Location | null {
+    const candidates = findPotentialDuplicateLocations({
+      address: entry.address,
+      tripadvisorUrl: entry.tripadvisorUrl,
+      tripadvisorLocationId: entry.tripadvisorLocationId,
+    });
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    const scoredCandidates = candidates
+      .map((candidate) => ({
+        candidate,
+        score: this.scoreDuplicateCandidate(entry, candidate),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const best = scoredCandidates[0];
+    if (!best) return null;
+
+    const minimumScore = entry.tripadvisorLocationId
+      ? 100
+      : entry.tripadvisorUrl
+        ? 110
+        : 40;
+
+    return best.score >= minimumScore ? best.candidate : null;
+  }
+
+  private async mergeDuplicateLocation(
+    existingLocation: Location,
+    incomingEntry: Location,
+    incomingCategories: readonly LocationCategory[]
+  ): Promise<number> {
+    if (!existingLocation.id) {
+      throw new BadRequestError("Duplicate location found without a valid ID");
+    }
+
+    const existingCategories = parseCategoryListJson(
+      existingLocation.categoriesJson,
+      existingLocation.category
+    );
+    const mergedCategories = mergeCategoryLists(existingCategories, [...incomingCategories]);
+
+    if (mergedCategories.length === existingCategories.length) {
+      throw new BadRequestError(
+        `Duplicate location detected. "${existingLocation.name}" already exists with the same category set.`
+      );
+    }
+
+    const mergedIdealForJson = this.mergeStringArrayJson(
+      existingLocation.idealForJson,
+      incomingEntry.idealForJson,
+      4
+    );
+
+    const updateData: Partial<Location> = {
+      category: mergedCategories[0],
+      categoriesJson: toCategoryListJson(mergedCategories, mergedCategories[0]),
+      ...(mergedIdealForJson !== undefined && { idealForJson: mergedIdealForJson }),
+      ...(!existingLocation.type && incomingEntry.type && { type: incomingEntry.type }),
+      ...(!existingLocation.locationKey && incomingEntry.locationKey && { locationKey: incomingEntry.locationKey }),
+      ...(!existingLocation.district && incomingEntry.district && { district: incomingEntry.district }),
+      ...(!existingLocation.contactAddress && incomingEntry.contactAddress && { contactAddress: incomingEntry.contactAddress }),
+      ...(!existingLocation.countryCode && incomingEntry.countryCode && { countryCode: incomingEntry.countryCode }),
+      ...(!existingLocation.ianaTimeId && incomingEntry.ianaTimeId && { ianaTimeId: incomingEntry.ianaTimeId }),
+      ...(!existingLocation.phoneNumber && incomingEntry.phoneNumber && { phoneNumber: incomingEntry.phoneNumber }),
+      ...(!existingLocation.website && incomingEntry.website && { website: incomingEntry.website }),
+      ...(!existingLocation.email && incomingEntry.email && { email: incomingEntry.email }),
+      ...(!existingLocation.neighborhoodDescription && incomingEntry.neighborhoodDescription && { neighborhoodDescription: incomingEntry.neighborhoodDescription }),
+      ...(!existingLocation.placeId && incomingEntry.placeId && { placeId: incomingEntry.placeId }),
+      ...(!existingLocation.tripadvisorUrl && incomingEntry.tripadvisorUrl && { tripadvisorUrl: incomingEntry.tripadvisorUrl }),
+      ...(!existingLocation.tripadvisorLocationId && incomingEntry.tripadvisorLocationId && { tripadvisorLocationId: incomingEntry.tripadvisorLocationId }),
+      ...(!existingLocation.tripadvisorMealTypesJson && incomingEntry.tripadvisorMealTypesJson && { tripadvisorMealTypesJson: incomingEntry.tripadvisorMealTypesJson }),
+      ...(!existingLocation.tripadvisorCuisinesJson && incomingEntry.tripadvisorCuisinesJson && { tripadvisorCuisinesJson: incomingEntry.tripadvisorCuisinesJson }),
+      ...(!existingLocation.tripadvisorFeaturesJson && incomingEntry.tripadvisorFeaturesJson && { tripadvisorFeaturesJson: incomingEntry.tripadvisorFeaturesJson }),
+    };
+
+    const merged = updateLocationById(existingLocation.id, updateData);
+    if (!merged) {
+      throw new BadRequestError("Failed to merge duplicate location categories");
+    }
+
+    const tripadvisorIdForFetch =
+      incomingEntry.tripadvisorLocationId && !existingLocation.tripadvisorLocationId
+        ? incomingEntry.tripadvisorLocationId
+        : null;
+
+    if (tripadvisorIdForFetch) {
+      try {
+        await this.tripAdvisorPlaceService.fetchAndMergePlaceData(existingLocation.id, tripadvisorIdForFetch);
+      } catch (error) {
+        console.error(
+          `[MapsService] TripAdvisor auto-fetch failed during duplicate merge for location ${existingLocation.id}:`,
+          error
+        );
+      }
+    }
+
+    return existingLocation.id;
+  }
+
+  private buildLocationResponseById(id: number, fallbackLocation?: Location): LocationResponse {
+    const location = getLocationByIdForUpdate(id) || fallbackLocation;
+
+    if (!location) {
+      throw new NotFoundError("Location", id);
+    }
+
+    const instagramEmbeds = getInstagramEmbedsByLocationId(id);
+    const uploads = getUploadsByLocationId(id);
+
+    return transformLocationToResponse({
+      ...location,
+      instagram_embeds: instagramEmbeds,
+      uploads,
+    });
+  }
+
   async addMapsLocation(payload: CreateMapsRequest): Promise<LocationResponse> {
     if (!payload.name || !payload.address) {
       throw new BadRequestError("Name and address required");
     }
 
-    // Validate category
-    const category = validateCategory(payload.category);
+    const categories = this.resolveRequestedCategories({
+      category: payload.category,
+      categories: payload.categories,
+    });
+    const category = categories[0];
 
     const apiKey = this.config.hasGoogleMapsKey() ? this.config.GOOGLE_MAPS_API_KEY : undefined;
     const entry = await createFromMaps(payload.name, payload.address, apiKey, category, payload.type);
+    entry.category = category;
+    entry.categoriesJson = toCategoryListJson(categories, category);
     const tripadvisorFields = this.resolveTripadvisorFields(payload.tripadvisorUrl);
     Object.assign(entry, tripadvisorFields);
     if (payload.email) {
@@ -178,13 +402,17 @@ export class MapsService {
       this.taxonomyService.ensureTaxonomyEntry(entry.locationKey);
     }
 
+    // Duplicate handling: merge categories on same place; reject exact duplicates.
+    const duplicate = this.findDuplicateCandidate(entry);
+    if (duplicate) {
+      const mergedId = await this.mergeDuplicateLocation(duplicate, entry, categories);
+      return this.buildLocationResponseById(mergedId, duplicate);
+    }
+
     const savedId = saveLocation(entry);
     if (!savedId || typeof savedId !== 'number') {
       throw new BadRequestError("Failed to save location to database");
     }
-
-    // Update entry with the saved ID
-    entry.id = savedId;
 
     // Auto-fetch TripAdvisor place data if tripadvisorLocationId is available
     if (entry.tripadvisorLocationId) {
@@ -196,18 +424,10 @@ export class MapsService {
       }
     }
 
-    // Re-fetch the location to get any updates from TripAdvisor merge
-    const updatedEntry = getLocationByIdForUpdate(savedId);
-    const finalEntry = updatedEntry || entry;
-
-    // Transform to response format
-    const locationWithNested = {
-      ...finalEntry,
-      instagram_embeds: [],
-      uploads: [],
-    };
-
-    return transformLocationToResponse(locationWithNested);
+    return this.buildLocationResponseById(savedId, {
+      ...entry,
+      id: savedId,
+    });
   }
 
 
@@ -219,8 +439,12 @@ export class MapsService {
       throw new NotFoundError("Location", id);
     }
 
-    // Validate category if provided
-    const category = updates.category ? validateCategory(updates.category) : undefined;
+    const categoryList = updates.categories
+      ? normalizeCategoryList(updates.categories, updates.category ?? currentLocation.category)
+      : updates.category
+        ? normalizeCategoryList([validateCategory(updates.category)], updates.category)
+        : undefined;
+    const primaryCategory = categoryList?.[0];
 
     const nextName = updates.name ?? currentLocation.name;
     const nextAddress = updates.address ?? currentLocation.address;
@@ -245,7 +469,10 @@ export class MapsService {
       ...(updates.name !== undefined && { name: updates.name }),
       ...(updates.address !== undefined && { address: updates.address }),
       ...(updates.title !== undefined && { title: updates.title }),
-      ...(category !== undefined && { category }),
+      ...(categoryList !== undefined && {
+        category: primaryCategory,
+        categoriesJson: toCategoryListJson(categoryList, primaryCategory),
+      }),
       ...(updates.type !== undefined && { type: updates.type }),
       ...(updates.locationKey !== undefined && { locationKey: updates.locationKey }),
       ...(updates.district !== undefined && { district: updates.district }),
@@ -279,17 +506,6 @@ export class MapsService {
 
     console.log(`✅ [UPDATE] Location ${id} updated successfully. New type:`, updatedLocation.type);
 
-    // Fetch nested data
-    const instagramEmbeds = getInstagramEmbedsByLocationId(id);
-    const uploads = getUploadsByLocationId(id);
-
-    // Transform to response format
-    const locationWithNested = {
-      ...updatedLocation,
-      instagram_embeds: instagramEmbeds,
-      uploads: uploads,
-    };
-
-    return transformLocationToResponse(locationWithNested);
+    return this.buildLocationResponseById(id, updatedLocation);
   }
 }

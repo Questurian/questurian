@@ -9,6 +9,14 @@ const locationCategorySchema = z.enum([
   "nightlife"
 ] as const satisfies readonly LocationCategory[]);
 
+const locationCategoriesSchema = z
+  .array(locationCategorySchema)
+  .min(1, "Select at least 1 category")
+  .max(2, "Select up to 2 categories")
+  .refine((categories) => new Set(categories).size === categories.length, {
+    message: "Categories must be unique",
+  });
+
 const idealForSchema = z
   .array(z.enum(IDEAL_FOR_TAGS))
   .min(1, "Select at least 1 Ideal For tag")
@@ -26,7 +34,7 @@ export const addLocationSchema = z.object({
     .string()
     .min(1, "Address is required")
     .max(500, "Address must be less than 500 characters"),
-  category: locationCategorySchema,
+  categories: locationCategoriesSchema,
   idealFor: idealForSchema,
   type: z.string().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorUrl: z
@@ -68,7 +76,8 @@ export const batchItemSchema = z.object({
     .string()
     .min(1, "Address is required")
     .max(500, "Address must be less than 500 characters"),
-  category: locationCategorySchema,
+  category: locationCategorySchema.optional(),
+  categories: locationCategoriesSchema.optional(),
   idealFor: idealForSchema,
   type: z.string().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorUrl: z
@@ -77,6 +86,10 @@ export const batchItemSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform(val => val === "" ? undefined : val),
+}).refine((data) => {
+  return data.category !== undefined || data.categories !== undefined;
+}, {
+  message: "Each item must include category or categories",
 });
 
 export const batchUploadSchema = z.array(batchItemSchema).min(1, "At least one location is required");

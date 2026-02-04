@@ -33,7 +33,8 @@ export function Home() {
   const locations = (data?.locations ?? []).map(location => ({
     ...location,
     location: location.location ?? undefined,
-    category: location.category
+    category: location.category,
+    categories: location.categories
   }));
 
   const handleDownloadAll = async () => {

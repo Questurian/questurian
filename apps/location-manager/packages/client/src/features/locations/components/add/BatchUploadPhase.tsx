@@ -2,7 +2,18 @@ import { useState, useEffect, useRef } from "react";
 import { Check, X, Loader2, Upload, AlertCircle } from "lucide-react";
 import { Button } from "@client/components/ui/button";
 import { locationsApi } from "@client/shared/services/api/locations.api";
+import type { Category } from "@client/shared/services/api/types";
 import type { BatchItem } from "../../validation/add-location.schema";
+
+function getItemCategories(item: BatchItem): Category[] {
+  if (Array.isArray(item.categories) && item.categories.length > 0) {
+    return item.categories as Category[];
+  }
+  if (item.category) {
+    return [item.category as Category];
+  }
+  return [];
+}
 
 interface BatchUploadPhaseProps {
   items: BatchItem[];
@@ -58,6 +69,22 @@ export function BatchUploadPhase({
 
   const processItem = async (index: number): Promise<BatchResult> => {
     const item = items[index];
+    const categories = getItemCategories(item);
+
+    if (categories.length === 0) {
+      const errorMessage = "Missing category/categories for batch item";
+      updateItemState(index, {
+        status: "failed",
+        message: `Failed: ${errorMessage}`,
+        error: errorMessage,
+      });
+      return {
+        index,
+        item,
+        success: false,
+        error: errorMessage,
+      };
+    }
 
     // Update to creating status
     updateItemState(index, {
@@ -70,7 +97,8 @@ export function BatchUploadPhase({
       const createResponse = await locationsApi.createLocation({
         name: item.name || item.address, // Use address as name if not provided
         address: item.address,
-        category: item.category,
+        category: categories[0],
+        categories,
         idealFor: item.idealFor,
         type: item.type,
         tripadvisorUrl: item.tripadvisorUrl,
@@ -278,7 +306,7 @@ export function BatchUploadPhase({
                         #{index + 1}
                       </span>
                       <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                        {item.category}
+                        {getItemCategories(item).join(" + ")}
                       </span>
                     </div>
                     <p className="text-sm text-foreground truncate mt-0.5">

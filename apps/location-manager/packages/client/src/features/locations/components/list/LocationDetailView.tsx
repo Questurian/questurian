@@ -324,7 +324,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
       { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
       { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
       { key: "sourceAddress", label: "Source Address", present: Boolean(source.address?.trim()) },
-      { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+      { key: "category", label: "Category", present: Array.isArray(locationDetail.categories) && locationDetail.categories.length > 0 },
       { key: "type", label: "Type", present: Boolean(locationDetail.type?.trim()) },
       { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
       { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
@@ -712,6 +712,13 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
             value={locationDetail.title}
           />
         )}
+
+        <DetailField
+          label="Categories"
+          value={(locationDetail.categories && locationDetail.categories.length > 0
+            ? locationDetail.categories
+            : [locationDetail.category]).join(", ")}
+        />
 
         {showContactAddress && (
           <DetailField

@@ -22,6 +22,12 @@ const IDEAL_FOR_OPTION_GROUPS = IDEAL_FOR_TAG_GROUPS.map((group) => ({
   label: group.label,
   options: group.tags.map((tag) => ({ value: tag, label: tag })),
 }));
+const CATEGORY_OPTIONS = [
+  { value: "dining", label: "Dining" },
+  { value: "accommodations", label: "Accommodations" },
+  { value: "attractions", label: "Attractions" },
+  { value: "nightlife", label: "Nightlife" },
+] as const satisfies readonly { value: LocationCategory; label: string }[];
 
 export function AddLocation() {
   const navigate = useNavigate();
@@ -62,22 +68,23 @@ export function AddLocation() {
     defaultValues: {
       name: "",
       address: "",
-      category: undefined,
+      categories: [],
       idealFor: [],
       type: undefined,
       tripadvisorUrl: "",
     },
   });
 
-  // Watch category changes to update selectedCategory and clear type
-  const watchedCategory = addForm.watch("category");
+  // Watch primary category changes to update selectedCategory and clear type
+  const watchedCategories = addForm.watch("categories");
+  const primaryCategory = watchedCategories?.[0];
   useEffect(() => {
-    if (watchedCategory !== selectedCategory) {
-      setSelectedCategory(watchedCategory);
+    if (primaryCategory !== selectedCategory) {
+      setSelectedCategory(primaryCategory);
       // Clear type when category changes
       addForm.setValue("type", undefined);
     }
-  }, [watchedCategory, selectedCategory, addForm]);
+  }, [primaryCategory, selectedCategory, addForm]);
 
   const confirmForm = useForm<ConfirmLocationFormData>({
     resolver: zodResolver(confirmLocationSchema),
@@ -89,7 +96,12 @@ export function AddLocation() {
   });
 
   function handleAddLocation(data: AddLocationFormData) {
-    createLocation(data, {
+    const nextPrimaryCategory = data.categories[0];
+    createLocation({
+      ...data,
+      category: nextPrimaryCategory,
+      categories: data.categories,
+    }, {
       onSuccess: (response) => {
         setCreatedLocation({
           id: response.id,
@@ -194,7 +206,7 @@ export function AddLocation() {
 ## Required Fields:
 - **name** (string) - Location name (e.g., "Asu Restaurant", "The Rooftop Bar")
 - **address** (string) - Full address including city and country
-- **category** (string) - One of: "dining", "accommodations", "attractions", "nightlife"
+- **category** (string) OR **categories** (array, max 2) using: "dining", "accommodations", "attractions", "nightlife"
 - **idealFor** (array) - 1 to 4 tags from this list:
 
   Occasions & Company: "Birthdays & Celebrations", "Business Dining", "Date Nights", "Family-Friendly", "First Dates", "Impressing Visitors", "Large Groups & Parties", "Pre-Theater", "Private Dining", "Catch-Up Conversations", "Friends' Night Out", "Solo Dining", "Special Occasions"
@@ -234,7 +246,7 @@ Breakdown:
   {
     "name": "The Rooftop Bar",
     "address": "456 Ocean Drive, Miami Beach, FL, USA",
-    "category": "nightlife",
+    "categories": ["dining", "nightlife"],
     "idealFor": ["Trendy Hot Spots", "Craft Cocktails"]
   }
 ]
@@ -279,11 +291,6 @@ Please generate the JSON for these locations:
       const categoryLabel = selectedDialogCategory
         ? selectedDialogCategory.charAt(0).toUpperCase() + selectedDialogCategory.slice(1)
         : "All Categories";
-
-      // Build enhanced prompt with existing locations
-      const locationDescription = selectedDialogCategory
-        ? `${categoryLabel} in ${cityLabel}, ${countryLabel}`
-        : `${cityLabel}, ${countryLabel}`;
 
       const existingLocationsSection = existingNames.length > 0
         ? `\n\n## IMPORTANT - Existing ${categoryLabel} Locations in ${cityLabel}, ${countryLabel}:\nThe following locations are ALREADY in the database. Do NOT include these in your output:\n${existingNames.map((name) => `- ${name}`).join("\n")}\n`
@@ -353,7 +360,7 @@ Please generate the JSON for these locations:
             <ul className="text-xs text-blue-600 list-disc list-inside space-y-1">
               <li><strong>name</strong> (required) - Location name</li>
               <li><strong>address</strong> (required) - Full address including city and country</li>
-              <li><strong>category</strong> (required) - dining, accommodations, attractions, or nightlife</li>
+              <li><strong>category</strong> or <strong>categories</strong> (required) - categories must be dining, accommodations, attractions, or nightlife</li>
               <li><strong>idealFor</strong> (required) - Array of 1-4 tags (see "Copy for AI" for full list)</li>
               <li><strong>type</strong> (optional) - Location type</li>
               <li><strong>tripadvisorUrl</strong> (optional) - Full TripAdvisor URL</li>
@@ -383,7 +390,7 @@ Please generate the JSON for these locations:
   {
     "name": "Asu",
     "address": "Av. La Mar 1337, Miraflores, Lima, Peru",
-    "category": "dining",
+    "categories": ["dining", "nightlife"],
     "idealFor": ["Date Nights", "Fine Dining", "Impressing Visitors"],
     "tripadvisorUrl": "https://www.tripadvisor.com/Restaurant_Review-g294316-d23520604-Reviews-Asu-Lima_Lima_Region.html"
   }
@@ -811,17 +818,15 @@ Please generate the JSON for these locations:
             placeholder="123 Main St, City, State, Country"
           />
 
-          <FormSelect
-            name="category"
-            label="Category"
+          <FormTagMultiSelect
+            name="categories"
+            label="Categories"
             control={addForm.control}
-            placeholder="Select a category"
-          >
-            <SelectItem value="dining">Dining</SelectItem>
-            <SelectItem value="accommodations">Accommodations</SelectItem>
-            <SelectItem value="attractions">Attractions</SelectItem>
-            <SelectItem value="nightlife">Nightlife</SelectItem>
-          </FormSelect>
+            options={CATEGORY_OPTIONS}
+            maxSelections={2}
+            placeholder="Select categories"
+            description="Choose 1 or 2 categories (first selection is primary)"
+          />
 
           {selectedCategory && (
             <FormSelect

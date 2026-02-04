@@ -22,14 +22,15 @@ export function saveLocation(location: Location): number | boolean {
   try {
     const db = getDb();
     const query = db.query(`
-      INSERT INTO locations (name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, ideal_for_json, tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
-      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $ideal_for_json, $tripadvisor_meal_types, $tripadvisor_cuisines, $tripadvisor_features, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
+      INSERT INTO locations (name, title, address, url, lat, lng, category, categories_json, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, ideal_for_json, tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
+      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $categories_json, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $ideal_for_json, $tripadvisor_meal_types, $tripadvisor_cuisines, $tripadvisor_features, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
       ON CONFLICT(name, address) DO UPDATE SET
         title = excluded.title,
         url = excluded.url,
         lat = excluded.lat,
         lng = excluded.lng,
         category = excluded.category,
+        categories_json = excluded.categories_json,
         type = excluded.type,
         locationKey = excluded.locationKey,
         district = excluded.district,
@@ -60,6 +61,7 @@ export function saveLocation(location: Location): number | boolean {
       $lat: location.lat || null,
       $lng: location.lng || null,
       $category: location.category || "attractions",
+      $categories_json: location.categoriesJson || JSON.stringify([location.category || "attractions"]),
       $type: (location as any).type || null,
       $locationKey: location.locationKey || null,
       $district: location.district || null,
@@ -82,8 +84,18 @@ export function saveLocation(location: Location): number | boolean {
       $payload_location_ref: location.payload_location_ref || null,
     });
 
-    const result = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
-    return result.id;
+    const idQuery = db.query(`
+      SELECT id
+      FROM locations
+      WHERE name = $name AND address = $address
+      LIMIT 1
+    `);
+    const saved = idQuery.get({
+      $name: location.name,
+      $address: location.address,
+    }) as { id: number } | undefined;
+
+    return saved?.id ?? false;
   } catch (error) {
     console.error("Error saving location to DB:", error);
     return false;
@@ -121,6 +133,10 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
     if (updates.category !== undefined) {
       setClause.push("category = $category");
       params.$category = updates.category;
+    }
+    if (updates.categoriesJson !== undefined) {
+      setClause.push("categories_json = $categories_json");
+      params.$categories_json = updates.categoriesJson;
     }
     if (updates.type !== undefined) {
       setClause.push("type = $type");
@@ -267,7 +283,7 @@ export function getAllLocations(): Location[] {
   const db = getDb();
   const query = db.query(`
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
-           l.category, l.type, l.locationKey, l.district, l.contactAddress,
+           l.category, l.categories_json as categoriesJson, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
@@ -297,7 +313,7 @@ export function getLocationsByCategory(category: string): Location[] {
   const db = getDb();
   const query = db.query(`
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
-           l.category, l.type, l.locationKey, l.district, l.contactAddress,
+           l.category, l.categories_json as categoriesJson, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
@@ -311,11 +327,14 @@ export function getLocationsByCategory(category: string): Location[] {
            l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at
     FROM locations l
     LEFT JOIN location_taxonomy t ON l.locationKey = t.locationKey
-    WHERE l.category = $category
+    WHERE (l.category = $category OR l.categories_json LIKE $categoryPattern)
       AND (l.locationKey IS NULL OR t.status = 'approved')
     ORDER BY l.created_at DESC
   `);
-  return query.all({ $category: category }) as Location[];
+  return query.all({
+    $category: category,
+    $categoryPattern: `%\"${category}\"%`,
+  }) as Location[];
 }
 
 /**
@@ -328,7 +347,7 @@ export function getLocationById(id: number): Location | null {
   const db = getDb();
   const query = db.query(`
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
-           l.category, l.type, l.locationKey, l.district, l.contactAddress,
+           l.category, l.categories_json as categoriesJson, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
@@ -356,7 +375,7 @@ export function getLocationByIdForUpdate(id: number): Location | null {
   const db = getDb();
   const query = db.query(`
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
-           l.category, l.type, l.locationKey, l.district, l.contactAddress,
+           l.category, l.categories_json as categoriesJson, l.type, l.locationKey, l.district, l.contactAddress,
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
@@ -377,6 +396,55 @@ export function getLocationByIdForUpdate(id: number): Location | null {
 }
 
 /**
+ * Find possible duplicate locations based on address and/or TripAdvisor identifiers.
+ */
+export function findPotentialDuplicateLocations(params: {
+  address: string;
+  tripadvisorUrl?: string | null;
+  tripadvisorLocationId?: string | null;
+}): Location[] {
+  const db = getDb();
+  const normalizedAddress = params.address
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  const whereClauses: string[] = [
+    "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(TRIM(address), ',', ''), '.', ''), '#', ''), '-', ''), ' ', '')) = $normalized_address",
+  ];
+  const queryParams: Record<string, string | null> = {
+    $normalized_address: normalizedAddress,
+  };
+
+  if (params.tripadvisorLocationId) {
+    whereClauses.push("tripadvisor_location_id = $tripadvisor_location_id");
+    queryParams.$tripadvisor_location_id = params.tripadvisorLocationId;
+  }
+
+  if (params.tripadvisorUrl) {
+    whereClauses.push("tripadvisor_url = $tripadvisor_url");
+    queryParams.$tripadvisor_url = params.tripadvisorUrl;
+  }
+
+  const query = db.query(`
+    SELECT id, name, title, address, url, lat, lng, category, categories_json as categoriesJson, type, locationKey, district, contactAddress,
+           countryCode, iana_time_id as ianaTimeId, phoneNumber, website, email, hours_json as hoursJson,
+           neighborhood_description as neighborhoodDescription,
+           ideal_for_json as idealForJson,
+           tripadvisor_meal_types as tripadvisorMealTypesJson,
+           tripadvisor_cuisines as tripadvisorCuisinesJson,
+           tripadvisor_features as tripadvisorFeaturesJson,
+           slug, place_id as placeId,
+           tripadvisor_url as tripadvisorUrl, tripadvisor_location_id as tripadvisorLocationId,
+           payload_location_ref, reviews_fetched_at as reviewsFetchedAt,
+           reviews_count as reviewsCount, reviews_google_count as reviewsGoogleCount,
+           reviews_tripadvisor_count as reviewsTripadvisorCount, created_at, updated_at
+    FROM locations
+    WHERE ${whereClauses.join(" OR ")}
+  `);
+
+  return query.all(queryParams) as Location[];
+}
+
+/**
  * Get a single location by its URL-friendly slug.
  *
  * @param slug - URL slug to search for (e.g., "panchita-miraflores")
@@ -385,7 +453,7 @@ export function getLocationByIdForUpdate(id: number): Location | null {
 export function getLocationBySlug(slug: string): Location | null {
   const db = getDb();
   const query = db.query(`
-    SELECT id, name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress,
+    SELECT id, name, title, address, url, lat, lng, category, categories_json as categoriesJson, type, locationKey, district, contactAddress,
            countryCode, iana_time_id as ianaTimeId, phoneNumber, website, email, hours_json as hoursJson,
            neighborhood_description as neighborhoodDescription,
            ideal_for_json as idealForJson,

@@ -11,6 +11,14 @@ export const locationCategorySchema = z.enum([
 
 export const idealForTagSchema = z.enum(IDEAL_FOR_TAGS);
 
+const locationCategoriesSchema = z
+  .array(locationCategorySchema)
+  .min(1, "Select at least 1 category")
+  .max(4, "Select up to 4 categories")
+  .refine((categories) => new Set(categories).size === categories.length, {
+    message: "Categories must be unique",
+  });
+
 const idealForTagsSchema = z
   .array(idealForTagSchema)
   .min(1, "Select at least 1 Ideal For tag")
@@ -22,7 +30,8 @@ const idealForTagsSchema = z
 export const createMapsSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   address: z.string().trim().min(1, "Address is required"),
-  category: locationCategorySchema,
+  category: locationCategorySchema.optional(),
+  categories: locationCategoriesSchema.optional(),
   idealFor: idealForTagsSchema,
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
@@ -44,6 +53,10 @@ export const createMapsSchema = z.object({
     z.array(z.string().trim()),
     z.string().trim(),
   ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+}).refine((data) => {
+  return data.category !== undefined || data.categories !== undefined;
+}, {
+  message: "At least one category must be provided",
 });
 
 // PATCH /api/maps/:id schema - only updatable fields allowed
@@ -53,6 +66,7 @@ export const patchMapsSchema = z.object({
   address: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1).optional(),
   category: locationCategorySchema.optional(),
+  categories: locationCategoriesSchema.optional(),
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   locationKey: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   district: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
@@ -102,6 +116,7 @@ export const patchMapsSchema = z.object({
          data.name !== undefined ||
          data.address !== undefined ||
          data.category !== undefined ||
+         data.categories !== undefined ||
          data.type !== undefined ||
          data.locationKey !== undefined ||
          data.district !== undefined ||

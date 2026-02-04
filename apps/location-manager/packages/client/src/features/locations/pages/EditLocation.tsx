@@ -23,6 +23,12 @@ const IDEAL_FOR_OPTION_GROUPS = IDEAL_FOR_TAG_GROUPS.map((group) => ({
   label: group.label,
   options: group.tags.map((tag) => ({ value: tag, label: tag })),
 }));
+const CATEGORY_OPTIONS = [
+  { value: "dining", label: "Dining" },
+  { value: "accommodations", label: "Accommodations" },
+  { value: "attractions", label: "Attractions" },
+  { value: "nightlife", label: "Nightlife" },
+] as const satisfies readonly { value: LocationCategory; label: string }[];
 
 export function EditLocation() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +54,7 @@ export function EditLocation() {
       name: "",
       address: "",
       title: "",
-      category: undefined,
+      categories: undefined,
       idealFor: [],
       type: undefined,
       locationKey: "",
@@ -71,12 +77,15 @@ export function EditLocation() {
   // Pre-populate form when location data is loaded
   useEffect(() => {
     if (location) {
-      setSelectedCategory(location.category);
+      const initialCategories = (location.categories && location.categories.length > 0)
+        ? location.categories
+        : [location.category];
+      setSelectedCategory(initialCategories[0]);
       form.reset({
         name: location.source?.name || "",
         address: location.source?.address || "",
         title: location.title || "",
-        category: location.category,
+        categories: initialCategories,
         idealFor: location.idealFor || [],
         type: location.type || undefined,
         locationKey: location.locationKey || "",
@@ -97,22 +106,23 @@ export function EditLocation() {
         tripadvisorCuisines: location.tripadvisorCuisines?.join(", ") || "",
       });
 
-      console.log("📦 Form reset complete. Category value:", form.getValues("category"), "Type value:", form.getValues("type"));
+      console.log("📦 Form reset complete. Categories value:", form.getValues("categories"), "Type value:", form.getValues("type"));
     }
   }, [location, form]);
 
-  const watchedCategory = form.watch("category");
+  const watchedCategories = form.watch("categories");
+  const watchedPrimaryCategory = watchedCategories?.[0];
   useEffect(() => {
-    if (watchedCategory === undefined) return;
+    if (watchedPrimaryCategory === undefined) return;
     if (selectedCategory === undefined) {
-      setSelectedCategory(watchedCategory);
+      setSelectedCategory(watchedPrimaryCategory);
       return;
     }
-    if (watchedCategory !== selectedCategory) {
-      setSelectedCategory(watchedCategory);
+    if (watchedPrimaryCategory !== selectedCategory) {
+      setSelectedCategory(watchedPrimaryCategory);
       form.setValue("type", "");
     }
-  }, [watchedCategory, selectedCategory, form]);
+  }, [watchedPrimaryCategory, selectedCategory, form]);
 
   // Redirect on successful update
   useEffect(() => {
@@ -129,6 +139,11 @@ export function EditLocation() {
     const updateData = Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined)
     );
+
+    if (Array.isArray(data.categories) && data.categories.length > 0) {
+      updateData.categories = data.categories;
+      updateData.category = data.categories[0];
+    }
 
     mutate({ id: locationId, data: updateData });
   }
@@ -179,17 +194,15 @@ export function EditLocation() {
             placeholder="Location name"
           />
 
-          <FormSelect
-            name="category"
-            label="Category"
+          <FormTagMultiSelect
+            name="categories"
+            label="Categories"
             control={form.control}
-            placeholder="Select a category"
-          >
-            <SelectItem value="dining">Dining</SelectItem>
-            <SelectItem value="accommodations">Accommodations</SelectItem>
-            <SelectItem value="attractions">Attractions</SelectItem>
-            <SelectItem value="nightlife">Nightlife</SelectItem>
-          </FormSelect>
+            options={CATEGORY_OPTIONS}
+            maxSelections={2}
+            placeholder="Select categories"
+            description="Choose 1 or 2 categories (first selection is primary)"
+          />
 
           <FormInput
             name="address"

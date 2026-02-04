@@ -28,3 +28,78 @@ export function validateCategoryWithDefault(category: unknown | undefined): Loca
   }
   return validateCategory(category);
 }
+
+/**
+ * Normalize category input into a unique, ordered array.
+ * Falls back to a single default category when nothing valid is provided.
+ */
+export function normalizeCategoryList(
+  categories: unknown,
+  fallbackCategory?: unknown
+): LocationCategory[] {
+  const deduped: LocationCategory[] = [];
+
+  if (Array.isArray(categories)) {
+    for (const category of categories) {
+      if (isValidCategory(category) && !deduped.includes(category)) {
+        deduped.push(category);
+      }
+    }
+  } else if (isValidCategory(categories)) {
+    deduped.push(categories);
+  }
+
+  if (deduped.length > 0) {
+    return deduped;
+  }
+
+  return [validateCategoryWithDefault(fallbackCategory)];
+}
+
+/**
+ * Parse categories_json from the database and ensure a safe fallback.
+ */
+export function parseCategoryListJson(
+  categoriesJson?: string | null,
+  fallbackCategory?: unknown
+): LocationCategory[] {
+  if (!categoriesJson) {
+    return normalizeCategoryList(undefined, fallbackCategory);
+  }
+
+  try {
+    const parsed = JSON.parse(categoriesJson);
+    return normalizeCategoryList(parsed, fallbackCategory);
+  } catch {
+    return normalizeCategoryList(undefined, fallbackCategory);
+  }
+}
+
+/**
+ * Serialize categories for persistence in locations.categories_json.
+ */
+export function toCategoryListJson(
+  categories: unknown,
+  fallbackCategory?: unknown
+): string {
+  return JSON.stringify(normalizeCategoryList(categories, fallbackCategory));
+}
+
+/**
+ * Merge category arrays while preserving the first-seen order.
+ */
+export function mergeCategoryLists(
+  ...categoryLists: Array<readonly LocationCategory[]>
+): LocationCategory[] {
+  const merged: LocationCategory[] = [];
+
+  for (const list of categoryLists) {
+    for (const category of list) {
+      if (!merged.includes(category)) {
+        merged.push(category);
+      }
+    }
+  }
+
+  return merged.length > 0 ? merged : ["attractions"];
+}

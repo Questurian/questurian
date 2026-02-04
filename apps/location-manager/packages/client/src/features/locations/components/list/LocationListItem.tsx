@@ -28,6 +28,7 @@ interface LocationListItemProps {
     name: string;
     title: string | null;
     category: string;
+    categories?: string[];
     location?: string;
   };
   onClick?: (id: number) => void;
@@ -37,6 +38,10 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const navigate = useNavigate();
+
+  const categories = (location.categories && location.categories.length > 0)
+    ? location.categories
+    : [location.category];
 
   // Custom hooks
   const { data: locationDetail, isLoading, error } = useLocationDetail(
@@ -105,9 +110,16 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
             onDelete={handleDeleteClick}
             menuRef={menuRef}
           />
-          <span className={`text-xs font-medium uppercase tracking-wider px-2 py-1 rounded-md ${getCategoryBadgeStyles(location.category)}`}>
-            {location.category}
-          </span>
+          <div className="flex flex-wrap justify-end gap-1 max-w-[180px]">
+            {categories.map((category) => (
+              <span
+                key={category}
+                className={`text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-md ${getCategoryBadgeStyles(category)}`}
+              >
+                {category}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 

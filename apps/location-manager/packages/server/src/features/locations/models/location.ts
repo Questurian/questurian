@@ -43,6 +43,7 @@ export interface Location {
   lat?: number | null;
   lng?: number | null;
   category?: LocationCategory;
+  categoriesJson?: string | null;
   type?: string | null;
   locationKey?: string | null;
   district?: string | null;
@@ -127,7 +128,8 @@ export interface LocationWithNested extends Location {
 export interface CreateMapsRequest {
   name: string;
   address: string;
-  category: LocationCategory;
+  category?: LocationCategory;
+  categories?: LocationCategory[];
   idealFor: IdealForTag[];
   type?: string;
   tripadvisorUrl?: string;
@@ -171,6 +173,7 @@ export interface LocationResponse {
   id: number;
   title: string | null;
   category: LocationCategory;
+  categories: LocationCategory[];
   type: string | null;
   locationKey: string | null;
   district: string | null;
@@ -209,6 +212,7 @@ export interface LocationBasic {
   title: string | null;
   location: string | null;
   category: LocationCategory;
+  categories: LocationCategory[];
   // Reviews tracking fields
   reviewsFetchedAt: string | null;
   reviewsCount: number | null;
