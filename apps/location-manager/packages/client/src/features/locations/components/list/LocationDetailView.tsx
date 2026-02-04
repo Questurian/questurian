@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed } from "@client/shared/services/api/types";
 import type { ImageVariant } from "@questurian/lm-shared";
 import { DetailField } from "./DetailField";
@@ -6,12 +6,24 @@ import { AddInstagramEmbedForm } from "../forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "../forms/AddUploadFilesForm";
 import { ImageLightbox } from "../ui/ImageLightbox";
 import { ReviewsStatusBadge } from "../ui/ReviewsStatusBadge";
-import { Button } from "@client/components/ui/button";
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@client/components/ui";
 import { Check, ChevronDown, ChevronUp, X, Download } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
+import { useUpdateLocation } from "@client/shared/services/api/hooks/useUpdateLocation";
 import { locationsApi } from "@client/shared/services/api/locations.api";
+import { IDEAL_FOR_TAG_GROUPS, type IdealForTag } from "@shared/types/location-ideal-for";
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -26,6 +38,7 @@ interface LocationDetailViewProps {
  */
 export function LocationDetailView({ locationDetail, isLoading, error, onCopyField }: LocationDetailViewProps) {
   const { showToast } = useToast();
+  const { mutate: updateLocation, isPending: isUpdatingLocation } = useUpdateLocation();
   const [lightboxState, setLightboxState] = useState({
     isOpen: false,
     images: [] as string[],
@@ -60,6 +73,56 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     },
   });
 
+  const hasIdealFor = Boolean(
+    Array.isArray(locationDetail?.idealFor) && locationDetail.idealFor.length > 0
+  );
+  const [idealForDraft, setIdealForDraft] = useState<IdealForTag[]>([]);
+
+  useEffect(() => {
+    // Reset draft whenever the loaded location changes or once tags are saved.
+    setIdealForDraft([]);
+  }, [locationDetail?.id, hasIdealFor]);
+
+  const addIdealForTag = (tag: string) => {
+    if (isUpdatingLocation) return;
+
+    setIdealForDraft((prev) => {
+      const nextTag = tag as IdealForTag;
+      if (prev.includes(nextTag) || prev.length >= 4) return prev;
+      return [...prev, nextTag];
+    });
+  };
+
+  const removeIdealForTag = (tagToRemove: IdealForTag) => {
+    setIdealForDraft((prev) => prev.filter((tag) => tag !== tagToRemove));
+  };
+
+  const submitIdealForTags = () => {
+    if (!locationDetail || isUpdatingLocation || idealForDraft.length === 0) return;
+
+    updateLocation(
+      {
+        id: locationDetail.id,
+        data: { idealFor: idealForDraft },
+      },
+      {
+        onSuccess: () => {
+          const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+          showToast("Ideal For tags saved", centerPosition);
+        },
+        onError: (updateError) => {
+          const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+          showToast(updateError.message || "Failed to save Ideal For tags", centerPosition);
+        },
+      }
+    );
+  };
+
+  const availableIdealForGroups = IDEAL_FOR_TAG_GROUPS.map((group) => ({
+    ...group,
+    tags: group.tags.filter((tag) => !idealForDraft.includes(tag)),
+  })).filter((group) => group.tags.length > 0);
+
   const requiredFields = useMemo(() => {
     if (!locationDetail) return [];
 
@@ -73,21 +136,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     const hasMedia =
       (locationDetail.uploads && locationDetail.uploads.length > 0) ||
       (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0);
-    const hasTripadvisorMealTypes = Boolean(
-      Array.isArray(locationDetail.tripadvisorMealTypes) &&
-      locationDetail.tripadvisorMealTypes.length > 0
-    );
-    const hasIdealFor = Boolean(
-      Array.isArray(locationDetail.idealFor) && locationDetail.idealFor.length > 0
-    );
-    const hasTripadvisorCuisines = Boolean(
-      Array.isArray(locationDetail.tripadvisorCuisines) &&
-      locationDetail.tripadvisorCuisines.length > 0
-    );
-    const hasTripadvisorFeatures = Boolean(
-      Array.isArray(locationDetail.tripadvisorFeatures) &&
-      locationDetail.tripadvisorFeatures.length > 0
-    );
+    const hasIdealFor = Boolean(Array.isArray(locationDetail.idealFor) && locationDetail.idealFor.length > 0);
 
     return [
       { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
@@ -120,9 +169,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
       },
       { key: "idealFor", label: "Ideal For", present: hasIdealFor },
       { key: "operationHours", label: "Hours", present: hasOperationHours },
-      { key: "tripadvisorMealTypes", label: "Meal Types", present: hasTripadvisorMealTypes },
-      { key: "tripadvisorCuisines", label: "Cuisines", present: hasTripadvisorCuisines },
-      { key: "tripadvisorFeatures", label: "Features", present: hasTripadvisorFeatures },
       { key: "media", label: "Images/Instagram", present: hasMedia },
     ];
   }, [locationDetail]);
@@ -311,8 +357,8 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
 
         {/* Reviews Section - Separate from Completeness */}
         <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Reviews</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">Reviews</span>
             <ReviewsStatusBadge
               hasReviews={!!locationDetail.reviewsFetchedAt}
               reviewsCount={locationDetail.reviewsCount}
@@ -338,38 +384,93 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
           )}
         </div>
 
-        <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
-          <span className="text-sm font-medium">Ideal For</span>
-          <div className="text-xs text-muted-foreground">
-            {locationDetail.idealFor?.length
-              ? locationDetail.idealFor.join(", ")
-              : "Missing"}
-          </div>
-        </div>
+        {!hasIdealFor && (
+          <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+            <span className="text-sm font-medium text-foreground">Set Ideal For</span>
+            <Select
+              key={`${isUpdatingLocation ? "updating" : "ready"}-${idealForDraft.join("|") || "empty"}`}
+              value={undefined}
+              onValueChange={addIdealForTag}
+              disabled={
+                isUpdatingLocation ||
+                idealForDraft.length >= 4 ||
+                availableIdealForGroups.length === 0
+              }
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue
+                  placeholder={
+                    isUpdatingLocation
+                      ? "Saving..."
+                      : idealForDraft.length >= 4
+                        ? "Maximum 4 tags selected"
+                        : "Choose tags (1-4)"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {availableIdealForGroups.map((group, groupIndex) => (
+                  <SelectGroup key={group.label}>
+                    <SelectLabel className="pl-2 pr-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                      {group.label}
+                    </SelectLabel>
+                    {group.tags.map((tag) => (
+                      <SelectItem key={tag} value={tag}>
+                        {tag}
+                      </SelectItem>
+                    ))}
+                    {groupIndex < availableIdealForGroups.length - 1 && <SelectSeparator />}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
-          <span className="text-sm font-medium">TripAdvisor Taxonomy</span>
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div>
-              Meal types:{" "}
-              {locationDetail.tripadvisorMealTypes?.length
-                ? locationDetail.tripadvisorMealTypes.join(", ")
-                : "Missing"}
+            {idealForDraft.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {idealForDraft.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      className="rounded-sm text-muted-foreground hover:text-foreground"
+                      onClick={() => removeIdealForTag(tag)}
+                      aria-label={`Remove ${tag}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={submitIdealForTags}
+                disabled={isUpdatingLocation || idealForDraft.length === 0}
+              >
+                {isUpdatingLocation ? "Saving..." : "Set Ideal For"}
+              </Button>
+              {idealForDraft.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIdealForDraft([])}
+                  disabled={isUpdatingLocation}
+                >
+                  Clear
+                </Button>
+              )}
             </div>
-            <div>
-              Cuisines:{" "}
-              {locationDetail.tripadvisorCuisines?.length
-                ? locationDetail.tripadvisorCuisines.join(", ")
-                : "Missing"}
-            </div>
-            <div>
-              Features:{" "}
-              {locationDetail.tripadvisorFeatures?.length
-                ? locationDetail.tripadvisorFeatures.join(", ")
-                : "Missing"}
-            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {idealForDraft.length}/4 selected. This appears only when no Ideal For tag is set.
+            </p>
           </div>
-        </div>
+        )}
 
         {/* Title field - only show if different from source name */}
         {locationDetail.title && locationDetail.title !== locationDetail.source?.name && (

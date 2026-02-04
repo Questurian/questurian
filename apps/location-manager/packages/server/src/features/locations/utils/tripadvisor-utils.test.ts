@@ -40,6 +40,13 @@ describe("TripAdvisor list normalization", () => {
   test("filters excluded TripAdvisor features", () => {
     expect(
       filterTripadvisorFeatures([
+        "Delivery",
+        "Takeout",
+        "Seating",
+        "Wheelchair Accessible",
+        "Full Bar",
+        "Table Service",
+        "Live Music",
         "Serves Alcohol",
         "Free Wifi",
         "Drive Thru",
@@ -54,7 +61,6 @@ describe("TripAdvisor list normalization", () => {
       "AmEx accepted",
       "Mastercard accepted",
       "Visa accepted",
-      "Credit cards accepted",
       "Reservations",
     ]);
   });

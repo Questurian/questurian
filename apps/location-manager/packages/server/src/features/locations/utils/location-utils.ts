@@ -7,7 +7,7 @@ import type {
   LocationResponse
 } from '../models/location';
 import { formatLocationName } from '@questurian/lm-shared';
-import { parseTripadvisorStringListJson } from './tripadvisor-utils';
+import { filterTripadvisorFeatures, parseTripadvisorStringListJson } from './tripadvisor-utils';
 import { IDEAL_FOR_TAGS, type IdealForTag } from "@shared/types/location-ideal-for";
 
 const IDEAL_FOR_TAG_SET = new Set<string>(IDEAL_FOR_TAGS);
@@ -216,7 +216,9 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     operationHours: parseOperationHours(location.hoursJson || null),
     tripadvisorMealTypes: parseTripadvisorStringListJson(location.tripadvisorMealTypesJson || null),
     tripadvisorCuisines: parseTripadvisorStringListJson(location.tripadvisorCuisinesJson || null),
-    tripadvisorFeatures: parseTripadvisorStringListJson(location.tripadvisorFeaturesJson || null),
+    tripadvisorFeatures: filterTripadvisorFeatures(
+      parseTripadvisorStringListJson(location.tripadvisorFeaturesJson || null)
+    ),
     contact: {
       countryCode: location.countryCode || null,
       phoneNumber: location.phoneNumber || null,

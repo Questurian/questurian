@@ -65,7 +65,6 @@ export function EditLocation() {
       tripadvisorUrl: "",
       tripadvisorMealTypes: "",
       tripadvisorCuisines: "",
-      tripadvisorFeatures: "",
     },
   });
 
@@ -96,7 +95,6 @@ export function EditLocation() {
         tripadvisorUrl: location.tripadvisorUrl || "",
         tripadvisorMealTypes: location.tripadvisorMealTypes?.join(", ") || "",
         tripadvisorCuisines: location.tripadvisorCuisines?.join(", ") || "",
-        tripadvisorFeatures: location.tripadvisorFeatures?.join(", ") || "",
       });
 
       console.log("📦 Form reset complete. Category value:", form.getValues("category"), "Type value:", form.getValues("type"));
@@ -390,15 +388,6 @@ export function EditLocation() {
             placeholder="Comma or line-separated cuisines"
             description="Safety override. Leave blank to keep current value."
             rows={2}
-          />
-
-          <FormTextarea
-            name="tripadvisorFeatures"
-            label="TripAdvisor Features"
-            control={form.control}
-            placeholder="Comma or line-separated features"
-            description="Safety override. Leave blank to keep current value."
-            rows={3}
           />
         </div>
 

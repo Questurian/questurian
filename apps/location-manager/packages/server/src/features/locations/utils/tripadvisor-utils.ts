@@ -67,6 +67,14 @@ export function parseTripadvisorStringListJson(value?: string | null): string[] 
 }
 
 const EXCLUDED_FEATURE_TOKENS = new Set([
+  "delivery",
+  "takeout",
+  "seating",
+  "wheelchairaccessible",
+  "fullbar",
+  "acceptscreditcards",
+  "tableservice",
+  "livemusic",
   "servesalcohol",
   "freewifi",
   "drivethru",
@@ -81,7 +89,6 @@ const FEATURE_REWRITE_BY_TOKEN: Record<string, string> = {
   americanexpress: "AmEx accepted",
   mastercard: "Mastercard accepted",
   visa: "Visa accepted",
-  acceptscreditcards: "Credit cards accepted",
 };
 
 /**

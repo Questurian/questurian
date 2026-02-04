@@ -29,12 +29,9 @@ describe("SerpApiTripAdvisorClient place filtering", () => {
     expect(result.meal_types).toEqual(["Dinner", "Lunch"]);
     expect(result.cuisines).toEqual(["Peruvian", "Seafood"]);
     expect(result.features).toEqual([
-      "Takeout",
-      "Delivery",
       "AmEx accepted",
       "Mastercard accepted",
       "Visa accepted",
-      "Credit cards accepted",
     ]);
     expect("dining_options" in result).toBe(false);
     expect("diets" in result).toBe(false);
