@@ -16,6 +16,7 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from "@client/components/ui";
 import { Check, ChevronDown, ChevronUp, X, Download } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
@@ -24,6 +25,148 @@ import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDe
 import { useUpdateLocation } from "@client/shared/services/api/hooks/useUpdateLocation";
 import { locationsApi } from "@client/shared/services/api/locations.api";
 import { IDEAL_FOR_TAG_GROUPS, type IdealForTag } from "@shared/types/location-ideal-for";
+
+const MAX_IDEAL_FOR_SELECTIONS = 4;
+const IDEAL_FOR_TAG_OPTIONS: readonly IdealForTag[] = IDEAL_FOR_TAG_GROUPS.flatMap((group) => group.tags);
+const IDEAL_FOR_TAG_BY_NORMALIZED = new Map<string, IdealForTag>(
+  IDEAL_FOR_TAG_OPTIONS.map((tag) => [normalizeTagText(tag), tag] as const)
+);
+
+interface ParsedIdealForInputSuccess {
+  ok: true;
+  tags: IdealForTag[];
+}
+
+interface ParsedIdealForInputFailure {
+  ok: false;
+  error: string;
+}
+
+type ParsedIdealForInputResult = ParsedIdealForInputSuccess | ParsedIdealForInputFailure;
+
+function normalizeTagText(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function stripWrappingQuotes(value: string): string {
+  return value.trim().replace(/^['"`]+|['"`]+$/g, "").trim();
+}
+
+function tokenizeTagInput(rawInput: string): string[] {
+  const trimmed = rawInput.trim();
+  if (!trimmed) return [];
+
+  const withoutBrackets =
+    trimmed.startsWith("[") && trimmed.endsWith("]")
+      ? trimmed.slice(1, -1)
+      : trimmed;
+
+  return withoutBrackets
+    .split(/[\n,;]+/)
+    .map((token) => stripWrappingQuotes(token))
+    .filter((token) => token.length > 0);
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const previousRow = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const currentRow = new Array<number>(b.length + 1).fill(0);
+
+  for (let i = 0; i < a.length; i += 1) {
+    currentRow[0] = i + 1;
+
+    for (let j = 0; j < b.length; j += 1) {
+      const cost = a[i] === b[j] ? 0 : 1;
+      currentRow[j + 1] = Math.min(
+        currentRow[j] + 1,
+        previousRow[j + 1] + 1,
+        previousRow[j] + cost
+      );
+    }
+
+    for (let j = 0; j < previousRow.length; j += 1) {
+      previousRow[j] = currentRow[j];
+    }
+  }
+
+  return previousRow[b.length];
+}
+
+function getClosestTagSuggestion(token: string): string | null {
+  const normalizedToken = normalizeTagText(token);
+  let bestMatch: string | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  IDEAL_FOR_TAG_OPTIONS.forEach((option) => {
+    const distance = levenshteinDistance(normalizedToken, normalizeTagText(option));
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestMatch = option;
+    }
+  });
+
+  const maxDistance = Math.max(2, Math.floor(normalizedToken.length * 0.35));
+
+  return bestDistance <= maxDistance ? bestMatch : null;
+}
+
+function parseIdealForDirectInput(rawInput: string): ParsedIdealForInputResult {
+  const parsedTokens = tokenizeTagInput(rawInput);
+
+  if (parsedTokens.length === 0) {
+    return { ok: false, error: "Enter at least one tag before applying." };
+  }
+
+  const resolvedTags: IdealForTag[] = [];
+  const unknownTokens: string[] = [];
+
+  parsedTokens.forEach((token) => {
+    const resolvedTag = IDEAL_FOR_TAG_BY_NORMALIZED.get(normalizeTagText(token));
+    if (resolvedTag) {
+      resolvedTags.push(resolvedTag);
+    } else {
+      unknownTokens.push(token);
+    }
+  });
+
+  if (unknownTokens.length > 0) {
+    const unknownTokenMessage = unknownTokens
+      .map((token) => {
+        const suggestion = getClosestTagSuggestion(token);
+        return suggestion
+          ? `"${token}" (did you mean "${suggestion}"?)`
+          : `"${token}"`;
+      })
+      .join(", ");
+
+    return { ok: false, error: `Check spelling for: ${unknownTokenMessage}.` };
+  }
+
+  const duplicateTags = resolvedTags.filter(
+    (tag, index) => resolvedTags.indexOf(tag) !== index
+  );
+
+  if (duplicateTags.length > 0) {
+    const uniqueDuplicates = Array.from(new Set(duplicateTags));
+    return { ok: false, error: `Remove duplicate tags: ${uniqueDuplicates.join(", ")}.` };
+  }
+
+  if (resolvedTags.length > MAX_IDEAL_FOR_SELECTIONS) {
+    return {
+      ok: false,
+      error: `You can only apply up to ${MAX_IDEAL_FOR_SELECTIONS} tags at once.`,
+    };
+  }
+
+  return { ok: true, tags: resolvedTags };
+}
+
+function formatTagsAsArray(tags: readonly IdealForTag[]): string {
+  return `[${tags.map((tag) => `"${tag}"`).join(", ")}]`;
+}
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -77,10 +220,18 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     Array.isArray(locationDetail?.idealFor) && locationDetail.idealFor.length > 0
   );
   const [idealForDraft, setIdealForDraft] = useState<IdealForTag[]>([]);
+  const [isDirectInputEnabled, setIsDirectInputEnabled] = useState(false);
+  const [directInputValue, setDirectInputValue] = useState("");
+  const [directInputError, setDirectInputError] = useState<string | null>(null);
+  const [directInputFeedback, setDirectInputFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     // Reset draft whenever the loaded location changes or once tags are saved.
     setIdealForDraft([]);
+    setIsDirectInputEnabled(false);
+    setDirectInputValue("");
+    setDirectInputError(null);
+    setDirectInputFeedback(null);
   }, [locationDetail?.id, hasIdealFor]);
 
   const addIdealForTag = (tag: string) => {
@@ -88,13 +239,44 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
 
     setIdealForDraft((prev) => {
       const nextTag = tag as IdealForTag;
-      if (prev.includes(nextTag) || prev.length >= 4) return prev;
+      if (prev.includes(nextTag) || prev.length >= MAX_IDEAL_FOR_SELECTIONS) return prev;
       return [...prev, nextTag];
     });
+    setDirectInputError(null);
+    setDirectInputFeedback(null);
   };
 
   const removeIdealForTag = (tagToRemove: IdealForTag) => {
     setIdealForDraft((prev) => prev.filter((tag) => tag !== tagToRemove));
+    setDirectInputError(null);
+    setDirectInputFeedback(null);
+  };
+
+  const handleDirectInputToggle = (isEnabled: boolean) => {
+    setIsDirectInputEnabled(isEnabled);
+    setDirectInputError(null);
+    setDirectInputFeedback(null);
+
+    if (isEnabled && directInputValue.trim().length === 0 && idealForDraft.length > 0) {
+      setDirectInputValue(formatTagsAsArray(idealForDraft));
+    }
+  };
+
+  const handleApplyDirectInput = () => {
+    const parseResult = parseIdealForDirectInput(directInputValue);
+
+    if (!parseResult.ok) {
+      setDirectInputError(parseResult.error);
+      setDirectInputFeedback(null);
+      return;
+    }
+
+    setIdealForDraft(parseResult.tags);
+    setDirectInputValue(formatTagsAsArray(parseResult.tags));
+    setDirectInputError(null);
+    setDirectInputFeedback(
+      `Applied ${parseResult.tags.length} tag${parseResult.tags.length === 1 ? "" : "s"}.`
+    );
   };
 
   const submitIdealForTags = () => {
@@ -393,7 +575,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
               onValueChange={addIdealForTag}
               disabled={
                 isUpdatingLocation ||
-                idealForDraft.length >= 4 ||
+                idealForDraft.length >= MAX_IDEAL_FOR_SELECTIONS ||
                 availableIdealForGroups.length === 0
               }
             >
@@ -402,8 +584,8 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
                   placeholder={
                     isUpdatingLocation
                       ? "Saving..."
-                      : idealForDraft.length >= 4
-                        ? "Maximum 4 tags selected"
+                      : idealForDraft.length >= MAX_IDEAL_FOR_SELECTIONS
+                        ? `Maximum ${MAX_IDEAL_FOR_SELECTIONS} tags selected`
                         : "Choose tags (1-4)"
                   }
                 />
@@ -424,6 +606,57 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
                 ))}
               </SelectContent>
             </Select>
+
+            <div className="rounded-md border border-dashed border-border/80 bg-background/60 p-3 space-y-3">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-primary"
+                  checked={isDirectInputEnabled}
+                  onChange={(event) => handleDirectInputToggle(event.target.checked)}
+                />
+                Paste an Ideal For array directly
+              </label>
+
+              {isDirectInputEnabled && (
+                <div className="space-y-2">
+                  <Textarea
+                    value={directInputValue}
+                    onChange={(event) => {
+                      setDirectInputValue(event.target.value);
+                      setDirectInputError(null);
+                      setDirectInputFeedback(null);
+                    }}
+                    rows={3}
+                    placeholder='["Casual Dining", "Coffee & Light Bites"] or Casual Dining, Coffee & Light Bites'
+                    aria-invalid={Boolean(directInputError)}
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      Brackets are optional. Tags must match the approved names exactly.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleApplyDirectInput}
+                      disabled={isUpdatingLocation}
+                    >
+                      Apply array
+                    </Button>
+                  </div>
+                  {directInputError && (
+                    <p className="text-xs font-medium text-destructive">
+                      {directInputError}
+                    </p>
+                  )}
+                  {directInputFeedback && !directInputError && (
+                    <p className="text-xs font-medium text-green-600">
+                      {directInputFeedback}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {idealForDraft.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -467,7 +700,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {idealForDraft.length}/4 selected. This appears only when no Ideal For tag is set.
+              {idealForDraft.length}/{MAX_IDEAL_FOR_SELECTIONS} selected. This appears only when no Ideal For tag is set.
             </p>
           </div>
         )}

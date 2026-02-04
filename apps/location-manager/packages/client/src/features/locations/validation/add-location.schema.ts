@@ -57,3 +57,29 @@ export const confirmLocationSchema = z.object({
 export type ConfirmLocationFormData = z.infer<typeof confirmLocationSchema>;
 
 export type AddLocationFormData = z.infer<typeof addLocationSchema>;
+
+// Batch upload item schema - same required fields as addLocationSchema
+export const batchItemSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Location name is required")
+    .max(200, "Name must be less than 200 characters"),
+  address: z
+    .string()
+    .min(1, "Address is required")
+    .max(500, "Address must be less than 500 characters"),
+  category: locationCategorySchema,
+  idealFor: idealForSchema,
+  type: z.string().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  tripadvisorUrl: z
+    .string()
+    .url("TripAdvisor URL must be a valid URL")
+    .optional()
+    .or(z.literal(""))
+    .transform(val => val === "" ? undefined : val),
+});
+
+export const batchUploadSchema = z.array(batchItemSchema).min(1, "At least one location is required");
+
+export type BatchItem = z.infer<typeof batchItemSchema>;
+export type BatchUploadData = z.infer<typeof batchUploadSchema>;

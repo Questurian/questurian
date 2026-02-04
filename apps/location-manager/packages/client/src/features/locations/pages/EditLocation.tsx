@@ -227,6 +227,7 @@ export function EditLocation() {
             optionGroups={IDEAL_FOR_OPTION_GROUPS}
             maxSelections={4}
             description="Choose 1 to 4 tags"
+            allowDirectTagArrayInput
           />
         </div>
 
