@@ -125,6 +125,11 @@ export class MapsService {
     return normalizeAndStringify(split);
   }
 
+  private normalizeIdealForTags(input?: string[]): string | undefined {
+    if (input === undefined) return undefined;
+    return JSON.stringify(Array.from(new Set(input)));
+  }
+
   async addMapsLocation(payload: CreateMapsRequest): Promise<LocationResponse> {
     if (!payload.name || !payload.address) {
       throw new BadRequestError("Name and address required");
@@ -144,6 +149,7 @@ export class MapsService {
       entry.neighborhoodDescription = payload.neighborhoodDescription;
     }
     const hoursJson = this.normalizeOperationHours(payload.operationHours);
+    const idealForJson = this.normalizeIdealForTags(payload.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(payload.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(payload.tripadvisorCuisines);
     const tripadvisorFeaturesJson = this.normalizeTripadvisorList(payload.tripadvisorFeatures, {
@@ -151,6 +157,9 @@ export class MapsService {
     });
     if (hoursJson !== undefined) {
       entry.hoursJson = hoursJson;
+    }
+    if (idealForJson !== undefined) {
+      entry.idealForJson = idealForJson;
     }
     if (tripadvisorMealTypesJson !== undefined) {
       entry.tripadvisorMealTypesJson = tripadvisorMealTypesJson;
@@ -226,6 +235,7 @@ export class MapsService {
 
     // Perform partial update - only update provided fields
     const hoursJson = this.normalizeOperationHours(updates.operationHours);
+    const idealForJson = this.normalizeIdealForTags(updates.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(updates.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(updates.tripadvisorCuisines);
     const tripadvisorFeaturesJson = this.normalizeTripadvisorList(updates.tripadvisorFeatures, {
@@ -246,6 +256,7 @@ export class MapsService {
       ...(updates.website !== undefined && { website: updates.website }),
       ...(updates.email !== undefined && { email: updates.email }),
       ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
+      ...(idealForJson !== undefined && { idealForJson }),
       ...(hoursJson !== undefined && { hoursJson }),
       ...(tripadvisorMealTypesJson !== undefined && { tripadvisorMealTypesJson }),
       ...(tripadvisorCuisinesJson !== undefined && { tripadvisorCuisinesJson }),

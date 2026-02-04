@@ -8,7 +8,6 @@ import type {
   LocationsResponse,
   LocationsBasicResponse,
   LocationEntryResponse,
-  Location,
   LocationResponse,
   CreateMapsRequest,
   UpdateMapsRequest,
@@ -64,7 +63,7 @@ export const locationsApi = {
   /**
    * Create a new location
    */
-  async createLocation(data: CreateMapsRequest): Promise<Location> {
+  async createLocation(data: CreateMapsRequest): Promise<LocationResponse> {
     const response = await apiPost<LocationEntryResponse>(API_ENDPOINTS.CREATE_LOCATION, data);
     return unwrapEntry(response);
   },
@@ -75,8 +74,8 @@ export const locationsApi = {
   async updateLocation(
     id: number,
     data: UpdateMapsRequest
-  ): Promise<Location> {
-    return apiPatch<Location>(API_ENDPOINTS.UPDATE_LOCATION(id), data);
+  ): Promise<LocationResponse> {
+    return apiPatch<LocationResponse>(API_ENDPOINTS.UPDATE_LOCATION(id), data);
   },
 
   /**

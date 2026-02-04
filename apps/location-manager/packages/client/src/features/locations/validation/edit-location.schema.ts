@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LocationCategory } from "@shared/types/location-category";
+import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
 
 const locationCategorySchema = z.enum([
   "dining",
@@ -7,6 +8,14 @@ const locationCategorySchema = z.enum([
   "attractions",
   "nightlife"
 ] as const satisfies readonly LocationCategory[]);
+
+const idealForSchema = z
+  .array(z.enum(IDEAL_FOR_TAGS))
+  .min(1, "Select at least 1 Ideal For tag")
+  .max(4, "Select up to 4 Ideal For tags")
+  .refine((tags) => new Set(tags).size === tags.length, {
+    message: "Ideal For tags must be unique",
+  });
 
 export const editLocationSchema = z.object({
   name: z
@@ -24,6 +33,7 @@ export const editLocationSchema = z.object({
     .max(200, "Title must be less than 200 characters")
     .optional(),
   category: locationCategorySchema.optional(),
+  idealFor: idealForSchema,
   type: z.string().optional().or(z.literal("")),
   locationKey: z.string().optional().or(z.literal("")),
   district: z.string().optional().or(z.literal("")),

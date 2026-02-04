@@ -8,6 +8,9 @@ import type {
 } from '../models/location';
 import { formatLocationName } from '@questurian/lm-shared';
 import { parseTripadvisorStringListJson } from './tripadvisor-utils';
+import { IDEAL_FOR_TAGS, type IdealForTag } from "@shared/types/location-ideal-for";
+
+const IDEAL_FOR_TAG_SET = new Set<string>(IDEAL_FOR_TAGS);
 
 /**
  * Parse a pipe-delimited location key into its components
@@ -178,6 +181,24 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
+  const parseIdealFor = (idealForJson?: string | null): IdealForTag[] | null => {
+    if (!idealForJson) return null;
+
+    try {
+      const parsed = JSON.parse(idealForJson);
+      if (!Array.isArray(parsed)) return null;
+
+      const normalized = parsed.filter(
+        (tag): tag is IdealForTag => typeof tag === "string" && IDEAL_FOR_TAG_SET.has(tag)
+      );
+
+      if (normalized.length === 0) return null;
+      return Array.from(new Set(normalized)).slice(0, 4);
+    } catch {
+      return null;
+    }
+  };
+
   return {
     id: location.id!,
     title: location.title || null,
@@ -191,6 +212,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     tripadvisorLocationId: location.tripadvisorLocationId || null,
     payload_location_ref: location.payload_location_ref || null,
     neighborhoodDescription: location.neighborhoodDescription || null,
+    idealFor: parseIdealFor(location.idealForJson || null),
     operationHours: parseOperationHours(location.hoursJson || null),
     tripadvisorMealTypes: parseTripadvisorStringListJson(location.tripadvisorMealTypesJson || null),
     tripadvisorCuisines: parseTripadvisorStringListJson(location.tripadvisorCuisinesJson || null),

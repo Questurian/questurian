@@ -29,6 +29,7 @@ import { addTripadvisorPlacesTable } from "./migrations/add-tripadvisor-places-t
 import { addTripadvisorTaxonomyFields } from "./migrations/add-tripadvisor-taxonomy-fields";
 import { addLocationEnrichmentFields } from "./migrations/add-location-enrichment-fields";
 import { addReviewsTracking } from "./migrations/add-reviews-tracking";
+import { addLocationIdealFor } from "./migrations/add-location-ideal-for";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -125,6 +126,7 @@ export function initDb() {
       email TEXT,
       hours_json TEXT,
       neighborhood_description TEXT,
+      ideal_for_json TEXT,
       tripadvisor_meal_types TEXT,
       tripadvisor_cuisines TEXT,
       tripadvisor_features TEXT,
@@ -252,6 +254,9 @@ export function initDb() {
 
   // Run migration to add reviews tracking fields to locations table
   addReviewsTracking(database);
+
+  // Run migration to add Ideal For tags field to locations table
+  addLocationIdealFor(database);
 }
 
 export function getDb(): Database {

@@ -10,6 +10,7 @@ export interface FormSelectProps<T extends FieldValues = FieldValues> {
   children: React.ReactNode;
   placeholder?: string;
   description?: string;
+  disabled?: boolean;
 }
 
 export function FormSelect<T extends FieldValues = FieldValues>({
@@ -19,6 +20,7 @@ export function FormSelect<T extends FieldValues = FieldValues>({
   children,
   placeholder,
   description,
+  disabled,
 }: FormSelectProps<T>) {
   return (
     <FormBase
@@ -38,6 +40,7 @@ export function FormSelect<T extends FieldValues = FieldValues>({
             {...fieldRest}
             value={value ?? undefined}
             onValueChange={onChange}
+            disabled={disabled}
             aria-invalid={fieldState.invalid}
           >
             <SelectTrigger id={field.name} onBlur={onBlur} ref={ref}>

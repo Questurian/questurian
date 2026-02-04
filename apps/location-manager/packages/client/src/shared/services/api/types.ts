@@ -3,6 +3,7 @@
  */
 
 import type { ImageSet } from "@questurian/lm-shared";
+import type { IdealForTag } from "@shared/types/location-ideal-for";
 
 export type Category = "dining" | "accommodations" | "attractions" | "nightlife";
 
@@ -66,6 +67,7 @@ export interface Location {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   neighborhoodDescription: string | null;
+  idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;
@@ -129,6 +131,7 @@ export interface LocationResponse {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   neighborhoodDescription: string | null;
+  idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;
@@ -153,7 +156,7 @@ export interface LocationsBasicResponse {
 }
 
 export interface LocationEntryResponse {
-  entry: Location;
+  entry: LocationResponse;
 }
 
 export interface InstagramEmbedResponse {
@@ -176,6 +179,7 @@ export interface CreateMapsRequest {
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string;
+  idealFor: IdealForTag[];
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;
@@ -198,6 +202,7 @@ export interface UpdateMapsRequest {
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string;
+  idealFor?: IdealForTag[];
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;

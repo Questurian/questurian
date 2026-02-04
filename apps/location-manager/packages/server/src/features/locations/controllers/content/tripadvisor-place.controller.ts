@@ -234,6 +234,7 @@ export async function downloadLocationExport(c: Context) {
     tripadvisorUrl: location.tripadvisorUrl,
     tripadvisorLocationId: location.tripadvisorLocationId,
     neighborhoodDescription: location.neighborhoodDescription,
+    idealFor: location.idealFor,
     operationHours: location.operationHours,
     tripadvisorMealTypes: location.tripadvisorMealTypes,
     tripadvisorCuisines: location.tripadvisorCuisines,

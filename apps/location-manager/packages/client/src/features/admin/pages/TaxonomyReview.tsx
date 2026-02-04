@@ -7,7 +7,6 @@ import {
   useApprovedTaxonomy,
 } from "@client/shared/services/api/hooks";
 import { Button } from "@client/components/ui/button";
-import { formatLocationHierarchy } from "@client/shared/lib/utils";
 import { CorrectionModal } from "../components/CorrectionModal";
 import { TaxonomyFilters } from "../components/TaxonomyFilters";
 import { filterTaxonomyEntries } from "../utils/taxonomy-filter-utils";

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
-import type { MergedReviewsStats, RejectsReportSummary, MergedReviewsReportData } from "../types";
+import type { MergedReviewsStats, RejectsReportSummary } from "../types";
 
 export const MERGED_REVIEWS_STATUS_QUERY_KEY = "merged-reviews-status";
 export const MERGED_REVIEWS_REPORT_QUERY_KEY = "merged-reviews-report";

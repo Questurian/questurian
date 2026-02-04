@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LocationCategory } from "@shared/types/location-category";
+import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
 
 export const locationCategorySchema = z.enum([
   "dining",
@@ -8,10 +9,21 @@ export const locationCategorySchema = z.enum([
   "nightlife"
 ] as const satisfies readonly LocationCategory[]);
 
+export const idealForTagSchema = z.enum(IDEAL_FOR_TAGS);
+
+const idealForTagsSchema = z
+  .array(idealForTagSchema)
+  .min(1, "Select at least 1 Ideal For tag")
+  .max(4, "Select up to 4 Ideal For tags")
+  .refine((tags) => new Set(tags).size === tags.length, {
+    message: "Ideal For tags must be unique",
+  });
+
 export const createMapsSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   address: z.string().trim().min(1, "Address is required"),
   category: locationCategorySchema,
+  idealFor: idealForTagsSchema,
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   email: z.string().trim().email().optional().or(z.literal("")),
@@ -52,6 +64,7 @@ export const patchMapsSchema = z.object({
   tripadvisorUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   email: z.string().trim().email().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   neighborhoodDescription: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  idealFor: idealForTagsSchema.optional(),
   placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   operationHours: z.union([
     z.record(z.any()),
@@ -101,6 +114,7 @@ export const patchMapsSchema = z.object({
          data.tripadvisorUrl !== undefined ||
          data.email !== undefined ||
          data.neighborhoodDescription !== undefined ||
+         data.idealFor !== undefined ||
          data.operationHours !== undefined ||
          data.tripadvisorMealTypes !== undefined ||
          data.tripadvisorCuisines !== undefined ||

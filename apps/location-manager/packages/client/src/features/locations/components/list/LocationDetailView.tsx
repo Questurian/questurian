@@ -67,9 +67,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     const source = locationDetail.source || {};
     const hasOperationHours = Boolean(
       locationDetail.operationHours &&
-        (typeof locationDetail.operationHours === "string"
-          ? locationDetail.operationHours.trim().length > 0
-          : Object.keys(locationDetail.operationHours).length > 0)
+        Object.keys(locationDetail.operationHours).length > 0
     );
 
     const hasMedia =
@@ -78,6 +76,9 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     const hasTripadvisorMealTypes = Boolean(
       Array.isArray(locationDetail.tripadvisorMealTypes) &&
       locationDetail.tripadvisorMealTypes.length > 0
+    );
+    const hasIdealFor = Boolean(
+      Array.isArray(locationDetail.idealFor) && locationDetail.idealFor.length > 0
     );
     const hasTripadvisorCuisines = Boolean(
       Array.isArray(locationDetail.tripadvisorCuisines) &&
@@ -117,6 +118,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         label: "Neighborhood",
         present: Boolean(locationDetail.neighborhoodDescription?.trim()),
       },
+      { key: "idealFor", label: "Ideal For", present: hasIdealFor },
       { key: "operationHours", label: "Hours", present: hasOperationHours },
       { key: "tripadvisorMealTypes", label: "Meal Types", present: hasTripadvisorMealTypes },
       { key: "tripadvisorCuisines", label: "Cuisines", present: hasTripadvisorCuisines },
@@ -334,6 +336,15 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
               </Button>
             </div>
           )}
+        </div>
+
+        <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+          <span className="text-sm font-medium">Ideal For</span>
+          <div className="text-xs text-muted-foreground">
+            {locationDetail.idealFor?.length
+              ? locationDetail.idealFor.join(", ")
+              : "Missing"}
+          </div>
         </div>
 
         <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">

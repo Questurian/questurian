@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
-import type { FetchTripAdvisorReviewsRequest, TripAdvisorReviewsStatusResponse } from "../types";
+import type { FetchTripAdvisorReviewsRequest } from "../types";
 
 export const TRIPADVISOR_REVIEWS_STATUS_QUERY_KEY = "tripadvisor-reviews-status";
 

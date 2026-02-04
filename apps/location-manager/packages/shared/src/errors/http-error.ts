@@ -1,18 +1,30 @@
 export class HttpError extends Error {
+  public readonly statusCode: number;
+  public readonly code?: string;
+  public readonly details?: unknown;
+
   constructor(
-    public readonly statusCode: number,
+    statusCode: number,
     message: string,
-    public readonly code?: string,
-    public readonly details?: any
+    code?: string,
+    details?: unknown
   ) {
     super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
     this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
+    const ErrorWithCapture = Error as ErrorConstructor & {
+      captureStackTrace?: (targetObject: object, constructorOpt?: Function) => void;
+    };
+    if (typeof ErrorWithCapture.captureStackTrace === "function") {
+      ErrorWithCapture.captureStackTrace(this, this.constructor);
+    }
   }
 }
 
 export class BadRequestError extends HttpError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: unknown) {
     super(400, message, "BAD_REQUEST", details);
   }
 }
@@ -27,13 +39,16 @@ export class NotFoundError extends HttpError {
 }
 
 export class ValidationError extends HttpError {
-  constructor(message: string, public readonly errors: any[]) {
+  public readonly errors: unknown[];
+
+  constructor(message: string, errors: unknown[]) {
     super(400, message, "VALIDATION_ERROR", { errors });
+    this.errors = errors;
   }
 }
 
 export class InternalServerError extends HttpError {
-  constructor(message: string = "Internal server error", details?: any) {
+  constructor(message: string = "Internal server error", details?: unknown) {
     super(500, message, "INTERNAL_ERROR", details);
   }
 }

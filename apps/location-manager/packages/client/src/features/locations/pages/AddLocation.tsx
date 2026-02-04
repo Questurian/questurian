@@ -2,16 +2,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addLocationSchema, confirmLocationSchema, type AddLocationFormData, type ConfirmLocationFormData } from "../validation/add-location.schema";
 import { useCreateLocation, useUpdateLocation, useLocationTypes } from "@client/shared/services/api";
-import { FormInput, FormSelect } from "@client/shared/components/forms";
+import { FormInput, FormSelect, FormTagMultiSelect } from "@client/shared/components/forms";
 import { SelectItem } from "@client/components/ui";
 import { SubmitButton } from "@client/shared/components/ui";
 import { MapPin, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { LocationCategory } from "@shared/types/location-category";
+import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
 import { ReviewsFetchPhase } from "../components/add/ReviewsFetchPhase";
 
 type Phase = "add" | "confirm" | "reviews" | "success";
+const IDEAL_FOR_OPTIONS = IDEAL_FOR_TAGS.map((tag) => ({ value: tag, label: tag }));
 
 export function AddLocation() {
   const navigate = useNavigate();
@@ -37,6 +39,7 @@ export function AddLocation() {
       name: "",
       address: "",
       category: undefined,
+      idealFor: [],
       type: undefined,
       tripadvisorUrl: "",
     },
@@ -106,14 +109,6 @@ export function AddLocation() {
         alert(`Update failed: ${error.message}`);
       },
     });
-  }
-
-  function handleStartOver() {
-    setPhase("add");
-    setCreatedLocation(null);
-    setSelectedCategory(undefined);
-    confirmForm.reset();
-    addForm.reset();
   }
 
   if (phase === "confirm" && createdLocation) {
@@ -290,6 +285,15 @@ export function AddLocation() {
               ))}
             </FormSelect>
           )}
+
+          <FormTagMultiSelect
+            name="idealFor"
+            label="Ideal For"
+            control={addForm.control}
+            options={IDEAL_FOR_OPTIONS}
+            maxSelections={4}
+            description="Choose 1 to 4 tags"
+          />
 
           <FormInput
             name="tripadvisorUrl"

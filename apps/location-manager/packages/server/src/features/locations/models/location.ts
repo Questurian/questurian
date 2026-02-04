@@ -1,3 +1,5 @@
+import type { IdealForTag } from "@shared/types/location-ideal-for";
+
 export type LocationCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife';
 
 // Hierarchical Location Taxonomy Types
@@ -52,6 +54,7 @@ export interface Location {
   email?: string | null;
   hoursJson?: string | null;
   neighborhoodDescription?: string | null;
+  idealForJson?: string | null;
   tripadvisorMealTypesJson?: string | null;
   tripadvisorCuisinesJson?: string | null;
   tripadvisorFeaturesJson?: string | null;
@@ -125,6 +128,7 @@ export interface CreateMapsRequest {
   name: string;
   address: string;
   category: LocationCategory;
+  idealFor: IdealForTag[];
   type?: string;
   tripadvisorUrl?: string;
   email?: string;
@@ -176,6 +180,7 @@ export interface LocationResponse {
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
   neighborhoodDescription: string | null;
+  idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;

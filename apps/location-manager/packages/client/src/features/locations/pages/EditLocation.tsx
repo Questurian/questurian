@@ -5,11 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Clock } from "lucide-react";
 import { editLocationSchema, type EditLocationFormData } from "../validation/edit-location.schema";
 import { useLocationById, useUpdateLocation, useLocationTypes } from "@client/shared/services/api";
-import { FormInput, FormSelect, FormTextarea } from "@client/shared/components/forms";
+import { FormInput, FormSelect, FormTextarea, FormTagMultiSelect } from "@client/shared/components/forms";
 import { Button, SelectItem } from "@client/components/ui";
 import { Field, FieldLabel } from "@client/shared/components/ui";
 import { SubmitButton } from "@client/shared/components/ui";
 import type { LocationCategory } from "@shared/types/location-category";
+import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
 
 const OperationHoursModal = lazy(
   () =>
@@ -17,6 +18,8 @@ const OperationHoursModal = lazy(
       default: m.OperationHoursModal,
     }))
 );
+
+const IDEAL_FOR_OPTIONS = IDEAL_FOR_TAGS.map((tag) => ({ value: tag, label: tag }));
 
 export function EditLocation() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +46,7 @@ export function EditLocation() {
       address: "",
       title: "",
       category: undefined,
+      idealFor: [],
       type: undefined,
       locationKey: "",
       district: "",
@@ -71,6 +75,7 @@ export function EditLocation() {
         address: location.source?.address || "",
         title: location.title || "",
         category: location.category,
+        idealFor: location.idealFor || [],
         type: location.type || undefined,
         locationKey: location.locationKey || "",
         district: location.district || "",
@@ -213,6 +218,15 @@ export function EditLocation() {
               </SelectItem>
             ))}
           </FormSelect>
+
+          <FormTagMultiSelect
+            name="idealFor"
+            label="Ideal For"
+            control={form.control}
+            options={IDEAL_FOR_OPTIONS}
+            maxSelections={4}
+            description="Choose 1 to 4 tags"
+          />
         </div>
 
         <div className="space-y-4">

@@ -2,7 +2,7 @@
  * Image processing utilities for cropping and resizing images
  */
 
-import type { ImageVariantType, VARIANT_SPECS } from "@questurian/lm-shared";
+import type { ImageVariantType } from "@questurian/lm-shared";
 import { VARIANT_SPECS as VARIANT_SPECS_IMPORT } from "@questurian/lm-shared";
 import type { Area } from "react-easy-crop";
 
