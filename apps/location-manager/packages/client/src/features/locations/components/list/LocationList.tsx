@@ -5,7 +5,6 @@ interface Location {
   name: string;
   title: string | null;
   category: string;
-  categories?: string[];
   location?: string;
 }
 

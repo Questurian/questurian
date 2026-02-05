@@ -224,7 +224,6 @@ export async function downloadLocationExport(c: Context) {
     title: location.title,
     address: location.source?.address,
     category: location.category,
-    categories: location.categories,
     type: location.type,
     locationKey: location.locationKey,
     district: location.district,

@@ -30,7 +30,6 @@ import { addTripadvisorTaxonomyFields } from "./migrations/add-tripadvisor-taxon
 import { addLocationEnrichmentFields } from "./migrations/add-location-enrichment-fields";
 import { addReviewsTracking } from "./migrations/add-reviews-tracking";
 import { addLocationIdealFor } from "./migrations/add-location-ideal-for";
-import { addLocationCategories } from "./migrations/add-location-categories";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -117,7 +116,6 @@ export function initDb() {
       lng REAL,
       category TEXT DEFAULT 'attractions'
         CHECK(category IN ('dining', 'accommodations', 'attractions', 'nightlife')),
-      categories_json TEXT DEFAULT '["attractions"]',
       locationKey TEXT,
       district TEXT,
       contactAddress TEXT,
@@ -259,9 +257,6 @@ export function initDb() {
 
   // Run migration to add Ideal For tags field to locations table
   addLocationIdealFor(database);
-
-  // Run migration to add categories_json field to locations table
-  addLocationCategories(database);
 }
 
 export function getDb(): Database {

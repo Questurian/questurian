@@ -16,13 +16,7 @@ import {
 import { getInstagramEmbedsByLocationId } from "../../repositories/content";
 import { getUploadsByLocationId } from "../../repositories/content";
 import { transformLocationToResponse } from "../../utils/location-utils";
-import {
-  mergeCategoryLists,
-  normalizeCategoryList,
-  parseCategoryListJson,
-  toCategoryListJson,
-  validateCategory,
-} from "../../utils/category-utils";
+import { validateCategory } from "../../utils/category-utils";
 import { TaxonomyService } from "../taxonomy/taxonomy.service";
 import { TaxonomyCorrectionService } from "../taxonomy/taxonomy-correction.service";
 import {
@@ -32,7 +26,6 @@ import {
   normalizeTripadvisorStringList,
 } from "../../utils/tripadvisor-utils";
 import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
-import type { LocationCategory } from "@shared/types/location-category";
 
 import type { PayloadApiClient } from "@server/shared/services/external/payload-api.client";
 
@@ -185,21 +178,6 @@ export class MapsService {
     return JSON.stringify(limited);
   }
 
-  private resolveRequestedCategories(input: {
-    category?: LocationCategory;
-    categories?: LocationCategory[];
-  }): LocationCategory[] {
-    if (input.categories && input.categories.length > 0) {
-      return normalizeCategoryList(input.categories, input.category ?? input.categories[0]);
-    }
-
-    if (input.category) {
-      return [validateCategory(input.category)];
-    }
-
-    throw new BadRequestError("At least one category is required");
-  }
-
   private scoreDuplicateCandidate(entry: Location, candidate: Location): number {
     let score = 0;
     const normalizedEntryAddress = this.normalizeAddressForDuplicateCheck(entry.address);
@@ -261,22 +239,18 @@ export class MapsService {
 
   private async mergeDuplicateLocation(
     existingLocation: Location,
-    incomingEntry: Location,
-    incomingCategories: readonly LocationCategory[]
+    incomingEntry: Location
   ): Promise<number> {
     if (!existingLocation.id) {
       throw new BadRequestError("Duplicate location found without a valid ID");
     }
 
-    const existingCategories = parseCategoryListJson(
-      existingLocation.categoriesJson,
-      existingLocation.category
-    );
-    const mergedCategories = mergeCategoryLists(existingCategories, [...incomingCategories]);
+    const existingCategory = existingLocation.category || "attractions";
+    const incomingCategory = incomingEntry.category || "attractions";
 
-    if (mergedCategories.length === existingCategories.length) {
+    if (existingCategory !== incomingCategory) {
       throw new BadRequestError(
-        `Duplicate location detected. "${existingLocation.name}" already exists with the same category set.`
+        `Duplicate location detected. "${existingLocation.name}" already exists as "${existingCategory}".`
       );
     }
 
@@ -287,8 +261,6 @@ export class MapsService {
     );
 
     const updateData: Partial<Location> = {
-      category: mergedCategories[0],
-      categoriesJson: toCategoryListJson(mergedCategories, mergedCategories[0]),
       ...(mergedIdealForJson !== undefined && { idealForJson: mergedIdealForJson }),
       ...(!existingLocation.type && incomingEntry.type && { type: incomingEntry.type }),
       ...(!existingLocation.locationKey && incomingEntry.locationKey && { locationKey: incomingEntry.locationKey }),
@@ -308,9 +280,16 @@ export class MapsService {
       ...(!existingLocation.tripadvisorFeaturesJson && incomingEntry.tripadvisorFeaturesJson && { tripadvisorFeaturesJson: incomingEntry.tripadvisorFeaturesJson }),
     };
 
+    const hasUpdates = Object.keys(updateData).length > 0;
+    if (!hasUpdates) {
+      throw new BadRequestError(
+        `Duplicate location detected. "${existingLocation.name}" already exists with the same category.`
+      );
+    }
+
     const merged = updateLocationById(existingLocation.id, updateData);
     if (!merged) {
-      throw new BadRequestError("Failed to merge duplicate location categories");
+      throw new BadRequestError("Failed to merge duplicate location fields");
     }
 
     const tripadvisorIdForFetch =
@@ -354,16 +333,11 @@ export class MapsService {
       throw new BadRequestError("Name and address required");
     }
 
-    const categories = this.resolveRequestedCategories({
-      category: payload.category,
-      categories: payload.categories,
-    });
-    const category = categories[0];
+    const category = validateCategory(payload.category);
 
     const apiKey = this.config.hasGoogleMapsKey() ? this.config.GOOGLE_MAPS_API_KEY : undefined;
     const entry = await createFromMaps(payload.name, payload.address, apiKey, category, payload.type);
     entry.category = category;
-    entry.categoriesJson = toCategoryListJson(categories, category);
     const tripadvisorFields = this.resolveTripadvisorFields(payload.tripadvisorUrl);
     Object.assign(entry, tripadvisorFields);
     if (payload.email) {
@@ -402,10 +376,10 @@ export class MapsService {
       this.taxonomyService.ensureTaxonomyEntry(entry.locationKey);
     }
 
-    // Duplicate handling: merge categories on same place; reject exact duplicates.
+    // Duplicate handling: merge missing fields on same place; reject exact duplicates.
     const duplicate = this.findDuplicateCandidate(entry);
     if (duplicate) {
-      const mergedId = await this.mergeDuplicateLocation(duplicate, entry, categories);
+      const mergedId = await this.mergeDuplicateLocation(duplicate, entry);
       return this.buildLocationResponseById(mergedId, duplicate);
     }
 
@@ -439,12 +413,7 @@ export class MapsService {
       throw new NotFoundError("Location", id);
     }
 
-    const categoryList = updates.categories
-      ? normalizeCategoryList(updates.categories, updates.category ?? currentLocation.category)
-      : updates.category
-        ? normalizeCategoryList([validateCategory(updates.category)], updates.category)
-        : undefined;
-    const primaryCategory = categoryList?.[0];
+    const category = updates.category ? validateCategory(updates.category) : undefined;
 
     const nextName = updates.name ?? currentLocation.name;
     const nextAddress = updates.address ?? currentLocation.address;
@@ -469,10 +438,7 @@ export class MapsService {
       ...(updates.name !== undefined && { name: updates.name }),
       ...(updates.address !== undefined && { address: updates.address }),
       ...(updates.title !== undefined && { title: updates.title }),
-      ...(categoryList !== undefined && {
-        category: primaryCategory,
-        categoriesJson: toCategoryListJson(categoryList, primaryCategory),
-      }),
+      ...(category !== undefined && { category }),
       ...(updates.type !== undefined && { type: updates.type }),
       ...(updates.locationKey !== undefined && { locationKey: updates.locationKey }),
       ...(updates.district !== undefined && { district: updates.district }),

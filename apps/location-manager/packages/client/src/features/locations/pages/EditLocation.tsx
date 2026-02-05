@@ -23,12 +23,6 @@ const IDEAL_FOR_OPTION_GROUPS = IDEAL_FOR_TAG_GROUPS.map((group) => ({
   label: group.label,
   options: group.tags.map((tag) => ({ value: tag, label: tag })),
 }));
-const CATEGORY_OPTIONS = [
-  { value: "dining", label: "Dining" },
-  { value: "accommodations", label: "Accommodations" },
-  { value: "attractions", label: "Attractions" },
-  { value: "nightlife", label: "Nightlife" },
-] as const satisfies readonly { value: LocationCategory; label: string }[];
 
 export function EditLocation() {
   const { id } = useParams<{ id: string }>();
@@ -54,7 +48,7 @@ export function EditLocation() {
       name: "",
       address: "",
       title: "",
-      categories: undefined,
+      category: undefined,
       idealFor: [],
       type: undefined,
       locationKey: "",
@@ -77,15 +71,12 @@ export function EditLocation() {
   // Pre-populate form when location data is loaded
   useEffect(() => {
     if (location) {
-      const initialCategories = (location.categories && location.categories.length > 0)
-        ? location.categories
-        : [location.category];
-      setSelectedCategory(initialCategories[0]);
+      setSelectedCategory(location.category);
       form.reset({
         name: location.source?.name || "",
         address: location.source?.address || "",
         title: location.title || "",
-        categories: initialCategories,
+        category: location.category,
         idealFor: location.idealFor || [],
         type: location.type || undefined,
         locationKey: location.locationKey || "",
@@ -106,23 +97,22 @@ export function EditLocation() {
         tripadvisorCuisines: location.tripadvisorCuisines?.join(", ") || "",
       });
 
-      console.log("📦 Form reset complete. Categories value:", form.getValues("categories"), "Type value:", form.getValues("type"));
+      console.log("📦 Form reset complete. Category value:", form.getValues("category"), "Type value:", form.getValues("type"));
     }
   }, [location, form]);
 
-  const watchedCategories = form.watch("categories");
-  const watchedPrimaryCategory = watchedCategories?.[0];
+  const watchedCategory = form.watch("category");
   useEffect(() => {
-    if (watchedPrimaryCategory === undefined) return;
+    if (watchedCategory === undefined) return;
     if (selectedCategory === undefined) {
-      setSelectedCategory(watchedPrimaryCategory);
+      setSelectedCategory(watchedCategory);
       return;
     }
-    if (watchedPrimaryCategory !== selectedCategory) {
-      setSelectedCategory(watchedPrimaryCategory);
+    if (watchedCategory !== selectedCategory) {
+      setSelectedCategory(watchedCategory);
       form.setValue("type", "");
     }
-  }, [watchedPrimaryCategory, selectedCategory, form]);
+  }, [watchedCategory, selectedCategory, form]);
 
   // Redirect on successful update
   useEffect(() => {
@@ -139,11 +129,6 @@ export function EditLocation() {
     const updateData = Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined)
     );
-
-    if (Array.isArray(data.categories) && data.categories.length > 0) {
-      updateData.categories = data.categories;
-      updateData.category = data.categories[0];
-    }
 
     mutate({ id: locationId, data: updateData });
   }
@@ -194,15 +179,17 @@ export function EditLocation() {
             placeholder="Location name"
           />
 
-          <FormTagMultiSelect
-            name="categories"
-            label="Categories"
+          <FormSelect
+            name="category"
+            label="Category"
             control={form.control}
-            options={CATEGORY_OPTIONS}
-            maxSelections={2}
-            placeholder="Select categories"
-            description="Choose 1 or 2 categories (first selection is primary)"
-          />
+            placeholder="Select a category"
+          >
+            <SelectItem value="dining">Dining</SelectItem>
+            <SelectItem value="accommodations">Accommodations</SelectItem>
+            <SelectItem value="attractions">Attractions</SelectItem>
+            <SelectItem value="nightlife">Nightlife</SelectItem>
+          </FormSelect>
 
           <FormInput
             name="address"

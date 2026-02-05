@@ -61,7 +61,6 @@ export interface Location {
   id: number;
   title: string | null;
   category: Category;
-  categories: Category[];
   type: string | null;
   locationKey: string;
   ianaTimeId: string | null;
@@ -94,7 +93,6 @@ export interface LocationBasic {
   title: string | null;
   location: string | null;
   category: Category;
-  categories: Category[];
   // Reviews tracking fields
   reviewsFetchedAt: string | null;
   reviewsCount: number | null;
@@ -125,7 +123,6 @@ export interface LocationResponse {
   id: number;
   title: string | null;
   category: Category;
-  categories: Category[];
   type: string | null;
   locationKey: string | null;
   district: string | null;
@@ -173,8 +170,7 @@ export interface UploadResponse {
 export interface CreateMapsRequest {
   name: string;
   address: string;
-  category?: Category;
-  categories?: Category[];
+  category: Category;
   type?: string;
   locationKey?: string;
   title?: string;
@@ -197,7 +193,6 @@ export interface UpdateMapsRequest {
   address?: string;
   title?: string;
   category?: Category;
-  categories?: Category[];
   type?: string;
   locationKey?: string;
   district?: string | null;

@@ -9,14 +9,6 @@ const locationCategorySchema = z.enum([
   "nightlife"
 ] as const satisfies readonly LocationCategory[]);
 
-const locationCategoriesSchema = z
-  .array(locationCategorySchema)
-  .min(1, "Select at least 1 category")
-  .max(2, "Select up to 2 categories")
-  .refine((categories) => new Set(categories).size === categories.length, {
-    message: "Categories must be unique",
-  });
-
 const idealForSchema = z
   .array(z.enum(IDEAL_FOR_TAGS))
   .min(1, "Select at least 1 Ideal For tag")
@@ -41,7 +33,6 @@ export const editLocationSchema = z.object({
     .max(200, "Title must be less than 200 characters")
     .optional(),
   category: locationCategorySchema.optional(),
-  categories: locationCategoriesSchema.optional(),
   idealFor: idealForSchema,
   type: z.string().optional().or(z.literal("")),
   locationKey: z.string().optional().or(z.literal("")),
