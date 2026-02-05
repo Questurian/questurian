@@ -251,16 +251,54 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
 /**
  * Transform a location to basic response format (lightweight)
  * Used for list views that don't need full location details
- * @param location - Location object from database
- * @returns Basic location info with id, name, location, and category
+ * @param location - Location object from database with media counts
+ * @returns Basic location info with id, name, location, category, and completion status
  */
-export function transformLocationToBasicResponse(location: import('../models/location').Location): import('../models/location').LocationBasic {
+export function transformLocationToBasicResponse(
+  location: import('../models/location').Location & { uploadsCount: number; instagramEmbedsCount: number }
+): import('../models/location').LocationBasic {
+  // Calculate completion status based on required fields
+  const hasMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
+  const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
+  const hasIdealFor = (() => {
+    if (!location.idealForJson) return false;
+    try {
+      const parsed = JSON.parse(location.idealForJson);
+      return Array.isArray(parsed) && parsed.length > 0;
+    } catch {
+      return false;
+    }
+  })();
+
+  const isComplete =
+    Boolean(location.title?.trim()) &&
+    Boolean(location.name?.trim()) &&
+    Boolean(location.address?.trim()) &&
+    Boolean(location.category) &&
+    Boolean(location.type?.trim()) &&
+    Boolean(location.locationKey?.trim()) &&
+    Boolean(location.district?.trim()) &&
+    Boolean(location.slug?.trim()) &&
+    location.lat != null &&
+    location.lng != null &&
+    Boolean(location.ianaTimeId?.trim()) &&
+    Boolean(location.countryCode?.trim()) &&
+    Boolean(location.phoneNumber?.trim()) &&
+    Boolean(location.website?.trim()) &&
+    Boolean(location.contactAddress?.trim()) &&
+    Boolean(location.url?.trim()) &&
+    Boolean(location.neighborhoodDescription?.trim()) &&
+    hasIdealFor &&
+    hasOperationHours &&
+    hasMedia;
+
   return {
     id: location.id!,
     name: location.name,
     title: location.title ?? null,
     location: location.locationKey ? formatLocationForDisplay(location.locationKey) : null,
     category: location.category || 'attractions',
+    isComplete,
     // Reviews tracking fields
     reviewsFetchedAt: location.reviewsFetchedAt || null,
     reviewsCount: location.reviewsCount ?? null,

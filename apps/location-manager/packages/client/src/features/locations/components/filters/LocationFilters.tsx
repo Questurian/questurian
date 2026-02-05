@@ -5,16 +5,19 @@ import { CountrySelect } from "./CountrySelect";
 import { CategorySelect } from "./CategorySelect";
 import { extractCitiesForCountry, extractNeighborhoodsForCity } from "../../utils/filter-utils";
 import type { Category, Country } from "@client/shared/services/api/types";
+import type { CompletionStatus } from "../../hooks/useLocationFilters";
 
 interface LocationFiltersProps {
   selectedCountry: string | null;
   selectedCity: string | null;
   selectedNeighborhood: string | null;
   selectedCategory: Category | null;
+  selectedCompletionStatus: CompletionStatus;
   onCountryChange: (value: string) => void;
   onCityChange: (value: string) => void;
   onNeighborhoodChange: (value: string) => void;
   onCategoryChange: (value: Category) => void;
+  onCompletionStatusChange: (value: CompletionStatus) => void;
   onReset: () => void;
   countries: Country[];
   isLoadingCountries: boolean;
@@ -25,10 +28,12 @@ export function LocationFilters({
   selectedCity,
   selectedNeighborhood,
   selectedCategory,
+  selectedCompletionStatus,
   onCountryChange,
   onCityChange,
   onNeighborhoodChange,
   onCategoryChange,
+  onCompletionStatusChange,
   onReset,
   countries,
   isLoadingCountries
@@ -44,7 +49,7 @@ export function LocationFilters({
     return extractNeighborhoodsForCity(countries, selectedCountry, selectedCity);
   }, [countries, selectedCountry, selectedCity]);
 
-  const hasFilters = selectedCountry || selectedCity || selectedNeighborhood || selectedCategory;
+  const hasFilters = selectedCountry || selectedCity || selectedNeighborhood || selectedCategory || selectedCompletionStatus !== "all";
 
   return (
     <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end", marginBottom: "1rem" }}>
@@ -104,6 +109,23 @@ export function LocationFilters({
         onChange={onCategoryChange}
         disabled={false} // Category can be selected independently of country
       />
+
+      {/* Completion Status Select */}
+      <div>
+        <Select
+          value={selectedCompletionStatus}
+          onValueChange={(value) => onCompletionStatusChange(value as CompletionStatus)}
+        >
+          <SelectTrigger style={{ width: "160px" }}>
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="complete">Complete</SelectItem>
+            <SelectItem value="incomplete">Incomplete</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {hasFilters && (
         <Button

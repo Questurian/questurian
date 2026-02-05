@@ -209,6 +209,7 @@ export interface LocationBasic {
   title: string | null;
   location: string | null;
   category: LocationCategory;
+  isComplete: boolean;
   // Reviews tracking fields
   reviewsFetchedAt: string | null;
   reviewsCount: number | null;

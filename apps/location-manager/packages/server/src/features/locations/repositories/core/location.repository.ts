@@ -272,7 +272,7 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
  *
  * @returns Array of all approved locations, sorted by creation date (newest first)
  */
-export function getAllLocations(): Location[] {
+export function getAllLocations(): (Location & { uploadsCount: number; instagramEmbedsCount: number })[] {
   const db = getDb();
   const query = db.query(`
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
@@ -287,13 +287,15 @@ export function getAllLocations(): Location[] {
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
            l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
-           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at
+           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at,
+           (SELECT COUNT(*) FROM uploads u WHERE u.location_id = l.id) as uploadsCount,
+           (SELECT COUNT(*) FROM instagram_embeds ie WHERE ie.location_id = l.id) as instagramEmbedsCount
     FROM locations l
     LEFT JOIN location_taxonomy t ON l.locationKey = t.locationKey
     WHERE l.locationKey IS NULL OR t.status = 'approved'
     ORDER BY l.created_at DESC
   `);
-  return query.all() as Location[];
+  return query.all() as (Location & { uploadsCount: number; instagramEmbedsCount: number })[];
 }
 
 /**
@@ -302,7 +304,7 @@ export function getAllLocations(): Location[] {
  * @param category - Category to filter by (e.g., "dining", "attractions", "nightlife")
  * @returns Array of locations in the specified category, sorted by creation date (newest first)
  */
-export function getLocationsByCategory(category: string): Location[] {
+export function getLocationsByCategory(category: string): (Location & { uploadsCount: number; instagramEmbedsCount: number })[] {
   const db = getDb();
   const query = db.query(`
     SELECT DISTINCT l.id, l.name, l.title, l.address, l.url, l.lat, l.lng,
@@ -317,14 +319,16 @@ export function getLocationsByCategory(category: string): Location[] {
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
            l.reviews_count as reviewsCount, l.reviews_google_count as reviewsGoogleCount,
-           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at
+           l.reviews_tripadvisor_count as reviewsTripadvisorCount, l.created_at, l.updated_at,
+           (SELECT COUNT(*) FROM uploads u WHERE u.location_id = l.id) as uploadsCount,
+           (SELECT COUNT(*) FROM instagram_embeds ie WHERE ie.location_id = l.id) as instagramEmbedsCount
     FROM locations l
     LEFT JOIN location_taxonomy t ON l.locationKey = t.locationKey
     WHERE l.category = $category
       AND (l.locationKey IS NULL OR t.status = 'approved')
     ORDER BY l.created_at DESC
   `);
-  return query.all({ $category: category }) as Location[];
+  return query.all({ $category: category }) as (Location & { uploadsCount: number; instagramEmbedsCount: number })[];
 }
 
 /**

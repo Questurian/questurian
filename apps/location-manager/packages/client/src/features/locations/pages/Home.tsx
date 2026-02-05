@@ -30,11 +30,24 @@ export function Home() {
   };
 
   const { data, isLoading, error, refetch } = useLocationsBasic(apiParams);
-  const locations = (data?.locations ?? []).map(location => ({
+  const allLocations = (data?.locations ?? []).map(location => ({
     ...location,
     location: location.location ?? undefined,
     category: location.category
   }));
+
+  // Apply completion status filter client-side
+  const locations = useMemo(() => {
+    if (filters.selectedCompletionStatus === "all") {
+      return allLocations;
+    }
+    return allLocations.filter(location => {
+      if (filters.selectedCompletionStatus === "complete") {
+        return location.isComplete;
+      }
+      return !location.isComplete;
+    });
+  }, [allLocations, filters.selectedCompletionStatus]);
 
   const handleDownloadAll = async () => {
     if (isDownloadingAll || locations.length === 0) return;
@@ -93,10 +106,12 @@ export function Home() {
         selectedCity={filters.selectedCity}
         selectedNeighborhood={filters.selectedNeighborhood}
         selectedCategory={filters.selectedCategory}
+        selectedCompletionStatus={filters.selectedCompletionStatus}
         onCountryChange={filters.setCountry}
         onCityChange={filters.setCity}
         onNeighborhoodChange={filters.setNeighborhood}
         onCategoryChange={filters.setCategory}
+        onCompletionStatusChange={filters.setCompletionStatus}
         onReset={filters.reset}
         countries={countries}
         isLoadingCountries={isLoadingCountries}
