@@ -1,0 +1,214 @@
+/* Mobile Responsive Design */
+@media (max-width: 768px) {
+  .page {
+    padding: 1.5rem 1rem 3rem;
+    max-width: none;
+    margin: 0;
+  }
+
+  .hero {
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 8vw, 2.5rem);
+  }
+
+  .lede {
+    font-size: 1.1rem;
+  }
+
+  .badge-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .badge {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.95rem;
+  }
+
+  .layout {
+    gap: 1.5rem;
+  }
+
+  .panel {
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+
+  .panel-header {
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .panel-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .panel-header p {
+    font-size: 0.9rem;
+  }
+
+  .panel-body {
+    gap: 1rem;
+  }
+
+  /* File input improvements for mobile */
+  .file-input {
+    padding: 2.5rem 1.5rem;
+    min-height: 220px;
+    gap: 1.25rem;
+  }
+
+  .file-input span {
+    font-size: 1rem;
+  }
+
+
+  /* Button improvements for mobile */
+  .button-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .button-row button {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+
+
+  /* Article types list mobile optimization */
+  .article-types-list {
+    gap: 0.75rem;
+  }
+
+  .article-type-item {
+    padding: 1rem;
+  }
+
+  .article-type-content .meta {
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+  }
+
+  .article-type-actions button:active,
+  .article-type-action button:active {
+    transform: scale(0.98);
+  }
+
+  .edit-form .button-row {
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+
+  .edit-form .button-row button {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  /* Navigation improvements */
+  .nav-link {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+
+  /* Result tabs for mobile */
+  .result-tabs {
+    padding: 0 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .result-tab {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  /* Classification result for mobile */
+  .classification-result {
+    padding: 2rem 1rem;
+  }
+
+  .classification-type {
+    font-size: 1.5rem;
+  }
+
+
+  /* Generated title for mobile */
+  .title-display {
+    font-size: 1.75rem;
+  }
+
+  /* Metrics grid for mobile */
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+
+@media (max-width: 480px) {
+  .page {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .hero h1 {
+    font-size: 1.6rem;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+
+  .panel-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .article-type-item {
+    padding: 0.875rem;
+  }
+
+  .article-type-content h3 {
+    font-size: 1rem;
+  }
+
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-form .button-row {
+    flex-direction: column;
+  }
+
+  .edit-form .button-row button {
+    width: 100%;
+  }
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .modal-content {
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+}

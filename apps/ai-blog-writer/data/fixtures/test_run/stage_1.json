@@ -1,0 +1,85 @@
+{
+  "run_id": "test_run",
+  "stage": "stage_1",
+  "created_at": "2024-01-15T10:01:00",
+  "input_refs": {
+    "stage_0": "data/runs/test_run/stage_0.json"
+  },
+  "data": {
+    "cleaned_transcript": "Welcome to AI Engineering Weekly. Today we're diving deep into building auditable AI pipelines. The key insight here is that every AI system needs traceability. When you're building content generation pipelines, you want to ensure that every piece of output can be traced back to its source. This is what we call provenance tracking. Let me walk you through our 8-stage approach. Stage one is normalization - cleaning up the raw transcript, fixing filler words, and chunking the text for processing. Stage two is extraction - we pull out the central thesis, key themes, claims, and quotes. Each of these has evidence spans pointing back to the source chunks. Stage three structures the content - identifying section candidates and patterns. Stage four classifies the content type - is this an analysis piece, a how-to guide, or an opinion article? Stage five analyzes the audience - who is this for and what's the tone? Stage six generates insights - what's novel here and what references are missing? Stage seven evaluates the pipeline itself - checking retrieval precision and hallucination rates. Finally, stage eight assembles everything into the final markdown output with full footnotes. The beauty of this approach is that you can debug any stage independently. If stage 4 is giving weird classifications, you can run just that stage with fixed inputs and iterate quickly. This modular approach has saved us countless hours of debugging time.",
+    "normalization_edits": [
+      {
+        "edit_type": "filler_removal",
+        "detail": "Removed 'um' and 'uh' from transcript",
+        "start_char": null,
+        "end_char": null
+      },
+      {
+        "edit_type": "punctuation_fix",
+        "detail": "Added proper sentence punctuation",
+        "start_char": null,
+        "end_char": null
+      }
+    ],
+    "speaker_segments": [
+      {
+        "speaker": "Dr. Sarah Chen",
+        "start_char": 0,
+        "end_char": 500,
+        "text": "Welcome to AI Engineering Weekly. Today we're diving deep into building auditable AI pipelines. The key insight here is that every AI system needs traceability. When you're building content generation pipelines, you want to ensure that every piece of output can be traced back to its source. This is what we call provenance tracking. Let me walk you through our 8-stage approach. Stage one is normalization - cleaning up the raw transcript, fixing filler words, and chunking the text for processing."
+      },
+      {
+        "speaker": "Dr. Sarah Chen",
+        "start_char": 501,
+        "end_char": 1200,
+        "text": "Stage two is extraction - we pull out the central thesis, key themes, claims, and quotes. Each of these has evidence spans pointing back to the source chunks. Stage three structures the content - identifying section candidates and patterns. Stage four classifies the content type - is this an analysis piece, a how-to guide, or an opinion article? Stage five analyzes the audience - who is this for and what's the tone? Stage six generates insights - what's novel here and what references are missing? Stage seven evaluates the pipeline itself - checking retrieval precision and hallucination rates."
+      }
+    ],
+    "approx_time_mapping": [
+      {
+        "start_char": 0,
+        "end_char": 500,
+        "start_time_sec": 0.0,
+        "end_time_sec": 33.3
+      },
+      {
+        "start_char": 501,
+        "end_char": 1000,
+        "start_time_sec": 33.4,
+        "end_time_sec": 66.6
+      },
+      {
+        "start_char": 1001,
+        "end_char": 1500,
+        "start_time_sec": 66.7,
+        "end_time_sec": 100.0
+      }
+    ],
+    "chunks": [
+      {
+        "chunk_id": "chunk_0000",
+        "start_char": 0,
+        "end_char": 500,
+        "text": "Welcome to AI Engineering Weekly. Today we're diving deep into building auditable AI pipelines. The key insight here is that every AI system needs traceability. When you're building content generation pipelines, you want to ensure that every piece of output can be traced back to its source. This is what we call provenance tracking. Let me walk you through our 8-stage approach. Stage one is normalization - cleaning up the raw transcript, fixing filler words, and chunking the text for processing."
+      },
+      {
+        "chunk_id": "chunk_0001",
+        "start_char": 425,
+        "end_char": 925,
+        "text": "Let me walk you through our 8-stage approach. Stage one is normalization - cleaning up the raw transcript, fixing filler words, and chunking the text for processing. Stage two is extraction - we pull out the central thesis, key themes, claims, and quotes. Each of these has evidence spans pointing back to the source chunks. Stage three structures the content - identifying section candidates and patterns. Stage four classifies the content type - is this an analysis piece, a how-to guide, or an opinion article?"
+      },
+      {
+        "chunk_id": "chunk_0002",
+        "start_char": 850,
+        "end_char": 1350,
+        "text": "Stage four classifies the content type - is this an analysis piece, a how-to guide, or an opinion article? Stage five analyzes the audience - who is this for and what's the tone? Stage six generates insights - what's novel here and what references are missing? Stage seven evaluates the pipeline itself - checking retrieval precision and hallucination rates. Finally, stage eight assembles everything into the final markdown output with full footnotes."
+      },
+      {
+        "chunk_id": "chunk_0003",
+        "start_char": 1275,
+        "end_char": 1650,
+        "text": "Finally, stage eight assembles everything into the final markdown output with full footnotes. The beauty of this approach is that you can debug any stage independently. If stage 4 is giving weird classifications, you can run just that stage with fixed inputs and iterate quickly. This modular approach has saved us countless hours of debugging time."
+      }
+    ]
+  }
+}

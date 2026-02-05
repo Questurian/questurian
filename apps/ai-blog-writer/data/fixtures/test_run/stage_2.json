@@ -1,0 +1,185 @@
+{
+  "run_id": "test_run",
+  "stage": "stage_2",
+  "created_at": "2024-01-15T10:02:00",
+  "input_refs": {
+    "stage_0": "data/runs/test_run/stage_0.json",
+    "stage_1": "data/runs/test_run/stage_1.json"
+  },
+  "data": {
+    "central_thesis": {
+      "text": "Every AI system needs traceability. When you're building content generation pipelines, you want to ensure that every piece of output can be traced back to its source. This is what we call provenance tracking.",
+      "evidence_spans": [
+        {
+          "chunk_id": "chunk_0000",
+          "start_char": 95,
+          "end_char": 295,
+          "text": "The key insight here is that every AI system needs traceability. When you're building content generation pipelines, you want to ensure that every piece of output can be traced back to its source.",
+          "approx_time_range": "6-19s"
+        }
+      ]
+    },
+    "themes": [
+      {
+        "theme_id": "theme_00",
+        "theme": "AI Pipelines",
+        "summary": "Key focus on AI pipeline architecture with operational detail on the 8-stage approach.",
+        "subthemes": ["Pipeline architecture", "Stage-based processing"],
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0000",
+            "start_char": 34,
+            "end_char": 120,
+            "text": "Today we're diving deep into building auditable AI pipelines.",
+            "approx_time_range": "2-8s"
+          }
+        ]
+      },
+      {
+        "theme_id": "theme_01",
+        "theme": "Auditability",
+        "summary": "Key focus on auditability with evidence spans and provenance tracking.",
+        "subthemes": ["Provenance tracking", "Evidence spans"],
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0001",
+            "start_char": 180,
+            "end_char": 320,
+            "text": "Each of these has evidence spans pointing back to the source chunks.",
+            "approx_time_range": "40-50s"
+          }
+        ]
+      },
+      {
+        "theme_id": "theme_02",
+        "theme": "Content Generation",
+        "summary": "Key focus on content generation workflows and modular debugging.",
+        "subthemes": ["Content workflows", "Modular architecture"],
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0003",
+            "start_char": 0,
+            "end_char": 150,
+            "text": "Finally, stage eight assembles everything into the final markdown output with full footnotes. The beauty of this approach is that you can debug any stage independently.",
+            "approx_time_range": "85-95s"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "claim_00",
+        "claim_text": "Every AI system needs traceability for reliable content generation",
+        "claim_type": "insight",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0000",
+            "start_char": 95,
+            "end_char": 180,
+            "text": "The key insight here is that every AI system needs traceability.",
+            "approx_time_range": "6-12s"
+          }
+        ]
+      },
+      {
+        "claim_id": "claim_01",
+        "claim_text": "The 8-stage approach enables modular debugging of pipeline components",
+        "claim_type": "methodology",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0003",
+            "start_char": 95,
+            "end_char": 280,
+            "text": "The beauty of this approach is that you can debug any stage independently. If stage 4 is giving weird classifications, you can run just that stage with fixed inputs and iterate quickly.",
+            "approx_time_range": "90-105s"
+          }
+        ]
+      },
+      {
+        "claim_id": "claim_02",
+        "claim_text": "Evidence spans allow output to be traced back to source chunks",
+        "claim_type": "technical",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0001",
+            "start_char": 180,
+            "end_char": 320,
+            "text": "Each of these has evidence spans pointing back to the source chunks.",
+            "approx_time_range": "40-50s"
+          }
+        ]
+      },
+      {
+        "claim_id": "claim_03",
+        "claim_text": "Stage seven evaluates retrieval precision and hallucination rates",
+        "claim_type": "technical",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0002",
+            "start_char": 200,
+            "end_char": 350,
+            "text": "Stage seven evaluates the pipeline itself - checking retrieval precision and hallucination rates.",
+            "approx_time_range": "70-80s"
+          }
+        ]
+      },
+      {
+        "claim_id": "claim_04",
+        "claim_text": "This modular approach has saved countless hours of debugging time",
+        "claim_type": "outcome",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0003",
+            "start_char": 280,
+            "end_char": 375,
+            "text": "This modular approach has saved us countless hours of debugging time.",
+            "approx_time_range": "105-110s"
+          }
+        ]
+      }
+    ],
+    "quotes": [
+      {
+        "quote_text": "The key insight here is that every AI system needs traceability.",
+        "speaker": "Dr. Sarah Chen",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0000",
+            "start_char": 95,
+            "end_char": 160,
+            "text": "The key insight here is that every AI system needs traceability.",
+            "approx_time_range": "6-10s"
+          }
+        ]
+      },
+      {
+        "quote_text": "The beauty of this approach is that you can debug any stage independently.",
+        "speaker": "Dr. Sarah Chen",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0003",
+            "start_char": 95,
+            "end_char": 170,
+            "text": "The beauty of this approach is that you can debug any stage independently.",
+            "approx_time_range": "90-95s"
+          }
+        ]
+      }
+    ],
+    "external_references": [
+      {
+        "reference_text": "Potential mention of retrieval precision metrics and hallucination evaluation frameworks.",
+        "context": "Detected a reference-style phrase during extraction mentioning evaluation methodology.",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0002",
+            "start_char": 200,
+            "end_char": 350,
+            "text": "Stage seven evaluates the pipeline itself - checking retrieval precision and hallucination rates.",
+            "approx_time_range": "70-80s"
+          }
+        ]
+      }
+    ]
+  }
+}

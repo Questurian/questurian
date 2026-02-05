@@ -1,0 +1,37 @@
+{
+  "name": "@questurian/abw-client",
+  "projectType": "application",
+  "sourceRoot": "apps/frontend/src",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node apps/frontend/scripts/show-commands.cjs && vite --config apps/frontend/vite.config.ts --host 0.0.0.0 --port 3003"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite build --config apps/frontend/vite.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint \"apps/frontend/src/**/*.{ts,tsx}\""
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'No frontend tests configured yet.'"
+      }
+    },
+    "docker-build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker build -f apps/frontend/Dockerfile -t ai-blog-frontend:local ."
+      }
+    }
+  }
+}

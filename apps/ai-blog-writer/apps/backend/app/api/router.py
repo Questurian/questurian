@@ -1,0 +1,20 @@
+"""
+Main API router that combines all feature routers.
+"""
+from fastapi import APIRouter
+
+from app.features.youtube2blog import router as youtube2blog_router
+from app.features.review2blog import router as review2blog_router
+
+router = APIRouter()
+
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "ok"}
+
+
+# Include feature routers
+router.include_router(youtube2blog_router)
+router.include_router(review2blog_router)

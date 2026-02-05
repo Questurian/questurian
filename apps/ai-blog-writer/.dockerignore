@@ -1,0 +1,29 @@
+# Dependencies - let containers install their own platform-specific deps
+node_modules
+**/node_modules
+
+# Lock files with platform-specific optional dependencies
+package-lock.json
+
+# Python virtual environments
+.venv
+**/__pycache__
+*.pyc
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Local environment files (secrets)
+.env.local
+apps/**/.env
+
+# Build outputs
+dist
+build

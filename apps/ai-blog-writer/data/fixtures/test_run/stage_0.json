@@ -1,0 +1,39 @@
+{
+  "run_id": "test_run",
+  "stage": "stage_0",
+  "created_at": "2024-01-15T10:00:00",
+  "input_refs": {
+    "source": "fixture_data"
+  },
+  "data": {
+    "meta": {
+      "run_id": "test_run",
+      "version": "0.1.0",
+      "created_at": "2024-01-15T10:00:00",
+      "source": "fixture_data",
+      "notes": "Test fixture for pipeline stage debugging"
+    },
+    "record": {
+      "video_id": "test_video_001",
+      "title": "Building Auditable AI Pipelines: A Complete Guide",
+      "description": "Learn how to build AI pipelines with full provenance tracking and auditability. We cover the 8-stage approach to transforming raw video transcripts into verified, traceable articles.",
+      "channel_title": "AI Engineering Weekly",
+      "channel_id": "UC_test_channel",
+      "video_url": "https://youtube.com/watch?v=test_video_001",
+      "published_at": "2024-01-10T14:30:00Z",
+      "transcript": "Welcome to AI Engineering Weekly. Today we're diving deep into building auditable AI pipelines. The key insight here is that every AI system needs traceability. When you're building content generation pipelines, you want to ensure that every piece of output can be traced back to its source. This is what we call provenance tracking. Let me walk you through our 8-stage approach. Stage one is normalization - cleaning up the raw transcript, fixing filler words, and chunking the text for processing. Stage two is extraction - we pull out the central thesis, key themes, claims, and quotes. Each of these has evidence spans pointing back to the source chunks. Stage three structures the content - identifying section candidates and patterns. Stage four classifies the content type - is this an analysis piece, a how-to guide, or an opinion article? Stage five analyzes the audience - who is this for and what's the tone? Stage six generates insights - what's novel here and what references are missing? Stage seven evaluates the pipeline itself - checking retrieval precision and hallucination rates. Finally, stage eight assembles everything into the final markdown output with full footnotes. The beauty of this approach is that you can debug any stage independently. If stage 4 is giving weird classifications, you can run just that stage with fixed inputs and iterate quickly. This modular approach has saved us countless hours of debugging time.",
+      "transcript_status": "completed",
+      "transcript_extracted_at": "2024-01-10T15:00:00Z",
+      "feed_display_name": "AI Engineering Weekly",
+      "channel_summary": "Technical deep-dives into AI engineering practices, focusing on production systems and best practices.",
+      "primary_topics": "[\"AI Pipelines\", \"Auditability\", \"Content Generation\"]",
+      "audience": "AI engineers and technical leaders",
+      "language_region": "en-US",
+      "hosts": "Dr. Sarah Chen",
+      "formats": "[\"Tutorial\", \"Deep Dive\"]",
+      "tone_style": "[\"technical\", \"educational\", \"practical\"]",
+      "expertise_background": "PhD in Machine Learning, 10 years industry experience",
+      "credibility_bias_notes": "Strong technical background, tends toward practical over theoretical"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@questurian/abw-server",
+  "projectType": "application",
+  "sourceRoot": "apps/backend/app",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node apps/backend/scripts/show-commands.cjs && PYTHONPATH=apps/backend:packages/shared/src:packages/utils/src .venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 4003"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": ".venv/bin/python -m flake8 apps/backend/app packages/shared/src packages/utils/src"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "PYTHONPATH=apps/backend:packages/shared/src:packages/utils/src .venv/bin/python -m pytest apps/backend/tests"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python -m compileall apps/backend/app"
+      }
+    },
+    "docker-build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker build -f apps/backend/Dockerfile -t ai-blog-backend:local ."
+      }
+    }
+  }
+}

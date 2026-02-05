@@ -1,0 +1,19 @@
+{
+  "name": "@questurian/abw-shared",
+  "projectType": "library",
+  "sourceRoot": "packages/shared/src",
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": ".venv/bin/python -m flake8 packages/shared/src"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": ".venv/bin/python -m pytest packages/shared; status=$?; if [ $status -eq 5 ]; then echo 'No tests in packages/shared (explicitly skipped)'; exit 0; fi; exit $status"
+      }
+    }
+  }
+}

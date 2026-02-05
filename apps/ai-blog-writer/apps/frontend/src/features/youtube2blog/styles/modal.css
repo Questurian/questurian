@@ -1,0 +1,151 @@
+/* Guidelines Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.guideline-content {
+  line-height: 1.6;
+}
+
+.guideline-content h1,
+.guideline-content h2,
+.guideline-content h3,
+.guideline-content h4,
+.guideline-content h5,
+.guideline-content h6 {
+  color: var(--ink);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.guideline-content h1 {
+  font-size: 1.8rem;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.5rem;
+}
+
+.guideline-content h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25rem;
+}
+
+.guideline-content h3 {
+  font-size: 1.2rem;
+}
+
+.guideline-content p {
+  margin-bottom: 1rem;
+  color: var(--ink);
+}
+
+.guideline-content ul,
+.guideline-content ol {
+  margin-bottom: 1rem;
+  padding-left: 2rem;
+}
+
+.guideline-content li {
+  margin-bottom: 0.5rem;
+}
+
+.guideline-content code {
+  background: #f4f4f4;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.9em;
+}
+
+.guideline-content pre {
+  background: #f4f4f4;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.guideline-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.guideline-content blockquote {
+  border-left: 4px solid var(--accent);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* View Guidelines Button */
+.article-type-actions .view-btn,
+.article-type-action .view-btn {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}

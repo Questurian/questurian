@@ -1,0 +1,45 @@
+{
+  "run_id": "test_run",
+  "stage": "stage_4",
+  "created_at": "2024-01-15T10:04:00",
+  "input_refs": {
+    "stage_2": "data/runs/test_run/stage_2.json",
+    "stage_3": "data/runs/test_run/stage_3.json"
+  },
+  "data": {
+    "signals": {
+      "structural": {
+        "section_count": 3.0,
+        "evidence_density": 1.67
+      },
+      "linguistic": {
+        "quote_density": 0.4
+      },
+      "evidence": {
+        "claim_count": 5.0
+      },
+      "narrative": {
+        "tension_count": 2.0
+      },
+      "temporal": {
+        "timeline_markers": 0.2
+      }
+    },
+    "scoring": {
+      "In-depth Analysis": 0.73,
+      "How-to Guide": 0.5,
+      "Opinion Piece": 0.22,
+      "Case Study": 0.37,
+      "Feature Story": 0.2,
+      "Listicle": 0.25,
+      "News Article": 0.15,
+      "Interview": 0.3
+    },
+    "classification": {
+      "primary_type": "In-depth Analysis",
+      "secondary_type": "How-to Guide",
+      "confidence": 0.73,
+      "explanation": "Highest score from evidence density and section count for In-depth Analysis."
+    }
+  }
+}

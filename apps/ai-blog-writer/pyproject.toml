@@ -1,0 +1,9 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+skip-string-normalization = true
+exclude = "(node_modules|dist|output|data)"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["apps/backend", "packages/shared/src", "packages/utils/src"]

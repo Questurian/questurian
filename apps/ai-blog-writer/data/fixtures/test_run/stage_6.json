@@ -1,0 +1,48 @@
+{
+  "run_id": "test_run",
+  "stage": "stage_6",
+  "created_at": "2024-01-15T10:06:00",
+  "input_refs": {
+    "stage_2": "data/runs/test_run/stage_2.json"
+  },
+  "data": {
+    "actionable_insights": [
+      {
+        "insight": "Cross-video insight: Every AI system needs traceability for reliable content generation",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0000",
+            "start_char": 95,
+            "end_char": 180,
+            "text": "The key insight here is that every AI system needs traceability.",
+            "approx_time_range": "6-12s"
+          }
+        ],
+        "novelty_signal": "Aligned with recent audience demand for verification."
+      },
+      {
+        "insight": "Cross-video insight: The 8-stage approach enables modular debugging of pipeline components",
+        "evidence_spans": [
+          {
+            "chunk_id": "chunk_0003",
+            "start_char": 95,
+            "end_char": 280,
+            "text": "The beauty of this approach is that you can debug any stage independently. If stage 4 is giving weird classifications, you can run just that stage with fixed inputs and iterate quickly.",
+            "approx_time_range": "90-105s"
+          }
+        ],
+        "novelty_signal": "Aligned with recent audience demand for verification."
+      }
+    ],
+    "originality_and_novelty_signals": [
+      "Highlights traceability through each pipeline stage.",
+      "Positions the workflow as audit-friendly."
+    ],
+    "external_and_missing_references": [
+      {
+        "suggestion": "Add a comparative reference to prior pipeline benchmarks.",
+        "rationale": "Could improve reader trust in the methodology."
+      }
+    ]
+  }
+}

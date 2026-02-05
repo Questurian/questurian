@@ -1,0 +1,31 @@
+{
+  "run_id": "test_run",
+  "stage": "stage_5",
+  "created_at": "2024-01-15T10:05:00",
+  "input_refs": {
+    "stage_0": "data/runs/test_run/stage_0.json",
+    "stage_2": "data/runs/test_run/stage_2.json"
+  },
+  "data": {
+    "inference_confidence": 0.72,
+    "audience_intent": {
+      "primary_intent": "Learn an actionable AI pipeline",
+      "secondary_intent": "Evaluate credibility of the workflow",
+      "reasoning": "Claims emphasize structure and evidence around Every AI system needs traceability. When you're building content."
+    },
+    "audience_segmentation": [
+      {
+        "segment": "AI engineers and technical leaders",
+        "fit": "High"
+      },
+      {
+        "segment": "Product strategists",
+        "fit": "Medium"
+      }
+    ],
+    "sentiment_and_tone": {
+      "sentiment": "informative",
+      "tone_descriptors": ["technical", "educational", "practical"]
+    }
+  }
+}

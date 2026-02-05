@@ -1,0 +1,257 @@
+"""
+YouTube2Blog API routes.
+
+All routes are prefixed with /youtube2blog in the main router.
+"""
+import io
+from typing import List
+from uuid import uuid4
+
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+
+from shared import RawVideoRecord
+from app.core import read_stage_result, read_status, read_output, clear_all_runs
+from utils import parse_csv
+
+from .orchestrator import initialize_run, process_run
+from .storage import (
+    write_article_type,
+    read_article_types,
+    get_article_type_by_name,
+    delete_article_type,
+    get_all_completed_articles,
+)
+from .stages import stage_1_clean_transcript
+
+router = APIRouter(prefix="/youtube2blog", tags=["youtube2blog"])
+
+# Hardcoded test record for /test endpoint
+TEST_RECORD = RawVideoRecord(
+    video_id="test_video_001",
+    title="How to Build AI Pipelines That Actually Work",
+    description="A deep dive into building reliable AI pipelines.",
+    video_url="https://youtube.com/watch?v=test123",
+    published_at="2024-01-15T10:00:00Z",
+    transcript="""Hey everyone, welcome back to the AI Engineering Podcast!
+Before we dive in, this video is sponsored by CloudProvider - use code AIPOD for 20% off.
+
+Okay, so today we're talking about building AI pipelines that actually work in production.
+The key insight is that you need to break things down into small, verifiable steps.
+
+Each stage should have clear inputs and outputs. You should be able to inspect
+what happened at each step. This is crucial for debugging when things go wrong.
+
+Another important point: start simple. Don't try to build the perfect system on day one.
+Get something working end to end, then iterate.
+
+For example, if you're building a content pipeline, start with just two stages:
+1. Parse the input data
+2. Process it with AI
+
+Once those work reliably, you can add more complexity.
+
+The biggest mistake I see is people trying to be too clever too early.
+Keep it simple. Make it work. Then make it better.
+
+If you found this helpful, don't forget to like and subscribe!
+And check out CloudProvider in the description below. See you next time!""",
+    transcript_status="completed",
+    transcript_extracted_at="2024-01-15T10:30:00Z",
+)
+
+
+@router.post("/upload")
+async def upload_csv(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+) -> JSONResponse:
+    """Upload a CSV file with YouTube video data to process."""
+    if not file.filename or not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Please upload a CSV file.")
+
+    content = await file.read()
+    text = content.decode("utf-8-sig")
+    try:
+        records = parse_csv(io.StringIO(text))
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+
+    if not records:
+        raise HTTPException(status_code=400, detail="CSV file has no rows.")
+
+    batch_id = str(uuid4())
+    run_ids: List[str] = []
+
+    for record in records:
+        meta = initialize_run(
+            record,
+            source=file.filename,
+            notes=f"batch:{batch_id}",
+        )
+        run_ids.append(meta.run_id)
+        background_tasks.add_task(process_run, record, meta)
+
+    response_payload = {
+        "batch_id": batch_id,
+        "run_ids": run_ids,
+        "message": f"Queued {len(run_ids)} pipeline runs.",
+    }
+    if len(run_ids) == 1:
+        response_payload["run_id"] = run_ids[0]
+
+    return JSONResponse(response_payload)
+
+
+@router.get("/status/{run_id}")
+async def get_status(run_id: str) -> JSONResponse:
+    """Get the status of a pipeline run."""
+    status = read_status(run_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Run not found.")
+    return JSONResponse(status)
+
+
+@router.get("/result/{run_id}")
+async def get_result(run_id: str, format: str = "json") -> JSONResponse:
+    """Get the result of a completed pipeline run."""
+    output = read_output(run_id)
+    if not output:
+        raise HTTPException(status_code=404, detail="Result not available yet.")
+
+    if format == "md":
+        return JSONResponse({
+            "run_id": run_id,
+            "markdown": output["markdown"],
+            "filename": f"{run_id}.md"
+        })
+
+    return JSONResponse({
+        "run_id": run_id,
+        "markdown": output["markdown"],
+        "artifact": output["artifact"]
+    })
+
+
+@router.get("/debug/{run_id}")
+async def debug_run(run_id: str) -> JSONResponse:
+    """Debug endpoint: shows all stage inputs and outputs for a run."""
+    status = read_status(run_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Run not found.")
+
+    stages = {}
+    for stage_name in ["stage_0", "stage_1", "stage_2", "stage_3", "stage_4"]:
+        stage_data = read_stage_result(run_id, stage_name)
+        if stage_data:
+            stages[stage_name] = stage_data
+
+    output = read_output(run_id)
+
+    return JSONResponse({
+        "run_id": run_id,
+        "status": status,
+        "stages": stages,
+        "output": output
+    })
+
+
+@router.post("/test-stage1")
+async def test_stage1() -> JSONResponse:
+    """Test Stage 1 only (requires AI)."""
+    stage1_output = stage_1_clean_transcript(TEST_RECORD)
+    return JSONResponse({
+        "message": "Stage 1 test completed successfully",
+        "stage_1": stage1_output.model_dump(),
+    })
+
+
+@router.post("/test")
+async def test_pipeline() -> JSONResponse:
+    """Test endpoint that runs Stage 1 with a hardcoded test record."""
+    stage1_output = stage_1_clean_transcript(TEST_RECORD)
+    return JSONResponse({
+        "message": "Pipeline test completed successfully",
+        "stage_1": stage1_output.model_dump(),
+    })
+
+
+@router.post("/clear")
+async def clear_database() -> JSONResponse:
+    """Clear ALL YouTube2Blog data from the database."""
+    count = clear_all_runs(feature="youtube2blog")
+    return JSONResponse({
+        "message": f"Cleared {count} runs from database",
+        "deleted_runs": count
+    })
+
+
+@router.get("/articles")
+async def get_articles() -> JSONResponse:
+    """Get all completed YouTube2Blog articles."""
+    articles = get_all_completed_articles()
+    return JSONResponse(articles)
+
+
+# Article Types CRUD
+@router.get("/article-types")
+async def get_article_types() -> JSONResponse:
+    """Get all article types with their definitions."""
+    try:
+        article_types = read_article_types()
+        return JSONResponse(article_types)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch article types: {str(e)}")
+
+
+@router.post("/article-types")
+async def create_article_type(request: dict) -> JSONResponse:
+    """Create a new article type."""
+    try:
+        name = request.get("name")
+        definition = request.get("definition")
+
+        if not name or not definition:
+            raise HTTPException(status_code=400, detail="Name and definition are required")
+
+        existing = get_article_type_by_name(name)
+        if existing:
+            raise HTTPException(status_code=400, detail="Article type with this name already exists")
+
+        article_type = write_article_type(name, definition)
+        return JSONResponse(article_type, status_code=201)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create article type: {str(e)}")
+
+
+@router.put("/article-types/{article_type_id}")
+async def update_article_type(article_type_id: int, request: dict) -> JSONResponse:
+    """Update an existing article type."""
+    try:
+        name = request.get("name")
+        definition = request.get("definition")
+
+        if not name or not definition:
+            raise HTTPException(status_code=400, detail="Name and definition are required")
+
+        updated_article_type = write_article_type(name, definition)
+        return JSONResponse(updated_article_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update article type: {str(e)}")
+
+
+@router.delete("/article-types/{article_type_id}")
+async def delete_article_type_endpoint(article_type_id: int) -> JSONResponse:
+    """Delete an article type by ID."""
+    try:
+        deleted = delete_article_type(article_type_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Article type not found")
+        return JSONResponse({"message": "Article type deleted successfully"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete article type: {str(e)}")

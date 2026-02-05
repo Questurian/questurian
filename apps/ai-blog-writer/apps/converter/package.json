@@ -1,0 +1,39 @@
+{
+  "name": "@questurian/abw-converter",
+  "version": "1.0.0",
+  "description": "Markdown to Lexical JSON converter for Payload CMS",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lexical/code": "^0.17.0",
+    "@lexical/headless": "^0.17.0",
+    "@lexical/html": "^0.17.0",
+    "@lexical/link": "^0.17.0",
+    "@lexical/list": "^0.17.0",
+    "@lexical/markdown": "^0.17.0",
+    "@lexical/rich-text": "^0.17.0",
+    "@lexical/table": "^0.17.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "jsdom": "^24.1.0",
+    "lexical": "^0.17.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

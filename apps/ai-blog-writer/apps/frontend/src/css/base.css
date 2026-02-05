@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+  color-scheme: light;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+  background-color: #f4efe7;
+  color: #1b1a17;
+  --ink: #1b1a17;
+  --muted: #5b554d;
+  --accent: #f36f2b;
+  --accent-soft: rgba(243, 111, 43, 0.2);
+  --panel: rgba(255, 255, 255, 0.75);
+  --border: rgba(27, 26, 23, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-image: radial-gradient(circle at 10% 20%, rgba(243, 111, 43, 0.12), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgba(43, 122, 120, 0.12), transparent 42%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.6), rgba(243, 239, 228, 0.9));
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+  margin: 0 0 0.5rem;
+}

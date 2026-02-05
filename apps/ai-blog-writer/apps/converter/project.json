@@ -1,0 +1,25 @@
+{
+  "name": "@questurian/abw-converter",
+  "projectType": "application",
+  "sourceRoot": "apps/converter/src",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/converter && pnpm run dev"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/converter && pnpm run build"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/converter && pnpm run typecheck"
+      }
+    }
+  }
+}

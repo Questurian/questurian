@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "workspaceLayout": {
+    "appsDir": "apps",
+    "libsDir": "packages"
+  },
+  "plugins": ["@nxlv/python"],
+  "targetDefaults": {
+    "lint": {
+      "inputs": ["default", "{workspaceRoot}/.eslintrc.cjs", "{workspaceRoot}/.prettierrc"]
+    },
+    "test": {
+      "inputs": ["default"]
+    },
+    "build": {
+      "inputs": ["default"]
+    }
+  }
+}

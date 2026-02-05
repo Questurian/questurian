@@ -1,0 +1,40 @@
+{
+  "run_id": "test_run",
+  "stage": "stage_3",
+  "created_at": "2024-01-15T10:03:00",
+  "input_refs": {
+    "stage_0": "data/runs/test_run/stage_0.json",
+    "stage_2": "data/runs/test_run/stage_2.json"
+  },
+  "data": {
+    "summaries": {
+      "executive": "Technical deep-dives into AI engineering practices, focusing on production systems and best practices. PhD in Machine Learning, 10 years industry experience. Every AI system needs traceability. When you're building content generation pipelines, you want to ensure that every piece of output can be traced back to its source. This is what we call provenance tracking.",
+      "structural": [
+        "Section: AI Pipelines",
+        "Section: Auditability",
+        "Section: Content Generation"
+      ],
+      "argument_flow": [
+        "claim_00",
+        "claim_01",
+        "claim_02",
+        "claim_03",
+        "claim_04"
+      ]
+    },
+    "patterns": {
+      "conceptual": ["AI Pipelines", "Auditability", "Content Generation", "Tutorial", "Deep Dive"],
+      "structural": ["Intro -> Evidence -> Synthesis"],
+      "linguistic": ["technical", "educational", "practical"]
+    },
+    "tensions": [
+      "Depth of analysis vs. pacing for a general audience.",
+      "Balancing automation with human oversight."
+    ],
+    "section_candidates": [
+      "AI Pipelines",
+      "Auditability",
+      "Content Generation"
+    ]
+  }
+}

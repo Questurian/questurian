@@ -1,0 +1,19 @@
+{
+  "name": "@questurian/abw-utils",
+  "projectType": "library",
+  "sourceRoot": "packages/utils/src",
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": ".venv/bin/python -m flake8 packages/utils/src"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": ".venv/bin/python -m pytest packages/utils; status=$?; if [ $status -eq 5 ]; then echo 'No tests in packages/utils (explicitly skipped)'; exit 0; fi; exit $status"
+      }
+    }
+  }
+}
