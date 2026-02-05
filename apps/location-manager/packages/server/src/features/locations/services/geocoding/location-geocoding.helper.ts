@@ -357,10 +357,9 @@ export async function createFromMaps(
       const placeDetails = await getPlaceDetails(name, address, apiKey);
       if (placeDetails) {
         // Update with enhanced information from Places API
-        if (placeDetails.formatted_address) {
-          // Prefer Google-provided address for contact details when available
-          entry.contactAddress = placeDetails.formatted_address;
-        }
+        // Note: We intentionally do NOT set contactAddress from formatted_address
+        // contactAddress should only be used for genuinely different addresses (e.g., mailing address)
+        // not Google's reformatted version of the same location
         if (placeDetails.name && placeDetails.name !== name) {
           // The official name might be different
           entry.name = placeDetails.name;
