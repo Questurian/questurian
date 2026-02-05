@@ -5,12 +5,14 @@
  * Used for monitoring and load balancer health checks
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const startTime = Date.now()
+  const corsHeaders = getCorsHeaders(req)
 
   try {
     // Check database connection
@@ -43,7 +45,7 @@ export async function GET() {
           total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`,
         },
       },
-    })
+    }, { headers: corsHeaders })
   } catch (error) {
     const responseTime = Date.now() - startTime
 
@@ -58,7 +60,11 @@ export async function GET() {
           responseTime: `${responseTime}ms`,
         },
       },
-      { status: 503 }
+      { status: 503, headers: corsHeaders }
     )
   }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return handleCorsOptions(req)
 }
