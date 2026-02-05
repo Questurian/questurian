@@ -3,6 +3,7 @@ import type { ArticleType, ResultResponse, StatusResponse, UploadResponse } from
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003'
 const CONVERTER_URL = import.meta.env.VITE_CONVERTER_URL || 'http://localhost:4004'
 const FEATURE_PREFIX = '/youtube2blog'
+const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
 
 export type LexicalConvertResponse = {
   success: boolean
@@ -154,4 +155,176 @@ export async function deleteArticleType(id: number): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete article type')
   }
+}
+
+// ============================================================================
+// Questura Payload CMS API - Locations, Categories, Tags
+// ============================================================================
+
+export type Location = {
+  id: number
+  level: 'country' | 'city' | 'neighborhood'
+  country: string
+  city?: string | null
+  neighborhood?: string | null
+  countryName?: string
+  cityName?: string
+  neighborhoodName?: string
+  locationKey: string
+  parentKey?: string | null
+  updatedAt: string
+  createdAt: string
+}
+
+export type ArticleCategory = {
+  id: number
+  name: string
+  slug?: string
+  description?: string
+  usageCount?: number
+  status?: 'active' | 'archived'
+  updatedAt: string
+  createdAt: string
+}
+
+export type ArticleTag = {
+  id: number
+  name: string
+  slug?: string
+  displayName?: string
+  description?: string
+  usageCount?: number
+  status?: 'active' | 'archived'
+  updatedAt: string
+  createdAt: string
+}
+
+export type MediaAsset = {
+  id: number
+  filename: string
+  alt?: string
+  url?: string
+  mimeType?: string
+  filesize?: number
+  width?: number
+  height?: number
+}
+
+async function payloadRequest(endpoint: string, token?: string) {
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  }
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  
+  const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'omit',
+    headers,
+  })
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch from ${endpoint}: ${response.status}`)
+  }
+  
+  return response.json()
+}
+
+export async function fetchLocations(token?: string, params?: { 
+  limit?: number 
+  page?: number
+}): Promise<{ docs: Location[]; totalDocs: number; totalPages: number }> {
+  const queryParams = new URLSearchParams()
+  queryParams.append('limit', String(params?.limit || 100))
+  if (params?.page) queryParams.append('page', String(params.page))
+  
+  return payloadRequest(`/api/locations?${queryParams.toString()}`, token)
+}
+
+export async function fetchArticleCategories(token?: string, params?: {
+  limit?: number
+  status?: string
+}): Promise<{ docs: ArticleCategory[]; totalDocs: number }> {
+  const queryParams = new URLSearchParams()
+  queryParams.append('limit', String(params?.limit || 100))
+  if (params?.status) queryParams.append('where[status][equals]', params.status)
+  
+  return payloadRequest(`/api/article-categories?${queryParams.toString()}`, token)
+}
+
+export async function fetchArticleTags(token?: string, params?: {
+  limit?: number
+  status?: string
+}): Promise<{ docs: ArticleTag[]; totalDocs: number }> {
+  const queryParams = new URLSearchParams()
+  queryParams.append('limit', String(params?.limit || 100))
+  if (params?.status) queryParams.append('where[status][equals]', params.status)
+  
+  return payloadRequest(`/api/article-tags?${queryParams.toString()}`, token)
+}
+
+export async function fetchMediaAssets(token?: string, params?: {
+  limit?: number
+  mimeType?: string
+}): Promise<{ docs: MediaAsset[]; totalDocs: number }> {
+  const queryParams = new URLSearchParams()
+  queryParams.append('limit', String(params?.limit || 50))
+  if (params?.mimeType) queryParams.append('where[mimeType][like]', params.mimeType)
+  
+  return payloadRequest(`/api/media-assets?${queryParams.toString()}`, token)
+}
+
+// ============================================================================
+// Article Creation API
+// ============================================================================
+
+export type CreateArticlePayload = {
+  title: string
+  location: string
+  locationRef?: number
+  step1_complete: boolean
+  status?: 'draft' | 'published'
+  category?: number
+  tags?: number[]
+  headerSection?: {
+    featuredImage?: number
+    intro?: object // Lexical JSON
+  }
+  contentBlocks?: Array<{
+    blockType: 'text' | 'image'
+    content?: object // For text blocks
+    image?: number // For image blocks
+    altText?: string
+    caption?: string
+  }>
+  seoSection?: {
+    seo?: number
+  }
+}
+
+export async function createArticle(
+  article: CreateArticlePayload, 
+  token: string
+): Promise<{ id: number; title: string; slug: string }> {
+  const response = await fetch(`${PAYLOAD_API_URL}/api/articles`, {
+    method: 'POST',
+    mode: 'cors',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(article),
+  })
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
+    throw new Error(errorData.message || `Failed to create article: ${response.status}`)
+  }
+  
+  return response.json()
 }

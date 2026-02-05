@@ -9,7 +9,9 @@ import {
   YouTube2BlogPage,
   ArticlesPage,
   ArticleTypesPage,
-  ImagePipelinePage
+  ImagePipelinePage,
+  StagePage,
+  StageArticlePage
 } from './features/youtube2blog'
 import { Review2BlogPage } from './features/review2blog'
 import './styles.css'
@@ -35,6 +37,8 @@ export default function App() {
               <Route path="youtube2blog/articles" element={<ArticlesPage />} />
               <Route path="youtube2blog/article-types" element={<ArticleTypesPage />} />
               <Route path="youtube2blog/image-pipeline" element={<ImagePipelinePage />} />
+              <Route path="youtube2blog/stage" element={<StagePage />} />
+              <Route path="youtube2blog/stage-article" element={<StageArticlePage />} />
 
               {/* Review2Blog Feature */}
               <Route path="review2blog" element={<Review2BlogPage />} />

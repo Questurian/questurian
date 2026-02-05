@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { fetchArticles, convertMarkdownToLexical, type SavedArticle } from '../api'
+import payloadLogoUrl from '../../../assets/payload-logo.svg?url'
 
 function formatDate(dateString: string): string {
   if (!dateString) return 'Unknown'
@@ -45,6 +46,14 @@ function ArticleCard({ article }: { article: SavedArticle }) {
     }
   }
 
+  // Build stage URL with article data
+  const stageUrl = `/youtube2blog/stage-article?${new URLSearchParams({
+    runId: article.run_id,
+    title: article.title || 'Untitled',
+    content: article.markdown.slice(0, 5000), // Limit content length
+    type: article.article_type || '',
+  }).toString()}`
+
   return (
     <div className="article-card">
       <div className="article-card-header">
@@ -59,6 +68,31 @@ function ArticleCard({ article }: { article: SavedArticle }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link
+            to={stageUrl}
+            className="stage-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: '2px solid #000',
+              backgroundColor: '#000',
+              color: '#fff',
+              fontSize: '0.85rem',
+              fontWeight: 500,
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <img
+              src={payloadLogoUrl}
+              alt=""
+              style={{ width: '16px', height: '16px', filter: 'invert(1)' }}
+            />
+            Stage for Payload
+          </Link>
           <button
             type="button"
             className="lexical-copy-btn"
@@ -68,7 +102,7 @@ function ArticleCard({ article }: { article: SavedArticle }) {
               padding: '0.5rem 1rem',
               borderRadius: '6px',
               border: 'none',
-              backgroundColor: copyStatus === 'success' ? '#22c55e' : copyStatus === 'error' ? '#ef4444' : '#000',
+              backgroundColor: copyStatus === 'success' ? '#22c55e' : copyStatus === 'error' ? '#ef4444' : '#666',
               color: '#fff',
               fontSize: '0.85rem',
               fontWeight: 500,
