@@ -145,9 +145,22 @@ function formatDate(value, withTime = false) {
   return withTime ? date.toLocaleString() : date.toLocaleDateString();
 }
 
-function getTimestamp(value) {
+function formatRelativeDate(value) {
   const date = parseDateValue(value);
-  return date ? date.getTime() : 0;
+  if (!date) return 'Unknown';
+
+  const now = new Date();
+  const diff = now - date;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 7) return date.toLocaleDateString();
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'Just now';
 }
 
 // Extract the best available date from an item based on its type
@@ -197,6 +210,36 @@ function truncateText(text, maxLength = 120) {
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength)}...`;
 }
+
+// Source type icons
+const SourceIcon = ({ type }) => {
+  const icons = {
+    article: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+      </svg>
+    ),
+    instagram: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+        <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+      </svg>
+    ),
+    youtube: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" />
+        <path d="m10 15 5-3-5-3z" />
+      </svg>
+    ),
+    reddit: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" />
+      </svg>
+    ),
+  };
+  return icons[type] || icons.article;
+};
 
 export default function Dashboard() {
   const [searchFilter, setSearchFilter] = useState('');
@@ -428,6 +471,22 @@ export default function Dashboard() {
     });
   }, [combinedItems]);
 
+  // Stats calculations
+  const stats = useMemo(() => {
+    const articleCount = leads.length + elComercioPosts.length + diarioCorreoPosts.length + scrapes.length;
+    const instagramCount = posts.length;
+    const youtubeCount = youtubePosts.length;
+    const totalSources = feeds.length + instagramFeeds.length + elComercioFeeds.length + diarioCorreoFeeds.length + youtubeFeeds.length;
+
+    return {
+      total: combinedItems.length,
+      articles: articleCount,
+      instagram: instagramCount,
+      youtube: youtubeCount,
+      sources: totalSources,
+    };
+  }, [combinedItems, leads, elComercioPosts, diarioCorreoPosts, scrapes, posts, youtubePosts, feeds, instagramFeeds, elComercioFeeds, diarioCorreoFeeds, youtubeFeeds]);
+
   const totalCount = combinedItems.length;
   const [visibleCount, setVisibleCount] = useState(DASHBOARD_PAGE_SIZE);
   const loadMoreRef = useRef(null);
@@ -573,14 +632,16 @@ export default function Dashboard() {
     const categoryName =
       categoryNames.get(feedCategoryIds.get(lead.feed_id)) || categoryFilter || 'Unknown';
 
+    const itemDate = lead.published || lead.collected_at;
+
     return (
-      <div key={`lead-${lead.id}`} className="lead-card lead-card-article">
+      <article key={`lead-${lead.id}`} className="lead-card lead-card-article">
         {lead.image_url && (
           <div className="lead-image">
-            <img src={lead.image_url} alt={displayTitle} loading="lazy" />
+            <img src={lead.image_url} alt="" loading="lazy" />
           </div>
         )}
-        <div className="lead-header">
+        <header className="lead-header">
           <h3>
             {lead.link ? (
               <a href={lead.link} target="_blank" rel="noopener noreferrer">
@@ -590,7 +651,7 @@ export default function Dashboard() {
               displayTitle
             )}
           </h3>
-        </div>
+        </header>
 
         <div className="lead-badges">
           <span className="badge">{categoryName}</span>
@@ -606,18 +667,15 @@ export default function Dashboard() {
 
         <div className="lead-meta">
           {lead.author && <span>By {lead.author}</span>}
-          <span className="published-date">
-            {lead.published
-              ? formatDate(lead.published)
-              : formatDate(lead.collected_at)}
-          </span>
+          <span className="published-date">{formatRelativeDate(itemDate)}</span>
         </div>
-        <div className="lead-footer">
-          {!showTranslated && lead.title_translated && (
+
+        {!showTranslated && lead.title_translated && (
+          <footer className="lead-footer">
             <small className="translation-hint">English translation available</small>
-          )}
-        </div>
-      </div>
+          </footer>
+        )}
+      </article>
     );
   }
 
@@ -639,9 +697,11 @@ export default function Dashboard() {
       || categoryFilter
       || 'Unknown';
 
+    const itemDate = post.posted_at || post.collected_at;
+
     return (
-      <div key={`instagram-${post.id}`} className="lead-card lead-card-instagram">
-        <div className="lead-header">
+      <article key={`instagram-${post.id}`} className="lead-card lead-card-instagram">
+        <header className="lead-header">
           <h3>
             {post.permalink ? (
               <a href={post.permalink} target="_blank" rel="noopener noreferrer">
@@ -651,7 +711,7 @@ export default function Dashboard() {
               usernameLabel
             )}
           </h3>
-        </div>
+        </header>
 
         <div className="lead-badges">
           <span className="badge">{categoryName}</span>
@@ -693,21 +753,17 @@ export default function Dashboard() {
             </div>
 
             <div className="lead-meta">
-              <span className="published-date">
-                {post.posted_at
-                  ? formatDate(post.posted_at)
-                  : formatDate(post.collected_at)}
-              </span>
+              <span className="published-date">{formatRelativeDate(itemDate)}</span>
             </div>
           </div>
         </div>
 
-        <div className="lead-footer">
-          {!showTranslated && post.caption_translated && (
+        {!showTranslated && post.caption_translated && (
+          <footer className="lead-footer">
             <small className="translation-hint">English translation available</small>
-          )}
-        </div>
-      </div>
+          </footer>
+        )}
+      </article>
     );
   }
 
@@ -730,14 +786,16 @@ export default function Dashboard() {
       || categoryFilter
       || 'Unknown';
 
+    const itemDate = post.published_at || post.collected_at;
+
     return (
-      <div key={`el_comercio-${post.id}`} className="lead-card lead-card-el-comercio">
+      <article key={`el_comercio-${post.id}`} className="lead-card lead-card-el-comercio">
         {post.image_url && (
           <div className="lead-image">
-            <img src={post.image_url} alt={displayTitle} loading="lazy" />
+            <img src={post.image_url} alt="" loading="lazy" />
           </div>
         )}
-        <div className="lead-header">
+        <header className="lead-header">
           <h3>
             {post.url ? (
               <a href={post.url} target="_blank" rel="noopener noreferrer">
@@ -747,7 +805,7 @@ export default function Dashboard() {
               displayTitle
             )}
           </h3>
-        </div>
+        </header>
 
         <div className="lead-badges">
           <span className="badge">{categoryName}</span>
@@ -768,18 +826,15 @@ export default function Dashboard() {
         )}
 
         <div className="lead-meta">
-          <span className="published-date">
-            {post.published_at
-              ? formatDate(post.published_at)
-              : formatDate(post.collected_at)}
-          </span>
+          <span className="published-date">{formatRelativeDate(itemDate)}</span>
         </div>
-        <div className="lead-footer">
-          {!showTranslated && post.title_translated && (
+
+        {!showTranslated && post.title_translated && (
+          <footer className="lead-footer">
             <small className="translation-hint">English translation available</small>
-          )}
-        </div>
-      </div>
+          </footer>
+        )}
+      </article>
     );
   }
 
@@ -802,14 +857,16 @@ export default function Dashboard() {
       || categoryFilter
       || 'Unknown';
 
+    const itemDate = post.published_at || post.collected_at;
+
     return (
-      <div key={`diario_correo-${post.id}`} className="lead-card lead-card-diario-correo">
+      <article key={`diario_correo-${post.id}`} className="lead-card lead-card-diario-correo">
         {post.image_url && (
           <div className="lead-image">
-            <img src={post.image_url} alt={displayTitle} loading="lazy" />
+            <img src={post.image_url} alt="" loading="lazy" />
           </div>
         )}
-        <div className="lead-header">
+        <header className="lead-header">
           <h3>
             {post.url ? (
               <a href={post.url} target="_blank" rel="noopener noreferrer">
@@ -819,7 +876,7 @@ export default function Dashboard() {
               displayTitle
             )}
           </h3>
-        </div>
+        </header>
 
         <div className="lead-badges">
           <span className="badge">{categoryName}</span>
@@ -842,18 +899,15 @@ export default function Dashboard() {
         )}
 
         <div className="lead-meta">
-          <span className="published-date">
-            {post.published_at
-              ? formatDate(post.published_at)
-              : formatDate(post.collected_at)}
-          </span>
+          <span className="published-date">{formatRelativeDate(itemDate)}</span>
         </div>
-        <div className="lead-footer">
-          {!showTranslated && post.title_translated && (
+
+        {!showTranslated && post.title_translated && (
+          <footer className="lead-footer">
             <small className="translation-hint">English translation available</small>
-          )}
-        </div>
-      </div>
+          </footer>
+        )}
+      </article>
     );
   }
 
@@ -865,14 +919,16 @@ export default function Dashboard() {
     const channelLabel =
       youtubeFeedNames.get(post.youtube_feed_id) || 'Unknown Channel';
 
+    const itemDate = post.published_at || post.collected_at;
+
     return (
-      <div key={`youtube-${post.id}`} className="lead-card lead-card-youtube">
+      <article key={`youtube-${post.id}`} className="lead-card lead-card-youtube">
         {post.thumbnail_url && (
           <div className="lead-image">
-            <img src={post.thumbnail_url} alt={post.title} loading="lazy" />
+            <img src={post.thumbnail_url} alt="" loading="lazy" />
           </div>
         )}
-        <div className="lead-header">
+        <header className="lead-header">
           <h3>
             {post.video_url ? (
               <a href={post.video_url} target="_blank" rel="noopener noreferrer">
@@ -882,7 +938,7 @@ export default function Dashboard() {
               post.title
             )}
           </h3>
-        </div>
+        </header>
 
         <div className="lead-badges">
           <span className="badge">{categoryName}</span>
@@ -890,17 +946,10 @@ export default function Dashboard() {
         </div>
 
         <div className="lead-meta">
-          <span className="published-date">
-            {post.published_at
-              ? formatDate(post.published_at)
-              : formatDate(post.collected_at)}
-          </span>
+          <span className="published-date">{formatRelativeDate(itemDate)}</span>
         </div>
 
-        <div className="lead-footer">
-        </div>
-
-        <div className="transcript-actions" style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="transcript-actions">
           {(() => {
             const state = transcriptStates[post.id];
             const hasExistingTranscript = post.transcript_status === 'completed';
@@ -911,26 +960,26 @@ export default function Dashboard() {
             }
 
             if (hasExistingTranscript || state?.hasTranscript) {
-                      return (
-                        <button
-                          className="button"
-                          onClick={() => handleDownloadTranscript(post.id)}
-                        >
-                          Download CSV
-                        </button>
-                      );
-                    }
+              return (
+                <button
+                  className="button button-sm"
+                  onClick={() => handleDownloadTranscript(post.id)}
+                >
+                  Download CSV
+                </button>
+              );
+            }
 
             if (isUnavailable) {
-              return <span className="badge" style={{ background: '#888' }}>No transcript available</span>;
+              return <span className="badge">No transcript available</span>;
             }
 
             if (state?.error && state?.status === 'failed') {
               return (
                 <>
-                  <span className="badge" style={{ background: '#c00' }}>Failed</span>
+                  <span className="badge danger">Failed</span>
                   <button
-                    className="button secondary"
+                    className="button secondary button-sm"
                     onClick={() => handleExtractTranscript(post.id)}
                   >
                     Retry
@@ -941,7 +990,7 @@ export default function Dashboard() {
 
             return (
               <button
-                className="button secondary"
+                className="button secondary button-sm"
                 onClick={() => handleExtractTranscript(post.id)}
               >
                 Get Transcript
@@ -949,7 +998,7 @@ export default function Dashboard() {
             );
           })()}
         </div>
-      </div>
+      </article>
     );
   }
 
@@ -970,18 +1019,18 @@ export default function Dashboard() {
     const topBarLabel = label || 'Scrape';
 
     return (
-      <div
+      <article
         key={`${scrape.content_type}-${scrape.content_id}`}
         className="lead-card lead-card-scrape"
         data-lead-label={topBarLabel}
       >
         {scrape.image_url && (
           <div className="lead-image">
-            <img src={scrape.image_url} alt={displayTitle || 'Scraped item'} loading="lazy" />
+            <img src={scrape.image_url} alt="" loading="lazy" />
           </div>
         )}
 
-        <div className="lead-header">
+        <header className="lead-header">
           <h3>
             {scrape.link ? (
               <a href={scrape.link} target="_blank" rel="noopener noreferrer">
@@ -991,7 +1040,7 @@ export default function Dashboard() {
               displayTitle
             )}
           </h3>
-        </div>
+        </header>
 
         <div className="lead-badges">
           <span className="badge">{label}</span>
@@ -1012,12 +1061,9 @@ export default function Dashboard() {
         )}
 
         <div className="lead-meta">
-          <span className="published-date">{formatDate(scrape.collected_at)}</span>
+          <span className="published-date">{formatRelativeDate(scrape.collected_at)}</span>
         </div>
-
-        <div className="lead-footer">
-        </div>
-      </div>
+      </article>
     );
   }
 
@@ -1025,13 +1071,50 @@ export default function Dashboard() {
     ? 'No approved content matches your filters.'
     : 'No approved content yet. Review pending items in the approval queue.';
 
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
-    <div className="page">
-      {isFetching && !isLoading && <div className="badge">Refreshing...</div>}
+    <div className="page dashboard">
+      {/* Hero Section */}
+      <header className="page-header">
+        <h1>{getGreeting()}</h1>
+        <p className="page-subtitle">
+          Your content intelligence dashboard. Track leads from multiple sources, all in one place.
+        </p>
+      </header>
+
+      {/* Stats Grid */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-card-label">Total Items</div>
+          <div className="stat-card-value">{formatNumber(stats.total)}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-label">Articles</div>
+          <div className="stat-card-value">{formatNumber(stats.articles)}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-label">Instagram</div>
+          <div className="stat-card-value">{formatNumber(stats.instagram)}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-label">Sources</div>
+          <div className="stat-card-value">{formatNumber(stats.sources)}</div>
+        </div>
+      </div>
+
+      {isFetching && !isLoading && <div className="badge warning">Refreshing...</div>}
 
       {error && <div className="error">{error.message}</div>}
 
-      <div className="subreddit-spotlight card">
+      {/* Reddit Spotlight Section */}
+      <section className="subreddit-spotlight card">
         <div className="subreddit-spotlight-header">
           <div>
             <h3>Reddit Quick Picks</h3>
@@ -1088,7 +1171,7 @@ export default function Dashboard() {
           {!subredditsLoading && !subredditsError && subredditPicks.length > 0 && (
             <div className="subreddit-grid">
               {subredditPicks.map((subreddit) => (
-                <div key={subreddit.id} className="card subreddit-card">
+                <div key={subreddit.id} className="subreddit-card">
                   <div className="subreddit-card-header">
                     <div>
                       <div className="subreddit-title">
@@ -1126,23 +1209,26 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      <div className="filters card">
-        <h3>Filters</h3>
+      {/* Filters Section */}
+      <section className="filters">
+        <h3>Filter Content</h3>
         <div className="filters-grid">
           <div className="form-group">
-            <label>Search</label>
+            <label htmlFor="search-filter">Search</label>
             <input
+              id="search-filter"
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Search titles, summaries, captions, usernames..."
+              placeholder="Search titles, summaries, captions..."
             />
           </div>
           <div className="form-group">
-            <label>Category</label>
+            <label htmlFor="category-filter">Category</label>
             <select
+              id="category-filter"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               disabled={categoriesLoading}
@@ -1154,7 +1240,15 @@ export default function Dashboard() {
             </select>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Content Feed */}
+      <section className="section-header">
+        <h2 className="section-title">Latest Content</h2>
+        <div className="section-actions">
+          <span className="badge">{visibleItems.length} of {totalCount}</span>
+        </div>
+      </section>
 
       {isLoading && totalCount === 0 ? (
         <div className="loading">Loading approved content...</div>
