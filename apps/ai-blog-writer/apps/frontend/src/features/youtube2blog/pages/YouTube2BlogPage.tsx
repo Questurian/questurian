@@ -310,7 +310,13 @@ export default function YouTube2BlogPage() {
           <Link to="/" className="nav-link">← Home</Link>
           <Link to="/youtube2blog/articles" className="nav-link">Saved Articles</Link>
           <Link to="/youtube2blog/article-types" className="nav-link">Article Types</Link>
-          <Link to="/youtube2blog/stage" className="nav-link">Stage</Link>
+          <Link to="/youtube2blog/stage" className="nav-link">Staged ({(() => {
+            try {
+              const stored = localStorage.getItem('youtube2blog_staged_articles')
+              const count = stored ? JSON.parse(stored).length : 0
+              return count
+            } catch { return 0 }
+          })()})</Link>
         </div>
       </header>
 

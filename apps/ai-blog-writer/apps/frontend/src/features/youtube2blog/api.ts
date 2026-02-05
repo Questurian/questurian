@@ -283,7 +283,7 @@ export async function fetchMediaAssets(token?: string, params?: {
 
 export type CreateArticlePayload = {
   title: string
-  location: string
+  location?: string
   locationRef?: number
   step1_complete: boolean
   status?: 'draft' | 'published'

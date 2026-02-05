@@ -5,6 +5,7 @@ export { default as ArticleTypesPage } from './pages/ArticleTypesPage'
 export { default as ImagePipelinePage } from './pages/ImagePipelinePage'
 export { default as StagePage } from './pages/StagePage'
 export { default as StageArticlePage } from './pages/StageArticlePage'
+export type { StagedArticle } from './pages/StageArticlePage'
 
 // Import styles
 import './styles/index.css'
