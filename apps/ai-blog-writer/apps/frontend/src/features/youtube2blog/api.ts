@@ -306,7 +306,7 @@ export type CreateArticlePayload = {
 }
 
 export async function createArticle(
-  article: CreateArticlePayload, 
+  article: CreateArticlePayload,
   token: string
 ): Promise<{ id: number; title: string; slug: string }> {
   const response = await fetch(`${PAYLOAD_API_URL}/api/articles`, {
@@ -320,11 +320,49 @@ export async function createArticle(
     },
     body: JSON.stringify(article),
   })
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
     throw new Error(errorData.message || `Failed to create article: ${response.status}`)
   }
-  
+
+  // Payload CMS wraps responses in a 'doc' object
+  const result = await response.json()
+  return result.doc
+}
+
+// ============================================================================
+// Article Sync Status API
+// ============================================================================
+
+export async function markArticleSynced(
+  runId: string,
+  payloadArticleId: number
+): Promise<{ message: string; run_id: string; payload_article_id: number }> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}/sync`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ payload_article_id: payloadArticleId }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
+    throw new Error(errorData.detail || `Failed to mark article synced: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+export async function getArticleSyncStatus(
+  runId: string
+): Promise<{ synced_to_payload: boolean; payload_article_id: number | null; synced_at: string | null }> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}/sync`)
+
+  if (!response.ok) {
+    throw new Error(`Failed to get sync status: ${response.status}`)
+  }
+
   return response.json()
 }

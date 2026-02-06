@@ -682,6 +682,24 @@ def add_youtube_transcript_columns():
     print("✅ YouTube transcript columns added")
 
 
+def add_youtube_shorts_column():
+    """Add is_short column to youtube_posts table."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    def column_exists(table_name, column_name):
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = [row[1] for row in cursor.fetchall()]
+        return column_name in columns
+
+    if not column_exists('youtube_posts', 'is_short'):
+        cursor.execute("ALTER TABLE youtube_posts ADD COLUMN is_short INTEGER DEFAULT 0")
+
+    conn.commit()
+    conn.close()
+    print("✅ YouTube is_short column added")
+
+
 def run_migrations():
     """Run all schema setup and migrations."""
     init_database()
@@ -689,6 +707,7 @@ def run_migrations():
     add_diario_correo_tables()
     add_youtube_tables()
     add_youtube_transcript_columns()
+    add_youtube_shorts_column()
     add_batch_fetch_tables()
 
 

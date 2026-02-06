@@ -46,6 +46,7 @@ class YouTubePostResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     video_url: Optional[str] = None
     collected_at: str
+    is_short: Optional[int] = 0
     transcript: Optional[str] = None
     transcript_status: Optional[str] = None
     transcript_error: Optional[str] = None
@@ -59,6 +60,7 @@ class YouTubeVideo(BaseModel):
     published_at: Optional[str] = None
     thumbnail_url: Optional[str] = None
     video_url: Optional[str] = None
+    is_short: int = 0
 
 
 class TranscriptResponse(BaseModel):

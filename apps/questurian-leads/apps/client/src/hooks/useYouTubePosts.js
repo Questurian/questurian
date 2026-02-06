@@ -14,6 +14,7 @@ function buildYouTubeParams(filters) {
   if (filters?.category) params.category = filters.category;
   if (filters?.country) params.country = filters.country;
   if (filters?.youtube_feed_id) params.youtube_feed_id = filters.youtube_feed_id;
+  if (filters?.video_type) params.video_type = filters.video_type;
   if (filters?.limit != null && filters.limit !== '') params.limit = filters.limit;
   if (filters?.offset != null && filters.offset !== '') params.offset = filters.offset;
   return params;

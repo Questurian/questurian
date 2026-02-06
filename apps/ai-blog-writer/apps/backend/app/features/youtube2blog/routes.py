@@ -22,6 +22,8 @@ from .storage import (
     get_article_type_by_name,
     delete_article_type,
     get_all_completed_articles,
+    mark_article_synced,
+    get_article_sync_status,
 )
 from .stages import stage_1_clean_transcript
 
@@ -255,3 +257,35 @@ async def delete_article_type_endpoint(article_type_id: int) -> JSONResponse:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete article type: {str(e)}")
+
+
+# Sync Status Endpoints
+@router.post("/articles/{run_id}/sync")
+async def mark_article_as_synced(run_id: str, request: dict) -> JSONResponse:
+    """
+    Mark an article as synced to Payload CMS.
+
+    Once synced, the article should be edited in Payload CMS, not this app.
+    """
+    payload_article_id = request.get("payload_article_id")
+    if not payload_article_id:
+        raise HTTPException(status_code=400, detail="payload_article_id is required")
+
+    success = mark_article_synced(run_id, payload_article_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    return JSONResponse({
+        "message": "Article marked as synced",
+        "run_id": run_id,
+        "payload_article_id": payload_article_id,
+    })
+
+
+@router.get("/articles/{run_id}/sync")
+async def get_sync_status(run_id: str) -> JSONResponse:
+    """Get the sync status of an article."""
+    status = get_article_sync_status(run_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return JSONResponse(status)

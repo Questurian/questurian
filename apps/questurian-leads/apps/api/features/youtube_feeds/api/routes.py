@@ -123,6 +123,7 @@ def get_youtube_posts(
     category: Optional[str] = Query(None),
     country: Optional[str] = Query(None),
     youtube_feed_id: Optional[int] = Query(None),
+    video_type: Optional[str] = Query(None, description="Filter by video type: 'short' or 'video'"),
     limit: Optional[int] = Query(None, ge=1),
     offset: Optional[int] = Query(0, ge=0),
 ) -> List[YouTubePostResponse]:
@@ -138,6 +139,7 @@ def get_youtube_posts(
             yp.thumbnail_url,
             yp.video_url,
             yp.collected_at,
+            yp.is_short,
             yp.transcript,
             yp.transcript_status,
             yp.transcript_error,
@@ -167,6 +169,11 @@ def get_youtube_posts(
         query += " AND yf.country = ?"
         params.append(country)
 
+    if video_type == "short":
+        query += " AND yp.is_short = 1"
+    elif video_type == "video":
+        query += " AND (yp.is_short = 0 OR yp.is_short IS NULL)"
+
     query += " ORDER BY COALESCE(yp.published_at, yp.collected_at) DESC"
 
     if limit is not None:
@@ -191,6 +198,7 @@ def get_youtube_post(post_id: int) -> YouTubePostResponse:
                thumbnail_url,
                video_url,
                collected_at,
+               is_short,
                transcript,
                transcript_status,
                transcript_error,

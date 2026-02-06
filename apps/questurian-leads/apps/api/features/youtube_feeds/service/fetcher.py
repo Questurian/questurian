@@ -74,8 +74,8 @@ def fetch_youtube_feed(feed_id: int, max_results: int = 5) -> Dict:
                 execute_query(
                     """INSERT INTO youtube_posts
                        (youtube_feed_id, video_id, title, description, published_at,
-                        thumbnail_url, video_url)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        thumbnail_url, video_url, is_short)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         feed_id,
                         video.video_id,
@@ -84,6 +84,7 @@ def fetch_youtube_feed(feed_id: int, max_results: int = 5) -> Dict:
                         video.published_at,
                         video.thumbnail_url,
                         video.video_url,
+                        video.is_short,
                     ),
                 )
                 post_count += 1

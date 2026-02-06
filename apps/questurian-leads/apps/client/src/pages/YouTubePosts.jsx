@@ -8,6 +8,7 @@ export default function YouTubePosts() {
     search: '',
     category: '',
     youtube_feed_id: '',
+    video_type: '', // 'short', 'video', or '' for all
   });
   const [transcriptStates, setTranscriptStates] = useState({});
 
@@ -72,6 +73,7 @@ export default function YouTubePosts() {
       search: '',
       category: '',
       youtube_feed_id: '',
+      video_type: '',
     });
   }
 
@@ -125,6 +127,17 @@ export default function YouTubePosts() {
               ))}
             </select>
           </div>
+          <div className="form-group">
+            <label>Video Type</label>
+            <select
+              value={filters.video_type}
+              onChange={(e) => handleFilterChange('video_type', e.target.value)}
+            >
+              <option value="">All Videos</option>
+              <option value="video">Regular Videos</option>
+              <option value="short">Shorts Only</option>
+            </select>
+          </div>
         </div>
         <button className="button secondary" onClick={clearFilters}>
           Clear Filters
@@ -161,6 +174,9 @@ export default function YouTubePosts() {
 
                 <div className="lead-badges">
                   <span className="badge">YouTube</span>
+                  {post.is_short === 1 && (
+                    <span className="badge" style={{ background: '#ff0050' }}>Short</span>
+                  )}
                   <span className="badge">{feedLabel}</span>
                 </div>
 

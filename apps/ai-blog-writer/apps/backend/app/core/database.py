@@ -66,10 +66,26 @@ def ensure_core_tables() -> None:
                 markdown TEXT NOT NULL,
                 artifact TEXT NOT NULL,
                 created_at TEXT NOT NULL,
+                synced_to_payload INTEGER DEFAULT 0,
+                payload_article_id INTEGER,
+                synced_at TEXT,
                 FOREIGN KEY (run_id) REFERENCES runs(run_id)
             );
             """
         )
+
+        # Migration: Add sync columns to existing outputs table
+        output_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(outputs)")
+        }
+        if "synced_to_payload" not in output_columns:
+            conn.execute(
+                "ALTER TABLE outputs ADD COLUMN synced_to_payload INTEGER DEFAULT 0"
+            )
+        if "payload_article_id" not in output_columns:
+            conn.execute("ALTER TABLE outputs ADD COLUMN payload_article_id INTEGER")
+        if "synced_at" not in output_columns:
+            conn.execute("ALTER TABLE outputs ADD COLUMN synced_at TEXT")
 
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(runs)")}
         if "feature" not in columns:
