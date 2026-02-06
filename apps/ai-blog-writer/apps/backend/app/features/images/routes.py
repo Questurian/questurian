@@ -105,17 +105,22 @@ async def upload_image_variants(
     
     Returns the MediaSet ID.
     """
+    print(f"[upload-variants] Received request: {len(variants)} files, types={variant_types}, ref={external_ref}")
+    
     # Validate authorization
     if not authorization or not authorization.startswith("Bearer "):
+        print("[upload-variants] Missing authorization header")
         raise HTTPException(status_code=401, detail="Authorization header required with Bearer token")
     
     jwt_token = authorization.replace("Bearer ", "")
     
     # Validate counts match
     if len(variants) != len(variant_types):
+        print(f"[upload-variants] Mismatch: {len(variants)} files vs {len(variant_types)} types")
         raise HTTPException(status_code=400, detail="Number of variants must match number of variant types")
     
     if len(variants) != 5:
+        print(f"[upload-variants] Wrong number of variants: {len(variants)}")
         raise HTTPException(status_code=400, detail="Exactly 5 variants required")
     
     # Validate variant types
@@ -125,19 +130,8 @@ async def upload_image_variants(
     
     try:
         client = PayloadClient(jwt_token)
-        
-        # Check if MediaSet already exists
-        existing = await client.find_media_set_by_external_ref(external_ref)
-        if existing:
-            return JSONResponse({
-                "success": True,
-                "mediaSetId": str(existing['id']),
-                "externalRef": external_ref,
-                "variantAssetIds": {},
-                "variants": {}
-            })
-        
-        # Read all variant files and upload to Payload
+
+        # Read all variant files first (before any API calls)
         variant_files = []
         for variant_file, variant_type in zip(variants, variant_types):
             content = await variant_file.read()
@@ -147,53 +141,57 @@ async def upload_image_variants(
                 'content': content,
                 'content_type': variant_file.content_type or 'image/webp'
             })
+
+        # Check if MediaSet already exists
+        existing = await client.find_media_set_by_external_ref(external_ref)
+        if existing:
+            # Only return early if MediaSet is complete (all variants uploaded)
+            if existing.get('status') == 'complete':
+                print(f"[upload-variants] MediaSet {existing['id']} is complete, returning early")
+                return JSONResponse({
+                    "success": True,
+                    "mediaSetId": str(existing['id']),
+                    "externalRef": external_ref,
+                    "variantAssetIds": {},
+                    "variants": {}
+                })
+            # MediaSet exists but is partial - use it and upload variants
+            media_set_id = str(existing['id'])
+            print(f"[upload-variants] Found partial MediaSet: {media_set_id}, uploading variants")
+        else:
+            # ⭐ STEP 1: Create MediaSet FIRST (matches Location Manager exactly)
+            # Only title, alt_text, externalRef - NO variant fields!
+            print(f"[upload-variants] Creating MediaSet with externalRef: {external_ref}")
+            media_set_id = await client.create_media_set(
+                title=external_ref,  # Use external_ref as title
+                alt_text=alt_text,
+                external_ref=external_ref,
+            )
+            print(f"[upload-variants] Created MediaSet: {media_set_id}")
         
-        # Find thumbnail to create MediaSet first
-        thumbnail_file = next((v for v in variant_files if v['type'] == 'thumbnail'), None)
-        if not thumbnail_file:
-            raise HTTPException(status_code=400, detail="Thumbnail variant required")
-        
-        # Upload thumbnail first to create MediaSet
+        # ⭐ STEP 2: Upload all variants with mediaSet reference
         from .image_processor import ProcessedVariant
-        thumbnail_variant = ProcessedVariant(
-            variant_type=ImageVariantType.THUMBNAIL,
-            buffer=thumbnail_file['content'],
-            filename=thumbnail_file['filename'],
-            width=150,
-            height=150,
-            content_type=thumbnail_file['content_type'],
-            file_size=len(thumbnail_file['content'])
-        )
-        thumbnail_id = await client.upload_image(thumbnail_variant, alt_text)
-        
-        # Create MediaSet with thumbnail
-        media_set_id = await client.create_media_set(
-            external_ref=external_ref,
-            alt_text=alt_text,
-            thumbnail_id=thumbnail_id,
-            square_id=thumbnail_id,
-            wide_id=thumbnail_id,
-            portrait_id=thumbnail_id,
-            hero_id=thumbnail_id
-        )
-        
-        # Upload remaining variants
-        variant_asset_ids = {'thumbnail': thumbnail_id}
+        variant_asset_ids = {}
         variant_specs = {
-            'thumbnail': (150, 150),
-            'square': (600, 600),
-            'wide': (1200, 675),
-            'portrait': (600, 800),
-            'hero': (1920, 1080)
+            'thumbnail': (1200, 800),   # 3:2
+            'square': (1080, 1080),     # 1:1
+            'wide': (1920, 1080),       # 16:9
+            'portrait': (1200, 1500),   # 4:5
+            'hero': (2100, 900)         # 21:9
         }
         
-        for vf in variant_files:
-            if vf['type'] == 'thumbnail':
+        # Define upload order
+        upload_order = ['thumbnail', 'square', 'wide', 'portrait', 'hero']
+        
+        for variant_type in upload_order:
+            vf = next((v for v in variant_files if v['type'] == variant_type), None)
+            if not vf:
+                print(f"[upload-variants] Warning: Missing variant {variant_type}")
                 continue
-                
-            width, height = variant_specs[vf['type']]
+            
+            width, height = variant_specs[variant_type]
             variant_obj = ProcessedVariant(
-                variant_type=ImageVariantType(vf['type']),
+                variant_type=ImageVariantType(variant_type),
                 buffer=vf['content'],
                 filename=vf['filename'],
                 width=width,
@@ -201,8 +199,18 @@ async def upload_image_variants(
                 content_type=vf['content_type'],
                 file_size=len(vf['content'])
             )
-            asset_id = await client.upload_image(variant_obj, alt_text, media_set_id)
-            variant_asset_ids[vf['type']] = asset_id
+            
+            print(f"[upload-variants] Uploading {variant_type} to mediaSet {media_set_id}")
+            try:
+                asset_id = await client.upload_image(variant_obj, alt_text, media_set_id)
+                if asset_id:
+                    variant_asset_ids[variant_type] = asset_id
+                    print(f"[upload-variants] Uploaded {variant_type}: {asset_id}")
+                else:
+                    print(f"[upload-variants] ERROR: No asset_id returned for {variant_type}")
+            except Exception as e:
+                print(f"[upload-variants] ERROR uploading {variant_type}: {e}")
+                raise
         
         return JSONResponse({
             "success": True,

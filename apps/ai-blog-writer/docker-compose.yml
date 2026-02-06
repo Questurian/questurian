@@ -5,6 +5,8 @@ services:
       dockerfile: apps/backend/Dockerfile
     env_file:
       - apps/backend/.env
+    environment:
+      - PAYLOAD_API_URL=http://host.docker.internal:4000
     volumes:
       - ./:/app
       - ~/.config/gcloud:/root/.config/gcloud:ro  # Mount GCloud credentials

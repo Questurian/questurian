@@ -4,7 +4,7 @@
 
 import type { ImageVariantType } from '../utils/imageProcessing';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003';
 
 export interface UploadImageResponse {
   success: boolean;
@@ -41,6 +41,13 @@ export async function uploadImageVariants(
   token: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadImageResponse> {
+  console.log('uploadImageVariants called with:', { 
+    fileCount: variantFiles.length, 
+    externalRef, 
+    altText: altText ? 'provided' : 'missing',
+    token: token ? 'provided' : 'missing'
+  });
+
   onProgress?.({
     status: 'uploading',
     progress: 0,
@@ -51,6 +58,7 @@ export async function uploadImageVariants(
   
   // Add each variant file with its type
   variantFiles.forEach(({ type, file }) => {
+    console.log(`Adding variant: ${type}, file: ${file.name}, size: ${file.size}`);
     formData.append(`variants`, file);
     formData.append(`variant_types`, type);
   });
@@ -64,23 +72,37 @@ export async function uploadImageVariants(
     message: `Uploading ${variantFiles.length} variants...`
   });
 
-  const response = await fetch(`${API_URL}/api/images/upload-variants`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    },
-    body: formData
-  });
+  console.log('Sending request to:', `${API_URL}/images/upload-variants`);
+  
+  try {
+    const response = await fetch(`${API_URL}/images/upload-variants`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
 
-  onProgress?.({
-    status: 'processing',
-    progress: 70,
-    message: 'Creating media set...'
-  });
+    console.log('Response received:', { status: response.status, ok: response.ok });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(errorData.detail || `Upload failed: ${response.statusText}`);
+    onProgress?.({
+      status: 'processing',
+      progress: 70,
+      message: 'Creating media set...'
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Upload failed:', errorText);
+      throw new Error(errorText || `Upload failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('Upload successful:', data);
+    return data;
+  } catch (error) {
+    console.error('Upload error:', error);
+    throw error;
   }
 
   onProgress?.({
@@ -120,7 +142,7 @@ export async function uploadImage(
     message: 'Uploading to server...'
   });
 
-  const response = await fetch(`${API_URL}/api/images/upload`, {
+  const response = await fetch(`${API_URL}/images/upload`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -180,7 +202,7 @@ export async function processImageOnly(
   formData.append('file', file);
   formData.append('alt_text', altText);
 
-  const response = await fetch(`${API_URL}/api/images/process-only`, {
+  const response = await fetch(`${API_URL}/images/process-only`, {
     method: 'POST',
     body: formData
   });

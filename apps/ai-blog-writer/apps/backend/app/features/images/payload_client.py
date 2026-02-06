@@ -1,5 +1,6 @@
 """Payload CMS API client for uploading images and creating MediaSets."""
 
+import json
 import os
 from typing import Optional
 import aiohttp
@@ -21,7 +22,8 @@ class PayloadClient:
         """Get request headers with auth if available."""
         headers = {}
         if self.jwt_token:
-            headers['Authorization'] = f'Bearer {self.jwt_token}'
+            # Location Manager uses JWT format, not Bearer
+            headers['Authorization'] = f'JWT {self.jwt_token}'
         return headers
     
     async def upload_image(
@@ -44,15 +46,11 @@ class PayloadClient:
         url = f"{self.api_url}/api/media-assets"
         headers = self._get_headers()
         
-        # Prepare multipart form data
+        # Prepare multipart form data (match Location Manager format exactly)
+        # Field order matters: file first, then _payload
         data = aiohttp.FormData()
-        data.add_field('alt', alt_text)
-        data.add_field('variant', variant.variant_type.value)
         
-        if media_set_id:
-            data.add_field('mediaSet', media_set_id)
-        
-        # Add the file
+        # Add the file FIRST (important!)
         data.add_field(
             'file',
             variant.buffer,
@@ -60,36 +58,51 @@ class PayloadClient:
             content_type=variant.content_type
         )
         
+        # Build _payload object with metadata (match Location Manager exactly)
+        payload = {
+            'alt_text': alt_text,
+            'photographer_credit': '',  # Always included even if empty
+            'variant': variant.variant_type.value,
+        }
+        if media_set_id:
+            # Payload expects relationship IDs as integers, not strings
+            payload['mediaSet'] = int(media_set_id)
+            print(f"[Payload] Adding mediaSet to payload: {media_set_id}")
+        
+        # Add _payload as JSON string
+        payload_json = json.dumps(payload)
+        print(f"[Payload] _payload: {payload_json}")
+        data.add_field('_payload', payload_json)
+        
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers, data=data) as response:
-                if response.status >= 400:
-                    error_text = await response.text()
-                    raise Exception(f"Failed to upload image: {response.status} - {error_text}")
+                response_text = await response.text()
+                print(f"[Payload] Upload response status: {response.status}")
+                print(f"[Payload] Upload response body: {response_text[:500]}")
                 
-                result = await response.json()
-                return str(result['doc']['id'])
+                if response.status >= 400:
+                    raise Exception(f"Failed to upload image: {response.status} - {response_text}")
+                
+                result = json.loads(response_text)
+                asset_id = result.get('doc', {}).get('id')
+                print(f"[Payload] Got asset_id: {asset_id}")
+                return str(asset_id) if asset_id else None
     
     async def create_media_set(
         self,
-        external_ref: str,
+        title: str,
         alt_text: str,
-        thumbnail_id: str,
-        square_id: str,
-        wide_id: str,
-        portrait_id: str,
-        hero_id: str
+        external_ref: str,
     ) -> str:
         """
-        Create a MediaSet in Payload CMS linking all 5 variants.
+        Create a MediaSet in Payload CMS.
+        Matches Location Manager: only title, alt_text, externalRef (NO variant fields!)
+        Variants are linked automatically when uploading media-assets with mediaSet field.
         
         Args:
-            external_ref: Unique external reference (e.g., staged article ID)
+            title: Title for the media set
             alt_text: Alt text for the images
-            thumbnail_id: Media asset ID for thumbnail
-            square_id: Media asset ID for square
-            wide_id: Media asset ID for wide
-            portrait_id: Media asset ID for portrait
-            hero_id: Media asset ID for hero
+            external_ref: Unique external reference
             
         Returns:
             The created MediaSet ID
@@ -97,24 +110,27 @@ class PayloadClient:
         url = f"{self.api_url}/api/media-sets"
         headers = {**self._get_headers(), 'Content-Type': 'application/json'}
         
+        # Match Location Manager PayloadMediaSetData exactly
         payload = {
+            'title': title,
+            'alt_text': alt_text,
             'externalRef': external_ref,
-            'alt': alt_text,
-            'thumbnail': thumbnail_id,
-            'square': square_id,
-            'wide': wide_id,
-            'portrait': portrait_id,
-            'hero': hero_id,
         }
+        
+        print(f"[Payload] Creating MediaSet with: {payload}")
         
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers, json=payload) as response:
-                if response.status >= 400:
-                    error_text = await response.text()
-                    raise Exception(f"Failed to create MediaSet: {response.status} - {error_text}")
+                response_text = await response.text()
+                print(f"[Payload] MediaSet create response: {response.status} - {response_text[:200]}")
                 
-                result = await response.json()
-                return str(result['doc']['id'])
+                if response.status >= 400:
+                    raise Exception(f"Failed to create MediaSet: {response.status} - {response_text}")
+                
+                result = json.loads(response_text)
+                media_set_id = str(result['doc']['id'])
+                print(f"[Payload] Created MediaSet: {media_set_id}")
+                return media_set_id
     
     async def find_media_set_by_external_ref(self, external_ref: str) -> Optional[dict]:
         """
@@ -151,12 +167,10 @@ async def upload_image_set(
     variants: dict[ImageVariantType, ProcessedVariant]
 ) -> dict:
     """
-    Upload all image variants and create a MediaSet.
-    
-    This is the main entry point that:
-    1. Checks if a MediaSet already exists for this external_ref
-    2. Uploads all 5 variants to media-assets
-    3. Creates a MediaSet linking all variants
+    Upload all image variants and create a MediaSet (server-side processing).
+    Matches Location Manager flow:
+    1. Create MediaSet first (empty, no variants)
+    2. Upload all variants with mediaSet reference
     
     Args:
         jwt_token: JWT token for Payload authentication
@@ -168,51 +182,36 @@ async def upload_image_set(
         Dictionary with mediaSetId and variantAssetIds
     """
     client = PayloadClient(jwt_token)
-    
+
     # Check if MediaSet already exists
     existing = await client.find_media_set_by_external_ref(external_ref)
     if existing:
-        return {
-            "mediaSetId": str(existing['id']),
-            "variantAssetIds": {}
-        }
+        # Only return early if MediaSet is complete (all variants uploaded)
+        if existing.get('status') == 'complete':
+            return {
+                "mediaSetId": str(existing['id']),
+                "variantAssetIds": {}
+            }
+        # MediaSet exists but is partial - use it and upload variants
+        media_set_id = str(existing['id'])
+        print(f"[Payload] Found partial MediaSet: {media_set_id}, uploading variants")
+    else:
+        # ⭐ STEP 1: Create MediaSet first (empty, like Location Manager)
+        media_set_id = await client.create_media_set(
+            title=external_ref,
+            alt_text=alt_text,
+            external_ref=external_ref,
+        )
     
-    # Upload all variants
-    # First upload - create MediaSet to get ID
-    thumbnail_id = await client.upload_image(variants[ImageVariantType.THUMBNAIL], alt_text)
+    # ⭐ STEP 2: Upload all variants with mediaSet reference
+    variant_asset_ids = {}
     
-    # Create MediaSet with thumbnail
-    media_set_id = await client.create_media_set(
-        external_ref=external_ref,
-        alt_text=alt_text,
-        thumbnail_id=thumbnail_id,
-        square_id=thumbnail_id,  # Temporary
-        wide_id=thumbnail_id,
-        portrait_id=thumbnail_id,
-        hero_id=thumbnail_id
-    )
-    
-    # Upload remaining variants linked to MediaSet
-    square_id = await client.upload_image(
-        variants[ImageVariantType.SQUARE], alt_text, media_set_id
-    )
-    wide_id = await client.upload_image(
-        variants[ImageVariantType.WIDE], alt_text, media_set_id
-    )
-    portrait_id = await client.upload_image(
-        variants[ImageVariantType.PORTRAIT], alt_text, media_set_id
-    )
-    hero_id = await client.upload_image(
-        variants[ImageVariantType.HERO], alt_text, media_set_id
-    )
+    for variant_type in [ImageVariantType.THUMBNAIL, ImageVariantType.SQUARE, 
+                         ImageVariantType.WIDE, ImageVariantType.PORTRAIT, ImageVariantType.HERO]:
+        asset_id = await client.upload_image(variants[variant_type], alt_text, media_set_id)
+        variant_asset_ids[variant_type.value] = asset_id
     
     return {
         "mediaSetId": media_set_id,
-        "variantAssetIds": {
-            "thumbnail": thumbnail_id,
-            "square": square_id,
-            "wide": wide_id,
-            "portrait": portrait_id,
-            "hero": hero_id
-        }
+        "variantAssetIds": variant_asset_ids
     }

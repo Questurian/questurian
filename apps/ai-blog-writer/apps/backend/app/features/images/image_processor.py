@@ -26,11 +26,11 @@ class VariantSpec:
 
 # Variant specifications matching the Location Manager implementation
 VARIANT_SPECS: Dict[ImageVariantType, VariantSpec] = {
-    ImageVariantType.THUMBNAIL: VariantSpec(width=150, height=150),
-    ImageVariantType.SQUARE: VariantSpec(width=600, height=600),
-    ImageVariantType.WIDE: VariantSpec(width=1200, height=675),
-    ImageVariantType.PORTRAIT: VariantSpec(width=600, height=800),
-    ImageVariantType.HERO: VariantSpec(width=1920, height=1080),
+    ImageVariantType.THUMBNAIL: VariantSpec(width=1200, height=800),   # 3:2
+    ImageVariantType.SQUARE: VariantSpec(width=1080, height=1080),    # 1:1
+    ImageVariantType.WIDE: VariantSpec(width=1920, height=1080),      # 16:9
+    ImageVariantType.PORTRAIT: VariantSpec(width=1200, height=1500),  # 4:5
+    ImageVariantType.HERO: VariantSpec(width=2100, height=900),       # 21:9
 }
 
 

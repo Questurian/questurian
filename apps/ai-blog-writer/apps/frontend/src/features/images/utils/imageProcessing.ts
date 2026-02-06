@@ -15,11 +15,11 @@ export interface VariantSpec {
 }
 
 export const VARIANT_SPECS: Record<ImageVariantType, VariantSpec> = {
-  thumbnail: { width: 150, height: 150, ratio: 1, label: '1:1' },
-  square: { width: 600, height: 600, ratio: 1, label: '1:1' },
-  wide: { width: 1200, height: 675, ratio: 16 / 9, label: '16:9' },
-  portrait: { width: 600, height: 800, ratio: 3 / 4, label: '3:4' },
-  hero: { width: 1920, height: 1080, ratio: 16 / 9, label: '16:9' },
+  thumbnail: { width: 1200, height: 800, ratio: 3 / 2, label: '3:2' },
+  square: { width: 1080, height: 1080, ratio: 1, label: '1:1' },
+  wide: { width: 1920, height: 1080, ratio: 16 / 9, label: '16:9' },
+  portrait: { width: 1200, height: 1500, ratio: 4 / 5, label: '4:5' },
+  hero: { width: 2100, height: 900, ratio: 21 / 9, label: '21:9' },
 };
 
 export const VARIANT_SEQUENCE: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'portrait', 'hero'];
@@ -40,6 +40,36 @@ export interface CropState {
 }
 
 export type CropStates = Record<ImageVariantType, CropState>;
+
+/**
+ * Calculate a centered default crop area for an image and target aspect ratio
+ */
+export function calculateDefaultCrop(
+  imageWidth: number,
+  imageHeight: number,
+  targetRatio: number
+): Area {
+  const imageRatio = imageWidth / imageHeight;
+  
+  let width: number;
+  let height: number;
+  
+  if (imageRatio > targetRatio) {
+    // Image is wider than target - crop width
+    height = imageHeight;
+    width = height * targetRatio;
+  } else {
+    // Image is taller than target - crop height
+    width = imageWidth;
+    height = width / targetRatio;
+  }
+  
+  // Center the crop
+  const x = (imageWidth - width) / 2;
+  const y = (imageHeight - height) / 2;
+  
+  return { x, y, width, height };
+}
 
 /**
  * Creates a cropped image from a source image using canvas
@@ -150,16 +180,27 @@ export async function createMultiVariantImages(
 }
 
 /**
- * Initialize default crop states for all variants
+ * Initialize default crop states for all variants with centered crops
  */
-export function initializeCropStates(): CropStates {
-  return {
+export function initializeCropStates(imageWidth?: number, imageHeight?: number): CropStates {
+  const states: CropStates = {
     thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
   };
+
+  // If we have image dimensions, calculate default centered crops
+  if (imageWidth && imageHeight) {
+    VARIANT_SEQUENCE.forEach(type => {
+      const spec = VARIANT_SPECS[type];
+      states[type].croppedAreaPixels = calculateDefaultCrop(imageWidth, imageHeight, spec.ratio);
+      states[type].completed = true;
+    });
+  }
+
+  return states;
 }
 
 /**

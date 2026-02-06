@@ -5,6 +5,7 @@ import {
   VARIANT_SEQUENCE,
   initializeCropStates,
   createMultiVariantImages,
+  loadImage,
   type ImageVariantType,
   type CropStates,
   validateImageResolution,
@@ -53,10 +54,12 @@ const MIN_RESOLUTION = { width: 1920, height: 1080 };
 
 export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: MultiVariantCropperProps) {
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [cropStates, setCropStates] = useState<CropStates>(initializeCropStates());
+  const [errorMsg, setErrorMsg] = useState<string>('');
 
   const currentVariantType = VARIANT_SEQUENCE[currentVariantIndex];
   const currentState = cropStates[currentVariantType];
@@ -71,13 +74,17 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
         MIN_RESOLUTION.height
       );
 
-      if (!validation.valid) {
+      if (!validation.valid || !validation.dimensions) {
         setValidationError(validation.error || 'Image validation failed');
         return;
       }
 
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      setImageDimensions(validation.dimensions);
+      
+      // Initialize crop states with default centered crops
+      setCropStates(initializeCropStates(validation.dimensions.width, validation.dimensions.height));
       setValidationError(null);
 
       return () => URL.revokeObjectURL(url);
@@ -100,6 +107,7 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
     }));
   }, [currentVariantType]);
 
+  // This is called when user releases the crop area
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCropStates(prev => ({
       ...prev,
@@ -109,80 +117,92 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
 
   const handlePrevious = () => {
     if (currentVariantIndex > 0) {
-      setCropStates(prev => ({
-        ...prev,
-        [currentVariantType]: { ...prev[currentVariantType], completed: true }
-      }));
       setCurrentVariantIndex(currentVariantIndex - 1);
     }
   };
 
   const handleNext = () => {
     if (currentVariantIndex < VARIANT_SEQUENCE.length - 1) {
-      setCropStates(prev => ({
-        ...prev,
-        [currentVariantType]: { ...prev[currentVariantType], completed: true }
-      }));
       setCurrentVariantIndex(currentVariantIndex + 1);
     }
   };
 
   const jumpToVariant = (index: number) => {
-    setCropStates(prev => ({
-      ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], completed: true }
-    }));
     setCurrentVariantIndex(index);
   };
 
   const allCropsComplete = () => {
-    return VARIANT_SEQUENCE.every(type => cropStates[type].croppedAreaPixels !== null);
+    return VARIANT_SEQUENCE.every(type => {
+      const state = cropStates[type];
+      return state.croppedAreaPixels !== null && state.croppedAreaPixels.width > 0;
+    });
   };
 
   const handleConfirmAll = async () => {
-    if (!currentState.croppedAreaPixels) {
-      alert('Please adjust the crop area before confirming');
-      return;
-    }
-
-    if (!allCropsComplete()) {
-      alert('Please complete all 5 variant crops');
+    setErrorMsg('');
+    
+    // Check each variant
+    const missingCrops = VARIANT_SEQUENCE.filter(type => !cropStates[type].croppedAreaPixels);
+    if (missingCrops.length > 0) {
+      setErrorMsg(`Missing crops for: ${missingCrops.join(', ')}`);
+      alert(`Missing crops for: ${missingCrops.join(', ')}. Please wait for images to load.`);
       return;
     }
 
     setIsProcessing(true);
+    setErrorMsg('Creating image files...');
 
     try {
+      console.log('Creating variant files with crops:', Object.entries(cropStates).map(([k, v]) => ({ 
+        type: k, 
+        hasCrop: !!v.croppedAreaPixels,
+        crop: v.croppedAreaPixels 
+      })));
+      
       const variantFiles = await createMultiVariantImages(previewUrl, cropStates, file.name);
+      console.log('Variant files created:', variantFiles.map(v => ({ type: v.type, size: v.file.size })));
+      
+      setErrorMsg('Uploading...');
       onConfirm(variantFiles);
     } catch (error) {
       console.error('Error processing variants:', error);
-      alert('Failed to process image variants');
-    } finally {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      setErrorMsg(`Error: ${msg}`);
+      alert('Failed to process image variants: ' + msg);
       setIsProcessing(false);
     }
   };
 
-  const completedCount = VARIANT_SEQUENCE.filter(type => cropStates[type].completed || cropStates[type].croppedAreaPixels !== null).length;
+  const completedCount = VARIANT_SEQUENCE.filter(type => {
+    const state = cropStates[type];
+    return state.croppedAreaPixels !== null && state.croppedAreaPixels.width > 0;
+  }).length;
 
   if (validationError) {
     return (
-      <div className="p-6 text-center">
-        <div className="text-red-400 mb-4">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mx-auto">
+      <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+        <div style={{ color: '#ef4444', marginBottom: '1rem' }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ margin: '0 auto' }}>
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-zinc-200 mb-2">Image Resolution Too Low</h3>
-        <p className="text-zinc-400 text-sm mb-4">{validationError}</p>
-        <p className="text-zinc-500 text-xs mb-6">
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 500, color: '#e4e4e7', marginBottom: '0.5rem' }}>Image Resolution Too Low</h3>
+        <p style={{ color: '#a1a1aa', fontSize: '0.875rem', marginBottom: '1rem' }}>{validationError}</p>
+        <p style={{ color: '#71717a', fontSize: '0.75rem', marginBottom: '1.5rem' }}>
           For best results, please use an image at least {MIN_RESOLUTION.width}×{MIN_RESOLUTION.height}px.
         </p>
         <button
           onClick={onCancel}
-          className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg transition-colors"
+          style={{ 
+            padding: '0.5rem 1rem', 
+            background: '#52525b', 
+            color: '#e4e4e7', 
+            borderRadius: '0.5rem',
+            border: 'none',
+            cursor: 'pointer'
+          }}
         >
           Go Back
         </button>
@@ -191,19 +211,24 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="stage-article-cropper-container">
       {/* Header */}
-      <div className="p-4 border-b border-zinc-800">
-        <h3 className="text-lg font-semibold text-zinc-100">
+      <div style={{ 
+        padding: '1rem 1.25rem', 
+        borderBottom: '1px solid #27272a',
+        flexShrink: 0
+      }}>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#f4f4f5', margin: 0 }}>
           Crop: {currentVariantType.charAt(0).toUpperCase() + currentVariantType.slice(1)}
         </h3>
-        <p className="text-sm text-zinc-500">
+        <p style={{ fontSize: '0.875rem', color: '#71717a', margin: '0.25rem 0 0 0' }}>
           Step {currentVariantIndex + 1} of 5 • Target: {currentSpec.width}×{currentSpec.height}px ({currentSpec.label})
+          {imageDimensions && ` • Source: ${imageDimensions.width}×${imageDimensions.height}`}
         </p>
       </div>
 
-      {/* Cropper area */}
-      <div className="relative flex-1 min-h-[300px] bg-black">
+      {/* Cropper area - Fixed height */}
+      <div className="stage-article-cropper-area" style={{ height: '280px' }}>
         {previewUrl && (
           <Cropper
             image={previewUrl}
@@ -217,109 +242,147 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
             cropShape="rect"
             showGrid={true}
             style={{
-              containerStyle: { background: '#000' },
+              containerStyle: { background: '#000', height: '100%' },
               cropAreaStyle: { border: '2px solid #f36f2b' }
             }}
           />
         )}
       </div>
 
-      {/* Variant progress badges */}
-      <div className="px-4 py-3 border-t border-b border-zinc-800 bg-zinc-900/50">
-        <div className="flex gap-2 flex-wrap justify-center">
+      {/* Controls */}
+      <div className="stage-article-cropper-controls" style={{ flexShrink: 0 }}>
+        {/* Variant progress badges */}
+        <div className="stage-article-cropper-variants">
           {VARIANT_SEQUENCE.map((type, idx) => {
             const isActive = idx === currentVariantIndex;
-            const isCompleted = cropStates[type].completed || cropStates[type].croppedAreaPixels !== null;
-            const spec = VARIANT_SPECS[type];
+            const isCompleted = cropStates[type].croppedAreaPixels !== null && cropStates[type].croppedAreaPixels!.width > 0;
 
             return (
               <button
                 key={type}
                 onClick={() => jumpToVariant(idx)}
                 disabled={isProcessing}
-                className={`
-                  flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
-                  ${isActive
-                    ? 'bg-[#f36f2b] text-white'
-                    : isCompleted
-                      ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                      : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-                  }
-                `}
+                className={`stage-article-cropper-variant-btn ${isActive ? 'active' : isCompleted ? 'completed' : 'pending'}`}
               >
                 {isCompleted && <CheckIcon />}
-                <span className="capitalize">{type}</span>
-                <span className="text-[10px] opacity-70">({spec.label})</span>
+                <span style={{ textTransform: 'capitalize' }}>{type}</span>
+                <span style={{ fontSize: '10px', opacity: 0.7 }}>({VARIANT_SPECS[type].label})</span>
               </button>
             );
           })}
         </div>
-      </div>
 
-      {/* Zoom info */}
-      <div className="px-4 py-2 text-xs text-zinc-500 text-center">
-        Zoom: {Math.round(currentState.zoom * 100)}% • Scroll or pinch to zoom • Drag to move
-      </div>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-zinc-800 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handlePrevious}
-            disabled={currentVariantIndex === 0 || isProcessing}
-            className="flex items-center gap-1 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-300 text-sm rounded-lg transition-colors"
-          >
-            <ChevronLeftIcon />
-            Previous
-          </button>
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={currentVariantIndex === VARIANT_SEQUENCE.length - 1 || isProcessing}
-            className="flex items-center gap-1 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-300 text-sm rounded-lg transition-colors"
-          >
-            Next
-            <ChevronRightIcon />
-          </button>
+        {/* Zoom info */}
+        <div style={{ fontSize: '0.75rem', color: '#71717a', textAlign: 'center', marginBottom: '0.75rem' }}>
+          Zoom: {Math.round(currentState.zoom * 100)}% • Scroll or pinch to zoom • Drag to move
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isProcessing}
-            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
+        {/* Error/Status message */}
+        {errorMsg && (
+          <div style={{ fontSize: '0.75rem', color: '#f36f2b', textAlign: 'center', marginBottom: '0.75rem' }}>
+            {errorMsg}
+          </div>
+        )}
 
-          <button
-            type="button"
-            onClick={handleConfirmAll}
-            disabled={isProcessing || !allCropsComplete()}
-            className={`
-              flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors
-              ${allCropsComplete()
-                ? 'bg-[#f36f2b] hover:bg-[#e56320] text-white'
-                : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-              }
-            `}
-          >
-            {isProcessing ? (
-              <>
-                <LoaderIcon />
-                Processing...
-              </>
-            ) : allCropsComplete() ? (
-              <>
-                <CheckIcon />
-                Confirm All ({completedCount}/5)
-              </>
-            ) : (
-              `Crop All (${completedCount}/5)`
-            )}
-          </button>
+        {/* Footer buttons */}
+        <div className="stage-article-cropper-footer">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={handlePrevious}
+              disabled={currentVariantIndex === 0 || isProcessing}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                padding: '0.5rem 0.75rem',
+                background: '#3f3f46',
+                color: '#d4d4d8',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                cursor: currentVariantIndex === 0 || isProcessing ? 'not-allowed' : 'pointer',
+                opacity: currentVariantIndex === 0 || isProcessing ? 0.5 : 1
+              }}
+            >
+              <ChevronLeftIcon />
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={currentVariantIndex === VARIANT_SEQUENCE.length - 1 || isProcessing}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                padding: '0.5rem 0.75rem',
+                background: '#3f3f46',
+                color: '#d4d4d8',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                cursor: currentVariantIndex === VARIANT_SEQUENCE.length - 1 || isProcessing ? 'not-allowed' : 'pointer',
+                opacity: currentVariantIndex === VARIANT_SEQUENCE.length - 1 || isProcessing ? 0.5 : 1
+              }}
+            >
+              Next
+              <ChevronRightIcon />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isProcessing}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#3f3f46',
+                color: '#d4d4d8',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                opacity: isProcessing ? 0.5 : 1
+              }}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleConfirmAll}
+              disabled={isProcessing}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                background: completedCount === 5 ? '#f36f2b' : '#3f3f46',
+                color: completedCount === 5 ? '#fff' : '#71717a',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                opacity: isProcessing ? 0.5 : 1
+              }}
+            >
+              {isProcessing ? (
+                <>
+                  <LoaderIcon />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckIcon />
+                  {completedCount === 5 ? 'Confirm All' : `Crop All (${completedCount}/5)`}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
