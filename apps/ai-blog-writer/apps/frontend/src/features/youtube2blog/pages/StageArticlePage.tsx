@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../providers/AuthProvider'
+import { ImageUpload, type UploadImageResponse } from '../../../features/images'
 import { 
   fetchLocations, 
   fetchMediaAssets,
@@ -62,6 +63,9 @@ export default function StageArticlePage() {
   // Modal state
   const [showImageModal, setShowImageModal] = useState(false)
   const [imageSearch, setImageSearch] = useState('')
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploadedMediaSetId, setUploadedMediaSetId] = useState<string | null>(null)
+  const [imageAltText, setImageAltText] = useState('')
   
   // Conversion state
   const [isConverting, setIsConverting] = useState(false)
@@ -257,6 +261,29 @@ export default function StageArticlePage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
     
     navigate('/youtube2blog/stage')
+  }
+
+  const handleUploadComplete = (result: UploadImageResponse) => {
+    setUploadedMediaSetId(result.mediaSetId)
+    
+    // Use the hero variant as the featured image if available
+    const heroAssetId = result.variantAssetIds?.hero
+    if (heroAssetId) {
+      updateStagedArticle({ featuredImageId: Number(heroAssetId) })
+    }
+    
+    // Refresh media assets to include newly uploaded images
+    if (token) {
+      fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
+        .then(res => setMediaAssets(res.docs || []))
+    }
+    
+    // Close both modals
+    setShowUploadModal(false)
+    setShowImageModal(false)
+    
+    // Reset alt text
+    setImageAltText('')
   }
 
   const getLocationDisplayName = (loc?: Location) => {
@@ -498,70 +525,118 @@ export default function StageArticlePage() {
         <div className="stage-article-modal-overlay" onClick={() => setShowImageModal(false)}>
           <div className="stage-article-modal" onClick={(e) => e.stopPropagation()}>
             <div className="stage-article-modal-header">
-              <h3>Select Featured Image</h3>
+              <h3>{showUploadModal ? 'Upload New Image' : 'Select Featured Image'}</h3>
               <button 
                 type="button"
                 className="stage-article-modal-close"
-                onClick={() => setShowImageModal(false)}
+                onClick={() => {
+                  if (showUploadModal) {
+                    setShowUploadModal(false)
+                  } else {
+                    setShowImageModal(false)
+                  }
+                }}
               >
                 ×
               </button>
             </div>
-            
-            <div className="stage-article-modal-search">
-              <input
-                type="text"
-                placeholder="Search images..."
-                value={imageSearch}
-                onChange={(e) => setImageSearch(e.target.value)}
-                className="stage-article-modal-search-input"
-              />
-            </div>
 
-            <div className="stage-article-modal-grid">
-              {mediaAssets
-                .filter(img => 
-                  img.filename.toLowerCase().includes(imageSearch.toLowerCase()) ||
-                  img.alt?.toLowerCase().includes(imageSearch.toLowerCase())
-                )
-                .map(img => (
+            {!showUploadModal ? (
+              <>
+                <div className="stage-article-modal-actions">
                   <button
-                    key={img.id}
                     type="button"
-                    className={`stage-article-modal-image ${selectedFeaturedImage?.id === img.id ? 'selected' : ''}`}
-                    onClick={() => {
-                      updateStagedArticle({ featuredImageId: img.id })
-                      setShowImageModal(false)
-                    }}
+                    className="stage-article-modal-upload-btn"
+                    onClick={() => setShowUploadModal(true)}
                   >
-                    <img 
-                      src={img.url || `${import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'}/api/media-assets/file/${img.filename}`}
-                      alt={img.alt || img.filename}
-                      loading="lazy"
-                    />
-                    <span className="stage-article-modal-image-name">{img.filename}</span>
-                    {selectedFeaturedImage?.id === img.id && (
-                      <div className="stage-article-modal-selected-badge">✓</div>
-                    )}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Upload New Image
                   </button>
-                ))}
-            </div>
+                </div>
+            
+                <div className="stage-article-modal-search">
+                  <input
+                    type="text"
+                    placeholder="Search images..."
+                    value={imageSearch}
+                    onChange={(e) => setImageSearch(e.target.value)}
+                    className="stage-article-modal-search-input"
+                  />
+                </div>
 
-            {mediaAssets.length === 0 && (
-              <div className="stage-article-modal-empty">
-                <p>No images found in the media library.</p>
-              </div>
+                <div className="stage-article-modal-grid">
+                  {mediaAssets
+                    .filter(img => 
+                      img.filename.toLowerCase().includes(imageSearch.toLowerCase()) ||
+                      img.alt?.toLowerCase().includes(imageSearch.toLowerCase())
+                    )
+                    .map(img => (
+                      <button
+                        key={img.id}
+                        type="button"
+                        className={`stage-article-modal-image ${selectedFeaturedImage?.id === img.id ? 'selected' : ''}`}
+                        onClick={() => {
+                          updateStagedArticle({ featuredImageId: img.id })
+                          setShowImageModal(false)
+                        }}
+                      >
+                        <img 
+                          src={img.url || `${import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'}/api/media-assets/file/${img.filename}`}
+                          alt={img.alt || img.filename}
+                          loading="lazy"
+                        />
+                        <span className="stage-article-modal-image-name">{img.filename}</span>
+                        {selectedFeaturedImage?.id === img.id && (
+                          <div className="stage-article-modal-selected-badge">✓</div>
+                        )}
+                      </button>
+                    ))}
+                </div>
+
+                {mediaAssets.length === 0 && (
+                  <div className="stage-article-modal-empty">
+                    <p>No images found in the media library.</p>
+                  </div>
+                )}
+
+                <div className="stage-article-modal-footer">
+                  <button 
+                    type="button"
+                    className="stage-article-modal-done"
+                    onClick={() => setShowImageModal(false)}
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="stage-article-upload-section">
+                  <div className="stage-article-upload-alt">
+                    <label htmlFor="image-alt-text">Alt Text *</label>
+                    <input
+                      id="image-alt-text"
+                      type="text"
+                      placeholder="Describe the image for accessibility"
+                      value={imageAltText}
+                      onChange={(e) => setImageAltText(e.target.value)}
+                      className="stage-article-modal-search-input"
+                    />
+                  </div>
+                  <ImageUpload
+                    externalRef={stagedArticle.id}
+                    token={token || ''}
+                    altText={imageAltText}
+                    onUploadComplete={handleUploadComplete}
+                    onCancel={() => setShowUploadModal(false)}
+                  />
+                </div>
+              </>
             )}
-
-            <div className="stage-article-modal-footer">
-              <button 
-                type="button"
-                className="stage-article-modal-done"
-                onClick={() => setShowImageModal(false)}
-              >
-                Done
-              </button>
-            </div>
           </div>
         </div>
       )}

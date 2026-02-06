@@ -1,0 +1,208 @@
+/**
+ * Image processing utilities for cropping and resizing images
+ * Adapted from Location Manager implementation
+ */
+
+import type { Area } from 'react-easy-crop';
+
+export type ImageVariantType = 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero';
+
+export interface VariantSpec {
+  width: number;
+  height: number;
+  ratio: number;
+  label: string;
+}
+
+export const VARIANT_SPECS: Record<ImageVariantType, VariantSpec> = {
+  thumbnail: { width: 150, height: 150, ratio: 1, label: '1:1' },
+  square: { width: 600, height: 600, ratio: 1, label: '1:1' },
+  wide: { width: 1200, height: 675, ratio: 16 / 9, label: '16:9' },
+  portrait: { width: 600, height: 800, ratio: 3 / 4, label: '3:4' },
+  hero: { width: 1920, height: 1080, ratio: 16 / 9, label: '16:9' },
+};
+
+export const VARIANT_SEQUENCE: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'portrait', 'hero'];
+
+export interface CropData {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface CropState {
+  variantType: ImageVariantType;
+  crop: { x: number; y: number };
+  zoom: number;
+  croppedAreaPixels: Area | null;
+  completed: boolean;
+}
+
+export type CropStates = Record<ImageVariantType, CropState>;
+
+/**
+ * Creates a cropped image from a source image using canvas
+ */
+export async function createCroppedImage(
+  imageSrc: string,
+  cropData: CropData,
+  targetDimensions: { width: number; height: number },
+  fileName: string
+): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetDimensions.width;
+        canvas.height = targetDimensions.height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        // Draw cropped and scaled image
+        ctx.drawImage(
+          image,
+          cropData.x,
+          cropData.y,
+          cropData.width,
+          cropData.height,
+          0,
+          0,
+          targetDimensions.width,
+          targetDimensions.height
+        );
+
+        // Convert to WebP for consistency
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Failed to create blob from canvas'));
+              return;
+            }
+
+            const webpFileName = fileName.replace(/\.[^/.]+$/, '') + '.webp';
+            const file = new File([blob], webpFileName, { type: 'image/webp' });
+            resolve(file);
+          },
+          'image/webp',
+          0.85
+        );
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    image.onerror = () => {
+      reject(new Error('Failed to load image'));
+    };
+
+    image.src = imageSrc;
+  });
+}
+
+/**
+ * Generate filename for a specific variant
+ */
+function generateVariantFileName(originalName: string, variantType: ImageVariantType): string {
+  const baseName = originalName.replace(/\.[^/.]+$/, '');
+  return `${baseName}_${variantType}.webp`;
+}
+
+/**
+ * Create all 5 variant images from crop states
+ */
+export async function createMultiVariantImages(
+  imageSrc: string,
+  cropStates: CropStates,
+  fileName: string
+): Promise<{ type: ImageVariantType; file: File }[]> {
+  const variantPromises = Object.entries(cropStates).map(async ([type, state]) => {
+    const variantType = type as ImageVariantType;
+    const spec = VARIANT_SPECS[variantType];
+
+    if (!state.croppedAreaPixels) {
+      throw new Error(`Missing crop data for variant: ${variantType}`);
+    }
+
+    const croppedFile = await createCroppedImage(
+      imageSrc,
+      {
+        x: state.croppedAreaPixels.x,
+        y: state.croppedAreaPixels.y,
+        width: state.croppedAreaPixels.width,
+        height: state.croppedAreaPixels.height,
+      },
+      { width: spec.width, height: spec.height },
+      generateVariantFileName(fileName, variantType)
+    );
+
+    return { type: variantType, file: croppedFile };
+  });
+
+  return Promise.all(variantPromises);
+}
+
+/**
+ * Initialize default crop states for all variants
+ */
+export function initializeCropStates(): CropStates {
+  return {
+    thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+  };
+}
+
+/**
+ * Load an image and return its dimensions
+ */
+export async function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = src;
+  });
+}
+
+/**
+ * Validate if an image meets minimum resolution requirements
+ */
+export async function validateImageResolution(
+  file: File,
+  minWidth: number,
+  minHeight: number
+): Promise<{ valid: boolean; error?: string; dimensions?: { width: number; height: number } }> {
+  try {
+    const url = URL.createObjectURL(file);
+    const img = await loadImage(url);
+    URL.revokeObjectURL(url);
+
+    const dimensions = { width: img.naturalWidth, height: img.naturalHeight };
+
+    if (img.naturalWidth < minWidth || img.naturalHeight < minHeight) {
+      return {
+        valid: false,
+        error: `Image resolution too low. Minimum: ${minWidth}×${minHeight}px, Got: ${img.naturalWidth}×${img.naturalHeight}px`,
+        dimensions,
+      };
+    }
+
+    return { valid: true, dimensions };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Failed to validate image',
+    };
+  }
+}

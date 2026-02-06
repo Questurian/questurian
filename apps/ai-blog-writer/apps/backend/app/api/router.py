@@ -5,6 +5,7 @@ from fastapi import APIRouter
 
 from app.features.youtube2blog import router as youtube2blog_router
 from app.features.review2blog import router as review2blog_router
+from app.features.images import router as images_router
 
 router = APIRouter()
 
@@ -18,3 +19,4 @@ async def health_check():
 # Include feature routers
 router.include_router(youtube2blog_router)
 router.include_router(review2blog_router)
+router.include_router(images_router)
