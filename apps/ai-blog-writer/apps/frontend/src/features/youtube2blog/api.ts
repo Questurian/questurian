@@ -203,6 +203,10 @@ export type MediaAsset = {
   id: number
   filename: string
   alt?: string
+  alt_text?: string
+  altText?: string
+  mediaSet?: number | string | { id?: number | string } | null
+  variant?: 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero'
   url?: string
   mimeType?: string
   filesize?: number

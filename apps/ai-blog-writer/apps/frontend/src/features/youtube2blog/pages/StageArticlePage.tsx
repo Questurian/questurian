@@ -22,7 +22,21 @@ export type ContentBlock = {
   type: 'text' | 'pullquote'
   content: string // Markdown content (header + body) or pull quote text
   imageAfter?: number // Media asset ID for image between this and next block
+  imageAfterAltText?: string
 }
+
+type MediaVariant = 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero'
+
+const CONTENT_BLOCK_VARIANT: MediaVariant = 'wide'
+const FEATURED_IMAGE_VARIANT: MediaVariant = 'hero'
+
+const VARIANT_FALLBACK_ORDER: MediaVariant[] = [
+  'wide',
+  'hero',
+  'square',
+  'portrait',
+  'thumbnail',
+]
 
 // Staged Article Type
 export type StagedArticle = {
@@ -119,7 +133,48 @@ function normalizeBlocks(blocks: ContentBlock[] | undefined, fallbackContent: st
     type: 'text',
     content: block.content || '',
     imageAfter: block.imageAfter,
+    imageAfterAltText: block.imageAfterAltText,
   }))
+}
+
+function getMediaAssetAltText(img?: MediaAsset | null): string {
+  if (!img) return ''
+  return img.alt_text?.trim() || img.alt?.trim() || img.altText?.trim() || ''
+}
+
+function getRelationshipId(
+  value: MediaAsset['mediaSet']
+): string | number | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'string' || typeof value === 'number') return value
+  if (typeof value === 'object' && 'id' in value) {
+    const id = value.id
+    if (typeof id === 'string' || typeof id === 'number') return id
+  }
+  return null
+}
+
+function pickVariantAssetId(
+  variantAssetIds: UploadImageResponse['variantAssetIds'],
+  preferredVariant: MediaVariant
+): number | null {
+  if (!variantAssetIds) return null
+
+  const orderedVariants: MediaVariant[] = [
+    preferredVariant,
+    ...VARIANT_FALLBACK_ORDER.filter(variant => variant !== preferredVariant),
+  ]
+
+  for (const variant of orderedVariants) {
+    const rawId = variantAssetIds[variant]
+    if (!rawId) continue
+    const numericId = Number(rawId)
+    if (!Number.isNaN(numericId)) {
+      return numericId
+    }
+  }
+
+  return null
 }
 
 export default function StageArticlePage() {
@@ -337,10 +392,16 @@ export default function StageArticlePage() {
     updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
   }, [stagedArticle, updateStagedArticle])
 
-  const addImageAfterBlock = useCallback((blockId: string, imageId: number) => {
+  const addImageAfterBlock = useCallback((blockId: string, imageId: number, imageAfterAltText?: string) => {
     if (!stagedArticle) return
     const updatedBlocks = stagedArticle.blocks.map(b =>
-      b.id === blockId ? { ...b, imageAfter: imageId } : b
+      b.id === blockId
+        ? {
+            ...b,
+            imageAfter: imageId,
+            imageAfterAltText: imageAfterAltText?.trim() || undefined,
+          }
+        : b
     )
     updateStagedArticle({ blocks: updatedBlocks })
   }, [stagedArticle, updateStagedArticle])
@@ -348,7 +409,7 @@ export default function StageArticlePage() {
   const removeImageAfterBlock = useCallback((blockId: string) => {
     if (!stagedArticle) return
     const updatedBlocks = stagedArticle.blocks.map(b =>
-      b.id === blockId ? { ...b, imageAfter: undefined } : b
+      b.id === blockId ? { ...b, imageAfter: undefined, imageAfterAltText: undefined } : b
     )
     updateStagedArticle({ blocks: updatedBlocks })
   }, [stagedArticle, updateStagedArticle])
@@ -374,6 +435,7 @@ export default function StageArticlePage() {
       type: 'text',
       content: `${currentBlock.content}\n\n${nextBlock.content}`,
       imageAfter: nextBlock.imageAfter, // Keep only the image after the second block
+      imageAfterAltText: nextBlock.imageAfterAltText,
     }
 
     const updatedBlocks = [
@@ -430,7 +492,13 @@ export default function StageArticlePage() {
 
     const newBlocks: ContentBlock[] = [
       { id: block.id, type: 'text', content: beforeContent },
-      { id: `block_${Date.now()}`, type: 'text', content: afterContent, imageAfter: block.imageAfter },
+      {
+        id: `block_${Date.now()}`,
+        type: 'text',
+        content: afterContent,
+        imageAfter: block.imageAfter,
+        imageAfterAltText: block.imageAfterAltText,
+      },
     ]
 
     const updatedBlocks = [
@@ -641,11 +709,7 @@ export default function StageArticlePage() {
         // Add image block if one exists after this block
         if (block.imageAfter) {
           const imageAsset = mediaAssets.find(m => m.id === block.imageAfter)
-          if (!imageAsset) {
-            throw new Error(`Image after block ${index + 1} is missing from the media library`)
-          }
-
-          const altText = imageAsset.alt?.trim() || ''
+          const altText = (block.imageAfterAltText?.trim() || getMediaAssetAltText(imageAsset)).trim()
           if (!altText) {
             throw new Error(`Image after block ${index + 1} is missing alt text`)
           }
@@ -713,10 +777,29 @@ export default function StageArticlePage() {
     navigate('/youtube2blog/stage')
   }
 
+  const findPreferredVariantAsset = useCallback((assetId: number, preferredVariant: MediaVariant): MediaAsset | null => {
+    const selectedAsset = mediaAssets.find(m => m.id === assetId)
+    if (!selectedAsset) return null
+
+    const mediaSetId = getRelationshipId(selectedAsset.mediaSet)
+    if (mediaSetId === null || !selectedAsset.variant) {
+      return selectedAsset
+    }
+
+    const preferred = mediaAssets.find(m => {
+      const candidateMediaSetId = getRelationshipId(m.mediaSet)
+      return candidateMediaSetId !== null
+        && String(candidateMediaSetId) === String(mediaSetId)
+        && m.variant === preferredVariant
+    })
+
+    return preferred || selectedAsset
+  }, [mediaAssets])
+
   const handleUploadComplete = (result: UploadImageResponse) => {
-    const heroAssetId = result.variantAssetIds?.hero
-    if (heroAssetId) {
-      updateStagedArticle({ featuredImageId: Number(heroAssetId) })
+    const featuredAssetId = pickVariantAssetId(result.variantAssetIds, FEATURED_IMAGE_VARIANT)
+    if (featuredAssetId) {
+      updateStagedArticle({ featuredImageId: featuredAssetId })
     }
 
     if (token) {
@@ -732,9 +815,9 @@ export default function StageArticlePage() {
   const handleBlockImageUploadComplete = (result: UploadImageResponse) => {
     if (!blockImageModal) return
 
-    const heroAssetId = result.variantAssetIds?.hero
-    if (heroAssetId) {
-      addImageAfterBlock(blockImageModal.blockId, Number(heroAssetId))
+    const blockAssetId = pickVariantAssetId(result.variantAssetIds, CONTENT_BLOCK_VARIANT)
+    if (blockAssetId) {
+      addImageAfterBlock(blockImageModal.blockId, blockAssetId, blockImageAltText)
     }
 
     if (token) {
@@ -1060,7 +1143,7 @@ export default function StageArticlePage() {
                           const img = mediaAssets.find(m => m.id === block.imageAfter)
                           return img ? (
                             <>
-                              <img src={getImageUrl(img)} alt={img.alt || ''} />
+                              <img src={getImageUrl(img)} alt={getMediaAssetAltText(img) || block.imageAfterAltText || ''} />
                               {!stagedArticle.publishedToPayload && (
                                 <button
                                   type="button"
@@ -1206,7 +1289,7 @@ export default function StageArticlePage() {
                 <div className="stage-article-featured-image">
                   <img
                     src={getImageUrl(selectedFeaturedImage)}
-                    alt={selectedFeaturedImage.alt || selectedFeaturedImage.filename}
+                    alt={getMediaAssetAltText(selectedFeaturedImage) || selectedFeaturedImage.filename}
                   />
                   {!stagedArticle.publishedToPayload && (
                     <button
@@ -1320,7 +1403,7 @@ export default function StageArticlePage() {
                   {mediaAssets
                     .filter(img =>
                       img.filename.toLowerCase().includes(imageSearch.toLowerCase()) ||
-                      img.alt?.toLowerCase().includes(imageSearch.toLowerCase())
+                      getMediaAssetAltText(img).toLowerCase().includes(imageSearch.toLowerCase())
                     )
                     .map(img => (
                       <button
@@ -1334,7 +1417,7 @@ export default function StageArticlePage() {
                       >
                         <img
                           src={getImageUrl(img)}
-                          alt={img.alt || img.filename}
+                          alt={getMediaAssetAltText(img) || img.filename}
                           loading="lazy"
                         />
                         <span className="stage-article-modal-image-name">{img.filename}</span>
@@ -1434,7 +1517,7 @@ export default function StageArticlePage() {
                   {mediaAssets
                     .filter(img =>
                       img.filename.toLowerCase().includes(blockImageSearch.toLowerCase()) ||
-                      img.alt?.toLowerCase().includes(blockImageSearch.toLowerCase())
+                      getMediaAssetAltText(img).toLowerCase().includes(blockImageSearch.toLowerCase())
                     )
                     .map(img => (
                       <button
@@ -1442,13 +1525,19 @@ export default function StageArticlePage() {
                         type="button"
                         className="stage-article-modal-image"
                         onClick={() => {
-                          addImageAfterBlock(blockImageModal.blockId, img.id)
+                          const preferredAsset = findPreferredVariantAsset(img.id, CONTENT_BLOCK_VARIANT)
+                          if (!preferredAsset) return
+                          addImageAfterBlock(
+                            blockImageModal.blockId,
+                            preferredAsset.id,
+                            getMediaAssetAltText(preferredAsset)
+                          )
                           setBlockImageModal(null)
                         }}
                       >
                         <img
                           src={getImageUrl(img)}
-                          alt={img.alt || img.filename}
+                          alt={getMediaAssetAltText(img) || img.filename}
                           loading="lazy"
                         />
                         <span className="stage-article-modal-image-name">{img.filename}</span>
