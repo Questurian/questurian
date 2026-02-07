@@ -18,7 +18,8 @@ import '../styles/stage-article.css'
 // Block type for parsed markdown sections
 export type ContentBlock = {
   id: string
-  content: string // Markdown content (header + body)
+  type: 'text' | 'pullquote'
+  content: string // Markdown content (header + body) or pull quote text
   imageAfter?: number // Media asset ID for image between this and next block
 }
 
@@ -60,6 +61,7 @@ function parseMarkdownToBlocks(markdown: string): ContentBlock[] {
       // Save previous block
       blocks.push({
         id: `block_${blockIndex++}`,
+        type: 'text',
         content: currentBlock.join('\n').trim(),
       })
       currentBlock = [line]
@@ -74,6 +76,7 @@ function parseMarkdownToBlocks(markdown: string): ContentBlock[] {
     if (content) {
       blocks.push({
         id: `block_${blockIndex}`,
+        type: 'text',
         content,
       })
     }
@@ -124,6 +127,10 @@ export default function StageArticlePage() {
   const [blockImageSearch, setBlockImageSearch] = useState('')
   const [showBlockUploadModal, setShowBlockUploadModal] = useState(false)
   const [blockImageAltText, setBlockImageAltText] = useState('')
+
+  // Drag and drop state
+  const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null)
+  const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null)
 
   // Conversion state
   const [isConverting, setIsConverting] = useState(false)
@@ -270,9 +277,17 @@ export default function StageArticlePage() {
     const currentBlock = stagedArticle.blocks[blockIndex]
     const nextBlock = stagedArticle.blocks[blockIndex + 1]
 
+    // Warn if there's an image between the blocks that will be deleted
+    if (currentBlock.imageAfter) {
+      if (!confirm('This will delete the image between these blocks. Continue?')) {
+        return
+      }
+    }
+
     // Merge content, removing any image that was between them
     const mergedBlock: ContentBlock = {
       id: currentBlock.id,
+      type: 'text',
       content: `${currentBlock.content}\n\n${nextBlock.content}`,
       imageAfter: nextBlock.imageAfter, // Keep only the image after the second block
     }
@@ -330,8 +345,8 @@ export default function StageArticlePage() {
     if (!beforeContent || !afterContent) return
 
     const newBlocks: ContentBlock[] = [
-      { id: block.id, content: beforeContent },
-      { id: `block_${Date.now()}`, content: afterContent, imageAfter: block.imageAfter },
+      { id: block.id, type: 'text', content: beforeContent },
+      { id: `block_${Date.now()}`, type: 'text', content: afterContent, imageAfter: block.imageAfter },
     ]
 
     const updatedBlocks = [
@@ -341,6 +356,144 @@ export default function StageArticlePage() {
     ]
 
     updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
+  }, [stagedArticle, updateStagedArticle])
+
+  const addNewBlock = useCallback((afterBlockId?: string, blockType: 'text' | 'pullquote' = 'text') => {
+    if (!stagedArticle) return
+
+    const newBlock: ContentBlock = {
+      id: `block_${Date.now()}`,
+      type: blockType,
+      content: blockType === 'pullquote'
+        ? 'Enter your pull quote here...'
+        : '## New Section\n\nAdd your content here...',
+    }
+
+    let updatedBlocks: ContentBlock[]
+
+    if (afterBlockId) {
+      const blockIndex = stagedArticle.blocks.findIndex(b => b.id === afterBlockId)
+      if (blockIndex === -1) return
+      updatedBlocks = [
+        ...stagedArticle.blocks.slice(0, blockIndex + 1),
+        newBlock,
+        ...stagedArticle.blocks.slice(blockIndex + 1),
+      ]
+    } else {
+      // Add at the end
+      updatedBlocks = [...stagedArticle.blocks, newBlock]
+    }
+
+    updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
+    setIsEditing(true) // Enter edit mode so they can edit the new block
+  }, [stagedArticle, updateStagedArticle])
+
+  const deleteBlock = useCallback((blockId: string) => {
+    if (!stagedArticle) return
+    if (stagedArticle.blocks.length <= 1) {
+      alert('Cannot delete the last block.')
+      return
+    }
+
+    const block = stagedArticle.blocks.find(b => b.id === blockId)
+    if (!block) return
+
+    const hasImage = block.imageAfter
+    const message = hasImage
+      ? 'Delete this block and its image?'
+      : 'Delete this block?'
+
+    if (!confirm(message)) return
+
+    const updatedBlocks = stagedArticle.blocks.filter(b => b.id !== blockId)
+    updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
+  }, [stagedArticle, updateStagedArticle])
+
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, blockId: string) => {
+    setDraggedBlockId(blockId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', blockId)
+    // Add a slight delay to allow the drag image to be captured
+    setTimeout(() => {
+      const element = document.querySelector(`[data-block-id="${blockId}"]`)
+      if (element) {
+        element.classList.add('dragging')
+      }
+    }, 0)
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedBlockId(null)
+    setDragOverBlockId(null)
+    // Remove dragging class from all blocks
+    document.querySelectorAll('.block-editor-item').forEach(el => {
+      el.classList.remove('dragging')
+    })
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, blockId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (blockId !== draggedBlockId) {
+      setDragOverBlockId(blockId)
+    }
+  }, [draggedBlockId])
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverBlockId(null)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent, targetBlockId: string) => {
+    e.preventDefault()
+    if (!stagedArticle || !draggedBlockId || draggedBlockId === targetBlockId) {
+      setDraggedBlockId(null)
+      setDragOverBlockId(null)
+      return
+    }
+
+    const blocks = [...stagedArticle.blocks]
+    const draggedIndex = blocks.findIndex(b => b.id === draggedBlockId)
+    const targetIndex = blocks.findIndex(b => b.id === targetBlockId)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    // Remove the dragged block
+    const [draggedBlock] = blocks.splice(draggedIndex, 1)
+
+    // Insert at the new position
+    const newTargetIndex = targetIndex > draggedIndex ? targetIndex : targetIndex
+    blocks.splice(newTargetIndex, 0, draggedBlock)
+
+    updateStagedArticle({ blocks, lexicalConverted: false })
+    setDraggedBlockId(null)
+    setDragOverBlockId(null)
+  }, [stagedArticle, draggedBlockId, updateStagedArticle])
+
+  const moveBlockUp = useCallback((blockId: string) => {
+    if (!stagedArticle) return
+    const index = stagedArticle.blocks.findIndex(b => b.id === blockId)
+    if (index <= 0) return
+
+    const blocks = [...stagedArticle.blocks]
+    const temp = blocks[index]
+    blocks[index] = blocks[index - 1]
+    blocks[index - 1] = temp
+
+    updateStagedArticle({ blocks, lexicalConverted: false })
+  }, [stagedArticle, updateStagedArticle])
+
+  const moveBlockDown = useCallback((blockId: string) => {
+    if (!stagedArticle) return
+    const index = stagedArticle.blocks.findIndex(b => b.id === blockId)
+    if (index === -1 || index >= stagedArticle.blocks.length - 1) return
+
+    const blocks = [...stagedArticle.blocks]
+    const temp = blocks[index]
+    blocks[index] = blocks[index + 1]
+    blocks[index + 1] = temp
+
+    updateStagedArticle({ blocks, lexicalConverted: false })
   }, [stagedArticle, updateStagedArticle])
 
   const handleSaveEdits = () => {
@@ -368,21 +521,30 @@ export default function StageArticlePage() {
     try {
       // Build content blocks array for Payload
       const contentBlocks: Array<{
-        blockType: 'text' | 'image'
+        blockType: 'text' | 'image' | 'pullQuote'
         content?: object
         image?: number
         altText?: string
+        quote?: string
       }> = []
 
       // Convert each block to Lexical and interleave with images
       for (const block of stagedArticle.blocks) {
-        // Convert block markdown to Lexical
-        const lexicalResult = await convertMarkdownToLexical(block.content)
-        if (lexicalResult.success && lexicalResult.data) {
+        if (block.type === 'pullquote') {
+          // Add pull quote block
           contentBlocks.push({
-            blockType: 'text',
-            content: lexicalResult.data,
+            blockType: 'pullQuote',
+            quote: block.content,
           })
+        } else {
+          // Convert text block markdown to Lexical
+          const lexicalResult = await convertMarkdownToLexical(block.content)
+          if (lexicalResult.success && lexicalResult.data) {
+            contentBlocks.push({
+              blockType: 'text',
+              content: lexicalResult.data,
+            })
+          }
         }
 
         // Add image block if one exists after this block
@@ -675,20 +837,99 @@ export default function StageArticlePage() {
 
           <div className="block-editor">
             {stagedArticle.blocks.map((block, index) => (
-              <div key={block.id} className="block-editor-item">
+              <div
+                key={block.id}
+                data-block-id={block.id}
+                className={`block-editor-item ${draggedBlockId === block.id ? 'dragging' : ''} ${dragOverBlockId === block.id ? 'drag-over' : ''}`}
+                draggable={!stagedArticle.publishedToPayload && !isEditing}
+                onDragStart={(e) => handleDragStart(e, block.id)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, block.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, block.id)}
+              >
                 {/* Block Content */}
-                <div className={`block-card ${isEditing ? 'editing' : ''}`}>
+                <div className={`block-card ${isEditing ? 'editing' : ''} ${block.type === 'pullquote' ? 'pullquote' : ''}`}>
                   <div className="block-card-header">
-                    <span className="block-number">{index + 1}</span>
+                    <div className="block-card-header-left">
+                      {/* Drag Handle */}
+                      {!stagedArticle.publishedToPayload && !isEditing && (
+                        <div className="block-drag-handle" title="Drag to reorder">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="9" cy="5" r="1.5"/>
+                            <circle cx="15" cy="5" r="1.5"/>
+                            <circle cx="9" cy="12" r="1.5"/>
+                            <circle cx="15" cy="12" r="1.5"/>
+                            <circle cx="9" cy="19" r="1.5"/>
+                            <circle cx="15" cy="19" r="1.5"/>
+                          </svg>
+                        </div>
+                      )}
+                      <span className="block-number">{index + 1}</span>
+                      {block.type === 'pullquote' && (
+                        <span className="block-type-badge">Pull Quote</span>
+                      )}
+                    </div>
+                    <div className="block-card-header-right">
+                      {/* Move buttons */}
+                      {!stagedArticle.publishedToPayload && !isEditing && (
+                        <div className="block-move-buttons">
+                          <button
+                            type="button"
+                            className="block-move-btn"
+                            onClick={() => moveBlockUp(block.id)}
+                            disabled={index === 0}
+                            title="Move up"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M18 15l-6-6-6 6"/>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="block-move-btn"
+                            onClick={() => moveBlockDown(block.id)}
+                            disabled={index === stagedArticle.blocks.length - 1}
+                            title="Move down"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                      {!stagedArticle.publishedToPayload && (
+                        <button
+                          type="button"
+                          className="block-delete-btn"
+                          onClick={() => deleteBlock(block.id)}
+                          title="Delete block"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {isEditing ? (
                     <textarea
-                      className="block-textarea"
+                      className={`block-textarea ${block.type === 'pullquote' ? 'pullquote' : ''}`}
                       value={block.content}
                       onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                      rows={Math.max(4, block.content.split('\n').length + 2)}
+                      rows={block.type === 'pullquote' ? 3 : Math.max(4, block.content.split('\n').length + 2)}
+                      placeholder={block.type === 'pullquote' ? 'Enter your pull quote...' : ''}
                     />
+                  ) : block.type === 'pullquote' ? (
+                    <div className="block-pullquote-preview">
+                      <svg className="block-pullquote-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
+                        <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
+                      </svg>
+                      <p>{block.content}</p>
+                    </div>
                   ) : (
                     <div className="block-preview">
                       {(() => {
@@ -778,7 +1019,7 @@ export default function StageArticlePage() {
                   </div>
                 )}
 
-                {/* Action Zone Between Blocks (fuse + add image) */}
+                {/* Action Zone Between Blocks (fuse + add image + add block) */}
                 {index < stagedArticle.blocks.length - 1 && !stagedArticle.publishedToPayload && (
                   <div className="block-action-zone">
                     <div className="block-action-line" />
@@ -813,11 +1054,55 @@ export default function StageArticlePage() {
                           Image
                         </button>
                       )}
+
+                      {/* Add Block Button */}
+                      <button
+                        type="button"
+                        className="block-add-block-btn"
+                        onClick={() => addNewBlock(block.id, 'text')}
+                        title="Add new text block here"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Block
+                      </button>
+
+                      {/* Add Pull Quote Button */}
+                      <button
+                        type="button"
+                        className="block-add-quote-btn"
+                        onClick={() => addNewBlock(block.id, 'pullquote')}
+                        title="Add pull quote here"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
+                          <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
+                        </svg>
+                        Quote
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
             ))}
+
+            {/* Add Block at End */}
+            {!stagedArticle.publishedToPayload && (
+              <button
+                type="button"
+                className="block-add-end-btn"
+                onClick={() => addNewBlock()}
+                title="Add new block at end"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Block
+              </button>
+            )}
           </div>
         </div>
 
@@ -893,7 +1178,10 @@ export default function StageArticlePage() {
                   <button
                     type="button"
                     className="stage-article-modal-upload-btn"
-                    onClick={() => setShowUploadModal(true)}
+                    onClick={() => {
+                      setImageAltText('')
+                      setShowUploadModal(true)
+                    }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -962,22 +1250,12 @@ export default function StageArticlePage() {
             ) : (
               <>
                 <div className="stage-article-upload-section">
-                  <div className="stage-article-upload-alt">
-                    <label htmlFor="image-alt-text">Alt Text *</label>
-                    <input
-                      id="image-alt-text"
-                      type="text"
-                      placeholder="Describe the image for accessibility"
-                      value={imageAltText}
-                      onChange={(e) => setImageAltText(e.target.value)}
-                      className="stage-article-modal-search-input"
-                    />
-                  </div>
                   <ImageUpload
                     externalRef={stagedArticle.id}
                     token={token || ''}
                     altText={imageAltText}
                     onUploadComplete={handleUploadComplete}
+                    onAltTextGenerated={(text) => setImageAltText(text)}
                     onCancel={() => setShowUploadModal(false)}
                   />
                 </div>
@@ -1014,7 +1292,10 @@ export default function StageArticlePage() {
                   <button
                     type="button"
                     className="stage-article-modal-upload-btn"
-                    onClick={() => setShowBlockUploadModal(true)}
+                    onClick={() => {
+                      setBlockImageAltText('')
+                      setShowBlockUploadModal(true)
+                    }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1080,22 +1361,12 @@ export default function StageArticlePage() {
             ) : (
               <>
                 <div className="stage-article-upload-section">
-                  <div className="stage-article-upload-alt">
-                    <label htmlFor="block-image-alt-text">Alt Text *</label>
-                    <input
-                      id="block-image-alt-text"
-                      type="text"
-                      placeholder="Describe the image for accessibility"
-                      value={blockImageAltText}
-                      onChange={(e) => setBlockImageAltText(e.target.value)}
-                      className="stage-article-modal-search-input"
-                    />
-                  </div>
                   <ImageUpload
                     externalRef={`${stagedArticle.id}_block_${blockImageModal.blockId}`}
                     token={token || ''}
                     altText={blockImageAltText}
                     onUploadComplete={handleBlockImageUploadComplete}
+                    onAltTextGenerated={(text) => setBlockImageAltText(text)}
                     onCancel={() => setShowBlockUploadModal(false)}
                   />
                 </div>

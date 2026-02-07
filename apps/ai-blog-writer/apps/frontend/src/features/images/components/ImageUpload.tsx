@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef } from 'react';
 import { MultiVariantCropper } from './MultiVariantCropper';
-import { uploadImage, uploadImageVariants, UploadProgress, UploadImageResponse } from '../api/imagesApi';
+import { uploadImageVariants, generateAltText, UploadProgress, UploadImageResponse } from '../api/imagesApi';
 import { type ImageVariantType } from '../utils/imageProcessing';
 
 // Inline SVG icons
@@ -19,14 +19,6 @@ const XIcon = () => (
   </svg>
 );
 
-const ImageIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-    <circle cx="8.5" cy="8.5" r="1.5"/>
-    <polyline points="21 15 16 10 5 21"/>
-  </svg>
-);
-
 const LoaderIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
     <line x1="12" y1="2" x2="12" y2="6"/>
@@ -37,13 +29,6 @@ const LoaderIcon = () => (
     <line x1="18" y1="12" x2="22" y2="12"/>
     <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
     <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
-  </svg>
-);
-
-const CheckCircleIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-    <polyline points="22 4 12 14.01 9 11.01"/>
   </svg>
 );
 
@@ -67,19 +52,21 @@ interface ImageUploadProps {
   token: string;
   altText: string;
   onUploadComplete: (result: UploadImageResponse) => void;
+  onAltTextGenerated?: (altText: string) => void;
   onCancel?: () => void;
   className?: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-type UploadMode = 'select' | 'crop' | 'uploading';
+type UploadMode = 'select' | 'alttext' | 'crop' | 'uploading';
 
 export function ImageUpload({
   externalRef,
   token,
   altText,
   onUploadComplete,
+  onAltTextGenerated,
   onCancel,
   className = ''
 }: ImageUploadProps) {
@@ -87,6 +74,7 @@ export function ImageUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [isGeneratingAlt, setIsGeneratingAlt] = useState(false);
   const [progress, setProgress] = useState<UploadProgress>({
     status: 'idle',
     progress: 0,
@@ -117,12 +105,26 @@ export function ImageUpload({
 
     setSelectedFile(file);
     setProgress({ status: 'idle', progress: 0, message: '' });
+    setMode('alttext');
 
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target?.result as string);
     reader.readAsDataURL(file);
-  }, []);
+
+    // Auto-generate alt text
+    if (onAltTextGenerated) {
+      setIsGeneratingAlt(true);
+      try {
+        const generatedAlt = await generateAltText(file);
+        onAltTextGenerated(generatedAlt);
+      } catch (err) {
+        console.error('Alt text generation failed:', err);
+      } finally {
+        setIsGeneratingAlt(false);
+      }
+    }
+  }, [onAltTextGenerated]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -161,30 +163,6 @@ export function ImageUpload({
     }
   }, []);
 
-  const handleSimpleUpload = useCallback(async () => {
-    if (!selectedFile) return;
-
-    setMode('uploading');
-
-    try {
-      const result = await uploadImage(
-        selectedFile,
-        externalRef,
-        altText,
-        token,
-        setProgress
-      );
-      onUploadComplete(result);
-    } catch (error) {
-      setProgress({
-        status: 'error',
-        progress: 0,
-        message: error instanceof Error ? error.message : 'Upload failed'
-      });
-      setMode('select');
-    }
-  }, [selectedFile, externalRef, altText, token, onUploadComplete]);
-
   const handleCropConfirm = useCallback(async (variantFiles: { type: ImageVariantType; file: File }[]) => {
     setMode('uploading');
 
@@ -218,7 +196,6 @@ export function ImageUpload({
       <div className={className}>
         <MultiVariantCropper
           file={selectedFile}
-          altText={altText}
           onConfirm={handleCropConfirm}
           onCancel={() => setMode('select')}
         />
@@ -286,92 +263,88 @@ export function ImageUpload({
     );
   }
 
-  return (
-    <div className={`stage-article-image-upload ${className}`}>
-      {/* Drop Zone */}
-      {!selectedFile && (
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={() => fileInputRef.current?.click()}
-          className={`stage-article-drop-zone ${isDragging ? 'dragging' : ''}`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleInputChange}
-            style={{ display: 'none' }}
-          />
-          <div className="icon-container">
-            <UploadIcon />
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#d4d4d8' }}>
-              {isDragging ? 'Drop image here' : 'Click or drag image here'}
-            </p>
-            <p style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '0.25rem' }}>
-              Supports JPG, PNG, WebP up to 10MB
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Selected File Preview */}
-      {selectedFile && (
+  // Render alt text stage
+  if (mode === 'alttext' && selectedFile) {
+    return (
+      <div className={`stage-article-image-upload ${className}`}>
         <div className="stage-article-preview-container">
           <div className="stage-article-preview-image">
-            {preview && (
-              <img src={preview} alt="Preview" />
-            )}
+            {preview && <img src={preview} alt="Preview" />}
           </div>
 
-          <div className="stage-article-preview-info">
-            <div className="stage-article-preview-icon">
-              <ImageIcon />
-            </div>
-            <div className="stage-article-preview-details">
-              <p className="stage-article-preview-name">{selectedFile.name}</p>
-              <p className="stage-article-preview-size">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-            </div>
-            <button
-              onClick={handleClear}
-              className="stage-article-preview-clear"
-            >
+          <div className="stage-article-preview-info-compact">
+            <span className="stage-article-preview-name-compact">{selectedFile.name}</span>
+            <span className="stage-article-preview-size-compact">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
+            <button onClick={handleClear} className="stage-article-preview-clear-compact">
               <XIcon />
             </button>
+          </div>
+
+          <div className="stage-article-alttext-section">
+            <label className="stage-article-alttext-label">Alt Text</label>
+            {isGeneratingAlt && (
+              <div className="stage-article-alttext-generating">
+                <LoaderIcon />
+                <span>Generating with AI...</span>
+              </div>
+            )}
+            <input
+              type="text"
+              className="stage-article-alttext-input"
+              value={altText}
+              onChange={(e) => onAltTextGenerated?.(e.target.value)}
+              placeholder={isGeneratingAlt ? 'Generating...' : 'Describe the image for accessibility'}
+              disabled={isGeneratingAlt}
+            />
           </div>
 
           <div className="stage-article-upload-actions">
             <button
               onClick={handleStartCropping}
-              disabled={!altText.trim()}
+              disabled={!altText.trim() || isGeneratingAlt}
               className="stage-article-upload-primary"
             >
               <CropIcon />
-              Adjust Crops & Upload
+              Continue to Crop
             </button>
-            
             <div className="stage-article-upload-secondary">
-              <button onClick={onCancel}>
-                Cancel
-              </button>
-              <button
-                onClick={handleSimpleUpload}
-                disabled={!altText.trim()}
-                style={{ opacity: !altText.trim() ? 0.5 : 1, cursor: !altText.trim() ? 'not-allowed' : 'pointer' }}
-              >
-                Quick Upload
-              </button>
+              <button onClick={onCancel}>Cancel</button>
             </div>
-            
-            <p className="stage-article-upload-hint">
-              "Adjust Crops" lets you customize each variant. "Quick Upload" uses automatic cropping.
-            </p>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Render drop zone (select mode)
+  return (
+    <div className={`stage-article-image-upload ${className}`}>
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={() => fileInputRef.current?.click()}
+        className={`stage-article-drop-zone ${isDragging ? 'dragging' : ''}`}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleInputChange}
+          style={{ display: 'none' }}
+        />
+        <div className="icon-container">
+          <UploadIcon />
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#d4d4d8' }}>
+            {isDragging ? 'Drop image here' : 'Click or drag image here'}
+          </p>
+          <p style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '0.25rem' }}>
+            Supports JPG, PNG, WebP up to 10MB
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

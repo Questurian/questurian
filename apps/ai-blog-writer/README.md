@@ -131,6 +131,12 @@ Ensure your `apps/backend/.env` file contains:
 ```bash
 GOOGLE_CLOUD_PROJECT=your-actual-gcp-project-id
 GOOGLE_CLOUD_LOCATION=us-central1
+PAYLOAD_API_URL=http://localhost:4000
+```
+
+If the backend runs inside Docker while Payload runs on your host machine, set:
+```bash
+PAYLOAD_API_URL=http://host.docker.internal:4000
 ```
 
 **Additional Resources:**

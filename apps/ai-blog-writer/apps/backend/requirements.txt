@@ -11,4 +11,4 @@ llama-index-embeddings-google==0.1.6
 llama-index-embeddings-vertex==0.1.1
 sentence-transformers==3.0.1
 pillow==10.4.0
-aiohttp==3.9.5
+httpx==0.27.0

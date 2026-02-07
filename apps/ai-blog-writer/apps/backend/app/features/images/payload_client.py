@@ -1,163 +1,531 @@
 """Payload CMS API client for uploading images and creating MediaSets."""
 
 import json
+import logging
 import os
 from typing import Optional
-import aiohttp
+
+import httpx
 
 from .image_processor import ImageVariantType, ProcessedVariant
 
 
-PAYLOAD_API_URL = os.getenv("PAYLOAD_API_URL", "http://localhost:4000")
+logger = logging.getLogger("images.payload")
+
+DEFAULT_PAYLOAD_API_URL = "http://localhost:4000"
+DEFAULT_DOCKER_PAYLOAD_API_URL = "http://host.docker.internal:4000"
+
+
+def _running_in_docker() -> bool:
+    """Return True when executing inside a Docker container."""
+    return os.path.exists("/.dockerenv")
+
+
+def _resolve_payload_api_url() -> str:
+    """
+    Resolve the Payload base URL for local and Dockerized backend runs.
+
+    Priority:
+    1. PAYLOAD_API_URL env var
+    2. host.docker.internal when running in Docker
+    3. localhost for non-Docker local development
+    """
+    configured_url = os.getenv("PAYLOAD_API_URL")
+    if configured_url:
+        return configured_url
+
+    if _running_in_docker():
+        logger.warning(
+            "PAYLOAD_API_URL not set; defaulting to %s because backend runs in Docker",
+            DEFAULT_DOCKER_PAYLOAD_API_URL,
+        )
+        return DEFAULT_DOCKER_PAYLOAD_API_URL
+
+    return DEFAULT_PAYLOAD_API_URL
+
+
+class PayloadUploadError(Exception):
+    """Structured error for Payload operations with full context."""
+
+    def __init__(self, step: str, message: str, status_code: int = 0,
+                 response_body: str = "", request_url: str = "", detail: str = ""):
+        self.step = step
+        self.status_code = status_code
+        self.response_body = response_body
+        self.request_url = request_url
+        self.detail = detail
+        full_msg = f"[{step}] {message}"
+        if status_code:
+            full_msg += f" (HTTP {status_code})"
+        if detail:
+            full_msg += f" — {detail}"
+        super().__init__(full_msg)
+
+    def to_dict(self) -> dict:
+        return {
+            "step": self.step,
+            "message": str(self),
+            "detail": self.detail,
+            "status_code": self.status_code,
+            "response_body": self.response_body[:1000] if self.response_body else "",
+            "request_url": self.request_url,
+        }
+
+
+def _parse_payload_error(response_text: str) -> str:
+    """Extract a human-readable error from Payload's JSON error responses."""
+    try:
+        data = json.loads(response_text)
+        errors = data.get("errors", [])
+        if errors:
+            messages = [e.get("message", "") for e in errors if e.get("message")]
+            field_errors = [
+                f"{e.get('field', '?')}: {e.get('message', '')}"
+                for e in errors if e.get("field")
+            ]
+            if field_errors:
+                return "Validation: " + "; ".join(field_errors)
+            if messages:
+                return "; ".join(messages)
+        if data.get("message"):
+            return data["message"]
+    except (json.JSONDecodeError, KeyError):
+        pass
+    return response_text[:300] if response_text else "Empty response"
+
+
+def _is_variant_conflict_error(parsed_error: str, variant: str) -> bool:
+    """Detect Payload's duplicate mediaSet+variant conflict message."""
+    normalized = parsed_error.lower()
+    variant_key = variant.lower()
+    return (
+        "mediaset already has a" in normalized
+        or (
+            "already has a" in normalized
+            and variant_key in normalized
+            and "variant" in normalized
+        )
+    )
 
 
 class PayloadClient:
     """Async client for Payload CMS media operations."""
-    
+
     def __init__(self, jwt_token: Optional[str] = None):
-        self.api_url = PAYLOAD_API_URL.rstrip('/')
+        self.api_url = _resolve_payload_api_url().rstrip('/')
         self.jwt_token = jwt_token
-    
+        if not jwt_token:
+            logger.warning("PayloadClient created without JWT token")
+
     def _get_headers(self) -> dict:
-        """Get request headers with auth if available."""
         headers = {}
         if self.jwt_token:
-            # Location Manager uses JWT format, not Bearer
             headers['Authorization'] = f'JWT {self.jwt_token}'
         return headers
-    
+
     async def upload_image(
         self,
         variant: ProcessedVariant,
         alt_text: str,
         media_set_id: Optional[str] = None
     ) -> str:
-        """
-        Upload a single image variant to Payload CMS media-assets.
-        
-        Args:
-            variant: The processed image variant
-            alt_text: Alt text for the image
-            media_set_id: Optional MediaSet ID to link this variant to
-            
-        Returns:
-            The created media-asset ID
-        """
+        """Upload a single image variant to Payload CMS media-assets."""
         url = f"{self.api_url}/api/media-assets"
         headers = self._get_headers()
-        
-        # Prepare multipart form data (match Location Manager format exactly)
-        # Field order matters: file first, then _payload
-        data = aiohttp.FormData()
-        
-        # Add the file FIRST (important!)
-        data.add_field(
-            'file',
-            variant.buffer,
-            filename=variant.filename,
-            content_type=variant.content_type
-        )
-        
-        # Build _payload object with metadata (match Location Manager exactly)
-        payload = {
-            'alt_text': alt_text,
-            'photographer_credit': '',  # Always included even if empty
-            'variant': variant.variant_type.value,
+        step = f"upload_image({variant.variant_type.value})"
+
+        files = {
+            'file': (variant.filename, variant.buffer, variant.content_type),
         }
-        if media_set_id:
-            # Payload expects relationship IDs as integers, not strings
-            payload['mediaSet'] = int(media_set_id)
-            print(f"[Payload] Adding mediaSet to payload: {media_set_id}")
-        
-        # Add _payload as JSON string
-        payload_json = json.dumps(payload)
-        print(f"[Payload] _payload: {payload_json}")
-        data.add_field('_payload', payload_json)
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, data=data) as response:
-                response_text = await response.text()
-                print(f"[Payload] Upload response status: {response.status}")
-                print(f"[Payload] Upload response body: {response_text[:500]}")
-                
-                if response.status >= 400:
-                    raise Exception(f"Failed to upload image: {response.status} - {response_text}")
-                
-                result = json.loads(response_text)
-                asset_id = result.get('doc', {}).get('id')
-                print(f"[Payload] Got asset_id: {asset_id}")
-                return str(asset_id) if asset_id else None
-    
+
+        media_set_value: Optional[str | int] = media_set_id
+        if isinstance(media_set_value, str) and media_set_value.isdigit():
+            media_set_value = int(media_set_value)
+
+        for attempt in range(3):
+            payload_obj = {
+                'alt_text': alt_text,
+                'photographer_credit': '',
+                'variant': variant.variant_type.value,
+            }
+            if media_set_value is not None:
+                payload_obj['mediaSet'] = media_set_value
+
+            payload_json = json.dumps(payload_obj)
+            data = {
+                '_payload': payload_json,
+            }
+
+            logger.info(
+                "%s → %s | attempt=%d | file=%s (%d bytes, %s) | _payload=%s",
+                step,
+                url,
+                attempt + 1,
+                variant.filename,
+                len(variant.buffer),
+                variant.content_type,
+                payload_json,
+            )
+
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(
+                        url, headers=headers, files=files, data=data
+                    )
+            except httpx.ConnectError as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Cannot connect to Payload CMS",
+                    request_url=url,
+                    detail=f"Is Payload running at {self.api_url}? ({e})",
+                )
+            except httpx.TimeoutException as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload CMS request timed out (60s)",
+                    request_url=url,
+                    detail=str(e),
+                )
+
+            body = response.text
+            logger.info("%s ← HTTP %d | body=%s", step, response.status_code, body[:300])
+
+            if response.status_code == 401:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Authentication failed",
+                    status_code=401,
+                    response_body=body,
+                    request_url=url,
+                    detail="JWT token may be expired or invalid. Try logging in again.",
+                )
+
+            if response.status_code >= 400:
+                parsed = _parse_payload_error(body)
+                can_overwrite_retry = (
+                    attempt == 0
+                    and media_set_id is not None
+                    and _is_variant_conflict_error(
+                        parsed,
+                        variant.variant_type.value,
+                    )
+                )
+                should_probe_existing_variant = (
+                    attempt == 0
+                    and media_set_id is not None
+                    and response.status_code >= 500
+                )
+
+                if can_overwrite_retry:
+                    existing_asset = await self.find_media_asset_by_variant(
+                        media_set_id=media_set_id,
+                        variant=variant.variant_type.value,
+                    )
+                    existing_asset_id = (
+                        existing_asset.get("id") if existing_asset else None
+                    )
+                    if not existing_asset_id:
+                        raise PayloadUploadError(
+                            step=step,
+                            message="Variant conflict detected but no existing asset found",
+                            status_code=response.status_code,
+                            response_body=body,
+                            request_url=url,
+                            detail=parsed,
+                        )
+
+                    await self.delete_media_asset(str(existing_asset_id))
+                    logger.warning(
+                        "%s duplicate variant found; deleted asset_id=%s and retrying",
+                        step,
+                        existing_asset_id,
+                    )
+                    continue
+
+                if should_probe_existing_variant:
+                    existing_asset = await self.find_media_asset_by_variant(
+                        media_set_id=media_set_id,
+                        variant=variant.variant_type.value,
+                    )
+                    existing_asset_id = (
+                        existing_asset.get("id") if existing_asset else None
+                    )
+                    if existing_asset_id:
+                        await self.delete_media_asset(str(existing_asset_id))
+                        logger.warning(
+                            "%s received HTTP %d with generic payload error; "
+                            "existing %s variant asset_id=%s found and deleted, retrying once",
+                            step,
+                            response.status_code,
+                            variant.variant_type.value,
+                            existing_asset_id,
+                        )
+                        continue
+
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload rejected the upload",
+                    status_code=response.status_code,
+                    response_body=body,
+                    request_url=url,
+                    detail=parsed,
+                )
+
+            try:
+                result = response.json()
+            except json.JSONDecodeError:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload returned invalid JSON",
+                    status_code=response.status_code,
+                    response_body=body,
+                    request_url=url,
+                )
+
+            asset_id = result.get('doc', {}).get('id')
+            if not asset_id:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload returned success but no asset ID in response",
+                    status_code=response.status_code,
+                    response_body=body[:500],
+                    request_url=url,
+                    detail=f"Response keys: {list(result.keys())}",
+                )
+
+            logger.info("%s ✓ asset_id=%s", step, asset_id)
+            return str(asset_id)
+
+        raise PayloadUploadError(
+            step=step,
+            message="Upload retry exhausted",
+            request_url=url,
+            detail="Retry limit reached while handling upload retries.",
+        )
+
     async def create_media_set(
         self,
         title: str,
         alt_text: str,
         external_ref: str,
     ) -> str:
-        """
-        Create a MediaSet in Payload CMS.
-        Matches Location Manager: only title, alt_text, externalRef (NO variant fields!)
-        Variants are linked automatically when uploading media-assets with mediaSet field.
-        
-        Args:
-            title: Title for the media set
-            alt_text: Alt text for the images
-            external_ref: Unique external reference
-            
-        Returns:
-            The created MediaSet ID
-        """
+        """Create a MediaSet in Payload CMS."""
         url = f"{self.api_url}/api/media-sets"
         headers = {**self._get_headers(), 'Content-Type': 'application/json'}
-        
-        # Match Location Manager PayloadMediaSetData exactly
+        step = "create_media_set"
+
         payload = {
             'title': title,
             'alt_text': alt_text,
             'externalRef': external_ref,
         }
-        
-        print(f"[Payload] Creating MediaSet with: {payload}")
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload) as response:
-                response_text = await response.text()
-                print(f"[Payload] MediaSet create response: {response.status} - {response_text[:200]}")
-                
-                if response.status >= 400:
-                    raise Exception(f"Failed to create MediaSet: {response.status} - {response_text}")
-                
-                result = json.loads(response_text)
-                media_set_id = str(result['doc']['id'])
-                print(f"[Payload] Created MediaSet: {media_set_id}")
-                return media_set_id
-    
+
+        logger.info("%s → %s | payload=%s", step, url, json.dumps(payload))
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, headers=headers, json=payload)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step=step, message="Cannot connect to Payload CMS",
+                request_url=url, detail=f"Is Payload running at {self.api_url}? ({e})"
+            )
+        except httpx.TimeoutException as e:
+            raise PayloadUploadError(
+                step=step, message="Payload CMS request timed out (30s)",
+                request_url=url, detail=str(e)
+            )
+
+        body = response.text
+        logger.info("%s ← HTTP %d | body=%s", step, response.status_code, body[:300])
+
+        if response.status_code == 401:
+            raise PayloadUploadError(
+                step=step, message="Authentication failed",
+                status_code=401, response_body=body, request_url=url,
+                detail="JWT token may be expired or invalid."
+            )
+
+        if response.status_code >= 400:
+            parsed = _parse_payload_error(body)
+            raise PayloadUploadError(
+                step=step, message="Failed to create MediaSet",
+                status_code=response.status_code, response_body=body,
+                request_url=url, detail=parsed
+            )
+
+        try:
+            result = response.json()
+        except json.JSONDecodeError:
+            raise PayloadUploadError(
+                step=step, message="Payload returned invalid JSON",
+                status_code=response.status_code, response_body=body,
+                request_url=url
+            )
+
+        media_set_id = result.get('doc', {}).get('id')
+        if not media_set_id:
+            raise PayloadUploadError(
+                step=step, message="Payload returned success but no MediaSet ID",
+                status_code=response.status_code, response_body=body[:500],
+                request_url=url
+            )
+
+        logger.info("%s ✓ mediaSetId=%s", step, media_set_id)
+        return str(media_set_id)
+
     async def find_media_set_by_external_ref(self, external_ref: str) -> Optional[dict]:
-        """
-        Find a MediaSet by its external reference.
-        
-        Args:
-            external_ref: The external reference to search for
-            
-        Returns:
-            The MediaSet document if found, None otherwise
-        """
+        """Find a MediaSet by its external reference."""
         url = f"{self.api_url}/api/media-sets"
         headers = self._get_headers()
         params = {
             'where[externalRef][equals]': external_ref,
             'limit': 1
         }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, params=params) as response:
-                if response.status >= 400:
-                    error_text = await response.text()
-                    raise Exception(f"Failed to find MediaSet: {response.status} - {error_text}")
-                
-                result = await response.json()
-                docs = result.get('docs', [])
-                return docs[0] if docs else None
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, headers=headers, params=params)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step="find_media_set", message="Cannot connect to Payload CMS",
+                request_url=url, detail=f"Is Payload running at {self.api_url}? ({e})"
+            )
+        except httpx.TimeoutException:
+            raise PayloadUploadError(
+                step="find_media_set", message="Payload CMS request timed out (15s)",
+                request_url=url
+            )
+
+        if response.status_code >= 400:
+            body = response.text
+            parsed = _parse_payload_error(body)
+            raise PayloadUploadError(
+                step="find_media_set", message="Failed to query MediaSets",
+                status_code=response.status_code, response_body=body,
+                request_url=url, detail=parsed
+            )
+
+        try:
+            result = response.json()
+        except json.JSONDecodeError:
+            body = response.text
+            raise PayloadUploadError(
+                step="find_media_set",
+                message="Payload returned invalid JSON while querying MediaSets",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+            )
+
+        docs = result.get('docs', [])
+        found = docs[0] if docs else None
+        logger.info("find_media_set(ref=%s) → %s", external_ref, found.get('id') if found else "not found")
+        return found
+
+    async def find_media_asset_by_variant(
+        self,
+        media_set_id: str,
+        variant: str,
+    ) -> Optional[dict]:
+        """Find an existing media-asset by mediaSet and variant."""
+        url = f"{self.api_url}/api/media-assets"
+        headers = self._get_headers()
+        step = f"find_media_asset({variant})"
+        params = {
+            'where[mediaSet][equals]': media_set_id,
+            'where[variant][equals]': variant,
+            'limit': 1,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, headers=headers, params=params)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Cannot connect to Payload CMS",
+                request_url=url,
+                detail=f"Is Payload running at {self.api_url}? ({e})",
+            )
+        except httpx.TimeoutException:
+            raise PayloadUploadError(
+                step=step,
+                message="Payload CMS request timed out (15s)",
+                request_url=url,
+            )
+
+        if response.status_code >= 400:
+            body = response.text
+            parsed = _parse_payload_error(body)
+            raise PayloadUploadError(
+                step=step,
+                message="Failed to query media-assets",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+                detail=parsed,
+            )
+
+        try:
+            result = response.json()
+        except json.JSONDecodeError:
+            body = response.text
+            raise PayloadUploadError(
+                step=step,
+                message="Payload returned invalid JSON while querying media-assets",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+            )
+
+        docs = result.get('docs', [])
+        found = docs[0] if docs else None
+        logger.info(
+            "%s(media_set_id=%s) → %s",
+            step,
+            media_set_id,
+            found.get('id') if found else "not found",
+        )
+        return found
+
+    async def delete_media_asset(self, asset_id: str) -> None:
+        """Delete a media-asset by ID."""
+        url = f"{self.api_url}/api/media-assets/{asset_id}"
+        headers = self._get_headers()
+        step = f"delete_media_asset({asset_id})"
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(url, headers=headers)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Cannot connect to Payload CMS",
+                request_url=url,
+                detail=f"Is Payload running at {self.api_url}? ({e})",
+            )
+        except httpx.TimeoutException as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Payload CMS request timed out (30s)",
+                request_url=url,
+                detail=str(e),
+            )
+
+        if response.status_code in {200, 202, 204, 404}:
+            return
+
+        body = response.text
+        parsed = _parse_payload_error(body)
+        raise PayloadUploadError(
+            step=step,
+            message="Failed to delete existing media-asset",
+            status_code=response.status_code,
+            response_body=body,
+            request_url=url,
+            detail=parsed,
+        )
 
 
 async def upload_image_set(
@@ -166,51 +534,33 @@ async def upload_image_set(
     alt_text: str,
     variants: dict[ImageVariantType, ProcessedVariant]
 ) -> dict:
-    """
-    Upload all image variants and create a MediaSet (server-side processing).
-    Matches Location Manager flow:
-    1. Create MediaSet first (empty, no variants)
-    2. Upload all variants with mediaSet reference
-    
-    Args:
-        jwt_token: JWT token for Payload authentication
-        external_ref: Unique reference (e.g., staged article ID)
-        alt_text: Alt text for the images
-        variants: Dictionary of processed variants
-        
-    Returns:
-        Dictionary with mediaSetId and variantAssetIds
-    """
+    """Upload all image variants and create a MediaSet (server-side processing)."""
     client = PayloadClient(jwt_token)
 
-    # Check if MediaSet already exists
     existing = await client.find_media_set_by_external_ref(external_ref)
     if existing:
-        # Only return early if MediaSet is complete (all variants uploaded)
-        if existing.get('status') == 'complete':
-            return {
-                "mediaSetId": str(existing['id']),
-                "variantAssetIds": {}
-            }
-        # MediaSet exists but is partial - use it and upload variants
-        media_set_id = str(existing['id'])
-        print(f"[Payload] Found partial MediaSet: {media_set_id}, uploading variants")
+        existing_id = existing.get('id')
+        if not existing_id:
+            raise PayloadUploadError(
+                step="find_media_set",
+                message="Payload returned an existing MediaSet without an id",
+                detail=f"external_ref={external_ref}",
+            )
+        media_set_id = str(existing_id)
+        logger.info("Reusing existing MediaSet %s for ref=%s", media_set_id, external_ref)
     else:
-        # ⭐ STEP 1: Create MediaSet first (empty, like Location Manager)
         media_set_id = await client.create_media_set(
             title=external_ref,
             alt_text=alt_text,
             external_ref=external_ref,
         )
-    
-    # ⭐ STEP 2: Upload all variants with mediaSet reference
+
     variant_asset_ids = {}
-    
-    for variant_type in [ImageVariantType.THUMBNAIL, ImageVariantType.SQUARE, 
+    for variant_type in [ImageVariantType.THUMBNAIL, ImageVariantType.SQUARE,
                          ImageVariantType.WIDE, ImageVariantType.PORTRAIT, ImageVariantType.HERO]:
         asset_id = await client.upload_image(variants[variant_type], alt_text, media_set_id)
         variant_asset_ids[variant_type.value] = asset_id
-    
+
     return {
         "mediaSetId": media_set_id,
         "variantAssetIds": variant_asset_ids

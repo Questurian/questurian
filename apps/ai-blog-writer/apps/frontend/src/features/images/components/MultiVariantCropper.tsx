@@ -8,12 +8,10 @@ import {
   loadImage,
   type ImageVariantType,
   type CropStates,
-  validateImageResolution,
 } from '../utils/imageProcessing';
 
 interface MultiVariantCropperProps {
   file: File;
-  altText: string;
   onConfirm: (variantFiles: { type: ImageVariantType; file: File }[]) => void;
   onCancel: () => void;
 }
@@ -50,14 +48,11 @@ const LoaderIcon = () => (
   </svg>
 );
 
-const MIN_RESOLUTION = { width: 1920, height: 1080 };
-
-export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: MultiVariantCropperProps) {
+export function MultiVariantCropper({ file, onConfirm, onCancel }: MultiVariantCropperProps) {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
   const [cropStates, setCropStates] = useState<CropStates>(initializeCropStates());
   const [errorMsg, setErrorMsg] = useState<string>('');
 
@@ -65,32 +60,21 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
   const currentState = cropStates[currentVariantType];
   const currentSpec = VARIANT_SPECS[currentVariantType];
 
-  // Validate and create preview URL when file changes
+  // Create preview URL and load image dimensions when file changes
   useEffect(() => {
-    const validateAndLoad = async () => {
-      const validation = await validateImageResolution(
-        file,
-        MIN_RESOLUTION.width,
-        MIN_RESOLUTION.height
-      );
-
-      if (!validation.valid || !validation.dimensions) {
-        setValidationError(validation.error || 'Image validation failed');
-        return;
-      }
-
+    const loadAndInit = async () => {
       const url = URL.createObjectURL(file);
+      const img = await loadImage(url);
+      const dimensions = { width: img.naturalWidth, height: img.naturalHeight };
+
       setPreviewUrl(url);
-      setImageDimensions(validation.dimensions);
-      
-      // Initialize crop states with default centered crops
-      setCropStates(initializeCropStates(validation.dimensions.width, validation.dimensions.height));
-      setValidationError(null);
+      setImageDimensions(dimensions);
+      setCropStates(initializeCropStates(dimensions.width, dimensions.height));
 
       return () => URL.revokeObjectURL(url);
     };
 
-    validateAndLoad();
+    loadAndInit();
   }, [file]);
 
   const onCropChange = useCallback((crop: Point) => {
@@ -131,13 +115,6 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
     setCurrentVariantIndex(index);
   };
 
-  const allCropsComplete = () => {
-    return VARIANT_SEQUENCE.every(type => {
-      const state = cropStates[type];
-      return state.croppedAreaPixels !== null && state.croppedAreaPixels.width > 0;
-    });
-  };
-
   const handleConfirmAll = async () => {
     setErrorMsg('');
     
@@ -153,15 +130,7 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
     setErrorMsg('Creating image files...');
 
     try {
-      console.log('Creating variant files with crops:', Object.entries(cropStates).map(([k, v]) => ({ 
-        type: k, 
-        hasCrop: !!v.croppedAreaPixels,
-        crop: v.croppedAreaPixels 
-      })));
-      
       const variantFiles = await createMultiVariantImages(previewUrl, cropStates, file.name);
-      console.log('Variant files created:', variantFiles.map(v => ({ type: v.type, size: v.file.size })));
-      
       setErrorMsg('Uploading...');
       onConfirm(variantFiles);
     } catch (error) {
@@ -177,38 +146,6 @@ export function MultiVariantCropper({ file, altText, onConfirm, onCancel }: Mult
     const state = cropStates[type];
     return state.croppedAreaPixels !== null && state.croppedAreaPixels.width > 0;
   }).length;
-
-  if (validationError) {
-    return (
-      <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-        <div style={{ color: '#ef4444', marginBottom: '1rem' }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ margin: '0 auto' }}>
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-        </div>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: 500, color: '#e4e4e7', marginBottom: '0.5rem' }}>Image Resolution Too Low</h3>
-        <p style={{ color: '#a1a1aa', fontSize: '0.875rem', marginBottom: '1rem' }}>{validationError}</p>
-        <p style={{ color: '#71717a', fontSize: '0.75rem', marginBottom: '1.5rem' }}>
-          For best results, please use an image at least {MIN_RESOLUTION.width}×{MIN_RESOLUTION.height}px.
-        </p>
-        <button
-          onClick={onCancel}
-          style={{ 
-            padding: '0.5rem 1rem', 
-            background: '#52525b', 
-            color: '#e4e4e7', 
-            borderRadius: '0.5rem',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          Go Back
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="stage-article-cropper-container">
