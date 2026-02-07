@@ -14,7 +14,7 @@ for rel_path in ("packages/shared/src", "packages/utils/src"):
     if path not in sys.path:
         sys.path.append(path)
 
-from app.storage.file_store import write_article_type
+from app.core import write_article_type
 
 # Article types and their definitions (copied from stages.py and stage_2.py)
 ARTICLE_TYPE_DATA = [

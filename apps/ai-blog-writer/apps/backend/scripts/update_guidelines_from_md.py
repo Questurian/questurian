@@ -8,14 +8,11 @@ corresponding article_types records in the database with the guideline content.
 import sys
 from pathlib import Path
 
-# Add the shared packages to the path
-ROOT = Path(__file__).resolve().parents[2]
-for rel_path in ("packages/shared/src", "packages/utils/src"):
-    path = str(ROOT / rel_path)
-    if path not in sys.path:
-        sys.path.append(path)
+# Add the backend app to the path
+ROOT = Path(__file__).resolve().parents[1]  # apps/backend
+sys.path.insert(0, str(ROOT))
 
-from app.storage.file_store import write_article_type, read_article_types
+from app.core import write_article_type, read_article_types
 
 # Mapping from filename to article type name
 # Some filenames differ slightly from the database names

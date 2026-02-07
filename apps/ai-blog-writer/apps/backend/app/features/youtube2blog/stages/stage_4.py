@@ -10,7 +10,7 @@ import logging
 
 from langchain.prompts import PromptTemplate
 
-from app.features.youtube2blog.storage import get_article_type_by_name
+from app.core import get_article_type_by_name
 from shared import Stage3Output, Stage4Output
 from utils import LLMPresets
 

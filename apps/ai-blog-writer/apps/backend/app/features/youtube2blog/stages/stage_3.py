@@ -12,7 +12,7 @@ from pathlib import Path
 
 from langchain.prompts import PromptTemplate
 
-from app.features.youtube2blog.storage import get_article_type_by_name
+from app.core import get_article_type_by_name
 from shared import Stage1Output, Stage2Output, Stage3Output
 from utils import LLMPresets, parse_json_response
 

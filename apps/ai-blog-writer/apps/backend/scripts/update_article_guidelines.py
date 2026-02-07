@@ -5,14 +5,11 @@ Script to update article types with markdown guideline file paths.
 import sys
 from pathlib import Path
 
-# Add the shared packages to the path
-ROOT = Path(__file__).resolve().parents[2]
-for rel_path in ("packages/shared/src", "packages/utils/src"):
-    path = str(ROOT / rel_path)
-    if path not in sys.path:
-        sys.path.append(path)
+# Add the backend app to the path
+ROOT = Path(__file__).resolve().parents[1]  # apps/backend
+sys.path.insert(0, str(ROOT))
 
-from app.storage.file_store import write_article_type
+from app.core import write_article_type
 
 # Map article type names to their guideline file paths
 GUIDELINE_FILES = {

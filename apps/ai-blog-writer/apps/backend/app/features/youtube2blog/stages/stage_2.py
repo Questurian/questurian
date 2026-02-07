@@ -5,7 +5,7 @@ import logging
 
 from langchain.prompts import PromptTemplate
 
-from app.features.youtube2blog.storage import read_article_definitions
+from app.core import read_article_definitions
 from shared import Stage1Output, Stage2Output
 from utils import LLMPresets, parse_json_response
 

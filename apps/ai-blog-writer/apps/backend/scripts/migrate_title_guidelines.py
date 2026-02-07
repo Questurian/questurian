@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent
 backend_path = ROOT / "apps" / "backend"
 sys.path.append(str(backend_path))
 
-from app.storage.file_store import read_article_types
+from app.core import read_article_types
 import sqlite3
 
 def normalize_name(name: str) -> str:
