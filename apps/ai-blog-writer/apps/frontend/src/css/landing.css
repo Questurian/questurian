@@ -165,6 +165,23 @@
   border-color: var(--sage-soft);
 }
 
+.landing-card--url2blog::before {
+  background: #0d9488;
+}
+
+.landing-card--url2blog .landing-card-icon {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0d9488;
+}
+
+.landing-card--url2blog:hover {
+  border-color: rgba(13, 148, 136, 0.12);
+}
+
+.landing-card--url2blog .landing-card-action {
+  color: #0d9488;
+}
+
 /* Card Typography */
 .landing-card h2 {
   font-family: var(--font-display);

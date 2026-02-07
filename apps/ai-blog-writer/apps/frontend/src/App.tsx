@@ -14,6 +14,7 @@ import {
   StageArticlePage
 } from './features/youtube2blog'
 import { Review2BlogPage } from './features/review2blog'
+import { Url2BlogPage } from './features/url2blog'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -42,6 +43,9 @@ export default function App() {
 
               {/* Review2Blog Feature */}
               <Route path="review2blog" element={<Review2BlogPage />} />
+
+              {/* URL2Blog Feature */}
+              <Route path="url2blog" element={<Url2BlogPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
