@@ -682,55 +682,23 @@ export default function StageArticlePage() {
     <div className="stage-article-page">
       {/* Header */}
       <header className="stage-article-header">
-        <div className="stage-article-header-top">
-          <p className="stage-article-eyebrow">
-            {stagedArticle.publishedToPayload ? 'Published to Payload' : 'Staging for Payload'}
-          </p>
-
-          <div className="stage-article-actions-bar">
-            {!stagedArticle.publishedToPayload && (
-              <button
-                className="stage-article-icon-btn"
-                onClick={() => isEditing ? handleSaveEdits() : setIsEditing(true)}
-                title={isEditing ? 'Save changes' : 'Edit blocks'}
-              >
-                {isEditing ? 'Done Editing' : 'Edit Blocks'}
-              </button>
+        <div className="stage-article-header-left">
+          <Link to="/youtube2blog/stage" className="stage-article-back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Stage List
+          </Link>
+          <div className="stage-article-header-meta">
+            <p className="stage-article-eyebrow">
+              {stagedArticle.publishedToPayload ? 'Published to Payload' : 'Staging for Payload'}
+            </p>
+            {stagedArticle.originalType && (
+              <span className="stage-article-type-badge">{stagedArticle.originalType}</span>
             )}
-            <button
-              className="stage-article-icon-btn danger"
-              onClick={handleDelete}
-              title="Delete staged article"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-
-        {/* Editable Title */}
-        {isEditing ? (
-          <input
-            type="text"
-            className="stage-article-title-input"
-            value={stagedArticle.title}
-            onChange={(e) => updateStagedArticle({ title: e.target.value })}
-            placeholder="Article title..."
-          />
-        ) : (
-          <h1>{stagedArticle.title || 'Untitled Article'}</h1>
-        )}
-
-        <div className="stage-article-header-meta">
-          {stagedArticle.originalType && (
-            <span className="stage-article-type-badge">{stagedArticle.originalType}</span>
-          )}
-
-          <span className="stage-article-block-count">
-            {stagedArticle.blocks.length} blocks
-          </span>
-
-          {/* Status Badges */}
-          <div className="stage-article-status-badges">
+            <span className="stage-article-block-count">
+              {stagedArticle.blocks.length} blocks
+            </span>
             {isConverting && (
               <span className="stage-article-badge converting">
                 <span className="stage-article-badge-spinner" />
@@ -742,413 +710,465 @@ export default function StageArticlePage() {
             )}
           </div>
         </div>
+
+        <div className="stage-article-actions-bar">
+          {!stagedArticle.publishedToPayload && (
+            <button
+              className="stage-article-icon-btn"
+              onClick={() => isEditing ? handleSaveEdits() : setIsEditing(true)}
+              title={isEditing ? 'Save changes' : 'Edit blocks'}
+            >
+              {isEditing ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              )}
+              {isEditing ? 'Done' : 'Edit'}
+            </button>
+          )}
+          <button
+            className="stage-article-icon-btn danger"
+            onClick={handleDelete}
+            title="Delete staged article"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Delete
+          </button>
+        </div>
       </header>
 
-      {/* Main Form */}
-      <div className="stage-article-form">
-        {/* Featured Image */}
-        <div className="stage-article-section">
-          <label className="stage-article-label">
-            Featured Image <span className="required">*</span>
-          </label>
+      {/* Title Area */}
+      <div className="stage-article-title-area">
+        {isEditing ? (
+          <input
+            type="text"
+            className="stage-article-title-input"
+            value={stagedArticle.title}
+            onChange={(e) => updateStagedArticle({ title: e.target.value })}
+            placeholder="Article title..."
+          />
+        ) : (
+          <h1 className="stage-article-title">{stagedArticle.title || 'Untitled Article'}</h1>
+        )}
+      </div>
 
-          {selectedFeaturedImage ? (
-            <div className="stage-article-featured-image">
-              <img
-                src={getImageUrl(selectedFeaturedImage)}
-                alt={selectedFeaturedImage.alt || selectedFeaturedImage.filename}
-              />
+      {/* Two-column layout */}
+      <div className="stage-article-layout">
+        {/* Main content - block editor */}
+        <main className="stage-article-main">
+          <div className="stage-article-section">
+            <div className="block-editor-header">
+              <label className="stage-article-label">
+                Content Blocks
+                <span className="stage-article-label-hint">
+                  {isEditing ? 'Edit blocks or merge adjacent sections' : 'Fuse blocks or add images between them'}
+                </span>
+              </label>
               {!stagedArticle.publishedToPayload && (
                 <button
                   type="button"
-                  onClick={() => setShowImageModal(true)}
-                  className="stage-article-change-btn"
+                  className="block-reset-btn"
+                  onClick={resetToOriginalBlocks}
+                  title="Reset to original blocks"
                 >
-                  Change
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                  </svg>
+                  Reset
                 </button>
               )}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowImageModal(true)}
-              className="stage-article-image-placeholder"
-              disabled={stagedArticle.publishedToPayload}
-            >
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              <span>Click to select featured image</span>
-            </button>
-          )}
-        </div>
 
-        {/* Location */}
-        <div className="stage-article-section">
-          <label className="stage-article-label">
-            Location <span className="required">*</span>
-          </label>
-          <select
-            value={stagedArticle.locationId || ''}
-            onChange={(e) => updateStagedArticle({ locationId: Number(e.target.value) || undefined })}
-            className="stage-article-select"
-            disabled={stagedArticle.publishedToPayload}
-          >
-            <option value="">-- Select a location --</option>
-            {locations.map(loc => (
-              <option key={loc.id} value={loc.id}>
-                {getLocationDisplayName(loc)} ({loc.level})
-              </option>
-            ))}
-          </select>
-          {selectedLocation && (
-            <div className="stage-article-selected-info">
-              {getLocationDisplayName(selectedLocation)}
-            </div>
-          )}
-        </div>
-
-        {/* Block Editor */}
-        <div className="stage-article-section">
-          <div className="block-editor-header">
-            <label className="stage-article-label">
-              Content Blocks
-              <span className="stage-article-label-hint">
-                {isEditing ? 'Edit blocks or merge adjacent sections' : 'Fuse blocks or add images between them'}
-              </span>
-            </label>
-            {!stagedArticle.publishedToPayload && (
-              <button
-                type="button"
-                className="block-reset-btn"
-                onClick={resetToOriginalBlocks}
-                title="Reset to original blocks"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-                Reset
-              </button>
-            )}
-          </div>
-
-          <div className="block-editor">
-            {stagedArticle.blocks.map((block, index) => (
-              <div
-                key={block.id}
-                data-block-id={block.id}
-                className={`block-editor-item ${draggedBlockId === block.id ? 'dragging' : ''} ${dragOverBlockId === block.id ? 'drag-over' : ''}`}
-                draggable={!stagedArticle.publishedToPayload && !isEditing}
-                onDragStart={(e) => handleDragStart(e, block.id)}
-                onDragEnd={handleDragEnd}
-                onDragOver={(e) => handleDragOver(e, block.id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, block.id)}
-              >
-                {/* Block Content */}
-                <div className={`block-card ${isEditing ? 'editing' : ''} ${block.type === 'pullquote' ? 'pullquote' : ''}`}>
-                  <div className="block-card-header">
-                    <div className="block-card-header-left">
-                      {/* Drag Handle */}
-                      {!stagedArticle.publishedToPayload && !isEditing && (
-                        <div className="block-drag-handle" title="Drag to reorder">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="9" cy="5" r="1.5"/>
-                            <circle cx="15" cy="5" r="1.5"/>
-                            <circle cx="9" cy="12" r="1.5"/>
-                            <circle cx="15" cy="12" r="1.5"/>
-                            <circle cx="9" cy="19" r="1.5"/>
-                            <circle cx="15" cy="19" r="1.5"/>
-                          </svg>
-                        </div>
-                      )}
-                      <span className="block-number">{index + 1}</span>
-                      {block.type === 'pullquote' && (
-                        <span className="block-type-badge">Pull Quote</span>
-                      )}
-                    </div>
-                    <div className="block-card-header-right">
-                      {/* Move buttons */}
-                      {!stagedArticle.publishedToPayload && !isEditing && (
-                        <div className="block-move-buttons">
-                          <button
-                            type="button"
-                            className="block-move-btn"
-                            onClick={() => moveBlockUp(block.id)}
-                            disabled={index === 0}
-                            title="Move up"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M18 15l-6-6-6 6"/>
+            <div className="block-editor">
+              {stagedArticle.blocks.map((block, index) => (
+                <div
+                  key={block.id}
+                  data-block-id={block.id}
+                  className={`block-editor-item ${draggedBlockId === block.id ? 'dragging' : ''} ${dragOverBlockId === block.id ? 'drag-over' : ''}`}
+                  draggable={!stagedArticle.publishedToPayload && !isEditing}
+                  onDragStart={(e) => handleDragStart(e, block.id)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => handleDragOver(e, block.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, block.id)}
+                >
+                  {/* Block Content */}
+                  <div className={`block-card ${isEditing ? 'editing' : ''} ${block.type === 'pullquote' ? 'pullquote' : ''}`}>
+                    <div className="block-card-header">
+                      <div className="block-card-header-left">
+                        {/* Drag Handle */}
+                        {!stagedArticle.publishedToPayload && !isEditing && (
+                          <div className="block-drag-handle" title="Drag to reorder">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="9" cy="5" r="1.5"/>
+                              <circle cx="15" cy="5" r="1.5"/>
+                              <circle cx="9" cy="12" r="1.5"/>
+                              <circle cx="15" cy="12" r="1.5"/>
+                              <circle cx="9" cy="19" r="1.5"/>
+                              <circle cx="15" cy="19" r="1.5"/>
                             </svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="block-move-btn"
-                            onClick={() => moveBlockDown(block.id)}
-                            disabled={index === stagedArticle.blocks.length - 1}
-                            title="Move down"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M6 9l6 6 6-6"/>
-                            </svg>
-                          </button>
-                        </div>
-                      )}
-                      {!stagedArticle.publishedToPayload && (
-                        <button
-                          type="button"
-                          className="block-delete-btn"
-                          onClick={() => deleteBlock(block.id)}
-                          title="Delete block"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {isEditing ? (
-                    <textarea
-                      className={`block-textarea ${block.type === 'pullquote' ? 'pullquote' : ''}`}
-                      value={block.content}
-                      onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                      rows={block.type === 'pullquote' ? 3 : Math.max(4, block.content.split('\n').length + 2)}
-                      placeholder={block.type === 'pullquote' ? 'Enter your pull quote...' : ''}
-                    />
-                  ) : block.type === 'pullquote' ? (
-                    <div className="block-pullquote-preview">
-                      <svg className="block-pullquote-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
-                        <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
-                      </svg>
-                      <p>{block.content}</p>
-                    </div>
-                  ) : (
-                    <div className="block-preview">
-                      {(() => {
-                        const splitPoints = findHeaderSplitPoints(block.content)
-                        if (splitPoints.length === 0 || stagedArticle.publishedToPayload) {
-                          // No split points, render normally
-                          return (
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {block.content}
-                            </ReactMarkdown>
-                          )
-                        }
-
-                        // Split content into segments at header boundaries
-                        const lines = block.content.split('\n')
-                        const segments: { content: string; splitLineIndex: number | null }[] = []
-                        let lastIndex = 0
-
-                        for (const point of splitPoints) {
-                          segments.push({
-                            content: lines.slice(lastIndex, point.lineIndex).join('\n'),
-                            splitLineIndex: point.lineIndex, // The line index where we'd split AFTER this segment
-                          })
-                          lastIndex = point.lineIndex
-                        }
-                        // Add the last segment (no split after it)
-                        segments.push({
-                          content: lines.slice(lastIndex).join('\n'),
-                          splitLineIndex: null,
-                        })
-
-                        return segments.map((segment, i) => (
-                          <div key={i}>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {segment.content}
-                            </ReactMarkdown>
-                            {segment.splitLineIndex !== null && (
-                              <div className="block-split-zone">
-                                <button
-                                  type="button"
-                                  className="block-split-btn"
-                                  onClick={() => splitBlockAtHeader(block.id, segment.splitLineIndex!)}
-                                  title="Split here"
-                                >
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5"/>
-                                  </svg>
-                                  Split
-                                </button>
-                              </div>
-                            )}
                           </div>
-                        ))
-                      })()}
+                        )}
+                        <span className="block-number">{index + 1}</span>
+                        {block.type === 'pullquote' && (
+                          <span className="block-type-badge">Pull Quote</span>
+                        )}
+                      </div>
+                      <div className="block-card-header-right">
+                        {/* Move buttons */}
+                        {!stagedArticle.publishedToPayload && !isEditing && (
+                          <div className="block-move-buttons">
+                            <button
+                              type="button"
+                              className="block-move-btn"
+                              onClick={() => moveBlockUp(block.id)}
+                              disabled={index === 0}
+                              title="Move up"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M18 15l-6-6-6 6"/>
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="block-move-btn"
+                              onClick={() => moveBlockDown(block.id)}
+                              disabled={index === stagedArticle.blocks.length - 1}
+                              title="Move down"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M6 9l6 6 6-6"/>
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                        {!stagedArticle.publishedToPayload && (
+                          <button
+                            type="button"
+                            className="block-delete-btn"
+                            onClick={() => deleteBlock(block.id)}
+                            title="Delete block"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="18" y1="6" x2="6" y2="18"/>
+                              <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Image After Block */}
-                {block.imageAfter && (
-                  <div className="block-image-container">
-                    <div className="block-image">
-                      {(() => {
-                        const img = mediaAssets.find(m => m.id === block.imageAfter)
-                        return img ? (
-                          <>
-                            <img src={getImageUrl(img)} alt={img.alt || ''} />
-                            {!stagedArticle.publishedToPayload && (
-                              <button
-                                type="button"
-                                className="block-image-remove"
-                                onClick={() => removeImageAfterBlock(block.id)}
-                                title="Remove image"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <line x1="18" y1="6" x2="6" y2="18"/>
-                                  <line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <span className="block-image-missing">Image not found</span>
-                        )
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Zone Between Blocks (fuse + add image + add block) */}
-                {index < stagedArticle.blocks.length - 1 && !stagedArticle.publishedToPayload && (
-                  <div className="block-action-zone">
-                    <div className="block-action-line" />
-                    <div className="block-action-buttons">
-                      {/* Fuse Button */}
-                      <button
-                        type="button"
-                        className="block-fuse-btn"
-                        onClick={() => mergeWithNextBlock(block.id)}
-                        title="Fuse with next block"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M7 10l5 5 5-5"/>
-                          <path d="M7 14l5-5 5 5"/>
-                        </svg>
-                        Fuse
-                      </button>
-
-                      {/* Add Image Button (only if no image already) */}
-                      {!block.imageAfter && (
-                        <button
-                          type="button"
-                          className="block-add-image-btn"
-                          onClick={() => setBlockImageModal({ blockId: block.id, show: true })}
-                          title="Add image between blocks"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <polyline points="21 15 16 10 5 21"/>
-                          </svg>
-                          Image
-                        </button>
-                      )}
-
-                      {/* Add Block Button */}
-                      <button
-                        type="button"
-                        className="block-add-block-btn"
-                        onClick={() => addNewBlock(block.id, 'text')}
-                        title="Add new text block here"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <line x1="12" y1="5" x2="12" y2="19"/>
-                          <line x1="5" y1="12" x2="19" y2="12"/>
-                        </svg>
-                        Block
-                      </button>
-
-                      {/* Add Pull Quote Button */}
-                      <button
-                        type="button"
-                        className="block-add-quote-btn"
-                        onClick={() => addNewBlock(block.id, 'pullquote')}
-                        title="Add pull quote here"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    {isEditing ? (
+                      <textarea
+                        className={`block-textarea ${block.type === 'pullquote' ? 'pullquote' : ''}`}
+                        value={block.content}
+                        onChange={(e) => updateBlockContent(block.id, e.target.value)}
+                        rows={block.type === 'pullquote' ? 3 : Math.max(4, block.content.split('\n').length + 2)}
+                        placeholder={block.type === 'pullquote' ? 'Enter your pull quote...' : ''}
+                      />
+                    ) : block.type === 'pullquote' ? (
+                      <div className="block-pullquote-preview">
+                        <svg className="block-pullquote-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
                           <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
                         </svg>
-                        Quote
-                      </button>
-                    </div>
+                        <p>{block.content}</p>
+                      </div>
+                    ) : (
+                      <div className="block-preview">
+                        {(() => {
+                          const splitPoints = findHeaderSplitPoints(block.content)
+                          if (splitPoints.length === 0 || stagedArticle.publishedToPayload) {
+                            // No split points, render normally
+                            return (
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {block.content}
+                              </ReactMarkdown>
+                            )
+                          }
+
+                          // Split content into segments at header boundaries
+                          const lines = block.content.split('\n')
+                          const segments: { content: string; splitLineIndex: number | null }[] = []
+                          let lastIndex = 0
+
+                          for (const point of splitPoints) {
+                            segments.push({
+                              content: lines.slice(lastIndex, point.lineIndex).join('\n'),
+                              splitLineIndex: point.lineIndex, // The line index where we'd split AFTER this segment
+                            })
+                            lastIndex = point.lineIndex
+                          }
+                          // Add the last segment (no split after it)
+                          segments.push({
+                            content: lines.slice(lastIndex).join('\n'),
+                            splitLineIndex: null,
+                          })
+
+                          return segments.map((segment, i) => (
+                            <div key={i}>
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {segment.content}
+                              </ReactMarkdown>
+                              {segment.splitLineIndex !== null && (
+                                <div className="block-split-zone">
+                                  <button
+                                    type="button"
+                                    className="block-split-btn"
+                                    onClick={() => splitBlockAtHeader(block.id, segment.splitLineIndex!)}
+                                    title="Split here"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5"/>
+                                    </svg>
+                                    Split
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        })()}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
 
-            {/* Add Block at End */}
-            {!stagedArticle.publishedToPayload && (
-              <button
-                type="button"
-                className="block-add-end-btn"
-                onClick={() => addNewBlock()}
-                title="Add new block at end"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add Block
-              </button>
-            )}
-          </div>
-        </div>
+                  {/* Image After Block */}
+                  {block.imageAfter && (
+                    <div className="block-image-container">
+                      <div className="block-image">
+                        {(() => {
+                          const img = mediaAssets.find(m => m.id === block.imageAfter)
+                          return img ? (
+                            <>
+                              <img src={getImageUrl(img)} alt={img.alt || ''} />
+                              {!stagedArticle.publishedToPayload && (
+                                <button
+                                  type="button"
+                                  className="block-image-remove"
+                                  onClick={() => removeImageAfterBlock(block.id)}
+                                  title="Remove image"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                  </svg>
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <span className="block-image-missing">Image not found</span>
+                          )
+                        })()}
+                      </div>
+                    </div>
+                  )}
 
-        {/* Info */}
-        <div className="stage-article-info-box">
-          <p><strong>Run ID:</strong> {stagedArticle.runId}</p>
-          <p><strong>Created:</strong> {new Date(stagedArticle.createdAt).toLocaleString()}</p>
-          <p><strong>Last Updated:</strong> {new Date(stagedArticle.updatedAt).toLocaleString()}</p>
-        </div>
+                  {/* Action Zone Between Blocks (fuse + add image + add block) */}
+                  {index < stagedArticle.blocks.length - 1 && !stagedArticle.publishedToPayload && (
+                    <div className="block-action-zone">
+                      <div className="block-action-line" />
+                      <div className="block-action-buttons">
+                        {/* Fuse Button */}
+                        <button
+                          type="button"
+                          className="block-fuse-btn"
+                          onClick={() => mergeWithNextBlock(block.id)}
+                          title="Fuse with next block"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M7 10l5 5 5-5"/>
+                            <path d="M7 14l5-5 5 5"/>
+                          </svg>
+                          Fuse
+                        </button>
 
-        {/* Actions */}
-        {!stagedArticle.publishedToPayload ? (
-          <div className="stage-article-actions">
-            <button
-              onClick={handlePublish}
-              disabled={isPublishing || !allFieldsFilled}
-              className="stage-article-publish-btn"
-            >
-              {isPublishing ? 'Publishing...' :
-               !allFieldsFilled ? 'Select location and image' :
-               'Publish to Payload CMS'}
-            </button>
-            <Link to="/youtube2blog/stage" className="stage-article-cancel">
-              Back to Stage List
-            </Link>
-          </div>
-        ) : (
-          <div className="stage-article-actions">
-            <div className="stage-article-published-notice">
-              Published to Payload CMS
-              {stagedArticle.payloadArticleId && (
-                <span> - Article ID: {stagedArticle.payloadArticleId}</span>
+                        {/* Add Image Button (only if no image already) */}
+                        {!block.imageAfter && (
+                          <button
+                            type="button"
+                            className="block-add-image-btn"
+                            onClick={() => setBlockImageModal({ blockId: block.id, show: true })}
+                            title="Add image between blocks"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                              <circle cx="8.5" cy="8.5" r="1.5"/>
+                              <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                            Image
+                          </button>
+                        )}
+
+                        {/* Add Block Button */}
+                        <button
+                          type="button"
+                          className="block-add-block-btn"
+                          onClick={() => addNewBlock(block.id, 'text')}
+                          title="Add new text block here"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                          </svg>
+                          Block
+                        </button>
+
+                        {/* Add Pull Quote Button */}
+                        <button
+                          type="button"
+                          className="block-add-quote-btn"
+                          onClick={() => addNewBlock(block.id, 'pullquote')}
+                          title="Add pull quote here"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
+                            <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
+                          </svg>
+                          Quote
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Add Block at End */}
+              {!stagedArticle.publishedToPayload && (
+                <button
+                  type="button"
+                  className="block-add-end-btn"
+                  onClick={() => addNewBlock()}
+                  title="Add new block at end"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Add Block
+                </button>
               )}
             </div>
-            <Link to="/youtube2blog/stage" className="stage-article-cancel">
-              Back to Stage List
-            </Link>
           </div>
-        )}
+        </main>
 
-        {/* Result */}
-        {publishResult && (
-          <div className={`stage-article-result ${publishResult.success ? 'success' : 'error'}`}>
-            {publishResult.success ? '' : ''} {publishResult.message}
+        {/* Sidebar */}
+        <aside className="stage-article-sidebar">
+          <div className="stage-article-sidebar-inner">
+            {/* Publish / Status */}
+            <div className="stage-article-sidebar-section stage-article-sidebar-publish">
+              {!stagedArticle.publishedToPayload ? (
+                <>
+                  <button
+                    onClick={handlePublish}
+                    disabled={isPublishing || !allFieldsFilled}
+                    className="stage-article-publish-btn"
+                  >
+                    {isPublishing ? 'Publishing...' :
+                     !allFieldsFilled ? 'Complete fields below' :
+                     'Publish to Payload'}
+                  </button>
+                  {!allFieldsFilled && (
+                    <p className="stage-article-publish-hint">
+                      {!selectedLocation && !selectedFeaturedImage
+                        ? 'Select a location and featured image'
+                        : !selectedLocation
+                          ? 'Select a location'
+                          : 'Select a featured image'}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="stage-article-published-notice">
+                  Published to Payload
+                  {stagedArticle.payloadArticleId && (
+                    <span> &middot; ID {stagedArticle.payloadArticleId}</span>
+                  )}
+                </div>
+              )}
+
+              {publishResult && (
+                <div className={`stage-article-result ${publishResult.success ? 'success' : 'error'}`}>
+                  {publishResult.message}
+                </div>
+              )}
+            </div>
+
+            {/* Featured Image */}
+            <div className="stage-article-sidebar-section">
+              <label className="stage-article-label">
+                Featured Image <span className="required">*</span>
+              </label>
+
+              {selectedFeaturedImage ? (
+                <div className="stage-article-featured-image">
+                  <img
+                    src={getImageUrl(selectedFeaturedImage)}
+                    alt={selectedFeaturedImage.alt || selectedFeaturedImage.filename}
+                  />
+                  {!stagedArticle.publishedToPayload && (
+                    <button
+                      type="button"
+                      onClick={() => setShowImageModal(true)}
+                      className="stage-article-change-btn"
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowImageModal(true)}
+                  className="stage-article-image-placeholder"
+                  disabled={stagedArticle.publishedToPayload}
+                >
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  <span>Select image</span>
+                </button>
+              )}
+            </div>
+
+            {/* Location */}
+            <div className="stage-article-sidebar-section">
+              <label className="stage-article-label">
+                Location <span className="required">*</span>
+              </label>
+              <select
+                value={stagedArticle.locationId || ''}
+                onChange={(e) => updateStagedArticle({ locationId: Number(e.target.value) || undefined })}
+                className="stage-article-select"
+                disabled={stagedArticle.publishedToPayload}
+              >
+                <option value="">-- Select --</option>
+                {locations.map(loc => (
+                  <option key={loc.id} value={loc.id}>
+                    {getLocationDisplayName(loc)} ({loc.level})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Info */}
+            <div className="stage-article-sidebar-section stage-article-info-box">
+              <p><strong>Run ID:</strong> {stagedArticle.runId}</p>
+              <p><strong>Created:</strong> {new Date(stagedArticle.createdAt).toLocaleDateString()}</p>
+              <p><strong>Updated:</strong> {new Date(stagedArticle.updatedAt).toLocaleDateString()}</p>
+            </div>
           </div>
-        )}
+        </aside>
       </div>
 
       {/* Featured Image Selection Modal */}
