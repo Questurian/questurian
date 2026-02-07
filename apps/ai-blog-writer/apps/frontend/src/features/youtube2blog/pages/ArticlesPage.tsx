@@ -29,7 +29,6 @@ function ArticleCard({ article }: { article: SavedArticle }) {
   const stageUrl = `/youtube2blog/stage-article?${new URLSearchParams({
     runId: article.run_id,
     title: article.title || 'Untitled',
-    content: article.markdown.slice(0, 5000), // Limit content length
     type: article.article_type || '',
   }).toString()}`
 

@@ -1,0 +1,1991 @@
+{
+  "collections": [
+    {
+      "slug": "users",
+      "fields": [
+        {
+          "type": "select",
+          "name": "role",
+          "required": true,
+          "hasMany": false
+        },
+        {
+          "type": "tabs",
+          "tabs": [
+            {
+              "label": "Basic Info",
+              "fields": [
+                {
+                  "type": "email",
+                  "name": "email",
+                  "required": true
+                },
+                {
+                  "type": "row",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "firstName"
+                    },
+                    {
+                      "type": "text",
+                      "name": "lastName"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Authentication",
+              "fields": [
+                {
+                  "type": "select",
+                  "name": "authProvider"
+                },
+                {
+                  "type": "row",
+                  "fields": [
+                    {
+                      "type": "checkbox",
+                      "name": "hasLocalPassword"
+                    },
+                    {
+                      "type": "checkbox",
+                      "name": "hasGoogleOAuth"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "name": "oauthId"
+                },
+                {
+                  "type": "row",
+                  "fields": [
+                    {
+                      "type": "date",
+                      "name": "passwordSetAt"
+                    },
+                    {
+                      "type": "date",
+                      "name": "googleLinkedAt"
+                    }
+                  ]
+                },
+                {
+                  "type": "number",
+                  "name": "tokenVersion",
+                  "required": true
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Password Change",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "passwordChangeCode"
+                    },
+                    {
+                      "type": "date",
+                      "name": "passwordChangeExpires"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Email Change",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "emailChangeCode"
+                    },
+                    {
+                      "type": "date",
+                      "name": "emailChangeExpires"
+                    },
+                    {
+                      "type": "email",
+                      "name": "pendingEmail"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Email Verification",
+                  "fields": [
+                    {
+                      "type": "checkbox",
+                      "name": "emailVerified"
+                    },
+                    {
+                      "type": "text",
+                      "name": "emailVerificationCode"
+                    },
+                    {
+                      "type": "date",
+                      "name": "emailVerificationExpires"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Password Reset",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "passwordResetCode"
+                    },
+                    {
+                      "type": "date",
+                      "name": "passwordResetExpires"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Membership",
+              "fields": [
+                {
+                  "type": "select",
+                  "name": "subscriptionStatus"
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Subscription Timing",
+                  "fields": [
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "date",
+                          "name": "subscriptionRenewsAt"
+                        },
+                        {
+                          "type": "date",
+                          "name": "membershipExpiration"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "checkbox",
+                      "name": "cancelAtPeriodEnd"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Stripe Integration",
+                  "fields": [
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "text",
+                          "name": "stripeCustomerId"
+                        },
+                        {
+                          "type": "text",
+                          "name": "stripeSubscriptionId"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Affiliate Tracking (Referred User)",
+                  "fields": [
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "text",
+                          "name": "affiliateReferralId"
+                        },
+                        {
+                          "type": "date",
+                          "name": "affiliateReferredAt"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Activity",
+              "fields": [
+                {
+                  "type": "date",
+                  "name": "createdAt"
+                },
+                {
+                  "type": "date",
+                  "name": "updatedAt"
+                }
+              ]
+            },
+            {
+              "label": "Public Profile",
+              "fields": [
+                {
+                  "type": "group",
+                  "name": "publicProfile",
+                  "fields": [
+                    {
+                      "type": "upload",
+                      "name": "avatar",
+                      "relationTo": "media-assets"
+                    },
+                    {
+                      "type": "checkbox",
+                      "name": "isPublic"
+                    },
+                    {
+                      "type": "text",
+                      "name": "displayName"
+                    },
+                    {
+                      "type": "textarea",
+                      "name": "bio"
+                    },
+                    {
+                      "type": "array",
+                      "name": "expertise",
+                      "fields": [
+                        {
+                          "type": "text",
+                          "name": "area",
+                          "required": true
+                        }
+                      ]
+                    },
+                    {
+                      "type": "group",
+                      "name": "socialLinks",
+                      "fields": [
+                        {
+                          "type": "text",
+                          "name": "instagram"
+                        },
+                        {
+                          "type": "text",
+                          "name": "twitter"
+                        },
+                        {
+                          "type": "text",
+                          "name": "website"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "media-assets",
+      "fields": [
+        {
+          "type": "relationship",
+          "name": "user",
+          "relationTo": "users"
+        },
+        {
+          "type": "text",
+          "name": "uploadedBy"
+        },
+        {
+          "type": "relationship",
+          "name": "mediaSet",
+          "relationTo": "media-sets"
+        },
+        {
+          "type": "select",
+          "name": "variant"
+        },
+        {
+          "type": "text",
+          "name": "alt_text"
+        },
+        {
+          "type": "text",
+          "name": "photographer_credit"
+        },
+        {
+          "type": "text",
+          "name": "location"
+        },
+        {
+          "type": "relationship",
+          "name": "locationRef",
+          "relationTo": "locations"
+        },
+        {
+          "type": "checkbox",
+          "name": "location_finalized"
+        },
+        {
+          "type": "relationship",
+          "name": "tags",
+          "hasMany": true,
+          "relationTo": "article-tags"
+        }
+      ]
+    },
+    {
+      "slug": "media-sets",
+      "fields": [
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "alt_text"
+        },
+        {
+          "type": "text",
+          "name": "photographer_credit"
+        },
+        {
+          "type": "group",
+          "name": "variants",
+          "fields": [
+            {
+              "type": "relationship",
+              "name": "thumbnail",
+              "label": "Thumbnail (3:2)",
+              "relationTo": "media-assets"
+            },
+            {
+              "type": "relationship",
+              "name": "square",
+              "label": "Square (1:1)",
+              "relationTo": "media-assets"
+            },
+            {
+              "type": "relationship",
+              "name": "wide",
+              "label": "Wide (16:9)",
+              "relationTo": "media-assets"
+            },
+            {
+              "type": "relationship",
+              "name": "portrait",
+              "label": "Portrait (4:5)",
+              "relationTo": "media-assets"
+            },
+            {
+              "type": "relationship",
+              "name": "hero",
+              "label": "Hero (21:9)",
+              "relationTo": "media-assets"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "name": "externalRef"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        },
+        {
+          "type": "text",
+          "name": "location"
+        },
+        {
+          "type": "relationship",
+          "name": "locationRef",
+          "relationTo": "locations"
+        },
+        {
+          "type": "checkbox",
+          "name": "location_finalized"
+        },
+        {
+          "type": "relationship",
+          "name": "tags",
+          "hasMany": true,
+          "relationTo": "article-tags"
+        }
+      ]
+    },
+    {
+      "slug": "articles",
+      "fields": [
+        {
+          "type": "checkbox",
+          "name": "step1_complete"
+        },
+        {
+          "type": "checkbox",
+          "name": "in_update_mode"
+        },
+        {
+          "type": "text",
+          "name": "title",
+          "label": "Title",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "location",
+          "label": "Location",
+          "required": true
+        },
+        {
+          "type": "relationship",
+          "name": "locationRef",
+          "relationTo": "locations"
+        },
+        {
+          "type": "text",
+          "name": "step1_ui_wrapper"
+        },
+        {
+          "type": "group",
+          "name": "headerSection",
+          "label": "Header Content",
+          "fields": [
+            {
+              "type": "upload",
+              "name": "featuredImage",
+              "required": true,
+              "relationTo": "media-assets"
+            }
+          ]
+        },
+        {
+          "type": "blocks",
+          "name": "contentBlocks",
+          "blocks": [
+            {
+              "slug": "text",
+              "fields": [
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "slug": "image",
+              "fields": [
+                {
+                  "type": "upload",
+                  "name": "image",
+                  "required": true,
+                  "relationTo": "media-assets"
+                },
+                {
+                  "type": "text",
+                  "name": "altText",
+                  "required": true
+                },
+                {
+                  "type": "text",
+                  "name": "caption"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "name": "seoSection",
+          "label": "SEO & Metadata",
+          "fields": [
+            {
+              "type": "relationship",
+              "name": "seo",
+              "relationTo": "seo-metadata"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "name": "slug"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "relationship",
+          "name": "author",
+          "required": true,
+          "relationTo": "users"
+        },
+        {
+          "type": "date",
+          "name": "publishedAt"
+        },
+        {
+          "type": "relationship",
+          "name": "category",
+          "hasMany": false,
+          "relationTo": "article-categories"
+        },
+        {
+          "type": "relationship",
+          "name": "tags",
+          "hasMany": true,
+          "relationTo": "article-tags"
+        }
+      ]
+    },
+    {
+      "slug": "rankings",
+      "fields": [
+        {
+          "type": "checkbox",
+          "name": "step1_complete"
+        },
+        {
+          "type": "checkbox",
+          "name": "in_update_mode"
+        },
+        {
+          "type": "checkbox",
+          "name": "location_finalized"
+        },
+        {
+          "type": "text",
+          "name": "slug"
+        },
+        {
+          "type": "text",
+          "name": "title",
+          "label": "Title",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "location",
+          "label": "Location",
+          "required": true
+        },
+        {
+          "type": "relationship",
+          "name": "locationRef",
+          "relationTo": "locations"
+        },
+        {
+          "type": "select",
+          "name": "rankingType",
+          "label": "Ranking Type",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "step1_ui_wrapper"
+        },
+        {
+          "type": "group",
+          "name": "header",
+          "label": "Header",
+          "fields": [
+            {
+              "type": "upload",
+              "name": "featuredImage",
+              "relationTo": "media-assets"
+            },
+            {
+              "type": "richText",
+              "name": "intro"
+            }
+          ]
+        },
+        {
+          "type": "blocks",
+          "name": "items",
+          "blocks": [
+            {
+              "slug": "data-dining",
+              "fields": [
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "dining"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "slug": "data-accommodations",
+              "fields": [
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "accommodations"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "slug": "data-attractions",
+              "fields": [
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "attractions"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "slug": "data-nightlife",
+              "fields": [
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "nightlife"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "name": "seoSection",
+          "label": "SEO & Metadata",
+          "fields": [
+            {
+              "type": "relationship",
+              "name": "seo",
+              "relationTo": "seo-metadata"
+            }
+          ]
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "relationship",
+          "name": "author",
+          "label": "Author",
+          "required": true,
+          "relationTo": "users"
+        }
+      ]
+    },
+    {
+      "slug": "affiliate-articles",
+      "fields": [
+        {
+          "type": "checkbox",
+          "name": "step1_complete"
+        },
+        {
+          "type": "checkbox",
+          "name": "in_update_mode"
+        },
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "ui",
+          "name": "step1UiWrapper"
+        },
+        {
+          "type": "group",
+          "name": "headerSection",
+          "label": "Header Content",
+          "fields": [
+            {
+              "type": "upload",
+              "name": "featuredImage",
+              "required": true,
+              "relationTo": "media-assets"
+            },
+            {
+              "type": "richText",
+              "name": "intro"
+            }
+          ]
+        },
+        {
+          "type": "blocks",
+          "name": "items",
+          "blocks": [
+            {
+              "slug": "data-affiliate",
+              "fields": [
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "affiliate-products"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "name": "seoSection",
+          "label": "SEO & Metadata",
+          "fields": [
+            {
+              "type": "relationship",
+              "name": "seo",
+              "relationTo": "seo-metadata"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "name": "slug"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "relationship",
+          "name": "author",
+          "required": true,
+          "relationTo": "users"
+        },
+        {
+          "type": "date",
+          "name": "publishedAt"
+        }
+      ]
+    },
+    {
+      "slug": "itineraries",
+      "fields": [
+        {
+          "type": "checkbox",
+          "name": "step1_complete"
+        },
+        {
+          "type": "checkbox",
+          "name": "in_update_mode"
+        },
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "location",
+          "required": true
+        },
+        {
+          "type": "relationship",
+          "name": "locationRef",
+          "relationTo": "locations"
+        },
+        {
+          "type": "ui",
+          "name": "step1UiWrapper"
+        },
+        {
+          "type": "group",
+          "name": "headerSection",
+          "label": "Header Content",
+          "fields": [
+            {
+              "type": "upload",
+              "name": "featuredImage",
+              "required": true,
+              "relationTo": "media-assets"
+            },
+            {
+              "type": "richText",
+              "name": "intro"
+            }
+          ]
+        },
+        {
+          "type": "blocks",
+          "name": "items",
+          "blocks": [
+            {
+              "slug": "itinerary-accommodations",
+              "fields": [
+                {
+                  "type": "row",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "timeHour",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timeMinute",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timePeriod",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "name": "duration",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "durationHours"
+                    },
+                    {
+                      "type": "select",
+                      "name": "durationMinutes"
+                    }
+                  ]
+                },
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "accommodations"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "slug": "itinerary-dining",
+              "fields": [
+                {
+                  "type": "row",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "timeHour",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timeMinute",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timePeriod",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "name": "duration",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "durationHours"
+                    },
+                    {
+                      "type": "select",
+                      "name": "durationMinutes"
+                    }
+                  ]
+                },
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "dining"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "slug": "itinerary-attractions",
+              "fields": [
+                {
+                  "type": "row",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "timeHour",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timeMinute",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timePeriod",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "name": "duration",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "durationHours"
+                    },
+                    {
+                      "type": "select",
+                      "name": "durationMinutes"
+                    }
+                  ]
+                },
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "attractions"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "slug": "itinerary-nightlife",
+              "fields": [
+                {
+                  "type": "row",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "timeHour",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timeMinute",
+                      "required": true
+                    },
+                    {
+                      "type": "select",
+                      "name": "timePeriod",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "name": "duration",
+                  "fields": [
+                    {
+                      "type": "number",
+                      "name": "durationHours"
+                    },
+                    {
+                      "type": "select",
+                      "name": "durationMinutes"
+                    }
+                  ]
+                },
+                {
+                  "type": "relationship",
+                  "name": "item",
+                  "required": true,
+                  "relationTo": "nightlife"
+                },
+                {
+                  "type": "json",
+                  "name": "selectedGalleryIndices"
+                },
+                {
+                  "type": "number",
+                  "name": "selectedInstagramIndex"
+                },
+                {
+                  "type": "relationship",
+                  "name": "perfectFor",
+                  "label": "Perfect For",
+                  "hasMany": true,
+                  "relationTo": "perfect-for-tags"
+                },
+                {
+                  "type": "richText",
+                  "name": "content",
+                  "required": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "name": "seoSection",
+          "label": "SEO & Metadata",
+          "fields": [
+            {
+              "type": "relationship",
+              "name": "seo",
+              "relationTo": "seo-metadata"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "name": "slug"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "relationship",
+          "name": "author",
+          "required": true,
+          "relationTo": "users"
+        },
+        {
+          "type": "date",
+          "name": "publishedAt"
+        }
+      ]
+    },
+    {
+      "slug": "locations",
+      "fields": [
+        {
+          "type": "select",
+          "name": "level",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "country",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "city"
+        },
+        {
+          "type": "text",
+          "name": "neighborhood"
+        },
+        {
+          "type": "text",
+          "name": "locationKey"
+        },
+        {
+          "type": "text",
+          "name": "parentKey"
+        },
+        {
+          "type": "text",
+          "name": "countryName",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "cityName"
+        },
+        {
+          "type": "text",
+          "name": "neighborhoodName"
+        }
+      ]
+    },
+    {
+      "slug": "seo-metadata",
+      "fields": [
+        {
+          "type": "collapsible",
+          "label": "Basic SEO",
+          "fields": [
+            {
+              "type": "text",
+              "name": "metaTitle"
+            },
+            {
+              "type": "textarea",
+              "name": "metaDescription"
+            },
+            {
+              "type": "text",
+              "name": "keywords"
+            }
+          ]
+        },
+        {
+          "type": "collapsible",
+          "label": "Social Media (Open Graph)",
+          "fields": [
+            {
+              "type": "text",
+              "name": "ogTitle"
+            },
+            {
+              "type": "textarea",
+              "name": "ogDescription"
+            },
+            {
+              "type": "upload",
+              "name": "ogImage",
+              "relationTo": "media-assets"
+            }
+          ]
+        },
+        {
+          "type": "collapsible",
+          "label": "Advanced SEO",
+          "fields": [
+            {
+              "type": "text",
+              "name": "canonicalUrl"
+            },
+            {
+              "type": "checkbox",
+              "name": "noIndex"
+            },
+            {
+              "type": "checkbox",
+              "name": "noFollow"
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "slug": "article-categories",
+      "fields": [
+        {
+          "type": "text",
+          "name": "name",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "slug"
+        },
+        {
+          "type": "textarea",
+          "name": "description"
+        },
+        {
+          "type": "number",
+          "name": "usageCount"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        }
+      ]
+    },
+    {
+      "slug": "article-tags",
+      "fields": [
+        {
+          "type": "text",
+          "name": "name",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "slug"
+        },
+        {
+          "type": "text",
+          "name": "displayName"
+        },
+        {
+          "type": "textarea",
+          "name": "description"
+        },
+        {
+          "type": "number",
+          "name": "usageCount"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        }
+      ]
+    },
+    {
+      "slug": "accommodations",
+      "fields": [
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "tabs",
+          "tabs": [
+            {
+              "label": "Details",
+              "fields": [
+                {
+                  "type": "select",
+                  "name": "type"
+                },
+                {
+                  "type": "array",
+                  "name": "gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "image",
+                      "required": true,
+                      "relationTo": "media-sets"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                },
+                {
+                  "type": "array",
+                  "name": "instagramGallery",
+                  "label": "Instagram Gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "post",
+                      "relationTo": "instagram-posts"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Location",
+              "fields": [
+                {
+                  "type": "text",
+                  "name": "location",
+                  "required": true
+                },
+                {
+                  "type": "relationship",
+                  "name": "locationRef",
+                  "relationTo": "locations"
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Contact Information",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "address"
+                    },
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "select",
+                          "name": "countryCode"
+                        },
+                        {
+                          "type": "text",
+                          "name": "phoneNumber"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "name": "website"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Coordinates",
+                  "fields": [
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "number",
+                          "name": "latitude"
+                        },
+                        {
+                          "type": "number",
+                          "name": "longitude"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "slug": "dining",
+      "fields": [
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "tabs",
+          "tabs": [
+            {
+              "label": "Details",
+              "fields": [
+                {
+                  "type": "select",
+                  "name": "type"
+                },
+                {
+                  "type": "array",
+                  "name": "gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "image",
+                      "required": true,
+                      "relationTo": "media-sets"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                },
+                {
+                  "type": "array",
+                  "name": "instagramGallery",
+                  "label": "Instagram Gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "post",
+                      "relationTo": "instagram-posts"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Location",
+              "fields": [
+                {
+                  "type": "text",
+                  "name": "location"
+                },
+                {
+                  "type": "relationship",
+                  "name": "locationRef",
+                  "relationTo": "locations"
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Contact Information",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "address"
+                    },
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "select",
+                          "name": "countryCode"
+                        },
+                        {
+                          "type": "text",
+                          "name": "phoneNumber"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "name": "website"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Coordinates",
+                  "fields": [
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "number",
+                          "name": "latitude"
+                        },
+                        {
+                          "type": "number",
+                          "name": "longitude"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "slug": "attractions",
+      "fields": [
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "tabs",
+          "tabs": [
+            {
+              "label": "Details",
+              "fields": [
+                {
+                  "type": "select",
+                  "name": "type"
+                },
+                {
+                  "type": "array",
+                  "name": "gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "image",
+                      "required": true,
+                      "relationTo": "media-sets"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                },
+                {
+                  "type": "array",
+                  "name": "instagramGallery",
+                  "label": "Instagram Gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "post",
+                      "relationTo": "instagram-posts"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Location",
+              "fields": [
+                {
+                  "type": "text",
+                  "name": "location",
+                  "required": true
+                },
+                {
+                  "type": "relationship",
+                  "name": "locationRef",
+                  "relationTo": "locations"
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Contact Information",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "address"
+                    },
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "select",
+                          "name": "countryCode"
+                        },
+                        {
+                          "type": "text",
+                          "name": "phoneNumber"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "name": "website"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Coordinates",
+                  "fields": [
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "number",
+                          "name": "latitude"
+                        },
+                        {
+                          "type": "number",
+                          "name": "longitude"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "slug": "nightlife",
+      "fields": [
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "tabs",
+          "tabs": [
+            {
+              "label": "Details",
+              "fields": [
+                {
+                  "type": "select",
+                  "name": "type"
+                },
+                {
+                  "type": "array",
+                  "name": "gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "image",
+                      "required": true,
+                      "relationTo": "media-sets"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                },
+                {
+                  "type": "array",
+                  "name": "instagramGallery",
+                  "label": "Instagram Gallery",
+                  "fields": [
+                    {
+                      "type": "relationship",
+                      "name": "post",
+                      "relationTo": "instagram-posts"
+                    },
+                    {
+                      "type": "ui",
+                      "name": "preview"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Location",
+              "fields": [
+                {
+                  "type": "text",
+                  "name": "location",
+                  "required": true
+                },
+                {
+                  "type": "relationship",
+                  "name": "locationRef",
+                  "relationTo": "locations"
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Contact Information",
+                  "fields": [
+                    {
+                      "type": "text",
+                      "name": "address"
+                    },
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "select",
+                          "name": "countryCode"
+                        },
+                        {
+                          "type": "text",
+                          "name": "phoneNumber"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "name": "website"
+                    }
+                  ]
+                },
+                {
+                  "type": "collapsible",
+                  "label": "Coordinates",
+                  "fields": [
+                    {
+                      "type": "row",
+                      "fields": [
+                        {
+                          "type": "number",
+                          "name": "latitude"
+                        },
+                        {
+                          "type": "number",
+                          "name": "longitude"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "slug": "affiliate-products",
+      "fields": [
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "tabs",
+          "tabs": [
+            {
+              "label": "Details",
+              "fields": [
+                {
+                  "type": "select",
+                  "name": "type"
+                },
+                {
+                  "type": "upload",
+                  "name": "featuredImage",
+                  "relationTo": "media-assets"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "slug": "instagram-posts",
+      "fields": [
+        {
+          "type": "upload",
+          "name": "previewImage",
+          "relationTo": "media-assets"
+        },
+        {
+          "type": "text",
+          "name": "title",
+          "required": true
+        },
+        {
+          "type": "textarea",
+          "name": "embedCode",
+          "required": true
+        },
+        {
+          "type": "select",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "slug": "perfect-for-tags",
+      "fields": [
+        {
+          "type": "text",
+          "name": "label",
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": "slug"
+        },
+        {
+          "type": "select",
+          "name": "category",
+          "required": true
+        },
+        {
+          "type": "select",
+          "name": "applicableTypes",
+          "required": true,
+          "hasMany": true
+        },
+        {
+          "type": "textarea",
+          "name": "description"
+        },
+        {
+          "type": "select",
+          "name": "status"
+        },
+        {
+          "type": "number",
+          "name": "usageCount"
+        },
+        {
+          "type": "relationship",
+          "name": "createdBy",
+          "relationTo": "users"
+        }
+      ]
+    }
+  ]
+}

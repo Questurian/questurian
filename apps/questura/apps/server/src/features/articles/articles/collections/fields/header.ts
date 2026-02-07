@@ -17,11 +17,5 @@ export const headerSection: Field = {
         description: 'Hero image displayed at top of article',
       },
     },
-    {
-      name: 'intro',
-      type: 'richText',
-      admin: { description: 'Introductory text for the Article' },
-    },
   ],
 }
-

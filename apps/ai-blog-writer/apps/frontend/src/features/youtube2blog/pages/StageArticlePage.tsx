@@ -9,6 +9,7 @@ import {
   fetchMediaAssets,
   createArticle,
   convertMarkdownToLexical,
+  fetchResult,
   markArticleSynced,
   type Location,
   type MediaAsset,
@@ -47,8 +48,25 @@ export type StagedArticle = {
 }
 
 // Parse markdown into blocks at each header
-function parseMarkdownToBlocks(markdown: string): ContentBlock[] {
+function stripLeadingH1(markdown: string): string {
+  if (!markdown) return ''
+
   const lines = markdown.split('\n')
+  if (!/^#\s+/.test(lines[0].trimStart())) {
+    return markdown.trim()
+  }
+
+  let contentStart = 1
+  while (contentStart < lines.length && lines[contentStart].trim() === '') {
+    contentStart++
+  }
+
+  return lines.slice(contentStart).join('\n').trim()
+}
+
+function parseMarkdownToBlocks(markdown: string): ContentBlock[] {
+  // Title is managed separately in the staging UI; keep blocks body-only.
+  const lines = stripLeadingH1(markdown).split('\n')
   const blocks: ContentBlock[] = []
   let currentBlock: string[] = []
   let blockIndex = 0
@@ -88,6 +106,20 @@ function parseMarkdownToBlocks(markdown: string): ContentBlock[] {
 // Reconstruct markdown from blocks
 function blocksToMarkdown(blocks: ContentBlock[]): string {
   return blocks.map(b => b.content).join('\n\n')
+}
+
+function normalizeBlocks(blocks: ContentBlock[] | undefined, fallbackContent: string): ContentBlock[] {
+  if (!blocks || blocks.length === 0) {
+    return parseMarkdownToBlocks(fallbackContent)
+  }
+
+  // Phase 1 contract only publishes text/image blocks.
+  return blocks.map((block, index) => ({
+    id: block.id || `block_${index}`,
+    type: 'text',
+    content: block.content || '',
+    imageAfter: block.imageAfter,
+  }))
 }
 
 export default function StageArticlePage() {
@@ -142,60 +174,112 @@ export default function StageArticlePage() {
   useEffect(() => {
     if (!urlRunId && !stagedId) return
 
-    const loadStagedArticle = () => {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      const allStaged: StagedArticle[] = stored ? JSON.parse(stored) : []
+    let isCancelled = false
 
-      if (stagedId) {
-        // Load existing staged article
-        const existing = allStaged.find(s => s.id === stagedId)
-        if (existing) {
-          // Migrate old articles without blocks
-          if (!existing.blocks || existing.blocks.length === 0) {
-            existing.blocks = parseMarkdownToBlocks(existing.content)
+    const loadStagedArticle = async () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY)
+        const allStaged: StagedArticle[] = stored ? JSON.parse(stored) : []
+
+        if (stagedId) {
+          // Load existing staged article
+          const existingIndex = allStaged.findIndex(s => s.id === stagedId)
+          const existing = existingIndex >= 0 ? allStaged[existingIndex] : null
+          if (existing) {
+            const normalizedBlocks = normalizeBlocks(existing.blocks, existing.content)
+            const normalizedExisting = {
+              ...existing,
+              blocks: normalizedBlocks,
+              content: blocksToMarkdown(normalizedBlocks),
+            }
+
+            if (!isCancelled) {
+              setStagedArticle(normalizedExisting)
+            }
+
+            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedBlocks)
+            if (blocksChanged) {
+              allStaged[existingIndex] = normalizedExisting
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(allStaged))
+            }
+          } else if (!isCancelled) {
+            setError('Staged article not found')
           }
-          setStagedArticle(existing)
-        } else {
-          setError('Staged article not found')
+        } else if (urlRunId) {
+          // Check if already staged
+          const existingIndex = allStaged.findIndex(s => s.runId === urlRunId)
+          const existing = existingIndex >= 0 ? allStaged[existingIndex] : null
+          if (existing) {
+            const normalizedBlocks = normalizeBlocks(existing.blocks, existing.content)
+            const normalizedExisting = {
+              ...existing,
+              blocks: normalizedBlocks,
+              content: blocksToMarkdown(normalizedBlocks),
+            }
+
+            if (!isCancelled) {
+              setStagedArticle(normalizedExisting)
+            }
+
+            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedBlocks)
+            if (blocksChanged) {
+              allStaged[existingIndex] = normalizedExisting
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(allStaged))
+            }
+
+            navigate(`/youtube2blog/stage-article?stagedId=${existing.id}`, { replace: true })
+          } else {
+            let markdown = urlContent
+            if (!markdown) {
+              const result = await fetchResult(urlRunId)
+              markdown = result.markdown || ''
+            }
+
+            if (!markdown.trim()) {
+              if (!isCancelled) {
+                setError('Unable to load article content for staging')
+              }
+              return
+            }
+
+            // Create new staged article
+            const blocks = parseMarkdownToBlocks(markdown)
+            const newStaged: StagedArticle = {
+              id: `staged_${Date.now()}`,
+              runId: urlRunId,
+              originalTitle: urlTitle,
+              originalContent: markdown,
+              originalType: urlType,
+              title: urlTitle,
+              content: markdown,
+              blocks,
+              lexicalConverted: false,
+              publishedToPayload: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+
+            // Save to storage
+            const updated = [...allStaged, newStaged]
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+
+            if (!isCancelled) {
+              setStagedArticle(newStaged)
+            }
+            navigate(`/youtube2blog/stage-article?stagedId=${newStaged.id}`, { replace: true })
+          }
         }
-      } else if (urlRunId) {
-        // Check if already staged
-        const existing = allStaged.find(s => s.runId === urlRunId)
-        if (existing) {
-          if (!existing.blocks || existing.blocks.length === 0) {
-            existing.blocks = parseMarkdownToBlocks(existing.content)
-          }
-          setStagedArticle(existing)
-          navigate(`/youtube2blog/stage-article?stagedId=${existing.id}`, { replace: true })
-        } else {
-          // Create new staged article
-          const blocks = parseMarkdownToBlocks(urlContent)
-          const newStaged: StagedArticle = {
-            id: `staged_${Date.now()}`,
-            runId: urlRunId,
-            originalTitle: urlTitle,
-            originalContent: urlContent,
-            originalType: urlType,
-            title: urlTitle,
-            content: urlContent,
-            blocks,
-            lexicalConverted: false,
-            publishedToPayload: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-
-          // Save to storage
-          const updated = [...allStaged, newStaged]
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-
-          setStagedArticle(newStaged)
-          navigate(`/youtube2blog/stage-article?stagedId=${newStaged.id}`, { replace: true })
+      } catch (err) {
+        if (!isCancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load staged article')
         }
       }
     }
 
-    loadStagedArticle()
+    void loadStagedArticle()
+    return () => {
+      isCancelled = true
+    }
   }, [urlRunId, stagedId, urlTitle, urlContent, urlType, navigate])
 
   // Load reference data
@@ -358,15 +442,13 @@ export default function StageArticlePage() {
     updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
   }, [stagedArticle, updateStagedArticle])
 
-  const addNewBlock = useCallback((afterBlockId?: string, blockType: 'text' | 'pullquote' = 'text') => {
+  const addNewBlock = useCallback((afterBlockId?: string) => {
     if (!stagedArticle) return
 
     const newBlock: ContentBlock = {
       id: `block_${Date.now()}`,
-      type: blockType,
-      content: blockType === 'pullquote'
-        ? 'Enter your pull quote here...'
-        : '## New Section\n\nAdd your content here...',
+      type: 'text',
+      content: '## New Section\n\nAdd your content here...',
     }
 
     let updatedBlocks: ContentBlock[]
@@ -503,8 +585,17 @@ export default function StageArticlePage() {
   const handlePublish = async () => {
     if (!token || !stagedArticle) return
 
+    const trimmedTitle = stagedArticle.title.trim()
     const location = locations.find(l => l.id === stagedArticle.locationId)
     const featuredImage = mediaAssets.find(m => m.id === stagedArticle.featuredImageId)
+
+    if (!trimmedTitle) {
+      setPublishResult({
+        success: false,
+        message: 'Please enter an article title'
+      })
+      return
+    }
 
     if (!location || !featuredImage) {
       setPublishResult({
@@ -521,47 +612,61 @@ export default function StageArticlePage() {
     try {
       // Build content blocks array for Payload
       const contentBlocks: Array<{
-        blockType: 'text' | 'image' | 'pullQuote'
+        blockType: 'text' | 'image'
         content?: object
         image?: number
         altText?: string
-        quote?: string
       }> = []
 
-      // Convert each block to Lexical and interleave with images
-      for (const block of stagedArticle.blocks) {
-        if (block.type === 'pullquote') {
-          // Add pull quote block
-          contentBlocks.push({
-            blockType: 'pullQuote',
-            quote: block.content,
-          })
-        } else {
-          // Convert text block markdown to Lexical
-          const lexicalResult = await convertMarkdownToLexical(block.content)
-          if (lexicalResult.success && lexicalResult.data) {
-            contentBlocks.push({
-              blockType: 'text',
-              content: lexicalResult.data,
-            })
+      let textBlocksAdded = 0
+
+      // Convert each markdown block to Lexical and interleave with images.
+      for (const [index, block] of stagedArticle.blocks.entries()) {
+        const markdown = block.content.trim()
+        if (markdown) {
+          const lexicalResult = await convertMarkdownToLexical(markdown)
+          if (!lexicalResult.success || !lexicalResult.data) {
+            throw new Error(
+              lexicalResult.error || `Failed to convert block ${index + 1} to Lexical`
+            )
           }
+
+          contentBlocks.push({
+            blockType: 'text',
+            content: lexicalResult.data,
+          })
+          textBlocksAdded++
         }
 
         // Add image block if one exists after this block
         if (block.imageAfter) {
           const imageAsset = mediaAssets.find(m => m.id === block.imageAfter)
+          if (!imageAsset) {
+            throw new Error(`Image after block ${index + 1} is missing from the media library`)
+          }
+
+          const altText = imageAsset.alt?.trim() || ''
+          if (!altText) {
+            throw new Error(`Image after block ${index + 1} is missing alt text`)
+          }
+
           contentBlocks.push({
             blockType: 'image',
             image: block.imageAfter,
-            altText: imageAsset?.alt || '',
+            altText,
           })
         }
+      }
+
+      if (textBlocksAdded === 0) {
+        throw new Error('Add at least one text block with content before publishing')
       }
 
       setIsConverting(false)
 
       const result = await createArticle({
-        title: stagedArticle.title || 'Untitled Article',
+        title: trimmedTitle,
+        location: location.locationKey,
         locationRef: location.id,
         step1_complete: true,
         status: 'draft',
@@ -676,7 +781,13 @@ export default function StageArticlePage() {
 
   const selectedLocation = locations.find(l => l.id === stagedArticle.locationId)
   const selectedFeaturedImage = mediaAssets.find(m => m.id === stagedArticle.featuredImageId)
-  const allFieldsFilled = selectedLocation && selectedFeaturedImage
+  const hasTitle = Boolean(stagedArticle.title.trim())
+  const allFieldsFilled = Boolean(selectedLocation && selectedFeaturedImage && hasTitle)
+  const missingRequiredFields = [
+    ...(!hasTitle ? ['title'] : []),
+    ...(!selectedLocation ? ['location'] : []),
+    ...(!selectedFeaturedImage ? ['featured image'] : []),
+  ]
 
   return (
     <div className="stage-article-page">
@@ -1012,7 +1123,7 @@ export default function StageArticlePage() {
                         <button
                           type="button"
                           className="block-add-block-btn"
-                          onClick={() => addNewBlock(block.id, 'text')}
+                          onClick={() => addNewBlock(block.id)}
                           title="Add new text block here"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1022,19 +1133,6 @@ export default function StageArticlePage() {
                           Block
                         </button>
 
-                        {/* Add Pull Quote Button */}
-                        <button
-                          type="button"
-                          className="block-add-quote-btn"
-                          onClick={() => addNewBlock(block.id, 'pullquote')}
-                          title="Add pull quote here"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
-                            <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
-                          </svg>
-                          Quote
-                        </button>
                       </div>
                     </div>
                   )}
@@ -1078,11 +1176,7 @@ export default function StageArticlePage() {
                   </button>
                   {!allFieldsFilled && (
                     <p className="stage-article-publish-hint">
-                      {!selectedLocation && !selectedFeaturedImage
-                        ? 'Select a location and featured image'
-                        : !selectedLocation
-                          ? 'Select a location'
-                          : 'Select a featured image'}
+                      Complete: {missingRequiredFields.join(', ')}
                     </p>
                   )}
                 </>

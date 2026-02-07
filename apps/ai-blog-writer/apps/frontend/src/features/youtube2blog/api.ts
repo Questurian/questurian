@@ -294,12 +294,11 @@ export type CreateArticlePayload = {
     intro?: object // Lexical JSON
   }
   contentBlocks?: Array<{
-    blockType: 'text' | 'image' | 'pullQuote'
+    blockType: 'text' | 'image'
     content?: object // For text blocks
     image?: number // For image blocks
     altText?: string
     caption?: string
-    quote?: string // For pull quote blocks
   }>
   seoSection?: {
     seo?: number
