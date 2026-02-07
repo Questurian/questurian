@@ -8,6 +8,9 @@ export type ExtractResponse = {
   raw_response: string
   parsed: { title: string; content: string; language: string } | null
   parse_error: string | null
+  translated: { title: string; content: string } | null
+  translation_skipped: boolean
+  translation_error: string | null
 }
 
 export async function extractArticle(url: string): Promise<ExtractResponse> {

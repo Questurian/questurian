@@ -10,6 +10,7 @@ export default function Url2BlogPage() {
   const [url, setUrl] = useState('')
   const [response, setResponse] = useState<ExtractResponse | null>(null)
   const [showRaw, setShowRaw] = useState(false)
+  const [showOriginal, setShowOriginal] = useState(false)
 
   const extractMutation = useMutation({
     mutationFn: extractArticle,
@@ -29,6 +30,7 @@ export default function Url2BlogPage() {
     if (!url.trim()) return
     setResponse(null)
     setShowRaw(false)
+    setShowOriginal(false)
     extractMutation.reset()
     extractMutation.mutate(url.trim())
   }
@@ -37,13 +39,17 @@ export default function Url2BlogPage() {
     setUrl('')
     setResponse(null)
     setShowRaw(false)
+    setShowOriginal(false)
     extractMutation.reset()
   }
 
   const handleCopyJson = () => {
-    if (response?.parsed) {
-      navigator.clipboard.writeText(JSON.stringify(response.parsed, null, 2))
-    }
+    if (!response?.parsed) return
+    const wasTranslated = !response.translation_skipped && response.translated != null
+    const output = wasTranslated
+      ? { ...response.translated, language: response.parsed.language }
+      : response.parsed
+    navigator.clipboard.writeText(JSON.stringify(output, null, 2))
   }
 
   return (
@@ -132,7 +138,7 @@ export default function Url2BlogPage() {
                 <span className="u2b-step-check">&check;</span>
                 <span>Extraction Complete</span>
               </div>
-              <h2>{response.parsed?.title || 'Extracted Article'}</h2>
+              <h2>{(response.translated?.title || response.parsed?.title) || 'Extracted Article'}</h2>
               <p className="u2b-source-url">{response.source_url}</p>
             </div>
             <div className="url2blog-panel-body">
@@ -142,25 +148,74 @@ export default function Url2BlogPage() {
                 </div>
               ) : null}
 
-              {response.parsed ? (
-                <div className="u2b-extracted-content">
-                  <div className="u2b-meta-row">
-                    <div className="u2b-language-badge">
-                      {response.parsed.language}
+              {response.parsed ? (() => {
+                const wasTranslated = !response.translation_skipped && response.translated != null
+                const displayTitle = wasTranslated ? response.translated!.title : response.parsed!.title
+                const displayContent = wasTranslated ? response.translated!.content : response.parsed!.content
+
+                return (
+                  <div className="u2b-extracted-content">
+                    <div className="u2b-meta-row">
+                      <div className="u2b-language-badge">
+                        {response.parsed.language}
+                      </div>
+                      {wasTranslated && (
+                        <div className="u2b-translated-badge">
+                          Translated to English
+                        </div>
+                      )}
+                      {response.translation_skipped && (
+                        <div className="u2b-skipped-badge">
+                          Already in English
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="u2b-content-section">
-                    <h3>Title</h3>
-                    <p className="u2b-title-display">{response.parsed.title}</p>
-                  </div>
-                  <div className="u2b-content-section">
-                    <h3>Content</h3>
-                    <div className="u2b-article-text">
-                      {response.parsed.content}
+
+                    {response.translation_error && (
+                      <p className="url2blog-error">Translation error: {response.translation_error}</p>
+                    )}
+
+                    <div className="u2b-content-section">
+                      <h3>Title</h3>
+                      <p className="u2b-title-display">{displayTitle}</p>
                     </div>
+                    <div className="u2b-content-section">
+                      <h3>Content</h3>
+                      <div className="u2b-article-text">
+                        {displayContent}
+                      </div>
+                    </div>
+
+                    {wasTranslated && (
+                      <>
+                        <div className="u2b-raw-toggle">
+                          <button
+                            type="button"
+                            className="url2blog-toggle-btn"
+                            onClick={() => setShowOriginal(!showOriginal)}
+                          >
+                            {showOriginal ? 'Hide' : 'Show'} Original ({response.parsed!.language})
+                          </button>
+                        </div>
+                        {showOriginal && (
+                          <div className="u2b-original-content">
+                            <div className="u2b-content-section">
+                              <h3>Original Title</h3>
+                              <p className="u2b-title-display">{response.parsed!.title}</p>
+                            </div>
+                            <div className="u2b-content-section">
+                              <h3>Original Content</h3>
+                              <div className="u2b-article-text">
+                                {response.parsed!.content}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                </div>
-              ) : null}
+                )
+              })() : null}
 
               {/* Raw JSON toggle */}
               <div className="u2b-raw-toggle">

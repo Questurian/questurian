@@ -45,6 +45,29 @@ RAW PAGE TEXT:
 """
 
 
+TRANSLATE_PROMPT = """You are a professional translator.
+
+Translate the following article title and content from {source_language} into English.
+
+Preserve:
+- The original meaning and tone
+- Paragraph breaks (newlines)
+- Any proper nouns, brand names, or place names (keep original if no standard English equivalent)
+
+Return ONLY valid JSON in this exact format:
+{{
+  "title": "The translated title in English",
+  "content": "The translated article content in English, preserving paragraphs with newlines"
+}}
+
+ORIGINAL TITLE:
+{title}
+
+ORIGINAL CONTENT:
+{content}
+"""
+
+
 class ExtractRequest(BaseModel):
     url: str
 
@@ -165,11 +188,47 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
     raw_response = result.strip()
     parsed, parse_error = _extract_json_from_response(raw_response)
 
+    # Phase 2: Translate if not English
+    translated = None
+    translation_skipped = False
+    translation_error = None
+
+    if parsed and not parse_error:
+        language = (parsed.get("language") or "").strip()
+        is_english = language.lower() in ("english", "en", "")
+
+        if is_english:
+            translation_skipped = True
+            logger.info("URL2Blog: article already in English, skipping translation")
+        else:
+            logger.info("URL2Blog: translating from %s to English", language)
+            translate_llm = get_vertex_llm(
+                temperature=0.1,
+                max_tokens=8192,
+                model_name="gemini-2.0-flash",
+            )
+            translate_prompt = TRANSLATE_PROMPT.format(
+                source_language=language,
+                title=parsed.get("title", ""),
+                content=parsed.get("content", ""),
+            )
+            translate_result = translate_llm.invoke(translate_prompt)
+
+            if translate_result and translate_result.strip():
+                translated, translation_error = _extract_json_from_response(
+                    translate_result.strip()
+                )
+            else:
+                translation_error = "Translation returned an empty response"
+
     return JSONResponse({
-        "message": "URL2Blog extraction completed",
+        "message": "URL2Blog stage 1 completed",
         "source_url": url,
         "raw_text_length": len(raw_text),
         "raw_response": raw_response,
         "parsed": parsed,
         "parse_error": parse_error,
+        "translated": translated,
+        "translation_skipped": translation_skipped,
+        "translation_error": translation_error,
     })
