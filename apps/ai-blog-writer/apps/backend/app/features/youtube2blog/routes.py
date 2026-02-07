@@ -16,12 +16,6 @@ from app.core import read_stage_result, read_status, read_output, clear_all_runs
 from utils import parse_csv
 
 from .orchestrator import initialize_run, process_run
-from app.core import (
-    write_article_type,
-    read_article_types,
-    get_article_type_by_name,
-    delete_article_type,
-)
 from .storage import (
     get_all_completed_articles,
     mark_article_synced,
@@ -196,69 +190,6 @@ async def get_articles() -> JSONResponse:
     """Get all completed YouTube2Blog articles."""
     articles = get_all_completed_articles()
     return JSONResponse(articles)
-
-
-# Article Types CRUD
-@router.get("/article-types")
-async def get_article_types() -> JSONResponse:
-    """Get all article types with their definitions."""
-    try:
-        article_types = read_article_types()
-        return JSONResponse(article_types)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch article types: {str(e)}")
-
-
-@router.post("/article-types")
-async def create_article_type(request: dict) -> JSONResponse:
-    """Create a new article type."""
-    try:
-        name = request.get("name")
-        definition = request.get("definition")
-
-        if not name or not definition:
-            raise HTTPException(status_code=400, detail="Name and definition are required")
-
-        existing = get_article_type_by_name(name)
-        if existing:
-            raise HTTPException(status_code=400, detail="Article type with this name already exists")
-
-        article_type = write_article_type(name, definition)
-        return JSONResponse(article_type, status_code=201)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create article type: {str(e)}")
-
-
-@router.put("/article-types/{article_type_id}")
-async def update_article_type(article_type_id: int, request: dict) -> JSONResponse:
-    """Update an existing article type."""
-    try:
-        name = request.get("name")
-        definition = request.get("definition")
-
-        if not name or not definition:
-            raise HTTPException(status_code=400, detail="Name and definition are required")
-
-        updated_article_type = write_article_type(name, definition)
-        return JSONResponse(updated_article_type)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update article type: {str(e)}")
-
-
-@router.delete("/article-types/{article_type_id}")
-async def delete_article_type_endpoint(article_type_id: int) -> JSONResponse:
-    """Delete an article type by ID."""
-    try:
-        deleted = delete_article_type(article_type_id)
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Article type not found")
-        return JSONResponse({"message": "Article type deleted successfully"})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete article type: {str(e)}")
 
 
 # Sync Status Endpoints

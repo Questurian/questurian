@@ -3,7 +3,7 @@
 import io
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Tuple
+from typing import Dict
 
 from PIL import Image
 
@@ -54,19 +54,19 @@ def process_image_variants(
 ) -> Dict[ImageVariantType, ProcessedVariant]:
     """
     Process an image into 5 variants optimized for WebP format.
-    
+
     Args:
         source_buffer: The original image bytes
         original_filename: Original filename (used for generating variant names)
         alt_text: Alt text for accessibility
         quality: WebP quality (0-100), default 85
-        
+
     Returns:
         Dictionary mapping variant types to processed variants
     """
     # Load source image
     source_image = Image.open(io.BytesIO(source_buffer))
-    
+
     # Convert to RGB if necessary (handles RGBA, P mode, etc.)
     if source_image.mode in ('RGBA', 'P'):
         # Create white background for transparency
@@ -77,24 +77,24 @@ def process_image_variants(
         source_image = background
     elif source_image.mode != 'RGB':
         source_image = source_image.convert('RGB')
-    
+
     # Generate base name from original filename
     base_name = original_filename.rsplit('.', 1)[0] if '.' in original_filename else original_filename
-    
+
     variants: Dict[ImageVariantType, ProcessedVariant] = {}
-    
+
     for variant_type, spec in VARIANT_SPECS.items():
         # Resize image maintaining aspect ratio, then crop to exact dimensions
         resized = _resize_and_crop(source_image, spec.width, spec.height)
-        
+
         # Save as WebP
         output_buffer = io.BytesIO()
         resized.save(output_buffer, format='WEBP', quality=quality, method=6)
         webp_buffer = output_buffer.getvalue()
-        
+
         # Generate filename
         filename = f"{base_name}_{variant_type.value}.webp"
-        
+
         variants[variant_type] = ProcessedVariant(
             variant_type=variant_type,
             buffer=webp_buffer,
@@ -104,7 +104,7 @@ def process_image_variants(
             content_type='image/webp',
             file_size=len(webp_buffer)
         )
-    
+
     return variants
 
 
@@ -116,7 +116,7 @@ def _resize_and_crop(image: Image.Image, target_width: int, target_height: int) 
     # Calculate scaling factors
     source_ratio = image.width / image.height
     target_ratio = target_width / target_height
-    
+
     if source_ratio > target_ratio:
         # Source is wider relative to target - scale by height
         new_height = target_height
@@ -125,17 +125,17 @@ def _resize_and_crop(image: Image.Image, target_width: int, target_height: int) 
         # Source is taller relative to target - scale by width
         new_width = target_width
         new_height = int(new_width / source_ratio)
-    
+
     # Resize using high-quality Lanczos resampling
     resized = image.resize((new_width, new_height), Image.LANCZOS)
-    
+
     # Calculate crop box to center the image
     left = (new_width - target_width) // 2
     top = (new_height - target_height) // 2
     right = left + target_width
     bottom = top + target_height
-    
+
     # Crop to exact dimensions
     cropped = resized.crop((left, top, right, bottom))
-    
+
     return cropped

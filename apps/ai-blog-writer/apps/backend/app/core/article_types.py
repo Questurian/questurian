@@ -4,7 +4,6 @@ Shared article types storage.
 Article types are reference data used across multiple features (youtube2blog,
 url2blog, etc.) for classifying and generating content.
 """
-import json
 from typing import Any, Dict, List, Optional
 
 from .database import get_db_connection
@@ -84,6 +83,23 @@ def read_article_types() -> List[Dict[str, Any]]:
         return [dict(row) for row in rows]
 
 
+def read_article_type_name_definitions() -> List[Dict[str, str]]:
+    """Read article types with only name and definition fields."""
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT name, definition FROM article_types ORDER BY name
+            """
+        ).fetchall()
+        return [
+            {
+                "name": row["name"],
+                "definition": row["definition"],
+            }
+            for row in rows
+        ]
+
+
 def read_article_type_names() -> List[str]:
     """Read just the article type names."""
     with get_db_connection() as conn:
@@ -127,6 +143,35 @@ def get_article_type_by_name(name: str) -> Optional[Dict[str, Any]]:
         if not row:
             return None
         return dict(row)
+
+
+def update_article_type_by_id(
+    article_type_id: int,
+    name: str,
+    definition: str,
+) -> Optional[Dict[str, Any]]:
+    """Update article type name/definition by ID and return updated row."""
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE article_types
+            SET name = ?, definition = ?, updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (name, definition, article_type_id),
+        )
+        if cursor.rowcount == 0:
+            return None
+
+        row = conn.execute(
+            """
+            SELECT id, name, definition, guideline, title_guideline, created_at, updated_at
+            FROM article_types
+            WHERE id = ?
+            """,
+            (article_type_id,),
+        ).fetchone()
+        return dict(row) if row else None
 
 
 def delete_article_type(article_type_id: int) -> bool:

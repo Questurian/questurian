@@ -3,6 +3,7 @@ import type { ArticleType, ResultResponse, StatusResponse, UploadResponse } from
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003'
 const CONVERTER_URL = import.meta.env.VITE_CONVERTER_URL || 'http://localhost:4004'
 const FEATURE_PREFIX = '/youtube2blog'
+const ARTICLE_TYPES_PREFIX = '/article-types'
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
 
 export type LexicalConvertResponse = {
@@ -113,7 +114,7 @@ export async function fetchArticles(): Promise<SavedArticle[]> {
 }
 
 export async function fetchArticleTypes(): Promise<ArticleType[]> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/article-types`)
+  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}`)
   if (!response.ok) {
     throw new Error('Failed to fetch article types')
   }
@@ -121,7 +122,7 @@ export async function fetchArticleTypes(): Promise<ArticleType[]> {
 }
 
 export async function createArticleType(name: string, definition: string): Promise<ArticleType> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/article-types`, {
+  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -135,7 +136,7 @@ export async function createArticleType(name: string, definition: string): Promi
 }
 
 export async function updateArticleType(id: number, name: string, definition: string): Promise<ArticleType> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/article-types/${id}`, {
+  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -149,7 +150,7 @@ export async function updateArticleType(id: number, name: string, definition: st
 }
 
 export async function deleteArticleType(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/article-types/${id}`, {
+  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}/${id}`, {
     method: 'DELETE',
   })
   if (!response.ok) {

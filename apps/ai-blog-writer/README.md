@@ -144,6 +144,7 @@ PAYLOAD_API_URL=http://host.docker.internal:4000
 - [Enable Vertex AI API](https://console.cloud.google.com/apis/library/aiplatform.googleapis.com)
 - [Google Cloud Console](https://console.cloud.google.com/)
 - Internal guide: `docs/google-vertex-auth-guide.md`
+- API changelog: `docs/api-changelog.md`
 
 ### 4. Start Development Servers
 

@@ -49,7 +49,7 @@ function readStoredAuth(): AuthState | null {
       return null;
     }
     return stored;
-  } catch (error) {
+  } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
   }
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (apiMessage) {
             message = apiMessage;
           }
-        } catch (error) {
+        } catch {
           // Keep default message when parsing fails.
         }
         throw new Error(message);
@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         const decoded = JSON.parse(jsonPayload);
         expiresAt = decoded.exp ? decoded.exp * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000;
-      } catch (e) {
+      } catch {
         // Fallback to 7 days if decoding fails
         expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
       }
