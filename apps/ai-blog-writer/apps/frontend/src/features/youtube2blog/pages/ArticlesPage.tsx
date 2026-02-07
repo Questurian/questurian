@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { fetchArticles, convertMarkdownToLexical, type SavedArticle } from '../api'
+import { fetchArticles, type SavedArticle } from '../api'
 import payloadLogoUrl from '../../../assets/payload-logo.svg?url'
 
 function formatDate(dateString: string): string {
@@ -23,28 +23,7 @@ function formatDate(dateString: string): string {
 }
 
 function ArticleCard({ article }: { article: SavedArticle }) {
-  const [expanded, setExpanded] = useState(false)
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-
-  const handleCopyLexical = async () => {
-    setCopyStatus('loading')
-    try {
-      const result = await convertMarkdownToLexical(article.markdown)
-      if (result.success && result.data) {
-        await navigator.clipboard.writeText(JSON.stringify(result.data, null, 2))
-        setCopyStatus('success')
-        setTimeout(() => setCopyStatus('idle'), 2000)
-      } else {
-        console.error('Conversion failed:', result.error)
-        setCopyStatus('error')
-        setTimeout(() => setCopyStatus('idle'), 3000)
-      }
-    } catch (error) {
-      console.error('Failed to convert/copy:', error)
-      setCopyStatus('error')
-      setTimeout(() => setCopyStatus('idle'), 3000)
-    }
-  }
+  const [expanded] = useState(false)
 
   // Build stage URL with article data
   const stageUrl = `/youtube2blog/stage-article?${new URLSearchParams({
@@ -93,35 +72,6 @@ function ArticleCard({ article }: { article: SavedArticle }) {
             />
             Stage for Payload
           </Link>
-          <button
-            type="button"
-            className="lexical-copy-btn"
-            onClick={handleCopyLexical}
-            disabled={copyStatus === 'loading'}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: copyStatus === 'success' ? '#22c55e' : copyStatus === 'error' ? '#ef4444' : '#666',
-              color: '#fff',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              cursor: copyStatus === 'loading' ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {copyStatus === 'loading' ? 'Converting...' :
-             copyStatus === 'success' ? 'Copied!' :
-             copyStatus === 'error' ? 'Failed' :
-             'Copy Lexical'}
-          </button>
-          <button
-            type="button"
-            className="expand-btn"
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? 'Collapse' : 'Expand'}
-          </button>
         </div>
       </div>
       {expanded && (

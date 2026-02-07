@@ -77,11 +77,11 @@
 .nav-connection-status {
   display: flex;
   align-items: center;
-  padding: var(--space-2) var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
   background: var(--cream);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  margin: 0 auto;
   transition: all var(--transition-base);
 }
 
@@ -105,6 +105,14 @@
   gap: var(--space-4);
 }
 
+.nav-connection-status .connection-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
 .nav-role-badge {
   font-size: 0.6875rem;
   font-weight: 600;
@@ -116,29 +124,77 @@
   border-radius: var(--radius-full);
 }
 
-.nav-user {
-  font-size: 0.875rem;
-  color: var(--muted);
-  font-weight: 500;
+.nav-user-menu {
+  position: relative;
 }
 
-.nav-logout-button {
-  padding: var(--space-2) var(--space-4);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  font-family: var(--font-body);
-  color: var(--muted);
-  background: transparent;
+.nav-user-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink);
   cursor: pointer;
   transition: all var(--transition-base);
 }
 
-.nav-logout-button:hover {
+.nav-user-menu-button svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  display: block;
+  transform: translateY(1px), translateX(10px);
+}
+
+.nav-user-menu-button:hover {
   background: var(--cream-dark);
   border-color: var(--border-strong);
+}
+
+.nav-user-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 200px;
+  padding: var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  z-index: 10;
+}
+
+.nav-user-menu-email {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.nav-user-menu-logout {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-body);
   color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-base);
+}
+
+.nav-user-menu-logout:hover {
+  background: var(--cream-dark);
+  border-color: var(--border-strong);
 }
 
 /* Mobile Menu Toggle */
