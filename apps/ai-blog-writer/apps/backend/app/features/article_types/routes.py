@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core import (
     delete_article_type,
+    get_article_type_by_id,
     get_article_type_by_name,
     read_article_types,
     read_article_type_name_definitions,
@@ -41,6 +42,56 @@ async def get_article_type_name_definitions() -> JSONResponse:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch article type name definitions: {exc}",
+        ) from exc
+
+
+@router.get("/{article_type_id}/guidelines")
+async def get_article_type_guidelines_by_id(article_type_id: int) -> JSONResponse:
+    """Get guidelines for an article type by ID."""
+    try:
+        article_type = get_article_type_by_id(article_type_id)
+        if not article_type:
+            raise HTTPException(status_code=404, detail="Article type not found")
+
+        return JSONResponse(
+            {
+                "id": article_type["id"],
+                "name": article_type["name"],
+                "guideline": article_type.get("guideline"),
+                "title_guideline": article_type.get("title_guideline"),
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch article type guidelines: {exc}",
+        ) from exc
+
+
+@router.get("/by-name/{name}/guidelines")
+async def get_article_type_guidelines_by_name(name: str) -> JSONResponse:
+    """Get guidelines for an article type by name."""
+    try:
+        article_type = get_article_type_by_name(name)
+        if not article_type:
+            raise HTTPException(status_code=404, detail="Article type not found")
+
+        return JSONResponse(
+            {
+                "id": article_type["id"],
+                "name": article_type["name"],
+                "guideline": article_type.get("guideline"),
+                "title_guideline": article_type.get("title_guideline"),
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch article type guidelines: {exc}",
         ) from exc
 
 

@@ -51,8 +51,10 @@ interface ImageUploadProps {
   externalRef: string;
   token: string;
   altText: string;
+  narrativeFocus?: string;
   onUploadComplete: (result: UploadImageResponse) => void;
   onAltTextGenerated?: (altText: string) => void;
+  onNarrativeFocusChange?: (narrativeFocus: string) => void;
   onCancel?: () => void;
   className?: string;
 }
@@ -65,8 +67,10 @@ export function ImageUpload({
   externalRef,
   token,
   altText,
+  narrativeFocus = '',
   onUploadComplete,
   onAltTextGenerated,
+  onNarrativeFocusChange,
   onCancel,
   className = ''
 }: ImageUploadProps) {
@@ -81,6 +85,20 @@ export function ImageUpload({
     message: ''
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const requestAltText = useCallback(async (file: File, focus: string) => {
+    if (!onAltTextGenerated) return;
+
+    setIsGeneratingAlt(true);
+    try {
+      const generatedAlt = await generateAltText(file, focus);
+      onAltTextGenerated(generatedAlt);
+    } catch (err) {
+      console.error('Alt text generation failed:', err);
+    } finally {
+      setIsGeneratingAlt(false);
+    }
+  }, [onAltTextGenerated]);
 
   const validateFile = (file: File): string | null => {
     if (!file.type.startsWith('image/')) {
@@ -113,18 +131,8 @@ export function ImageUpload({
     reader.readAsDataURL(file);
 
     // Auto-generate alt text
-    if (onAltTextGenerated) {
-      setIsGeneratingAlt(true);
-      try {
-        const generatedAlt = await generateAltText(file);
-        onAltTextGenerated(generatedAlt);
-      } catch (err) {
-        console.error('Alt text generation failed:', err);
-      } finally {
-        setIsGeneratingAlt(false);
-      }
-    }
-  }, [onAltTextGenerated]);
+    await requestAltText(file, narrativeFocus);
+  }, [narrativeFocus, requestAltText]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -189,6 +197,11 @@ export function ImageUpload({
     if (!selectedFile) return;
     setMode('crop');
   };
+
+  const handleRegenerateAltText = useCallback(async () => {
+    if (!selectedFile) return;
+    await requestAltText(selectedFile, narrativeFocus);
+  }, [narrativeFocus, requestAltText, selectedFile]);
 
   // Render the cropper mode
   if (mode === 'crop' && selectedFile) {
@@ -296,6 +309,26 @@ export function ImageUpload({
               placeholder={isGeneratingAlt ? 'Generating...' : 'Describe the image for accessibility'}
               disabled={isGeneratingAlt}
             />
+            <label className="stage-article-alttext-label" style={{ marginTop: '0.75rem' }}>
+              Narrative / Audience Focus (Optional)
+            </label>
+            <input
+              type="text"
+              className="stage-article-alttext-input"
+              value={narrativeFocus}
+              onChange={(e) => onNarrativeFocusChange?.(e.target.value)}
+              placeholder="Example: Emphasize details relevant to travelers."
+              disabled={isGeneratingAlt}
+            />
+            <div className="stage-article-upload-secondary" style={{ marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={handleRegenerateAltText}
+                disabled={isGeneratingAlt || !selectedFile}
+              >
+                Regenerate Alt Text With Focus
+              </button>
+            </div>
           </div>
 
           <div className="stage-article-upload-actions">

@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import sqlite3
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -112,3 +113,47 @@ def test_update_article_type_uses_id_and_returns_conflict_for_duplicate_name(
         },
     )
     assert missing_id_response.status_code == 404
+
+
+def test_get_article_type_guidelines_by_id_and_name(
+    client_with_temp_article_types_db,
+):
+    client = client_with_temp_article_types_db
+
+    created = client.post(
+        '/article-types',
+        json={
+            'name': 'Adventure Guide',
+            'definition': (
+                'Focuses on activities like hiking, diving, trekking, '
+                'or other adventures.'
+            ),
+        },
+    ).json()
+
+    article_types_store.write_article_type(
+        name='Adventure Guide',
+        definition=created['definition'],
+        guideline='Cover gear, route difficulty, and safety considerations.',
+        title_guideline='Use action verbs and mention activity type.',
+    )
+
+    by_id_response = client.get(f"/article-types/{created['id']}/guidelines")
+    assert by_id_response.status_code == 200
+    assert by_id_response.json() == {
+        'id': created['id'],
+        'name': 'Adventure Guide',
+        'guideline': 'Cover gear, route difficulty, and safety considerations.',
+        'title_guideline': 'Use action verbs and mention activity type.',
+    }
+
+    encoded_name = quote('Adventure Guide', safe='')
+    by_name_response = client.get(f'/article-types/by-name/{encoded_name}/guidelines')
+    assert by_name_response.status_code == 200
+    assert by_name_response.json() == by_id_response.json()
+
+    missing_id_response = client.get('/article-types/9999/guidelines')
+    assert missing_id_response.status_code == 404
+
+    missing_name_response = client.get('/article-types/by-name/does-not-exist/guidelines')
+    assert missing_name_response.status_code == 404

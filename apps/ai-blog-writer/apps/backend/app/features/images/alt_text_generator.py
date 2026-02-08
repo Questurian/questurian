@@ -31,7 +31,9 @@ def _ensure_initialized():
     _initialized = True
 
 
-def generate_alt_text(image_bytes: bytes, content_type: str) -> str:
+def generate_alt_text(
+    image_bytes: bytes, content_type: str, narrative_focus: str | None = None
+) -> str:
     """
     Generate descriptive alt text for an image using Gemini vision.
 
@@ -58,6 +60,15 @@ def generate_alt_text(image_bytes: bytes, content_type: str) -> str:
         "Keep the result under 125 characters.\n"
         "Return ONLY the alt text."
     )
+
+    focus_text = (narrative_focus or "").strip()
+    if focus_text:
+        prompt += (
+            "\n\nOptional audience reframing guidance:\n"
+            f"{focus_text}\n\n"
+            "If this guidance is relevant to visible image details, prioritize those details.\n"
+            "Do not invent anything not visible in the image."
+        )
 
     logger.info("Generating alt text with %s", DEFAULT_MODEL)
 

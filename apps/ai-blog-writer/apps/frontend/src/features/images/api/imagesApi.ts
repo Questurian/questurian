@@ -294,11 +294,15 @@ export async function uploadImage(
  * Generate alt text for an image using Gemini vision AI
  */
 export async function generateAltText(
-  file: File
+  file: File,
+  narrativeFocus?: string
 ): Promise<string> {
   try {
     const formData = new FormData();
     formData.append('file', file);
+    if (narrativeFocus?.trim()) {
+      formData.append('narrative_focus', narrativeFocus.trim());
+    }
 
     const response = await fetch(`${API_URL}/images/generate-alt-text`, {
       method: 'POST',

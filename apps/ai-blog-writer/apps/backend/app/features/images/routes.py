@@ -471,13 +471,23 @@ async def process_image_only(
 
 
 @router.post("/generate-alt-text")
-async def generate_alt_text_endpoint(file: UploadFile = File(...)) -> JSONResponse:
+async def generate_alt_text_endpoint(
+    file: UploadFile = File(...),
+    narrative_focus: str = Form(
+        default="",
+        description="Optional audience or narrative focus for alt-text emphasis",
+    ),
+) -> JSONResponse:
     """Generate alt text for an image using Gemini vision."""
     content = await _read_upload_file(file, step="validate_file")
     content_type = file.content_type or "image/jpeg"
 
     try:
-        alt_text = generate_alt_text(image_bytes=content, content_type=content_type)
+        alt_text = generate_alt_text(
+            image_bytes=content,
+            content_type=content_type,
+            narrative_focus=narrative_focus.strip() or None,
+        )
     except HTTPException:
         raise
     except Exception as exc:

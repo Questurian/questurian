@@ -34,6 +34,7 @@ Comprehensive route list for this workspace.
 | Method | Path | Description |
 |---|---|---|
 | POST | `/url2blog/extract` | Extract and optionally translate article content from a URL |
+| POST | `/url2blog/pipeline-v2` | Simplified one-call pipeline (extract + classify + strict guideline rewrite + quality gate + fact-retention audit/repair) returning lean JSON and `final_markdown` (`include_debug=true` adds raw internals, optional `narrative_focus` steers framing, optional `model_name` selects Gemini model, short articles use capped Google-grounded enrichment) |
 
 ### Review2Blog (`/review2blog`)
 
@@ -54,7 +55,7 @@ Comprehensive route list for this workspace.
 | POST | `/images/upload` | Upload one image, process variants, upload to Payload |
 | POST | `/images/upload-variants` | Upload pre-processed variants to Payload |
 | POST | `/images/process-only` | Process image variants without Payload upload |
-| POST | `/images/generate-alt-text` | Generate alt text with Gemini vision |
+| POST | `/images/generate-alt-text` | Generate alt text with Gemini vision (optional `narrative_focus` to emphasize audience-relevant details) |
 
 ### Shared Article Types (`/article-types`)
 
@@ -62,6 +63,8 @@ Comprehensive route list for this workspace.
 |---|---|---|
 | GET | `/article-types` | List all article types |
 | GET | `/article-types/name-definitions` | List article types with only `name` and `definition` |
+| GET | `/article-types/{article_type_id}/guidelines` | Get `guideline` and `title_guideline` by article type ID |
+| GET | `/article-types/by-name/{name}/guidelines` | Get `guideline` and `title_guideline` by article type name |
 | POST | `/article-types` | Create article type |
 | PUT | `/article-types/{article_type_id}` | Update article type by ID |
 | DELETE | `/article-types/{article_type_id}` | Delete article type by ID |

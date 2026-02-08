@@ -145,6 +145,21 @@ def get_article_type_by_name(name: str) -> Optional[Dict[str, Any]]:
         return dict(row)
 
 
+def get_article_type_by_id(article_type_id: int) -> Optional[Dict[str, Any]]:
+    """Read a specific article type by ID."""
+    with get_db_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT id, name, definition, guideline, title_guideline, created_at, updated_at
+            FROM article_types WHERE id = ?
+            """,
+            (article_type_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return dict(row)
+
+
 def update_article_type_by_id(
     article_type_id: int,
     name: str,

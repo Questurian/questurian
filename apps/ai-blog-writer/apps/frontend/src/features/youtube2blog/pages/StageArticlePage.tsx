@@ -208,12 +208,14 @@ export default function StageArticlePage() {
   const [imageSearch, setImageSearch] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [imageAltText, setImageAltText] = useState('')
+  const [imageNarrativeFocus, setImageNarrativeFocus] = useState('')
 
   // Modal state for block images
   const [blockImageModal, setBlockImageModal] = useState<{ blockId: string; show: boolean } | null>(null)
   const [blockImageSearch, setBlockImageSearch] = useState('')
   const [showBlockUploadModal, setShowBlockUploadModal] = useState(false)
   const [blockImageAltText, setBlockImageAltText] = useState('')
+  const [blockImageNarrativeFocus, setBlockImageNarrativeFocus] = useState('')
 
   // Drag and drop state
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null)
@@ -810,6 +812,7 @@ export default function StageArticlePage() {
     setShowUploadModal(false)
     setShowImageModal(false)
     setImageAltText('')
+    setImageNarrativeFocus('')
   }
 
   const handleBlockImageUploadComplete = (result: UploadImageResponse) => {
@@ -828,6 +831,7 @@ export default function StageArticlePage() {
     setShowBlockUploadModal(false)
     setBlockImageModal(null)
     setBlockImageAltText('')
+    setBlockImageNarrativeFocus('')
   }
 
   const getLocationDisplayName = (loc?: Location) => {
@@ -1377,6 +1381,7 @@ export default function StageArticlePage() {
                     className="stage-article-modal-upload-btn"
                     onClick={() => {
                       setImageAltText('')
+                      setImageNarrativeFocus('')
                       setShowUploadModal(true)
                     }}
                   >
@@ -1451,8 +1456,10 @@ export default function StageArticlePage() {
                     externalRef={stagedArticle.id}
                     token={token || ''}
                     altText={imageAltText}
+                    narrativeFocus={imageNarrativeFocus}
                     onUploadComplete={handleUploadComplete}
                     onAltTextGenerated={(text) => setImageAltText(text)}
+                    onNarrativeFocusChange={(text) => setImageNarrativeFocus(text)}
                     onCancel={() => setShowUploadModal(false)}
                   />
                 </div>
@@ -1491,6 +1498,7 @@ export default function StageArticlePage() {
                     className="stage-article-modal-upload-btn"
                     onClick={() => {
                       setBlockImageAltText('')
+                      setBlockImageNarrativeFocus('')
                       setShowBlockUploadModal(true)
                     }}
                   >
@@ -1568,8 +1576,10 @@ export default function StageArticlePage() {
                     externalRef={`${stagedArticle.id}_block_${blockImageModal.blockId}`}
                     token={token || ''}
                     altText={blockImageAltText}
+                    narrativeFocus={blockImageNarrativeFocus}
                     onUploadComplete={handleBlockImageUploadComplete}
                     onAltTextGenerated={(text) => setBlockImageAltText(text)}
+                    onNarrativeFocusChange={(text) => setBlockImageNarrativeFocus(text)}
                     onCancel={() => setShowBlockUploadModal(false)}
                   />
                 </div>
