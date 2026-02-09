@@ -264,6 +264,19 @@ export default function Url2BlogPage() {
           <Link to="/" className="url2blog-nav-link">
             &larr; Home
           </Link>
+          <Link to="/url2blog/articles" className="url2blog-nav-link">
+            Saved Articles
+          </Link>
+          <Link to="/url2blog/stage" className="url2blog-nav-link">
+            Staged ({(() => {
+              try {
+                const stored = localStorage.getItem('url2blog_staged_articles')
+                return stored ? JSON.parse(stored).length : 0
+              } catch {
+                return 0
+              }
+            })()})
+          </Link>
         </div>
       </header>
 
@@ -695,6 +708,21 @@ export default function Url2BlogPage() {
                 <button type="button" className="url2blog-submit-btn" onClick={handleCopyMarkdown}>
                   Copy Markdown
                 </button>
+                <Link to="/url2blog/articles" className="url2blog-clear-btn">
+                  Saved Articles
+                </Link>
+                {result.run_id && (
+                  <Link
+                    to={`/url2blog/stage-article?${new URLSearchParams({
+                      runId: result.run_id,
+                      title: result.improved_article.title || result.article.original_title || 'Untitled',
+                      type: result.selected_article_type.name || '',
+                    }).toString()}`}
+                    className="url2blog-submit-btn"
+                  >
+                    Stage for Payload
+                  </Link>
+                )}
                 <button type="button" className="url2blog-clear-btn" onClick={handleStartOver}>
                   Start Over
                 </button>

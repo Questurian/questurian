@@ -298,13 +298,27 @@ export type CreateArticlePayload = {
     featuredImage?: number
     intro?: object // Lexical JSON
   }
-  contentBlocks?: Array<{
-    blockType: 'text' | 'image'
-    content?: object // For text blocks
-    image?: number // For image blocks
-    altText?: string
-    caption?: string
-  }>
+  contentBlocks?: Array<
+    | {
+        blockType: 'text'
+        content?: object // For text blocks
+      }
+    | {
+        blockType: 'image'
+        image?: number // For image blocks
+        altText?: string
+        caption?: string
+      }
+    | {
+        blockType: 'key-takeaway'
+        label: string
+        items: Array<{ text: string }>
+      }
+    | {
+        blockType: 'pull-quote'
+        quote: string
+      }
+  >
   seoSection?: {
     seo?: number
   }

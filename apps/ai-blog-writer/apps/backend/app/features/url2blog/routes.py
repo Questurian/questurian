@@ -10,8 +10,10 @@ import math
 import os
 import re
 import contextvars
+from datetime import datetime
 from contextlib import contextmanager
 from typing import Any
+from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -25,14 +27,26 @@ except Exception:  # pragma: no cover - optional runtime dependency
     gm = None
 
 from app.core import (
+    read_output,
+    read_stage_result,
+    read_status,
     get_article_type_by_id,
     get_article_type_by_name,
     read_article_type_name_definitions,
+    write_artifact,
+    write_stage_result,
+    write_status,
 )
 from utils import get_vertex_llm
+from .storage import (
+    get_all_completed_articles,
+    get_article_sync_status,
+    mark_article_synced,
+)
 
 router = APIRouter(prefix="/url2blog", tags=["url2blog"])
 logger = logging.getLogger(__name__)
+FEATURE_NAME = "url2blog"
 
 URL2BLOG_ALLOWED_MODELS = (
     "gemini-2.5-flash",
@@ -738,6 +752,108 @@ class PipelineV2Request(BaseModel):
     execution_profile: str | None = URL2BLOG_DEFAULT_EXECUTION_PROFILE
     max_external_context_items: int = DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS
     model_name: str | None = URL2BLOG_DEFAULT_MODEL
+
+
+def _now_iso() -> str:
+    """Return a UTC ISO timestamp for run/state writes."""
+    return datetime.utcnow().isoformat()
+
+
+@router.get("/status/{run_id}")
+async def get_status(run_id: str) -> JSONResponse:
+    """Get the status of a URL2Blog pipeline run."""
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Run not found.")
+    return JSONResponse(status)
+
+
+@router.get("/result/{run_id}")
+async def get_result(run_id: str) -> JSONResponse:
+    """Get the result of a completed URL2Blog pipeline run."""
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Run not found.")
+
+    output = read_output(run_id)
+    if not output:
+        raise HTTPException(status_code=404, detail="Result not available yet.")
+
+    return JSONResponse(
+        {
+            "run_id": run_id,
+            "markdown": output["markdown"],
+            "artifact": output["artifact"],
+        }
+    )
+
+
+@router.get("/debug/{run_id}")
+async def debug_run(run_id: str) -> JSONResponse:
+    """Debug endpoint for URL2Blog run metadata/stages."""
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Run not found.")
+
+    stages = {}
+    for stage_name in ["stage_1", "stage_2", "pipeline_v2"]:
+        stage_data = read_stage_result(run_id, stage_name)
+        if stage_data:
+            stages[stage_name] = stage_data
+
+    output = read_output(run_id)
+
+    return JSONResponse(
+        {
+            "run_id": run_id,
+            "status": status,
+            "stages": stages,
+            "output": output,
+        }
+    )
+
+
+@router.get("/articles")
+async def get_articles() -> JSONResponse:
+    """Get all completed URL2Blog articles."""
+    return JSONResponse(get_all_completed_articles())
+
+
+@router.post("/articles/{run_id}/sync")
+async def mark_article_as_synced(run_id: str, request: dict) -> JSONResponse:
+    """Mark a URL2Blog article as synced to Payload CMS."""
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    payload_article_id = request.get("payload_article_id")
+    if not payload_article_id:
+        raise HTTPException(status_code=400, detail="payload_article_id is required")
+
+    success = mark_article_synced(run_id, payload_article_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    return JSONResponse(
+        {
+            "message": "Article marked as synced",
+            "run_id": run_id,
+            "payload_article_id": payload_article_id,
+        }
+    )
+
+
+@router.get("/articles/{run_id}/sync")
+async def get_sync_status(run_id: str) -> JSONResponse:
+    """Get URL2Blog article sync status."""
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    status = get_article_sync_status(run_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return JSONResponse(status)
 
 
 def _strip_html(html: str) -> str:
@@ -2681,6 +2797,18 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         raise HTTPException(
             status_code=400, detail="URL must start with http:// or https://"
         )
+    run_id = str(uuid4())
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": "stage_1",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
 
     # Reuse existing extraction logic.
     stage1_response = await extract_article(
@@ -2691,6 +2819,22 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         )
     )
     stage1_payload = json.loads(stage1_response.body.decode("utf-8"))
+    write_stage_result(
+        run_id,
+        "stage_1",
+        {"created_at": _now_iso(), "data": stage1_payload},
+    )
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": "stage_2",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
     if include_debug:
         stage1_debug = _safe_dict(stage1_payload.get("debug"))
         stage1_trace = stage1_debug.get("trace")
@@ -2751,6 +2895,22 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             )
         )
     stage2_payload = json.loads(stage2_response.body.decode("utf-8"))
+    write_stage_result(
+        run_id,
+        "stage_2",
+        {"created_at": _now_iso(), "data": stage2_payload},
+    )
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": "rewrite",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
     if include_debug:
         stage2_debug = _safe_dict(stage2_payload.get("debug"))
         stage2_trace = stage2_debug.get("trace")
@@ -3765,6 +3925,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
 
     response_payload: dict[str, Any] = {
         "message": "URL2Blog simple pipeline completed",
+        "run_id": run_id,
         "pipeline_status": pipeline_status,
         "article": {
             "source_url": url,
@@ -3899,5 +4060,33 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "editorial_diagnostic": editorial_augmentation["diagnostic"],
             "json_parse_metrics": json_parse_metrics,
         }
+
+    write_stage_result(
+        run_id,
+        "pipeline_v2",
+        {"created_at": _now_iso(), "data": response_payload},
+    )
+    write_artifact(
+        run_id,
+        {
+            "markdown": final_markdown,
+            "pipeline_v2": response_payload,
+            "stages": {
+                "stage_1": stage1_payload,
+                "stage_2": stage2_payload,
+            },
+        },
+    )
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "completed",
+            "stage": "complete",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
 
     return JSONResponse(response_payload)

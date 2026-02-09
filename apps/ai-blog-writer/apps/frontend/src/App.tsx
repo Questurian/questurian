@@ -14,7 +14,12 @@ import {
   StageArticlePage
 } from './features/youtube2blog'
 import { Review2BlogPage } from './features/review2blog'
-import { Url2BlogPage } from './features/url2blog'
+import {
+  Url2BlogPage,
+  Url2BlogArticlesPage,
+  Url2BlogStagePage,
+  Url2BlogStageArticlePage
+} from './features/url2blog'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -46,6 +51,9 @@ export default function App() {
 
               {/* URL2Blog Feature */}
               <Route path="url2blog" element={<Url2BlogPage />} />
+              <Route path="url2blog/articles" element={<Url2BlogArticlesPage />} />
+              <Route path="url2blog/stage" element={<Url2BlogStagePage />} />
+              <Route path="url2blog/stage-article" element={<Url2BlogStageArticlePage />} />
             </Route>
           </Routes>
         </BrowserRouter>

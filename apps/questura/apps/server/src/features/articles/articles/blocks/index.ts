@@ -66,6 +66,39 @@ export const ImageBlock: Block = {
 }
 
 /**
+ * Key Takeaway Block - Highlight concise takeaways for readers
+ */
+export const KeyTakeawayBlock: Block = {
+  slug: 'key-takeaway',
+  labels: {
+    singular: 'Key Takeaway',
+    plural: 'Key Takeaways',
+  },
+  fields: [
+    {
+      name: 'label',
+      type: 'text',
+      required: true,
+      defaultValue: 'Key Takeaways',
+    },
+    {
+      name: 'items',
+      type: 'array',
+      minRows: 1,
+      maxRows: 5,
+      required: true,
+      fields: [
+        {
+          name: 'text',
+          type: 'text',
+          required: true,
+        },
+      ],
+    },
+  ],
+}
+
+/**
  * All available article blocks
  */
-export const articleBlocks = [TextBlock, ImageBlock]
+export const articleBlocks = [TextBlock, ImageBlock, KeyTakeawayBlock]

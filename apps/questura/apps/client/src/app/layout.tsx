@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Roboto } from "next/font/google";
 import "./globals.css";
-import { Navbar as NewNavbar } from "../features/Navigation";
 import LoginModalRenderer from "../components/layout/LoginModalRenderer";
 import PasswordResetModalRenderer from "../components/layout/PasswordResetModalRenderer";
 import UserModalRenderer from "../components/layout/UserModalRenderer";
@@ -39,7 +38,6 @@ export default function RootLayout({
       >
         <div className="min-w-[280px] overflow-x-hidden">
           <QueryProvider>
-            <NewNavbar />
             {children}
             <LoginModalRenderer />
             <PasswordResetModalRenderer />
