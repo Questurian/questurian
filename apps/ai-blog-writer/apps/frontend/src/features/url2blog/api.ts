@@ -40,6 +40,20 @@ export type Url2BlogPipelineV2Request = {
 export type Url2BlogModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash'
 export type Url2BlogExecutionProfile = 'standard' | 'lean'
 
+export type Url2BlogStageTrace = {
+  stage: string
+  model_name?: string
+  max_tokens?: number
+  temperature?: number
+  input?: unknown
+  prompt?: string | null
+  raw_response?: string | null
+  parsed?: unknown
+  output?: unknown
+  grounded_urls?: string[]
+  error?: string
+}
+
 export type Url2BlogPipelineV2Response = {
   message: string
   pipeline_status: 'ready_for_drafting' | 'needs_revision'
@@ -121,6 +135,16 @@ export type Url2BlogPipelineV2Response = {
     json_parse_failures_by_stage?: Record<string, number>
   }
   debug?: {
+    pipeline_input?: {
+      url: string
+      include_debug: boolean
+      narrative_focus: string
+      execution_profile: Url2BlogExecutionProfile
+      enable_web_enrichment: boolean
+      enable_editorial_augmentation: boolean
+      max_external_context_items: number
+      model_name: Url2BlogModel
+    }
     guideline: {
       id: number
       name: string
@@ -130,6 +154,7 @@ export type Url2BlogPipelineV2Response = {
     article_original_content: string
     stage1: ExtractResponse
     stage2: Stage2ClassifyResponse
+    pipeline_trace?: Url2BlogStageTrace[]
     rewrite_raw_response: string
     repair_raw_response?: string
     quality_raw_response?: string

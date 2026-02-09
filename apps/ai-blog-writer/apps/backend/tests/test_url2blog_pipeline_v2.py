@@ -853,6 +853,13 @@ def test_pipeline_v2_includes_debug_payload_only_when_requested(client, monkeypa
     assert payload["debug"]["external_context_points"][0]["source_url"] == (
         "https://example.com/context"
     )
+    assert isinstance(payload["debug"]["pipeline_trace"], list)
+    assert len(payload["debug"]["pipeline_trace"]) > 0
+    assert any(
+        entry.get("stage") == "short_article_enrichment"
+        for entry in payload["debug"]["pipeline_trace"]
+        if isinstance(entry, dict)
+    )
 
 
 def test_extract_json_from_response_handles_unclosed_markdown_fence():
@@ -960,6 +967,58 @@ def test_invoke_json_llm_tracks_parse_recovery(monkeypatch):
                 '{"classification":"When to Visit Article",'
                 '"confidence":1.0,'
                 '"reasoning":"The article intent",}'
+            ),
+            (
+                '{'
+                '"classification":"When to Visit Article",'
+                '"confidence":1.0,'
+                '"reasoning":"Editorial intent fit."'
+                '}'
+            ),
+        ]
+    )
+
+    class StubLLM:
+        def invoke(self, prompt: str) -> str:  # noqa: ARG002 - prompt asserted by caller
+            return next(responses)
+
+    monkeypatch.setattr(
+        url2blog_routes,
+        "get_vertex_llm",
+        lambda *args, **kwargs: StubLLM(),  # noqa: ARG005 - signature parity
+    )
+
+    metrics = {
+        "total_parse_failures": 0,
+        "recovered_calls": 0,
+        "recovered_parse_failures": 0,
+        "failures_by_stage": {},
+    }
+
+    with url2blog_routes._json_parse_tracking_scope(metrics, "unit_test_stage"):
+        parsed, _ = url2blog_routes._invoke_json_llm(
+            prompt="Return strict JSON.",
+            max_tokens=256,
+            temperature=0.1,
+            model_name="gemini-2.5-flash",
+        )
+
+    assert parsed["classification"] == "When to Visit Article"
+    assert metrics["total_parse_failures"] == 1
+    assert metrics["recovered_calls"] == 1
+    assert metrics["recovered_parse_failures"] == 1
+    assert metrics["failures_by_stage"]["unit_test_stage"] == 1
+
+
+def test_invoke_json_llm_disables_truncated_repair_by_default(monkeypatch):
+    responses = iter(
+        [
+            (
+                "```json\n"
+                '{\n'
+                '  "classification": "When to Visit Article",\n'
+                '  "confidence": 1.0,\n'
+                '  "reasoning": "The article intent'
             ),
             (
                 '{'

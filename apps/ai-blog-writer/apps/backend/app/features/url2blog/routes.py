@@ -717,6 +717,7 @@ NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
 class ExtractRequest(BaseModel):
     url: str
     model_name: str | None = None
+    include_debug: bool = False
 
 
 class Stage2ClassifyRequest(BaseModel):
@@ -725,6 +726,7 @@ class Stage2ClassifyRequest(BaseModel):
     source_url: str | None = None
     language: str | None = None
     model_name: str | None = None
+    include_debug: bool = False
 
 
 class PipelineV2Request(BaseModel):
@@ -765,6 +767,8 @@ def _strip_html(html: str) -> str:
 
 def _extract_json_from_response(
     raw_text: str,
+    *,
+    allow_truncated_repair: bool = True,
 ) -> tuple[dict[str, Any] | None, str | None]:
     """Parse JSON from LLM response, handling markdown code blocks."""
     if not raw_text:
@@ -819,9 +823,10 @@ def _extract_json_from_response(
             except json.JSONDecodeError:
                 pass
 
-        repaired = _try_fix_truncated_json_object(cleaned)
-        if repaired:
-            return repaired, None
+        if allow_truncated_repair:
+            repaired = _try_fix_truncated_json_object(cleaned)
+            if repaired:
+                return repaired, None
 
         return None, str(exc)
 
@@ -1340,9 +1345,18 @@ def _invoke_json_llm_tracked(
     max_tokens: int = 4096,
     temperature: float = 0.05,
     model_name: str | None = None,
+    allow_truncated_repair: bool = False,
 ) -> tuple[dict[str, Any], str]:
     """Invoke JSON LLM with parse-retry tracking for a named stage."""
     with _json_parse_tracking_scope(parse_metrics, stage_name):
+        if allow_truncated_repair:
+            return _invoke_json_llm(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                model_name=model_name,
+                allow_truncated_repair=True,
+            )
         return _invoke_json_llm(
             prompt=prompt,
             max_tokens=max_tokens,
@@ -1415,6 +1429,7 @@ def _invoke_json_llm(
     max_tokens: int = 4096,
     temperature: float = 0.05,
     model_name: str | None = None,
+    allow_truncated_repair: bool = False,
 ) -> tuple[dict[str, Any], str]:
     """Invoke LLM and parse strict JSON response."""
     parsed, raw_response, parse_error = _invoke_json_llm_best_effort(
@@ -1422,6 +1437,7 @@ def _invoke_json_llm(
         max_tokens=max_tokens,
         temperature=temperature,
         model_name=model_name,
+        allow_truncated_repair=allow_truncated_repair,
     )
     if parsed:
         return parsed, raw_response
@@ -1437,6 +1453,7 @@ def _invoke_json_llm_best_effort(
     max_tokens: int = 4096,
     temperature: float = 0.05,
     model_name: str | None = None,
+    allow_truncated_repair: bool = False,
 ) -> tuple[dict[str, Any] | None, str, str | None]:
     """Invoke LLM with JSON-recovery retries without raising on parse failure."""
     strict_prompt = (
@@ -1469,7 +1486,10 @@ def _invoke_json_llm_best_effort(
                 continue
 
             raw_response = result.strip()
-            parsed, parse_error = _extract_json_from_response(raw_response)
+            parsed, parse_error = _extract_json_from_response(
+                raw_response,
+                allow_truncated_repair=allow_truncated_repair,
+            )
             if not parse_error and parsed:
                 _record_json_parse_recovery(parse_failures_this_call)
                 if resolved_model_name != selected_model_name:
@@ -2282,6 +2302,7 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
     """
     url = request.url.strip()
     selected_model_name = _resolve_url2blog_model(request.model_name)
+    include_debug = request.include_debug
     if not url.startswith(("http://", "https://")):
         raise HTTPException(
             status_code=400, detail="URL must start with http:// or https://"
@@ -2334,14 +2355,37 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
         max_tokens=8192,
         temperature=0.1,
         model_name=selected_model_name,
+        allow_truncated_repair=True,
     )
     if not raw_response and parse_error:
         logger.warning("URL2Blog Stage 1 extraction failed: %s", parse_error)
+
+    stage_trace: list[dict[str, Any]] = []
+    if include_debug:
+        stage_trace.append(
+            {
+                "stage": "stage1_extract_article",
+                "model_name": selected_model_name,
+                "max_tokens": 8192,
+                "temperature": 0.1,
+                "input": {
+                    "url": url,
+                    "raw_text": raw_text,
+                    "raw_text_length": len(raw_text),
+                },
+                "prompt": prompt,
+                "raw_response": raw_response,
+                "parsed": parsed,
+                "parse_error": parse_error,
+            }
+        )
 
     # Phase 2: Translate if not English
     translated = None
     translation_skipped = False
     translation_error = None
+    translation_prompt = ""
+    translation_raw_response = ""
 
     if parsed and not parse_error:
         language = (parsed.get("language") or "").strip()
@@ -2350,37 +2394,81 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
         if is_english:
             translation_skipped = True
             logger.info("URL2Blog: article already in English, skipping translation")
+            if include_debug:
+                stage_trace.append(
+                    {
+                        "stage": "stage1_translate_article",
+                        "model_name": selected_model_name,
+                        "max_tokens": 8192,
+                        "temperature": 0.1,
+                        "input": {
+                            "source_language": language or "English",
+                            "title": parsed.get("title", ""),
+                            "content": parsed.get("content", ""),
+                        },
+                        "prompt": None,
+                        "raw_response": "",
+                        "parsed": None,
+                        "parse_error": None,
+                        "skipped": True,
+                        "skip_reason": "Source language already English.",
+                    }
+                )
         else:
             logger.info("URL2Blog: translating from %s to English", language)
-            translate_prompt = TRANSLATE_PROMPT.format(
+            translation_prompt = TRANSLATE_PROMPT.format(
                 source_language=language,
                 title=parsed.get("title", ""),
                 content=parsed.get("content", ""),
             )
-            translated, _, translation_error = _invoke_json_llm_best_effort(
-                prompt=translate_prompt,
-                max_tokens=8192,
-                temperature=0.1,
-                model_name=selected_model_name,
+            translated, translation_raw_response, translation_error = (
+                _invoke_json_llm_best_effort(
+                    prompt=translation_prompt,
+                    max_tokens=8192,
+                    temperature=0.1,
+                    model_name=selected_model_name,
+                    allow_truncated_repair=True,
+                )
             )
+            if include_debug:
+                stage_trace.append(
+                    {
+                        "stage": "stage1_translate_article",
+                        "model_name": selected_model_name,
+                        "max_tokens": 8192,
+                        "temperature": 0.1,
+                        "input": {
+                            "source_language": language,
+                            "title": parsed.get("title", ""),
+                            "content": parsed.get("content", ""),
+                        },
+                        "prompt": translation_prompt,
+                        "raw_response": translation_raw_response,
+                        "parsed": translated,
+                        "parse_error": translation_error,
+                        "skipped": False,
+                    }
+                )
             if translation_error and not translated:
                 logger.warning(
                     "URL2Blog translation failed to parse JSON: %s", translation_error
                 )
 
-    return JSONResponse(
-        {
-            "message": "URL2Blog stage 1 completed",
-            "source_url": url,
-            "raw_text_length": len(raw_text),
-            "raw_response": raw_response,
-            "parsed": parsed,
-            "parse_error": parse_error,
-            "translated": translated,
-            "translation_skipped": translation_skipped,
-            "translation_error": translation_error,
-        }
-    )
+    payload: dict[str, Any] = {
+        "message": "URL2Blog stage 1 completed",
+        "source_url": url,
+        "raw_text_length": len(raw_text),
+        "raw_response": raw_response,
+        "parsed": parsed,
+        "parse_error": parse_error,
+        "translated": translated,
+        "translation_skipped": translation_skipped,
+        "translation_error": translation_error,
+    }
+    if include_debug:
+        payload["debug"] = {"trace": stage_trace}
+
+    return JSONResponse(payload)
 
 
 async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
@@ -2393,6 +2481,7 @@ async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
     title = request.title.strip()
     content = request.content.strip()
     selected_model_name = _resolve_url2blog_model(request.model_name)
+    include_debug = request.include_debug
     if not title and not content:
         raise HTTPException(status_code=400, detail="Title or content is required")
     if len(content) < 50:
@@ -2471,20 +2560,48 @@ async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
         article_type_row["name"],
     )
 
-    return JSONResponse(
-        {
-            "message": "URL2Blog stage 2 classification completed",
-            "classification": {
-                "id": article_type_row["id"],
-                "name": article_type_row["name"],
-                "definition": article_type_row["definition"],
-                "confidence": confidence,
-                "reasoning": reasoning,
-            },
-            "article_types_considered": len(article_types),
-            "raw_response": raw_response,
+    payload: dict[str, Any] = {
+        "message": "URL2Blog stage 2 classification completed",
+        "classification": {
+            "id": article_type_row["id"],
+            "name": article_type_row["name"],
+            "definition": article_type_row["definition"],
+            "confidence": confidence,
+            "reasoning": reasoning,
+        },
+        "article_types_considered": len(article_types),
+        "raw_response": raw_response,
+    }
+    if include_debug:
+        payload["debug"] = {
+            "trace": [
+                {
+                    "stage": "stage2_classification",
+                    "model_name": selected_model_name,
+                    "max_tokens": 1024,
+                    "temperature": 0.1,
+                    "input": {
+                        "title": title,
+                        "content": content_for_prompt,
+                        "source_url": request.source_url,
+                        "language": request.language,
+                        "article_types": article_types,
+                    },
+                    "prompt": prompt,
+                    "raw_response": raw_response,
+                    "parsed": parsed,
+                    "output": {
+                        "id": article_type_row["id"],
+                        "name": article_type_row["name"],
+                        "definition": article_type_row["definition"],
+                        "confidence": confidence,
+                        "reasoning": reasoning,
+                    },
+                }
+            ]
         }
-    )
+
+    return JSONResponse(payload)
 
 
 @router.post("/pipeline-v2")
@@ -2518,6 +2635,48 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
     max_length_expansion_passes = (
         1 if is_lean_profile else MAX_LENGTH_EXPANSION_PASSES
     )
+    stage_trace: list[dict[str, Any]] = []
+
+    def _append_stage_trace(
+        *,
+        stage: str,
+        model_name: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        input_payload: Any | None = None,
+        prompt: str | None = None,
+        raw_response: str | None = None,
+        parsed: Any | None = None,
+        output: Any | None = None,
+        grounded_urls: list[str] | None = None,
+        error: str | None = None,
+    ) -> None:
+        if not include_debug:
+            return
+
+        entry: dict[str, Any] = {"stage": stage}
+        if model_name is not None:
+            entry["model_name"] = model_name
+        if max_tokens is not None:
+            entry["max_tokens"] = max_tokens
+        if temperature is not None:
+            entry["temperature"] = temperature
+        if input_payload is not None:
+            entry["input"] = input_payload
+        if prompt is not None:
+            entry["prompt"] = prompt
+        if raw_response is not None:
+            entry["raw_response"] = raw_response
+        if parsed is not None:
+            entry["parsed"] = parsed
+        if output is not None:
+            entry["output"] = output
+        if grounded_urls is not None:
+            entry["grounded_urls"] = grounded_urls
+        if error:
+            entry["error"] = error
+
+        stage_trace.append(entry)
     if not url.startswith(("http://", "https://")):
         raise HTTPException(
             status_code=400, detail="URL must start with http:// or https://"
@@ -2525,9 +2684,20 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
 
     # Reuse existing extraction logic.
     stage1_response = await extract_article(
-        ExtractRequest(url=url, model_name=selected_model_name)
+        ExtractRequest(
+            url=url,
+            model_name=selected_model_name,
+            include_debug=include_debug,
+        )
     )
     stage1_payload = json.loads(stage1_response.body.decode("utf-8"))
+    if include_debug:
+        stage1_debug = _safe_dict(stage1_payload.get("debug"))
+        stage1_trace = stage1_debug.get("trace")
+        if isinstance(stage1_trace, list):
+            for entry in stage1_trace:
+                if isinstance(entry, dict):
+                    stage_trace.append(entry)
     parsed_article = _safe_dict(stage1_payload.get("parsed"))
 
     if not parsed_article:
@@ -2577,9 +2747,17 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 source_url=url,
                 language=normalized_language,
                 model_name=selected_model_name,
+                include_debug=include_debug,
             )
         )
     stage2_payload = json.loads(stage2_response.body.decode("utf-8"))
+    if include_debug:
+        stage2_debug = _safe_dict(stage2_payload.get("debug"))
+        stage2_trace = stage2_debug.get("trace")
+        if isinstance(stage2_trace, list):
+            for entry in stage2_trace:
+                if isinstance(entry, dict):
+                    stage_trace.append(entry)
     classification = _safe_dict(stage2_payload.get("classification"))
 
     article_type_id: int | None = None
@@ -2611,6 +2789,11 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
     external_context_raw_response = ""
     external_context_grounded_urls: list[str] = []
     short_article_enrichment_applied = False
+    external_context_parsed: dict[str, Any] = {}
+    external_context: dict[str, Any] = {
+        "context_points": [],
+        "usage_note": "",
+    }
 
     should_enrich_short_article = (
         enable_web_enrichment and source_word_count < SHORT_ARTICLE_WORD_THRESHOLD
@@ -2650,6 +2833,41 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         external_context_points = external_context["context_points"]
         external_context_usage_note = external_context["usage_note"]
         short_article_enrichment_applied = bool(external_context_points)
+        _append_stage_trace(
+            stage="short_article_enrichment",
+            model_name=selected_model_name,
+            max_tokens=1024,
+            temperature=0.05,
+            input_payload={
+                "source_url": url,
+                "source_title": normalized_title,
+                "source_content": normalized_content[:20_000],
+                "article_type": classification,
+                "narrative_focus": narrative_focus,
+                "max_external_context_items": max_external_context_items,
+            },
+            prompt=enrichment_prompt,
+            raw_response=external_context_raw_response,
+            parsed=external_context_parsed,
+            output=external_context,
+            grounded_urls=external_context_grounded_urls,
+        )
+    else:
+        _append_stage_trace(
+            stage="short_article_enrichment",
+            model_name=selected_model_name,
+            max_tokens=1024,
+            temperature=0.05,
+            input_payload={
+                "source_word_count": source_word_count,
+                "threshold": SHORT_ARTICLE_WORD_THRESHOLD,
+                "enable_web_enrichment": enable_web_enrichment,
+            },
+            output={
+                "skipped": True,
+                "reason": "Short-article enrichment conditions not met.",
+            },
+        )
 
     external_context_for_prompt = (
         json.dumps(external_context_points, ensure_ascii=False, indent=2)
@@ -2673,6 +2891,21 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         model_name=selected_model_name,
     )
     source_fact_anchors = _sanitize_v2_source_facts(source_facts_parsed, max_facts=18)
+    _append_stage_trace(
+        stage="source_facts_extraction",
+        model_name=selected_model_name,
+        max_tokens=1536,
+        temperature=0.05,
+        input_payload={
+            "source_title": normalized_title,
+            "source_content": normalized_content[:20_000],
+            "max_facts": 18,
+        },
+        prompt=source_facts_prompt,
+        raw_response=source_facts_raw_response,
+        parsed=source_facts_parsed,
+        output={"source_fact_anchors": source_fact_anchors},
+    )
 
     rewrite_prompt = (
         V2_GUIDELINE_REWRITE_PROMPT.replace("{title}", normalized_title)
@@ -2700,7 +2933,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         prompt=rewrite_prompt,
         stage_name="guideline_rewrite_initial",
         parse_metrics=json_parse_metrics,
-        max_tokens=4096,
+        max_tokens=6144,
         temperature=0.1,
         model_name=selected_model_name,
     )
@@ -2708,6 +2941,26 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         rewrite_parsed,
         fallback_title=normalized_title,
         fallback_content=normalized_content,
+    )
+    _append_stage_trace(
+        stage="guideline_rewrite_initial",
+        model_name=selected_model_name,
+        max_tokens=6144,
+        temperature=0.1,
+        input_payload={
+            "title": normalized_title,
+            "content": normalized_content[:20_000],
+            "article_type": classification,
+            "guideline": guideline_payload["guideline"] or "No guideline provided.",
+            "title_guideline": guideline_payload["title_guideline"]
+            or "No title guideline provided.",
+            "narrative_focus": narrative_focus,
+            "external_context": external_context_points,
+        },
+        prompt=rewrite_prompt,
+        raw_response=rewrite_raw_response,
+        parsed=rewrite_parsed,
+        output=rewrite,
     )
 
     source_words = _tokenize_similarity_words(normalized_content)
@@ -2748,16 +3001,41 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         model_name=selected_model_name,
     )
     quality = _sanitize_v2_quality_audit(quality_parsed)
+    _append_stage_trace(
+        stage="quality_audit_initial",
+        model_name=selected_model_name,
+        max_tokens=1024,
+        temperature=0.05,
+        input_payload={
+            "source_title": normalized_title,
+            "source_content": normalized_content[:20_000],
+            "rewritten_title": rewrite["improved_title"],
+            "rewritten_content": rewrite["improved_content"][:20_000],
+            "article_type": classification,
+            "guideline": guideline_payload["guideline"] or "No guideline provided.",
+            "title_guideline": guideline_payload["title_guideline"]
+            or "No title guideline provided.",
+            "ngram_overlap": round(ngram_overlap, 3),
+            "narrative_focus": narrative_focus,
+            "external_context": external_context_points,
+        },
+        prompt=quality_prompt,
+        raw_response=quality_raw_response,
+        parsed=quality_parsed,
+        output=quality,
+    )
 
     second_pass_applied = False
     repair_raw_response = ""
     if not is_lean_profile and _should_force_v2_second_pass(quality, ngram_overlap):
         second_pass_applied = True
+        previous_title = rewrite["improved_title"]
+        previous_content = rewrite["improved_content"]
         repair_prompt = (
             V2_REWRITE_REPAIR_PROMPT.replace("{source_title}", normalized_title)
             .replace("{source_content}", normalized_content[:20_000])
-            .replace("{previous_title}", rewrite["improved_title"])
-            .replace("{previous_content}", rewrite["improved_content"][:20_000])
+            .replace("{previous_title}", previous_title)
+            .replace("{previous_content}", previous_content[:20_000])
             .replace(
                 "{required_revisions}",
                 json.dumps(
@@ -2789,14 +3067,38 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             prompt=repair_prompt,
             stage_name="rewrite_repair_second_pass",
             parse_metrics=json_parse_metrics,
-            max_tokens=4096,
+            max_tokens=6144,
             temperature=0.1,
             model_name=selected_model_name,
         )
         rewrite = _sanitize_v2_guideline_rewrite(
             repair_parsed,
-            fallback_title=rewrite["improved_title"],
-            fallback_content=rewrite["improved_content"],
+            fallback_title=previous_title,
+            fallback_content=previous_content,
+        )
+        _append_stage_trace(
+            stage="rewrite_repair_second_pass",
+            model_name=selected_model_name,
+            max_tokens=6144,
+            temperature=0.1,
+            input_payload={
+                "source_title": normalized_title,
+                "source_content": normalized_content[:20_000],
+                "previous_title": previous_title,
+                "previous_content": previous_content[:20_000],
+                "required_revisions": quality["required_revisions"],
+                "article_type": classification,
+                "guideline": guideline_payload["guideline"]
+                or "No guideline provided.",
+                "title_guideline": guideline_payload["title_guideline"]
+                or "No title guideline provided.",
+                "narrative_focus": narrative_focus,
+                "external_context": external_context_points,
+            },
+            prompt=repair_prompt,
+            raw_response=repair_raw_response,
+            parsed=repair_parsed,
+            output=rewrite,
         )
 
         rewritten_words = _tokenize_similarity_words(rewrite["improved_content"])
@@ -2835,6 +3137,41 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             model_name=selected_model_name,
         )
         quality = _sanitize_v2_quality_audit(quality_parsed)
+        _append_stage_trace(
+            stage="quality_audit_after_second_pass",
+            model_name=selected_model_name,
+            max_tokens=1024,
+            temperature=0.05,
+            input_payload={
+                "source_title": normalized_title,
+                "source_content": normalized_content[:20_000],
+                "rewritten_title": rewrite["improved_title"],
+                "rewritten_content": rewrite["improved_content"][:20_000],
+                "article_type": classification,
+                "guideline": guideline_payload["guideline"]
+                or "No guideline provided.",
+                "title_guideline": guideline_payload["title_guideline"]
+                or "No title guideline provided.",
+                "ngram_overlap": round(ngram_overlap, 3),
+                "narrative_focus": narrative_focus,
+                "external_context": external_context_points,
+            },
+            prompt=quality_prompt,
+            raw_response=quality_raw_response,
+            parsed=quality_parsed,
+            output=quality,
+        )
+    else:
+        _append_stage_trace(
+            stage="rewrite_repair_second_pass",
+            model_name=selected_model_name,
+            max_tokens=6144,
+            temperature=0.1,
+            output={
+                "skipped": True,
+                "reason": "Initial quality/originality checks passed.",
+            },
+        )
 
     fact_coverage = _sanitize_v2_fact_coverage({}, source_fact_anchors)
     fact_coverage_raw_response = ""
@@ -2865,14 +3202,31 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         fact_coverage = _sanitize_v2_fact_coverage(
             fact_coverage_parsed, source_fact_anchors
         )
+        _append_stage_trace(
+            stage="fact_coverage_audit_initial",
+            model_name=selected_model_name,
+            max_tokens=1536,
+            temperature=0.05,
+            input_payload={
+                "source_facts": source_fact_anchors,
+                "rewritten_title": rewrite["improved_title"],
+                "rewritten_content": rewrite["improved_content"][:20_000],
+            },
+            prompt=fact_coverage_prompt,
+            raw_response=fact_coverage_raw_response,
+            parsed=fact_coverage_parsed,
+            output=fact_coverage,
+        )
 
         if not is_lean_profile and _should_force_v2_fact_repair(fact_coverage):
             fact_repair_applied = True
+            previous_title = rewrite["improved_title"]
+            previous_content = rewrite["improved_content"]
             fact_repair_prompt = (
                 V2_FACT_REPAIR_PROMPT.replace("{source_title}", normalized_title)
                 .replace("{source_content}", normalized_content[:20_000])
-                .replace("{rewritten_title}", rewrite["improved_title"])
-                .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+                .replace("{rewritten_title}", previous_title)
+                .replace("{rewritten_content}", previous_content[:20_000])
                 .replace(
                     "{missing_facts}",
                     json.dumps(
@@ -2904,14 +3258,38 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 prompt=fact_repair_prompt,
                 stage_name="fact_repair",
                 parse_metrics=json_parse_metrics,
-                max_tokens=4096,
+                max_tokens=6144,
                 temperature=0.1,
                 model_name=selected_model_name,
             )
             rewrite = _sanitize_v2_guideline_rewrite(
                 fact_repair_parsed,
-                fallback_title=rewrite["improved_title"],
-                fallback_content=rewrite["improved_content"],
+                fallback_title=previous_title,
+                fallback_content=previous_content,
+            )
+            _append_stage_trace(
+                stage="fact_repair",
+                model_name=selected_model_name,
+                max_tokens=6144,
+                temperature=0.1,
+                input_payload={
+                    "source_title": normalized_title,
+                    "source_content": normalized_content[:20_000],
+                    "rewritten_title": previous_title,
+                    "rewritten_content": previous_content[:20_000],
+                    "missing_facts": fact_coverage["missing_facts"],
+                    "article_type": classification,
+                    "guideline": guideline_payload["guideline"]
+                    or "No guideline provided.",
+                    "title_guideline": guideline_payload["title_guideline"]
+                    or "No title guideline provided.",
+                    "narrative_focus": narrative_focus,
+                    "external_context": external_context_points,
+                },
+                prompt=fact_repair_prompt,
+                raw_response=fact_repair_raw_response,
+                parsed=fact_repair_parsed,
+                output=rewrite,
             )
 
             rewritten_words = _tokenize_similarity_words(rewrite["improved_content"])
@@ -2951,6 +3329,30 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 model_name=selected_model_name,
             )
             quality = _sanitize_v2_quality_audit(quality_parsed)
+            _append_stage_trace(
+                stage="quality_audit_after_fact_repair",
+                model_name=selected_model_name,
+                max_tokens=1024,
+                temperature=0.05,
+                input_payload={
+                    "source_title": normalized_title,
+                    "source_content": normalized_content[:20_000],
+                    "rewritten_title": rewrite["improved_title"],
+                    "rewritten_content": rewrite["improved_content"][:20_000],
+                    "article_type": classification,
+                    "guideline": guideline_payload["guideline"]
+                    or "No guideline provided.",
+                    "title_guideline": guideline_payload["title_guideline"]
+                    or "No title guideline provided.",
+                    "ngram_overlap": round(ngram_overlap, 3),
+                    "narrative_focus": narrative_focus,
+                    "external_context": external_context_points,
+                },
+                prompt=quality_prompt,
+                raw_response=quality_raw_response,
+                parsed=quality_parsed,
+                output=quality,
+            )
 
             fact_coverage_prompt = (
                 V2_FACT_COVERAGE_AUDIT_PROMPT.replace(
@@ -2971,6 +3373,44 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             fact_coverage = _sanitize_v2_fact_coverage(
                 fact_coverage_parsed, source_fact_anchors
             )
+            _append_stage_trace(
+                stage="fact_coverage_audit_after_fact_repair",
+                model_name=selected_model_name,
+                max_tokens=1536,
+                temperature=0.05,
+                input_payload={
+                    "source_facts": source_fact_anchors,
+                    "rewritten_title": rewrite["improved_title"],
+                    "rewritten_content": rewrite["improved_content"][:20_000],
+                },
+                prompt=fact_coverage_prompt,
+                raw_response=fact_coverage_raw_response,
+                parsed=fact_coverage_parsed,
+                output=fact_coverage,
+            )
+        else:
+            _append_stage_trace(
+                stage="fact_repair",
+                model_name=selected_model_name,
+                max_tokens=6144,
+                temperature=0.1,
+                output={
+                    "skipped": True,
+                    "reason": "Factual coverage met threshold.",
+                    "fact_coverage_score": fact_coverage["coverage_score"],
+                },
+            )
+    else:
+        _append_stage_trace(
+            stage="fact_coverage_audit_initial",
+            model_name=selected_model_name,
+            max_tokens=1536,
+            temperature=0.05,
+            output={
+                "skipped": True,
+                "reason": "No source facts extracted.",
+            },
+        )
 
     rewritten_words = _tokenize_similarity_words(rewrite["improved_content"])
     rewritten_word_count = len(rewritten_words)
@@ -3024,6 +3464,31 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             )
         except HTTPException as exc:
             logger.warning("URL2Blog length expansion failed: %s", exc.detail)
+            _append_stage_trace(
+                stage=stage_name,
+                model_name=selected_model_name,
+                max_tokens=6144,
+                temperature=0.1,
+                input_payload={
+                    "source_title": normalized_title,
+                    "source_content": normalized_content[:20_000],
+                    "rewritten_title": rewrite["improved_title"],
+                    "rewritten_content": rewrite["improved_content"][:20_000],
+                    "current_word_count": rewritten_word_count,
+                    "source_word_count": source_word_count,
+                    "min_word_target": min_expanded_word_target,
+                    "article_type": classification,
+                    "guideline": guideline_payload["guideline"]
+                    or "No guideline provided.",
+                    "title_guideline": guideline_payload["title_guideline"]
+                    or "No title guideline provided.",
+                    "narrative_focus": narrative_focus,
+                    "external_context": external_context_points,
+                    "source_facts": source_fact_anchors,
+                },
+                prompt=expansion_prompt,
+                error=_safe_str(exc.detail),
+            )
             break
 
         expansion = _sanitize_v2_length_expansion(
@@ -3033,6 +3498,35 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         expanded_content = expansion["expanded_content"]
         expanded_words = _tokenize_similarity_words(expanded_content)
         expanded_word_count = len(expanded_words)
+        _append_stage_trace(
+            stage=stage_name,
+            model_name=selected_model_name,
+            max_tokens=6144,
+            temperature=0.1,
+            input_payload={
+                "source_title": normalized_title,
+                "source_content": normalized_content[:20_000],
+                "rewritten_title": rewrite["improved_title"],
+                "rewritten_content": rewrite["improved_content"][:20_000],
+                "current_word_count": rewritten_word_count,
+                "source_word_count": source_word_count,
+                "min_word_target": min_expanded_word_target,
+                "article_type": classification,
+                "guideline": guideline_payload["guideline"] or "No guideline provided.",
+                "title_guideline": guideline_payload["title_guideline"]
+                or "No title guideline provided.",
+                "narrative_focus": narrative_focus,
+                "external_context": external_context_points,
+                "source_facts": source_fact_anchors,
+            },
+            prompt=expansion_prompt,
+            raw_response=length_expansion_raw_response,
+            parsed=expansion_parsed,
+            output={
+                "expansion_summary": expansion["expansion_summary"],
+                "expanded_word_count": expanded_word_count,
+            },
+        )
         if expanded_word_count <= rewritten_word_count:
             break
 
@@ -3079,6 +3573,29 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             model_name=selected_model_name,
         )
         quality = _sanitize_v2_quality_audit(quality_parsed)
+        _append_stage_trace(
+            stage="quality_audit_after_length_expansion",
+            model_name=selected_model_name,
+            max_tokens=1024,
+            temperature=0.05,
+            input_payload={
+                "source_title": normalized_title,
+                "source_content": normalized_content[:20_000],
+                "rewritten_title": rewrite["improved_title"],
+                "rewritten_content": rewrite["improved_content"][:20_000],
+                "article_type": classification,
+                "guideline": guideline_payload["guideline"] or "No guideline provided.",
+                "title_guideline": guideline_payload["title_guideline"]
+                or "No title guideline provided.",
+                "ngram_overlap": round(ngram_overlap, 3),
+                "narrative_focus": narrative_focus,
+                "external_context": external_context_points,
+            },
+            prompt=quality_prompt,
+            raw_response=quality_raw_response,
+            parsed=quality_parsed,
+            output=quality,
+        )
 
         if source_fact_anchors:
             fact_coverage_prompt = (
@@ -3100,6 +3617,34 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             fact_coverage = _sanitize_v2_fact_coverage(
                 fact_coverage_parsed, source_fact_anchors
             )
+            _append_stage_trace(
+                stage="fact_coverage_audit_after_length_expansion",
+                model_name=selected_model_name,
+                max_tokens=1536,
+                temperature=0.05,
+                input_payload={
+                    "source_facts": source_fact_anchors,
+                    "rewritten_title": rewrite["improved_title"],
+                    "rewritten_content": rewrite["improved_content"][:20_000],
+                },
+                prompt=fact_coverage_prompt,
+                raw_response=fact_coverage_raw_response,
+                parsed=fact_coverage_parsed,
+                output=fact_coverage,
+            )
+    else:
+        _append_stage_trace(
+            stage="length_expansion",
+            model_name=selected_model_name,
+            max_tokens=6144,
+            temperature=0.1,
+            output={
+                "skipped": True,
+                "reason": "Length target already met or expansion produced no growth.",
+                "current_word_count": rewritten_word_count,
+                "min_word_target": min_expanded_word_target,
+            },
+        )
 
     final_improved_content = _ensure_markdown_section_headers(
         rewrite["improved_content"]
@@ -3132,7 +3677,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                     prompt=augmentation_prompt,
                     stage_name="editorial_augmentation",
                     parse_metrics=json_parse_metrics,
-                    max_tokens=4096,
+                    max_tokens=6144,
                     temperature=0.05,
                     model_name=selected_model_name,
                 )
@@ -3141,11 +3686,52 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 augmentation_parsed,
                 fallback_content=final_improved_content,
             )
+            _append_stage_trace(
+                stage="editorial_augmentation",
+                model_name=selected_model_name,
+                max_tokens=6144,
+                temperature=0.05,
+                input_payload={
+                    "article_title": rewrite["improved_title"][:500],
+                    "article_content": final_improved_content[:20_000],
+                    "article_type": classification,
+                    "narrative_focus": narrative_focus,
+                },
+                prompt=augmentation_prompt,
+                raw_response=editorial_augmentation_raw_response,
+                parsed=augmentation_parsed,
+                output=editorial_augmentation,
+            )
         except HTTPException as exc:
             logger.warning(
                 "URL2Blog editorial augmentation failed: %s",
                 exc.detail,
             )
+            _append_stage_trace(
+                stage="editorial_augmentation",
+                model_name=selected_model_name,
+                max_tokens=6144,
+                temperature=0.05,
+                input_payload={
+                    "article_title": rewrite["improved_title"][:500],
+                    "article_content": final_improved_content[:20_000],
+                    "article_type": classification,
+                    "narrative_focus": narrative_focus,
+                },
+                prompt=augmentation_prompt,
+                error=_safe_str(exc.detail),
+            )
+    else:
+        _append_stage_trace(
+            stage="editorial_augmentation",
+            model_name=selected_model_name,
+            max_tokens=6144,
+            temperature=0.05,
+            output={
+                "skipped": True,
+                "reason": "Editorial augmentation disabled for this run.",
+            },
+        )
 
     final_improved_content = editorial_augmentation["augmented_content"]
     final_word_count = len(_tokenize_similarity_words(final_improved_content))
@@ -3159,6 +3745,23 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "Final article length is below minimum expansion target "
             f"({final_word_count} < {min_expanded_word_target} words)."
         )
+    final_markdown = _build_markdown(
+        rewrite["improved_title"],
+        final_improved_content,
+    )
+    _append_stage_trace(
+        stage="finalize_output",
+        output={
+            "improved_title": rewrite["improved_title"],
+            "improved_content": final_improved_content,
+            "final_markdown": final_markdown,
+            "pipeline_status": pipeline_status,
+            "final_word_count": final_word_count,
+            "min_expanded_word_target": min_expanded_word_target,
+            "length_requirement_met": length_requirement_met,
+            "length_requirement_blocking_reason": length_requirement_blocking_reason,
+        },
+    )
 
     response_payload: dict[str, Any] = {
         "message": "URL2Blog simple pipeline completed",
@@ -3185,10 +3788,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "title": rewrite["improved_title"],
             "content": final_improved_content,
         },
-        "final_markdown": _build_markdown(
-            rewrite["improved_title"],
-            final_improved_content,
-        ),
+        "final_markdown": final_markdown,
         "guideline_review": {
             "alignment_summary": rewrite["guideline_alignment_summary"],
             "improvements_applied": rewrite["improvements_applied"],
@@ -3263,10 +3863,21 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
 
     if include_debug:
         response_payload["debug"] = {
+            "pipeline_input": {
+                "url": url,
+                "include_debug": include_debug,
+                "narrative_focus": narrative_focus,
+                "execution_profile": execution_profile,
+                "enable_web_enrichment": enable_web_enrichment,
+                "enable_editorial_augmentation": enable_editorial_augmentation,
+                "max_external_context_items": max_external_context_items,
+                "model_name": selected_model_name,
+            },
             "guideline": guideline_payload,
             "article_original_content": normalized_content,
             "stage1": stage1_payload,
             "stage2": stage2_payload,
+            "pipeline_trace": stage_trace,
             "rewrite_raw_response": rewrite_raw_response,
             "repair_raw_response": repair_raw_response,
             "quality_raw_response": quality_raw_response,
