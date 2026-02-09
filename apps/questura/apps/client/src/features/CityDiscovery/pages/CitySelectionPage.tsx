@@ -7,6 +7,7 @@ import { CityCard } from '../components/CityCard';
 import { cities } from '../lib/data';
 
 type CardVariant = 'default' | 'featured';
+type FeaturedCity = 'lima' | 'medellin';
 
 interface LayoutSlot {
   className: string;
@@ -17,6 +18,10 @@ const TOP_GRID_ANIMATION_DELAYS = ['0.5s', '0.57s', '0.64s', '0.71s', '0.78s', '
 const FLIP_DURATION_MS = 620;
 const FLIP_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const TOP_GRID_CITIES = cities.slice(0, 6);
+const HOVER_FEATURE_CITY_BY_ID: Partial<Record<string, FeaturedCity>> = {
+  lima: 'lima',
+  medellin: 'medellin',
+};
 
 function resetCardMotionStyles(cardElement: HTMLDivElement) {
   cardElement.style.transition = '';
@@ -83,15 +88,15 @@ const LAYOUT_TWO_SLOTS: LayoutSlot[] = [
 function CitySelectionContent() {
   const router = useRouter();
   const [showDevReference, setShowDevReference] = useState(false);
-  const [useReferenceLayout, setUseReferenceLayout] = useState(false);
-  const [isLayoutTransitioning, setIsLayoutTransitioning] = useState(false);
+  const [featuredCity, setFeaturedCity] = useState<FeaturedCity>('lima');
+  const featuredCityRef = useRef<FeaturedCity>('lima');
   const isLayoutTransitioningRef = useRef(false);
   const topCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingFirstRectsRef = useRef<Map<string, DOMRect> | null>(null);
   const transitionFrameRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const isDevMode = process.env.NODE_ENV !== 'production';
-  const activeLayoutSlots = useReferenceLayout ? LAYOUT_TWO_SLOTS : LAYOUT_ONE_SLOTS;
+  const activeLayoutSlots = featuredCity === 'medellin' ? LAYOUT_TWO_SLOTS : LAYOUT_ONE_SLOTS;
 
   const handleCitySelect = (cityId: string) => {
     router.push(`/step-2?city=${cityId}`);
@@ -101,10 +106,58 @@ function CitySelectionContent() {
     topCardRefs.current[cityId] = element;
   };
 
-  const releaseLayoutTransitionLock = () => {
-    pendingFirstRectsRef.current = null;
-    isLayoutTransitioningRef.current = false;
-    setIsLayoutTransitioning(false);
+  const runLayoutTransition = (nextFeaturedCity: FeaturedCity) => {
+    if (nextFeaturedCity === featuredCityRef.current) {
+      isLayoutTransitioningRef.current = false;
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      featuredCityRef.current = nextFeaturedCity;
+      setFeaturedCity(nextFeaturedCity);
+      isLayoutTransitioningRef.current = false;
+      return;
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      featuredCityRef.current = nextFeaturedCity;
+      setFeaturedCity(nextFeaturedCity);
+      isLayoutTransitioningRef.current = false;
+      return;
+    }
+
+    if (transitionFrameRef.current !== null) {
+      window.cancelAnimationFrame(transitionFrameRef.current);
+      transitionFrameRef.current = null;
+    }
+
+    if (transitionTimeoutRef.current !== null) {
+      window.clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+
+    TOP_GRID_CITIES.forEach((city) => {
+      const cardElement = topCardRefs.current[city.id];
+      if (!cardElement) {
+        return;
+      }
+
+      cardElement.getAnimations().forEach((animation) => animation.cancel());
+      resetCardMotionStyles(cardElement);
+    });
+
+    const firstRects = new Map<string, DOMRect>();
+
+    TOP_GRID_CITIES.forEach((city) => {
+      const cardElement = topCardRefs.current[city.id];
+      if (cardElement) {
+        firstRects.set(city.id, cardElement.getBoundingClientRect());
+      }
+    });
+
+    pendingFirstRectsRef.current = firstRects;
+    featuredCityRef.current = nextFeaturedCity;
+    setFeaturedCity(nextFeaturedCity);
   };
 
   useLayoutEffect(() => {
@@ -163,7 +216,8 @@ function CitySelectionContent() {
         transitionTimeoutRef.current = null;
       }
 
-      releaseLayoutTransitionLock();
+      pendingFirstRectsRef.current = null;
+      isLayoutTransitioningRef.current = false;
     };
 
     TOP_GRID_CITIES.forEach((city) => {
@@ -239,61 +293,15 @@ function CitySelectionContent() {
     transitionTimeoutRef.current = window.setTimeout(() => {
       finishTransition();
     }, FLIP_DURATION_MS + 160);
-  }, [useReferenceLayout]);
+  }, [featuredCity]);
 
-  const handleLayoutToggle = () => {
+  const requestFeaturedCity = (nextFeaturedCity: FeaturedCity) => {
     if (isLayoutTransitioningRef.current) {
       return;
     }
 
     isLayoutTransitioningRef.current = true;
-    setIsLayoutTransitioning(true);
-
-    const nextLayout = !useReferenceLayout;
-
-    if (typeof window === 'undefined') {
-      setUseReferenceLayout(nextLayout);
-      releaseLayoutTransitionLock();
-      return;
-    }
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setUseReferenceLayout(nextLayout);
-      releaseLayoutTransitionLock();
-      return;
-    }
-
-    if (transitionFrameRef.current !== null) {
-      window.cancelAnimationFrame(transitionFrameRef.current);
-      transitionFrameRef.current = null;
-    }
-
-    if (transitionTimeoutRef.current !== null) {
-      window.clearTimeout(transitionTimeoutRef.current);
-      transitionTimeoutRef.current = null;
-    }
-
-    TOP_GRID_CITIES.forEach((city) => {
-      const cardElement = topCardRefs.current[city.id];
-      if (!cardElement) {
-        return;
-      }
-
-      cardElement.getAnimations().forEach((animation) => animation.cancel());
-      resetCardMotionStyles(cardElement);
-    });
-
-    const firstRects = new Map<string, DOMRect>();
-
-    TOP_GRID_CITIES.forEach((city) => {
-      const cardElement = topCardRefs.current[city.id];
-      if (cardElement) {
-        firstRects.set(city.id, cardElement.getBoundingClientRect());
-      }
-    });
-
-    pendingFirstRectsRef.current = firstRects;
-    setUseReferenceLayout(nextLayout);
+    runLayoutTransition(nextFeaturedCity);
   };
 
   return (
@@ -315,14 +323,6 @@ function CitySelectionContent() {
           <div className="flex items-center gap-3">
             {isDevMode ? (
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isLayoutTransitioning}
-                  onClick={handleLayoutToggle}
-                  className="text-[10px] 480:text-xs uppercase tracking-wide px-3 py-1.5 rounded-full border border-[#C65D3B]/40 text-[#C65D3B] hover:border-[#C65D3B]/70 hover:bg-[#C65D3B]/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {useReferenceLayout ? 'Use Layout 1' : 'Use Layout 2'}
-                </button>
                 <button
                   type="button"
                   onClick={() => setShowDevReference(current => !current)}
@@ -375,6 +375,11 @@ function CitySelectionContent() {
               key={city.id}
               ref={setTopCardRef(city.id)}
               className={activeLayoutSlots[index].className}
+              onMouseEnter={
+                HOVER_FEATURE_CITY_BY_ID[city.id]
+                  ? () => requestFeaturedCity(HOVER_FEATURE_CITY_BY_ID[city.id]!)
+                  : undefined
+              }
             >
               <CityCard
                 city={city}
