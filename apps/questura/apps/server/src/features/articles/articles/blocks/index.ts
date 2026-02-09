@@ -98,7 +98,107 @@ export const KeyTakeawayBlock: Block = {
   ],
 }
 
+export const PullQuoteBlock: Block = {
+  slug: 'pull-quote',
+  labels: {
+    singular: 'Pull Quote',
+    plural: 'Pull Quotes',
+  },
+  fields: [
+    {
+      name: 'quote',
+      type: 'textarea',
+      required: true,
+    },
+  ],
+}
+
+export const InTheKnowBlock: Block = {
+  slug: 'in-the-know',
+  labels: {
+    singular: 'In The Know',
+    plural: 'In The Know Boxes',
+  },
+  fields: [
+    {
+      name: 'label',
+      type: 'text',
+      required: true,
+      defaultValue: 'In The Know',
+    },
+    {
+      name: 'text',
+      type: 'textarea',
+      required: true,
+    },
+  ],
+}
+
+export const HighlightCalloutBlock: Block = {
+  slug: 'highlight-callout',
+  labels: {
+    singular: 'Highlight Callout',
+    plural: 'Highlight Callouts',
+  },
+  fields: [
+    {
+      name: 'label',
+      type: 'text',
+      required: true,
+      defaultValue: 'Highlight Callout',
+    },
+    {
+      name: 'text',
+      type: 'textarea',
+      required: true,
+    },
+  ],
+}
+
+export const FAQBlock: Block = {
+  slug: 'faq',
+  labels: {
+    singular: 'FAQ',
+    plural: 'FAQ Blocks',
+  },
+  fields: [
+    {
+      name: 'label',
+      type: 'text',
+      required: true,
+      defaultValue: 'FAQ',
+    },
+    {
+      name: 'items',
+      type: 'array',
+      required: true,
+      minRows: 2,
+      maxRows: 5,
+      fields: [
+        {
+          name: 'question',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'answer',
+          type: 'textarea',
+          required: true,
+        },
+      ],
+    },
+  ],
+}
+
 /**
  * All available article blocks
  */
-export const articleBlocks = [TextBlock, ImageBlock, KeyTakeawayBlock]
+export const articleBlocks = [
+  TextBlock,
+  ImageBlock,
+  KeyTakeawayBlock,
+  PullQuoteBlock,
+  InTheKnowBlock,
+  HighlightCalloutBlock,
+  FAQBlock,
+]

@@ -318,6 +318,11 @@ export type CreateArticlePayload = {
         blockType: 'pull-quote'
         quote: string
       }
+    | {
+        blockType: 'in-the-know'
+        label: string
+        text: string
+      }
   >
   seoSection?: {
     seo?: number

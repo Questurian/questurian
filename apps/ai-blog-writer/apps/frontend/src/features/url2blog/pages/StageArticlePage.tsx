@@ -172,9 +172,12 @@ const KEY_TAKEAWAYS_COMPONENT = 'key_takeaways_box'
 const KEY_TAKEAWAYS_LABEL = 'Key Takeaways'
 const PULL_QUOTE_COMPONENT = 'pull_quote'
 const PULL_QUOTE_LABEL = 'Pull Quote'
+const IN_THE_KNOW_COMPONENT = 'in_the_know_box'
+const IN_THE_KNOW_LABEL = 'In The Know'
+const EDITORIAL_MAX_TAKEAWAYS = 5
 
 type PayloadContentBlock = NonNullable<CreateArticlePayload['contentBlocks']>[number]
-type SupportedPayloadBlockType = 'key-takeaway' | 'pull-quote'
+type SupportedPayloadBlockType = 'key-takeaway' | 'pull-quote' | 'in-the-know'
 
 type EditorialPublishValidation =
   | {
@@ -236,6 +239,15 @@ function normalizeEditorialComponentKey(component: string): string {
     || normalized === 'key_takeaways_box'
   ) {
     return KEY_TAKEAWAYS_COMPONENT
+  }
+  if (
+    normalized === 'in_the_know'
+    || normalized === 'in_theknow'
+    || normalized === 'in_the_know_box'
+    || normalized === 'in_theknow_box'
+    || normalized === 'in_the_know_callout'
+  ) {
+    return IN_THE_KNOW_COMPONENT
   }
   return normalized
 }
@@ -311,8 +323,15 @@ function parseEditorialFrame(
   }
 }
 
-function buildCanonicalKeyTakeawaysMarkdown(label: string, rawItems: string[]): string {
+function buildCanonicalKeyTakeawaysMarkdown(
+  label: string,
+  rawItems: string[],
+  options?: {
+    useFallbackItems?: boolean
+  }
+): string {
   const normalizedLabel = label.trim() || KEY_TAKEAWAYS_LABEL
+  const useFallbackItems = options?.useFallbackItems ?? true
   const normalizedItems = rawItems
     .map((item) =>
       item
@@ -320,11 +339,15 @@ function buildCanonicalKeyTakeawaysMarkdown(label: string, rawItems: string[]): 
         .replace(/^\d+\.\s+/, '')
         .trim()
     )
-    .filter(Boolean)
+  const nonEmptyItems = normalizedItems.filter((item) => item.length > 0)
 
-  const items = normalizedItems.length > 0
-    ? normalizedItems.slice(0, 5)
-    : ['Add takeaway 1', 'Add takeaway 2', 'Add takeaway 3']
+  const items = useFallbackItems
+    ? nonEmptyItems.length > 0
+      ? nonEmptyItems.slice(0, EDITORIAL_MAX_TAKEAWAYS)
+      : ['Add takeaway 1', 'Add takeaway 2', 'Add takeaway 3']
+    : normalizedItems.length > 0
+      ? normalizedItems.slice(0, EDITORIAL_MAX_TAKEAWAYS)
+      : ['']
 
   return [
     `> [!EDITORIAL-BLOCK-START|${KEY_TAKEAWAYS_COMPONENT}]`,
@@ -336,22 +359,53 @@ function buildCanonicalKeyTakeawaysMarkdown(label: string, rawItems: string[]): 
   ].join('\n')
 }
 
-function buildCanonicalPullQuoteMarkdown(label: string, rawQuote: string): string {
+function buildCanonicalPullQuoteMarkdown(
+  label: string,
+  rawQuote: string,
+  options?: {
+    useFallbackQuote?: boolean
+  }
+): string {
   const normalizedLabel = label.trim() || PULL_QUOTE_LABEL
-  const quote = rawQuote.trim() || 'Add pull quote before publishing.'
+  const useFallbackQuote = options?.useFallbackQuote ?? true
+  const quote = rawQuote.trim()
+  const normalizedQuote = quote || (useFallbackQuote ? 'Add pull quote before publishing.' : '')
 
   return [
     `> [!EDITORIAL-BLOCK-START|${PULL_QUOTE_COMPONENT}]`,
     `> [!EDITORIAL-BLOCK-LABEL|${normalizedLabel}]`,
     `> [!EDITORIAL-BOX|${PULL_QUOTE_COMPONENT}]`,
     `> **Component:** ${normalizedLabel}`,
-    `> "${quote}"`,
+    `> "${normalizedQuote}"`,
     `> [!EDITORIAL-BLOCK-END|${PULL_QUOTE_COMPONENT}]`,
+  ].join('\n')
+}
+
+function buildCanonicalInTheKnowMarkdown(
+  label: string,
+  rawText: string,
+  options?: {
+    useFallbackText?: boolean
+  }
+): string {
+  const normalizedLabel = label.trim() || IN_THE_KNOW_LABEL
+  const useFallbackText = options?.useFallbackText ?? true
+  const text = rawText.trim()
+  const normalizedText = text || (useFallbackText ? 'Add context details before publishing.' : '')
+
+  return [
+    `> [!EDITORIAL-BLOCK-START|${IN_THE_KNOW_COMPONENT}]`,
+    `> [!EDITORIAL-BLOCK-LABEL|${normalizedLabel}]`,
+    `> [!EDITORIAL-BOX|${IN_THE_KNOW_COMPONENT}]`,
+    `> **Component:** ${normalizedLabel}`,
+    ...normalizedText.split('\n').map((line) => `> ${line}`),
+    `> [!EDITORIAL-BLOCK-END|${IN_THE_KNOW_COMPONENT}]`,
   ].join('\n')
 }
 
 function parseKeyTakeawayEditorialBlock(block: EditorialBlock): {
   label: string
+  rawItems: string[]
   items: string[]
   hasStartMarker: boolean
   hasEndMarker: boolean
@@ -363,7 +417,7 @@ function parseKeyTakeawayEditorialBlock(block: EditorialBlock): {
   const frame = parseEditorialFrame(block, KEY_TAKEAWAYS_COMPONENT)
 
   const listItemRegex = /^([-*+]\s+|\d+\.\s+)/
-  const items = frame.bodyLines
+  const rawItems = frame.bodyLines
     .filter((line) => listItemRegex.test(line))
     .map((line) =>
       line
@@ -371,13 +425,14 @@ function parseKeyTakeawayEditorialBlock(block: EditorialBlock): {
         .replace(/^\d+\.\s+/, '')
         .trim()
     )
-    .filter(Boolean)
+  const items = rawItems.filter((item) => item.length > 0)
 
   const label = frame.label || KEY_TAKEAWAYS_LABEL
   const correctedMarkdown = buildCanonicalKeyTakeawaysMarkdown(label, items)
 
   return {
     label,
+    rawItems,
     items,
     hasStartMarker: frame.hasStartMarker,
     hasEndMarker: frame.hasEndMarker,
@@ -421,6 +476,37 @@ function parsePullQuoteEditorialBlock(block: EditorialBlock): {
   return {
     label,
     quoteText,
+    hasStartMarker: frame.hasStartMarker,
+    hasEndMarker: frame.hasEndMarker,
+    hasLabelMarker: frame.hasLabelMarker,
+    hasBoxMarker: frame.hasBoxMarker,
+    hasComponentLine: frame.hasComponentLine,
+    correctedMarkdown,
+  }
+}
+
+function parseInTheKnowEditorialBlock(block: EditorialBlock): {
+  label: string
+  text: string
+  hasStartMarker: boolean
+  hasEndMarker: boolean
+  hasLabelMarker: boolean
+  hasBoxMarker: boolean
+  hasComponentLine: boolean
+  correctedMarkdown: string
+} {
+  const frame = parseEditorialFrame(block, IN_THE_KNOW_COMPONENT)
+  const text = frame.bodyLines
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+    .trim()
+  const label = frame.label || IN_THE_KNOW_LABEL
+  const correctedMarkdown = buildCanonicalInTheKnowMarkdown(label, text)
+
+  return {
+    label,
+    text,
     hasStartMarker: frame.hasStartMarker,
     hasEndMarker: frame.hasEndMarker,
     hasLabelMarker: frame.hasLabelMarker,
@@ -491,6 +577,37 @@ function validateEditorialBlockForPublish(block: EditorialBlock): EditorialPubli
       },
       correctedMarkdown: parsed.correctedMarkdown,
       mappedPayloadBlockType: 'pull-quote',
+    }
+  }
+
+  if (component === IN_THE_KNOW_COMPONENT) {
+    const parsed = parseInTheKnowEditorialBlock(block)
+    const missingParts: string[] = []
+
+    if (!parsed.hasStartMarker) missingParts.push('start marker')
+    if (!parsed.hasLabelMarker) missingParts.push('label marker')
+    if (!parsed.hasBoxMarker) missingParts.push('box marker')
+    if (!parsed.hasComponentLine) missingParts.push('component line')
+    if (!parsed.hasEndMarker) missingParts.push('end marker')
+    if (!parsed.text) missingParts.push('text')
+
+    if (missingParts.length > 0) {
+      return {
+        status: 'invalid',
+        message: `Block markdown incorrect (${missingParts.join(', ')})`,
+        correctedMarkdown: parsed.correctedMarkdown,
+      }
+    }
+
+    return {
+      status: 'supported',
+      payloadBlock: {
+        blockType: 'in-the-know',
+        label: parsed.label,
+        text: parsed.text,
+      },
+      correctedMarkdown: parsed.correctedMarkdown,
+      mappedPayloadBlockType: 'in-the-know',
     }
   }
 
@@ -906,6 +1023,8 @@ function renderEditorialBlockCard(
     disableFix?: boolean
     canEdit?: boolean
     onChangeMarkdown?: (nextMarkdown: string) => void
+    onRemoveBlock?: () => void
+    disableRemove?: boolean
     canReorder?: boolean
     onMoveUp?: () => void
     onMoveDown?: () => void
@@ -922,6 +1041,23 @@ function renderEditorialBlockCard(
   const pullQuoteParsed = normalizedComponent === PULL_QUOTE_COMPONENT
     ? parsePullQuoteEditorialBlock(block)
     : null
+  const inTheKnowParsed = normalizedComponent === IN_THE_KNOW_COMPONENT
+    ? parseInTheKnowEditorialBlock(block)
+    : null
+  const isKeyTakeaways = normalizedComponent === KEY_TAKEAWAYS_COMPONENT
+  const isPullQuote = normalizedComponent === PULL_QUOTE_COMPONENT
+  const isInTheKnow = normalizedComponent === IN_THE_KNOW_COMPONENT
+  const supportsStructuredEditor = isKeyTakeaways || isPullQuote || isInTheKnow
+  const isEditMode = Boolean(options?.canEdit && options?.onChangeMarkdown)
+  const keyTakeawaysLabel = keyTakeawaysParsed?.label || block.label || KEY_TAKEAWAYS_LABEL
+  const keyTakeawaysDraftItems = keyTakeawaysParsed?.rawItems.length
+    ? keyTakeawaysParsed.rawItems
+    : ['']
+  const pullQuoteLabel = pullQuoteParsed?.label || block.label || PULL_QUOTE_LABEL
+  const pullQuoteText = pullQuoteParsed?.quoteText || ''
+  const inTheKnowLabel = inTheKnowParsed?.label || block.label || IN_THE_KNOW_LABEL
+  const inTheKnowText = inTheKnowParsed?.text || ''
+  const showHeader = isEditMode || normalizedComponent !== PULL_QUOTE_COMPONENT
   return (
     <article
       key={block.id}
@@ -933,55 +1069,79 @@ function renderEditorialBlockCard(
         marginTop: '0.75rem',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '0.5rem',
-          gap: '0.75rem',
-        }}
-      >
-        <div>
-          <strong>{block.label}</strong>
-          <div style={{ fontSize: '0.8rem', opacity: 0.65 }}>
-            {block.component}
+      {showHeader && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '0.5rem',
+            gap: '0.75rem',
+          }}
+        >
+          <div>
+            <strong>{block.label}</strong>
+            {isEditMode && (
+              <div style={{ fontSize: '0.8rem', opacity: 0.65 }}>
+                {block.component}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            {isEditMode && (
+              <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+                Editorial Block Detected #{displayNumber}
+              </span>
+            )}
+            {options?.canReorder && (
+              <div className="block-move-buttons" style={{ opacity: 1 }}>
+                <button
+                  type="button"
+                  className="block-move-btn"
+                  onClick={options.onMoveUp}
+                  disabled={options.disableMoveUp}
+                  title="Move up"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 15l-6-6-6 6"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="block-move-btn"
+                  onClick={options.onMoveDown}
+                  disabled={options.disableMoveDown}
+                  title="Move down"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+            {options?.onRemoveBlock && (
+              <button
+                type="button"
+                className="block-delete-btn"
+                onClick={options.onRemoveBlock}
+                disabled={options.disableRemove}
+                title="Remove editorial block"
+                style={{
+                  opacity: options.disableRemove ? 0.35 : 1,
+                  cursor: options.disableRemove ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            )}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>
-            Editorial Block Detected #{displayNumber}
-          </span>
-          {options?.canReorder && (
-            <div className="block-move-buttons" style={{ opacity: 1 }}>
-              <button
-                type="button"
-                className="block-move-btn"
-                onClick={options.onMoveUp}
-                disabled={options.disableMoveUp}
-                title="Move up"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 15l-6-6-6 6"/>
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="block-move-btn"
-                onClick={options.onMoveDown}
-                disabled={options.disableMoveDown}
-                title="Move down"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
-      {validation?.status === 'supported' && (
+      {isEditMode && validation?.status === 'supported' && (
         <div
           style={{
             marginBottom: '0.6rem',
@@ -996,7 +1156,7 @@ function renderEditorialBlockCard(
         </div>
       )}
 
-      {validation?.status === 'unsupported' && (
+      {isEditMode && validation?.status === 'unsupported' && (
         <div
           style={{
             marginBottom: '0.6rem',
@@ -1011,7 +1171,7 @@ function renderEditorialBlockCard(
         </div>
       )}
 
-      {validation?.status === 'invalid' && (
+      {isEditMode && validation?.status === 'invalid' && (
         <div
           style={{
             marginBottom: '0.6rem',
@@ -1047,7 +1207,179 @@ function renderEditorialBlockCard(
         </div>
       )}
 
-      {options?.canEdit && options?.onChangeMarkdown ? (
+      {isEditMode && supportsStructuredEditor ? (
+        <div className="editorial-structured-editor">
+          {isKeyTakeaways && (
+            <>
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Label</label>
+                <input
+                  type="text"
+                  className="editorial-field-input"
+                  value={keyTakeawaysLabel}
+                  onChange={(event) => options.onChangeMarkdown?.(
+                    buildCanonicalKeyTakeawaysMarkdown(
+                      event.target.value,
+                      keyTakeawaysDraftItems,
+                      { useFallbackItems: false }
+                    )
+                  )}
+                  placeholder={KEY_TAKEAWAYS_LABEL}
+                />
+              </div>
+
+              <div className="editorial-field-group">
+                <div className="editorial-field-row">
+                  <label className="editorial-field-label">Takeaways</label>
+                  <span className="editorial-field-meta">
+                    {keyTakeawaysDraftItems.filter((item) => item.trim().length > 0).length}
+                    {' / '}
+                    {EDITORIAL_MAX_TAKEAWAYS}
+                  </span>
+                </div>
+                <div className="editorial-takeaway-list">
+                  {keyTakeawaysDraftItems.map((item, itemIndex) => (
+                    <div key={`${block.id}_takeaway_${itemIndex}`} className="editorial-takeaway-row">
+                      <span className="editorial-takeaway-index">{itemIndex + 1}</span>
+                      <input
+                        type="text"
+                        className="editorial-field-input"
+                        value={item}
+                        onChange={(event) => {
+                          const nextItems = [...keyTakeawaysDraftItems]
+                          nextItems[itemIndex] = event.target.value
+                          options.onChangeMarkdown?.(
+                            buildCanonicalKeyTakeawaysMarkdown(
+                              keyTakeawaysLabel,
+                              nextItems,
+                              { useFallbackItems: false }
+                            )
+                          )
+                        }}
+                        placeholder={`Takeaway ${itemIndex + 1}`}
+                      />
+                      <button
+                        type="button"
+                        className="editorial-inline-btn danger"
+                        onClick={() => {
+                          const nextItems = keyTakeawaysDraftItems.filter((_, index) => index !== itemIndex)
+                          options.onChangeMarkdown?.(
+                            buildCanonicalKeyTakeawaysMarkdown(
+                              keyTakeawaysLabel,
+                              nextItems.length ? nextItems : [''],
+                              { useFallbackItems: false }
+                            )
+                          )
+                        }}
+                        disabled={keyTakeawaysDraftItems.length <= 1}
+                        title="Remove takeaway"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="editorial-field-actions">
+                  <button
+                    type="button"
+                    className="editorial-inline-btn"
+                    onClick={() => options.onChangeMarkdown?.(
+                      buildCanonicalKeyTakeawaysMarkdown(
+                        keyTakeawaysLabel,
+                        [...keyTakeawaysDraftItems, ''],
+                        { useFallbackItems: false }
+                      )
+                    )}
+                    disabled={keyTakeawaysDraftItems.length >= EDITORIAL_MAX_TAKEAWAYS}
+                  >
+                    Add takeaway
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {isPullQuote && (
+            <>
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Label</label>
+                <input
+                  type="text"
+                  className="editorial-field-input"
+                  value={pullQuoteLabel}
+                  onChange={(event) => options.onChangeMarkdown?.(
+                    buildCanonicalPullQuoteMarkdown(
+                      event.target.value,
+                      pullQuoteText,
+                      { useFallbackQuote: false }
+                    )
+                  )}
+                  placeholder={PULL_QUOTE_LABEL}
+                />
+              </div>
+
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Quote</label>
+                <textarea
+                  className="editorial-field-textarea"
+                  value={pullQuoteText}
+                  onChange={(event) => options.onChangeMarkdown?.(
+                    buildCanonicalPullQuoteMarkdown(
+                      pullQuoteLabel,
+                      event.target.value,
+                      { useFallbackQuote: false }
+                    )
+                  )}
+                  rows={3}
+                  placeholder="Add the pull quote text"
+                />
+              </div>
+            </>
+          )}
+
+          {isInTheKnow && (
+            <>
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Label</label>
+                <input
+                  type="text"
+                  className="editorial-field-input"
+                  value={inTheKnowLabel}
+                  onChange={(event) => options.onChangeMarkdown?.(
+                    buildCanonicalInTheKnowMarkdown(
+                      event.target.value,
+                      inTheKnowText,
+                      { useFallbackText: false }
+                    )
+                  )}
+                  placeholder={IN_THE_KNOW_LABEL}
+                />
+              </div>
+
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Body Text</label>
+                <textarea
+                  className="editorial-field-textarea"
+                  value={inTheKnowText}
+                  onChange={(event) => options.onChangeMarkdown?.(
+                    buildCanonicalInTheKnowMarkdown(
+                      inTheKnowLabel,
+                      event.target.value,
+                      { useFallbackText: false }
+                    )
+                  )}
+                  rows={4}
+                  placeholder="Add supporting context for this callout"
+                />
+              </div>
+            </>
+          )}
+
+          <p className="editorial-editor-hint">
+            Schema editor keeps block markers and component wiring in the required format.
+          </p>
+        </div>
+      ) : isEditMode ? (
         <div style={{ marginTop: '0.35rem' }}>
           <textarea
             value={block.markdown}
@@ -1057,7 +1389,7 @@ function renderEditorialBlockCard(
             style={{ width: '100%' }}
           />
           <p style={{ marginTop: '0.35rem', fontSize: '0.76rem', opacity: 0.72 }}>
-            Key Takeaways needs bullets (`- item`). Pull Quote needs one quote sentence.
+            Unsupported block type. Edit markdown directly.
           </p>
         </div>
       ) : keyTakeawaysParsed && keyTakeawaysParsed.items.length > 0 ? (
@@ -1075,6 +1407,11 @@ function renderEditorialBlockCard(
             <p>{`"${pullQuoteParsed.quoteText}"`}</p>
           </blockquote>
         </figure>
+      ) : inTheKnowParsed && inTheKnowParsed.text ? (
+        <section className="editorial-preview-card editorial-preview-in-the-know">
+          <h4>{inTheKnowParsed.label || IN_THE_KNOW_LABEL}</h4>
+          <p>{inTheKnowParsed.text}</p>
+        </section>
       ) : previewMarkdown ? (
         <div className="block-preview">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -1087,18 +1424,20 @@ function renderEditorialBlockCard(
         </p>
       )}
 
-      <details style={{ marginTop: '0.5rem' }}>
-        <summary>Raw Markdown</summary>
-        <pre
-          style={{
-            whiteSpace: 'pre-wrap',
-            marginTop: '0.5rem',
-            fontSize: '0.78rem',
-          }}
-        >
-          {block.markdown}
-        </pre>
-      </details>
+      {isEditMode && (
+        <details className="editorial-markdown-details">
+          <summary>{supportsStructuredEditor ? 'Generated markdown' : 'Raw markdown'}</summary>
+          <pre
+            style={{
+              whiteSpace: 'pre-wrap',
+              marginTop: '0.5rem',
+              fontSize: '0.78rem',
+            }}
+          >
+            {block.markdown}
+          </pre>
+        </details>
+      )}
     </article>
   )
 }
@@ -1506,7 +1845,9 @@ export default function StageArticlePage() {
     const defaultLabel =
       correctedComponent === PULL_QUOTE_COMPONENT
         ? PULL_QUOTE_LABEL
-        : KEY_TAKEAWAYS_LABEL
+        : correctedComponent === IN_THE_KNOW_COMPONENT
+          ? IN_THE_KNOW_LABEL
+          : KEY_TAKEAWAYS_LABEL
     const correctedLabel = labelMatch?.[1]?.trim() || target.label || defaultLabel
 
     const updatedEditorialBlocks = stagedArticle.editorialBlocks.map((block) =>
@@ -1550,6 +1891,26 @@ export default function StageArticlePage() {
       editorialBlocks: updatedEditorialBlocks,
       lexicalConverted: false,
     })
+  }, [stagedArticle, updateStagedArticle])
+
+  const removeEditorialBlock = useCallback((blockId: string) => {
+    if (!stagedArticle) return
+
+    const target = stagedArticle.editorialBlocks.find((block) => block.id === blockId)
+    if (!target) return
+
+    const blockLabel = target.label?.trim() || 'this editorial block'
+    if (!confirm(`Remove "${blockLabel}"?`)) return
+
+    const updatedEditorialBlocks = stagedArticle.editorialBlocks.filter(
+      (block) => block.id !== blockId
+    )
+
+    updateStagedArticle({
+      editorialBlocks: updatedEditorialBlocks,
+      lexicalConverted: false,
+    })
+    setPublishResult(null)
   }, [stagedArticle, updateStagedArticle])
 
   // Block operations
@@ -2192,8 +2553,8 @@ export default function StageArticlePage() {
                   {stagedArticle.editorialBlocks.length}
                 </p>
                 <p>
-                  `key_takeaways_box` and `pull_quote` can publish to Payload
-                  (`key-takeaway` / `pull-quote`). Other components or incorrect
+                  `key_takeaways_box`, `pull_quote`, and `in_the_know_box` can publish to Payload
+                  (`key-takeaway` / `pull-quote` / `in-the-know`). Other components or incorrect
                   block markdown remain locked.
                 </p>
                 {editorialPublishAnalysis.hasBlockingBlocks && (
@@ -2241,6 +2602,8 @@ export default function StageArticlePage() {
                           canEdit: isEditing && !stagedArticle.publishedToPayload,
                           onChangeMarkdown: (nextMarkdown) =>
                             updateEditorialBlockMarkdown(editorialBlock.id, nextMarkdown),
+                          onRemoveBlock: () => removeEditorialBlock(editorialBlock.id),
+                          disableRemove: stagedArticle.publishedToPayload,
                           canReorder,
                           onMoveUp: () => moveTimelineItem(timelineItem.id, 'up'),
                           onMoveDown: () => moveTimelineItem(timelineItem.id, 'down'),

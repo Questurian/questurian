@@ -1583,6 +1583,152 @@
   color: var(--ink);
 }
 
+.editorial-structured-editor {
+  margin-top: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.editorial-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editorial-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.editorial-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.editorial-field-meta {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.editorial-field-input,
+.editorial-field-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+  font-size: 0.86rem;
+  font-family: var(--font-body);
+  color: var(--ink);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.editorial-field-input:focus,
+.editorial-field-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.editorial-field-textarea {
+  min-height: 98px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.editorial-takeaway-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editorial-takeaway-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.editorial-takeaway-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-1);
+}
+
+.editorial-field-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.editorial-inline-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.editorial-inline-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.editorial-inline-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editorial-inline-btn.danger:hover:not(:disabled) {
+  border-color: var(--error);
+  color: var(--error);
+  background: var(--error-soft);
+}
+
+.editorial-editor-hint {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.editorial-markdown-details {
+  margin-top: var(--space-2);
+}
+
+.editorial-markdown-details summary {
+  cursor: pointer;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.editorial-markdown-details pre {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  font-size: 0.78rem;
+}
+
 /* Pull Quote Preview */
 .block-pullquote-preview {
   padding: var(--space-6) var(--space-8);
@@ -1872,6 +2018,27 @@
   color: var(--ink);
 }
 
+.editorial-preview-in-the-know {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid rgba(83, 109, 153, 0.25);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(228, 237, 252, 0.8) 0%, #fff 100%);
+}
+
+.editorial-preview-in-the-know h4 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.06rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.editorial-preview-in-the-know p {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
 /* Block Image */
 .block-image-container {
   display: flex;
@@ -2158,5 +2325,18 @@
 
   .editorial-preview-pull-quote p {
     font-size: 1.08rem;
+  }
+
+  .editorial-preview-in-the-know {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .editorial-takeaway-row {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .editorial-takeaway-row .editorial-inline-btn {
+    grid-column: 2;
+    justify-self: flex-start;
   }
 }

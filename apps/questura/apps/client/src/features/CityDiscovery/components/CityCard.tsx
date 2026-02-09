@@ -29,7 +29,7 @@ export function CityCard({ city, onSelect, variant = 'default', style }: CityCar
       className={`
         relative overflow-hidden rounded-2xl cursor-pointer group w-full
         ${variantClasses[variant]}
-        hover-lift animate-fade-in-up
+        animate-fade-in-up transition-transform duration-500 ease-out hover:scale-[1.02]
       `}
     >
       {/* Background Image */}
@@ -38,29 +38,44 @@ export function CityCard({ city, onSelect, variant = 'default', style }: CityCar
         <img
           src={city.image}
           alt={city.name}
-          className="w-full h-full object-cover image-zoom"
+          className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/80 via-[#1A1A1A]/20 to-transparent" />
       </div>
 
       {/* Content */}
       <div className="absolute inset-0 flex flex-col justify-end p-4 480:p-5 768:p-6 1024:p-8 z-10">
-        <span className="inline-block w-fit px-2 768:px-3 py-0.5 768:py-1 bg-[#C65D3B] text-white text-[10px] 768:text-[11px] font-medium tracking-wider uppercase rounded-full mb-2 768:mb-3">
-          {city.tag}
-        </span>
-
-        <h3 className={`${titleClasses[variant]} font-display text-white leading-none tracking-tight mb-1`}>
+        {/* City Name - THE STAR: Larger, first in hierarchy */}
+        <h3 className={`${titleClasses[variant]} font-display text-white leading-[0.9] tracking-tight mb-2 480:mb-3`}>
           {city.name}
         </h3>
 
-        <div className="flex items-center gap-1.5 text-white/70">
-          <span className="text-xs 768:text-sm tracking-wide">{city.displayCountry}</span>
-          <span className="text-sm">{city.flag}</span>
+        {/* Bottom row: Country flag + Name + Badge */}
+        <div className="flex items-center gap-2 480:gap-3">
+          {/* Country with Flag */}
+          <div className="flex items-center gap-1.5 text-white/90">
+            {/* SVG Flag from flagcdn.com */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://flagcdn.com/w40/${city.countryCode}.png`}
+              srcSet={`https://flagcdn.com/w40/${city.countryCode}.png 1x, https://flagcdn.com/w80/${city.countryCode}.png 2x`}
+              alt={`${city.displayCountry} flag`}
+              className="w-4 h-3 480:w-5 480:h-4 object-cover rounded-sm shadow-sm"
+            />
+            <span className="text-xs 480:text-sm 768:text-base tracking-wide">{city.displayCountry}</span>
+          </div>
+          
+          {/* Divider */}
+          <span className="text-white/30">·</span>
+          
+          {/* Badge - Subtle but noticeable accent */}
+          <span className="inline-flex items-center px-1.5 480:px-2 py-0.5 bg-white/15 backdrop-blur-sm text-white text-[10px] 480:text-[11px] 768:text-xs font-medium tracking-wider uppercase rounded">
+            {city.tag}
+          </span>
         </div>
       </div>
 
-      {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-[#C65D3B]/0 group-hover:bg-[#C65D3B]/10 transition-colors duration-500" />
+
     </div>
   );
 }
