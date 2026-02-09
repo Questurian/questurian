@@ -29,7 +29,7 @@ export const cities: City[] = [
     displayCountry: 'Colombia',
     countryCode: 'co',
     tag: 'Caribbean Charm',
-    image: 'https://images.unsplash.com/photo-1533653662686-3e8c9a27542b?w=1200&q=85',
+    image: 'https://images.unsplash.com/photo-1520975661595-6453be3f7070?w=1200&q=85',
     description: 'Wander through colorful colonial streets and soak up the Caribbean breeze.',
   },
   {
