@@ -873,6 +873,22 @@ def test_extract_json_from_response_handles_unclosed_markdown_fence():
     assert parsed["confidence"] == 1.0
 
 
+def test_extract_json_from_response_repairs_unterminated_string():
+    raw_response = (
+        "```json\n"
+        "{\n"
+        '  "title": "Sample headline",\n'
+        '  "content": "This article compares shoulder season weather and crowds'
+    )
+
+    parsed, parse_error = url2blog_routes._extract_json_from_response(raw_response)
+
+    assert parse_error is None
+    assert parsed is not None
+    assert parsed["title"] == "Sample headline"
+    assert parsed["content"].endswith("crowds")
+
+
 def test_editorial_augmentation_normalizes_faq_component_and_adds_box():
     parsed = {
         "augmented_content": (
@@ -941,11 +957,9 @@ def test_invoke_json_llm_tracks_parse_recovery(monkeypatch):
     responses = iter(
         [
             (
-                "```json\n"
-                '{\n'
-                '  "classification": "When to Visit Article",\n'
-                '  "confidence": 1.0,\n'
-                '  "reasoning": "The article intent'
+                '{"classification":"When to Visit Article",'
+                '"confidence":1.0,'
+                '"reasoning":"The article intent",}'
             ),
             (
                 '{'

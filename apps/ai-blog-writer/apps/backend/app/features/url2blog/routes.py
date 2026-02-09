@@ -819,6 +819,10 @@ def _extract_json_from_response(
             except json.JSONDecodeError:
                 pass
 
+        repaired = _try_fix_truncated_json_object(cleaned)
+        if repaired:
+            return repaired, None
+
         return None, str(exc)
 
 
@@ -854,6 +858,36 @@ def _extract_first_json_object(text: str) -> str | None:
             depth -= 1
             if depth == 0:
                 return text[start:idx + 1]
+
+    return None
+
+
+def _try_fix_truncated_json_object(text: str) -> dict[str, Any] | None:
+    """Attempt to recover from truncated JSON by closing open strings/braces."""
+    candidate = text.strip()
+    if not candidate:
+        return None
+
+    first_brace = candidate.find("{")
+    if first_brace == -1:
+        return None
+    candidate = candidate[first_brace:]
+
+    # Close odd quote counts when the response ends mid-string.
+    if candidate.count('"') % 2 == 1:
+        candidate = f'{candidate}"'
+
+    open_braces = candidate.count("{")
+    close_braces = candidate.count("}")
+    if open_braces > close_braces:
+        candidate = f"{candidate}{'}' * (open_braces - close_braces)}"
+
+    try:
+        parsed = json.loads(candidate)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        return None
 
     return None
 
@@ -1383,6 +1417,28 @@ def _invoke_json_llm(
     model_name: str | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Invoke LLM and parse strict JSON response."""
+    parsed, raw_response, parse_error = _invoke_json_llm_best_effort(
+        prompt=prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        model_name=model_name,
+    )
+    if parsed:
+        return parsed, raw_response
+
+    raise HTTPException(
+        status_code=500,
+        detail=f"Failed to parse LLM response: {parse_error or 'Unknown parse failure'}",
+    )
+
+
+def _invoke_json_llm_best_effort(
+    prompt: str,
+    max_tokens: int = 4096,
+    temperature: float = 0.05,
+    model_name: str | None = None,
+) -> tuple[dict[str, Any] | None, str, str | None]:
+    """Invoke LLM with JSON-recovery retries without raising on parse failure."""
     strict_prompt = (
         f"{prompt}\n\n"
         "CRITICAL OUTPUT RULE:\n"
@@ -1421,7 +1477,7 @@ def _invoke_json_llm(
                         "URL2Blog JSON recovered using fallback model %s",
                         resolved_model_name,
                     )
-                return parsed, raw_response
+                return parsed, raw_response, None
 
             last_error = parse_error or "Invalid JSON"
             last_response = raw_response[:2000]
@@ -1452,10 +1508,7 @@ def _invoke_json_llm(
                 f"Previous invalid output:\n{raw_response[:4000]}\n"
             )
 
-    raise HTTPException(
-        status_code=500,
-        detail=f"Failed to parse LLM response: {last_error}",
-    )
+    return None, last_response, last_error
 
 
 def _remove_academic_conclusion_phrases(text: str) -> str:
@@ -2273,21 +2326,17 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
         raw_text = raw_text[:max_chars]
 
     # Send to Gemini for extraction
-    llm = get_vertex_llm(
-        temperature=0.1,
-        max_tokens=4096,
-        model_name=selected_model_name,
-    )
     prompt = EXTRACT_PROMPT + raw_text
 
     logger.info("URL2Blog Stage 1: sending prompt to Gemini (%d chars)", len(raw_text))
-    result = llm.invoke(prompt)
-
-    if not result or not result.strip():
-        raise HTTPException(status_code=500, detail="LLM returned an empty response.")
-
-    raw_response = result.strip()
-    parsed, parse_error = _extract_json_from_response(raw_response)
+    parsed, raw_response, parse_error = _invoke_json_llm_best_effort(
+        prompt=prompt,
+        max_tokens=8192,
+        temperature=0.1,
+        model_name=selected_model_name,
+    )
+    if not raw_response and parse_error:
+        logger.warning("URL2Blog Stage 1 extraction failed: %s", parse_error)
 
     # Phase 2: Translate if not English
     translated = None
@@ -2303,24 +2352,21 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
             logger.info("URL2Blog: article already in English, skipping translation")
         else:
             logger.info("URL2Blog: translating from %s to English", language)
-            translate_llm = get_vertex_llm(
-                temperature=0.1,
-                max_tokens=8192,
-                model_name=selected_model_name,
-            )
             translate_prompt = TRANSLATE_PROMPT.format(
                 source_language=language,
                 title=parsed.get("title", ""),
                 content=parsed.get("content", ""),
             )
-            translate_result = translate_llm.invoke(translate_prompt)
-
-            if translate_result and translate_result.strip():
-                translated, translation_error = _extract_json_from_response(
-                    translate_result.strip()
+            translated, _, translation_error = _invoke_json_llm_best_effort(
+                prompt=translate_prompt,
+                max_tokens=8192,
+                temperature=0.1,
+                model_name=selected_model_name,
+            )
+            if translation_error and not translated:
+                logger.warning(
+                    "URL2Blog translation failed to parse JSON: %s", translation_error
                 )
-            else:
-                translation_error = "Translation returned an empty response"
 
     return JSONResponse(
         {
