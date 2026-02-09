@@ -11,9 +11,9 @@ interface CityCardProps {
 
 export function CityCard({ city, onSelect, variant = 'default', style }: CityCardProps) {
   const variantClasses = {
-    default: 'aspect-[4/3] 480:aspect-[3/2]',
-    featured: 'aspect-[16/9] 1024:aspect-auto 1024:h-full',
-    wide: 'aspect-[4/3] 480:aspect-[3/2] 1024:aspect-[21/9]',
+    default: 'aspect-[16/10] 480:aspect-[4/3] 768:aspect-[3/2]',
+    featured: 'aspect-[16/10] 480:aspect-[16/9] 1024:aspect-auto 1024:h-full',
+    wide: 'aspect-[16/10] 480:aspect-[4/3] 768:aspect-[3/2] 1024:aspect-[21/9]',
   };
 
   const titleClasses = {
