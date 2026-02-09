@@ -88,15 +88,6 @@ function CitySelectionContent() {
             />
           ))}
 
-          {/* Wide City */}
-          <div className="1024:col-span-3">
-            <CityCard
-              city={cities[6]}
-              onSelect={handleCitySelect}
-              variant="wide"
-              style={{ animationDelay: '0.95s' }}
-            />
-          </div>
         </div>
 
         {/* Footer Note */}
