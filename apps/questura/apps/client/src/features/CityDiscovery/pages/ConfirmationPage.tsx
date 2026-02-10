@@ -23,7 +23,7 @@ function ConfirmationContent() {
   }
 
   const handleContinue = () => {
-    router.push(`/${city.country}/${city.id}`);
+    router.push(`/${city.country}/${city.id}/${intent.id}`);
   };
 
   const handleStartOver = () => {
