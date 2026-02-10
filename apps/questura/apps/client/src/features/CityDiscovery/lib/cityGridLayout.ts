@@ -63,7 +63,7 @@ export function getLayoutSlotClassName(slot: LayoutSlot): string {
   const sharedClasses = `1024:col-start-${slot.colStart} 1024:row-start-${slot.rowStart}`;
 
   if (slot.variant === 'featured') {
-    return `380:col-span-2 1024:col-span-${slot.colSpan} 1024:row-span-${slot.rowSpan} ${sharedClasses}`;
+    return `1024:col-span-${slot.colSpan} 1024:row-span-${slot.rowSpan} ${sharedClasses}`;
   }
 
   return sharedClasses;

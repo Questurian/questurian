@@ -19,7 +19,20 @@ export function CitySelectionGridSection() {
 
   return (
     <div className="w-full max-w-[1400px] mx-auto">
-      <div className="grid grid-cols-1 380:grid-cols-2 1024:grid-cols-3 gap-3 480:gap-4 768:gap-5 1024:gap-6">
+      <div className="grid grid-cols-1 gap-3 480:gap-4 768:gap-5 1024:hidden">
+        {TOP_GRID_CITIES.map((city, index) => (
+          <div key={city.id}>
+            <CityCard
+              city={city}
+              onSelect={handleCitySelect}
+              variant="default"
+              style={{ animationDelay: TOP_GRID_ANIMATION_DELAYS[index] }}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden 1024:grid 1024:grid-cols-3 gap-3 480:gap-4 768:gap-5 1024:gap-6">
         {TOP_GRID_CITIES.map((city, index) => (
           <div
             key={city.id}

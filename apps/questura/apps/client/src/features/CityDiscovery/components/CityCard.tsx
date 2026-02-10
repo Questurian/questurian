@@ -10,10 +10,12 @@ interface CityCardProps {
 }
 
 export function CityCard({ city, onSelect, variant = 'default', style }: CityCardProps) {
+  const fixedHeightClasses = 'h-[220px] 480:h-[300px] 768:h-[340px]';
+
   const variantClasses = {
-    default: 'aspect-[16/10] 480:aspect-[4/3] 768:aspect-[3/2]',
-    featured: 'aspect-[16/10] 480:aspect-[16/9] 1024:aspect-auto 1024:h-full',
-    wide: 'aspect-[16/10] 480:aspect-[4/3] 768:aspect-[3/2] 1024:aspect-[21/9]',
+    default: `${fixedHeightClasses} 1024:h-auto 1024:aspect-[3/2]`,
+    featured: `${fixedHeightClasses} 1024:aspect-auto 1024:h-full`,
+    wide: `${fixedHeightClasses} 1024:h-auto 1024:aspect-[21/9]`,
   };
 
   const titleClasses = {
