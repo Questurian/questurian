@@ -8,10 +8,25 @@ import {
   SignInButton,
   UserIcon,
 } from "../shared/components";
-import { SubNav } from "../components/SubNav";
+import { SubNav, type CityMode } from "../components/SubNav";
 import Link from "next/link";
 import { useAuth } from "@/lib/user/hooks";
 import LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
+import { useParams, usePathname } from "next/navigation";
+
+const cityModes: CityMode[] = ["explore", "stay", "move"];
+
+function getParamValue(param: string | string[] | undefined): string | undefined {
+  if (typeof param === "string") {
+    return param;
+  }
+
+  if (Array.isArray(param)) {
+    return param[0];
+  }
+
+  return undefined;
+}
 
 function LocationPill() {
   return (
@@ -33,14 +48,35 @@ function LocationPill() {
 
 export default function DesktopNavbar() {
   const { user, loading, isAuthenticated } = useAuth();
+  const params = useParams();
+  const pathname = usePathname();
   const shouldShowSubscribe = !isAuthenticated || user?.subscriptionStatus !== "active";
+
+  const countrySlug = getParamValue(params.country)?.toLowerCase();
+  const citySlug = getParamValue(params.city)?.toLowerCase();
+  const modeSlugFromParams = getParamValue(params.mode)?.toLowerCase();
+
+  const pathnameSegments = pathname.split("/").filter(Boolean);
+  const modeSlugFromPath = pathnameSegments[2]?.toLowerCase();
+  const rawMode = modeSlugFromParams || modeSlugFromPath;
+  const activeMode: CityMode = cityModes.includes(rawMode as CityMode) ? (rawMode as CityMode) : "explore";
+
+  const hasCityContext = Boolean(countrySlug && citySlug);
 
   return (
     <div className="w-full overflow-hidden border-b border-black/10">
       <nav className="w-full bg-[#252629] px-6 py-1.5">
         <div className="flex w-full items-center justify-between gap-4">
           <LocationPill />
-          <SubNav compact />
+          <SubNav
+            compact
+            activeMode={activeMode}
+            getHref={
+              hasCityContext
+                ? (mode) => `/${countrySlug}/${citySlug}/${mode}`
+                : undefined
+            }
+          />
         </div>
       </nav>
 

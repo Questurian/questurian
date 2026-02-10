@@ -6,16 +6,46 @@ import { useProtectedRoute } from '@/lib/routing';
 import { useLoginModalStore } from '@/lib/stores/loginModalStore';
 import { getCityBySlug } from '@/features/CityDiscovery';
 
+type CityMode = 'explore' | 'stay' | 'move';
+
+function getParamValue(param: string | string[] | undefined): string | undefined {
+  if (typeof param === 'string') {
+    return param;
+  }
+
+  if (Array.isArray(param)) {
+    return param[0];
+  }
+
+  return undefined;
+}
+
 function CityDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
 
-  const citySlug = (params.city as string)?.toLowerCase();
-  const countrySlug = (params.country as string)?.toLowerCase();
+  const citySlug = getParamValue(params.city)?.toLowerCase();
+  const countrySlug = getParamValue(params.country)?.toLowerCase();
+  const modeSlug = getParamValue(params.mode)?.toLowerCase();
+  const validModes: CityMode[] = ['explore', 'stay', 'move'];
+  const activeMode: CityMode = validModes.includes(modeSlug as CityMode) ? (modeSlug as CityMode) : 'explore';
 
   const city = getCityBySlug(countrySlug, citySlug);
+
+  useEffect(() => {
+    if (!countrySlug || !citySlug) {
+      return;
+    }
+
+    const canonicalPath = `/${countrySlug}/${citySlug}/${activeMode}`;
+    const modeMissingOrInvalid = modeSlug !== activeMode;
+
+    if (modeMissingOrInvalid) {
+      router.replace(canonicalPath);
+    }
+  }, [router, countrySlug, citySlug, modeSlug, activeMode]);
 
   useProtectedRoute({
     onLoginRequired: (redirectPath) => {
@@ -54,10 +84,11 @@ function CityDashboardContent() {
         prefillEmail: email || undefined
       });
 
-      router.replace(`/${countrySlug}/${citySlug}`);
+      const canonicalPath = `/${countrySlug}/${citySlug}/${activeMode}`;
+      router.replace(canonicalPath);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, citySlug, countrySlug]);
+  }, [searchParams, citySlug, countrySlug, activeMode]);
 
   // If city not found, show error
   if (!city) {
