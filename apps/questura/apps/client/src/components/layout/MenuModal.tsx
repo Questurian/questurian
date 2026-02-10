@@ -1,30 +1,42 @@
 "use client";
 
-import { X } from "lucide-react";
+import Link from "next/link";
+import { Compass, BedDouble, PlaneTakeoff, MapPin, X } from "lucide-react";
+import { useAuth } from "@/lib/user/hooks";
+import { useLoginModalStore } from "@/lib/stores/loginModalStore";
 
 interface MenuModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const hiddenNavItems = [
+  { label: "Explore", Icon: Compass },
+  { label: "Stay", Icon: BedDouble },
+  { label: "Move", Icon: PlaneTakeoff },
+] as const;
+
 export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
+  const { isAuthenticated } = useAuth();
+  const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
+
   if (!isOpen) return null;
 
   return (
     <>
       <style>{`
-        @keyframes slideInFromLeft {
+        @keyframes menuSlideIn {
           from {
-            transform: translateX(-100%);
-            opacity: 0;
+            transform: translateX(-18px);
+            opacity: 0.65;
           }
           to {
-            transform: translateX(0);
+            transform: translateX(0px);
             opacity: 1;
           }
         }
 
-        @keyframes fadeIn {
+        @keyframes menuFadeIn {
           from {
             opacity: 0;
           }
@@ -33,79 +45,94 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
           }
         }
 
-        .modal-slide-in-left {
-          animation: slideInFromLeft 0.3s ease-out forwards;
+        .menu-sheet-enter {
+          animation: menuSlideIn 0.25s ease-out forwards;
         }
 
-        .modal-overlay-fade {
-          animation: fadeIn 0.3s ease-out forwards;
+        .menu-overlay-enter {
+          animation: menuFadeIn 0.2s ease-out forwards;
         }
       `}</style>
 
-      <div
-        className={`
-          /* Base styles */
-          fixed inset-0 z-50 overflow-y-auto modal-slide-in-left
-          /* 480px breakpoint */
-          480:inset-y-0 480:left-0 480:right-auto 480:w-[440px]
-        `}
-      >
-        {/* BACKGROUND OVERLAY - Dark 31 31 31 background covering entire page */}
-        <div
-          className={`
-            /* Base styles */
-            fixed inset-0 transition-opacity modal-overlay-fade cursor-auto
-            /* 480px breakpoint */
-            480:inset-y-0 480:left-0 480:right-auto 480:w-[440px]
-          `}
-          aria-hidden="true"
-          style={{ backgroundColor: "#1f1f1f" }}
-        ></div>
+      <div className="fixed inset-0 z-50">
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="menu-overlay-enter absolute inset-0 bg-black/40"
+          onClick={onClose}
+        />
 
-        {/* MODAL CONTAINER - Flexbox wrapper that centers the content */}
-        <div
-          className={`
-            /* Base styles */
-            flex flex-col items-center justify-center min-h-screen text-center relative z-50 w-full
-            /* 480px breakpoint */
-            480:min-h-screen
-          `}
-        >
-          {/* CLOSE BUTTON - Top left X button */}
-          <button
-            onClick={onClose}
-            className={`
-              /* Base styles */
-              absolute top-8 left-8
-              p-2 bg-transparent border-0 cursor-pointer
-              focus:outline-none transition-colors
-              hover:opacity-80
-            `}
-            aria-label="Close modal"
-          >
-            <X className="w-8 h-8 text-white" />
-          </button>
-
-          {/* MODAL CONTENT - Centered text */}
-          <div
-            className={`
-              /* Base styles */
-              relative pointer-events-auto flex flex-col gap-6 items-center
-            `}
-          >
-            <h1
-              className={`
-                /* Base styles */
-                text-white text-4xl font-medium
-                /* Underline effect */
-                underline decoration-white underline-offset-4
-                480:text-5xl
-              `}
+        <aside className="menu-sheet-enter relative h-full w-[84%] max-w-[360px] border-r border-white/15 bg-[#1f1f1f] px-5 py-6 text-white shadow-2xl">
+          <div className="mb-7 flex items-center justify-between">
+            <h2 className="font-display text-[1.15rem] tracking-[0.08em] uppercase">
+              Menu
+            </h2>
+            <button
+              onClick={onClose}
+              className="rounded-full p-1.5 transition-colors hover:bg-white/10 focus:outline-none"
+              aria-label="Close modal"
             >
-              hello bub
-            </h1>
+              <X className="h-5 w-5 text-white" />
+            </button>
           </div>
-        </div>
+
+          <div className="mb-6 rounded-xl border border-white/15 bg-white/5 px-3.5 py-3">
+            <div className="flex items-center gap-2.5">
+              <MapPin className="h-4 w-4 text-white/80" />
+              <span className="text-sm font-medium">Lima, Peru</span>
+            </div>
+          </div>
+
+          <nav aria-label="Hidden mobile navigation" className="space-y-2">
+            {hiddenNavItems.map(({ label, Icon }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={onClose}
+                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-left transition-colors hover:bg-white/10"
+              >
+                <span className="flex items-center gap-2.5 text-sm font-semibold tracking-[0.03em]">
+                  <Icon className="h-4 w-4 text-white/80" />
+                  {label}
+                </span>
+                <span className="text-xs uppercase tracking-[0.08em] text-white/55">
+                  Open
+                </span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="mt-7 space-y-2">
+            <Link
+              href="/join"
+              onClick={onClose}
+              className="block rounded-xl border border-white/10 px-3.5 py-3 text-sm font-semibold transition-colors hover:bg-white/10"
+            >
+              Join Membership
+            </Link>
+
+            {isAuthenticated ? (
+              <Link
+                href="/account"
+                onClick={onClose}
+                className="block rounded-xl border border-white/10 px-3.5 py-3 text-sm font-semibold transition-colors hover:bg-white/10"
+              >
+                Account
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  openLoginModal();
+                }}
+                className="block w-full rounded-xl border border-white/10 px-3.5 py-3 text-left text-sm font-semibold transition-colors hover:bg-white/10"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        </aside>
       </div>
     </>
   );

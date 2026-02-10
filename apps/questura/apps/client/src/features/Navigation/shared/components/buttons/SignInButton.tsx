@@ -2,9 +2,10 @@
 import { useLoginModalStore } from "@/lib/stores/loginModalStore";
 interface SignInButtonProps {
   onClick?: () => void;
+  className?: string;
 }
 
-export default function SignInButton({ onClick }: SignInButtonProps) {
+export default function SignInButton({ onClick, className = "" }: SignInButtonProps) {
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
   const handleClick = () => {
     if (onClick) {
@@ -29,6 +30,7 @@ export default function SignInButton({ onClick }: SignInButtonProps) {
         /* 480px breakpoint */
         480:text-[0.850rem]
         /* 550px breakpoint */
+        ${className}
       `}
     >
       Sign in

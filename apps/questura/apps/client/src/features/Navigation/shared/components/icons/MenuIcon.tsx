@@ -14,7 +14,7 @@ export default function MenuIcon({ buttonClassName = '', iconClassName = '' }: M
   return (
     <button
       onClick={openMenuModal}
-      className={`p-0 bg-transparent border-0 cursor-pointer focus:outline-none ${buttonClassName}`}
+      className={`inline-flex items-center justify-center p-0 leading-none bg-transparent border-0 cursor-pointer focus:outline-none ${buttonClassName}`}
       aria-label="Open menu modal"
     >
       <TextSearch
