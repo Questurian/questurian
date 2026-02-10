@@ -26,8 +26,8 @@ export function CitySelectionTopSection({ children }: CitySelectionTopSectionPro
       </header>
 
       <main className="px-4 480:px-6 768:px-10 1024:px-16 pb-12 768:pb-20">
-        <section className="pt-8 480:pt-12 768:pt-16 max-w-[62rem]">
-          <p className="text-[#C65D3B] text-xs 480:text-sm tracking-[0.32em] uppercase mb-4 768:mb-6 animate-slide-in-right">
+        <section className="pt-6 480:pt-8 768:pt-10 max-w-[62rem]">
+          <p className="text-[#C65D3B] text-xs 480:text-sm tracking-[0.32em] uppercase mb-2 480:mb-3 768:mb-4 animate-slide-in-right">
             Choose your destination
           </p>
 
@@ -39,7 +39,7 @@ export function CitySelectionTopSection({ children }: CitySelectionTopSectionPro
           </h1>
 
           <p
-            className="mt-5 480:mt-6 768:mt-8 max-w-[54rem] text-[#1A1A1A]/62 leading-[1.42] text-sm 480:text-[1.05rem] 768:text-[1.35rem] font-display animate-fade-in-up"
+            className="mt-3 480:mt-4 768:mt-5 max-w-[54rem] text-[#1A1A1A]/62 leading-[1.42] text-sm 480:text-[1.05rem] 768:text-[1.35rem] font-display animate-fade-in-up"
             style={{ animationDelay: '0.25s' }}
           >
             Select a city that resonates with your rhythm and pace. Every destination reveals a different way to
@@ -47,7 +47,7 @@ export function CitySelectionTopSection({ children }: CitySelectionTopSectionPro
           </p>
         </section>
 
-        <div className="mt-10 768:mt-14 1024:mt-16">{children}</div>
+        <div className="mt-8 768:mt-10 1024:mt-12">{children}</div>
       </main>
     </>
   );
