@@ -7,21 +7,117 @@ import { CityCard } from '../components/CityCard';
 import { cities } from '../lib/data';
 
 type CardVariant = 'default' | 'featured';
-type FeaturedCity = 'lima' | 'medellin';
+type FeaturedCityId = 'lima' | 'medellin' | 'cartagena' | 'mexico-city' | 'sao-paulo' | 'rio';
+type LayoutRequestMode = 'hover' | 'canonical';
 
 interface LayoutSlot {
-  className: string;
+  colStart: 1 | 2 | 3;
+  rowStart: 1 | 2 | 3;
+  colSpan: 1 | 2;
+  rowSpan: 1 | 2;
   variant: CardVariant;
+}
+
+interface GridCell {
+  col: 1 | 2 | 3;
+  row: 1 | 2 | 3;
+}
+
+interface LayoutRequest {
+  cityId: FeaturedCityId;
+  mode: LayoutRequestMode;
 }
 
 const TOP_GRID_ANIMATION_DELAYS = ['0.5s', '0.57s', '0.64s', '0.71s', '0.78s', '0.85s'];
 const FLIP_DURATION_MS = 620;
 const FLIP_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const TOP_GRID_CITIES = cities.slice(0, 6);
-const HOVER_FEATURE_CITY_BY_ID: Partial<Record<string, FeaturedCity>> = {
-  lima: 'lima',
-  medellin: 'medellin',
+const CANONICAL_FEATURED_CITY: FeaturedCityId = 'lima';
+const TOP_GRID_CITY_IDS: FeaturedCityId[] = ['lima', 'medellin', 'cartagena', 'mexico-city', 'sao-paulo', 'rio'];
+const TOP_GRID_CITIES = cities.slice(0, 6) as Array<(typeof cities)[number] & { id: FeaturedCityId }>;
+const BASE_CELL_BY_CITY_ID: Record<FeaturedCityId, GridCell> = {
+  lima: { col: 1, row: 1 },
+  medellin: { col: 3, row: 1 },
+  cartagena: { col: 3, row: 2 },
+  'mexico-city': { col: 1, row: 3 },
+  'sao-paulo': { col: 2, row: 3 },
+  rio: { col: 3, row: 3 },
 };
+const ALL_GRID_CELLS: GridCell[] = [
+  { col: 1, row: 1 },
+  { col: 2, row: 1 },
+  { col: 3, row: 1 },
+  { col: 1, row: 2 },
+  { col: 2, row: 2 },
+  { col: 3, row: 2 },
+  { col: 1, row: 3 },
+  { col: 2, row: 3 },
+  { col: 3, row: 3 },
+];
+
+function getCellKey(cell: GridCell): string {
+  return `${cell.col}-${cell.row}`;
+}
+
+function clampFeaturedStart(value: number): 1 | 2 {
+  if (value <= 1) return 1;
+  return 2;
+}
+
+function getLayoutSlotClassName(slot: LayoutSlot): string {
+  const sharedClasses = `1024:col-start-${slot.colStart} 1024:row-start-${slot.rowStart}`;
+
+  if (slot.variant === 'featured') {
+    return `380:col-span-2 1024:col-span-${slot.colSpan} 1024:row-span-${slot.rowSpan} ${sharedClasses}`;
+  }
+
+  return sharedClasses;
+}
+
+function resolveLayoutSlots(
+  featuredCityId: FeaturedCityId,
+  anchorCell?: GridCell
+): Record<FeaturedCityId, LayoutSlot> {
+  const featuredBaseCell = anchorCell ?? BASE_CELL_BY_CITY_ID[featuredCityId];
+  const featuredStartCol = clampFeaturedStart(featuredBaseCell.col - 1);
+  const featuredStartRow = clampFeaturedStart(featuredBaseCell.row - 1);
+  const featuredOccupiedCells = new Set<string>([
+    getCellKey({ col: featuredStartCol, row: featuredStartRow }),
+    getCellKey({ col: (featuredStartCol + 1) as 2 | 3, row: featuredStartRow }),
+    getCellKey({ col: featuredStartCol, row: (featuredStartRow + 1) as 2 | 3 }),
+    getCellKey({ col: (featuredStartCol + 1) as 2 | 3, row: (featuredStartRow + 1) as 2 | 3 }),
+  ]);
+
+  const availableCells = ALL_GRID_CELLS.filter((cell) => !featuredOccupiedCells.has(getCellKey(cell)));
+  const slotByCityId = {} as Record<FeaturedCityId, LayoutSlot>;
+
+  slotByCityId[featuredCityId] = {
+    colStart: featuredStartCol,
+    rowStart: featuredStartRow,
+    colSpan: 2,
+    rowSpan: 2,
+    variant: 'featured',
+  };
+
+  let availableCellIndex = 0;
+  TOP_GRID_CITY_IDS.forEach((cityId) => {
+    if (cityId === featuredCityId) {
+      return;
+    }
+
+    const nextCell = availableCells[availableCellIndex];
+    availableCellIndex += 1;
+
+    slotByCityId[cityId] = {
+      colStart: nextCell.col,
+      rowStart: nextCell.row,
+      colSpan: 1,
+      rowSpan: 1,
+      variant: 'default',
+    };
+  });
+
+  return slotByCityId;
+}
 
 function resetCardMotionStyles(cardElement: HTMLDivElement) {
   cardElement.style.transition = '';
@@ -31,72 +127,24 @@ function resetCardMotionStyles(cardElement: HTMLDivElement) {
   cardElement.style.zIndex = '';
 }
 
-const LAYOUT_ONE_SLOTS: LayoutSlot[] = [
-  {
-    className: '380:col-span-2 1024:col-span-2 1024:row-span-2 1024:col-start-1 1024:row-start-1',
-    variant: 'featured',
-  },
-  {
-    className: '1024:col-start-3 1024:row-start-1',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-start-3 1024:row-start-2',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-start-1 1024:row-start-3',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-start-2 1024:row-start-3',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-start-3 1024:row-start-3',
-    variant: 'default',
-  },
-];
-
-const LAYOUT_TWO_SLOTS: LayoutSlot[] = [
-  {
-    className: '1024:col-start-1 1024:row-start-1',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-span-2 1024:row-span-2 1024:col-start-2 1024:row-start-1',
-    variant: 'featured',
-  },
-  {
-    className: '1024:col-start-1 1024:row-start-2',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-start-1 1024:row-start-3',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-start-2 1024:row-start-3',
-    variant: 'default',
-  },
-  {
-    className: '1024:col-start-3 1024:row-start-3',
-    variant: 'default',
-  },
-];
-
 function CitySelectionContent() {
   const router = useRouter();
   const [showDevReference, setShowDevReference] = useState(false);
-  const [featuredCity, setFeaturedCity] = useState<FeaturedCity>('lima');
-  const featuredCityRef = useRef<FeaturedCity>('lima');
+  const [featuredCity, setFeaturedCity] = useState<FeaturedCityId>(CANONICAL_FEATURED_CITY);
+  const [featuredAnchorCell, setFeaturedAnchorCell] = useState<GridCell | null>(null);
+  const featuredCityRef = useRef<FeaturedCityId>(CANONICAL_FEATURED_CITY);
+  const featuredAnchorCellRef = useRef<GridCell | null>(null);
   const isLayoutTransitioningRef = useRef(false);
+  const pendingLayoutRequestRef = useRef<LayoutRequest | null>(null);
+  const runLayoutTransitionRef = useRef<(nextFeaturedCity: FeaturedCityId, mode: LayoutRequestMode) => void>(
+    () => undefined
+  );
   const topCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingFirstRectsRef = useRef<Map<string, DOMRect> | null>(null);
   const transitionFrameRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const isDevMode = process.env.NODE_ENV !== 'production';
-  const activeLayoutSlots = featuredCity === 'medellin' ? LAYOUT_TWO_SLOTS : LAYOUT_ONE_SLOTS;
+  const activeLayoutSlotsById = resolveLayoutSlots(featuredCity, featuredAnchorCell ?? undefined);
 
   const handleCitySelect = (cityId: string) => {
     router.push(`/step-2?city=${cityId}`);
@@ -106,22 +154,47 @@ function CitySelectionContent() {
     topCardRefs.current[cityId] = element;
   };
 
-  const runLayoutTransition = (nextFeaturedCity: FeaturedCity) => {
-    if (nextFeaturedCity === featuredCityRef.current) {
+  const runLayoutTransition = (nextFeaturedCity: FeaturedCityId, mode: LayoutRequestMode) => {
+    const isAlreadyInRequestedLayout =
+      mode === 'canonical'
+        ? nextFeaturedCity === featuredCityRef.current && featuredAnchorCellRef.current === null
+        : nextFeaturedCity === featuredCityRef.current;
+
+    if (isAlreadyInRequestedLayout) {
       isLayoutTransitioningRef.current = false;
       return;
     }
 
+    const nextAnchorCell =
+      mode === 'canonical'
+        ? null
+        : (() => {
+            const currentLayout = resolveLayoutSlots(
+              featuredCityRef.current,
+              featuredAnchorCellRef.current ?? undefined
+            );
+            const currentSlot = currentLayout[nextFeaturedCity];
+
+            return {
+              col: currentSlot.colStart,
+              row: currentSlot.rowStart,
+            } as GridCell;
+          })();
+
     if (typeof window === 'undefined') {
       featuredCityRef.current = nextFeaturedCity;
+      featuredAnchorCellRef.current = nextAnchorCell;
       setFeaturedCity(nextFeaturedCity);
+      setFeaturedAnchorCell(nextAnchorCell);
       isLayoutTransitioningRef.current = false;
       return;
     }
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       featuredCityRef.current = nextFeaturedCity;
+      featuredAnchorCellRef.current = nextAnchorCell;
       setFeaturedCity(nextFeaturedCity);
+      setFeaturedAnchorCell(nextAnchorCell);
       isLayoutTransitioningRef.current = false;
       return;
     }
@@ -157,8 +230,11 @@ function CitySelectionContent() {
 
     pendingFirstRectsRef.current = firstRects;
     featuredCityRef.current = nextFeaturedCity;
+    featuredAnchorCellRef.current = nextAnchorCell;
     setFeaturedCity(nextFeaturedCity);
+    setFeaturedAnchorCell(nextAnchorCell);
   };
+  runLayoutTransitionRef.current = runLayoutTransition;
 
   useLayoutEffect(() => {
     return () => {
@@ -218,6 +294,13 @@ function CitySelectionContent() {
 
       pendingFirstRectsRef.current = null;
       isLayoutTransitioningRef.current = false;
+      const pendingLayoutRequest = pendingLayoutRequestRef.current;
+      pendingLayoutRequestRef.current = null;
+
+      if (pendingLayoutRequest) {
+        isLayoutTransitioningRef.current = true;
+        runLayoutTransitionRef.current(pendingLayoutRequest.cityId, pendingLayoutRequest.mode);
+      }
     };
 
     TOP_GRID_CITIES.forEach((city) => {
@@ -293,15 +376,16 @@ function CitySelectionContent() {
     transitionTimeoutRef.current = window.setTimeout(() => {
       finishTransition();
     }, FLIP_DURATION_MS + 160);
-  }, [featuredCity]);
+  }, [featuredCity, featuredAnchorCell?.col, featuredAnchorCell?.row]);
 
-  const requestFeaturedCity = (nextFeaturedCity: FeaturedCity) => {
+  const requestFeaturedCity = (nextFeaturedCity: FeaturedCityId, mode: LayoutRequestMode = 'hover') => {
     if (isLayoutTransitioningRef.current) {
+      pendingLayoutRequestRef.current = { cityId: nextFeaturedCity, mode };
       return;
     }
 
     isLayoutTransitioningRef.current = true;
-    runLayoutTransition(nextFeaturedCity);
+    runLayoutTransition(nextFeaturedCity, mode);
   };
 
   return (
@@ -369,22 +453,20 @@ function CitySelectionContent() {
         </div>
 
         {/* City Grid - Mobile-first progressive layout */}
-        <div className="grid grid-cols-1 380:grid-cols-2 1024:grid-cols-3 gap-3 480:gap-4 768:gap-5 1024:gap-6">
+        <div
+          className="grid grid-cols-1 380:grid-cols-2 1024:grid-cols-3 gap-3 480:gap-4 768:gap-5 1024:gap-6"
+        >
           {TOP_GRID_CITIES.map((city, index) => (
             <div
               key={city.id}
               ref={setTopCardRef(city.id)}
-              className={activeLayoutSlots[index].className}
-              onMouseEnter={
-                HOVER_FEATURE_CITY_BY_ID[city.id]
-                  ? () => requestFeaturedCity(HOVER_FEATURE_CITY_BY_ID[city.id]!)
-                  : undefined
-              }
+              className={getLayoutSlotClassName(activeLayoutSlotsById[city.id])}
+              onMouseEnter={() => requestFeaturedCity(city.id, 'hover')}
             >
               <CityCard
                 city={city}
                 onSelect={handleCitySelect}
-                variant={activeLayoutSlots[index].variant}
+                variant={activeLayoutSlotsById[city.id].variant}
                 style={{ animationDelay: TOP_GRID_ANIMATION_DELAYS[index] }}
               />
             </div>
