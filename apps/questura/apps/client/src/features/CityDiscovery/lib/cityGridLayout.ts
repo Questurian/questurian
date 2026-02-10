@@ -54,19 +54,38 @@ function getCellKey(cell: GridCell): string {
   return `${cell.col}-${cell.row}`;
 }
 
+const DESKTOP_POSITION_CLASS_BY_CELL: Record<string, string> = {
+  '1-1': '1024:col-start-1 1024:row-start-1',
+  '2-1': '1024:col-start-2 1024:row-start-1',
+  '3-1': '1024:col-start-3 1024:row-start-1',
+  '1-2': '1024:col-start-1 1024:row-start-2',
+  '2-2': '1024:col-start-2 1024:row-start-2',
+  '3-2': '1024:col-start-3 1024:row-start-2',
+  '1-3': '1024:col-start-1 1024:row-start-3',
+  '2-3': '1024:col-start-2 1024:row-start-3',
+  '3-3': '1024:col-start-3 1024:row-start-3',
+};
+
+const FEATURED_LAYOUT_CLASS_BY_CELL: Record<string, string> = {
+  '1-1': '380:col-span-2 1024:col-span-2 1024:row-span-2 1024:col-start-1 1024:row-start-1',
+  '2-1': '380:col-span-2 1024:col-span-2 1024:row-span-2 1024:col-start-2 1024:row-start-1',
+  '1-2': '380:col-span-2 1024:col-span-2 1024:row-span-2 1024:col-start-1 1024:row-start-2',
+  '2-2': '380:col-span-2 1024:col-span-2 1024:row-span-2 1024:col-start-2 1024:row-start-2',
+};
+
 function clampFeaturedStart(value: number): 1 | 2 {
   if (value <= 1) return 1;
   return 2;
 }
 
 export function getLayoutSlotClassName(slot: LayoutSlot): string {
-  const sharedClasses = `1024:col-start-${slot.colStart} 1024:row-start-${slot.rowStart}`;
+  const cellKey = getCellKey({ col: slot.colStart, row: slot.rowStart });
 
   if (slot.variant === 'featured') {
-    return `380:col-span-2 1024:col-span-${slot.colSpan} 1024:row-span-${slot.rowSpan} ${sharedClasses}`;
+    return FEATURED_LAYOUT_CLASS_BY_CELL[cellKey] ?? FEATURED_LAYOUT_CLASS_BY_CELL['1-1'];
   }
 
-  return sharedClasses;
+  return DESKTOP_POSITION_CLASS_BY_CELL[cellKey] ?? DESKTOP_POSITION_CLASS_BY_CELL['1-1'];
 }
 
 export function resolveLayoutSlots(

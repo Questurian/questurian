@@ -1,21 +1,14 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import { CitySelectionGridSection } from '../components/CitySelectionGridSection';
 import { CitySelectionTopSection } from '../components/CitySelectionTopSection';
 
 function CitySelectionContent() {
-  const [showDevReference, setShowDevReference] = useState(false);
-  const isDevMode = process.env.NODE_ENV !== 'production';
-
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
-      <CitySelectionTopSection
-        isDevMode={isDevMode}
-        showDevReference={showDevReference}
-        onToggleDevReference={() => setShowDevReference((current) => !current)}
-      >
-        <CitySelectionGridSection isDevMode={isDevMode} showDevReference={showDevReference} />
+      <CitySelectionTopSection>
+        <CitySelectionGridSection />
       </CitySelectionTopSection>
     </div>
   );
