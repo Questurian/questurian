@@ -4,18 +4,10 @@ import { MapPin } from 'lucide-react';
 import { CitySelectionHero } from './CitySelectionHero';
 
 interface CitySelectionTopSectionProps {
-  isDevMode: boolean;
-  showDevReference: boolean;
-  onToggleDevReference: () => void;
   children: JSX.Element;
 }
 
-export function CitySelectionTopSection({
-  isDevMode,
-  showDevReference,
-  onToggleDevReference,
-  children,
-}: CitySelectionTopSectionProps) {
+export function CitySelectionTopSection({ children }: CitySelectionTopSectionProps) {
   return (
     <>
       <header className="px-4 480:px-6 768:px-10 1024:px-16 py-5 768:py-8 animate-fade-in-down">
@@ -30,17 +22,6 @@ export function CitySelectionTopSection({
           </div>
 
           <div className="flex items-center gap-3">
-            {isDevMode ? (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onToggleDevReference}
-                  className="text-[10px] 480:text-xs uppercase tracking-wide px-3 py-1.5 rounded-full border border-[#1A1A1A]/25 text-[#1A1A1A]/70 hover:text-[#1A1A1A] hover:border-[#1A1A1A]/40 transition-colors"
-                >
-                  {showDevReference ? 'Hide Dev Reference' : 'Show Dev Reference'}
-                </button>
-              </div>
-            ) : null}
             <span className="text-xs text-[#1A1A1A]/40 tracking-wider uppercase hidden 550:block">
               Step 1 of 3
             </span>
