@@ -28,13 +28,13 @@ export default function LinkingErrorPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center px-5">
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+        <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-8 text-center">
           <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-[#fce4ec] rounded-full mb-4">
               <svg
-                className="w-6 h-6 text-red-600 dark:text-red-400"
+                className="w-6 h-6 text-[#c62828]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -47,16 +47,16 @@ export default function LinkingErrorPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="font-display text-[1.35rem] text-[#1A1A1A] mb-2">
               Account Linking Failed
             </h1>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65]">
               The Google account email didn&apos;t match your current account.
             </p>
           </div>
 
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg">
-            <p className="text-sm font-medium">
+          <div className="bg-[#fce4ec] border border-[#f8bbd0] text-[#c62828] px-4 py-3 rounded-sm">
+            <p className="text-[0.84rem] font-medium">
               This window will close in {countdown} second{countdown !== 1 ? 's' : ''}.
             </p>
           </div>

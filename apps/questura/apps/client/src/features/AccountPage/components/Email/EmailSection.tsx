@@ -10,20 +10,20 @@ export function EmailSection({ user }: EmailSectionProps) {
   const hasPassword = user?.hasLocalPassword || user?.authProvider === 'local' || user?.authProvider === 'dual';
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8">
       <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">
             Email
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-[0.84rem] text-[#6b6a68] leading-[1.65] mb-4">
             Use this email to sign in. This is also where we&apos;ll send email communication and newsletters.
           </p>
-          <div className="text-sm text-gray-900 dark:text-white font-medium mb-2">
+          <div className="text-[0.9rem] text-[#1A1A1A] font-medium mb-1.5">
             {user?.email}
           </div>
           {!hasPassword && (
-            <p className="text-xs text-yellow-600 dark:text-yellow-400">
+            <p className="text-[0.78rem] text-[#C65D3B]">
               You must add a password to your account before changing your email.
             </p>
           )}
@@ -31,12 +31,16 @@ export function EmailSection({ user }: EmailSectionProps) {
         {hasPassword ? (
           <button
             onClick={() => router.push('/account/change-email')}
-            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline ml-4 cursor-pointer"
+            className="
+              text-[0.82rem] text-[#6b6a68] hover:text-[#1A1A1A]
+              underline underline-offset-2 ml-4 cursor-pointer
+              transition-colors
+            "
           >
             Edit
           </button>
         ) : (
-          <span className="text-sm text-gray-400 dark:text-gray-500 ml-4 cursor-not-allowed">
+          <span className="text-[0.82rem] text-[#c4c2be] ml-4 cursor-not-allowed">
             Edit
           </span>
         )}

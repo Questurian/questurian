@@ -11,26 +11,26 @@ interface PasswordSectionProps {
 export function PasswordSection({ user, passwordSuccess, passwordError, onClearPasswordMessages }: PasswordSectionProps) {
   const router = useRouter();
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8">
       <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">
             Password
           </h3>
 
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-[0.84rem] text-[#6b6a68] leading-[1.65] mb-4">
             {user?.authProvider === 'local' || user?.authProvider === 'dual'
               ? 'Password authentication is enabled and secure.'
               : 'No password set. You can add password authentication for additional security.'}
           </p>
 
           {passwordSuccess && (
-            <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 px-4 py-3 rounded-lg relative flex items-start justify-between">
-              <span className="text-sm">{passwordSuccess}</span>
+            <div className="mb-4 bg-[#e8f5e9] border border-[#c8e6c9] text-[#2e7d32] px-4 py-3 rounded-sm relative flex items-start justify-between">
+              <span className="text-[0.84rem] leading-[1.5]">{passwordSuccess}</span>
               {onClearPasswordMessages && (
                 <button
                   onClick={onClearPasswordMessages}
-                  className="text-green-800 dark:text-green-200 hover:text-green-900 dark:hover:text-green-100 ml-4"
+                  className="text-[#2e7d32] hover:text-[#1b5e20] ml-4 flex-shrink-0"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -41,12 +41,12 @@ export function PasswordSection({ user, passwordSuccess, passwordError, onClearP
           )}
 
           {passwordError && (
-            <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg relative flex items-start justify-between">
-              <span className="text-sm">{passwordError}</span>
+            <div className="mb-4 bg-[#fce4ec] border border-[#f8bbd0] text-[#c62828] px-4 py-3 rounded-sm relative flex items-start justify-between">
+              <span className="text-[0.84rem] leading-[1.5]">{passwordError}</span>
               {onClearPasswordMessages && (
                 <button
                   onClick={onClearPasswordMessages}
-                  className="text-red-800 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100 ml-4"
+                  className="text-[#c62828] hover:text-[#b71c1c] ml-4 flex-shrink-0"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -64,7 +64,11 @@ export function PasswordSection({ user, passwordSuccess, passwordError, onClearP
               router.push('/account/add-password');
             }
           }}
-          className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline ml-4 cursor-pointer"
+          className="
+            text-[0.82rem] text-[#6b6a68] hover:text-[#1A1A1A]
+            underline underline-offset-2 ml-4 cursor-pointer
+            transition-colors whitespace-nowrap
+          "
         >
           {user?.authProvider === 'local' || user?.authProvider === 'dual' ? 'Change password' : 'Set password'}
         </button>

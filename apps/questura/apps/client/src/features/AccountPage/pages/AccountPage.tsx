@@ -61,20 +61,42 @@ function AccountContent() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Account
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              Welcome back, {user?.email}!
-            </p>
-          </div>
+    <div className="min-h-screen">
+      {/* ── Header ── */}
+      <header className="px-6 pt-10 pb-2 480:pt-12 768:pt-14">
+        <div className="max-w-2xl mx-auto">
+          <p
+            className="
+              text-[0.68rem] uppercase tracking-[0.18em] font-semibold
+              text-[#9a9894] mb-3
+            "
+          >
+            Account Settings
+          </p>
+          <h1
+            className="
+              font-display text-[1.55rem] text-[#1A1A1A] leading-[1.15]
+              480:text-[1.8rem]
+              768:text-[2.1rem]
+            "
+          >
+            Your Account
+          </h1>
+          <p
+            className="
+              mt-2.5 text-[0.9rem] text-[#6b6a68] leading-[1.6]
+              480:text-[0.95rem]
+              768:text-[1rem]
+            "
+          >
+            {user?.email}
+          </p>
         </div>
+      </header>
 
-        <div className="space-y-8">
+      {/* ── Sections ── */}
+      <section className="px-6 pt-8 pb-16 480:pt-10 768:pt-12 768:pb-20">
+        <div className="max-w-2xl mx-auto space-y-5 768:space-y-6">
           <EmailSection user={user} />
 
           <PasswordSection
@@ -95,7 +117,7 @@ function AccountContent() {
 
           <MembershipSection user={user} />
         </div>
-      </div>
+      </section>
     </div>
   );
 }

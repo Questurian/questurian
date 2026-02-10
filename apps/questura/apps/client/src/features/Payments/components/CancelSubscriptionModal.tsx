@@ -19,40 +19,51 @@ export function CancelSubscriptionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+    <div className="fixed inset-0 bg-[#1A1A1A]/60 flex items-center justify-center p-5 z-50">
+      <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm max-w-md w-full p-6 480:p-8">
+        <h3 className="font-display text-[1.15rem] text-[#1A1A1A] mb-4 768:text-[1.25rem]">
           Cancel Subscription
         </h3>
 
         <div className="mb-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65] mb-3">
             Are you sure you want to cancel your subscription?
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65]">
             Your premium access will continue until {formatExpirationDate(membershipExpiration)},
             and then your account will revert to the free plan.
           </p>
         </div>
 
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mb-6">
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+        <div className="bg-[#fff3e0] border border-[#ffe0b2] rounded-sm p-3.5 mb-6">
+          <p className="text-[0.84rem] text-[#e65100] leading-[1.55]">
             <strong>Note:</strong> This action cannot be undone. You&apos;ll need to subscribe again to regain premium access.
           </p>
         </div>
 
-        <div className="flex space-x-3">
+        <div className="flex gap-3">
           <button
             onClick={onConfirm}
             disabled={isLoading}
-            className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="
+              flex-1 bg-[#c62828] hover:bg-[#b71c1c]
+              text-white text-center py-3 rounded
+              text-[0.88rem] font-medium transition-colors
+              disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
+            "
           >
             {isLoading ? 'Cancelling...' : 'Yes, Cancel Subscription'}
           </button>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="
+              flex-1 bg-white border border-[#d7d4ce]
+              text-[#4f4e4b] text-center py-3 rounded
+              text-[0.88rem] font-medium transition-colors
+              hover:bg-[#f0efeb] disabled:opacity-50
+              disabled:cursor-not-allowed cursor-pointer
+            "
           >
             Keep Subscription
           </button>
