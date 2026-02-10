@@ -15,7 +15,7 @@ function CityDashboardContent() {
   const citySlug = (params.city as string)?.toLowerCase();
   const countrySlug = (params.country as string)?.toLowerCase();
 
-  const city = getCityBySlug(citySlug, countrySlug);
+  const city = getCityBySlug(countrySlug, citySlug);
 
   useProtectedRoute({
     onLoginRequired: (redirectPath) => {
@@ -54,7 +54,7 @@ function CityDashboardContent() {
         prefillEmail: email || undefined
       });
 
-      router.replace(`/${citySlug}/${countrySlug}`);
+      router.replace(`/${countrySlug}/${citySlug}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, citySlug, countrySlug]);

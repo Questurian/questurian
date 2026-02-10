@@ -104,9 +104,9 @@ export const intents: Intent[] = [
   },
 ];
 
-export function getCityBySlug(citySlug: string, countrySlug: string): City | undefined {
+export function getCityBySlug(countrySlug: string, citySlug: string): City | undefined {
   return cities.find(
-    c => c.id === citySlug.toLowerCase() && c.country === countrySlug.toLowerCase()
+    c => c.country === countrySlug.toLowerCase() && c.id === citySlug.toLowerCase()
   );
 }
 
