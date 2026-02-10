@@ -30,10 +30,22 @@ export const basicFields: Field[] = [
 
       // STAFF EMAIL DOMAIN VALIDATION
       // Staff accounts (editor/admin) must use company email (@questurian.com)
-      // Customers can use any email, staff must use company domain
+      // Exception: allow first-user bootstrap (auto-promoted to admin) to use any email.
       const userRole = (data as any)?.role
+      let isFirstUserBootstrap = false
+      if (operation === 'create' && !req?.user && req?.payload) {
+        try {
+          const existingUsersCount = await req.payload.count({
+            collection: 'users',
+          })
+          isFirstUserBootstrap = existingUsersCount.totalDocs === 0
+        } catch (error) {
+          console.error('Error checking first-user bootstrap state:', error)
+        }
+      }
+
       if (userRole === 'editor' || userRole === 'admin') {
-        if (!email.endsWith('@questurian.com')) {
+        if (!isFirstUserBootstrap && !email.endsWith('@questurian.com')) {
           return 'Staff accounts must use company email (@questurian.com). Please use your Questurian staff email address.'
         }
       }

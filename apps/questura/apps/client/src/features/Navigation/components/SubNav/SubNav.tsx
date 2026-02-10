@@ -1,69 +1,32 @@
 'use client';
 
-import { ArgentinaFlag, BrazilFlag, ColombianFlag, PeruFlag } from '@/components/shared/flags';
+const navItems = ['Explore', 'Stay', 'Move'] as const;
 
-const countries = [
-  { name: 'Peru', Flag: PeruFlag },
-  { name: 'Colombia', Flag: ColombianFlag },
-  { name: 'Argentina', Flag: ArgentinaFlag },
-  { name: 'Brazil', Flag: BrazilFlag },
-];
+interface SubNavProps {
+  className?: string;
+}
 
-export function SubNav() {
+export function SubNav({ className = '' }: SubNavProps) {
   return (
     <nav
-      className={`
-        /* Base styles */
-        border-t-[0.5px] border-white
-        bg-[rgb(31,31,31)]
-        h-[65px]
-        overflow-x-auto
-        [&::-webkit-scrollbar]:hidden
-        [-ms-overflow-style:none]
-        [scrollbar-width:none]
-      `}
+      aria-label="Section navigation"
+      className={`inline-flex rounded-full bg-white/10 p-1 ${className}`}
     >
-      <div
-        className={`
-          /* Base styles */
-          flex items-center justify-center
-          gap-4
-          max-w-[1024px]
-          w-fit
-          min-w-full
-          h-full
-          mx-auto
-        `}
-      >
-        {countries.map(({ name, Flag }) => (
-          <div
-            key={name}
-            className={`
-              /* Base styles */
-              flex items-center justify-center
-              gap-2 cursor-pointer
-              px-3 py-2
-              transition-colors duration-200
-              hover:bg-white/10
-            `}
-          >
-            <Flag
-              className={`
-                /* Base styles */
-                h-5 w-5
-              `}
-            />
-            <span
-              className={`
-                /* Base styles */
-                text-base font-bold text-white
-              `}
-            >
-              {name}
-            </span>
-          </div>
-        ))}
-      </div>
+      {navItems.map((item, index) => (
+        <button
+          key={item}
+          type="button"
+          aria-pressed={index === 0}
+          className={`
+            rounded-full px-4 py-1.5 uppercase tracking-[0.08em]
+            text-[0.63rem] 480:text-[0.69rem] 550:text-[0.74rem]
+            font-semibold transition-colors duration-200
+            ${index === 0 ? 'bg-white text-[#222427]' : 'text-white/85 hover:text-white'}
+          `}
+        >
+          {item}
+        </button>
+      ))}
     </nav>
   );
 }

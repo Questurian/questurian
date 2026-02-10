@@ -6,7 +6,7 @@ import config from '@/payload.config'
 import jwt from 'jsonwebtoken'
 import { exchangeCodeForToken, getUserInfo, handleGoogleAuth } from '@/auth/lib/google-handler'
 import { isActiveMember } from '@/shared/lib/membership'
-import { APP_URLS } from '@/shared/config'
+import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { setAuthCookie } from '@/shared/utils/cookie-helper'
 
 export async function GET(req: NextRequest) {
@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
         collection: 'users',
         tokenVersion: user.tokenVersion || 0
       },
-      process.env.PAYLOAD_SECRET!,
+      APP_CONFIG.JWT_SECRET,
       {
         expiresIn: '7d'
       }

@@ -3,13 +3,18 @@
 import { User } from "lucide-react";
 import { useUserModalStore } from "@/lib/stores/userModalStore";
 
-export default function UserIcon() {
+interface UserIconProps {
+  buttonClassName?: string;
+  iconClassName?: string;
+}
+
+export default function UserIcon({ buttonClassName = "", iconClassName = "" }: UserIconProps) {
   const { openUserModal } = useUserModalStore();
 
   return (
     <button
       onClick={openUserModal}
-      className="p-0 bg-transparent border-0 cursor-pointer focus:outline-none"
+      className={`p-0 bg-transparent border-0 cursor-pointer focus:outline-none ${buttonClassName}`}
       aria-label="Open user modal"
     >
       <User
@@ -24,6 +29,7 @@ export default function UserIcon() {
           /* 480px breakpoint */
           /* 550px breakpoint */
           550:w-6 550:h-6
+          ${iconClassName}
         `}
       />
     </button>

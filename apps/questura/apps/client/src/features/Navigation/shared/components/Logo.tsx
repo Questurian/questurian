@@ -1,27 +1,43 @@
 "use client";
 
-export default function Logo() {
-  return (
-    <h1
-      className={`
-        /* Base styles */
-        font-[Quattrocento] font-bold text-white m-0 p-0
-        text-lg
-        /* 280px breakpoint */
-        /* 320px breakpoint */
-        /* 380px breakpoint */
-        /* 480px breakpoint */
-        480:text-xl
-        /* 550px breakpoint */
-          550:text-2xl
-        /* 768px breakpoint */
-        /* 1024px breakpoint */
-        1024:text-6xl
-        /* 1280px breakpoint */
+interface LogoProps {
+  className?: string;
+  subtitle?: string;
+  subtitleClassName?: string;
+}
 
-      `}
-    >
-      Questurian
-    </h1>
+export default function Logo({
+  className = "",
+  subtitle = "",
+  subtitleClassName = "",
+}: LogoProps) {
+  return (
+    <div className="text-center">
+      <h1
+        className={`
+          font-display text-[#25292d] uppercase font-semibold leading-none m-0 p-0
+          tracking-[0.12em] text-[1.25rem]
+          480:text-[1.4rem]
+          550:text-[1.55rem]
+          1024:text-[2.9rem]
+          ${className}
+        `}
+      >
+        Questurian
+      </h1>
+      {subtitle ? (
+        <p
+          className={`
+            font-display italic text-[#6b6a68] mt-1
+            text-[0.82rem]
+            550:text-[0.95rem]
+            1024:text-[1.4rem]
+            ${subtitleClassName}
+          `}
+        >
+          {subtitle}
+        </p>
+      ) : null}
+    </div>
   );
 }

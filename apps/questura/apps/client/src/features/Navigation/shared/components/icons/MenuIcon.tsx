@@ -3,13 +3,18 @@
 import { TextSearch } from 'lucide-react';
 import { useMenuModalStore } from '@/lib/stores/menuModalStore';
 
-export default function MenuIcon() {
+interface MenuIconProps {
+  buttonClassName?: string;
+  iconClassName?: string;
+}
+
+export default function MenuIcon({ buttonClassName = '', iconClassName = '' }: MenuIconProps) {
   const { openMenuModal } = useMenuModalStore();
 
   return (
     <button
       onClick={openMenuModal}
-      className="p-0 bg-transparent border-0 cursor-pointer focus:outline-none"
+      className={`p-0 bg-transparent border-0 cursor-pointer focus:outline-none ${buttonClassName}`}
       aria-label="Open menu modal"
     >
       <TextSearch
@@ -25,6 +30,7 @@ export default function MenuIcon() {
           480:w-5 480:h-5
           /* 550px breakpoint */
           550:w-6 550:h-6
+          ${iconClassName}
         `}
       />
     </button>

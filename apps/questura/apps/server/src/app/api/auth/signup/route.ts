@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
         emailVerified: true,
         tokenVersion: newUser.tokenVersion || 0
       },
-      APP_CONFIG.payloadSecret,
+      APP_CONFIG.JWT_SECRET,
       {
         expiresIn: '7d'
       }

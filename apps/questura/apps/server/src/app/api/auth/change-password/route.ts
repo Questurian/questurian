@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         collection: 'users',
         tokenVersion: newTokenVersion
       } as any,
-      JWT_SECRET || APP_CONFIG.payloadSecret || 'secret',
+      JWT_SECRET,
       {
         expiresIn: APP_CONFIG.jwtExpiresIn || '7d'
       } as any
