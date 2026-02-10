@@ -31,7 +31,7 @@ export function CityCard({ city, onSelect, variant = 'default', style }: CityCar
       className={`
         relative overflow-hidden rounded-2xl cursor-pointer group w-full
         ${variantClasses[variant]}
-        animate-fade-in-up transition-transform duration-500 ease-out 1024:hover:scale-[1.02]
+        animate-fade-in-up transition-transform duration-500 ease-out hover:scale-[1.02]
       `}
     >
       {/* Background Image */}
