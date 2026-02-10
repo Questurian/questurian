@@ -26,25 +26,27 @@ export function CitySelectionTopSection({ children }: CitySelectionTopSectionPro
       </header>
 
       <main className="px-4 480:px-6 768:px-10 1024:px-16 pb-12 768:pb-20">
-        <section className="pt-6 480:pt-8 768:pt-10 max-w-[62rem]">
-          <p className="text-[#C65D3B] text-xs 480:text-sm tracking-[0.32em] uppercase mb-2 480:mb-3 768:mb-4 animate-slide-in-right">
-            Choose your destination
-          </p>
+        <section className="pt-6 480:pt-8 768:pt-10 max-w-[1400px] mx-auto">
+          <div className="max-w-[62rem]">
+            <p className="text-[#C65D3B] text-xs 480:text-sm tracking-[0.32em] uppercase mb-2 480:mb-3 768:mb-4 animate-slide-in-right">
+              Choose your destination
+            </p>
 
-          <h1
-            className="font-display text-[#1A1A1A] leading-[0.94] tracking-[-0.02em] text-[2rem] 480:text-[2.7rem] 768:text-[3.6rem] 1024:text-[4.3rem] animate-text-reveal"
-            style={{ animationDelay: '0.1s' }}
-          >
-            Where to <span className="italic font-normal">next?</span>
-          </h1>
+            <h1
+              className="font-display text-[#1A1A1A] leading-[0.94] tracking-[-0.02em] text-[2rem] 480:text-[2.7rem] 768:text-[3.6rem] 1024:text-[4.3rem] animate-text-reveal"
+              style={{ animationDelay: '0.1s' }}
+            >
+              Where to <span className="city-next-pop">next?</span>
+            </h1>
 
-          <p
-            className="mt-3 480:mt-4 768:mt-5 max-w-[54rem] text-[#1A1A1A]/62 leading-[1.42] text-sm 480:text-[1.05rem] 768:text-[1.35rem] font-display animate-fade-in-up"
-            style={{ animationDelay: '0.25s' }}
-          >
-            Select a city that resonates with your rhythm and pace. Every destination reveals a different way to
-            live, work, and connect.
-          </p>
+            <p
+              className="mt-3 480:mt-4 768:mt-5 max-w-[54rem] text-[#1A1A1A]/62 leading-[1.42] text-sm 480:text-[1.05rem] 768:text-[1.35rem] font-display animate-fade-in-up"
+              style={{ animationDelay: '0.25s' }}
+            >
+              Select a city that resonates with your rhythm and pace. Every destination reveals a different way to
+              live, work, and connect.
+            </p>
+          </div>
         </section>
 
         <div className="mt-8 768:mt-10 1024:mt-12">{children}</div>
