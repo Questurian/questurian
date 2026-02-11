@@ -1,3 +1,13 @@
+import {
+  convertMarkdownToLexical as convertMarkdownToLexicalFromYoutube,
+  createArticle as createArticleFromYoutube,
+  fetchLocations as fetchLocationsFromYoutube,
+  fetchMediaAssets as fetchMediaAssetsFromYoutube,
+  type CreateArticlePayload,
+  type Location,
+  type MediaAsset,
+} from '../youtube2blog/api'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003'
 const FEATURE_PREFIX = '/prompt2blog'
 
@@ -163,6 +173,19 @@ export type Prompt2BlogResultResponse = {
   }
 }
 
+export type Prompt2BlogSavedArticle = {
+  run_id: string
+  title: string | null
+  article_type: string | null
+  created_at: string
+  updated_at: string
+  markdown: string
+  markdown_length: number
+  synced_to_payload?: boolean
+  payload_article_id?: number | null
+  synced_at?: string | null
+}
+
 export type Prompt2BlogDebugResponse = {
   run_id: string
   status: Prompt2BlogStatusResponse
@@ -297,6 +320,10 @@ export async function getPrompt2BlogResult(runId: string): Promise<Prompt2BlogRe
   return response.json()
 }
 
+export async function fetchResult(runId: string): Promise<Prompt2BlogResultResponse> {
+  return getPrompt2BlogResult(runId)
+}
+
 export async function getPrompt2BlogDebug(runId: string): Promise<Prompt2BlogDebugResponse> {
   const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/debug/${runId}`)
 
@@ -306,3 +333,53 @@ export async function getPrompt2BlogDebug(runId: string): Promise<Prompt2BlogDeb
 
   return response.json()
 }
+
+export async function fetchArticles(): Promise<Prompt2BlogSavedArticle[]> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles`)
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to fetch Prompt2Blog articles')
+  }
+
+  return response.json()
+}
+
+export async function markArticleSynced(
+  runId: string,
+  payloadArticleId: number,
+): Promise<{ message: string; run_id: string; payload_article_id: number }> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ payload_article_id: payloadArticleId }),
+  })
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to mark article synced')
+  }
+
+  return response.json()
+}
+
+export async function getArticleSyncStatus(
+  runId: string,
+): Promise<{
+  synced_to_payload: boolean
+  payload_article_id: number | null
+  synced_at: string | null
+}> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}/sync`)
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to get sync status')
+  }
+
+  return response.json()
+}
+
+export type { CreateArticlePayload, Location, MediaAsset }
+
+export const convertMarkdownToLexical = convertMarkdownToLexicalFromYoutube
+export const fetchLocations = fetchLocationsFromYoutube
+export const fetchMediaAssets = fetchMediaAssetsFromYoutube
+export const createArticle = createArticleFromYoutube

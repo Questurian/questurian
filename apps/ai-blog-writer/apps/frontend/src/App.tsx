@@ -14,7 +14,12 @@ import {
   StageArticlePage
 } from './features/youtube2blog'
 import { Review2BlogPage } from './features/review2blog'
-import { Prompt2BlogPage } from './features/prompt2blog'
+import {
+  Prompt2BlogPage,
+  Prompt2BlogArticlesPage,
+  Prompt2BlogStagePage,
+  Prompt2BlogStageArticlePage
+} from './features/prompt2blog'
 import {
   Url2BlogPage,
   Url2BlogArticlesPage,
@@ -52,6 +57,9 @@ export default function App() {
 
               {/* Prompt2Blog Feature */}
               <Route path="prompt2blog" element={<Prompt2BlogPage />} />
+              <Route path="prompt2blog/articles" element={<Prompt2BlogArticlesPage />} />
+              <Route path="prompt2blog/stage" element={<Prompt2BlogStagePage />} />
+              <Route path="prompt2blog/stage-article" element={<Prompt2BlogStageArticlePage />} />
 
               {/* URL2Blog Feature */}
               <Route path="url2blog" element={<Url2BlogPage />} />

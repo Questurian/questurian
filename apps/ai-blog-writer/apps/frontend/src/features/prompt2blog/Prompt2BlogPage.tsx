@@ -304,6 +304,18 @@ export default function Prompt2BlogPage() {
     },
   }), [location, topic, audience, goal, perspective, voice, formatting, callToAction, seo, editorialInstructions, blobs])
 
+  const stageArticleUrl = useMemo(() => {
+    if (!pipelineResult) return null
+    const runId = pipelineResult.run_id || pipelineRunId
+    if (!runId) return null
+
+    return `/prompt2blog/stage-article?${new URLSearchParams({
+      runId,
+      title: pipelineResult.improved_article.title || 'Untitled',
+      type: pipelineResult.article_type.name || '',
+    }).toString()}`
+  }, [pipelineResult, pipelineRunId])
+
   const handleCopyJson = useCallback(() => {
     navigator.clipboard.writeText(JSON.stringify(buildJson, null, 2)).then(() => {
       setCopied(true)
@@ -509,6 +521,17 @@ export default function Prompt2BlogPage() {
         </div>
         <div className="p2b-badge-row">
           <Link to="/" className="p2b-nav-link">&larr; Home</Link>
+          <Link to="/prompt2blog/articles" className="p2b-nav-link">Saved Articles</Link>
+          <Link to="/prompt2blog/stage" className="p2b-nav-link">
+            Staged ({(() => {
+              try {
+                const stored = localStorage.getItem('prompt2blog_staged_articles')
+                return stored ? JSON.parse(stored).length : 0
+              } catch {
+                return 0
+              }
+            })()})
+          </Link>
         </div>
       </header>
 
@@ -873,6 +896,16 @@ export default function Prompt2BlogPage() {
               {sourceStep === 'pipeline_complete' && pipelineResult && (
                 <div className="p2b-final-result">
                   <h3>Final Article Ready</h3>
+                  <div className="p2b-panel-actions" style={{ marginBottom: '1rem' }}>
+                    {stageArticleUrl && (
+                      <Link to={stageArticleUrl} className="p2b-synthesize-btn">
+                        Stage in Payload Editor
+                      </Link>
+                    )}
+                    <Link to="/prompt2blog/articles" className="p2b-rerun-btn">
+                      View Saved Articles
+                    </Link>
+                  </div>
                   <p>
                     <strong>Status:</strong> {pipelineResult.pipeline_status}
                   </p>
