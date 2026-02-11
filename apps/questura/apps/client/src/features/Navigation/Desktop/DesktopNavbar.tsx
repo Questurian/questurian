@@ -193,7 +193,7 @@ export default function DesktopNavbar() {
           <div className="justify-self-start">
             <MenuIcon iconClassName="!text-black" />
           </div>
-          <Link href="/" className="cursor-pointer justify-self-center">
+          <Link href={hasCityContext ? `/${countrySlug}/${citySlug}/${activeMode}` : "/"} className="cursor-pointer justify-self-center">
             <Logo />
           </Link>
           <div className="flex items-center justify-self-end gap-4">

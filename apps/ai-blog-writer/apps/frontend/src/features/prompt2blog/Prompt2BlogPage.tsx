@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { synthesizeSources } from './api'
+import {
+  getPrompt2BlogDebug,
+  getPrompt2BlogResult,
+  getPrompt2BlogStatus,
+  startPrompt2BlogRun,
+  type Prompt2BlogPipelinePayload,
+  type Prompt2BlogStatusResponse,
+} from './api'
 import './styles.css'
 
 interface LocationFields {
@@ -41,10 +48,12 @@ interface P2BFormState {
   callToAction: string
   seo: SeoFields
   editorialInstructions: string
+  enableEditorialAugmentation: boolean
   blobs: RawBlob[]
 }
 
 const STORAGE_KEY = 'p2b-form-draft'
+const RUN_STORAGE_KEY = 'p2b-run-state'
 
 const DEFAULT_STATE: P2BFormState = {
   location: { country: '', city: '', neighborhood: '' },
@@ -57,6 +66,7 @@ const DEFAULT_STATE: P2BFormState = {
   callToAction: '',
   seo: { primary_keyword: '', secondary_keywords: '' },
   editorialInstructions: '',
+  enableEditorialAugmentation: true,
   blobs: [{ id: 1, content: '' }],
 }
 
@@ -71,8 +81,113 @@ function loadSavedState(): P2BFormState {
   }
 }
 
+type SourceStep = 'edit' | 'pipeline_running' | 'pipeline_complete'
+
+interface PersistedRunState {
+  sourceStep: SourceStep
+  pipelineRunId: string | null
+  pipelineResult: Prompt2BlogPipelinePayload | null
+}
+
+function loadSavedRunState(): PersistedRunState {
+  const fallback: PersistedRunState = {
+    sourceStep: 'edit',
+    pipelineRunId: null,
+    pipelineResult: null,
+  }
+
+  try {
+    const raw = localStorage.getItem(RUN_STORAGE_KEY)
+    if (!raw) return fallback
+    const parsed = JSON.parse(raw) as Partial<PersistedRunState>
+    const sourceStep =
+      parsed.sourceStep === 'pipeline_running' || parsed.sourceStep === 'pipeline_complete'
+        ? parsed.sourceStep
+        : 'edit'
+
+    return {
+      sourceStep,
+      pipelineRunId: typeof parsed.pipelineRunId === 'string' ? parsed.pipelineRunId : null,
+      pipelineResult:
+        parsed.pipelineResult && typeof parsed.pipelineResult === 'object'
+        && (parsed.pipelineResult as { quality_review?: unknown }).quality_review
+          ? (parsed.pipelineResult as Prompt2BlogPipelinePayload)
+          : null,
+    }
+  } catch {
+    return fallback
+  }
+}
+
+type PipelineStepStatus = 'pending' | 'running' | 'done' | 'error'
+type PipelineLogLevel = 'info' | 'error'
+
+type PipelineLogEntry = {
+  id: number
+  at: string
+  level: PipelineLogLevel
+  message: string
+}
+
+const PIPELINE_STAGE_ORDER = [
+  'queued',
+  'stage_synthesize_sources',
+  'stage_classify_article_type',
+  'stage_guideline_fetch',
+  'stage_coverage_check',
+  'stage_supplement',
+  'stage_compose',
+  'stage_quality_audit',
+  'stage_repair',
+  'stage_editorial_augmentation',
+  'stage_title',
+  'stage_finalize',
+  'complete',
+] as const
+
+const PIPELINE_STAGE_LABELS: Record<string, string> = {
+  queued: 'Queued',
+  stage_synthesize_sources: 'Synthesize raw sources',
+  stage_classify_article_type: 'Classify article type',
+  stage_guideline_fetch: 'Fetch article guidelines',
+  stage_coverage_check: 'Check coverage against brief + guideline',
+  stage_supplement: 'Generate supplemental sections (if needed)',
+  stage_compose: 'Compose full draft',
+  stage_quality_audit: 'Audit draft quality and constraints',
+  stage_repair: 'Repair pass (if needed)',
+  stage_editorial_augmentation: 'Apply editorial blocks (if helpful)',
+  stage_title: 'Generate final title',
+  stage_finalize: 'Finalize markdown output',
+  complete: 'Complete',
+}
+
+function getPipelineStepStatus(
+  step: string,
+  status: Prompt2BlogStatusResponse | null,
+): PipelineStepStatus {
+  if (!status) {
+    return step === 'queued' ? 'running' : 'pending'
+  }
+
+  const activeIndex = PIPELINE_STAGE_ORDER.indexOf(
+    (status.stage || 'queued') as (typeof PIPELINE_STAGE_ORDER)[number],
+  )
+  const stepIndex = PIPELINE_STAGE_ORDER.indexOf(step as (typeof PIPELINE_STAGE_ORDER)[number])
+
+  if (status.state === 'failed') {
+    if (step === status.stage) return 'error'
+    return stepIndex < activeIndex ? 'done' : 'pending'
+  }
+  if (status.state === 'completed') {
+    return step === 'complete' || stepIndex <= activeIndex ? 'done' : 'pending'
+  }
+  if (step === status.stage) return 'running'
+  return stepIndex < activeIndex ? 'done' : 'pending'
+}
+
 export default function Prompt2BlogPage() {
   const saved = useRef(loadSavedState())
+  const savedRun = useRef(loadSavedRunState())
 
   const [location, setLocation] = useState<LocationFields>(saved.current.location)
   const [topic, setTopic] = useState(saved.current.topic)
@@ -84,16 +199,32 @@ export default function Prompt2BlogPage() {
   const [callToAction, setCallToAction] = useState(saved.current.callToAction)
   const [seo, setSeo] = useState<SeoFields>(saved.current.seo)
   const [editorialInstructions, setEditorialInstructions] = useState(saved.current.editorialInstructions)
+  const [enableEditorialAugmentation, setEnableEditorialAugmentation] = useState(
+    saved.current.enableEditorialAugmentation ?? true,
+  )
   const [blobs, setBlobs] = useState<RawBlob[]>(saved.current.blobs)
 
   // Persist to localStorage on every change
   useEffect(() => {
     const state: P2BFormState = {
       location, topic, audience, goal, perspective,
-      voice, formatting, callToAction, seo, editorialInstructions, blobs,
+      voice, formatting, callToAction, seo, editorialInstructions, enableEditorialAugmentation, blobs,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [location, topic, audience, goal, perspective, voice, formatting, callToAction, seo, editorialInstructions, blobs])
+  }, [
+    location,
+    topic,
+    audience,
+    goal,
+    perspective,
+    voice,
+    formatting,
+    callToAction,
+    seo,
+    editorialInstructions,
+    enableEditorialAugmentation,
+    blobs,
+  ])
 
   const addBlob = () => {
     setBlobs(prev => [...prev, { id: Date.now(), content: '' }])
@@ -108,49 +239,36 @@ export default function Prompt2BlogPage() {
     setBlobs(prev => prev.map(b => b.id === id ? { ...b, content } : b))
   }
 
-  const handleClear = useCallback(() => {
-    setLocation(DEFAULT_STATE.location)
-    setTopic(DEFAULT_STATE.topic)
-    setAudience(DEFAULT_STATE.audience)
-    setGoal(DEFAULT_STATE.goal)
-    setPerspective(DEFAULT_STATE.perspective)
-    setVoice(DEFAULT_STATE.voice)
-    setFormatting(DEFAULT_STATE.formatting)
-    setCallToAction(DEFAULT_STATE.callToAction)
-    setSeo(DEFAULT_STATE.seo)
-    setEditorialInstructions(DEFAULT_STATE.editorialInstructions)
-    setBlobs(DEFAULT_STATE.blobs)
-    localStorage.removeItem(STORAGE_KEY)
-  }, [])
+  const [sourceStep, setSourceStep] = useState<SourceStep>(savedRun.current.sourceStep)
+  const [pipelineRunId, setPipelineRunId] = useState<string | null>(savedRun.current.pipelineRunId)
+  const [pipelineStatus, setPipelineStatus] = useState<Prompt2BlogStatusResponse | null>(null)
+  const [pipelineResult, setPipelineResult] = useState<Prompt2BlogPipelinePayload | null>(
+    savedRun.current.pipelineResult,
+  )
+  const [pipelineDebugData, setPipelineDebugData] = useState<Record<string, unknown> | null>(null)
+  const [pipelineLogs, setPipelineLogs] = useState<PipelineLogEntry[]>([])
+  const [showPipelineDebug, setShowPipelineDebug] = useState(false)
+  const lastObservedStageRef = useRef<string | null>(null)
+  const resumedRunLoggedRef = useRef(false)
 
-  const [synthesizedText, setSynthesizedText] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const hasBlobs = blobs.some(b => b.content.trim())
 
-  const handleSynthesize = useCallback(async () => {
-    const contents = blobs.map(b => b.content).filter(c => c.trim())
-    if (contents.length === 0) return
-
-    setIsLoading(true)
-    setError(null)
-    try {
-      const res = await synthesizeSources(contents)
-      setSynthesizedText(res.synthesized)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Synthesis failed')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [blobs])
-
-  const handleEditSources = useCallback(() => {
-    setSynthesizedText(null)
-    setError(null)
+  const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
+    setPipelineLogs(prev => [
+      ...prev,
+      {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        at: new Date().toLocaleTimeString(),
+        level,
+        message,
+      },
+    ])
   }, [])
-
-  const [copied, setCopied] = useState(false)
 
   const buildJson = useMemo(() => ({
     location: {
@@ -190,8 +308,194 @@ export default function Prompt2BlogPage() {
     navigator.clipboard.writeText(JSON.stringify(buildJson, null, 2)).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {
+      setError('Unable to copy JSON to clipboard.')
     })
   }, [buildJson])
+
+  const handleRunPipeline = useCallback(async () => {
+    const rawSources = blobs.map(blob => blob.content.trim()).filter(Boolean)
+    if (!rawSources.length) {
+      setError('At least one raw source is required before running the pipeline.')
+      return
+    }
+
+    setIsLoading(true)
+    setLoadingLabel('Starting final article pipeline...')
+    setError(null)
+    setPipelineResult(null)
+    setPipelineStatus(null)
+    setPipelineDebugData(null)
+    setPipelineLogs([])
+    setShowPipelineDebug(false)
+    lastObservedStageRef.current = null
+    resumedRunLoggedRef.current = false
+
+    try {
+      const startResponse = await startPrompt2BlogRun({
+        raw_sources: rawSources,
+        writing_brief: buildJson as Record<string, unknown>,
+        include_debug: true,
+        enable_editorial_augmentation: enableEditorialAugmentation,
+      })
+
+      appendPipelineLog(`Pipeline started. Run ID: ${startResponse.run_id}`)
+      appendPipelineLog(
+        `Editorial blocks ${enableEditorialAugmentation ? 'enabled' : 'disabled'} for this run.`,
+      )
+      setLoadingLabel('Running final article pipeline...')
+      setPipelineRunId(startResponse.run_id)
+      setSourceStep('pipeline_running')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to start final pipeline'
+      setError(message)
+      appendPipelineLog(`Pipeline start failed: ${message}`, 'error')
+      setIsLoading(false)
+    }
+  }, [appendPipelineLog, blobs, buildJson, enableEditorialAugmentation])
+
+  const handleResetRun = useCallback(() => {
+    setSourceStep('edit')
+    setPipelineRunId(null)
+    setPipelineStatus(null)
+    setPipelineResult(null)
+    setPipelineDebugData(null)
+    setPipelineLogs([])
+    setShowPipelineDebug(false)
+    setIsLoading(false)
+    setLoadingLabel('')
+    setError(null)
+    resumedRunLoggedRef.current = false
+    localStorage.removeItem(RUN_STORAGE_KEY)
+  }, [])
+
+  const handleClear = useCallback(() => {
+    setLocation(DEFAULT_STATE.location)
+    setTopic(DEFAULT_STATE.topic)
+    setAudience(DEFAULT_STATE.audience)
+    setGoal(DEFAULT_STATE.goal)
+    setPerspective(DEFAULT_STATE.perspective)
+    setVoice(DEFAULT_STATE.voice)
+    setFormatting(DEFAULT_STATE.formatting)
+    setCallToAction(DEFAULT_STATE.callToAction)
+    setSeo(DEFAULT_STATE.seo)
+    setEditorialInstructions(DEFAULT_STATE.editorialInstructions)
+    setEnableEditorialAugmentation(DEFAULT_STATE.enableEditorialAugmentation)
+    setBlobs(DEFAULT_STATE.blobs)
+    localStorage.removeItem(STORAGE_KEY)
+    handleResetRun()
+  }, [handleResetRun])
+
+  useEffect(() => {
+    const payload: PersistedRunState = {
+      sourceStep,
+      pipelineRunId,
+      pipelineResult,
+    }
+    localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(payload))
+  }, [sourceStep, pipelineRunId, pipelineResult])
+
+  useEffect(() => {
+    if (!pipelineRunId || sourceStep !== 'pipeline_running') return
+
+    let cancelled = false
+    let timeoutId: number | null = null
+
+    const poll = async () => {
+      try {
+        const status = await getPrompt2BlogStatus(pipelineRunId)
+        if (cancelled) return
+
+        setPipelineStatus(status)
+
+        if (status.stage && lastObservedStageRef.current !== status.stage) {
+          lastObservedStageRef.current = status.stage
+          const stageLabel = PIPELINE_STAGE_LABELS[status.stage] || status.stage
+          appendPipelineLog(`Stage: ${stageLabel}`)
+          setLoadingLabel(`Running: ${stageLabel}`)
+        }
+
+        if (status.state === 'completed') {
+          const result = await getPrompt2BlogResult(pipelineRunId)
+          if (cancelled) return
+          if (result.artifact?.pipeline_v2) {
+            setPipelineResult(result.artifact.pipeline_v2)
+          } else {
+            setError('Pipeline finished but no final payload was returned.')
+          }
+
+          const debugPayload = await getPrompt2BlogDebug(pipelineRunId).catch(() => null)
+          if (debugPayload?.stages) {
+            setPipelineDebugData(debugPayload.stages)
+          }
+
+          appendPipelineLog('Pipeline completed successfully.')
+          setSourceStep('pipeline_complete')
+          setIsLoading(false)
+          setLoadingLabel('')
+          return
+        }
+
+        if (status.state === 'failed') {
+          const failureMessage = status.error || 'Pipeline failed.'
+          appendPipelineLog(
+            `Pipeline failed at ${PIPELINE_STAGE_LABELS[status.stage] || status.stage}: ${failureMessage}`,
+            'error',
+          )
+          setError(failureMessage)
+
+          const debugPayload = await getPrompt2BlogDebug(pipelineRunId).catch(() => null)
+          if (debugPayload?.stages) {
+            setPipelineDebugData(debugPayload.stages)
+          }
+
+          setSourceStep('edit')
+          setIsLoading(false)
+          setLoadingLabel('')
+          return
+        }
+
+        timeoutId = window.setTimeout(poll, 1200)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to poll pipeline status'
+        appendPipelineLog(`Status polling error: ${message}`, 'error')
+        timeoutId = window.setTimeout(poll, 2000)
+      }
+    }
+
+    poll()
+
+    return () => {
+      cancelled = true
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [appendPipelineLog, pipelineRunId, sourceStep])
+
+  useEffect(() => {
+    if (sourceStep === 'pipeline_running' && !pipelineRunId) {
+      setSourceStep('edit')
+    }
+  }, [pipelineRunId, sourceStep])
+
+  useEffect(() => {
+    if (sourceStep === 'pipeline_complete' && !pipelineResult) {
+      setSourceStep('edit')
+    }
+  }, [pipelineResult, sourceStep])
+
+  useEffect(() => {
+    if (sourceStep !== 'pipeline_running' || !pipelineRunId) return
+    setIsLoading(true)
+    if (!loadingLabel) {
+      setLoadingLabel('Running final article pipeline...')
+    }
+    if (!resumedRunLoggedRef.current) {
+      appendPipelineLog(`Resumed run: ${pipelineRunId}`)
+      resumedRunLoggedRef.current = true
+    }
+  }, [appendPipelineLog, loadingLabel, pipelineRunId, sourceStep])
 
   return (
     <div className="p2b-page">
@@ -455,119 +759,220 @@ export default function Prompt2BlogPage() {
             </div>
           </section>
 
-          {/* Raw Input Blobs / Synthesized Result */}
-          <section className="p2b-panel">
-            {synthesizedText === null ? (
-              <>
-                <div className="p2b-panel-header">
-                  <h2>Raw Source Material</h2>
-                  <p>Paste raw text blobs — articles, social posts, notes, HTML — the AI will synthesize them.</p>
+          {/* Raw Source Material and one-button pipeline */}
+          <section className="p2b-panel p2b-panel--source">
+            <div className="p2b-panel-header">
+              <h2>Raw Source Material</h2>
+              <p>
+                Paste raw text blobs. One click will synthesize, classify, fetch guidelines, and generate the
+                final article.
+              </p>
+            </div>
+
+            <div className="p2b-panel-body">
+              {blobs.map((blob, index) => (
+                <div key={blob.id} className="p2b-blob-field">
+                  <div className="p2b-blob-header">
+                    <label>Source {index + 1}</label>
+                    {blobs.length > 1 && (
+                      <button
+                        type="button"
+                        className="p2b-blob-remove"
+                        onClick={() => removeBlob(blob.id)}
+                        aria-label="Remove source"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    placeholder="Paste raw text, article excerpt, social post, HTML, or notes..."
+                    value={blob.content}
+                    onChange={(e) => updateBlob(blob.id, e.target.value)}
+                    rows={4}
+                    className="p2b-textarea"
+                  />
                 </div>
-                <div className="p2b-panel-body">
-                  {blobs.map((blob, index) => (
-                    <div key={blob.id} className="p2b-blob-field">
-                      <div className="p2b-blob-header">
-                        <label>Source {index + 1}</label>
-                        {blobs.length > 1 && (
-                          <button
-                            type="button"
-                            className="p2b-blob-remove"
-                            onClick={() => removeBlob(blob.id)}
-                            aria-label="Remove source"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                      <textarea
-                        placeholder="Paste raw text, article excerpt, social media post, HTML, notes..."
-                        value={blob.content}
-                        onChange={(e) => updateBlob(blob.id, e.target.value)}
-                        rows={4}
-                        className="p2b-textarea"
-                      />
-                    </div>
-                  ))}
-                  <button type="button" className="p2b-add-blob-btn" onClick={addBlob}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    Add Another Source
+              ))}
+
+              <button type="button" className="p2b-add-blob-btn" onClick={addBlob}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Add Another Source
+              </button>
+
+              <label className="p2b-toggle-row">
+                <input
+                  type="checkbox"
+                  checked={enableEditorialAugmentation}
+                  disabled={isLoading}
+                  onChange={(e) => setEnableEditorialAugmentation(e.target.checked)}
+                />
+                <span>Enable editorial blocks augmentation</span>
+              </label>
+
+              <div className="p2b-panel-actions">
+                <button
+                  type="button"
+                  className="p2b-synthesize-btn"
+                  disabled={!hasBlobs || isLoading}
+                  onClick={handleRunPipeline}
+                >
+                  {sourceStep === 'pipeline_running' ? 'Running Final Pipeline...' : 'Generate Final Article'}
+                </button>
+                {(pipelineRunId || pipelineResult) && (
+                  <button
+                    type="button"
+                    className="p2b-rerun-btn"
+                    onClick={handleResetRun}
+                    disabled={isLoading}
+                  >
+                    Reset Run State
                   </button>
+                )}
+              </div>
+
+              {(pipelineRunId || sourceStep !== 'edit' || pipelineLogs.length > 0) && (
+                <div className="p2b-pipeline-progress">
+                  <h3>Final Pipeline Progress</h3>
+                  <div className="p2b-stage-checklist">
+                    {PIPELINE_STAGE_ORDER.map(step => {
+                      const status = getPipelineStepStatus(step, pipelineStatus)
+                      return (
+                        <div key={step} className={`p2b-stage-item ${status}`}>
+                          <div className="p2b-stage-dot" />
+                          <span>{PIPELINE_STAGE_LABELS[step] || step}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {pipelineRunId && (
+                    <p className="p2b-pipeline-runid">
+                      <strong>Run ID:</strong> {pipelineRunId}
+                    </p>
+                  )}
+
+                  {pipelineLogs.length > 0 && (
+                    <div className="p2b-pipeline-log">
+                      <h4>Process Log</h4>
+                      {pipelineLogs.map(entry => (
+                        <div key={entry.id} className={`p2b-log-line p2b-log-line--${entry.level}`}>
+                          <span className="p2b-log-time">{entry.at}</span>
+                          <span>{entry.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="p2b-panel-header">
-                  <h2>Synthesized Overview</h2>
-                  <p>AI-generated synthesis of your {blobs.filter(b => b.content.trim()).length} source(s).</p>
-                </div>
-                <div className="p2b-panel-body">
+              )}
+
+              {sourceStep === 'pipeline_complete' && pipelineResult && (
+                <div className="p2b-final-result">
+                  <h3>Final Article Ready</h3>
+                  <p>
+                    <strong>Status:</strong> {pipelineResult.pipeline_status}
+                  </p>
+                  <p>
+                    <strong>Article Type:</strong> {pipelineResult.article_type.name}
+                  </p>
+                  <p>
+                    <strong>Title:</strong> {pipelineResult.improved_article.title}
+                  </p>
+                  <p>
+                    <strong>Quality Summary:</strong> {pipelineResult.quality_review.quality_summary}
+                  </p>
+                  <p>
+                    <strong>Editorial Augmentation:</strong>{' '}
+                    {pipelineResult.quality_review.editorial_augmentation_applied ?? false
+                      ? 'Applied'
+                      : 'Not applied'}
+                  </p>
+                  <p>
+                    <strong>Editorial Summary:</strong>{' '}
+                    {pipelineResult.quality_review.editorial_augmentation_summary
+                      || 'No editorial summary available.'}
+                  </p>
+                  <p>
+                    <strong>Editorial Components:</strong>{' '}
+                    {(pipelineResult.quality_review.editorial_components_added || []).length
+                      ? (pipelineResult.quality_review.editorial_components_added || [])
+                        .map(component => component.component)
+                        .join(', ')
+                      : 'None'}
+                  </p>
+                  <p>
+                    <strong>Editorial Diagnostic:</strong>{' '}
+                    {Object.entries(pipelineResult.quality_review.editorial_diagnostic || {}).length
+                      ? Object.entries(pipelineResult.quality_review.editorial_diagnostic || {})
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(' | ')
+                      : 'Not available'}
+                  </p>
+
+                  {(pipelineResult.quality_review.editorial_components_added || []).length > 0 && (
+                    <div className="p2b-guideline-card">
+                      <div className="p2b-guideline-card-header">
+                        <h3>Editorial Component Details</h3>
+                      </div>
+                      {(pipelineResult.quality_review.editorial_components_added || []).map((component, index) => (
+                        <p key={`${component.component}-${index}`}>
+                          <strong>{component.component}</strong>
+                          {' - '}
+                          {component.justification || 'No justification provided.'}
+                          {component.placement ? ` (${component.placement})` : ''}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="p2b-synthesized-text">
-                    {synthesizedText.split('\n').map((line, i) => (
+                    {pipelineResult.final_markdown.split('\n').map((line, i) => (
                       <p key={i}>{line || '\u00A0'}</p>
                     ))}
                   </div>
-                  <div className="p2b-result-actions">
-                    <button
-                      type="button"
-                      className="p2b-rerun-btn"
-                      onClick={handleSynthesize}
-                      disabled={isLoading}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      {isLoading ? 'Re-running...' : 'Re-run'}
-                    </button>
-                    <button
-                      type="button"
-                      className="p2b-edit-sources-btn"
-                      onClick={handleEditSources}
-                      disabled={isLoading}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Edit Sources
-                    </button>
-                  </div>
+
+                  {pipelineDebugData && (
+                    <div className="p2b-final-debug">
+                      <button
+                        type="button"
+                        className="p2b-rerun-btn"
+                        onClick={() => setShowPipelineDebug(prev => !prev)}
+                      >
+                        {showPipelineDebug ? 'Hide' : 'Show'} Pipeline Debug
+                      </button>
+                      {showPipelineDebug && (
+                        <div className="p2b-raw-json">
+                          <pre>{JSON.stringify(pipelineDebugData, null, 2)}</pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </>
+              )}
+            </div>
+
+            {/* Error — inside the panel */}
+            {error && (
+              <div className="p2b-error">
+                {error}
+              </div>
+            )}
+
+            {/* Loading — inside the panel */}
+            {isLoading && (
+              <div className="p2b-loading">
+                <div className="p2b-spinner" />
+                <span>{loadingLabel}</span>
+              </div>
             )}
           </section>
 
-          {/* Error message */}
-          {error && (
-            <div className="p2b-error">
-              {error}
-            </div>
-          )}
-
-          {/* Loading overlay */}
-          {isLoading && (
-            <div className="p2b-loading">
-              <div className="p2b-spinner" />
-              <span>Synthesizing sources...</span>
-            </div>
-          )}
-
-          {/* Submit */}
+          {/* Utility buttons */}
           <div className="p2b-submit-row">
-            {synthesizedText === null && (
-              <button
-                type="button"
-                className="p2b-submit-btn"
-                disabled={!hasBlobs || isLoading}
-                onClick={handleSynthesize}
-              >
-                {isLoading ? 'Synthesizing...' : 'Synthesize Sources'}
-              </button>
-            )}
             <button type="button" className="p2b-copy-json-btn" onClick={handleCopyJson}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
