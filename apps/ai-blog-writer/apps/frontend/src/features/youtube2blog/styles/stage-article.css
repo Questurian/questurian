@@ -2067,13 +2067,16 @@
 
 /* Block Image */
 .block-image-container {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-4) 0;
+  width: 100%;
+  padding: var(--space-2) 0;
 }
 
 .block-image-card {
-  width: min(100%, 760px);
+  width: 100%;
+}
+
+.block-image-item {
+  margin: var(--space-2) 0 var(--space-3);
 }
 
 .block-image {

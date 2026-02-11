@@ -25,6 +25,7 @@ export type EditorialBlock = {
   markdown: string
   anchorLine?: number
   afterBlockId?: string | null
+  placeAfterImage?: boolean
 }
 
 export type StagedArticle = {

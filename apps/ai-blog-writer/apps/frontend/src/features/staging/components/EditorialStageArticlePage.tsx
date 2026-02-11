@@ -153,6 +153,7 @@ function extractEditorialBlocks(markdown: string): {
       markdown: blockLines.join('\n').trim(),
       anchorLine: bodyLines.length,
       afterBlockId: null,
+      placeAfterImage: false,
     })
 
     index = cursor + 1
@@ -181,6 +182,7 @@ function normalizeEditorialBlocks(
         typeof block.afterBlockId === 'string' || block.afterBlockId === null
           ? block.afterBlockId
           : undefined,
+      placeAfterImage: block.placeAfterImage === true,
     }))
     .filter((block) => block.markdown.trim().length > 0)
 }
@@ -249,6 +251,11 @@ type TimelineItem =
     }
   | {
       id: string
+      type: 'image'
+      contentBlockId: string
+    }
+  | {
+      id: string
       type: 'editorial'
       editorialBlockId: string
     }
@@ -257,8 +264,88 @@ function getContentTimelineItemId(blockId: string): string {
   return `content:${blockId}`
 }
 
+function getImageTimelineItemId(blockId: string): string {
+  return `image:${blockId}`
+}
+
 function getEditorialTimelineItemId(editorialBlockId: string): string {
   return `editorial:${editorialBlockId}`
+}
+
+type BlockMediaPayload =
+  | {
+      type: 'single'
+      imageAfter: number
+      imageAfterAltText?: string
+    }
+  | {
+      type: 'pair'
+      imgPairAfter: NonNullable<ContentBlock['imgPairAfter']>
+    }
+  | {
+      type: 'trio'
+      imgTrioAfter: NonNullable<ContentBlock['imgTrioAfter']>
+    }
+
+function stripBlockMedia(block: ContentBlock): ContentBlock {
+  return {
+    ...block,
+    imageAfter: undefined,
+    imageAfterAltText: undefined,
+    imgPairAfter: undefined,
+    imgTrioAfter: undefined,
+  }
+}
+
+function getBlockMediaPayload(block: ContentBlock): BlockMediaPayload | null {
+  if (block.imageAfter != null) {
+    return {
+      type: 'single',
+      imageAfter: block.imageAfter,
+      imageAfterAltText: block.imageAfterAltText,
+    }
+  }
+
+  if (block.imgPairAfter) {
+    return {
+      type: 'pair',
+      imgPairAfter: block.imgPairAfter,
+    }
+  }
+
+  if (block.imgTrioAfter) {
+    return {
+      type: 'trio',
+      imgTrioAfter: block.imgTrioAfter,
+    }
+  }
+
+  return null
+}
+
+function applyMediaPayloadToBlock(
+  block: ContentBlock,
+  mediaPayload: BlockMediaPayload
+): ContentBlock {
+  if (mediaPayload.type === 'single') {
+    return {
+      ...stripBlockMedia(block),
+      imageAfter: mediaPayload.imageAfter,
+      imageAfterAltText: mediaPayload.imageAfterAltText,
+    }
+  }
+
+  if (mediaPayload.type === 'pair') {
+    return {
+      ...stripBlockMedia(block),
+      imgPairAfter: mediaPayload.imgPairAfter,
+    }
+  }
+
+  return {
+    ...stripBlockMedia(block),
+    imgTrioAfter: mediaPayload.imgTrioAfter,
+  }
 }
 
 function normalizeEditorialComponentKey(component: string): string {
@@ -983,8 +1070,41 @@ function buildTimelineItems(
       contentBlockId: block.id,
     })
 
+    const hasImageBlock = Boolean(getBlockMediaPayload(block))
     const anchoredEditorialBlocks = editorialByBlockId.get(block.id) || []
-    anchoredEditorialBlocks.forEach((editorialBlock) => {
+    const editorialBeforeImage = anchoredEditorialBlocks.filter(
+      (editorialBlock) => !editorialBlock.placeAfterImage
+    )
+    const editorialAfterImage = anchoredEditorialBlocks.filter(
+      (editorialBlock) => editorialBlock.placeAfterImage
+    )
+
+    if (!hasImageBlock) {
+      anchoredEditorialBlocks.forEach((editorialBlock) => {
+        items.push({
+          id: getEditorialTimelineItemId(editorialBlock.id),
+          type: 'editorial',
+          editorialBlockId: editorialBlock.id,
+        })
+      })
+      return
+    }
+
+    editorialBeforeImage.forEach((editorialBlock) => {
+      items.push({
+        id: getEditorialTimelineItemId(editorialBlock.id),
+        type: 'editorial',
+        editorialBlockId: editorialBlock.id,
+      })
+    })
+
+    items.push({
+      id: getImageTimelineItemId(block.id),
+      type: 'image',
+      contentBlockId: block.id,
+    })
+
+    editorialAfterImage.forEach((editorialBlock) => {
       items.push({
         id: getEditorialTimelineItemId(editorialBlock.id),
         type: 'editorial',
@@ -1004,7 +1124,16 @@ function applyTimelineItemsToDraft(
   blocks: ContentBlock[]
   editorialBlocks: EditorialBlock[]
 } {
-  const contentById = new Map(blocks.map((block) => [block.id, block]))
+  const contentById = new Map(
+    blocks.map((block) => [block.id, stripBlockMedia(block)])
+  )
+  const mediaPayloadByContentId = new Map<string, BlockMediaPayload>()
+  blocks.forEach((block) => {
+    const mediaPayload = getBlockMediaPayload(block)
+    if (mediaPayload) {
+      mediaPayloadByContentId.set(block.id, mediaPayload)
+    }
+  })
   const normalizedEditorialBlocks = normalizeEditorialBlocks(editorialBlocks)
   const editorialById = new Map(
     normalizedEditorialBlocks.map((editorialBlock) => [editorialBlock.id, editorialBlock])
@@ -1014,7 +1143,40 @@ function applyTimelineItemsToDraft(
   const nextEditorialBlocks: EditorialBlock[] = []
   const seenContentIds = new Set<string>()
   const seenEditorialIds = new Set<string>()
+  const seenImageSourceIds = new Set<string>()
+  const pendingMediaPayloads: BlockMediaPayload[] = []
   let lastContentBlockId: string | null = null
+  let seenImageAfterCurrentContent = false
+
+  const attachMediaToBlock = (
+    targetBlockId: string | null,
+    mediaPayload: BlockMediaPayload
+  ): boolean => {
+    if (!targetBlockId) return false
+    const blockIndex = nextBlocks.findIndex((block) => block.id === targetBlockId)
+    if (blockIndex === -1) return false
+
+    const targetBlock = nextBlocks[blockIndex]
+    if (getBlockMediaPayload(targetBlock)) {
+      return false
+    }
+
+    nextBlocks[blockIndex] = applyMediaPayloadToBlock(targetBlock, mediaPayload)
+    return true
+  }
+
+  const attachPendingMediaToBlock = (targetBlockId: string | null) => {
+    if (!targetBlockId || pendingMediaPayloads.length === 0) return
+    if (attachMediaToBlock(targetBlockId, pendingMediaPayloads[0])) {
+      pendingMediaPayloads.shift()
+    }
+  }
+
+  const hasAttachedMedia = (targetBlockId: string | null): boolean => {
+    if (!targetBlockId) return false
+    const targetBlock = nextBlocks.find((block) => block.id === targetBlockId)
+    return Boolean(targetBlock && getBlockMediaPayload(targetBlock))
+  }
 
   timelineItems.forEach((item) => {
     if (item.type === 'content') {
@@ -1023,6 +1185,22 @@ function applyTimelineItemsToDraft(
       nextBlocks.push(block)
       seenContentIds.add(block.id)
       lastContentBlockId = block.id
+      seenImageAfterCurrentContent = false
+      attachPendingMediaToBlock(block.id)
+      seenImageAfterCurrentContent = hasAttachedMedia(block.id)
+      return
+    }
+
+    if (item.type === 'image') {
+      const mediaPayload = mediaPayloadByContentId.get(item.contentBlockId)
+      if (!mediaPayload || seenImageSourceIds.has(item.contentBlockId)) return
+      seenImageSourceIds.add(item.contentBlockId)
+
+      if (!attachMediaToBlock(lastContentBlockId, mediaPayload)) {
+        pendingMediaPayloads.push(mediaPayload)
+      } else {
+        seenImageAfterCurrentContent = true
+      }
       return
     }
 
@@ -1031,6 +1209,7 @@ function applyTimelineItemsToDraft(
     nextEditorialBlocks.push({
       ...editorialBlock,
       afterBlockId: lastContentBlockId,
+      placeAfterImage: seenImageAfterCurrentContent,
     })
     seenEditorialIds.add(editorialBlock.id)
   })
@@ -1038,9 +1217,12 @@ function applyTimelineItemsToDraft(
   // Keep any missing blocks/items as a fallback so data is never dropped.
   blocks.forEach((block) => {
     if (seenContentIds.has(block.id)) return
-    nextBlocks.push(block)
+    nextBlocks.push(stripBlockMedia(block))
     seenContentIds.add(block.id)
     lastContentBlockId = block.id
+    seenImageAfterCurrentContent = false
+    attachPendingMediaToBlock(block.id)
+    seenImageAfterCurrentContent = hasAttachedMedia(block.id)
   })
 
   normalizedEditorialBlocks.forEach((editorialBlock) => {
@@ -1051,6 +1233,27 @@ function applyTimelineItemsToDraft(
     })
     seenEditorialIds.add(editorialBlock.id)
   })
+
+  mediaPayloadByContentId.forEach((mediaPayload, sourceBlockId) => {
+    if (seenImageSourceIds.has(sourceBlockId)) return
+    seenImageSourceIds.add(sourceBlockId)
+
+    if (attachMediaToBlock(sourceBlockId, mediaPayload)) return
+    if (attachMediaToBlock(lastContentBlockId, mediaPayload)) return
+    pendingMediaPayloads.push(mediaPayload)
+  })
+
+  if (pendingMediaPayloads.length > 0) {
+    nextBlocks.forEach((block) => {
+      if (pendingMediaPayloads.length === 0) return
+      if (getBlockMediaPayload(block)) return
+      const mediaPayload = pendingMediaPayloads.shift()
+      if (!mediaPayload) return
+      const blockIndex = nextBlocks.findIndex((candidate) => candidate.id === block.id)
+      if (blockIndex === -1) return
+      nextBlocks[blockIndex] = applyMediaPayloadToBlock(block, mediaPayload)
+    })
+  }
 
   return {
     blocks: nextBlocks,
@@ -2409,7 +2612,8 @@ export default function EditorialStageArticlePage({
 
   const addNewEditorialBlock = useCallback((
     component: SupportedEditorialComponent,
-    afterBlockId?: string
+    afterBlockId?: string,
+    placeAfterImage?: boolean
   ) => {
     if (!stagedArticle) return
 
@@ -2420,6 +2624,9 @@ export default function EditorialStageArticlePage({
       : stagedArticle.blocks.length > 0
         ? stagedArticle.blocks[stagedArticle.blocks.length - 1].id
         : null
+    const anchorBlock = validAfterBlockId
+      ? stagedArticle.blocks.find((block) => block.id === validAfterBlockId)
+      : null
 
     const newEditorialBlock: EditorialBlock = {
       id: `editorial_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -2427,6 +2634,13 @@ export default function EditorialStageArticlePage({
       label,
       markdown,
       afterBlockId: validAfterBlockId,
+      placeAfterImage:
+        placeAfterImage
+        ?? Boolean(
+          anchorBlock?.imageAfter
+          || anchorBlock?.imgPairAfter
+          || anchorBlock?.imgTrioAfter
+        ),
     }
 
     updateStagedArticle({
@@ -2451,9 +2665,10 @@ export default function EditorialStageArticlePage({
 
   const addEditorialFromPicker = useCallback((
     component: SupportedEditorialComponent,
-    afterBlockId?: string
+    afterBlockId?: string,
+    placeAfterImage?: boolean
   ) => {
-    addNewEditorialBlock(component, afterBlockId)
+    addNewEditorialBlock(component, afterBlockId, placeAfterImage)
     setOpenEditorialPickerTarget(null)
   }, [addNewEditorialBlock])
 
@@ -2577,7 +2792,10 @@ export default function EditorialStageArticlePage({
     try {
       const contentBlockIds = new Set(stagedArticle.blocks.map((block) => block.id))
       const editorialBeforeFirst: PayloadContentBlock[] = []
-      const editorialAfterByBlockId = new Map<string, PayloadContentBlock[]>()
+      const editorialAfterByBlockId = new Map<
+        string,
+        Array<{ payloadBlock: PayloadContentBlock; placeAfterImage: boolean }>
+      >()
 
       stagedArticle.editorialBlocks.forEach((editorialBlock) => {
         const validation = editorialPublishAnalysis.byId[editorialBlock.id]
@@ -2592,7 +2810,10 @@ export default function EditorialStageArticlePage({
         }
 
         const list = editorialAfterByBlockId.get(editorialBlock.afterBlockId) || []
-        list.push(validation.payloadBlock)
+        list.push({
+          payloadBlock: validation.payloadBlock,
+          placeAfterImage: editorialBlock.placeAfterImage === true,
+        })
         editorialAfterByBlockId.set(editorialBlock.afterBlockId, list)
       })
 
@@ -2603,6 +2824,14 @@ export default function EditorialStageArticlePage({
 
       // Convert each markdown block to Lexical and interleave with images.
       for (const [index, block] of stagedArticle.blocks.entries()) {
+        const anchoredEditorialBlocks = editorialAfterByBlockId.get(block.id) || []
+        const editorialBeforeImage = anchoredEditorialBlocks
+          .filter((entry) => !entry.placeAfterImage)
+          .map((entry) => entry.payloadBlock)
+        const editorialAfterImage = anchoredEditorialBlocks
+          .filter((entry) => entry.placeAfterImage)
+          .map((entry) => entry.payloadBlock)
+
         const markdown = block.content.trim()
         if (markdown) {
           const lexicalResult = await convertMarkdownToLexical(markdown)
@@ -2618,6 +2847,10 @@ export default function EditorialStageArticlePage({
           })
           textBlocksAdded++
         }
+
+        editorialBeforeImage.forEach((editorialPayloadBlock) => {
+          contentBlocks.push(editorialPayloadBlock)
+        })
 
         // Add image block if one exists after this block
         if (block.imageAfter) {
@@ -2676,8 +2909,7 @@ export default function EditorialStageArticlePage({
           })
         }
 
-        const anchoredEditorialBlocks = editorialAfterByBlockId.get(block.id) || []
-        anchoredEditorialBlocks.forEach((editorialPayloadBlock) => {
+        editorialAfterImage.forEach((editorialPayloadBlock) => {
           contentBlocks.push(editorialPayloadBlock)
         })
       }
@@ -2835,12 +3067,12 @@ export default function EditorialStageArticlePage({
   const canAddImageAfterBlock = (block: ContentBlock) => (
     !block.imageAfter && !block.imgPairAfter && !block.imgTrioAfter
   )
-  const renderImagePicker = (blockId: string) => (
+  const renderImagePicker = (blockId: string, pickerKey: string) => (
     <div className="block-editorial-picker">
       <button
         type="button"
-        className={`block-add-editorial-trigger ${openImagePickerTarget === blockId ? 'active' : ''}`}
-        onClick={() => toggleImagePicker(blockId)}
+        className={`block-add-editorial-trigger ${openImagePickerTarget === pickerKey ? 'active' : ''}`}
+        onClick={() => toggleImagePicker(pickerKey)}
         title="Choose image block"
       >
         Image
@@ -2848,11 +3080,11 @@ export default function EditorialStageArticlePage({
           <path d="M6 9l6 6 6-6"/>
         </svg>
       </button>
-      {openImagePickerTarget === blockId && (
+      {openImagePickerTarget === pickerKey && (
         <div className="block-editorial-picker-menu">
           {IMAGE_PICKER_OPTIONS.map((option) => (
             <button
-              key={`${blockId}-${option.mode}`}
+              key={`${pickerKey}-${option.mode}`}
               type="button"
               className="block-editorial-option-btn"
               onClick={() => void openBlockImageModal(blockId, option.mode)}
@@ -2864,12 +3096,16 @@ export default function EditorialStageArticlePage({
       )}
     </div>
   )
-  const renderEditorialPicker = (blockId: string) => (
+  const renderEditorialPicker = (
+    blockId: string,
+    pickerKey: string,
+    placeAfterImage = false
+  ) => (
     <div className="block-editorial-picker">
       <button
         type="button"
-        className={`block-add-editorial-trigger ${openEditorialPickerTarget === blockId ? 'active' : ''}`}
-        onClick={() => toggleEditorialPicker(blockId)}
+        className={`block-add-editorial-trigger ${openEditorialPickerTarget === pickerKey ? 'active' : ''}`}
+        onClick={() => toggleEditorialPicker(pickerKey)}
         title="Choose editorial block"
       >
         Editorial
@@ -2877,14 +3113,14 @@ export default function EditorialStageArticlePage({
           <path d="M6 9l6 6 6-6"/>
         </svg>
       </button>
-      {openEditorialPickerTarget === blockId && (
+      {openEditorialPickerTarget === pickerKey && (
         <div className="block-editorial-picker-menu">
           {EDITORIAL_PICKER_OPTIONS.map((option) => (
             <button
-              key={`${blockId}-${option.component}`}
+              key={`${pickerKey}-${option.component}`}
               type="button"
               className="block-editorial-option-btn"
-              onClick={() => addEditorialFromPicker(option.component, blockId)}
+              onClick={() => addEditorialFromPicker(option.component, blockId, placeAfterImage)}
             >
               {option.label}
             </button>
@@ -2903,27 +3139,20 @@ export default function EditorialStageArticlePage({
   let technicalBlockCounter = 0
 
   timelineItems.forEach((item) => {
-    if (item.type === 'editorial') {
-      technicalBlockCounter += 1
-      editorialTimelineNumberMap.set(item.editorialBlockId, technicalBlockCounter)
+    technicalBlockCounter += 1
+    if (item.type === 'content') {
+      contentTimelineNumberMap.set(item.contentBlockId, technicalBlockCounter)
       return
     }
 
-    const contentBlock = contentBlockById.get(item.contentBlockId)
-    if (!contentBlock) return
-
-    technicalBlockCounter += 1
-    contentTimelineNumberMap.set(contentBlock.id, technicalBlockCounter)
-
-    if (
-      contentBlock.imageAfter != null
-      || contentBlock.imgPairAfter != null
-      || contentBlock.imgTrioAfter != null
-    ) {
-      technicalBlockCounter += 1
-      imageTimelineNumberMap.set(contentBlock.id, technicalBlockCounter)
+    if (item.type === 'image') {
+      imageTimelineNumberMap.set(item.contentBlockId, technicalBlockCounter)
+      return
     }
+
+    editorialTimelineNumberMap.set(item.editorialBlockId, technicalBlockCounter)
   })
+
   const totalTechnicalBlockCount = technicalBlockCounter
   const hasTitle = Boolean(stagedArticle.title.trim())
   const allFieldsFilled = Boolean(
@@ -3005,6 +3234,60 @@ export default function EditorialStageArticlePage({
     )
     mergeMediaAssetsIntoState([imageOne, imageTwo, imageThree])
     closeBlockImageModal()
+  }
+
+  const renderActionZoneForBlock = (
+    block: ContentBlock,
+    options?: {
+      showFuse?: boolean
+      pickerKey?: string
+      placeAfterImage?: boolean
+      allowImageAdd?: boolean
+    }
+  ) => {
+    if (stagedArticle.publishedToPayload) return null
+    const showFuse = options?.showFuse ?? true
+    const pickerKey = options?.pickerKey || block.id
+    const placeAfterImage = options?.placeAfterImage ?? false
+    const allowImageAdd = options?.allowImageAdd ?? true
+
+    return (
+      <div className="block-action-zone">
+        <div className="block-action-line" />
+        <div className="block-action-buttons">
+          {showFuse && (
+            <button
+              type="button"
+              className="block-fuse-btn"
+              onClick={() => mergeWithNextBlock(block.id)}
+              title="Fuse with next block"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M7 10l5 5 5-5"/>
+                <path d="M7 14l5-5 5 5"/>
+              </svg>
+              Fuse
+            </button>
+          )}
+
+          {allowImageAdd && canAddImageAfterBlock(block) && renderImagePicker(block.id, pickerKey)}
+
+          <button
+            type="button"
+            className="block-add-block-btn"
+            onClick={() => addNewBlock(block.id)}
+            title="Add new text block here"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Block
+          </button>
+          {renderEditorialPicker(block.id, pickerKey, placeAfterImage)}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -3128,10 +3411,18 @@ export default function EditorialStageArticlePage({
                 const canReorder = !stagedArticle.publishedToPayload && !isEditing
                 const isFirstTimelineItem = timelineIndex === 0
                 const isLastTimelineItem = timelineIndex === timelineItems.length - 1
+                const hasNextTimelineItem = timelineIndex < timelineItems.length - 1
+                const nextTimelineItem = hasNextTimelineItem
+                  ? timelineItems[timelineIndex + 1]
+                  : null
+                const pickerKey = `after:${timelineItem.id}`
 
                 if (timelineItem.type === 'editorial') {
                   const editorialBlock = editorialBlockById.get(timelineItem.editorialBlockId)
                   if (!editorialBlock) return null
+                  const anchorBlock = editorialBlock.afterBlockId
+                    ? contentBlockById.get(editorialBlock.afterBlockId)
+                    : null
 
                   return (
                     <div
@@ -3164,177 +3455,53 @@ export default function EditorialStageArticlePage({
                           disableMoveDown: isLastTimelineItem,
                         }
                       )}
+                      {!stagedArticle.publishedToPayload
+                        && hasNextTimelineItem
+                        && anchorBlock
+                        && renderActionZoneForBlock(anchorBlock, {
+                          showFuse: false,
+                          pickerKey,
+                          placeAfterImage: editorialBlock.placeAfterImage === true,
+                        })}
                     </div>
                   )
                 }
 
-                const block = contentBlockById.get(timelineItem.contentBlockId)
-                if (!block) return null
-                const contentIndex = contentBlockIndexMap.get(block.id) ?? 0
-                const contentBlockNumber = contentTimelineNumberMap.get(block.id) ?? (contentIndex + 1)
-                const imageBlockNumber = imageTimelineNumberMap.get(block.id)
+                if (timelineItem.type === 'image') {
+                  const block = contentBlockById.get(timelineItem.contentBlockId)
+                  if (!block) return null
+                  if (!block.imageAfter && !block.imgPairAfter && !block.imgTrioAfter) return null
+                  const imageBlockNumber = imageTimelineNumberMap.get(block.id) || timelineIndex + 1
 
-                return (
-                  <div
-                    key={timelineItem.id}
-                    data-timeline-id={timelineItem.id}
-                    className={`block-editor-item ${draggedTimelineItemId === timelineItem.id ? 'dragging' : ''} ${dragOverTimelineItemId === timelineItem.id ? 'drag-over' : ''}`}
-                    draggable={canReorder}
-                    onDragStart={(e) => handleDragStart(e, timelineItem.id)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={(e) => handleDragOver(e, timelineItem.id)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, timelineItem.id)}
-                  >
-                    {/* Block Content */}
-                    <div className={`block-card ${isEditing ? 'editing' : ''} ${block.type === 'pullquote' ? 'pullquote' : ''}`}>
-                      <div className="block-card-header">
-                        <div className="block-card-header-left">
-                          {/* Drag Handle */}
-                          {canReorder && (
-                            <div className="block-drag-handle" title="Drag to reorder">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                <circle cx="9" cy="5" r="1.5"/>
-                                <circle cx="15" cy="5" r="1.5"/>
-                                <circle cx="9" cy="12" r="1.5"/>
-                                <circle cx="15" cy="12" r="1.5"/>
-                                <circle cx="9" cy="19" r="1.5"/>
-                                <circle cx="15" cy="19" r="1.5"/>
-                              </svg>
-                            </div>
-                          )}
-                          <span className="block-number">{contentBlockNumber}</span>
-                          {block.type === 'pullquote' && (
-                            <span className="block-type-badge">Pull Quote</span>
-                          )}
-                        </div>
-                        <div className="block-card-header-right">
-                          {/* Move buttons */}
-                          {canReorder && (
-                            <div className="block-move-buttons">
-                              <button
-                                type="button"
-                                className="block-move-btn"
-                                onClick={() => moveTimelineItem(timelineItem.id, 'up')}
-                                disabled={isFirstTimelineItem}
-                                title="Move up"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M18 15l-6-6-6 6"/>
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="block-move-btn"
-                                onClick={() => moveTimelineItem(timelineItem.id, 'down')}
-                                disabled={isLastTimelineItem}
-                                title="Move down"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M6 9l6 6 6-6"/>
-                                </svg>
-                              </button>
-                            </div>
-                          )}
-                          {!stagedArticle.publishedToPayload && (
-                            <button
-                              type="button"
-                              className="block-delete-btn"
-                              onClick={() => deleteBlock(block.id)}
-                              title="Delete block"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {isEditing ? (
-                        <textarea
-                          className={`block-textarea ${block.type === 'pullquote' ? 'pullquote' : ''}`}
-                          value={block.content}
-                          onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                          rows={block.type === 'pullquote' ? 3 : Math.max(4, block.content.split('\n').length + 2)}
-                          placeholder={block.type === 'pullquote' ? 'Enter your pull quote...' : ''}
-                        />
-                      ) : block.type === 'pullquote' ? (
-                        <div className="block-pullquote-preview">
-                          <svg className="block-pullquote-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
-                            <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
-                          </svg>
-                          <p>{block.content}</p>
-                        </div>
-                      ) : (
-                        <div className="block-preview">
-                          {(() => {
-                            const splitPoints = findHeaderSplitPoints(block.content)
-                            if (splitPoints.length === 0 || stagedArticle.publishedToPayload) {
-                              // No split points, render normally
-                              return (
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {block.content}
-                                </ReactMarkdown>
-                              )
-                            }
-
-                            // Split content into segments at header boundaries
-                            const lines = block.content.split('\n')
-                            const segments: { content: string; splitLineIndex: number | null }[] = []
-                            let lastIndex = 0
-
-                            for (const point of splitPoints) {
-                              segments.push({
-                                content: lines.slice(lastIndex, point.lineIndex).join('\n'),
-                                splitLineIndex: point.lineIndex, // The line index where we'd split AFTER this segment
-                              })
-                              lastIndex = point.lineIndex
-                            }
-                            // Add the last segment (no split after it)
-                            segments.push({
-                              content: lines.slice(lastIndex).join('\n'),
-                              splitLineIndex: null,
-                            })
-
-                            return segments.map((segment, i) => (
-                              <div key={i}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {segment.content}
-                                </ReactMarkdown>
-                                {segment.splitLineIndex !== null && (
-                                  <div className="block-split-zone">
-                                    <button
-                                      type="button"
-                                      className="block-split-btn"
-                                      onClick={() => splitBlockAtHeader(block.id, segment.splitLineIndex!)}
-                                      title="Split here"
-                                    >
-                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5"/>
-                                      </svg>
-                                      Split
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ))
-                          })()}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Media Block After Content Block */}
-                    {(block.imageAfter || block.imgPairAfter || block.imgTrioAfter) && (
+                  return (
+                    <div
+                      key={timelineItem.id}
+                      data-timeline-id={timelineItem.id}
+                      className={`block-editor-item block-image-item ${draggedTimelineItemId === timelineItem.id ? 'dragging' : ''} ${dragOverTimelineItemId === timelineItem.id ? 'drag-over' : ''}`}
+                      draggable={canReorder}
+                      onDragStart={(e) => handleDragStart(e, timelineItem.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, timelineItem.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, timelineItem.id)}
+                    >
                       <div className="block-image-container">
                         <div className="block-card block-image-card">
                           <div className="block-card-header">
                             <div className="block-card-header-left">
-                              {imageBlockNumber != null && (
-                                <span className="block-number">{imageBlockNumber}</span>
+                              {canReorder && (
+                                <div className="block-drag-handle" title="Drag to reorder">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                    <circle cx="9" cy="5" r="1.5"/>
+                                    <circle cx="15" cy="5" r="1.5"/>
+                                    <circle cx="9" cy="12" r="1.5"/>
+                                    <circle cx="15" cy="12" r="1.5"/>
+                                    <circle cx="9" cy="19" r="1.5"/>
+                                    <circle cx="15" cy="19" r="1.5"/>
+                                  </svg>
+                                </div>
                               )}
+                              <span className="block-number">{imageBlockNumber}</span>
                               <span className="block-type-badge block-type-badge-image">
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -3345,6 +3512,32 @@ export default function EditorialStageArticlePage({
                               </span>
                             </div>
                             <div className="block-card-header-right">
+                              {canReorder && (
+                                <div className="block-move-buttons">
+                                  <button
+                                    type="button"
+                                    className="block-move-btn"
+                                    onClick={() => moveTimelineItem(timelineItem.id, 'up')}
+                                    disabled={isFirstTimelineItem}
+                                    title="Move up"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M18 15l-6-6-6 6"/>
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="block-move-btn"
+                                    onClick={() => moveTimelineItem(timelineItem.id, 'down')}
+                                    disabled={isLastTimelineItem}
+                                    title="Move down"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M6 9l6 6 6-6"/>
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
                               {!stagedArticle.publishedToPayload && (block.imgPairAfter || block.imgTrioAfter) && (
                                 <button
                                   type="button"
@@ -3501,48 +3694,181 @@ export default function EditorialStageArticlePage({
                           </div>
                         </div>
                       </div>
-                    )}
+                      {!stagedArticle.publishedToPayload
+                        && hasNextTimelineItem
+                        && renderActionZoneForBlock(block, {
+                          showFuse: false,
+                          pickerKey,
+                          placeAfterImage: true,
+                          allowImageAdd: false,
+                        })}
+                    </div>
+                  )
+                }
 
-                    {/* Action Zone Between Blocks (fuse + add image + add block) */}
-                    {contentIndex < stagedArticle.blocks.length - 1 && !stagedArticle.publishedToPayload && (
-                      <div className="block-action-zone">
-                        <div className="block-action-line" />
-                        <div className="block-action-buttons">
-                          {/* Fuse Button */}
-                          <button
-                            type="button"
-                            className="block-fuse-btn"
-                            onClick={() => mergeWithNextBlock(block.id)}
-                            title="Fuse with next block"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M7 10l5 5 5-5"/>
-                              <path d="M7 14l5-5 5 5"/>
-                            </svg>
-                            Fuse
-                          </button>
+                const block = contentBlockById.get(timelineItem.contentBlockId)
+                if (!block) return null
+                const contentIndex = contentBlockIndexMap.get(block.id) ?? 0
+                const contentBlockNumber = contentTimelineNumberMap.get(block.id) ?? (contentIndex + 1)
 
-                          {/* Add Image Dropdown (single + img pair) */}
-                          {canAddImageAfterBlock(block) && renderImagePicker(block.id)}
-
-                          {/* Add Block Button */}
-                          <button
-                            type="button"
-                            className="block-add-block-btn"
-                            onClick={() => addNewBlock(block.id)}
-                            title="Add new text block here"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <line x1="12" y1="5" x2="12" y2="19"/>
-                              <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            Block
-                          </button>
-                          {renderEditorialPicker(block.id)}
-
+                return (
+                  <div
+                    key={timelineItem.id}
+                    data-timeline-id={timelineItem.id}
+                    className={`block-editor-item ${draggedTimelineItemId === timelineItem.id ? 'dragging' : ''} ${dragOverTimelineItemId === timelineItem.id ? 'drag-over' : ''}`}
+                    draggable={canReorder}
+                    onDragStart={(e) => handleDragStart(e, timelineItem.id)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, timelineItem.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, timelineItem.id)}
+                  >
+                    {/* Block Content */}
+                    <div className={`block-card ${isEditing ? 'editing' : ''} ${block.type === 'pullquote' ? 'pullquote' : ''}`}>
+                      <div className="block-card-header">
+                        <div className="block-card-header-left">
+                          {/* Drag Handle */}
+                          {canReorder && (
+                            <div className="block-drag-handle" title="Drag to reorder">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="9" cy="5" r="1.5"/>
+                                <circle cx="15" cy="5" r="1.5"/>
+                                <circle cx="9" cy="12" r="1.5"/>
+                                <circle cx="15" cy="12" r="1.5"/>
+                                <circle cx="9" cy="19" r="1.5"/>
+                                <circle cx="15" cy="19" r="1.5"/>
+                              </svg>
+                            </div>
+                          )}
+                          <span className="block-number">{contentBlockNumber}</span>
+                          {block.type === 'pullquote' && (
+                            <span className="block-type-badge">Pull Quote</span>
+                          )}
+                        </div>
+                        <div className="block-card-header-right">
+                          {/* Move buttons */}
+                          {canReorder && (
+                            <div className="block-move-buttons">
+                              <button
+                                type="button"
+                                className="block-move-btn"
+                                onClick={() => moveTimelineItem(timelineItem.id, 'up')}
+                                disabled={isFirstTimelineItem}
+                                title="Move up"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M18 15l-6-6-6 6"/>
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="block-move-btn"
+                                onClick={() => moveTimelineItem(timelineItem.id, 'down')}
+                                disabled={isLastTimelineItem}
+                                title="Move down"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M6 9l6 6 6-6"/>
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                          {!stagedArticle.publishedToPayload && (
+                            <button
+                              type="button"
+                              className="block-delete-btn"
+                              onClick={() => deleteBlock(block.id)}
+                              title="Delete block"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </div>
-                    )}
+
+                      {isEditing ? (
+                        <textarea
+                          className={`block-textarea ${block.type === 'pullquote' ? 'pullquote' : ''}`}
+                          value={block.content}
+                          onChange={(e) => updateBlockContent(block.id, e.target.value)}
+                          rows={block.type === 'pullquote' ? 3 : Math.max(4, block.content.split('\n').length + 2)}
+                          placeholder={block.type === 'pullquote' ? 'Enter your pull quote...' : ''}
+                        />
+                      ) : block.type === 'pullquote' ? (
+                        <div className="block-pullquote-preview">
+                          <svg className="block-pullquote-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/>
+                            <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/>
+                          </svg>
+                          <p>{block.content}</p>
+                        </div>
+                      ) : (
+                        <div className="block-preview">
+                          {(() => {
+                            const splitPoints = findHeaderSplitPoints(block.content)
+                            if (splitPoints.length === 0 || stagedArticle.publishedToPayload) {
+                              // No split points, render normally
+                              return (
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {block.content}
+                                </ReactMarkdown>
+                              )
+                            }
+
+                            // Split content into segments at header boundaries
+                            const lines = block.content.split('\n')
+                            const segments: { content: string; splitLineIndex: number | null }[] = []
+                            let lastIndex = 0
+
+                            for (const point of splitPoints) {
+                              segments.push({
+                                content: lines.slice(lastIndex, point.lineIndex).join('\n'),
+                                splitLineIndex: point.lineIndex, // The line index where we'd split AFTER this segment
+                              })
+                              lastIndex = point.lineIndex
+                            }
+                            // Add the last segment (no split after it)
+                            segments.push({
+                              content: lines.slice(lastIndex).join('\n'),
+                              splitLineIndex: null,
+                            })
+
+                            return segments.map((segment, i) => (
+                              <div key={i}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {segment.content}
+                                </ReactMarkdown>
+                                {segment.splitLineIndex !== null && (
+                                  <div className="block-split-zone">
+                                    <button
+                                      type="button"
+                                      className="block-split-btn"
+                                      onClick={() => splitBlockAtHeader(block.id, segment.splitLineIndex!)}
+                                      title="Split here"
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5"/>
+                                      </svg>
+                                      Split
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                    {!stagedArticle.publishedToPayload
+                      && hasNextTimelineItem
+                      && renderActionZoneForBlock(block, {
+                        showFuse: nextTimelineItem?.type === 'content',
+                        pickerKey,
+                        placeAfterImage: false,
+                      })}
                   </div>
                 )
               })}
@@ -3552,7 +3878,7 @@ export default function EditorialStageArticlePage({
                 <div className="block-action-zone">
                   <div className="block-action-line" />
                   <div className="block-action-buttons">
-                    {canAddImageAfterBlock(lastContentBlock) && renderImagePicker(lastContentBlock.id)}
+                    {canAddImageAfterBlock(lastContentBlock) && renderImagePicker(lastContentBlock.id, 'end')}
                     <button
                       type="button"
                       className="block-add-block-btn"
@@ -3565,7 +3891,15 @@ export default function EditorialStageArticlePage({
                       </svg>
                       Block
                     </button>
-                    {renderEditorialPicker(lastContentBlock.id)}
+                    {renderEditorialPicker(
+                      lastContentBlock.id,
+                      'end',
+                      Boolean(
+                        lastContentBlock.imageAfter
+                        || lastContentBlock.imgPairAfter
+                        || lastContentBlock.imgTrioAfter
+                      )
+                    )}
                   </div>
                 </div>
               )}
