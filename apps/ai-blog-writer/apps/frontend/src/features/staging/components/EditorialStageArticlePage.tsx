@@ -9,9 +9,21 @@ import type { CreateArticlePayload, Location, MediaAsset } from '../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../types'
 
 type MediaVariant = 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero'
+type BlockImageModalMode = 'default' | 'img' | 'img-trio'
+type ImgTrioFormat = 'square' | 'landscape'
 
 const CONTENT_BLOCK_VARIANT: MediaVariant = 'wide'
+const IMG_BLOCK_VARIANT: MediaVariant = 'portrait'
 const FEATURED_IMAGE_VARIANT: MediaVariant = 'hero'
+const IMG_BLOCK_MIN_WIDTH = 1200
+const IMG_BLOCK_MIN_HEIGHT = 1500
+const IMG_PAIR_REQUIRED_IMAGE_COUNT = 2
+const IMG_TRIO_REQUIRED_IMAGE_COUNT = 3
+const IMG_TRIO_DEFAULT_FORMAT: ImgTrioFormat = 'square'
+const IMG_TRIO_DIMENSIONS: Record<ImgTrioFormat, { width: number; height: number }> = {
+  square: { width: 1080, height: 1080 },
+  landscape: { width: 1920, height: 1080 },
+}
 
 const VARIANT_FALLBACK_ORDER: MediaVariant[] = [
   'wide',
@@ -28,7 +40,14 @@ type EditorialStageArticleApi = {
   ) => Promise<{ docs: Location[]; totalDocs: number; totalPages: number }>
   fetchMediaAssets: (
     token?: string,
-    params?: { limit?: number; mimeType?: string }
+    params?: {
+      limit?: number
+      mimeType?: string
+      minWidth?: number
+      minHeight?: number
+      width?: number
+      height?: number
+    }
   ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
   createArticle: (
     payload: CreateArticlePayload,
@@ -56,6 +75,18 @@ type EditorialStageArticlePageProps = {
   storageKey: string
   routes: EditorialStageRoutes
   api: EditorialStageArticleApi
+}
+
+type BlockImageModalState = {
+  blockId: string
+  show: boolean
+  mode: BlockImageModalMode
+}
+
+type OpenBlockImageModalOptions = {
+  caption?: string
+  trioFormat?: ImgTrioFormat
+  selectedAssetIds?: number[]
 }
 
 function extractEditorialBlocks(markdown: string): {
@@ -165,6 +196,24 @@ type SupportedEditorialComponent =
   | typeof KEY_TAKEAWAYS_COMPONENT
   | typeof PULL_QUOTE_COMPONENT
   | typeof IN_THE_KNOW_COMPONENT
+
+const IMAGE_PICKER_OPTIONS: ReadonlyArray<{
+  mode: BlockImageModalMode
+  label: string
+}> = [
+  { mode: 'default', label: 'Single Image' },
+  { mode: 'img', label: 'Img Pair (2)' },
+  { mode: 'img-trio', label: 'Img Trio (3)' },
+]
+
+const EDITORIAL_PICKER_OPTIONS: ReadonlyArray<{
+  component: SupportedEditorialComponent
+  label: string
+}> = [
+  { component: PULL_QUOTE_COMPONENT, label: 'Quote' },
+  { component: KEY_TAKEAWAYS_COMPONENT, label: 'Key Takeaways' },
+  { component: IN_THE_KNOW_COMPONENT, label: 'In The Know' },
+]
 
 type PayloadContentBlock = NonNullable<CreateArticlePayload['contentBlocks']>[number]
 type SupportedPayloadBlockType = 'key-takeaway' | 'pull-quote' | 'in-the-know'
@@ -1073,89 +1122,84 @@ function renderEditorialBlockCard(
   const pullQuoteText = pullQuoteParsed?.quoteText || ''
   const inTheKnowLabel = inTheKnowParsed?.label || block.label || IN_THE_KNOW_LABEL
   const inTheKnowText = inTheKnowParsed?.text || ''
-  const showHeader = isEditMode || normalizedComponent !== PULL_QUOTE_COMPONENT
   return (
-    <article
-      key={block.id}
-      style={{
-        border: '1px solid rgba(0, 0, 0, 0.12)',
-        borderRadius: '12px',
-        padding: '0.85rem',
-        background: '#f7f5f2',
-        marginTop: '0.75rem',
-      }}
-    >
-      {showHeader && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '0.5rem',
-            gap: '0.75rem',
-          }}
-        >
-          <div>
-            <strong>{block.label}</strong>
-            {isEditMode && (
-              <div style={{ fontSize: '0.8rem', opacity: 0.65 }}>
-                {block.component}
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            {isEditMode && (
-              <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>
-                Editorial Block Detected #{displayNumber}
-              </span>
-            )}
-            {options?.canReorder && (
-              <div className="block-move-buttons" style={{ opacity: 1 }}>
-                <button
-                  type="button"
-                  className="block-move-btn"
-                  onClick={options.onMoveUp}
-                  disabled={options.disableMoveUp}
-                  title="Move up"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 15l-6-6-6 6"/>
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className="block-move-btn"
-                  onClick={options.onMoveDown}
-                  disabled={options.disableMoveDown}
-                  title="Move down"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M6 9l6 6 6-6"/>
-                  </svg>
-                </button>
-              </div>
-            )}
-            {options?.onRemoveBlock && (
+    <article key={block.id} className={`block-card editorial-card ${isEditMode ? 'editing' : ''}`}>
+      <div className="block-card-header">
+        <div className="block-card-header-left">
+          {options?.canReorder && (
+            <div className="block-drag-handle" title="Drag to reorder">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="9" cy="5" r="1.5"/>
+                <circle cx="15" cy="5" r="1.5"/>
+                <circle cx="9" cy="12" r="1.5"/>
+                <circle cx="15" cy="12" r="1.5"/>
+                <circle cx="9" cy="19" r="1.5"/>
+                <circle cx="15" cy="19" r="1.5"/>
+              </svg>
+            </div>
+          )}
+          {displayNumber > 0 && (
+            <span className="block-number" title="Block order">
+              {displayNumber}
+            </span>
+          )}
+          <span className="block-type-badge block-type-badge-editorial">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 19.5V4a2 2 0 0 1 2-2h9l5 5v12.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 19.5z"/>
+              <path d="M14 2v6h6"/>
+            </svg>
+            Editorial
+          </span>
+          <strong className="editorial-card-label">{block.label}</strong>
+          {isEditMode && (
+            <span className="editorial-card-component">{block.component}</span>
+          )}
+        </div>
+        <div className="block-card-header-right">
+          {options?.canReorder && (
+            <div className="block-move-buttons">
               <button
                 type="button"
-                className="block-delete-btn"
-                onClick={options.onRemoveBlock}
-                disabled={options.disableRemove}
-                title="Remove editorial block"
-                style={{
-                  opacity: options.disableRemove ? 0.35 : 1,
-                  cursor: options.disableRemove ? 'not-allowed' : 'pointer',
-                }}
+                className="block-move-btn"
+                onClick={options.onMoveUp}
+                disabled={options.disableMoveUp}
+                title="Move up"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
+                  <path d="M18 15l-6-6-6 6"/>
                 </svg>
               </button>
-            )}
-          </div>
+              <button
+                type="button"
+                className="block-move-btn"
+                onClick={options.onMoveDown}
+                disabled={options.disableMoveDown}
+                title="Move down"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+            </div>
+          )}
+          {options?.onRemoveBlock && (
+            <button
+              type="button"
+              className="block-delete-btn"
+              onClick={options.onRemoveBlock}
+              disabled={options.disableRemove}
+              title="Remove editorial block"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
         </div>
-      )}
+      </div>
+
+      <div className="editorial-card-body">
 
       {isEditMode && validation?.status === 'supported' && (
         <div
@@ -1454,6 +1498,7 @@ function renderEditorialBlockCard(
           </pre>
         </details>
       )}
+      </div>
     </article>
   )
 }
@@ -1470,12 +1515,39 @@ function normalizeBlocks(blocks: ContentBlock[] | undefined, fallbackContent: st
     content: block.content || '',
     imageAfter: block.imageAfter,
     imageAfterAltText: block.imageAfterAltText,
+    imgPairAfter: block.imgPairAfter,
+    imgTrioAfter: block.imgTrioAfter,
   }))
 }
 
 function getMediaAssetAltText(img?: MediaAsset | null): string {
   if (!img) return ''
   return img.alt_text?.trim() || img.alt?.trim() || img.altText?.trim() || ''
+}
+
+function hasExactDimensions(
+  img: MediaAsset | null | undefined,
+  width: number,
+  height: number
+): boolean {
+  if (!img) return false
+  return img.width === width && img.height === height
+}
+
+function hasExactImgBlockDimensions(img?: MediaAsset | null): boolean {
+  return hasExactDimensions(img, IMG_BLOCK_MIN_WIDTH, IMG_BLOCK_MIN_HEIGHT)
+}
+
+function getImgTrioDimensions(format: ImgTrioFormat): { width: number; height: number } {
+  return IMG_TRIO_DIMENSIONS[format]
+}
+
+function hasExactImgTrioDimensions(
+  img: MediaAsset | null | undefined,
+  format: ImgTrioFormat
+): boolean {
+  const dims = getImgTrioDimensions(format)
+  return hasExactDimensions(img, dims.width, dims.height)
 }
 
 function getRelationshipId(
@@ -1511,6 +1583,19 @@ function pickVariantAssetId(
   }
 
   return null
+}
+
+function mergeMediaAssetLists(
+  existingAssets: MediaAsset[],
+  nextAssets: MediaAsset[]
+): MediaAsset[] {
+  if (!nextAssets.length) return existingAssets
+
+  const mergedAssets = new Map<number, MediaAsset>()
+  existingAssets.forEach((asset) => mergedAssets.set(asset.id, asset))
+  nextAssets.forEach((asset) => mergedAssets.set(asset.id, asset))
+
+  return Array.from(mergedAssets.values())
 }
 
 export default function EditorialStageArticlePage({
@@ -1559,15 +1644,23 @@ export default function EditorialStageArticlePage({
   const [imageNarrativeFocus, setImageNarrativeFocus] = useState('')
 
   // Modal state for block images
-  const [blockImageModal, setBlockImageModal] = useState<{ blockId: string; show: boolean } | null>(null)
+  const [blockImageModal, setBlockImageModal] = useState<BlockImageModalState | null>(null)
   const [blockImageSearch, setBlockImageSearch] = useState('')
   const [showBlockUploadModal, setShowBlockUploadModal] = useState(false)
   const [blockImageAltText, setBlockImageAltText] = useState('')
   const [blockImageNarrativeFocus, setBlockImageNarrativeFocus] = useState('')
+  const [imgBlockAssets, setImgBlockAssets] = useState<MediaAsset[]>([])
+  const [isLoadingImgBlockAssets, setIsLoadingImgBlockAssets] = useState(false)
+  const [imgBlockAssetsError, setImgBlockAssetsError] = useState<string | null>(null)
+  const [selectedImgBlockAssetIds, setSelectedImgBlockAssetIds] = useState<number[]>([])
+  const [imgBlockCaption, setImgBlockCaption] = useState('')
+  const [imgTrioFormat, setImgTrioFormat] = useState<ImgTrioFormat>(IMG_TRIO_DEFAULT_FORMAT)
 
   // Drag and drop state
   const [draggedTimelineItemId, setDraggedTimelineItemId] = useState<string | null>(null)
   const [dragOverTimelineItemId, setDragOverTimelineItemId] = useState<string | null>(null)
+  const [openEditorialPickerTarget, setOpenEditorialPickerTarget] = useState<string | null>(null)
+  const [openImagePickerTarget, setOpenImagePickerTarget] = useState<string | null>(null)
 
   // Conversion state
   const [isConverting, setIsConverting] = useState(false)
@@ -1795,6 +1888,105 @@ export default function EditorialStageArticlePage({
     loadData()
   }, [token, fetchLocations, fetchMediaAssets])
 
+  const mergeMediaAssetsIntoState = useCallback((assets: MediaAsset[]) => {
+    setMediaAssets((existingAssets) => mergeMediaAssetLists(existingAssets, assets))
+  }, [])
+
+  const closeBlockImageModal = useCallback(() => {
+    setShowBlockUploadModal(false)
+    setBlockImageModal(null)
+    setSelectedImgBlockAssetIds([])
+    setImgBlockCaption('')
+    setImgTrioFormat(IMG_TRIO_DEFAULT_FORMAT)
+    setImgBlockAssetsError(null)
+    setIsLoadingImgBlockAssets(false)
+  }, [])
+
+  const openBlockImageModal = useCallback((
+    blockId: string,
+    mode: BlockImageModalMode,
+    options?: OpenBlockImageModalOptions
+  ) => {
+    setBlockImageSearch('')
+    setShowBlockUploadModal(false)
+    setSelectedImgBlockAssetIds(options?.selectedAssetIds || [])
+    setImgBlockCaption(options?.caption || '')
+    setImgTrioFormat(options?.trioFormat || IMG_TRIO_DEFAULT_FORMAT)
+    setImgBlockAssetsError(null)
+    setOpenImagePickerTarget(null)
+    setBlockImageModal({ blockId, show: true, mode })
+  }, [])
+
+  useEffect(() => {
+    if (!blockImageModal || blockImageModal.mode === 'default') return
+    if (!token) {
+      setImgBlockAssets([])
+      setSelectedImgBlockAssetIds([])
+      return
+    }
+
+    const loadFilteredAssets = async () => {
+      setIsLoadingImgBlockAssets(true)
+      setImgBlockAssetsError(null)
+
+      let width = IMG_BLOCK_MIN_WIDTH
+      let height = IMG_BLOCK_MIN_HEIGHT
+      if (blockImageModal.mode === 'img-trio') {
+        const dims = getImgTrioDimensions(imgTrioFormat)
+        width = dims.width
+        height = dims.height
+      }
+
+      try {
+        const response = await fetchMediaAssets(token, {
+          limit: 200,
+          mimeType: 'image/',
+          width,
+          height,
+        })
+        const docs = response.docs || []
+        setImgBlockAssets(docs)
+        const allowedAssetIds = new Set(docs.map((asset) => asset.id))
+        const requiredCount = blockImageModal.mode === 'img-trio'
+          ? IMG_TRIO_REQUIRED_IMAGE_COUNT
+          : IMG_PAIR_REQUIRED_IMAGE_COUNT
+        setSelectedImgBlockAssetIds((current) =>
+          current
+            .filter((id) => allowedAssetIds.has(id))
+            .slice(0, requiredCount)
+        )
+        mergeMediaAssetsIntoState(docs)
+      } catch (err) {
+        setImgBlockAssets([])
+        setSelectedImgBlockAssetIds([])
+        setImgBlockAssetsError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to load filtered image assets'
+        )
+      } finally {
+        setIsLoadingImgBlockAssets(false)
+      }
+    }
+
+    void loadFilteredAssets()
+  }, [blockImageModal, token, fetchMediaAssets, mergeMediaAssetsIntoState, imgTrioFormat])
+
+  const toggleImgBlockAssetSelection = useCallback((
+    assetId: number,
+    requiredCount: number
+  ) => {
+    setSelectedImgBlockAssetIds((current) => {
+      if (current.includes(assetId)) {
+        return current.filter((id) => id !== assetId)
+      }
+      if (current.length >= requiredCount) {
+        return [...current.slice(1), assetId]
+      }
+      return [...current, assetId]
+    })
+  }, [])
+
   const updateStagedArticle = useCallback((updates: Partial<StagedArticle>) => {
     setStagedArticle(prev => {
       if (!prev) return null
@@ -1969,9 +2161,98 @@ export default function EditorialStageArticlePage({
             ...b,
             imageAfter: imageId,
             imageAfterAltText: imageAfterAltText?.trim() || undefined,
+            imgPairAfter: undefined,
+            imgTrioAfter: undefined,
           }
         : b
     )
+    updateStagedArticle({ blocks: updatedBlocks })
+  }, [stagedArticle, updateStagedArticle])
+
+  const addImgPairAfterBlock = useCallback((
+    blockId: string,
+    imageOne: MediaAsset,
+    imageTwo: MediaAsset,
+    caption?: string
+  ) => {
+    if (!stagedArticle) return
+
+    const updatedBlocks = stagedArticle.blocks.map((b) =>
+      b.id === blockId
+        ? {
+            ...b,
+            imageAfter: undefined,
+            imageAfterAltText: undefined,
+            imgPairAfter: {
+              imageOne: imageOne.id,
+              imageTwo: imageTwo.id,
+              caption: caption?.trim() || undefined,
+            },
+            imgTrioAfter: undefined,
+          }
+        : b
+    )
+
+    updateStagedArticle({ blocks: updatedBlocks })
+  }, [stagedArticle, updateStagedArticle])
+
+  const addImgTrioAfterBlock = useCallback((
+    blockId: string,
+    format: ImgTrioFormat,
+    imageOne: MediaAsset,
+    imageTwo: MediaAsset,
+    imageThree: MediaAsset,
+    caption?: string
+  ) => {
+    if (!stagedArticle) return
+
+    const updatedBlocks = stagedArticle.blocks.map((b) =>
+      b.id === blockId
+        ? {
+            ...b,
+            imageAfter: undefined,
+            imageAfterAltText: undefined,
+            imgPairAfter: undefined,
+            imgTrioAfter: {
+              format,
+              imageOne: imageOne.id,
+              imageTwo: imageTwo.id,
+              imageThree: imageThree.id,
+              caption: caption?.trim() || undefined,
+            },
+          }
+        : b
+    )
+
+    updateStagedArticle({ blocks: updatedBlocks })
+  }, [stagedArticle, updateStagedArticle])
+
+  const updateMediaGroupCaption = useCallback((blockId: string, caption: string) => {
+    if (!stagedArticle) return
+
+    const updatedBlocks = stagedArticle.blocks.map((b) => {
+      if (b.id !== blockId) return b
+      if (b.imgPairAfter) {
+        return {
+          ...b,
+          imgPairAfter: {
+            ...b.imgPairAfter,
+            caption: caption || undefined,
+          },
+        }
+      }
+      if (b.imgTrioAfter) {
+        return {
+          ...b,
+          imgTrioAfter: {
+            ...b.imgTrioAfter,
+            caption: caption || undefined,
+          },
+        }
+      }
+      return b
+    })
+
     updateStagedArticle({ blocks: updatedBlocks })
   }, [stagedArticle, updateStagedArticle])
 
@@ -1979,6 +2260,22 @@ export default function EditorialStageArticlePage({
     if (!stagedArticle) return
     const updatedBlocks = stagedArticle.blocks.map(b =>
       b.id === blockId ? { ...b, imageAfter: undefined, imageAfterAltText: undefined } : b
+    )
+    updateStagedArticle({ blocks: updatedBlocks })
+  }, [stagedArticle, updateStagedArticle])
+
+  const removeImgPairAfterBlock = useCallback((blockId: string) => {
+    if (!stagedArticle) return
+    const updatedBlocks = stagedArticle.blocks.map((b) =>
+      b.id === blockId ? { ...b, imgPairAfter: undefined } : b
+    )
+    updateStagedArticle({ blocks: updatedBlocks })
+  }, [stagedArticle, updateStagedArticle])
+
+  const removeImgTrioAfterBlock = useCallback((blockId: string) => {
+    if (!stagedArticle) return
+    const updatedBlocks = stagedArticle.blocks.map((b) =>
+      b.id === blockId ? { ...b, imgTrioAfter: undefined } : b
     )
     updateStagedArticle({ blocks: updatedBlocks })
   }, [stagedArticle, updateStagedArticle])
@@ -1991,20 +2288,22 @@ export default function EditorialStageArticlePage({
     const currentBlock = stagedArticle.blocks[blockIndex]
     const nextBlock = stagedArticle.blocks[blockIndex + 1]
 
-    // Warn if there's an image between the blocks that will be deleted
-    if (currentBlock.imageAfter) {
-      if (!confirm('This will delete the image between these blocks. Continue?')) {
+    // Warn if there are media blocks between the blocks that will be deleted.
+    if (currentBlock.imageAfter || currentBlock.imgPairAfter || currentBlock.imgTrioAfter) {
+      if (!confirm('This will delete media between these blocks. Continue?')) {
         return
       }
     }
 
-    // Merge content, removing any image that was between them
+    // Merge content, removing any media block between them.
     const mergedBlock: ContentBlock = {
       id: currentBlock.id,
       type: 'text',
       content: `${currentBlock.content}\n\n${nextBlock.content}`,
-      imageAfter: nextBlock.imageAfter, // Keep only the image after the second block
+      imageAfter: nextBlock.imageAfter,
       imageAfterAltText: nextBlock.imageAfterAltText,
+      imgPairAfter: nextBlock.imgPairAfter,
+      imgTrioAfter: nextBlock.imgTrioAfter,
     }
 
     const updatedBlocks = [
@@ -2066,6 +2365,8 @@ export default function EditorialStageArticlePage({
         content: afterContent,
         imageAfter: block.imageAfter,
         imageAfterAltText: block.imageAfterAltText,
+        imgPairAfter: block.imgPairAfter,
+        imgTrioAfter: block.imgTrioAfter,
       },
     ]
 
@@ -2136,6 +2437,26 @@ export default function EditorialStageArticlePage({
     setPublishResult(null)
   }, [stagedArticle, updateStagedArticle])
 
+  const toggleEditorialPicker = useCallback((target: string) => {
+    setOpenEditorialPickerTarget((current) => (
+      current === target ? null : target
+    ))
+  }, [])
+
+  const toggleImagePicker = useCallback((target: string) => {
+    setOpenImagePickerTarget((current) => (
+      current === target ? null : target
+    ))
+  }, [])
+
+  const addEditorialFromPicker = useCallback((
+    component: SupportedEditorialComponent,
+    afterBlockId?: string
+  ) => {
+    addNewEditorialBlock(component, afterBlockId)
+    setOpenEditorialPickerTarget(null)
+  }, [addNewEditorialBlock])
+
   const deleteBlock = useCallback((blockId: string) => {
     if (!stagedArticle) return
     if (stagedArticle.blocks.length <= 1) {
@@ -2146,9 +2467,9 @@ export default function EditorialStageArticlePage({
     const block = stagedArticle.blocks.find(b => b.id === blockId)
     if (!block) return
 
-    const hasImage = block.imageAfter
-    const message = hasImage
-      ? 'Delete this block and its image?'
+    const hasMedia = Boolean(block.imageAfter || block.imgPairAfter || block.imgTrioAfter)
+    const message = hasMedia
+      ? 'Delete this block and its media block?'
       : 'Delete this block?'
 
     if (!confirm(message)) return
@@ -2249,20 +2570,6 @@ export default function EditorialStageArticlePage({
       return
     }
 
-    if (editorialPublishAnalysis.hasBlockingBlocks) {
-      const details = editorialPublishAnalysis.blockingBlocks
-        .slice(0, 3)
-        .map((issue) => issue.message)
-        .join('; ')
-      setPublishResult({
-        success: false,
-        message: details
-          ? `Publishing blocked: ${details}`
-          : 'Publishing blocked: block markdown incorrect',
-      })
-      return
-    }
-
     setIsPublishing(true)
     setPublishResult(null)
     setIsConverting(true)
@@ -2324,6 +2631,48 @@ export default function EditorialStageArticlePage({
             blockType: 'image',
             image: block.imageAfter,
             altText,
+          })
+        }
+
+        if (!block.imageAfter && block.imgPairAfter) {
+          const imageOneAsset = mediaAssets.find((m) => m.id === block.imgPairAfter?.imageOne)
+          const imageTwoAsset = mediaAssets.find((m) => m.id === block.imgPairAfter?.imageTwo)
+          if (!hasExactImgBlockDimensions(imageOneAsset) || !hasExactImgBlockDimensions(imageTwoAsset)) {
+            throw new Error(
+              `Img block after section ${index + 1} must be exactly ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT}`
+            )
+          }
+
+          contentBlocks.push({
+            blockType: 'img-pair',
+            imageOne: block.imgPairAfter.imageOne,
+            imageTwo: block.imgPairAfter.imageTwo,
+            caption: block.imgPairAfter.caption?.trim() || undefined,
+          })
+        }
+
+        if (!block.imageAfter && !block.imgPairAfter && block.imgTrioAfter) {
+          const imageOneAsset = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageOne)
+          const imageTwoAsset = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageTwo)
+          const imageThreeAsset = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageThree)
+          if (
+            !hasExactImgTrioDimensions(imageOneAsset, block.imgTrioAfter.format)
+            || !hasExactImgTrioDimensions(imageTwoAsset, block.imgTrioAfter.format)
+            || !hasExactImgTrioDimensions(imageThreeAsset, block.imgTrioAfter.format)
+          ) {
+            const dims = getImgTrioDimensions(block.imgTrioAfter.format)
+            throw new Error(
+              `Img trio after section ${index + 1} must be exactly ${dims.width}x${dims.height}`
+            )
+          }
+
+          contentBlocks.push({
+            blockType: 'img-trio',
+            format: block.imgTrioAfter.format,
+            imageOne: block.imgTrioAfter.imageOne,
+            imageTwo: block.imgTrioAfter.imageTwo,
+            imageThree: block.imgTrioAfter.imageThree,
+            caption: block.imgTrioAfter.caption?.trim() || undefined,
           })
         }
 
@@ -2415,7 +2764,7 @@ export default function EditorialStageArticlePage({
 
     if (token) {
       fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
-        .then(res => setMediaAssets(res.docs || []))
+        .then(res => mergeMediaAssetsIntoState(res.docs || []))
     }
 
     setShowUploadModal(false)
@@ -2426,6 +2775,10 @@ export default function EditorialStageArticlePage({
 
   const handleBlockImageUploadComplete = (result: UploadImageResponse) => {
     if (!blockImageModal) return
+    if (blockImageModal.mode !== 'default') {
+      setShowBlockUploadModal(false)
+      return
+    }
 
     const blockAssetId = pickVariantAssetId(result.variantAssetIds, CONTENT_BLOCK_VARIANT)
     if (blockAssetId) {
@@ -2434,11 +2787,10 @@ export default function EditorialStageArticlePage({
 
     if (token) {
       fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
-        .then(res => setMediaAssets(res.docs || []))
+        .then(res => mergeMediaAssetsIntoState(res.docs || []))
     }
 
-    setShowBlockUploadModal(false)
-    setBlockImageModal(null)
+    closeBlockImageModal()
     setBlockImageAltText('')
     setBlockImageNarrativeFocus('')
   }
@@ -2477,28 +2829,183 @@ export default function EditorialStageArticlePage({
 
   const selectedLocation = locations.find(l => l.id === stagedArticle.locationId)
   const selectedFeaturedImage = mediaAssets.find(m => m.id === stagedArticle.featuredImageId)
+  const lastContentBlock = stagedArticle.blocks.length > 0
+    ? stagedArticle.blocks[stagedArticle.blocks.length - 1]
+    : null
+  const canAddImageAfterBlock = (block: ContentBlock) => (
+    !block.imageAfter && !block.imgPairAfter && !block.imgTrioAfter
+  )
+  const renderImagePicker = (blockId: string) => (
+    <div className="block-editorial-picker">
+      <button
+        type="button"
+        className={`block-add-editorial-trigger ${openImagePickerTarget === blockId ? 'active' : ''}`}
+        onClick={() => toggleImagePicker(blockId)}
+        title="Choose image block"
+      >
+        Image
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+      {openImagePickerTarget === blockId && (
+        <div className="block-editorial-picker-menu">
+          {IMAGE_PICKER_OPTIONS.map((option) => (
+            <button
+              key={`${blockId}-${option.mode}`}
+              type="button"
+              className="block-editorial-option-btn"
+              onClick={() => void openBlockImageModal(blockId, option.mode)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+  const renderEditorialPicker = (blockId: string) => (
+    <div className="block-editorial-picker">
+      <button
+        type="button"
+        className={`block-add-editorial-trigger ${openEditorialPickerTarget === blockId ? 'active' : ''}`}
+        onClick={() => toggleEditorialPicker(blockId)}
+        title="Choose editorial block"
+      >
+        Editorial
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+      {openEditorialPickerTarget === blockId && (
+        <div className="block-editorial-picker-menu">
+          {EDITORIAL_PICKER_OPTIONS.map((option) => (
+            <button
+              key={`${blockId}-${option.component}`}
+              type="button"
+              className="block-editorial-option-btn"
+              onClick={() => addEditorialFromPicker(option.component, blockId)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
   const contentBlockById = new Map(stagedArticle.blocks.map((block) => [block.id, block]))
   const editorialBlockById = new Map(stagedArticle.editorialBlocks.map((block) => [block.id, block]))
   const contentBlockIndexMap = new Map(stagedArticle.blocks.map((block, index) => [block.id, index]))
   const timelineIndexMap = new Map(timelineItems.map((item, index) => [item.id, index]))
-  const editorialDisplayOrderMap = new Map<string, number>()
-  stagedArticle.editorialBlocks.forEach((block, index) => {
-    editorialDisplayOrderMap.set(block.id, index + 1)
+  const contentTimelineNumberMap = new Map<string, number>()
+  const editorialTimelineNumberMap = new Map<string, number>()
+  const imageTimelineNumberMap = new Map<string, number>()
+  let technicalBlockCounter = 0
+
+  timelineItems.forEach((item) => {
+    if (item.type === 'editorial') {
+      technicalBlockCounter += 1
+      editorialTimelineNumberMap.set(item.editorialBlockId, technicalBlockCounter)
+      return
+    }
+
+    const contentBlock = contentBlockById.get(item.contentBlockId)
+    if (!contentBlock) return
+
+    technicalBlockCounter += 1
+    contentTimelineNumberMap.set(contentBlock.id, technicalBlockCounter)
+
+    if (
+      contentBlock.imageAfter != null
+      || contentBlock.imgPairAfter != null
+      || contentBlock.imgTrioAfter != null
+    ) {
+      technicalBlockCounter += 1
+      imageTimelineNumberMap.set(contentBlock.id, technicalBlockCounter)
+    }
   })
+  const totalTechnicalBlockCount = technicalBlockCounter
   const hasTitle = Boolean(stagedArticle.title.trim())
-  const hasBlockingEditorialBlocks = editorialPublishAnalysis.hasBlockingBlocks
   const allFieldsFilled = Boolean(
     selectedLocation
     && selectedFeaturedImage
     && hasTitle
-    && !hasBlockingEditorialBlocks
   )
-  const missingRequiredFields = [
-    ...(!hasTitle ? ['title'] : []),
-    ...(!selectedLocation ? ['location'] : []),
-    ...(!selectedFeaturedImage ? ['featured image'] : []),
-    ...(hasBlockingEditorialBlocks ? ['editorial blocks (block markdown incorrect or unsupported component)'] : []),
-  ]
+  const hasMissingFeaturedImage = !selectedFeaturedImage
+  const isImgBlockModal = blockImageModal?.mode === 'img'
+  const isImgTrioModal = blockImageModal?.mode === 'img-trio'
+  const isMultiImageModal = isImgBlockModal || isImgTrioModal
+  const blockImageSearchableAssets = isMultiImageModal ? imgBlockAssets : mediaAssets
+  const blockImageDimensionFilteredAssets = blockImageSearchableAssets.filter((img) => {
+    if (isImgBlockModal) return hasExactImgBlockDimensions(img)
+    if (isImgTrioModal) return hasExactImgTrioDimensions(img, imgTrioFormat)
+    return true
+  })
+  const filteredBlockImageAssets = blockImageDimensionFilteredAssets.filter((img) =>
+    img.filename.toLowerCase().includes(blockImageSearch.toLowerCase())
+    || getMediaAssetAltText(img).toLowerCase().includes(blockImageSearch.toLowerCase())
+  )
+  const imgTrioDimensions = getImgTrioDimensions(imgTrioFormat)
+  const requiredImageCount = isImgTrioModal
+    ? IMG_TRIO_REQUIRED_IMAGE_COUNT
+    : IMG_PAIR_REQUIRED_IMAGE_COUNT
+  const selectedImgBlockAssets = selectedImgBlockAssetIds
+    .map((assetId) => blockImageDimensionFilteredAssets.find((asset) => asset.id === assetId))
+    .filter((asset): asset is MediaAsset => Boolean(asset))
+  const handleAddSelectedImgBlock = () => {
+    if (!blockImageModal || blockImageModal.mode === 'default') return
+    if (selectedImgBlockAssets.length !== requiredImageCount) return
+
+    if (blockImageModal.mode === 'img') {
+      const [rawImageOne, rawImageTwo] = selectedImgBlockAssets
+      const imageOne = findPreferredVariantAsset(rawImageOne.id, IMG_BLOCK_VARIANT)
+      const imageTwo = findPreferredVariantAsset(rawImageTwo.id, IMG_BLOCK_VARIANT)
+      if (!imageOne || !imageTwo) return
+      if (!hasExactImgBlockDimensions(imageOne) || !hasExactImgBlockDimensions(imageTwo)) {
+        setPublishResult({
+          success: false,
+          message: `Img pair requires exactly ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT} images`,
+        })
+        return
+      }
+
+      addImgPairAfterBlock(blockImageModal.blockId, imageOne, imageTwo, imgBlockCaption)
+      mergeMediaAssetsIntoState([imageOne, imageTwo])
+      closeBlockImageModal()
+      return
+    }
+
+    const [rawImageOne, rawImageTwo, rawImageThree] = selectedImgBlockAssets
+    const preferredVariant = imgTrioFormat === 'square' ? 'square' : 'wide'
+    const imageOne = findPreferredVariantAsset(rawImageOne.id, preferredVariant)
+    const imageTwo = findPreferredVariantAsset(rawImageTwo.id, preferredVariant)
+    const imageThree = findPreferredVariantAsset(rawImageThree.id, preferredVariant)
+    if (!imageOne || !imageTwo || !imageThree) return
+
+    if (
+      !hasExactImgTrioDimensions(imageOne, imgTrioFormat)
+      || !hasExactImgTrioDimensions(imageTwo, imgTrioFormat)
+      || !hasExactImgTrioDimensions(imageThree, imgTrioFormat)
+    ) {
+      const dims = getImgTrioDimensions(imgTrioFormat)
+      setPublishResult({
+        success: false,
+        message: `Img trio (${imgTrioFormat}) requires exactly ${dims.width}x${dims.height} images`,
+      })
+      return
+    }
+
+    addImgTrioAfterBlock(
+      blockImageModal.blockId,
+      imgTrioFormat,
+      imageOne,
+      imageTwo,
+      imageThree,
+      imgBlockCaption
+    )
+    mergeMediaAssetsIntoState([imageOne, imageTwo, imageThree])
+    closeBlockImageModal()
+  }
 
   return (
     <div className="stage-article-page">
@@ -2518,12 +3025,9 @@ export default function EditorialStageArticlePage({
             {stagedArticle.originalType && (
               <span className="stage-article-type-badge">{stagedArticle.originalType}</span>
             )}
-            <span className="stage-article-block-count">
-              {stagedArticle.blocks.length} blocks
-            </span>
-            {stagedArticle.editorialBlocks.length > 0 && (
-              <span className="stage-article-badge error">
-                Editorial blocks: {stagedArticle.editorialBlocks.length}
+            {!stagedArticle.publishedToPayload && hasMissingFeaturedImage && (
+              <span className="stage-article-badge missing">
+                Missing featured image
               </span>
             )}
             {isConverting && (
@@ -2556,6 +3060,20 @@ export default function EditorialStageArticlePage({
                 </svg>
               )}
               {isEditing ? 'Done' : 'Edit'}
+            </button>
+          )}
+          {!stagedArticle.publishedToPayload && (
+            <button
+              type="button"
+              className="stage-article-icon-btn"
+              onClick={resetToOriginalBlocks}
+              title="Reset to original blocks"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              Reset
             </button>
           )}
           <button
@@ -2599,44 +3117,10 @@ export default function EditorialStageArticlePage({
                   {isEditing ? 'Edit blocks or merge adjacent sections' : 'Fuse blocks or add images between them'}
                 </span>
               </label>
-              {!stagedArticle.publishedToPayload && (
-                <button
-                  type="button"
-                  className="block-reset-btn"
-                  onClick={resetToOriginalBlocks}
-                  title="Reset to original blocks"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                    <path d="M3 3v5h5"/>
-                  </svg>
-                  Reset
-                </button>
-              )}
+              <span className="stage-article-block-count" title="Includes content, editorial, and image blocks">
+                {totalTechnicalBlockCount} blocks
+              </span>
             </div>
-
-            {stagedArticle.editorialBlocks.length > 0 && (
-              <div className="stage-article-info-box" style={{ marginBottom: '1rem' }}>
-                <p>
-                  <strong>Editorial blocks in this draft:</strong>{' '}
-                  {stagedArticle.editorialBlocks.length}
-                </p>
-                <p>
-                  `key_takeaways_box`, `pull_quote`, and `in_the_know_box` can publish to Payload
-                  (`key-takeaway` / `pull-quote` / `in-the-know`). Other components or incorrect
-                  block markdown remain locked.
-                </p>
-                {editorialPublishAnalysis.hasBlockingBlocks && (
-                  <p style={{ marginTop: '0.45rem' }}>
-                    <strong>Blocking:</strong>{' '}
-                    {editorialPublishAnalysis.blockingBlocks
-                      .slice(0, 2)
-                      .map((issue) => issue.message)
-                      .join(' | ')}
-                  </p>
-                )}
-              </div>
-            )}
 
             <div className="block-editor">
               {timelineItems.map((timelineItem) => {
@@ -2663,7 +3147,7 @@ export default function EditorialStageArticlePage({
                     >
                       {renderEditorialBlockCard(
                         editorialBlock,
-                        editorialDisplayOrderMap.get(editorialBlock.id) || 1,
+                        editorialTimelineNumberMap.get(editorialBlock.id) || timelineIndex + 1,
                         {
                           validation: editorialPublishAnalysis.byId[editorialBlock.id],
                           onFixBlock: () => fixEditorialBlock(editorialBlock.id),
@@ -2687,6 +3171,8 @@ export default function EditorialStageArticlePage({
                 const block = contentBlockById.get(timelineItem.contentBlockId)
                 if (!block) return null
                 const contentIndex = contentBlockIndexMap.get(block.id) ?? 0
+                const contentBlockNumber = contentTimelineNumberMap.get(block.id) ?? (contentIndex + 1)
+                const imageBlockNumber = imageTimelineNumberMap.get(block.id)
 
                 return (
                   <div
@@ -2717,7 +3203,7 @@ export default function EditorialStageArticlePage({
                               </svg>
                             </div>
                           )}
-                          <span className="block-number">{contentIndex + 1}</span>
+                          <span className="block-number">{contentBlockNumber}</span>
                           {block.type === 'pullquote' && (
                             <span className="block-type-badge">Pull Quote</span>
                           )}
@@ -2840,33 +3326,179 @@ export default function EditorialStageArticlePage({
                       )}
                     </div>
 
-                    {/* Image After Block */}
-                    {block.imageAfter && (
+                    {/* Media Block After Content Block */}
+                    {(block.imageAfter || block.imgPairAfter || block.imgTrioAfter) && (
                       <div className="block-image-container">
-                        <div className="block-image">
-                          {(() => {
-                            const img = mediaAssets.find(m => m.id === block.imageAfter)
-                            return img ? (
-                              <>
+                        <div className="block-card block-image-card">
+                          <div className="block-card-header">
+                            <div className="block-card-header-left">
+                              {imageBlockNumber != null && (
+                                <span className="block-number">{imageBlockNumber}</span>
+                              )}
+                              <span className="block-type-badge block-type-badge-image">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                                  <polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                                {block.imgTrioAfter ? 'Img Trio (3)' : block.imgPairAfter ? 'Img Pair (2)' : 'Image'}
+                              </span>
+                            </div>
+                            <div className="block-card-header-right">
+                              {!stagedArticle.publishedToPayload && (block.imgPairAfter || block.imgTrioAfter) && (
+                                <button
+                                  type="button"
+                                  className="block-edit-btn"
+                                  onClick={() => {
+                                    if (block.imgTrioAfter) {
+                                      openBlockImageModal(block.id, 'img-trio', {
+                                        caption: block.imgTrioAfter.caption || '',
+                                        trioFormat: block.imgTrioAfter.format,
+                                        selectedAssetIds: [
+                                          block.imgTrioAfter.imageOne,
+                                          block.imgTrioAfter.imageTwo,
+                                          block.imgTrioAfter.imageThree,
+                                        ],
+                                      })
+                                      return
+                                    }
+                                    if (block.imgPairAfter) {
+                                      openBlockImageModal(block.id, 'img', {
+                                        caption: block.imgPairAfter.caption || '',
+                                        selectedAssetIds: [
+                                          block.imgPairAfter.imageOne,
+                                          block.imgPairAfter.imageTwo,
+                                        ],
+                                      })
+                                    }
+                                  }}
+                                  title={block.imgTrioAfter ? 'Edit img trio' : 'Edit img pair'}
+                                >
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                                  </svg>
+                                  Edit
+                                </button>
+                              )}
+                              {!stagedArticle.publishedToPayload && (
+                                <button
+                                  type="button"
+                                  className="block-delete-btn"
+                                  onClick={() => {
+                                    if (block.imgTrioAfter) {
+                                      removeImgTrioAfterBlock(block.id)
+                                      return
+                                    }
+                                    if (block.imgPairAfter) {
+                                      removeImgPairAfterBlock(block.id)
+                                      return
+                                    }
+                                    removeImageAfterBlock(block.id)
+                                  }}
+                                  title={block.imgPairAfter || block.imgTrioAfter ? 'Remove img block' : 'Remove image'}
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="block-image">
+                            {(() => {
+                              if (block.imgTrioAfter) {
+                                const imageOne = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageOne)
+                                const imageTwo = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageTwo)
+                                const imageThree = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageThree)
+
+                                if (!imageOne || !imageTwo || !imageThree) {
+                                  return <span className="block-image-missing">One or more images not found</span>
+                                }
+
+                                return (
+                                  <div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                                      <img
+                                        src={getImageUrl(imageOne)}
+                                        alt={getMediaAssetAltText(imageOne) || ''}
+                                      />
+                                      <img
+                                        src={getImageUrl(imageTwo)}
+                                        alt={getMediaAssetAltText(imageTwo) || ''}
+                                      />
+                                      <img
+                                        src={getImageUrl(imageThree)}
+                                        alt={getMediaAssetAltText(imageThree) || ''}
+                                      />
+                                    </div>
+                                    {isEditing && !stagedArticle.publishedToPayload ? (
+                                      <input
+                                        type="text"
+                                        className="stage-article-modal-search-input"
+                                        style={{ marginTop: '0.5rem' }}
+                                        value={block.imgTrioAfter.caption || ''}
+                                        onChange={(event) => updateMediaGroupCaption(block.id, event.target.value)}
+                                        placeholder="Caption for all images..."
+                                      />
+                                    ) : block.imgTrioAfter.caption?.trim() ? (
+                                      <p style={{ marginTop: '0.5rem', marginBottom: 0, fontSize: '0.85rem', opacity: 0.8 }}>
+                                        {block.imgTrioAfter.caption}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                )
+                              }
+
+                              if (block.imgPairAfter) {
+                                const imageOne = mediaAssets.find((m) => m.id === block.imgPairAfter?.imageOne)
+                                const imageTwo = mediaAssets.find((m) => m.id === block.imgPairAfter?.imageTwo)
+
+                                if (!imageOne || !imageTwo) {
+                                  return <span className="block-image-missing">One or more images not found</span>
+                                }
+
+                                return (
+                                  <div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                      <img
+                                        src={getImageUrl(imageOne)}
+                                        alt={getMediaAssetAltText(imageOne) || ''}
+                                      />
+                                      <img
+                                        src={getImageUrl(imageTwo)}
+                                        alt={getMediaAssetAltText(imageTwo) || ''}
+                                      />
+                                    </div>
+                                    {isEditing && !stagedArticle.publishedToPayload ? (
+                                      <input
+                                        type="text"
+                                        className="stage-article-modal-search-input"
+                                        style={{ marginTop: '0.5rem' }}
+                                        value={block.imgPairAfter.caption || ''}
+                                        onChange={(event) => updateMediaGroupCaption(block.id, event.target.value)}
+                                        placeholder="Caption for both images..."
+                                      />
+                                    ) : block.imgPairAfter.caption?.trim() ? (
+                                      <p style={{ marginTop: '0.5rem', marginBottom: 0, fontSize: '0.85rem', opacity: 0.8 }}>
+                                        {block.imgPairAfter.caption}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                )
+                              }
+
+                              const img = mediaAssets.find((m) => m.id === block.imageAfter)
+                              if (!img) {
+                                return <span className="block-image-missing">Image not found</span>
+                              }
+
+                              return (
                                 <img src={getImageUrl(img)} alt={getMediaAssetAltText(img) || block.imageAfterAltText || ''} />
-                                {!stagedArticle.publishedToPayload && (
-                                  <button
-                                    type="button"
-                                    className="block-image-remove"
-                                    onClick={() => removeImageAfterBlock(block.id)}
-                                    title="Remove image"
-                                  >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <line x1="18" y1="6" x2="6" y2="18"/>
-                                      <line x1="6" y1="6" x2="18" y2="18"/>
-                                    </svg>
-                                  </button>
-                                )}
-                              </>
-                            ) : (
-                              <span className="block-image-missing">Image not found</span>
-                            )
-                          })()}
+                              )
+                            })()}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -2890,22 +3522,8 @@ export default function EditorialStageArticlePage({
                             Fuse
                           </button>
 
-                          {/* Add Image Button (only if no image already) */}
-                          {!block.imageAfter && (
-                            <button
-                              type="button"
-                              className="block-add-image-btn"
-                              onClick={() => setBlockImageModal({ blockId: block.id, show: true })}
-                              title="Add image between blocks"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                <circle cx="8.5" cy="8.5" r="1.5"/>
-                                <polyline points="21 15 16 10 5 21"/>
-                              </svg>
-                              Image
-                            </button>
-                          )}
+                          {/* Add Image Dropdown (single + img pair) */}
+                          {canAddImageAfterBlock(block) && renderImagePicker(block.id)}
 
                           {/* Add Block Button */}
                           <button
@@ -2920,30 +3538,7 @@ export default function EditorialStageArticlePage({
                             </svg>
                             Block
                           </button>
-                          <button
-                            type="button"
-                            className="block-add-editorial-btn"
-                            onClick={() => addNewEditorialBlock(PULL_QUOTE_COMPONENT, block.id)}
-                            title="Add pull quote here"
-                          >
-                            Quote
-                          </button>
-                          <button
-                            type="button"
-                            className="block-add-editorial-btn"
-                            onClick={() => addNewEditorialBlock(KEY_TAKEAWAYS_COMPONENT, block.id)}
-                            title="Add key takeaways here"
-                          >
-                            Takeaways
-                          </button>
-                          <button
-                            type="button"
-                            className="block-add-editorial-btn"
-                            onClick={() => addNewEditorialBlock(IN_THE_KNOW_COMPONENT, block.id)}
-                            title="Add in-the-know callout here"
-                          >
-                            In The Know
-                          </button>
+                          {renderEditorialPicker(block.id)}
 
                         </div>
                       </div>
@@ -2952,47 +3547,26 @@ export default function EditorialStageArticlePage({
                 )
               })}
 
-              {/* Add Block at End */}
-              {!stagedArticle.publishedToPayload && (
-                <button
-                  type="button"
-                  className="block-add-end-btn"
-                  onClick={() => addNewBlock()}
-                  title="Add new block at end"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                  Add Block
-                </button>
-              )}
-              {!stagedArticle.publishedToPayload && (
-                <div className="block-add-end-editorial-row">
-                  <button
-                    type="button"
-                    className="block-add-end-editorial-btn"
-                    onClick={() => addNewEditorialBlock(PULL_QUOTE_COMPONENT)}
-                    title="Add pull quote at the end"
-                  >
-                    Add Quote
-                  </button>
-                  <button
-                    type="button"
-                    className="block-add-end-editorial-btn"
-                    onClick={() => addNewEditorialBlock(KEY_TAKEAWAYS_COMPONENT)}
-                    title="Add key takeaways at the end"
-                  >
-                    Add Takeaways
-                  </button>
-                  <button
-                    type="button"
-                    className="block-add-end-editorial-btn"
-                    onClick={() => addNewEditorialBlock(IN_THE_KNOW_COMPONENT)}
-                    title="Add in-the-know callout at the end"
-                  >
-                    Add In The Know
-                  </button>
+              {/* Action Zone at End (reuse same controls as between blocks) */}
+              {!stagedArticle.publishedToPayload && lastContentBlock && (
+                <div className="block-action-zone">
+                  <div className="block-action-line" />
+                  <div className="block-action-buttons">
+                    {canAddImageAfterBlock(lastContentBlock) && renderImagePicker(lastContentBlock.id)}
+                    <button
+                      type="button"
+                      className="block-add-block-btn"
+                      onClick={() => addNewBlock(lastContentBlock.id)}
+                      title="Add new text block here"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Block
+                    </button>
+                    {renderEditorialPicker(lastContentBlock.id)}
+                  </div>
                 </div>
               )}
             </div>
@@ -3012,15 +3586,9 @@ export default function EditorialStageArticlePage({
                     className="stage-article-publish-btn"
                   >
                     {isPublishing ? 'Publishing...' :
-                     hasBlockingEditorialBlocks ? 'Fix editorial blocks' :
                      !allFieldsFilled ? 'Complete fields below' :
                      'Publish to Payload'}
                   </button>
-                  {!allFieldsFilled && (
-                    <p className="stage-article-publish-hint">
-                      Complete: {missingRequiredFields.join(', ')}
-                    </p>
-                  )}
                 </>
               ) : (
                 <div className="stage-article-published-notice">
@@ -3226,10 +3794,18 @@ export default function EditorialStageArticlePage({
 
       {/* Block Image Selection Modal */}
       {blockImageModal?.show && !stagedArticle.publishedToPayload && (
-        <div className="stage-article-modal-overlay" onClick={() => setBlockImageModal(null)}>
+        <div className="stage-article-modal-overlay" onClick={closeBlockImageModal}>
           <div className="stage-article-modal" onClick={(e) => e.stopPropagation()}>
             <div className="stage-article-modal-header">
-              <h3>{showBlockUploadModal ? 'Upload New Image' : 'Add Image Between Blocks'}</h3>
+              <h3>
+                {showBlockUploadModal
+                  ? 'Upload New Image'
+                  : isImgBlockModal
+                    ? 'Add Img Pair Between Blocks'
+                    : isImgTrioModal
+                      ? 'Add Img Trio Between Blocks'
+                    : 'Add Image Between Blocks'}
+              </h3>
               <button
                 type="button"
                 className="stage-article-modal-close"
@@ -3237,7 +3813,7 @@ export default function EditorialStageArticlePage({
                   if (showBlockUploadModal) {
                     setShowBlockUploadModal(false)
                   } else {
-                    setBlockImageModal(null)
+                    closeBlockImageModal()
                   }
                 }}
               >
@@ -3247,24 +3823,63 @@ export default function EditorialStageArticlePage({
 
             {!showBlockUploadModal ? (
               <>
-                <div className="stage-article-modal-actions">
-                  <button
-                    type="button"
-                    className="stage-article-modal-upload-btn"
-                    onClick={() => {
-                      setBlockImageAltText('')
-                      setBlockImageNarrativeFocus('')
-                      setShowBlockUploadModal(true)
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Upload New Image
-                  </button>
-                </div>
+                {!isMultiImageModal && (
+                  <div className="stage-article-modal-actions">
+                    <button
+                      type="button"
+                      className="stage-article-modal-upload-btn"
+                      onClick={() => {
+                        setBlockImageAltText('')
+                        setBlockImageNarrativeFocus('')
+                        setShowBlockUploadModal(true)
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      Upload New Image
+                    </button>
+                  </div>
+                )}
+
+                {isImgBlockModal && (
+                  <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
+                    Select exactly {IMG_PAIR_REQUIRED_IMAGE_COUNT} images. Showing only {IMG_BLOCK_MIN_WIDTH}x{IMG_BLOCK_MIN_HEIGHT} assets; saved block is locked to that exact size.
+                  </p>
+                )}
+
+                {isImgTrioModal && (
+                  <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
+                    Select exactly {IMG_TRIO_REQUIRED_IMAGE_COUNT} images. Showing only {imgTrioDimensions.width}x{imgTrioDimensions.height} assets for the selected format.
+                  </p>
+                )}
+
+                {isImgTrioModal && (
+                  <div className="stage-article-modal-search" style={{ marginBottom: '0.5rem' }}>
+                    <select
+                      className="stage-article-select"
+                      value={imgTrioFormat}
+                      onChange={(e) => setImgTrioFormat(e.target.value as ImgTrioFormat)}
+                    >
+                      <option value="square">Square (1080x1080)</option>
+                      <option value="landscape">Landscape (1920x1080)</option>
+                    </select>
+                  </div>
+                )}
+
+                {isMultiImageModal && (
+                  <div className="stage-article-modal-search" style={{ marginBottom: '0.5rem' }}>
+                    <input
+                      type="text"
+                      placeholder={isImgTrioModal ? 'Caption for all three images (optional)' : 'Caption for both images (optional)'}
+                      value={imgBlockCaption}
+                      onChange={(e) => setImgBlockCaption(e.target.value)}
+                      className="stage-article-modal-search-input"
+                    />
+                  </div>
+                )}
 
                 <div className="stage-article-modal-search">
                   <input
@@ -3276,18 +3891,31 @@ export default function EditorialStageArticlePage({
                   />
                 </div>
 
+                {isMultiImageModal && isLoadingImgBlockAssets && (
+                  <div className="stage-article-modal-empty">
+                    <p>Loading filtered image assets...</p>
+                  </div>
+                )}
+
+                {isMultiImageModal && imgBlockAssetsError && (
+                  <div className="stage-article-modal-empty">
+                    <p>{imgBlockAssetsError}</p>
+                  </div>
+                )}
+
                 <div className="stage-article-modal-grid">
-                  {mediaAssets
-                    .filter(img =>
-                      img.filename.toLowerCase().includes(blockImageSearch.toLowerCase()) ||
-                      getMediaAssetAltText(img).toLowerCase().includes(blockImageSearch.toLowerCase())
-                    )
+                  {filteredBlockImageAssets
                     .map(img => (
                       <button
                         key={img.id}
                         type="button"
-                        className="stage-article-modal-image"
+                        className={`stage-article-modal-image ${isMultiImageModal && selectedImgBlockAssetIds.includes(img.id) ? 'selected' : ''}`}
                         onClick={() => {
+                          if (isMultiImageModal) {
+                            toggleImgBlockAssetSelection(img.id, requiredImageCount)
+                            return
+                          }
+
                           const preferredAsset = findPreferredVariantAsset(img.id, CONTENT_BLOCK_VARIANT)
                           if (!preferredAsset) return
                           addImageAfterBlock(
@@ -3295,7 +3923,8 @@ export default function EditorialStageArticlePage({
                             preferredAsset.id,
                             getMediaAssetAltText(preferredAsset)
                           )
-                          setBlockImageModal(null)
+                          mergeMediaAssetsIntoState([preferredAsset])
+                          closeBlockImageModal()
                         }}
                       >
                         <img
@@ -3304,21 +3933,42 @@ export default function EditorialStageArticlePage({
                           loading="lazy"
                         />
                         <span className="stage-article-modal-image-name">{img.filename}</span>
+                        {isMultiImageModal && selectedImgBlockAssetIds.includes(img.id) && (
+                          <div className="stage-article-modal-selected-badge">
+                            {selectedImgBlockAssetIds.indexOf(img.id) + 1}
+                          </div>
+                        )}
                       </button>
                     ))}
                 </div>
 
-                {mediaAssets.length === 0 && (
+                {!isLoadingImgBlockAssets && !imgBlockAssetsError && filteredBlockImageAssets.length === 0 && (
                   <div className="stage-article-modal-empty">
-                    <p>No images found in the media library.</p>
+                    <p>
+                      {isImgBlockModal
+                        ? `No ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT} images match the current search.`
+                        : isImgTrioModal
+                          ? `No ${imgTrioDimensions.width}x${imgTrioDimensions.height} images match the current search.`
+                        : 'No images found in the media library.'}
+                    </p>
                   </div>
                 )}
 
                 <div className="stage-article-modal-footer">
+                  {isMultiImageModal && (
+                    <button
+                      type="button"
+                      className="stage-article-modal-done"
+                      onClick={handleAddSelectedImgBlock}
+                      disabled={selectedImgBlockAssets.length !== requiredImageCount}
+                    >
+                      {isImgTrioModal ? 'Add Img Trio' : 'Add Img Pair'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="stage-article-modal-done"
-                    onClick={() => setBlockImageModal(null)}
+                    onClick={closeBlockImageModal}
                   >
                     Cancel
                   </button>

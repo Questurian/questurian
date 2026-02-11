@@ -4,6 +4,18 @@ export type ContentBlock = {
   content: string
   imageAfter?: number
   imageAfterAltText?: string
+  imgPairAfter?: {
+    imageOne: number
+    imageTwo: number
+    caption?: string
+  }
+  imgTrioAfter?: {
+    format: 'square' | 'landscape'
+    imageOne: number
+    imageTwo: number
+    imageThree: number
+    caption?: string
+  }
 }
 
 export type EditorialBlock = {

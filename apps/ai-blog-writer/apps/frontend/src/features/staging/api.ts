@@ -90,6 +90,20 @@ export type CreateArticlePayload = {
         caption?: string
       }
     | {
+        blockType: 'img-pair'
+        imageOne: number
+        imageTwo: number
+        caption?: string
+      }
+    | {
+        blockType: 'img-trio'
+        format: 'square' | 'landscape'
+        imageOne: number
+        imageTwo: number
+        imageThree: number
+        caption?: string
+      }
+    | {
         blockType: 'key-takeaway'
         label: string
         items: Array<{ text: string }>
@@ -199,11 +213,27 @@ export async function fetchMediaAssets(
   params?: {
     limit?: number
     mimeType?: string
+    minWidth?: number
+    minHeight?: number
+    width?: number
+    height?: number
   }
 ): Promise<{ docs: MediaAsset[]; totalDocs: number }> {
   const queryParams = new URLSearchParams()
   queryParams.append('limit', String(params?.limit || 50))
   if (params?.mimeType) queryParams.append('where[mimeType][like]', params.mimeType)
+  if (params?.minWidth) {
+    queryParams.append('where[width][greater_than_equal]', String(params.minWidth))
+  }
+  if (params?.minHeight) {
+    queryParams.append('where[height][greater_than_equal]', String(params.minHeight))
+  }
+  if (params?.width) {
+    queryParams.append('where[width][equals]', String(params.width))
+  }
+  if (params?.height) {
+    queryParams.append('where[height][equals]', String(params.height))
+  }
 
   return payloadRequest(`/api/media-assets?${queryParams.toString()}`, token)
 }
