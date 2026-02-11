@@ -161,6 +161,10 @@ const PULL_QUOTE_LABEL = 'Pull Quote'
 const IN_THE_KNOW_COMPONENT = 'in_the_know_box'
 const IN_THE_KNOW_LABEL = 'In The Know'
 const EDITORIAL_MAX_TAKEAWAYS = 5
+type SupportedEditorialComponent =
+  | typeof KEY_TAKEAWAYS_COMPONENT
+  | typeof PULL_QUOTE_COMPONENT
+  | typeof IN_THE_KNOW_COMPONENT
 
 type PayloadContentBlock = NonNullable<CreateArticlePayload['contentBlocks']>[number]
 type SupportedPayloadBlockType = 'key-takeaway' | 'pull-quote' | 'in-the-know'
@@ -387,6 +391,32 @@ function buildCanonicalInTheKnowMarkdown(
     ...normalizedText.split('\n').map((line) => `> ${line}`),
     `> [!EDITORIAL-BLOCK-END|${IN_THE_KNOW_COMPONENT}]`,
   ].join('\n')
+}
+
+function buildDefaultEditorialTemplate(
+  component: SupportedEditorialComponent
+): {
+  label: string
+  markdown: string
+} {
+  if (component === PULL_QUOTE_COMPONENT) {
+    return {
+      label: PULL_QUOTE_LABEL,
+      markdown: buildCanonicalPullQuoteMarkdown(PULL_QUOTE_LABEL, ''),
+    }
+  }
+
+  if (component === IN_THE_KNOW_COMPONENT) {
+    return {
+      label: IN_THE_KNOW_LABEL,
+      markdown: buildCanonicalInTheKnowMarkdown(IN_THE_KNOW_LABEL, ''),
+    }
+  }
+
+  return {
+    label: KEY_TAKEAWAYS_LABEL,
+    markdown: buildCanonicalKeyTakeawaysMarkdown(KEY_TAKEAWAYS_LABEL, []),
+  }
 }
 
 function parseKeyTakeawayEditorialBlock(block: EditorialBlock): {
@@ -2076,6 +2106,36 @@ export default function EditorialStageArticlePage({
     setIsEditing(true) // Enter edit mode so they can edit the new block
   }, [stagedArticle, updateStagedArticle])
 
+  const addNewEditorialBlock = useCallback((
+    component: SupportedEditorialComponent,
+    afterBlockId?: string
+  ) => {
+    if (!stagedArticle) return
+
+    const { label, markdown } = buildDefaultEditorialTemplate(component)
+    const validAfterBlockId = afterBlockId
+      && stagedArticle.blocks.some((block) => block.id === afterBlockId)
+      ? afterBlockId
+      : stagedArticle.blocks.length > 0
+        ? stagedArticle.blocks[stagedArticle.blocks.length - 1].id
+        : null
+
+    const newEditorialBlock: EditorialBlock = {
+      id: `editorial_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      component,
+      label,
+      markdown,
+      afterBlockId: validAfterBlockId,
+    }
+
+    updateStagedArticle({
+      editorialBlocks: [...stagedArticle.editorialBlocks, newEditorialBlock],
+      lexicalConverted: false,
+    })
+    setIsEditing(true)
+    setPublishResult(null)
+  }, [stagedArticle, updateStagedArticle])
+
   const deleteBlock = useCallback((blockId: string) => {
     if (!stagedArticle) return
     if (stagedArticle.blocks.length <= 1) {
@@ -2860,6 +2920,30 @@ export default function EditorialStageArticlePage({
                             </svg>
                             Block
                           </button>
+                          <button
+                            type="button"
+                            className="block-add-editorial-btn"
+                            onClick={() => addNewEditorialBlock(PULL_QUOTE_COMPONENT, block.id)}
+                            title="Add pull quote here"
+                          >
+                            Quote
+                          </button>
+                          <button
+                            type="button"
+                            className="block-add-editorial-btn"
+                            onClick={() => addNewEditorialBlock(KEY_TAKEAWAYS_COMPONENT, block.id)}
+                            title="Add key takeaways here"
+                          >
+                            Takeaways
+                          </button>
+                          <button
+                            type="button"
+                            className="block-add-editorial-btn"
+                            onClick={() => addNewEditorialBlock(IN_THE_KNOW_COMPONENT, block.id)}
+                            title="Add in-the-know callout here"
+                          >
+                            In The Know
+                          </button>
 
                         </div>
                       </div>
@@ -2882,6 +2966,34 @@ export default function EditorialStageArticlePage({
                   </svg>
                   Add Block
                 </button>
+              )}
+              {!stagedArticle.publishedToPayload && (
+                <div className="block-add-end-editorial-row">
+                  <button
+                    type="button"
+                    className="block-add-end-editorial-btn"
+                    onClick={() => addNewEditorialBlock(PULL_QUOTE_COMPONENT)}
+                    title="Add pull quote at the end"
+                  >
+                    Add Quote
+                  </button>
+                  <button
+                    type="button"
+                    className="block-add-end-editorial-btn"
+                    onClick={() => addNewEditorialBlock(KEY_TAKEAWAYS_COMPONENT)}
+                    title="Add key takeaways at the end"
+                  >
+                    Add Takeaways
+                  </button>
+                  <button
+                    type="button"
+                    className="block-add-end-editorial-btn"
+                    onClick={() => addNewEditorialBlock(IN_THE_KNOW_COMPONENT)}
+                    title="Add in-the-know callout at the end"
+                  >
+                    Add In The Know
+                  </button>
+                </div>
               )}
             </div>
           </div>
