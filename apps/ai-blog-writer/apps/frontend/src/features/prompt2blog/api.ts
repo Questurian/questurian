@@ -1,12 +1,14 @@
 import {
-  convertMarkdownToLexical as convertMarkdownToLexicalFromYoutube,
-  createArticle as createArticleFromYoutube,
-  fetchLocations as fetchLocationsFromYoutube,
-  fetchMediaAssets as fetchMediaAssetsFromYoutube,
+  convertMarkdownToLexical,
+  createArticle,
+  fetchLocations,
+  fetchMediaAssets,
+  getArticleSyncStatus as getArticleSyncStatusForFeature,
+  markArticleSynced as markArticleSyncedForFeature,
   type CreateArticlePayload,
   type Location,
   type MediaAsset,
-} from '../youtube2blog/api'
+} from '../staging/api'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003'
 const FEATURE_PREFIX = '/prompt2blog'
@@ -348,17 +350,7 @@ export async function markArticleSynced(
   runId: string,
   payloadArticleId: number,
 ): Promise<{ message: string; run_id: string; payload_article_id: number }> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}/sync`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload_article_id: payloadArticleId }),
-  })
-
-  if (!response.ok) {
-    throw await parseError(response, 'Failed to mark article synced')
-  }
-
-  return response.json()
+  return markArticleSyncedForFeature(FEATURE_PREFIX, runId, payloadArticleId)
 }
 
 export async function getArticleSyncStatus(
@@ -368,18 +360,8 @@ export async function getArticleSyncStatus(
   payload_article_id: number | null
   synced_at: string | null
 }> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}/sync`)
-
-  if (!response.ok) {
-    throw await parseError(response, 'Failed to get sync status')
-  }
-
-  return response.json()
+  return getArticleSyncStatusForFeature(FEATURE_PREFIX, runId)
 }
 
 export type { CreateArticlePayload, Location, MediaAsset }
-
-export const convertMarkdownToLexical = convertMarkdownToLexicalFromYoutube
-export const fetchLocations = fetchLocationsFromYoutube
-export const fetchMediaAssets = fetchMediaAssetsFromYoutube
-export const createArticle = createArticleFromYoutube
+export { convertMarkdownToLexical, fetchLocations, fetchMediaAssets, createArticle }
