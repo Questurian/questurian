@@ -8,6 +8,7 @@ from app.features.review2blog import router as review2blog_router
 from app.features.images import router as images_router
 from app.features.url2blog import router as url2blog_router
 from app.features.article_types import router as article_types_router
+from app.features.prompt2blog import router as prompt2blog_router
 
 router = APIRouter()
 
@@ -24,3 +25,4 @@ router.include_router(review2blog_router)
 router.include_router(images_router)
 router.include_router(url2blog_router)
 router.include_router(article_types_router)
+router.include_router(prompt2blog_router)
