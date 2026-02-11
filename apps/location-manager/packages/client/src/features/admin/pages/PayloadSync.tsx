@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection } from "@client/shared/services/api/hooks/usePayloadSync";
-import { useClearDatabase } from "@client/shared/services/api/hooks";
+import { useClearDatabase, useLocationsBasic } from "@client/shared/services/api/hooks";
 import { useToast } from "@client/shared/hooks/useToast";
 import { Button } from "@client/components/ui/button";
 import {
@@ -24,10 +24,9 @@ import {
 import type { Category } from "@client/shared/services/api/types";
 import type { SyncStatusResponse } from "@client/shared/services/api/payload.api";
 
-type SyncStatusFilter = "all" | "synced" | "not-synced" | "needs-resync" | "failed";
-
 export function PayloadSync() {
   const { data: statusData, isLoading, error, refetch: refetchSyncStatus } = useSyncStatus();
+  const { data: locationsBasicData, isLoading: isLoadingLocationsBasic } = useLocationsBasic();
   const syncLocationMutation = useSyncLocation();
   const syncAllMutation = useSyncAll();
   const { data: connectionStatus, isLoading: isConnecting, refetch: testConnection } = usePayloadConnection();
@@ -36,32 +35,30 @@ export function PayloadSync() {
 
   const [syncingId, setSyncingId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<SyncStatusFilter>("all");
 
-  // Filter status data by category and sync status
+  const completeLocationIds = useMemo(() => {
+    const ids = new Set<number>();
+    (locationsBasicData?.locations ?? []).forEach((location) => {
+      if (location.isComplete) {
+        ids.add(location.id);
+      }
+    });
+    return ids;
+  }, [locationsBasicData]);
+
+  // Show only data-complete locations, with optional category filter
   const filteredData = useMemo(() => {
     if (!statusData) return [];
 
-    let filtered = statusData;
+    let filtered = statusData.filter(item => completeLocationIds.has(item.locationId));
 
     // Filter by category
     if (categoryFilter !== "all") {
       filtered = filtered.filter(item => item.category === categoryFilter);
     }
 
-    // Filter by sync status
-    if (statusFilter === "synced") {
-      filtered = filtered.filter(item => item.synced && item.syncState?.sync_status === "success" && !item.needsResync);
-    } else if (statusFilter === "not-synced") {
-      filtered = filtered.filter(item => !item.synced);
-    } else if (statusFilter === "needs-resync") {
-      filtered = filtered.filter(item => item.needsResync);
-    } else if (statusFilter === "failed") {
-      filtered = filtered.filter(item => item.syncState?.sync_status === "failed");
-    }
-
     return filtered;
-  }, [statusData, categoryFilter, statusFilter]);
+  }, [statusData, categoryFilter, completeLocationIds]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -139,7 +136,7 @@ export function PayloadSync() {
               Payload CMS Sync
             </h2>
             <p className="text-muted-foreground">
-              Sync location data from url-util to Payload CMS. Images are uploaded to Bunny CDN via Payload.
+              Sync location data from url-util to Payload CMS. Showing data-complete locations only.
             </p>
           </div>
 
@@ -246,22 +243,6 @@ export function PayloadSync() {
             </Select>
           </div>
 
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Sync Status Filter</label>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as SyncStatusFilter)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="synced">Synced</SelectItem>
-                <SelectItem value="needs-resync">Needs Resync</SelectItem>
-                <SelectItem value="not-synced">Not Synced</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex items-end">
             <Button
               onClick={handleSyncAll}
@@ -282,14 +263,14 @@ export function PayloadSync() {
         )}
 
         {/* Loading state */}
-        {isLoading ? (
+        {isLoading || isLoadingLocationsBasic ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
           </div>
         ) : filteredData.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              No locations found matching the selected filters.
+              No data-complete locations found for the selected category.
             </p>
           </div>
         ) : (

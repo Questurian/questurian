@@ -94,12 +94,63 @@ export const Dining: CollectionConfig = {
                   admin: { description: 'Gallery media set' },
                 },
                 {
+                  name: 'altText',
+                  type: 'text',
+                  admin: {
+                    description: 'Optional per-image alt text from Location Manager',
+                  },
+                },
+                {
+                  name: 'caption',
+                  type: 'text',
+                  admin: {
+                    description: 'Optional per-image caption from Location Manager',
+                  },
+                },
+                {
                   name: 'preview',
                   type: 'ui',
                   admin: {
                     components: {
                       Field: 'src/features/media/components/MediaSetPreview.tsx',
                     },
+                  },
+                },
+              ],
+            },
+            {
+              type: 'collapsible',
+              label: 'Location Manager Enrichment',
+              admin: {
+                initCollapsed: true,
+              },
+              fields: [
+                {
+                  name: 'idealFor',
+                  type: 'json',
+                  admin: {
+                    description: 'String[] ideal-for tags',
+                  },
+                },
+                {
+                  name: 'mealTypes',
+                  type: 'json',
+                  admin: {
+                    description: 'String[] meal types',
+                  },
+                },
+                {
+                  name: 'cuisines',
+                  type: 'json',
+                  admin: {
+                    description: 'String[] cuisines',
+                  },
+                },
+                {
+                  name: 'features',
+                  type: 'json',
+                  admin: {
+                    description: 'String[] dining features',
                   },
                 },
               ],
@@ -192,6 +243,41 @@ export const Dining: CollectionConfig = {
                   type: 'text',
                   admin: {
                     description: 'Website URL',
+                  },
+                },
+                {
+                  name: 'email',
+                  type: 'email',
+                  admin: {
+                    description: 'Contact email from Location Manager',
+                  },
+                },
+                {
+                  name: 'neighborhoodDescription',
+                  type: 'textarea',
+                  admin: {
+                    description: 'Neighborhood context from Location Manager',
+                    rows: 3,
+                  },
+                },
+                {
+                  name: 'operationHours',
+                  type: 'json',
+                  admin: {
+                    description: 'Structured operation hours object from Location Manager',
+                  },
+                },
+                {
+                  name: 'ianaTimeId',
+                  type: 'text',
+                  admin: {
+                    description: 'IANA timezone (example: America/Bogota)',
+                  },
+                  validate: (value) => {
+                    if (!value) return true
+                    return typeof value === 'string' && value.includes('/')
+                      ? true
+                      : 'Use IANA timezone format, e.g. America/Bogota'
                   },
                 },
               ],

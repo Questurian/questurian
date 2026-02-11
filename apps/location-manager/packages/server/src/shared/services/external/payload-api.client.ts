@@ -200,6 +200,11 @@ export interface PayloadEntryData {
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown>;
+  idealFor?: string[];
+  mealTypes?: string[];
+  cuisines?: string[];
+  features?: string[];
+  ianaTimeId?: string;
   latitude?: number;
   longitude?: number;
   status: "draft" | "published";
@@ -642,6 +647,11 @@ export class PayloadApiClient {
       locationRef: data.locationRef,
       gallery: data.gallery,
       instagramGallery: data.instagramGallery,
+      idealFor: data.idealFor,
+      mealTypes: data.mealTypes,
+      cuisines: data.cuisines,
+      features: data.features,
+      ianaTimeId: data.ianaTimeId,
       status: data.status,
     });
 
@@ -699,6 +709,11 @@ export class PayloadApiClient {
       title: data.title,
       type: data.type,
       locationRef: data.locationRef,
+      idealFor: data.idealFor,
+      mealTypes: data.mealTypes,
+      cuisines: data.cuisines,
+      features: data.features,
+      ianaTimeId: data.ianaTimeId,
       galleryCount: data.gallery?.length || 0,
       instagramGalleryCount: data.instagramGallery?.length || 0,
     });

@@ -33,6 +33,11 @@ export function mapLocationToPayloadFormat(
     ...(location.contact.email ? { email: location.contact.email } : {}),
     ...(location.neighborhoodDescription ? { neighborhoodDescription: location.neighborhoodDescription } : {}),
     ...(location.operationHours ? { operationHours: location.operationHours } : {}),
+    ...(location.idealFor ? { idealFor: location.idealFor } : {}),
+    ...(location.tripadvisorMealTypes ? { mealTypes: location.tripadvisorMealTypes } : {}),
+    ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),
+    ...(location.tripadvisorFeatures ? { features: location.tripadvisorFeatures } : {}),
+    ...(location.ianaTimeId ? { ianaTimeId: location.ianaTimeId } : {}),
   };
 }
 
