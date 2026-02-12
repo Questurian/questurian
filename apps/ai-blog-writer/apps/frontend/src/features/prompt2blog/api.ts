@@ -3,6 +3,7 @@ import {
   createArticle,
   fetchLocations,
   fetchMediaAssets,
+  searchPexelsImages,
   getArticleSyncStatus as getArticleSyncStatusForFeature,
   markArticleSynced as markArticleSyncedForFeature,
   rewriteBlockWithAi,
@@ -369,6 +370,7 @@ export {
   convertMarkdownToLexical,
   fetchLocations,
   fetchMediaAssets,
+  searchPexelsImages,
   createArticle,
   rewriteBlockWithAi,
 }

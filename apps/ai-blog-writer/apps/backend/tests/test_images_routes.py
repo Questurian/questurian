@@ -179,3 +179,85 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
     assert detail["partial_variant_asset_ids"] == {"thumbnail": "101"}
     assert detail["payload_error"]["status_code"] == 500
     assert detail["payload_error"]["detail"] == "Something went wrong."
+
+
+def test_pexels_search_requires_api_key(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.delenv("PEXELS_API_KEY", raising=False)
+
+    response = client.get("/images/pexels/search", params={"query": "beach"})
+
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_pexels_key"
+    assert detail["env_var"] == "PEXELS_API_KEY"
+
+
+def test_pexels_search_returns_mapped_results(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setenv("PEXELS_API_KEY", "test-pexels-key")
+
+    class FakePexelsResponse:
+        status_code = 200
+
+        def json(self):
+            return {
+                "page": 1,
+                "per_page": 2,
+                "total_results": 999,
+                "photos": [
+                    {
+                        "id": 123,
+                        "width": 3000,
+                        "height": 2000,
+                        "url": "https://www.pexels.com/photo/123/",
+                        "photographer": "Jane Doe",
+                        "photographer_url": "https://www.pexels.com/@janedoe",
+                        "alt": "Mountain lake",
+                        "src": {
+                            "medium": "https://images.pexels.com/photos/123/medium.jpeg",
+                            "large2x": "https://images.pexels.com/photos/123/large2x.jpeg",
+                            "portrait": "https://images.pexels.com/photos/123/portrait.jpeg",
+                        },
+                    }
+                ],
+            }
+
+    class FakeAsyncClient:
+        def __init__(self, timeout: float):
+            assert timeout == 15.0
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url: str, params: dict, headers: dict):
+            assert url == "https://api.pexels.com/v1/search"
+            assert headers["Authorization"] == "test-pexels-key"
+            assert params["query"] == "mountains"
+            assert params["per_page"] == 2
+            assert params["page"] == 1
+            return FakePexelsResponse()
+
+    monkeypatch.setattr(
+        "app.features.images.routes.httpx.AsyncClient",
+        FakeAsyncClient,
+    )
+
+    response = client.get(
+        "/images/pexels/search",
+        params={"query": "mountains", "per_page": 2},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["query"] == "mountains"
+    assert payload["per_page"] == 2
+    assert payload["total_results"] == 999
+    assert len(payload["photos"]) == 1
+    assert payload["photos"][0]["id"] == 123
+    assert payload["photos"][0]["photographer"] == "Jane Doe"
+    assert payload["photos"][0]["image_url"].endswith("medium.jpeg")

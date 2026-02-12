@@ -1,9 +1,11 @@
 """API routes for image processing and upload."""
 
 import logging
+import os
 from collections import Counter
 from typing import Any, Dict, List, Optional
 
+import httpx
 from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
@@ -22,6 +24,7 @@ logger = logging.getLogger("images.routes")
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 REQUIRED_VARIANT_TYPES = tuple(variant.value for variant in ImageVariantType)
+PEXELS_SEARCH_URL = "https://api.pexels.com/v1/search"
 VARIANT_DIMENSIONS = {
     variant.value: (spec.width, spec.height)
     for variant, spec in VARIANT_SPECS.items()
@@ -129,6 +132,19 @@ def _validate_location_ref(location_ref: int) -> int:
     return location_ref
 
 
+def _get_pexels_api_key() -> str:
+    """Load and validate the Pexels API key from environment variables."""
+    api_key = os.getenv("PEXELS_API_KEY", "").strip()
+    if not api_key:
+        _raise_http_error(
+            status_code=500,
+            message="PEXELS_API_KEY is not configured",
+            step="validate_pexels_key",
+            env_var="PEXELS_API_KEY",
+        )
+    return api_key
+
+
 async def _read_upload_file(file: UploadFile, step: str) -> bytes:
     """Read and validate uploaded file bytes."""
     if not file.filename:
@@ -158,6 +174,137 @@ async def _read_upload_file(file: UploadFile, step: str) -> bytes:
         )
 
     return content
+
+
+@router.get("/pexels/search")
+async def search_pexels_images(
+    query: str,
+    per_page: int = 9,
+    page: int = 1,
+) -> JSONResponse:
+    """Proxy basic Pexels photo search for stage image picker previews."""
+    normalized_query = query.strip()
+    if not normalized_query:
+        _raise_http_error(
+            status_code=400,
+            message="query is required",
+            step="validate_pexels_query",
+        )
+
+    if per_page < 1 or per_page > 30:
+        _raise_http_error(
+            status_code=400,
+            message="per_page must be between 1 and 30",
+            step="validate_pexels_query",
+            per_page=per_page,
+        )
+
+    if page < 1:
+        _raise_http_error(
+            status_code=400,
+            message="page must be greater than 0",
+            step="validate_pexels_query",
+            page=page,
+        )
+
+    api_key = _get_pexels_api_key()
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(
+                PEXELS_SEARCH_URL,
+                params={
+                    "query": normalized_query,
+                    "per_page": per_page,
+                    "page": page,
+                },
+                headers={"Authorization": api_key},
+            )
+    except httpx.RequestError as exc:
+        logger.exception("Pexels request failed for query=%s", normalized_query)
+        _raise_http_error(
+            status_code=502,
+            message="Failed to reach Pexels API",
+            step="request_pexels",
+            detail=str(exc),
+        )
+
+    if response.status_code >= 400:
+        detail_message = f"Pexels API returned {response.status_code}"
+        if response.status_code == 429:
+            _raise_http_error(
+                status_code=429,
+                message=detail_message,
+                step="request_pexels",
+                provider_status_code=response.status_code,
+            )
+        _raise_http_error(
+            status_code=502,
+            message=detail_message,
+            step="request_pexels",
+            provider_status_code=response.status_code,
+        )
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        logger.exception("Pexels response was not valid JSON for query=%s", normalized_query)
+        _raise_http_error(
+            status_code=502,
+            message="Pexels API returned invalid JSON",
+            step="parse_pexels_response",
+            detail=str(exc),
+        )
+
+    photos_raw = payload.get("photos")
+    if not isinstance(photos_raw, list):
+        photos_raw = []
+
+    photos: List[Dict[str, Any]] = []
+    for photo in photos_raw:
+        if not isinstance(photo, dict):
+            continue
+
+        src = photo.get("src")
+        if not isinstance(src, dict):
+            src = {}
+
+        image_url = (
+            src.get("medium")
+            or src.get("large")
+            or src.get("large2x")
+            or src.get("portrait")
+            or src.get("original")
+        )
+        if not image_url:
+            continue
+
+        photo_id = photo.get("id")
+        photos.append(
+            {
+                "id": int(photo_id) if isinstance(photo_id, int) else photo_id,
+                "width": photo.get("width"),
+                "height": photo.get("height"),
+                "alt": photo.get("alt") or "",
+                "photographer": photo.get("photographer") or "",
+                "photographer_url": photo.get("photographer_url") or "",
+                "pexels_url": photo.get("url") or "",
+                "image_url": image_url,
+                "image_url_large": src.get("large2x") or src.get("large") or image_url,
+                "image_url_portrait": src.get("portrait") or image_url,
+            }
+        )
+
+    return JSONResponse(
+        {
+            "success": True,
+            "query": normalized_query,
+            "page": page,
+            "per_page": per_page,
+            "total_results": payload.get("total_results", 0),
+            "photos": photos,
+        }
+    )
 
 
 @router.post("/upload")

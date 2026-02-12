@@ -11,6 +11,7 @@ export {
   fetchArticleTags,
   fetchLocations,
   fetchMediaAssets,
+  searchPexelsImages,
   rewriteBlockWithAi,
 } from '../staging/api'
 
@@ -21,6 +22,8 @@ export type {
   LexicalConvertResponse,
   Location,
   MediaAsset,
+  PexelsPhoto,
+  PexelsSearchResponse,
   RewriteBlockWithAiResponse,
 } from '../staging/api'
 

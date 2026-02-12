@@ -6,6 +6,7 @@ import {
   convertMarkdownToLexical,
   fetchResult,
   markArticleSynced,
+  searchPexelsImages,
   rewriteBlockWithAi,
 } from '../api'
 
@@ -31,6 +32,7 @@ export default function StageArticlePage() {
         convertMarkdownToLexical,
         fetchResult,
         markArticleSynced,
+        searchPexelsImages,
         rewriteBlockWithAi,
       }}
     />

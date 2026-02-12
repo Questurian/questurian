@@ -36,6 +36,15 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
           }
         }
 
+        @keyframes menuSlideDown {
+          from {
+            transform: translateY(-100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+
         @keyframes menuFadeIn {
           from {
             opacity: 0;
@@ -47,6 +56,12 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
 
         .menu-sheet-enter {
           animation: menuSlideIn 0.25s ease-out forwards;
+        }
+
+        @media (min-width: 1024px) {
+          .menu-sheet-enter {
+            animation: menuSlideDown 0.35s ease-out forwards;
+          }
         }
 
         .menu-overlay-enter {
@@ -62,7 +77,7 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
           onClick={onClose}
         />
 
-        <aside className="menu-sheet-enter relative h-full w-[84%] max-w-[360px] border-r border-white/15 bg-[#1f1f1f] px-5 py-6 text-white shadow-2xl">
+        <aside className="menu-sheet-enter relative h-full w-[84%] max-w-[360px] border-r border-white/15 bg-[#1f1f1f] px-5 py-6 text-white shadow-2xl 1024:w-full 1024:max-w-none 1024:border-r-0">
           <div className="mb-7 flex items-center justify-between">
             <h2 className="font-display text-[1.15rem] tracking-[0.08em] uppercase">
               Menu

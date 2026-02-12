@@ -26,6 +26,28 @@ export type RewriteBlockWithAiRequest = {
   articleContext?: string
 }
 
+export type PexelsPhoto = {
+  id: number | string
+  width?: number
+  height?: number
+  alt?: string
+  photographer?: string
+  photographer_url?: string
+  pexels_url?: string
+  image_url: string
+  image_url_large?: string
+  image_url_portrait?: string
+}
+
+export type PexelsSearchResponse = {
+  success: boolean
+  query: string
+  page: number
+  per_page: number
+  total_results: number
+  photos: PexelsPhoto[]
+}
+
 export type Location = {
   id: number
   level: 'country' | 'city' | 'neighborhood'
@@ -217,6 +239,44 @@ export async function rewriteBlockWithAi(
       .catch(() => ({ detail: 'AI rewrite failed' }))
 
     throw new Error(errorData.detail || 'AI rewrite failed')
+  }
+
+  return response.json()
+}
+
+export async function searchPexelsImages(
+  query: string,
+  params?: {
+    perPage?: number
+    page?: number
+  }
+): Promise<PexelsSearchResponse> {
+  const normalizedQuery = query.trim()
+  if (!normalizedQuery) {
+    throw new Error('Search query is required')
+  }
+
+  const queryParams = new URLSearchParams()
+  queryParams.append('query', normalizedQuery)
+  queryParams.append('per_page', String(params?.perPage ?? 9))
+  queryParams.append('page', String(params?.page ?? 1))
+
+  const response = await fetch(
+    `${API_BASE_URL}/images/pexels/search?${queryParams.toString()}`
+  )
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ detail: { message: 'Pexels search failed' } }))
+    const detail = errorData.detail
+    if (typeof detail === 'string') {
+      throw new Error(detail)
+    }
+    if (detail?.message) {
+      throw new Error(detail.message)
+    }
+    throw new Error('Pexels search failed')
   }
 
   return response.json()

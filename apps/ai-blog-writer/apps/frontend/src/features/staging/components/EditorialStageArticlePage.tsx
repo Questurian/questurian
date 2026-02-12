@@ -6,7 +6,12 @@ import { useAuth } from '../../../providers/AuthProvider'
 import { ImageUpload, type UploadImageResponse } from '../../../features/images'
 import { MarkdownBlockEditor } from '../features/markdown-editor'
 import '../../youtube2blog/styles/stage-article.css'
-import type { CreateArticlePayload, Location, MediaAsset } from '../api'
+import type {
+  CreateArticlePayload,
+  Location,
+  MediaAsset,
+  PexelsPhoto,
+} from '../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../types'
 
 type MediaVariant =
@@ -89,6 +94,12 @@ type EditorialStageArticleApi = {
     runId: string,
     payloadArticleId: number
   ) => Promise<{ message: string; run_id: string; payload_article_id: number }>
+  searchPexelsImages: (
+    query: string,
+    params?: { perPage?: number; page?: number }
+  ) => Promise<{
+    photos: PexelsPhoto[]
+  }>
   rewriteBlockWithAi: (
     input: {
       prompt: string
@@ -2076,6 +2087,7 @@ export default function EditorialStageArticlePage({
     convertMarkdownToLexical,
     fetchResult,
     markArticleSynced,
+    searchPexelsImages,
     rewriteBlockWithAi,
   } = api
   const { token } = useAuth()
@@ -2109,6 +2121,10 @@ export default function EditorialStageArticlePage({
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [imageAltText, setImageAltText] = useState('')
   const [imagePhotographerCredit, setImagePhotographerCredit] = useState('')
+  const [pexelsFeaturedQuery, setPexelsFeaturedQuery] = useState('')
+  const [pexelsFeaturedResults, setPexelsFeaturedResults] = useState<PexelsPhoto[]>([])
+  const [isSearchingPexelsFeatured, setIsSearchingPexelsFeatured] = useState(false)
+  const [pexelsFeaturedError, setPexelsFeaturedError] = useState<string | null>(null)
 
   // Modal state for block images
   const [blockImageModal, setBlockImageModal] = useState<BlockImageModalState | null>(null)
@@ -2122,6 +2138,10 @@ export default function EditorialStageArticlePage({
   const [selectedImgBlockAssetIds, setSelectedImgBlockAssetIds] = useState<number[]>([])
   const [imgBlockCaption, setImgBlockCaption] = useState('')
   const [imgTrioFormat, setImgTrioFormat] = useState<ImgTrioFormat>(IMG_TRIO_DEFAULT_FORMAT)
+  const [pexelsBlockQuery, setPexelsBlockQuery] = useState('')
+  const [pexelsBlockResults, setPexelsBlockResults] = useState<PexelsPhoto[]>([])
+  const [isSearchingPexelsBlock, setIsSearchingPexelsBlock] = useState(false)
+  const [pexelsBlockError, setPexelsBlockError] = useState<string | null>(null)
 
   // Drag and drop state
   const [draggedTimelineItemId, setDraggedTimelineItemId] = useState<string | null>(null)
@@ -2392,6 +2412,10 @@ export default function EditorialStageArticlePage({
     setImgTrioFormat(IMG_TRIO_DEFAULT_FORMAT)
     setImgBlockAssetsError(null)
     setIsLoadingImgBlockAssets(false)
+    setPexelsBlockQuery('')
+    setPexelsBlockResults([])
+    setIsSearchingPexelsBlock(false)
+    setPexelsBlockError(null)
   }, [])
 
   const openBlockImageModal = useCallback((
@@ -2405,6 +2429,10 @@ export default function EditorialStageArticlePage({
     setImgBlockCaption(options?.caption || '')
     setImgTrioFormat(options?.trioFormat || IMG_TRIO_DEFAULT_FORMAT)
     setImgBlockAssetsError(null)
+    setPexelsBlockQuery('')
+    setPexelsBlockResults([])
+    setIsSearchingPexelsBlock(false)
+    setPexelsBlockError(null)
     setOpenImagePickerTarget(null)
     setBlockImageModal({
       blockId,
@@ -2468,6 +2496,14 @@ export default function EditorialStageArticlePage({
 
     void loadFilteredAssets()
   }, [blockImageModal, token, fetchMediaAssets, mergeMediaAssetsIntoState, imgTrioFormat])
+
+  useEffect(() => {
+    if (showImageModal) return
+    setPexelsFeaturedQuery('')
+    setPexelsFeaturedResults([])
+    setIsSearchingPexelsFeatured(false)
+    setPexelsFeaturedError(null)
+  }, [showImageModal])
 
   const toggleImgBlockAssetSelection = useCallback((
     assetId: number,
@@ -3535,6 +3571,54 @@ export default function EditorialStageArticlePage({
     setBlockImageAltText('')
     setBlockImagePhotographerCredit('')
   }
+
+  const runFeaturedPexelsSearch = useCallback(async () => {
+    const query = pexelsFeaturedQuery.trim()
+    if (!query) {
+      setPexelsFeaturedError('Enter a search term first.')
+      setPexelsFeaturedResults([])
+      return
+    }
+
+    setIsSearchingPexelsFeatured(true)
+    setPexelsFeaturedError(null)
+
+    try {
+      const response = await searchPexelsImages(query, { perPage: 9, page: 1 })
+      setPexelsFeaturedResults(response.photos || [])
+    } catch (err) {
+      setPexelsFeaturedResults([])
+      setPexelsFeaturedError(
+        err instanceof Error ? err.message : 'Pexels search failed'
+      )
+    } finally {
+      setIsSearchingPexelsFeatured(false)
+    }
+  }, [pexelsFeaturedQuery, searchPexelsImages])
+
+  const runBlockPexelsSearch = useCallback(async () => {
+    const query = pexelsBlockQuery.trim()
+    if (!query) {
+      setPexelsBlockError('Enter a search term first.')
+      setPexelsBlockResults([])
+      return
+    }
+
+    setIsSearchingPexelsBlock(true)
+    setPexelsBlockError(null)
+
+    try {
+      const response = await searchPexelsImages(query, { perPage: 9, page: 1 })
+      setPexelsBlockResults(response.photos || [])
+    } catch (err) {
+      setPexelsBlockResults([])
+      setPexelsBlockError(
+        err instanceof Error ? err.message : 'Pexels search failed'
+      )
+    } finally {
+      setIsSearchingPexelsBlock(false)
+    }
+  }, [pexelsBlockQuery, searchPexelsImages])
 
   const getLocationDisplayName = (loc?: Location) => {
     if (!loc) return ''
@@ -4670,6 +4754,67 @@ export default function EditorialStageArticlePage({
                   />
                 </div>
 
+                <div className="stage-article-modal-search stage-article-modal-search-inline">
+                  <input
+                    type="text"
+                    placeholder="Search with Pexels..."
+                    value={pexelsFeaturedQuery}
+                    onChange={(e) => setPexelsFeaturedQuery(e.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void runFeaturedPexelsSearch()
+                      }
+                    }}
+                    className="stage-article-modal-search-input"
+                  />
+                  <button
+                    type="button"
+                    className="stage-article-modal-search-btn"
+                    onClick={() => {
+                      void runFeaturedPexelsSearch()
+                    }}
+                    disabled={isSearchingPexelsFeatured}
+                  >
+                    {isSearchingPexelsFeatured ? 'Searching...' : 'Search with Pexels'}
+                  </button>
+                </div>
+
+                {pexelsFeaturedError && (
+                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                    <p>{pexelsFeaturedError}</p>
+                  </div>
+                )}
+
+                {pexelsFeaturedResults.length > 0 && (
+                  <>
+                    <div className="stage-article-modal-pexels-header">
+                      Pexels results (preview only). Click image to open source.
+                    </div>
+                    <div className="stage-article-modal-grid">
+                      {pexelsFeaturedResults.map((photo) => (
+                        <a
+                          key={`featured-pexels-${photo.id}`}
+                          href={photo.pexels_url || photo.image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="stage-article-modal-image stage-article-modal-image-pexels"
+                        >
+                          <img
+                            src={photo.image_url}
+                            alt={photo.alt || 'Pexels image'}
+                            loading="lazy"
+                          />
+                          <span className="stage-article-modal-image-name">
+                            {photo.photographer || `Pexels ${photo.id}`}
+                          </span>
+                          <span className="stage-article-modal-pexels-meta">Pexels</span>
+                        </a>
+                      ))}
+                    </div>
+                  </>
+                )}
+
                 <div className="stage-article-modal-grid">
                   {filteredFeaturedImageAssets
                     .map(img => (
@@ -4852,6 +4997,67 @@ export default function EditorialStageArticlePage({
                     className="stage-article-modal-search-input"
                   />
                 </div>
+
+                <div className="stage-article-modal-search stage-article-modal-search-inline">
+                  <input
+                    type="text"
+                    placeholder="Search with Pexels..."
+                    value={pexelsBlockQuery}
+                    onChange={(e) => setPexelsBlockQuery(e.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void runBlockPexelsSearch()
+                      }
+                    }}
+                    className="stage-article-modal-search-input"
+                  />
+                  <button
+                    type="button"
+                    className="stage-article-modal-search-btn"
+                    onClick={() => {
+                      void runBlockPexelsSearch()
+                    }}
+                    disabled={isSearchingPexelsBlock}
+                  >
+                    {isSearchingPexelsBlock ? 'Searching...' : 'Search with Pexels'}
+                  </button>
+                </div>
+
+                {pexelsBlockError && (
+                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                    <p>{pexelsBlockError}</p>
+                  </div>
+                )}
+
+                {pexelsBlockResults.length > 0 && (
+                  <>
+                    <div className="stage-article-modal-pexels-header">
+                      Pexels results (preview only). Click image to open source.
+                    </div>
+                    <div className="stage-article-modal-grid">
+                      {pexelsBlockResults.map((photo) => (
+                        <a
+                          key={`block-pexels-${photo.id}`}
+                          href={photo.pexels_url || photo.image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="stage-article-modal-image stage-article-modal-image-pexels"
+                        >
+                          <img
+                            src={photo.image_url}
+                            alt={photo.alt || 'Pexels image'}
+                            loading="lazy"
+                          />
+                          <span className="stage-article-modal-image-name">
+                            {photo.photographer || `Pexels ${photo.id}`}
+                          </span>
+                          <span className="stage-article-modal-pexels-meta">Pexels</span>
+                        </a>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 {isMultiImageModal && isLoadingImgBlockAssets && (
                   <div className="stage-article-modal-empty">
