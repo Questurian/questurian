@@ -1592,9 +1592,9 @@
   color: var(--ink);
   background: white;
   border: none;
-  resize: none;
-  min-height: 100px;
-  field-sizing: content;
+  resize: vertical;
+  min-height: 140px;
+  overflow-y: hidden;
 }
 
 .block-textarea:focus {

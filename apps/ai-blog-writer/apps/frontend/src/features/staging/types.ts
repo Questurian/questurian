@@ -1,6 +1,6 @@
 export type ContentBlock = {
   id: string
-  type: 'text' | 'pullquote'
+  type: 'text' | 'pullquote' | 'image' | 'img-pair' | 'img-trio'
   content: string
   imageAfter?: number
   imageAfterAltText?: string

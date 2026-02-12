@@ -91,6 +91,7 @@ export function ImageUpload({
   });
   const [preparedVariantFiles, setPreparedVariantFiles] = useState<VariantUploadFile[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasPhotographerCredit = photographerCredit.trim().length > 0;
 
   const requestAltText = useCallback(async (file: File) => {
     if (!onAltTextGenerated) return;
@@ -209,6 +210,7 @@ export function ImageUpload({
 
   const handleStartCropping = () => {
     if (!selectedFile) return;
+    if (!altText.trim() || !hasPhotographerCredit || isGeneratingAlt) return;
     setMode('crop');
   };
 
@@ -344,7 +346,7 @@ export function ImageUpload({
               disabled={isGeneratingAlt}
             />
             <label className="stage-article-alttext-label" style={{ marginTop: '0.75rem' }}>
-              Photographer Credit (Optional)
+              Photographer Credit <span className="required">*</span>
             </label>
             <input
               type="text"
@@ -353,7 +355,14 @@ export function ImageUpload({
               onChange={(e) => onPhotographerCreditChange?.(e.target.value)}
               placeholder="Example: Jane Doe / Unsplash"
               disabled={isGeneratingAlt}
+              required
+              aria-required="true"
             />
+            {!hasPhotographerCredit && !isGeneratingAlt && (
+              <p style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#ef4444' }}>
+                Photographer credit is required before upload.
+              </p>
+            )}
             <div className="stage-article-upload-secondary" style={{ marginTop: '0.5rem' }}>
               <button
                 type="button"
@@ -368,7 +377,7 @@ export function ImageUpload({
           <div className="stage-article-upload-actions">
             <button
               onClick={handleStartCropping}
-              disabled={!altText.trim() || isGeneratingAlt}
+              disabled={!altText.trim() || !hasPhotographerCredit || isGeneratingAlt}
               className="stage-article-upload-primary"
             >
               <CropIcon />

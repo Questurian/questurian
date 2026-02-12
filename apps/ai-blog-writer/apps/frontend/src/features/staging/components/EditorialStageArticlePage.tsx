@@ -8,13 +8,24 @@ import '../../youtube2blog/styles/stage-article.css'
 import type { CreateArticlePayload, Location, MediaAsset } from '../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../types'
 
-type MediaVariant = 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero'
+type MediaVariant =
+  | 'thumbnail'
+  | 'square'
+  | 'wide'
+  | 'portrait'
+  | 'hero'
+  | 'open_graph'
+  | 'editorial'
 type BlockImageModalMode = 'default' | 'img' | 'img-trio'
 type ImgTrioFormat = 'square' | 'landscape'
 
 const CONTENT_BLOCK_VARIANT: MediaVariant = 'wide'
 const IMG_BLOCK_VARIANT: MediaVariant = 'portrait'
-const FEATURED_IMAGE_VARIANT: MediaVariant = 'hero'
+const FEATURED_IMAGE_VARIANT: MediaVariant = 'editorial'
+const CONTENT_BLOCK_WIDTH = 1920
+const CONTENT_BLOCK_HEIGHT = 1080
+const FEATURED_IMAGE_WIDTH = 1600
+const FEATURED_IMAGE_HEIGHT = 1200
 const IMG_BLOCK_MIN_WIDTH = 1200
 const IMG_BLOCK_MIN_HEIGHT = 1500
 const IMG_PAIR_REQUIRED_IMAGE_COUNT = 2
@@ -81,12 +92,14 @@ type BlockImageModalState = {
   blockId: string
   show: boolean
   mode: BlockImageModalMode
+  replaceExistingBlock?: boolean
 }
 
 type OpenBlockImageModalOptions = {
   caption?: string
   trioFormat?: ImgTrioFormat
   selectedAssetIds?: number[]
+  replaceExistingBlock?: boolean
 }
 
 function buildImageFileNamePrefix(articleTitle: string, externalRef: string): string {
@@ -294,6 +307,73 @@ type TimelineItem =
       editorialBlockId: string
     }
 
+type NormalizeBlocksResult = {
+  blocks: ContentBlock[]
+  mediaBlockIdByLegacyAnchorId: Map<string, string>
+}
+
+function isStandaloneMediaBlock(block: ContentBlock): boolean {
+  return block.type === 'image' || block.type === 'img-pair' || block.type === 'img-trio'
+}
+
+function isTextualBlock(block: ContentBlock): boolean {
+  return block.type === 'text' || block.type === 'pullquote'
+}
+
+function createSingleImageBlock(
+  id: string,
+  imageId: number,
+  altText?: string
+): ContentBlock {
+  return {
+    id,
+    type: 'image',
+    content: '',
+    imageAfter: imageId,
+    imageAfterAltText: altText?.trim() || undefined,
+  }
+}
+
+function createImgPairBlock(
+  id: string,
+  imageOne: number,
+  imageTwo: number,
+  caption?: string
+): ContentBlock {
+  return {
+    id,
+    type: 'img-pair',
+    content: '',
+    imgPairAfter: {
+      imageOne,
+      imageTwo,
+      caption: caption?.trim() || undefined,
+    },
+  }
+}
+
+function createImgTrioBlock(
+  id: string,
+  format: ImgTrioFormat,
+  imageOne: number,
+  imageTwo: number,
+  imageThree: number,
+  caption?: string
+): ContentBlock {
+  return {
+    id,
+    type: 'img-trio',
+    content: '',
+    imgTrioAfter: {
+      format,
+      imageOne,
+      imageTwo,
+      imageThree,
+      caption: caption?.trim() || undefined,
+    },
+  }
+}
+
 function getContentTimelineItemId(blockId: string): string {
   return `content:${blockId}`
 }
@@ -321,17 +401,29 @@ type BlockMediaPayload =
       imgTrioAfter: NonNullable<ContentBlock['imgTrioAfter']>
     }
 
-function stripBlockMedia(block: ContentBlock): ContentBlock {
-  return {
-    ...block,
-    imageAfter: undefined,
-    imageAfterAltText: undefined,
-    imgPairAfter: undefined,
-    imgTrioAfter: undefined,
-  }
-}
-
 function getBlockMediaPayload(block: ContentBlock): BlockMediaPayload | null {
+  if (block.type === 'image' && block.imageAfter != null) {
+    return {
+      type: 'single',
+      imageAfter: block.imageAfter,
+      imageAfterAltText: block.imageAfterAltText,
+    }
+  }
+
+  if (block.type === 'img-pair' && block.imgPairAfter) {
+    return {
+      type: 'pair',
+      imgPairAfter: block.imgPairAfter,
+    }
+  }
+
+  if (block.type === 'img-trio' && block.imgTrioAfter) {
+    return {
+      type: 'trio',
+      imgTrioAfter: block.imgTrioAfter,
+    }
+  }
+
   if (block.imageAfter != null) {
     return {
       type: 'single',
@@ -355,31 +447,6 @@ function getBlockMediaPayload(block: ContentBlock): BlockMediaPayload | null {
   }
 
   return null
-}
-
-function applyMediaPayloadToBlock(
-  block: ContentBlock,
-  mediaPayload: BlockMediaPayload
-): ContentBlock {
-  if (mediaPayload.type === 'single') {
-    return {
-      ...stripBlockMedia(block),
-      imageAfter: mediaPayload.imageAfter,
-      imageAfterAltText: mediaPayload.imageAfterAltText,
-    }
-  }
-
-  if (mediaPayload.type === 'pair') {
-    return {
-      ...stripBlockMedia(block),
-      imgPairAfter: mediaPayload.imgPairAfter,
-    }
-  }
-
-  return {
-    ...stripBlockMedia(block),
-    imgTrioAfter: mediaPayload.imgTrioAfter,
-  }
 }
 
 function normalizeEditorialComponentKey(component: string): string {
@@ -961,11 +1028,14 @@ function hasMeaningfulEditorialPlacement(
   })
 }
 
-async function fetchEditorialBlocksFromRun(runId: string): Promise<EditorialBlock[]> {
+async function fetchEditorialBlocksFromRun(
+  runId: string,
+  fetchResultFn: (runId: string) => Promise<{ markdown: string }>
+): Promise<EditorialBlock[]> {
   if (!runId) return []
 
   try {
-    const result = await fetchResult(runId)
+    const result = await fetchResultFn(runId)
     const extracted = extractEditorialBlocks(result.markdown || '')
     return extracted.editorialBlocks
   } catch {
@@ -984,7 +1054,9 @@ function attachEditorialBlocksToContentBlocks(
 ): EditorialBlock[] {
   if (!editorialBlocks.length) return []
 
-  if (!blocks.length || !ranges.length) {
+  const anchorBlocks = blocks.filter(isTextualBlock)
+
+  if (!anchorBlocks.length || !ranges.length) {
     return normalizeEditorialBlocks(editorialBlocks).map((block) => ({
       ...block,
       afterBlockId: null,
@@ -1015,13 +1087,13 @@ function attachEditorialBlocksToContentBlocks(
       }
     }
 
-    if (afterIndex >= blocks.length) {
-      afterIndex = blocks.length - 1
+    if (afterIndex >= anchorBlocks.length) {
+      afterIndex = anchorBlocks.length - 1
     }
 
     return {
       ...block,
-      afterBlockId: afterIndex >= 0 ? blocks[afterIndex].id : null,
+      afterBlockId: afterIndex >= 0 ? anchorBlocks[afterIndex].id : null,
     }
   })
 }
@@ -1098,47 +1170,23 @@ function buildTimelineItems(
   })
 
   blocks.forEach((block) => {
-    items.push({
-      id: getContentTimelineItemId(block.id),
-      type: 'content',
-      contentBlockId: block.id,
-    })
-
-    const hasImageBlock = Boolean(getBlockMediaPayload(block))
     const anchoredEditorialBlocks = editorialByBlockId.get(block.id) || []
-    const editorialBeforeImage = anchoredEditorialBlocks.filter(
-      (editorialBlock) => !editorialBlock.placeAfterImage
-    )
-    const editorialAfterImage = anchoredEditorialBlocks.filter(
-      (editorialBlock) => editorialBlock.placeAfterImage
-    )
 
-    if (!hasImageBlock) {
-      anchoredEditorialBlocks.forEach((editorialBlock) => {
-        items.push({
-          id: getEditorialTimelineItemId(editorialBlock.id),
-          type: 'editorial',
-          editorialBlockId: editorialBlock.id,
-        })
+    if (isStandaloneMediaBlock(block)) {
+      items.push({
+        id: getImageTimelineItemId(block.id),
+        type: 'image',
+        contentBlockId: block.id,
       })
-      return
+    } else {
+      items.push({
+        id: getContentTimelineItemId(block.id),
+        type: 'content',
+        contentBlockId: block.id,
+      })
     }
 
-    editorialBeforeImage.forEach((editorialBlock) => {
-      items.push({
-        id: getEditorialTimelineItemId(editorialBlock.id),
-        type: 'editorial',
-        editorialBlockId: editorialBlock.id,
-      })
-    })
-
-    items.push({
-      id: getImageTimelineItemId(block.id),
-      type: 'image',
-      contentBlockId: block.id,
-    })
-
-    editorialAfterImage.forEach((editorialBlock) => {
+    anchoredEditorialBlocks.forEach((editorialBlock) => {
       items.push({
         id: getEditorialTimelineItemId(editorialBlock.id),
         type: 'editorial',
@@ -1158,16 +1206,7 @@ function applyTimelineItemsToDraft(
   blocks: ContentBlock[]
   editorialBlocks: EditorialBlock[]
 } {
-  const contentById = new Map(
-    blocks.map((block) => [block.id, stripBlockMedia(block)])
-  )
-  const mediaPayloadByContentId = new Map<string, BlockMediaPayload>()
-  blocks.forEach((block) => {
-    const mediaPayload = getBlockMediaPayload(block)
-    if (mediaPayload) {
-      mediaPayloadByContentId.set(block.id, mediaPayload)
-    }
-  })
+  const blockById = new Map(blocks.map((block) => [block.id, block]))
   const normalizedEditorialBlocks = normalizeEditorialBlocks(editorialBlocks)
   const editorialById = new Map(
     normalizedEditorialBlocks.map((editorialBlock) => [editorialBlock.id, editorialBlock])
@@ -1175,66 +1214,19 @@ function applyTimelineItemsToDraft(
 
   const nextBlocks: ContentBlock[] = []
   const nextEditorialBlocks: EditorialBlock[] = []
-  const seenContentIds = new Set<string>()
+  const seenBlockIds = new Set<string>()
   const seenEditorialIds = new Set<string>()
-  const seenImageSourceIds = new Set<string>()
-  const pendingMediaPayloads: BlockMediaPayload[] = []
-  let lastContentBlockId: string | null = null
-  let seenImageAfterCurrentContent = false
-
-  const attachMediaToBlock = (
-    targetBlockId: string | null,
-    mediaPayload: BlockMediaPayload
-  ): boolean => {
-    if (!targetBlockId) return false
-    const blockIndex = nextBlocks.findIndex((block) => block.id === targetBlockId)
-    if (blockIndex === -1) return false
-
-    const targetBlock = nextBlocks[blockIndex]
-    if (getBlockMediaPayload(targetBlock)) {
-      return false
-    }
-
-    nextBlocks[blockIndex] = applyMediaPayloadToBlock(targetBlock, mediaPayload)
-    return true
-  }
-
-  const attachPendingMediaToBlock = (targetBlockId: string | null) => {
-    if (!targetBlockId || pendingMediaPayloads.length === 0) return
-    if (attachMediaToBlock(targetBlockId, pendingMediaPayloads[0])) {
-      pendingMediaPayloads.shift()
-    }
-  }
-
-  const hasAttachedMedia = (targetBlockId: string | null): boolean => {
-    if (!targetBlockId) return false
-    const targetBlock = nextBlocks.find((block) => block.id === targetBlockId)
-    return Boolean(targetBlock && getBlockMediaPayload(targetBlock))
-  }
+  let lastBlockId: string | null = null
+  let lastItemWasImage = false
 
   timelineItems.forEach((item) => {
-    if (item.type === 'content') {
-      const block = contentById.get(item.contentBlockId)
-      if (!block || seenContentIds.has(block.id)) return
+    if (item.type === 'content' || item.type === 'image') {
+      const block = blockById.get(item.contentBlockId)
+      if (!block || seenBlockIds.has(block.id)) return
       nextBlocks.push(block)
-      seenContentIds.add(block.id)
-      lastContentBlockId = block.id
-      seenImageAfterCurrentContent = false
-      attachPendingMediaToBlock(block.id)
-      seenImageAfterCurrentContent = hasAttachedMedia(block.id)
-      return
-    }
-
-    if (item.type === 'image') {
-      const mediaPayload = mediaPayloadByContentId.get(item.contentBlockId)
-      if (!mediaPayload || seenImageSourceIds.has(item.contentBlockId)) return
-      seenImageSourceIds.add(item.contentBlockId)
-
-      if (!attachMediaToBlock(lastContentBlockId, mediaPayload)) {
-        pendingMediaPayloads.push(mediaPayload)
-      } else {
-        seenImageAfterCurrentContent = true
-      }
+      seenBlockIds.add(block.id)
+      lastBlockId = block.id
+      lastItemWasImage = item.type === 'image'
       return
     }
 
@@ -1242,52 +1234,30 @@ function applyTimelineItemsToDraft(
     if (!editorialBlock || seenEditorialIds.has(editorialBlock.id)) return
     nextEditorialBlocks.push({
       ...editorialBlock,
-      afterBlockId: lastContentBlockId,
-      placeAfterImage: seenImageAfterCurrentContent,
+      afterBlockId: lastBlockId,
+      placeAfterImage: lastItemWasImage,
     })
     seenEditorialIds.add(editorialBlock.id)
   })
 
   // Keep any missing blocks/items as a fallback so data is never dropped.
   blocks.forEach((block) => {
-    if (seenContentIds.has(block.id)) return
-    nextBlocks.push(stripBlockMedia(block))
-    seenContentIds.add(block.id)
-    lastContentBlockId = block.id
-    seenImageAfterCurrentContent = false
-    attachPendingMediaToBlock(block.id)
-    seenImageAfterCurrentContent = hasAttachedMedia(block.id)
+    if (seenBlockIds.has(block.id)) return
+    nextBlocks.push(block)
+    seenBlockIds.add(block.id)
+    lastBlockId = block.id
+    lastItemWasImage = isStandaloneMediaBlock(block)
   })
 
   normalizedEditorialBlocks.forEach((editorialBlock) => {
     if (seenEditorialIds.has(editorialBlock.id)) return
     nextEditorialBlocks.push({
       ...editorialBlock,
-      afterBlockId: lastContentBlockId,
+      afterBlockId: lastBlockId,
+      placeAfterImage: lastItemWasImage,
     })
     seenEditorialIds.add(editorialBlock.id)
   })
-
-  mediaPayloadByContentId.forEach((mediaPayload, sourceBlockId) => {
-    if (seenImageSourceIds.has(sourceBlockId)) return
-    seenImageSourceIds.add(sourceBlockId)
-
-    if (attachMediaToBlock(sourceBlockId, mediaPayload)) return
-    if (attachMediaToBlock(lastContentBlockId, mediaPayload)) return
-    pendingMediaPayloads.push(mediaPayload)
-  })
-
-  if (pendingMediaPayloads.length > 0) {
-    nextBlocks.forEach((block) => {
-      if (pendingMediaPayloads.length === 0) return
-      if (getBlockMediaPayload(block)) return
-      const mediaPayload = pendingMediaPayloads.shift()
-      if (!mediaPayload) return
-      const blockIndex = nextBlocks.findIndex((candidate) => candidate.id === block.id)
-      if (blockIndex === -1) return
-      nextBlocks[blockIndex] = applyMediaPayloadToBlock(block, mediaPayload)
-    })
-  }
 
   return {
     blocks: nextBlocks,
@@ -1316,6 +1286,11 @@ function getEditorialBlockBody(markdown: string): string {
   return cleaned.trim()
 }
 
+function resizeTextareaToContent(element: HTMLTextAreaElement): void {
+  element.style.height = 'auto'
+  element.style.height = `${element.scrollHeight}px`
+}
+
 function renderEditorialBlockCard(
   block: EditorialBlock,
   displayNumber: number,
@@ -1324,6 +1299,8 @@ function renderEditorialBlockCard(
     onFixBlock?: () => void
     disableFix?: boolean
     canEdit?: boolean
+    onToggleEdit?: () => void
+    disableEditToggle?: boolean
     onChangeMarkdown?: (nextMarkdown: string) => void
     onRemoveBlock?: () => void
     disableRemove?: boolean
@@ -1418,6 +1395,17 @@ function renderEditorialBlockCard(
                 </svg>
               </button>
             </div>
+          )}
+          {options?.onToggleEdit && (
+            <button
+              type="button"
+              className="block-edit-btn"
+              onClick={options.onToggleEdit}
+              disabled={options.disableEditToggle}
+              title={isEditMode ? 'Done editing block' : 'Edit block'}
+            >
+              {isEditMode ? 'Done' : 'Edit'}
+            </button>
           )}
           {options?.onRemoveBlock && (
             <button
@@ -1681,6 +1669,10 @@ function renderEditorialBlockCard(
           <textarea
             value={block.markdown}
             onChange={(event) => options.onChangeMarkdown?.(event.target.value)}
+            onInput={(event) => resizeTextareaToContent(event.currentTarget)}
+            ref={(element) => {
+              if (element) resizeTextareaToContent(element)
+            }}
             rows={Math.max(8, block.markdown.split('\n').length + 1)}
             className="block-textarea"
             style={{ width: '100%' }}
@@ -1740,21 +1732,173 @@ function renderEditorialBlockCard(
   )
 }
 
-function normalizeBlocks(blocks: ContentBlock[] | undefined, fallbackContent: string): ContentBlock[] {
+function normalizeBlocks(
+  blocks: ContentBlock[] | undefined,
+  fallbackContent: string
+): NormalizeBlocksResult {
   if (!blocks || blocks.length === 0) {
-    return parseMarkdownToBlocks(fallbackContent)
+    return {
+      blocks: parseMarkdownToBlocks(fallbackContent),
+      mediaBlockIdByLegacyAnchorId: new Map(),
+    }
   }
 
-  // Phase 1 contract only publishes text/image blocks.
-  return blocks.map((block, index) => ({
-    id: block.id || `block_${index}`,
-    type: 'text',
-    content: block.content || '',
-    imageAfter: block.imageAfter,
-    imageAfterAltText: block.imageAfterAltText,
-    imgPairAfter: block.imgPairAfter,
-    imgTrioAfter: block.imgTrioAfter,
-  }))
+  const normalizedBlocks: ContentBlock[] = []
+  const mediaBlockIdByLegacyAnchorId = new Map<string, string>()
+  const usedIds = new Set<string>()
+
+  const createUniqueId = (baseId: string): string => {
+    let candidate = baseId
+    let suffix = 1
+    while (usedIds.has(candidate)) {
+      candidate = `${baseId}_${suffix}`
+      suffix += 1
+    }
+    usedIds.add(candidate)
+    return candidate
+  }
+
+  const appendLegacyMediaBlock = (
+    anchorId: string,
+    mediaType: 'image' | 'img-pair' | 'img-trio',
+    mediaBlock: ContentBlock
+  ) => {
+    const baseId = `${anchorId}__${mediaType}`
+    const mediaBlockId = createUniqueId(baseId)
+    const finalizedMediaBlock = { ...mediaBlock, id: mediaBlockId }
+    normalizedBlocks.push(finalizedMediaBlock)
+    mediaBlockIdByLegacyAnchorId.set(anchorId, mediaBlockId)
+  }
+
+  blocks.forEach((block, index) => {
+    const sourceId = block.id || `block_${index}`
+    const blockId = createUniqueId(sourceId)
+
+    if (block.type === 'image') {
+      const imageId = block.imageAfter
+      if (typeof imageId === 'number') {
+        normalizedBlocks.push(
+          createSingleImageBlock(blockId, imageId, block.imageAfterAltText)
+        )
+      }
+      return
+    }
+
+    if (block.type === 'img-pair') {
+      const pair = block.imgPairAfter
+      if (pair) {
+        normalizedBlocks.push(
+          createImgPairBlock(
+            blockId,
+            pair.imageOne,
+            pair.imageTwo,
+            pair.caption
+          )
+        )
+      }
+      return
+    }
+
+    if (block.type === 'img-trio') {
+      const trio = block.imgTrioAfter
+      if (trio) {
+        normalizedBlocks.push(
+          createImgTrioBlock(
+            blockId,
+            trio.format,
+            trio.imageOne,
+            trio.imageTwo,
+            trio.imageThree,
+            trio.caption
+          )
+        )
+      }
+      return
+    }
+
+    const normalizedTextBlock: ContentBlock = {
+      id: blockId,
+      type: block.type === 'pullquote' ? 'pullquote' : 'text',
+      content: block.content || '',
+      imageAfter: undefined,
+      imageAfterAltText: undefined,
+      imgPairAfter: undefined,
+      imgTrioAfter: undefined,
+    }
+    normalizedBlocks.push(normalizedTextBlock)
+
+    if (typeof block.imageAfter === 'number') {
+      appendLegacyMediaBlock(
+        blockId,
+        'image',
+        createSingleImageBlock('', block.imageAfter, block.imageAfterAltText)
+      )
+      return
+    }
+
+    if (block.imgPairAfter) {
+      appendLegacyMediaBlock(
+        blockId,
+        'img-pair',
+        createImgPairBlock(
+          '',
+          block.imgPairAfter.imageOne,
+          block.imgPairAfter.imageTwo,
+          block.imgPairAfter.caption
+        )
+      )
+      return
+    }
+
+    if (block.imgTrioAfter) {
+      appendLegacyMediaBlock(
+        blockId,
+        'img-trio',
+        createImgTrioBlock(
+          '',
+          block.imgTrioAfter.format,
+          block.imgTrioAfter.imageOne,
+          block.imgTrioAfter.imageTwo,
+          block.imgTrioAfter.imageThree,
+          block.imgTrioAfter.caption
+        )
+      )
+    }
+  })
+
+  return {
+    blocks: normalizedBlocks,
+    mediaBlockIdByLegacyAnchorId,
+  }
+}
+
+function migrateEditorialBlocksForStandaloneMedia(
+  editorialBlocks: EditorialBlock[],
+  mediaBlockIdByLegacyAnchorId: Map<string, string>
+): EditorialBlock[] {
+  return normalizeEditorialBlocks(editorialBlocks).map((editorialBlock) => {
+    const afterBlockId = editorialBlock.afterBlockId || null
+    if (
+      afterBlockId
+      && editorialBlock.placeAfterImage
+      && mediaBlockIdByLegacyAnchorId.has(afterBlockId)
+    ) {
+      return {
+        ...editorialBlock,
+        afterBlockId: mediaBlockIdByLegacyAnchorId.get(afterBlockId) || afterBlockId,
+        placeAfterImage: false,
+      }
+    }
+
+    if (editorialBlock.placeAfterImage) {
+      return {
+        ...editorialBlock,
+        placeAfterImage: false,
+      }
+    }
+
+    return editorialBlock
+  })
 }
 
 function getMediaAssetAltText(img?: MediaAsset | null): string {
@@ -1773,6 +1917,14 @@ function hasExactDimensions(
 
 function hasExactImgBlockDimensions(img?: MediaAsset | null): boolean {
   return hasExactDimensions(img, IMG_BLOCK_MIN_WIDTH, IMG_BLOCK_MIN_HEIGHT)
+}
+
+function hasExactContentBlockDimensions(img?: MediaAsset | null): boolean {
+  return hasExactDimensions(img, CONTENT_BLOCK_WIDTH, CONTENT_BLOCK_HEIGHT)
+}
+
+function hasExactFeaturedImageDimensions(img?: MediaAsset | null): boolean {
+  return hasExactDimensions(img, FEATURED_IMAGE_WIDTH, FEATURED_IMAGE_HEIGHT)
 }
 
 function getImgTrioDimensions(format: ImgTrioFormat): { width: number; height: number } {
@@ -1867,7 +2019,7 @@ export default function EditorialStageArticlePage({
 
   // Staged article state
   const [stagedArticle, setStagedArticle] = useState<StagedArticle | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
+  const [activeEditingTimelineItemId, setActiveEditingTimelineItemId] = useState<string | null>(null)
 
   // Form state
   const [isPublishing, setIsPublishing] = useState(false)
@@ -1923,11 +2075,18 @@ export default function EditorialStageArticlePage({
             const contentForParsing = extractedFromContent.bodyMarkdown || existing.content
             const originalContentForReset = extractedFromOriginal.bodyMarkdown || contentForParsing
             const parsedDetails = parseMarkdownToBlocksDetailed(contentForParsing)
-            const normalizedBlocks =
+            const normalizedBlocksResult =
               existing.blocks?.length
                 ? normalizeBlocks(existing.blocks, contentForParsing)
-                : parsedDetails.blocks
-            const existingEditorialBlocks = normalizeEditorialBlocks(existing.editorialBlocks)
+                : {
+                    blocks: parsedDetails.blocks,
+                    mediaBlockIdByLegacyAnchorId: new Map<string, string>(),
+                  }
+            const normalizedBlocks = normalizedBlocksResult.blocks
+            const existingEditorialBlocks = migrateEditorialBlocksForStandaloneMedia(
+              existing.editorialBlocks || [],
+              normalizedBlocksResult.mediaBlockIdByLegacyAnchorId
+            )
             const hasMeaningfulExistingPlacement = hasMeaningfulEditorialPlacement(
               existingEditorialBlocks,
               normalizedBlocks
@@ -1935,7 +2094,10 @@ export default function EditorialStageArticlePage({
             let fallbackEditorialBlocks = extractedFromContent.editorialBlocks
 
             if (!hasMeaningfulExistingPlacement && existing.runId) {
-              const runEditorialBlocks = await fetchEditorialBlocksFromRun(existing.runId)
+              const runEditorialBlocks = await fetchEditorialBlocksFromRun(
+                existing.runId,
+                fetchResult
+              )
               if (runEditorialBlocks.length > 0) {
                 fallbackEditorialBlocks = runEditorialBlocks
               }
@@ -1980,11 +2142,18 @@ export default function EditorialStageArticlePage({
             const contentForParsing = extractedFromContent.bodyMarkdown || existing.content
             const originalContentForReset = extractedFromOriginal.bodyMarkdown || contentForParsing
             const parsedDetails = parseMarkdownToBlocksDetailed(contentForParsing)
-            const normalizedBlocks =
+            const normalizedBlocksResult =
               existing.blocks?.length
                 ? normalizeBlocks(existing.blocks, contentForParsing)
-                : parsedDetails.blocks
-            const existingEditorialBlocks = normalizeEditorialBlocks(existing.editorialBlocks)
+                : {
+                    blocks: parsedDetails.blocks,
+                    mediaBlockIdByLegacyAnchorId: new Map<string, string>(),
+                  }
+            const normalizedBlocks = normalizedBlocksResult.blocks
+            const existingEditorialBlocks = migrateEditorialBlocksForStandaloneMedia(
+              existing.editorialBlocks || [],
+              normalizedBlocksResult.mediaBlockIdByLegacyAnchorId
+            )
             const hasMeaningfulExistingPlacement = hasMeaningfulEditorialPlacement(
               existingEditorialBlocks,
               normalizedBlocks
@@ -1992,7 +2161,10 @@ export default function EditorialStageArticlePage({
             let fallbackEditorialBlocks = extractedFromContent.editorialBlocks
 
             if (!hasMeaningfulExistingPlacement && existing.runId) {
-              const runEditorialBlocks = await fetchEditorialBlocksFromRun(existing.runId)
+              const runEditorialBlocks = await fetchEditorialBlocksFromRun(
+                existing.runId,
+                fetchResult
+              )
               if (runEditorialBlocks.length > 0) {
                 fallbackEditorialBlocks = runEditorialBlocks
               }
@@ -2151,7 +2323,12 @@ export default function EditorialStageArticlePage({
     setImgTrioFormat(options?.trioFormat || IMG_TRIO_DEFAULT_FORMAT)
     setImgBlockAssetsError(null)
     setOpenImagePickerTarget(null)
-    setBlockImageModal({ blockId, show: true, mode })
+    setBlockImageModal({
+      blockId,
+      show: true,
+      mode,
+      replaceExistingBlock: options?.replaceExistingBlock === true,
+    })
   }, [])
 
   useEffect(() => {
@@ -2256,6 +2433,26 @@ export default function EditorialStageArticlePage({
     () => buildTimelineItems(stagedArticle?.blocks || [], stagedArticle?.editorialBlocks || []),
     [stagedArticle?.blocks, stagedArticle?.editorialBlocks]
   )
+
+  useEffect(() => {
+    if (!activeEditingTimelineItemId) return
+    const stillExists = timelineItems.some((item) => item.id === activeEditingTimelineItemId)
+    if (!stillExists) {
+      setActiveEditingTimelineItemId(null)
+    }
+  }, [timelineItems, activeEditingTimelineItemId])
+
+  useEffect(() => {
+    if (!stagedArticle?.publishedToPayload) return
+    if (!activeEditingTimelineItemId) return
+    setActiveEditingTimelineItemId(null)
+  }, [stagedArticle?.publishedToPayload, activeEditingTimelineItemId])
+
+  const toggleTimelineItemEdit = useCallback((timelineItemId: string) => {
+    setActiveEditingTimelineItemId((current) => (
+      current === timelineItemId ? null : timelineItemId
+    ))
+  }, [])
 
   const applyTimelineReorder = useCallback((nextTimelineItems: TimelineItem[]) => {
     if (!stagedArticle) return
@@ -2390,19 +2587,60 @@ export default function EditorialStageArticlePage({
     updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
   }, [stagedArticle, updateStagedArticle])
 
-  const addImageAfterBlock = useCallback((blockId: string, imageId: number, imageAfterAltText?: string) => {
+  const reanchorEditorialBlocksAfterBlockRemoval = useCallback((
+    removedBlockId: string,
+    fallbackAfterBlockId: string | null
+  ): EditorialBlock[] => {
+    if (!stagedArticle) return []
+
+    return (stagedArticle.editorialBlocks || []).map((editorialBlock) => {
+      if (editorialBlock.afterBlockId !== removedBlockId) {
+        return editorialBlock
+      }
+
+      return {
+        ...editorialBlock,
+        afterBlockId: fallbackAfterBlockId,
+        placeAfterImage: false,
+      }
+    })
+  }, [stagedArticle])
+
+  const createMediaBlockId = () => (
+    `media_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  )
+
+  const addImageAfterBlock = useCallback((
+    blockId: string,
+    imageId: number,
+    imageAfterAltText?: string,
+    replaceExisting = false
+  ) => {
     if (!stagedArticle) return
-    const updatedBlocks = stagedArticle.blocks.map(b =>
-      b.id === blockId
-        ? {
-            ...b,
-            imageAfter: imageId,
-            imageAfterAltText: imageAfterAltText?.trim() || undefined,
-            imgPairAfter: undefined,
-            imgTrioAfter: undefined,
-          }
-        : b
+    const blockIndex = stagedArticle.blocks.findIndex((b) => b.id === blockId)
+    if (blockIndex === -1) return
+    const targetBlock = stagedArticle.blocks[blockIndex]
+
+    if (replaceExisting && targetBlock.type === 'image') {
+      const updatedBlocks = stagedArticle.blocks.map((b) =>
+        b.id === blockId
+          ? createSingleImageBlock(blockId, imageId, imageAfterAltText)
+          : b
+      )
+      updateStagedArticle({ blocks: updatedBlocks })
+      return
+    }
+
+    const newImageBlock = createSingleImageBlock(
+      createMediaBlockId(),
+      imageId,
+      imageAfterAltText
     )
+    const updatedBlocks = [
+      ...stagedArticle.blocks.slice(0, blockIndex + 1),
+      newImageBlock,
+      ...stagedArticle.blocks.slice(blockIndex + 1),
+    ]
     updateStagedArticle({ blocks: updatedBlocks })
   }, [stagedArticle, updateStagedArticle])
 
@@ -2410,26 +2648,40 @@ export default function EditorialStageArticlePage({
     blockId: string,
     imageOne: MediaAsset,
     imageTwo: MediaAsset,
-    caption?: string
+    caption?: string,
+    replaceExisting = false
   ) => {
     if (!stagedArticle) return
+    const blockIndex = stagedArticle.blocks.findIndex((b) => b.id === blockId)
+    if (blockIndex === -1) return
+    const targetBlock = stagedArticle.blocks[blockIndex]
 
-    const updatedBlocks = stagedArticle.blocks.map((b) =>
-      b.id === blockId
-        ? {
-            ...b,
-            imageAfter: undefined,
-            imageAfterAltText: undefined,
-            imgPairAfter: {
-              imageOne: imageOne.id,
-              imageTwo: imageTwo.id,
-              caption: caption?.trim() || undefined,
-            },
-            imgTrioAfter: undefined,
-          }
-        : b
+    if (replaceExisting && targetBlock.type === 'img-pair') {
+      const updatedBlocks = stagedArticle.blocks.map((b) =>
+        b.id === blockId
+          ? createImgPairBlock(
+              blockId,
+              imageOne.id,
+              imageTwo.id,
+              caption
+            )
+          : b
+      )
+      updateStagedArticle({ blocks: updatedBlocks })
+      return
+    }
+
+    const newPairBlock = createImgPairBlock(
+      createMediaBlockId(),
+      imageOne.id,
+      imageTwo.id,
+      caption
     )
-
+    const updatedBlocks = [
+      ...stagedArticle.blocks.slice(0, blockIndex + 1),
+      newPairBlock,
+      ...stagedArticle.blocks.slice(blockIndex + 1),
+    ]
     updateStagedArticle({ blocks: updatedBlocks })
   }, [stagedArticle, updateStagedArticle])
 
@@ -2439,28 +2691,44 @@ export default function EditorialStageArticlePage({
     imageOne: MediaAsset,
     imageTwo: MediaAsset,
     imageThree: MediaAsset,
-    caption?: string
+    caption?: string,
+    replaceExisting = false
   ) => {
     if (!stagedArticle) return
+    const blockIndex = stagedArticle.blocks.findIndex((b) => b.id === blockId)
+    if (blockIndex === -1) return
+    const targetBlock = stagedArticle.blocks[blockIndex]
 
-    const updatedBlocks = stagedArticle.blocks.map((b) =>
-      b.id === blockId
-        ? {
-            ...b,
-            imageAfter: undefined,
-            imageAfterAltText: undefined,
-            imgPairAfter: undefined,
-            imgTrioAfter: {
+    if (replaceExisting && targetBlock.type === 'img-trio') {
+      const updatedBlocks = stagedArticle.blocks.map((b) =>
+        b.id === blockId
+          ? createImgTrioBlock(
+              blockId,
               format,
-              imageOne: imageOne.id,
-              imageTwo: imageTwo.id,
-              imageThree: imageThree.id,
-              caption: caption?.trim() || undefined,
-            },
-          }
-        : b
-    )
+              imageOne.id,
+              imageTwo.id,
+              imageThree.id,
+              caption
+            )
+          : b
+      )
+      updateStagedArticle({ blocks: updatedBlocks })
+      return
+    }
 
+    const newTrioBlock = createImgTrioBlock(
+      createMediaBlockId(),
+      format,
+      imageOne.id,
+      imageTwo.id,
+      imageThree.id,
+      caption
+    )
+    const updatedBlocks = [
+      ...stagedArticle.blocks.slice(0, blockIndex + 1),
+      newTrioBlock,
+      ...stagedArticle.blocks.slice(blockIndex + 1),
+    ]
     updateStagedArticle({ blocks: updatedBlocks })
   }, [stagedArticle, updateStagedArticle])
 
@@ -2469,6 +2737,24 @@ export default function EditorialStageArticlePage({
 
     const updatedBlocks = stagedArticle.blocks.map((b) => {
       if (b.id !== blockId) return b
+      if (b.type === 'img-pair' && b.imgPairAfter) {
+        return createImgPairBlock(
+          b.id,
+          b.imgPairAfter.imageOne,
+          b.imgPairAfter.imageTwo,
+          caption
+        )
+      }
+      if (b.type === 'img-trio' && b.imgTrioAfter) {
+        return createImgTrioBlock(
+          b.id,
+          b.imgTrioAfter.format,
+          b.imgTrioAfter.imageOne,
+          b.imgTrioAfter.imageTwo,
+          b.imgTrioAfter.imageThree,
+          caption
+        )
+      }
       if (b.imgPairAfter) {
         return {
           ...b,
@@ -2495,27 +2781,75 @@ export default function EditorialStageArticlePage({
 
   const removeImageAfterBlock = useCallback((blockId: string) => {
     if (!stagedArticle) return
+    const removedIndex = stagedArticle.blocks.findIndex((b) => b.id === blockId)
+    const targetBlock = stagedArticle.blocks.find((b) => b.id === blockId)
+    if (targetBlock?.type === 'image') {
+      const fallbackAfterBlockId = removedIndex > 0
+        ? stagedArticle.blocks[removedIndex - 1].id
+        : null
+      const updatedEditorialBlocks = reanchorEditorialBlocksAfterBlockRemoval(
+        blockId,
+        fallbackAfterBlockId
+      )
+      updateStagedArticle({
+        blocks: stagedArticle.blocks.filter((b) => b.id !== blockId),
+        editorialBlocks: updatedEditorialBlocks,
+      })
+      return
+    }
     const updatedBlocks = stagedArticle.blocks.map(b =>
       b.id === blockId ? { ...b, imageAfter: undefined, imageAfterAltText: undefined } : b
     )
     updateStagedArticle({ blocks: updatedBlocks })
-  }, [stagedArticle, updateStagedArticle])
+  }, [stagedArticle, reanchorEditorialBlocksAfterBlockRemoval, updateStagedArticle])
 
   const removeImgPairAfterBlock = useCallback((blockId: string) => {
     if (!stagedArticle) return
+    const removedIndex = stagedArticle.blocks.findIndex((b) => b.id === blockId)
+    const targetBlock = stagedArticle.blocks.find((b) => b.id === blockId)
+    if (targetBlock?.type === 'img-pair') {
+      const fallbackAfterBlockId = removedIndex > 0
+        ? stagedArticle.blocks[removedIndex - 1].id
+        : null
+      const updatedEditorialBlocks = reanchorEditorialBlocksAfterBlockRemoval(
+        blockId,
+        fallbackAfterBlockId
+      )
+      updateStagedArticle({
+        blocks: stagedArticle.blocks.filter((b) => b.id !== blockId),
+        editorialBlocks: updatedEditorialBlocks,
+      })
+      return
+    }
     const updatedBlocks = stagedArticle.blocks.map((b) =>
       b.id === blockId ? { ...b, imgPairAfter: undefined } : b
     )
     updateStagedArticle({ blocks: updatedBlocks })
-  }, [stagedArticle, updateStagedArticle])
+  }, [stagedArticle, reanchorEditorialBlocksAfterBlockRemoval, updateStagedArticle])
 
   const removeImgTrioAfterBlock = useCallback((blockId: string) => {
     if (!stagedArticle) return
+    const removedIndex = stagedArticle.blocks.findIndex((b) => b.id === blockId)
+    const targetBlock = stagedArticle.blocks.find((b) => b.id === blockId)
+    if (targetBlock?.type === 'img-trio') {
+      const fallbackAfterBlockId = removedIndex > 0
+        ? stagedArticle.blocks[removedIndex - 1].id
+        : null
+      const updatedEditorialBlocks = reanchorEditorialBlocksAfterBlockRemoval(
+        blockId,
+        fallbackAfterBlockId
+      )
+      updateStagedArticle({
+        blocks: stagedArticle.blocks.filter((b) => b.id !== blockId),
+        editorialBlocks: updatedEditorialBlocks,
+      })
+      return
+    }
     const updatedBlocks = stagedArticle.blocks.map((b) =>
       b.id === blockId ? { ...b, imgTrioAfter: undefined } : b
     )
     updateStagedArticle({ blocks: updatedBlocks })
-  }, [stagedArticle, updateStagedArticle])
+  }, [stagedArticle, reanchorEditorialBlocksAfterBlockRemoval, updateStagedArticle])
 
   const mergeWithNextBlock = useCallback((blockId: string) => {
     if (!stagedArticle) return
@@ -2525,22 +2859,13 @@ export default function EditorialStageArticlePage({
     const currentBlock = stagedArticle.blocks[blockIndex]
     const nextBlock = stagedArticle.blocks[blockIndex + 1]
 
-    // Warn if there are media blocks between the blocks that will be deleted.
-    if (currentBlock.imageAfter || currentBlock.imgPairAfter || currentBlock.imgTrioAfter) {
-      if (!confirm('This will delete media between these blocks. Continue?')) {
-        return
-      }
-    }
+    if (!isTextualBlock(currentBlock) || !isTextualBlock(nextBlock)) return
 
-    // Merge content, removing any media block between them.
+    // Merge text content of adjacent textual blocks.
     const mergedBlock: ContentBlock = {
       id: currentBlock.id,
-      type: 'text',
+      type: currentBlock.type === 'pullquote' ? 'pullquote' : 'text',
       content: `${currentBlock.content}\n\n${nextBlock.content}`,
-      imageAfter: nextBlock.imageAfter,
-      imageAfterAltText: nextBlock.imageAfterAltText,
-      imgPairAfter: nextBlock.imgPairAfter,
-      imgTrioAfter: nextBlock.imgTrioAfter,
     }
 
     const updatedBlocks = [
@@ -2549,7 +2874,22 @@ export default function EditorialStageArticlePage({
       ...stagedArticle.blocks.slice(blockIndex + 2),
     ]
 
-    updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
+    const updatedEditorialBlocks = (stagedArticle.editorialBlocks || []).map((editorialBlock) => {
+      if (editorialBlock.afterBlockId !== nextBlock.id) {
+        return editorialBlock
+      }
+
+      return {
+        ...editorialBlock,
+        afterBlockId: currentBlock.id,
+      }
+    })
+
+    updateStagedArticle({
+      blocks: updatedBlocks,
+      editorialBlocks: updatedEditorialBlocks,
+      lexicalConverted: false,
+    })
   }, [stagedArticle, updateStagedArticle])
 
   const resetToOriginalBlocks = useCallback(() => {
@@ -2586,7 +2926,9 @@ export default function EditorialStageArticlePage({
     if (blockIndex === -1) return
 
     const block = stagedArticle.blocks[blockIndex]
+    if (!isTextualBlock(block)) return
     const lines = block.content.split('\n')
+    const secondBlockId = `block_${Date.now()}`
 
     // Split content at the header line
     const beforeContent = lines.slice(0, lineIndex).join('\n').trim()
@@ -2595,15 +2937,15 @@ export default function EditorialStageArticlePage({
     if (!beforeContent || !afterContent) return
 
     const newBlocks: ContentBlock[] = [
-      { id: block.id, type: 'text', content: beforeContent },
       {
-        id: `block_${Date.now()}`,
-        type: 'text',
+        id: block.id,
+        type: block.type === 'pullquote' ? 'pullquote' : 'text',
+        content: beforeContent,
+      },
+      {
+        id: secondBlockId,
+        type: block.type === 'pullquote' ? 'pullquote' : 'text',
         content: afterContent,
-        imageAfter: block.imageAfter,
-        imageAfterAltText: block.imageAfterAltText,
-        imgPairAfter: block.imgPairAfter,
-        imgTrioAfter: block.imgTrioAfter,
       },
     ]
 
@@ -2613,7 +2955,23 @@ export default function EditorialStageArticlePage({
       ...stagedArticle.blocks.slice(blockIndex + 1),
     ]
 
-    updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
+    const updatedEditorialBlocks = (stagedArticle.editorialBlocks || []).map((editorialBlock) => {
+      if (editorialBlock.afterBlockId !== block.id) {
+        return editorialBlock
+      }
+
+      // Keep editorial blocks at the end of the original section after split.
+      return {
+        ...editorialBlock,
+        afterBlockId: secondBlockId,
+      }
+    })
+
+    updateStagedArticle({
+      blocks: updatedBlocks,
+      editorialBlocks: updatedEditorialBlocks,
+      lexicalConverted: false,
+    })
   }, [stagedArticle, updateStagedArticle])
 
   const addNewBlock = useCallback((afterBlockId?: string) => {
@@ -2641,13 +2999,12 @@ export default function EditorialStageArticlePage({
     }
 
     updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
-    setIsEditing(true) // Enter edit mode so they can edit the new block
+    setActiveEditingTimelineItemId(getContentTimelineItemId(newBlock.id))
   }, [stagedArticle, updateStagedArticle])
 
   const addNewEditorialBlock = useCallback((
     component: SupportedEditorialComponent,
-    afterBlockId?: string,
-    placeAfterImage?: boolean
+    afterBlockId?: string
   ) => {
     if (!stagedArticle) return
 
@@ -2658,9 +3015,6 @@ export default function EditorialStageArticlePage({
       : stagedArticle.blocks.length > 0
         ? stagedArticle.blocks[stagedArticle.blocks.length - 1].id
         : null
-    const anchorBlock = validAfterBlockId
-      ? stagedArticle.blocks.find((block) => block.id === validAfterBlockId)
-      : null
 
     const newEditorialBlock: EditorialBlock = {
       id: `editorial_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -2668,20 +3022,14 @@ export default function EditorialStageArticlePage({
       label,
       markdown,
       afterBlockId: validAfterBlockId,
-      placeAfterImage:
-        placeAfterImage
-        ?? Boolean(
-          anchorBlock?.imageAfter
-          || anchorBlock?.imgPairAfter
-          || anchorBlock?.imgTrioAfter
-        ),
+      placeAfterImage: false,
     }
 
     updateStagedArticle({
       editorialBlocks: [...stagedArticle.editorialBlocks, newEditorialBlock],
       lexicalConverted: false,
     })
-    setIsEditing(true)
+    setActiveEditingTimelineItemId(getEditorialTimelineItemId(newEditorialBlock.id))
     setPublishResult(null)
   }, [stagedArticle, updateStagedArticle])
 
@@ -2702,7 +3050,8 @@ export default function EditorialStageArticlePage({
     afterBlockId?: string,
     placeAfterImage?: boolean
   ) => {
-    addNewEditorialBlock(component, afterBlockId, placeAfterImage)
+    void placeAfterImage
+    addNewEditorialBlock(component, afterBlockId)
     setOpenEditorialPickerTarget(null)
   }, [addNewEditorialBlock])
 
@@ -2716,16 +3065,28 @@ export default function EditorialStageArticlePage({
     const block = stagedArticle.blocks.find(b => b.id === blockId)
     if (!block) return
 
-    const hasMedia = Boolean(block.imageAfter || block.imgPairAfter || block.imgTrioAfter)
+    const hasMedia = Boolean(getBlockMediaPayload(block))
     const message = hasMedia
       ? 'Delete this block and its media block?'
       : 'Delete this block?'
 
     if (!confirm(message)) return
 
+    const removedIndex = stagedArticle.blocks.findIndex((candidate) => candidate.id === blockId)
+    const fallbackAfterBlockId = removedIndex > 0
+      ? stagedArticle.blocks[removedIndex - 1].id
+      : null
     const updatedBlocks = stagedArticle.blocks.filter(b => b.id !== blockId)
-    updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
-  }, [stagedArticle, updateStagedArticle])
+    const updatedEditorialBlocks = reanchorEditorialBlocksAfterBlockRemoval(
+      blockId,
+      fallbackAfterBlockId
+    )
+    updateStagedArticle({
+      blocks: updatedBlocks,
+      editorialBlocks: updatedEditorialBlocks,
+      lexicalConverted: false,
+    })
+  }, [stagedArticle, reanchorEditorialBlocksAfterBlockRemoval, updateStagedArticle])
 
   // Drag and drop handlers
   const handleDragStart = useCallback((e: React.DragEvent, timelineItemId: string) => {
@@ -2792,16 +3153,15 @@ export default function EditorialStageArticlePage({
     setDragOverTimelineItemId(null)
   }, [stagedArticle, draggedTimelineItemId, timelineItems, applyTimelineReorder])
 
-  const handleSaveEdits = () => {
-    setIsEditing(false)
-  }
-
   const handlePublish = async () => {
     if (!token || !stagedArticle) return
 
     const trimmedTitle = stagedArticle.title.trim()
     const location = locations.find(l => l.id === stagedArticle.locationId)
-    const featuredImage = mediaAssets.find(m => m.id === stagedArticle.featuredImageId)
+    const featuredImage =
+      stagedArticle.featuredImageId
+        ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
+        : null
 
     if (!trimmedTitle) {
       setPublishResult({
@@ -2824,54 +3184,39 @@ export default function EditorialStageArticlePage({
     setIsConverting(true)
 
     try {
-      const contentBlockIds = new Set(stagedArticle.blocks.map((block) => block.id))
-      const editorialBeforeFirst: PayloadContentBlock[] = []
-      const editorialAfterByBlockId = new Map<
-        string,
-        Array<{ payloadBlock: PayloadContentBlock; placeAfterImage: boolean }>
-      >()
-
-      stagedArticle.editorialBlocks.forEach((editorialBlock) => {
-        const validation = editorialPublishAnalysis.byId[editorialBlock.id]
-        if (!validation || validation.status !== 'supported') return
-
-        if (
-          !editorialBlock.afterBlockId
-          || !contentBlockIds.has(editorialBlock.afterBlockId)
-        ) {
-          editorialBeforeFirst.push(validation.payloadBlock)
-          return
-        }
-
-        const list = editorialAfterByBlockId.get(editorialBlock.afterBlockId) || []
-        list.push({
-          payloadBlock: validation.payloadBlock,
-          placeAfterImage: editorialBlock.placeAfterImage === true,
-        })
-        editorialAfterByBlockId.set(editorialBlock.afterBlockId, list)
-      })
-
-      // Build content blocks array for Payload
-      const contentBlocks: PayloadContentBlock[] = [...editorialBeforeFirst]
-
+      const blockById = new Map(stagedArticle.blocks.map((block) => [block.id, block]))
+      const editorialById = new Map(
+        (stagedArticle.editorialBlocks || []).map((block) => [block.id, block])
+      )
+      const contentBlocks: PayloadContentBlock[] = []
+      const processedBlockIds = new Set<string>()
+      const processedEditorialIds = new Set<string>()
       let textBlocksAdded = 0
 
-      // Convert each markdown block to Lexical and interleave with images.
-      for (const [index, block] of stagedArticle.blocks.entries()) {
-        const anchoredEditorialBlocks = editorialAfterByBlockId.get(block.id) || []
-        const editorialBeforeImage = anchoredEditorialBlocks
-          .filter((entry) => !entry.placeAfterImage)
-          .map((entry) => entry.payloadBlock)
-        const editorialAfterImage = anchoredEditorialBlocks
-          .filter((entry) => entry.placeAfterImage)
-          .map((entry) => entry.payloadBlock)
+      // Publish in exact UI stack order.
+      for (const [timelineIndex, timelineItem] of timelineItems.entries()) {
+        if (timelineItem.type === 'editorial') {
+          const editorialBlock = editorialById.get(timelineItem.editorialBlockId)
+          if (!editorialBlock || processedEditorialIds.has(editorialBlock.id)) continue
+          const validation = editorialPublishAnalysis.byId[editorialBlock.id]
+          if (!validation || validation.status !== 'supported') continue
+          contentBlocks.push(validation.payloadBlock)
+          processedEditorialIds.add(editorialBlock.id)
+          continue
+        }
 
-        const markdown = block.content.trim()
-        if (markdown) {
+        const block = blockById.get(timelineItem.contentBlockId)
+        if (!block || processedBlockIds.has(block.id)) continue
+        processedBlockIds.add(block.id)
+
+        if (timelineItem.type === 'content') {
+          const markdown = block.content.trim()
+          if (!markdown) continue
           const lexicalResult = await convertMarkdownToLexical(markdown)
           if (!lexicalResult.success || !lexicalResult.data) {
             throw new Error(
-              lexicalResult.error || `Failed to convert block ${index + 1} to Lexical`
+              lexicalResult.error
+              || `Failed to convert block ${timelineIndex + 1} to Lexical`
             )
           }
 
@@ -2879,72 +3224,70 @@ export default function EditorialStageArticlePage({
             blockType: 'text',
             content: lexicalResult.data,
           })
-          textBlocksAdded++
+          textBlocksAdded += 1
+          continue
         }
 
-        editorialBeforeImage.forEach((editorialPayloadBlock) => {
-          contentBlocks.push(editorialPayloadBlock)
-        })
+        const mediaPayload = getBlockMediaPayload(block)
+        if (!mediaPayload) continue
 
-        // Add image block if one exists after this block
-        if (block.imageAfter) {
-          const imageAsset = mediaAssets.find(m => m.id === block.imageAfter)
-          const altText = (block.imageAfterAltText?.trim() || getMediaAssetAltText(imageAsset)).trim()
+        if (mediaPayload.type === 'single') {
+          const imageAsset = mediaAssets.find((m) => m.id === mediaPayload.imageAfter)
+          const altText = (
+            mediaPayload.imageAfterAltText?.trim()
+            || getMediaAssetAltText(imageAsset)
+          ).trim()
           if (!altText) {
-            throw new Error(`Image after block ${index + 1} is missing alt text`)
+            throw new Error(`Image block ${timelineIndex + 1} is missing alt text`)
           }
 
           contentBlocks.push({
             blockType: 'image',
-            image: block.imageAfter,
+            image: mediaPayload.imageAfter,
             altText,
           })
+          continue
         }
 
-        if (!block.imageAfter && block.imgPairAfter) {
-          const imageOneAsset = mediaAssets.find((m) => m.id === block.imgPairAfter?.imageOne)
-          const imageTwoAsset = mediaAssets.find((m) => m.id === block.imgPairAfter?.imageTwo)
+        if (mediaPayload.type === 'pair') {
+          const imageOneAsset = mediaAssets.find((m) => m.id === mediaPayload.imgPairAfter.imageOne)
+          const imageTwoAsset = mediaAssets.find((m) => m.id === mediaPayload.imgPairAfter.imageTwo)
           if (!hasExactImgBlockDimensions(imageOneAsset) || !hasExactImgBlockDimensions(imageTwoAsset)) {
             throw new Error(
-              `Img block after section ${index + 1} must be exactly ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT}`
+              `Img pair block ${timelineIndex + 1} must be exactly ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT}`
             )
           }
 
           contentBlocks.push({
             blockType: 'img-pair',
-            imageOne: block.imgPairAfter.imageOne,
-            imageTwo: block.imgPairAfter.imageTwo,
-            caption: block.imgPairAfter.caption?.trim() || undefined,
+            imageOne: mediaPayload.imgPairAfter.imageOne,
+            imageTwo: mediaPayload.imgPairAfter.imageTwo,
+            caption: mediaPayload.imgPairAfter.caption?.trim() || undefined,
           })
+          continue
         }
 
-        if (!block.imageAfter && !block.imgPairAfter && block.imgTrioAfter) {
-          const imageOneAsset = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageOne)
-          const imageTwoAsset = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageTwo)
-          const imageThreeAsset = mediaAssets.find((m) => m.id === block.imgTrioAfter?.imageThree)
-          if (
-            !hasExactImgTrioDimensions(imageOneAsset, block.imgTrioAfter.format)
-            || !hasExactImgTrioDimensions(imageTwoAsset, block.imgTrioAfter.format)
-            || !hasExactImgTrioDimensions(imageThreeAsset, block.imgTrioAfter.format)
-          ) {
-            const dims = getImgTrioDimensions(block.imgTrioAfter.format)
-            throw new Error(
-              `Img trio after section ${index + 1} must be exactly ${dims.width}x${dims.height}`
-            )
-          }
-
-          contentBlocks.push({
-            blockType: 'img-trio',
-            format: block.imgTrioAfter.format,
-            imageOne: block.imgTrioAfter.imageOne,
-            imageTwo: block.imgTrioAfter.imageTwo,
-            imageThree: block.imgTrioAfter.imageThree,
-            caption: block.imgTrioAfter.caption?.trim() || undefined,
-          })
+        const imageOneAsset = mediaAssets.find((m) => m.id === mediaPayload.imgTrioAfter.imageOne)
+        const imageTwoAsset = mediaAssets.find((m) => m.id === mediaPayload.imgTrioAfter.imageTwo)
+        const imageThreeAsset = mediaAssets.find((m) => m.id === mediaPayload.imgTrioAfter.imageThree)
+        if (
+          !hasExactImgTrioDimensions(imageOneAsset, mediaPayload.imgTrioAfter.format)
+          || !hasExactImgTrioDimensions(imageTwoAsset, mediaPayload.imgTrioAfter.format)
+          || !hasExactImgTrioDimensions(imageThreeAsset, mediaPayload.imgTrioAfter.format)
+        ) {
+          const dims = getImgTrioDimensions(mediaPayload.imgTrioAfter.format)
+          throw new Error(
+            `Img trio block ${timelineIndex + 1} must be exactly ${dims.width}x${dims.height}`
+          )
         }
 
-        editorialAfterImage.forEach((editorialPayloadBlock) => {
-          contentBlocks.push(editorialPayloadBlock)
+        contentBlocks.push({
+          blockType: 'img-trio',
+          format: mediaPayload.imgTrioAfter.format,
+          imageOne: mediaPayload.imgTrioAfter.imageOne,
+          imageTwo: mediaPayload.imgTrioAfter.imageTwo,
+          imageThree: mediaPayload.imgTrioAfter.imageThree,
+          caption: mediaPayload.imgTrioAfter.caption?.trim() || undefined,
         })
       }
 
@@ -3048,7 +3391,12 @@ export default function EditorialStageArticlePage({
 
     const blockAssetId = pickVariantAssetId(result.variantAssetIds, CONTENT_BLOCK_VARIANT)
     if (blockAssetId) {
-      addImageAfterBlock(blockImageModal.blockId, blockAssetId, blockImageAltText)
+      addImageAfterBlock(
+        blockImageModal.blockId,
+        blockAssetId,
+        blockImageAltText,
+        blockImageModal.replaceExistingBlock === true
+      )
     }
 
     if (token) {
@@ -3094,7 +3442,10 @@ export default function EditorialStageArticlePage({
   }
 
   const selectedLocation = locations.find(l => l.id === stagedArticle.locationId)
-  const selectedFeaturedImage = mediaAssets.find(m => m.id === stagedArticle.featuredImageId)
+  const selectedFeaturedImage =
+    stagedArticle.featuredImageId
+      ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
+      : null
   const hasValidUploadLocation = Boolean(selectedLocation?.id)
   const uploadLocationRequirementMessage =
     'Select a valid location before uploading new images.'
@@ -3111,9 +3462,7 @@ export default function EditorialStageArticlePage({
   const lastContentBlock = stagedArticle.blocks.length > 0
     ? stagedArticle.blocks[stagedArticle.blocks.length - 1]
     : null
-  const canAddImageAfterBlock = (block: ContentBlock) => (
-    !block.imageAfter && !block.imgPairAfter && !block.imgTrioAfter
-  )
+  const canAddImageAfterBlock = (block: ContentBlock) => Boolean(block.id)
   const renderImagePicker = (blockId: string, pickerKey: string) => (
     <div className="block-editorial-picker">
       <button
@@ -3217,7 +3566,20 @@ export default function EditorialStageArticlePage({
     if (isImgTrioModal) return hasExactImgTrioDimensions(img, imgTrioFormat)
     return true
   })
-  const filteredBlockImageAssets = blockImageDimensionFilteredAssets.filter((img) =>
+  const featuredImageVariantAssets = mediaAssets.filter((img) => {
+    if (img.variant) return img.variant === FEATURED_IMAGE_VARIANT
+    return hasExactFeaturedImageDimensions(img)
+  })
+  const filteredFeaturedImageAssets = featuredImageVariantAssets.filter((img) =>
+    img.filename.toLowerCase().includes(imageSearch.toLowerCase())
+    || getMediaAssetAltText(img).toLowerCase().includes(imageSearch.toLowerCase())
+  )
+  const blockImageVariantFilteredAssets = blockImageDimensionFilteredAssets.filter((img) => {
+    if (blockImageModal?.mode !== 'default') return true
+    if (img.variant) return img.variant === CONTENT_BLOCK_VARIANT
+    return hasExactContentBlockDimensions(img)
+  })
+  const filteredBlockImageAssets = blockImageVariantFilteredAssets.filter((img) =>
     img.filename.toLowerCase().includes(blockImageSearch.toLowerCase())
     || getMediaAssetAltText(img).toLowerCase().includes(blockImageSearch.toLowerCase())
   )
@@ -3245,7 +3607,13 @@ export default function EditorialStageArticlePage({
         return
       }
 
-      addImgPairAfterBlock(blockImageModal.blockId, imageOne, imageTwo, imgBlockCaption)
+      addImgPairAfterBlock(
+        blockImageModal.blockId,
+        imageOne,
+        imageTwo,
+        imgBlockCaption,
+        blockImageModal.replaceExistingBlock === true
+      )
       mergeMediaAssetsIntoState([imageOne, imageTwo])
       closeBlockImageModal()
       return
@@ -3277,7 +3645,8 @@ export default function EditorialStageArticlePage({
       imageOne,
       imageTwo,
       imageThree,
-      imgBlockCaption
+      imgBlockCaption,
+      blockImageModal.replaceExistingBlock === true
     )
     mergeMediaAssetsIntoState([imageOne, imageTwo, imageThree])
     closeBlockImageModal()
@@ -3375,25 +3744,6 @@ export default function EditorialStageArticlePage({
         <div className="stage-article-actions-bar">
           {!stagedArticle.publishedToPayload && (
             <button
-              className="stage-article-icon-btn"
-              onClick={() => isEditing ? handleSaveEdits() : setIsEditing(true)}
-              title={isEditing ? 'Save changes' : 'Edit blocks'}
-            >
-              {isEditing ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              )}
-              {isEditing ? 'Done' : 'Edit'}
-            </button>
-          )}
-          {!stagedArticle.publishedToPayload && (
-            <button
               type="button"
               className="stage-article-icon-btn"
               onClick={resetToOriginalBlocks}
@@ -3422,7 +3772,7 @@ export default function EditorialStageArticlePage({
 
       {/* Title Area */}
       <div className="stage-article-title-area">
-        {isEditing ? (
+        {!stagedArticle.publishedToPayload ? (
           <input
             type="text"
             className="stage-article-title-input"
@@ -3444,7 +3794,9 @@ export default function EditorialStageArticlePage({
               <label className="stage-article-label">
                 Content Blocks
                 <span className="stage-article-label-hint">
-                  {isEditing ? 'Edit blocks or merge adjacent sections' : 'Fuse blocks or add images between them'}
+                  {activeEditingTimelineItemId
+                    ? 'Editing one block at a time'
+                    : 'Fuse blocks or add images between them'}
                 </span>
               </label>
               <span className="stage-article-block-count" title="Includes content, editorial, and image blocks">
@@ -3455,7 +3807,7 @@ export default function EditorialStageArticlePage({
             <div className="block-editor">
               {timelineItems.map((timelineItem) => {
                 const timelineIndex = timelineIndexMap.get(timelineItem.id) ?? 0
-                const canReorder = !stagedArticle.publishedToPayload && !isEditing
+                const canReorder = !stagedArticle.publishedToPayload && !activeEditingTimelineItemId
                 const isFirstTimelineItem = timelineIndex === 0
                 const isLastTimelineItem = timelineIndex === timelineItems.length - 1
                 const hasNextTimelineItem = timelineIndex < timelineItems.length - 1
@@ -3467,6 +3819,8 @@ export default function EditorialStageArticlePage({
                 if (timelineItem.type === 'editorial') {
                   const editorialBlock = editorialBlockById.get(timelineItem.editorialBlockId)
                   if (!editorialBlock) return null
+                  const isEditingThisEditorialBlock =
+                    activeEditingTimelineItemId === timelineItem.id
                   const anchorBlock = editorialBlock.afterBlockId
                     ? contentBlockById.get(editorialBlock.afterBlockId)
                     : null
@@ -3490,7 +3844,10 @@ export default function EditorialStageArticlePage({
                           validation: editorialPublishAnalysis.byId[editorialBlock.id],
                           onFixBlock: () => fixEditorialBlock(editorialBlock.id),
                           disableFix: stagedArticle.publishedToPayload,
-                          canEdit: isEditing && !stagedArticle.publishedToPayload,
+                          canEdit: isEditingThisEditorialBlock && !stagedArticle.publishedToPayload,
+                          onToggleEdit: stagedArticle.publishedToPayload
+                            ? undefined
+                            : () => toggleTimelineItemEdit(timelineItem.id),
                           onChangeMarkdown: (nextMarkdown) =>
                             updateEditorialBlockMarkdown(editorialBlock.id, nextMarkdown),
                           onRemoveBlock: () => removeEditorialBlock(editorialBlock.id),
@@ -3519,6 +3876,7 @@ export default function EditorialStageArticlePage({
                   if (!block) return null
                   if (!block.imageAfter && !block.imgPairAfter && !block.imgTrioAfter) return null
                   const imageBlockNumber = imageTimelineNumberMap.get(block.id) || timelineIndex + 1
+                  const isEditingThisImageBlock = activeEditingTimelineItemId === timelineItem.id
 
                   return (
                     <div
@@ -3585,7 +3943,17 @@ export default function EditorialStageArticlePage({
                                   </button>
                                 </div>
                               )}
-                              {!stagedArticle.publishedToPayload && (block.imgPairAfter || block.imgTrioAfter) && (
+                              {!stagedArticle.publishedToPayload && (
+                                <button
+                                  type="button"
+                                  className="block-edit-btn"
+                                  onClick={() => toggleTimelineItemEdit(timelineItem.id)}
+                                  title={isEditingThisImageBlock ? 'Done editing caption' : 'Edit caption'}
+                                >
+                                  {isEditingThisImageBlock ? 'Done' : 'Caption'}
+                                </button>
+                              )}
+                              {!stagedArticle.publishedToPayload && (block.imageAfter || block.imgPairAfter || block.imgTrioAfter) && (
                                 <button
                                   type="button"
                                   className="block-edit-btn"
@@ -3599,6 +3967,7 @@ export default function EditorialStageArticlePage({
                                           block.imgTrioAfter.imageTwo,
                                           block.imgTrioAfter.imageThree,
                                         ],
+                                        replaceExistingBlock: true,
                                       })
                                       return
                                     }
@@ -3609,10 +3978,23 @@ export default function EditorialStageArticlePage({
                                           block.imgPairAfter.imageOne,
                                           block.imgPairAfter.imageTwo,
                                         ],
+                                        replaceExistingBlock: true,
+                                      })
+                                      return
+                                    }
+                                    if (block.imageAfter) {
+                                      openBlockImageModal(block.id, 'default', {
+                                        replaceExistingBlock: true,
                                       })
                                     }
                                   }}
-                                  title={block.imgTrioAfter ? 'Edit img trio' : 'Edit img pair'}
+                                  title={
+                                    block.imgTrioAfter
+                                      ? 'Edit img trio'
+                                      : block.imgPairAfter
+                                        ? 'Edit img pair'
+                                        : 'Change image'
+                                  }
                                 >
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M12 20h9"/>
@@ -3673,7 +4055,7 @@ export default function EditorialStageArticlePage({
                                         alt={getMediaAssetAltText(imageThree) || ''}
                                       />
                                     </div>
-                                    {isEditing && !stagedArticle.publishedToPayload ? (
+                                    {isEditingThisImageBlock && !stagedArticle.publishedToPayload ? (
                                       <input
                                         type="text"
                                         className="stage-article-modal-search-input"
@@ -3711,7 +4093,7 @@ export default function EditorialStageArticlePage({
                                         alt={getMediaAssetAltText(imageTwo) || ''}
                                       />
                                     </div>
-                                    {isEditing && !stagedArticle.publishedToPayload ? (
+                                    {isEditingThisImageBlock && !stagedArticle.publishedToPayload ? (
                                       <input
                                         type="text"
                                         className="stage-article-modal-search-input"
@@ -3746,8 +4128,8 @@ export default function EditorialStageArticlePage({
                         && renderActionZoneForBlock(block, {
                           showFuse: false,
                           pickerKey,
-                          placeAfterImage: true,
-                          allowImageAdd: false,
+                          placeAfterImage: false,
+                          allowImageAdd: true,
                         })}
                     </div>
                   )
@@ -3757,6 +4139,9 @@ export default function EditorialStageArticlePage({
                 if (!block) return null
                 const contentIndex = contentBlockIndexMap.get(block.id) ?? 0
                 const contentBlockNumber = contentTimelineNumberMap.get(block.id) ?? (contentIndex + 1)
+                const isEditingThisContentBlock =
+                  activeEditingTimelineItemId === timelineItem.id
+                  && !stagedArticle.publishedToPayload
 
                 return (
                   <div
@@ -3771,7 +4156,7 @@ export default function EditorialStageArticlePage({
                     onDrop={(e) => handleDrop(e, timelineItem.id)}
                   >
                     {/* Block Content */}
-                    <div className={`block-card ${isEditing ? 'editing' : ''} ${block.type === 'pullquote' ? 'pullquote' : ''}`}>
+                    <div className={`block-card ${isEditingThisContentBlock ? 'editing' : ''} ${block.type === 'pullquote' ? 'pullquote' : ''}`}>
                       <div className="block-card-header">
                         <div className="block-card-header-left">
                           {/* Drag Handle */}
@@ -3823,6 +4208,16 @@ export default function EditorialStageArticlePage({
                           {!stagedArticle.publishedToPayload && (
                             <button
                               type="button"
+                              className="block-edit-btn"
+                              onClick={() => toggleTimelineItemEdit(timelineItem.id)}
+                              title={isEditingThisContentBlock ? 'Done editing block' : 'Edit block'}
+                            >
+                              {isEditingThisContentBlock ? 'Done' : 'Edit'}
+                            </button>
+                          )}
+                          {!stagedArticle.publishedToPayload && (
+                            <button
+                              type="button"
                               className="block-delete-btn"
                               onClick={() => deleteBlock(block.id)}
                               title="Delete block"
@@ -3836,11 +4231,15 @@ export default function EditorialStageArticlePage({
                         </div>
                       </div>
 
-                      {isEditing ? (
+                      {isEditingThisContentBlock ? (
                         <textarea
                           className={`block-textarea ${block.type === 'pullquote' ? 'pullquote' : ''}`}
                           value={block.content}
                           onChange={(e) => updateBlockContent(block.id, e.target.value)}
+                          onInput={(event) => resizeTextareaToContent(event.currentTarget)}
+                          ref={(element) => {
+                            if (element) resizeTextareaToContent(element)
+                          }}
                           rows={block.type === 'pullquote' ? 3 : Math.max(4, block.content.split('\n').length + 2)}
                           placeholder={block.type === 'pullquote' ? 'Enter your pull quote...' : ''}
                         />
@@ -3941,11 +4340,7 @@ export default function EditorialStageArticlePage({
                     {renderEditorialPicker(
                       lastContentBlock.id,
                       'end',
-                      Boolean(
-                        lastContentBlock.imageAfter
-                        || lastContentBlock.imgPairAfter
-                        || lastContentBlock.imgTrioAfter
-                      )
+                      false
                     )}
                   </div>
                 </div>
@@ -4116,18 +4511,19 @@ export default function EditorialStageArticlePage({
                 </div>
 
                 <div className="stage-article-modal-grid">
-                  {mediaAssets
-                    .filter(img =>
-                      img.filename.toLowerCase().includes(imageSearch.toLowerCase()) ||
-                      getMediaAssetAltText(img).toLowerCase().includes(imageSearch.toLowerCase())
-                    )
+                  {filteredFeaturedImageAssets
                     .map(img => (
                       <button
                         key={img.id}
                         type="button"
                         className={`stage-article-modal-image ${selectedFeaturedImage?.id === img.id ? 'selected' : ''}`}
                         onClick={() => {
-                          updateStagedArticle({ featuredImageId: img.id })
+                          const preferredAsset = findPreferredVariantAsset(
+                            img.id,
+                            FEATURED_IMAGE_VARIANT
+                          )
+                          if (!preferredAsset) return
+                          updateStagedArticle({ featuredImageId: preferredAsset.id })
                           setShowImageModal(false)
                         }}
                       >
@@ -4144,9 +4540,12 @@ export default function EditorialStageArticlePage({
                     ))}
                 </div>
 
-                {mediaAssets.length === 0 && (
+                {filteredFeaturedImageAssets.length === 0 && (
                   <div className="stage-article-modal-empty">
-                    <p>No images found in the media library.</p>
+                    <p>
+                      No editorial ({FEATURED_IMAGE_WIDTH}x{FEATURED_IMAGE_HEIGHT}) images
+                      match the current search.
+                    </p>
                   </div>
                 )}
 
@@ -4324,7 +4723,8 @@ export default function EditorialStageArticlePage({
                           addImageAfterBlock(
                             blockImageModal.blockId,
                             preferredAsset.id,
-                            getMediaAssetAltText(preferredAsset)
+                            getMediaAssetAltText(preferredAsset),
+                            blockImageModal.replaceExistingBlock === true
                           )
                           mergeMediaAssetsIntoState([preferredAsset])
                           closeBlockImageModal()
@@ -4352,7 +4752,7 @@ export default function EditorialStageArticlePage({
                         ? `No ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT} images match the current search.`
                         : isImgTrioModal
                           ? `No ${imgTrioDimensions.width}x${imgTrioDimensions.height} images match the current search.`
-                        : 'No images found in the media library.'}
+                        : `No ${CONTENT_BLOCK_VARIANT} (${CONTENT_BLOCK_WIDTH}x${CONTENT_BLOCK_HEIGHT}) images match the current search.`}
                     </p>
                   </div>
                 )}
