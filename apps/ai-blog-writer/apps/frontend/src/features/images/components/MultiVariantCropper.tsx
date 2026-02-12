@@ -12,6 +12,7 @@ import {
 
 interface MultiVariantCropperProps {
   file: File;
+  fileNamePrefix?: string;
   onConfirm: (variantFiles: { type: ImageVariantType; file: File }[]) => void;
   onCancel: () => void;
 }
@@ -48,7 +49,12 @@ const LoaderIcon = () => (
   </svg>
 );
 
-export function MultiVariantCropper({ file, onConfirm, onCancel }: MultiVariantCropperProps) {
+export function MultiVariantCropper({
+  file,
+  fileNamePrefix,
+  onConfirm,
+  onCancel,
+}: MultiVariantCropperProps) {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
@@ -130,7 +136,12 @@ export function MultiVariantCropper({ file, onConfirm, onCancel }: MultiVariantC
     setErrorMsg('Creating image files...');
 
     try {
-      const variantFiles = await createMultiVariantImages(previewUrl, cropStates, file.name);
+      const variantFiles = await createMultiVariantImages(
+        previewUrl,
+        cropStates,
+        file.name,
+        fileNamePrefix
+      );
       setErrorMsg('Uploading...');
       onConfirm(variantFiles);
     } catch (error) {

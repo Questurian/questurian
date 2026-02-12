@@ -22,10 +22,15 @@ def _variant_form_parts(
     variant_types: list[str],
     external_ref: str,
     alt_text: str,
+    location_ref: int,
 ) -> list[tuple[str, tuple[None, str]]]:
     return (
         [("variant_types", (None, variant_type)) for variant_type in variant_types]
-        + [("external_ref", (None, external_ref)), ("alt_text", (None, alt_text))]
+        + [
+            ("external_ref", (None, external_ref)),
+            ("alt_text", (None, alt_text)),
+            ("location_ref", (None, str(location_ref))),
+        ]
     )
 
 
@@ -45,6 +50,7 @@ def test_upload_variants_rejects_duplicate_variant_types():
             ],
             external_ref="article-dup",
             alt_text="Alt text",
+            location_ref=42,
         ),
         headers=_auth_headers(),
     )
@@ -54,6 +60,33 @@ def test_upload_variants_rejects_duplicate_variant_types():
     assert detail["step"] == "validate_variant_types"
     assert detail["duplicate_types"] == ["thumbnail"]
     assert detail["missing_types"] == ["square"]
+
+
+def test_upload_variants_rejects_non_positive_location_ref():
+    client = TestClient(app)
+
+    response = client.post(
+        "/images/upload-variants",
+        files=_variant_files()
+        + _variant_form_parts(
+            variant_types=[
+                "thumbnail",
+                "square",
+                "wide",
+                "portrait",
+                "hero",
+            ],
+            external_ref="article-location",
+            alt_text="Alt text",
+            location_ref=0,
+        ),
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_location_ref"
+    assert detail["location_ref"] == 0
 
 
 def test_upload_variants_returns_structured_payload_error(monkeypatch):
@@ -67,10 +100,19 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
         title: str,
         alt_text: str,
         external_ref: str,
+        location_ref: int | None = None,
     ):
+        assert location_ref == 321
         return "23"
 
-    async def fake_upload_image(self, variant, alt_text: str, media_set_id: str | None = None):
+    async def fake_upload_image(
+        self,
+        variant,
+        alt_text: str,
+        media_set_id: str | None = None,
+        location_ref: int | None = None,
+    ):
+        assert location_ref == 321
         if variant.variant_type.value == "thumbnail":
             return "101"
         raise PayloadUploadError(
@@ -110,6 +152,7 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
             ],
             external_ref="article-500",
             alt_text="Alt text",
+            location_ref=321,
         ),
         headers=_auth_headers(),
     )

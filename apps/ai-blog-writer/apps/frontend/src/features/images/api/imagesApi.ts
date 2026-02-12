@@ -153,6 +153,7 @@ export async function uploadImageVariants(
   variantFiles: { type: ImageVariantType; file: File }[],
   externalRef: string,
   altText: string,
+  locationRef: number,
   token: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadImageResponse> {
@@ -172,6 +173,7 @@ export async function uploadImageVariants(
   
   formData.append('external_ref', externalRef);
   formData.append('alt_text', altText);
+  formData.append('location_ref', String(locationRef));
 
   onProgress?.({
     status: 'uploading',
@@ -230,6 +232,7 @@ export async function uploadImage(
   file: File,
   externalRef: string,
   altText: string,
+  locationRef: number,
   token: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadImageResponse> {
@@ -244,6 +247,7 @@ export async function uploadImage(
     formData.append('file', file);
     formData.append('external_ref', externalRef);
     formData.append('alt_text', altText);
+    formData.append('location_ref', String(locationRef));
 
     onProgress?.({
       status: 'uploading',

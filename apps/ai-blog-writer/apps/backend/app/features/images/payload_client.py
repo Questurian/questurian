@@ -127,7 +127,8 @@ class PayloadClient:
         self,
         variant: ProcessedVariant,
         alt_text: str,
-        media_set_id: Optional[str] = None
+        media_set_id: Optional[str] = None,
+        location_ref: Optional[int] = None,
     ) -> str:
         """Upload a single image variant to Payload CMS media-assets."""
         url = f"{self.api_url}/api/media-assets"
@@ -150,6 +151,8 @@ class PayloadClient:
             }
             if media_set_value is not None:
                 payload_obj['mediaSet'] = media_set_value
+            if location_ref is not None:
+                payload_obj['locationRef'] = location_ref
 
             payload_json = json.dumps(payload_obj)
             data = {
@@ -308,6 +311,7 @@ class PayloadClient:
         title: str,
         alt_text: str,
         external_ref: str,
+        location_ref: Optional[int] = None,
     ) -> str:
         """Create a MediaSet in Payload CMS."""
         url = f"{self.api_url}/api/media-sets"
@@ -319,6 +323,8 @@ class PayloadClient:
             'alt_text': alt_text,
             'externalRef': external_ref,
         }
+        if location_ref is not None:
+            payload['locationRef'] = location_ref
 
         logger.info("%s → %s | payload=%s", step, url, json.dumps(payload))
 
@@ -532,6 +538,7 @@ async def upload_image_set(
     jwt_token: str,
     external_ref: str,
     alt_text: str,
+    location_ref: int,
     variants: dict[ImageVariantType, ProcessedVariant]
 ) -> dict:
     """Upload all image variants and create a MediaSet (server-side processing)."""
@@ -553,12 +560,18 @@ async def upload_image_set(
             title=external_ref,
             alt_text=alt_text,
             external_ref=external_ref,
+            location_ref=location_ref,
         )
 
     variant_asset_ids = {}
     for variant_type in [ImageVariantType.THUMBNAIL, ImageVariantType.SQUARE,
                          ImageVariantType.WIDE, ImageVariantType.PORTRAIT, ImageVariantType.HERO]:
-        asset_id = await client.upload_image(variants[variant_type], alt_text, media_set_id)
+        asset_id = await client.upload_image(
+            variants[variant_type],
+            alt_text,
+            media_set_id,
+            location_ref=location_ref,
+        )
         variant_asset_ids[variant_type.value] = asset_id
 
     return {

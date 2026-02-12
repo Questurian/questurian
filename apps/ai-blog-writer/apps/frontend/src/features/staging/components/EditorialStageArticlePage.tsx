@@ -89,6 +89,40 @@ type OpenBlockImageModalOptions = {
   selectedAssetIds?: number[]
 }
 
+function buildImageFileNamePrefix(articleTitle: string, externalRef: string): string {
+  const slugify = (value: string): string => {
+    const normalized = value
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+
+    return normalized
+  }
+
+  const stableHash = (value: string): string => {
+    let hash = 2166136261
+    for (let index = 0; index < value.length; index += 1) {
+      hash ^= value.charCodeAt(index)
+      hash +=
+        (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
+    }
+    return (hash >>> 0).toString(36).slice(0, 4)
+  }
+
+  const titleSlug = slugify(articleTitle)
+  const titlePart = (titleSlug.split('-')[0] || 'image').slice(0, 16)
+  const numericToken = (externalRef.match(/\d+/g)?.[0] || '').slice(-6)
+  const hashToken = stableHash(externalRef)
+  const idPart = numericToken
+    ? `${numericToken}${hashToken}`
+    : hashToken
+
+  return `${titlePart}-${idPart}`
+}
+
 function extractEditorialBlocks(markdown: string): {
   bodyMarkdown: string
   editorialBlocks: EditorialBlock[]
@@ -3061,6 +3095,19 @@ export default function EditorialStageArticlePage({
 
   const selectedLocation = locations.find(l => l.id === stagedArticle.locationId)
   const selectedFeaturedImage = mediaAssets.find(m => m.id === stagedArticle.featuredImageId)
+  const hasValidUploadLocation = Boolean(selectedLocation?.id)
+  const uploadLocationRequirementMessage =
+    'Select a valid location before uploading new images.'
+  const featuredImageFileNamePrefix = buildImageFileNamePrefix(
+    stagedArticle.title,
+    stagedArticle.id
+  )
+  const blockImageExternalRef = blockImageModal
+    ? `${stagedArticle.id}_block_${blockImageModal.blockId}`
+    : ''
+  const blockImageFileNamePrefix = blockImageExternalRef
+    ? buildImageFileNamePrefix(stagedArticle.title, blockImageExternalRef)
+    : undefined
   const lastContentBlock = stagedArticle.blocks.length > 0
     ? stagedArticle.blocks[stagedArticle.blocks.length - 1]
     : null
@@ -4036,7 +4083,9 @@ export default function EditorialStageArticlePage({
                   <button
                     type="button"
                     className="stage-article-modal-upload-btn"
+                    disabled={!hasValidUploadLocation}
                     onClick={() => {
+                      if (!hasValidUploadLocation) return
                       setImageAltText('')
                       setImageNarrativeFocus('')
                       setShowUploadModal(true)
@@ -4050,6 +4099,11 @@ export default function EditorialStageArticlePage({
                     Upload New Image
                   </button>
                 </div>
+                {!hasValidUploadLocation && (
+                  <div className="stage-article-modal-empty" style={{ marginBottom: '0.75rem' }}>
+                    <p>{uploadLocationRequirementMessage}</p>
+                  </div>
+                )}
 
                 <div className="stage-article-modal-search">
                   <input
@@ -4109,16 +4163,24 @@ export default function EditorialStageArticlePage({
             ) : (
               <>
                 <div className="stage-article-upload-section">
-                  <ImageUpload
-                    externalRef={stagedArticle.id}
-                    token={token || ''}
-                    altText={imageAltText}
-                    narrativeFocus={imageNarrativeFocus}
-                    onUploadComplete={handleUploadComplete}
-                    onAltTextGenerated={(text) => setImageAltText(text)}
-                    onNarrativeFocusChange={(text) => setImageNarrativeFocus(text)}
-                    onCancel={() => setShowUploadModal(false)}
-                  />
+                  {selectedLocation ? (
+                    <ImageUpload
+                      externalRef={stagedArticle.id}
+                      fileNamePrefix={featuredImageFileNamePrefix}
+                      locationRef={selectedLocation.id}
+                      token={token || ''}
+                      altText={imageAltText}
+                      narrativeFocus={imageNarrativeFocus}
+                      onUploadComplete={handleUploadComplete}
+                      onAltTextGenerated={(text) => setImageAltText(text)}
+                      onNarrativeFocusChange={(text) => setImageNarrativeFocus(text)}
+                      onCancel={() => setShowUploadModal(false)}
+                    />
+                  ) : (
+                    <div className="stage-article-modal-empty">
+                      <p>{uploadLocationRequirementMessage}</p>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -4162,7 +4224,9 @@ export default function EditorialStageArticlePage({
                     <button
                       type="button"
                       className="stage-article-modal-upload-btn"
+                      disabled={!hasValidUploadLocation}
                       onClick={() => {
+                        if (!hasValidUploadLocation) return
                         setBlockImageAltText('')
                         setBlockImageNarrativeFocus('')
                         setShowBlockUploadModal(true)
@@ -4175,6 +4239,11 @@ export default function EditorialStageArticlePage({
                       </svg>
                       Upload New Image
                     </button>
+                  </div>
+                )}
+                {!isMultiImageModal && !hasValidUploadLocation && (
+                  <div className="stage-article-modal-empty" style={{ marginBottom: '0.75rem' }}>
+                    <p>{uploadLocationRequirementMessage}</p>
                   </div>
                 )}
 
@@ -4311,16 +4380,24 @@ export default function EditorialStageArticlePage({
             ) : (
               <>
                 <div className="stage-article-upload-section">
-                  <ImageUpload
-                    externalRef={`${stagedArticle.id}_block_${blockImageModal.blockId}`}
-                    token={token || ''}
-                    altText={blockImageAltText}
-                    narrativeFocus={blockImageNarrativeFocus}
-                    onUploadComplete={handleBlockImageUploadComplete}
-                    onAltTextGenerated={(text) => setBlockImageAltText(text)}
-                    onNarrativeFocusChange={(text) => setBlockImageNarrativeFocus(text)}
-                    onCancel={() => setShowBlockUploadModal(false)}
-                  />
+                  {selectedLocation ? (
+                    <ImageUpload
+                      externalRef={blockImageExternalRef}
+                      fileNamePrefix={blockImageFileNamePrefix}
+                      locationRef={selectedLocation.id}
+                      token={token || ''}
+                      altText={blockImageAltText}
+                      narrativeFocus={blockImageNarrativeFocus}
+                      onUploadComplete={handleBlockImageUploadComplete}
+                      onAltTextGenerated={(text) => setBlockImageAltText(text)}
+                      onNarrativeFocusChange={(text) => setBlockImageNarrativeFocus(text)}
+                      onCancel={() => setShowBlockUploadModal(false)}
+                    />
+                  ) : (
+                    <div className="stage-article-modal-empty">
+                      <p>{uploadLocationRequirementMessage}</p>
+                    </div>
+                  )}
                 </div>
               </>
             )}

@@ -49,6 +49,8 @@ const CropIcon = () => (
 
 interface ImageUploadProps {
   externalRef: string;
+  fileNamePrefix?: string;
+  locationRef: number;
   token: string;
   altText: string;
   narrativeFocus?: string;
@@ -65,6 +67,8 @@ type UploadMode = 'select' | 'alttext' | 'crop' | 'uploading';
 
 export function ImageUpload({
   externalRef,
+  fileNamePrefix,
+  locationRef,
   token,
   altText,
   narrativeFocus = '',
@@ -179,6 +183,7 @@ export function ImageUpload({
         variantFiles,
         externalRef,
         altText,
+        locationRef,
         token,
         setProgress
       );
@@ -191,7 +196,7 @@ export function ImageUpload({
       });
       setMode('crop');
     }
-  }, [externalRef, altText, token, onUploadComplete]);
+  }, [externalRef, altText, locationRef, token, onUploadComplete]);
 
   const handleStartCropping = () => {
     if (!selectedFile) return;
@@ -209,6 +214,7 @@ export function ImageUpload({
       <div className={className}>
         <MultiVariantCropper
           file={selectedFile}
+          fileNamePrefix={fileNamePrefix}
           onConfirm={handleCropConfirm}
           onCancel={() => setMode('select')}
         />

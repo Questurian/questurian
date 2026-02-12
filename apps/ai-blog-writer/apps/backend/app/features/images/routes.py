@@ -117,6 +117,18 @@ def _validate_variant_types(variant_types: List[str]) -> None:
         )
 
 
+def _validate_location_ref(location_ref: int) -> int:
+    """Validate location reference for image metadata."""
+    if location_ref <= 0:
+        _raise_http_error(
+            status_code=400,
+            message="location_ref must be a positive integer",
+            step="validate_location_ref",
+            location_ref=location_ref,
+        )
+    return location_ref
+
+
 async def _read_upload_file(file: UploadFile, step: str) -> bytes:
     """Read and validate uploaded file bytes."""
     if not file.filename:
@@ -156,6 +168,10 @@ async def upload_image(
         description="Unique reference for this image set (e.g., staged article ID)",
     ),
     alt_text: str = Form(..., description="Alt text for accessibility"),
+    location_ref: int = Form(
+        ...,
+        description="Payload location id to attach to uploaded images",
+    ),
     authorization: Optional[str] = Header(None),
 ) -> JSONResponse:
     """
@@ -168,6 +184,7 @@ async def upload_image(
     4. Linked in a new MediaSet
     """
     jwt_token = _extract_bearer_token(authorization)
+    valid_location_ref = _validate_location_ref(location_ref)
     content = await _read_upload_file(file, step="validate_file")
 
     try:
@@ -181,6 +198,7 @@ async def upload_image(
             jwt_token=jwt_token,
             external_ref=external_ref,
             alt_text=alt_text,
+            location_ref=valid_location_ref,
             variants=variants,
         )
     except PayloadUploadError as exc:
@@ -194,6 +212,7 @@ async def upload_image(
             step=exc.step,
             detail=exc.detail or str(exc),
             external_ref=external_ref,
+            location_ref=valid_location_ref,
             payload_error=exc.to_dict(),
         )
     except HTTPException:
@@ -209,6 +228,7 @@ async def upload_image(
             step="process_image_variants",
             detail=str(exc),
             external_ref=external_ref,
+            location_ref=valid_location_ref,
         )
 
     return JSONResponse(
@@ -242,6 +262,10 @@ async def upload_image_variants(
     ),
     external_ref: str = Form(..., description="Unique reference for this image set"),
     alt_text: str = Form(..., description="Alt text for accessibility"),
+    location_ref: int = Form(
+        ...,
+        description="Payload location id to attach to uploaded images",
+    ),
     authorization: Optional[str] = Header(None),
 ) -> JSONResponse:
     """
@@ -252,6 +276,7 @@ async def upload_image_variants(
     2. Creates or reuses a MediaSet linking all variants
     """
     jwt_token = _extract_bearer_token(authorization)
+    valid_location_ref = _validate_location_ref(location_ref)
 
     if len(variants) != len(variant_types):
         _raise_http_error(
@@ -322,6 +347,7 @@ async def upload_image_variants(
                 title=external_ref,
                 alt_text=alt_text,
                 external_ref=external_ref,
+                location_ref=valid_location_ref,
             )
 
         for variant_type in UPLOAD_ORDER:
@@ -342,6 +368,7 @@ async def upload_image_variants(
                 variant=variant_obj,
                 alt_text=alt_text,
                 media_set_id=media_set_id,
+                location_ref=valid_location_ref,
             )
             if not asset_id:
                 _raise_http_error(
@@ -384,6 +411,7 @@ async def upload_image_variants(
             step=exc.step,
             detail=exc.detail or str(exc),
             external_ref=external_ref,
+            location_ref=valid_location_ref,
             media_set_id=media_set_id,
             failed_variant=failed_variant,
             partial_variant_asset_ids=variant_asset_ids,
@@ -402,6 +430,7 @@ async def upload_image_variants(
             step="upload_image_variants",
             detail=str(exc),
             external_ref=external_ref,
+            location_ref=valid_location_ref,
             media_set_id=media_set_id,
             failed_variant=failed_variant,
             partial_variant_asset_ids=variant_asset_ids,

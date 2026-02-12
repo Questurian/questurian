@@ -41,6 +41,18 @@ export interface CropState {
 
 export type CropStates = Record<ImageVariantType, CropState>;
 
+function sanitizeFileNameBase(value: string): string {
+  const normalized = value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  return normalized || 'image';
+}
+
 /**
  * Calculate a centered default crop area for an image and target aspect ratio
  */
@@ -140,8 +152,15 @@ export async function createCroppedImage(
 /**
  * Generate filename for a specific variant
  */
-function generateVariantFileName(originalName: string, variantType: ImageVariantType): string {
-  const baseName = originalName.replace(/\.[^/.]+$/, '');
+function generateVariantFileName(
+  originalName: string,
+  variantType: ImageVariantType,
+  fileNamePrefix?: string
+): string {
+  const sourceBaseName = fileNamePrefix?.trim()
+    ? fileNamePrefix
+    : originalName.replace(/\.[^/.]+$/, '');
+  const baseName = sanitizeFileNameBase(sourceBaseName);
   return `${baseName}_${variantType}.webp`;
 }
 
@@ -151,7 +170,8 @@ function generateVariantFileName(originalName: string, variantType: ImageVariant
 export async function createMultiVariantImages(
   imageSrc: string,
   cropStates: CropStates,
-  fileName: string
+  fileName: string,
+  fileNamePrefix?: string
 ): Promise<{ type: ImageVariantType; file: File }[]> {
   const variantPromises = Object.entries(cropStates).map(async ([type, state]) => {
     const variantType = type as ImageVariantType;
@@ -170,7 +190,7 @@ export async function createMultiVariantImages(
         height: state.croppedAreaPixels.height,
       },
       { width: spec.width, height: spec.height },
-      generateVariantFileName(fileName, variantType)
+      generateVariantFileName(fileName, variantType, fileNamePrefix)
     );
 
     return { type: variantType, file: croppedFile };
