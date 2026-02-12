@@ -6,6 +6,7 @@ import {
   convertMarkdownToLexical,
   fetchResult,
   markArticleSynced,
+  rewriteBlockWithAi,
 } from '../api'
 
 export type {
@@ -30,6 +31,7 @@ export default function StageArticlePage() {
         convertMarkdownToLexical,
         fetchResult,
         markArticleSynced,
+        rewriteBlockWithAi,
       }}
     />
   )

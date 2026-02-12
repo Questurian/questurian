@@ -13,6 +13,19 @@ export type LexicalConvertResponse = {
   }
 }
 
+export type RewriteBlockWithAiResponse = {
+  rewritten_content: string
+  model_used: string
+}
+
+export type RewriteBlockWithAiRequest = {
+  prompt: string
+  blockContent: string
+  modelName?: string
+  articleTitle?: string
+  articleContext?: string
+}
+
 export type Location = {
   id: number
   level: 'country' | 'city' | 'neighborhood'
@@ -168,6 +181,42 @@ export async function convertMarkdownToLexical(markdown: string): Promise<Lexica
       .catch(() => ({ error: 'Conversion failed' }))
 
     return { success: false, error: errorData.error || 'Conversion failed' }
+  }
+
+  return response.json()
+}
+
+export async function rewriteBlockWithAi(
+  input: RewriteBlockWithAiRequest
+): Promise<RewriteBlockWithAiResponse> {
+  const {
+    prompt,
+    blockContent,
+    modelName,
+    articleTitle,
+    articleContext,
+  } = input
+
+  const response = await fetch(`${API_BASE_URL}/editor-assist/rewrite-block`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt,
+      block_content: blockContent,
+      model_name: modelName,
+      article_title: articleTitle,
+      article_context: articleContext,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ detail: 'AI rewrite failed' }))
+
+    throw new Error(errorData.detail || 'AI rewrite failed')
   }
 
   return response.json()

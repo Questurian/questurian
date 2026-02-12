@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useAuth } from '../../../providers/AuthProvider'
 import { ImageUpload, type UploadImageResponse } from '../../../features/images'
+import { MarkdownBlockEditor } from '../features/markdown-editor'
 import '../../youtube2blog/styles/stage-article.css'
 import type { CreateArticlePayload, Location, MediaAsset } from '../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../types'
@@ -18,6 +19,7 @@ type MediaVariant =
   | 'editorial'
 type BlockImageModalMode = 'default' | 'img' | 'img-trio'
 type ImgTrioFormat = 'square' | 'landscape'
+type EditorModelName = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash'
 
 const CONTENT_BLOCK_VARIANT: MediaVariant = 'wide'
 const IMG_BLOCK_VARIANT: MediaVariant = 'portrait'
@@ -31,6 +33,12 @@ const IMG_BLOCK_MIN_HEIGHT = 1500
 const IMG_PAIR_REQUIRED_IMAGE_COUNT = 2
 const IMG_TRIO_REQUIRED_IMAGE_COUNT = 3
 const IMG_TRIO_DEFAULT_FORMAT: ImgTrioFormat = 'square'
+const DEFAULT_EDITOR_MODEL_NAME: EditorModelName = 'gemini-2.5-flash'
+const EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string }> = [
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+]
 const IMG_TRIO_DIMENSIONS: Record<ImgTrioFormat, { width: number; height: number }> = {
   square: { width: 1080, height: 1080 },
   landscape: { width: 1920, height: 1080 },
@@ -43,6 +51,13 @@ const VARIANT_FALLBACK_ORDER: MediaVariant[] = [
   'portrait',
   'thumbnail',
 ]
+
+function resolveEditorModelName(value?: string): EditorModelName {
+  if (value === 'gemini-2.5-flash') return value
+  if (value === 'gemini-2.5-pro') return value
+  if (value === 'gemini-2.0-flash') return value
+  return DEFAULT_EDITOR_MODEL_NAME
+}
 
 type EditorialStageArticleApi = {
   fetchLocations: (
@@ -74,6 +89,15 @@ type EditorialStageArticleApi = {
     runId: string,
     payloadArticleId: number
   ) => Promise<{ message: string; run_id: string; payload_article_id: number }>
+  rewriteBlockWithAi: (
+    input: {
+      prompt: string
+      blockContent: string
+      modelName?: EditorModelName
+      articleTitle?: string
+      articleContext?: string
+    }
+  ) => Promise<{ rewritten_content: string }>
 }
 
 type EditorialStageRoutes = {
@@ -1141,6 +1165,59 @@ function composeArticleMarkdown(
   return parts.join('\n\n').trim()
 }
 
+function buildAiArticleContext(
+  timelineItems: TimelineItem[],
+  blocks: ContentBlock[],
+  editorialBlocks: EditorialBlock[]
+): string {
+  const blockById = new Map(blocks.map((block) => [block.id, block]))
+  const editorialById = new Map(
+    normalizeEditorialBlocks(editorialBlocks).map((block) => [block.id, block])
+  )
+  const parts: string[] = []
+  let textSectionCount = 0
+
+  timelineItems.forEach((item) => {
+    if (item.type === 'image') {
+      return
+    }
+
+    if (item.type === 'content') {
+      const block = blockById.get(item.contentBlockId)
+      if (!block || !isTextualBlock(block)) {
+        return
+      }
+
+      const content = block.content.trim()
+      if (!content) {
+        return
+      }
+
+      textSectionCount += 1
+      const label = block.type === 'pullquote'
+        ? 'Pull Quote'
+        : `Section ${textSectionCount}`
+      parts.push(`### ${label}\n${content}`)
+      return
+    }
+
+    const editorialBlock = editorialById.get(item.editorialBlockId)
+    if (!editorialBlock) {
+      return
+    }
+
+    const editorialBody = getEditorialBlockBody(editorialBlock.markdown).trim()
+    if (!editorialBody) {
+      return
+    }
+
+    const editorialLabel = editorialBlock.label?.trim() || 'Editorial'
+    parts.push(`### Editorial: ${editorialLabel}\n${editorialBody}`)
+  })
+
+  return parts.join('\n\n').trim()
+}
+
 function buildTimelineItems(
   blocks: ContentBlock[],
   editorialBlocks: EditorialBlock[]
@@ -1999,6 +2076,7 @@ export default function EditorialStageArticlePage({
     convertMarkdownToLexical,
     fetchResult,
     markArticleSynced,
+    rewriteBlockWithAi,
   } = api
   const { token } = useAuth()
   const navigate = useNavigate()
@@ -2116,6 +2194,7 @@ export default function EditorialStageArticlePage({
               blocks: normalizedBlocks,
               content: composeArticleMarkdown(normalizedBlocks, normalizedEditorialBlocks),
               editorialBlocks: normalizedEditorialBlocks,
+              editorModelName: resolveEditorModelName(existing.editorModelName),
             }
 
             if (!isCancelled) {
@@ -2125,7 +2204,8 @@ export default function EditorialStageArticlePage({
             const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedBlocks)
             const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedEditorialBlocks)
             const contentChanged = existing.content !== normalizedExisting.content
-            if (blocksChanged || editorialChanged || contentChanged) {
+            const modelChanged = existing.editorModelName !== normalizedExisting.editorModelName
+            if (blocksChanged || editorialChanged || contentChanged || modelChanged) {
               allStaged[existingIndex] = normalizedExisting
               localStorage.setItem(storageKey, JSON.stringify(allStaged))
             }
@@ -2183,6 +2263,7 @@ export default function EditorialStageArticlePage({
               blocks: normalizedBlocks,
               content: composeArticleMarkdown(normalizedBlocks, normalizedEditorialBlocks),
               editorialBlocks: normalizedEditorialBlocks,
+              editorModelName: resolveEditorModelName(existing.editorModelName),
             }
 
             if (!isCancelled) {
@@ -2192,7 +2273,8 @@ export default function EditorialStageArticlePage({
             const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedBlocks)
             const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedEditorialBlocks)
             const contentChanged = existing.content !== normalizedExisting.content
-            if (blocksChanged || editorialChanged || contentChanged) {
+            const modelChanged = existing.editorModelName !== normalizedExisting.editorModelName
+            if (blocksChanged || editorialChanged || contentChanged || modelChanged) {
               allStaged[existingIndex] = normalizedExisting
               localStorage.setItem(storageKey, JSON.stringify(allStaged))
             }
@@ -2233,6 +2315,7 @@ export default function EditorialStageArticlePage({
               content: composeArticleMarkdown(blocks, editorialBlocks),
               blocks,
               editorialBlocks,
+              editorModelName: DEFAULT_EDITOR_MODEL_NAME,
               lexicalConverted: false,
               publishedToPayload: false,
               createdAt: new Date().toISOString(),
@@ -2586,6 +2669,50 @@ export default function EditorialStageArticlePage({
     )
     updateStagedArticle({ blocks: updatedBlocks, lexicalConverted: false })
   }, [stagedArticle, updateStagedArticle])
+
+  const rewriteTextBlockWithAi = useCallback(async (
+    blockId: string,
+    currentContent: string,
+    prompt: string,
+    includeWholeArticleContext: boolean
+  ): Promise<string> => {
+    if (!stagedArticle) {
+      throw new Error('Stage article is not loaded yet.')
+    }
+
+    const targetBlock = stagedArticle.blocks.find((block) => block.id === blockId)
+    if (!targetBlock || targetBlock.type !== 'text') {
+      throw new Error('AI rewrite is only available for text blocks.')
+    }
+
+    const articleTitle = (
+      stagedArticle.title.trim()
+      || stagedArticle.originalTitle.trim()
+      || 'Untitled article'
+    )
+    const articleContext = includeWholeArticleContext
+      ? buildAiArticleContext(
+          timelineItems,
+          stagedArticle.blocks,
+          stagedArticle.editorialBlocks || []
+        )
+      : undefined
+    const modelName = resolveEditorModelName(stagedArticle.editorModelName)
+    const response = await rewriteBlockWithAi({
+      prompt,
+      blockContent: currentContent,
+      modelName,
+      articleTitle,
+      articleContext,
+    })
+    const rewrittenContent = response.rewritten_content?.trim()
+
+    if (!rewrittenContent) {
+      throw new Error('AI returned empty block content.')
+    }
+
+    return rewrittenContent
+  }, [stagedArticle, rewriteBlockWithAi, timelineItems])
 
   const reanchorEditorialBlocksAfterBlockRemoval = useCallback((
     removedBlockId: string,
@@ -4232,14 +4359,26 @@ export default function EditorialStageArticlePage({
                       </div>
 
                       {isEditingThisContentBlock ? (
-                        <textarea
-                          className={`block-textarea ${block.type === 'pullquote' ? 'pullquote' : ''}`}
+                        <MarkdownBlockEditor
+                          blockId={block.id}
                           value={block.content}
-                          onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                          onInput={(event) => resizeTextareaToContent(event.currentTarget)}
-                          ref={(element) => {
-                            if (element) resizeTextareaToContent(element)
-                          }}
+                          onChange={(nextValue) => updateBlockContent(block.id, nextValue)}
+                          showToolbar={block.type === 'text'}
+                          enforceHeadingStructure={block.type === 'text'}
+                          onAiRewrite={block.type === 'text'
+                            ? async ({
+                              currentContent,
+                              prompt,
+                              includeWholeArticleContext,
+                            }) =>
+                              rewriteTextBlockWithAi(
+                                block.id,
+                                currentContent,
+                                prompt,
+                                includeWholeArticleContext
+                              )
+                            : undefined}
+                          className={block.type === 'pullquote' ? 'block-textarea pullquote' : undefined}
                           rows={block.type === 'pullquote' ? 3 : Math.max(4, block.content.split('\n').length + 2)}
                           placeholder={block.type === 'pullquote' ? 'Enter your pull quote...' : ''}
                         />
@@ -4436,6 +4575,27 @@ export default function EditorialStageArticlePage({
                 {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
                     {getLocationDisplayName(loc)} ({loc.level})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* AI Model */}
+            <div className="stage-article-sidebar-section">
+              <label className="stage-article-label">
+                AI Model
+              </label>
+              <select
+                value={resolveEditorModelName(stagedArticle.editorModelName)}
+                onChange={(e) => updateStagedArticle({
+                  editorModelName: resolveEditorModelName(e.target.value),
+                })}
+                className="stage-article-select"
+                disabled={stagedArticle.publishedToPayload}
+              >
+                {EDITOR_MODEL_OPTIONS.map((modelOption) => (
+                  <option key={modelOption.value} value={modelOption.value}>
+                    {modelOption.label}
                   </option>
                 ))}
               </select>

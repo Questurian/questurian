@@ -5,6 +5,7 @@ import {
   fetchMediaAssets,
   getArticleSyncStatus as getArticleSyncStatusForFeature,
   markArticleSynced as markArticleSyncedForFeature,
+  rewriteBlockWithAi,
   type CreateArticlePayload,
   type Location,
   type MediaAsset,
@@ -293,4 +294,10 @@ export async function getArticleSyncStatus(
 }
 
 export type { CreateArticlePayload, Location, MediaAsset }
-export { convertMarkdownToLexical, fetchLocations, fetchMediaAssets, createArticle }
+export {
+  convertMarkdownToLexical,
+  fetchLocations,
+  fetchMediaAssets,
+  createArticle,
+  rewriteBlockWithAi,
+}

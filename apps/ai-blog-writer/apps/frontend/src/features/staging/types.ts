@@ -39,6 +39,7 @@ export type StagedArticle = {
   blocks: ContentBlock[]
   editorialBlocks?: EditorialBlock[]
   locationId?: number
+  editorModelName?: string
   featuredImageId?: number
   lexicalConverted: boolean
   lexicalData?: object
