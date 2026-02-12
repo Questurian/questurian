@@ -15,6 +15,8 @@ def _variant_files() -> list[tuple[str, tuple[str, bytes, str]]]:
         ("variants", ("wide.webp", b"wide", "image/webp")),
         ("variants", ("portrait.webp", b"portrait", "image/webp")),
         ("variants", ("hero.webp", b"hero", "image/webp")),
+        ("variants", ("open_graph.webp", b"open-graph", "image/webp")),
+        ("variants", ("editorial.webp", b"editorial", "image/webp")),
     ]
 
 
@@ -47,6 +49,8 @@ def test_upload_variants_rejects_duplicate_variant_types():
                 "wide",
                 "portrait",
                 "hero",
+                "open_graph",
+                "editorial",
             ],
             external_ref="article-dup",
             alt_text="Alt text",
@@ -75,6 +79,8 @@ def test_upload_variants_rejects_non_positive_location_ref():
                 "wide",
                 "portrait",
                 "hero",
+                "open_graph",
+                "editorial",
             ],
             external_ref="article-location",
             alt_text="Alt text",
@@ -149,6 +155,8 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
                 "wide",
                 "portrait",
                 "hero",
+                "open_graph",
+                "editorial",
             ],
             external_ref="article-500",
             alt_text="Alt text",

@@ -28,7 +28,7 @@ interface MultiVariantCropperModalProps {
   onConfirm: (sourceFile: File, variantFiles: { type: ImageVariantType; file: File }[]) => void;
 }
 
-const variantSequence: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'portrait', 'hero'];
+const variantSequence: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'social', 'editorial', 'portrait', 'hero'];
 
 export function MultiVariantCropperModal({
   file,
@@ -41,11 +41,13 @@ export function MultiVariantCropperModal({
   const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Initialize crop states for all 5 variants
+  // Initialize crop states for all variants
   const [cropStates, setCropStates] = useState<Record<ImageVariantType, CropState>>({
     thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    social: { variantType: 'social', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    editorial: { variantType: 'editorial', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
   });
@@ -53,6 +55,7 @@ export function MultiVariantCropperModal({
   const currentVariantType = variantSequence[currentVariantIndex];
   const currentState = cropStates[currentVariantType];
   const currentSpec = VARIANT_SPECS[currentVariantType];
+  const totalVariants = variantSequence.length;
 
   // Create preview URL when file changes
   useEffect(() => {
@@ -143,14 +146,14 @@ export function MultiVariantCropperModal({
 
     if (!allCropsComplete()) {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast("Please complete all 5 variant crops", centerPosition);
+      showToast(`Please complete all ${totalVariants} variant crops`, centerPosition);
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // Generate all 5 variant files
+      // Generate all variant files
       const variantFiles = await createMultiVariantImages(
         previewUrl,
         cropStates,
@@ -178,7 +181,7 @@ export function MultiVariantCropperModal({
             Crop Image: {currentSpec.label} - {currentVariantType.charAt(0).toUpperCase() + currentVariantType.slice(1)}
           </DialogTitle>
           <p className="text-sm text-muted-foreground mt-2">
-            Step {currentVariantIndex + 1} of 5 • Target: {currentSpec.width}×{currentSpec.height}px
+            Step {currentVariantIndex + 1} of {totalVariants} • Target: {currentSpec.width}×{currentSpec.height}px
           </p>
         </DialogHeader>
 
@@ -279,8 +282,8 @@ export function MultiVariantCropperModal({
             {isProcessing
               ? "Processing..."
               : allCropsComplete()
-                ? `Confirm All (${completedCount}/5)`
-                : `Crop All (${completedCount}/5)`
+                ? `Confirm All (${completedCount}/${totalVariants})`
+                : `Crop All (${completedCount}/${totalVariants})`
             }
           </Button>
         </DialogFooter>

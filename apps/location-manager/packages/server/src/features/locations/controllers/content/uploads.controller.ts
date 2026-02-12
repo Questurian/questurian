@@ -74,7 +74,7 @@ export async function deleteUpload(c: Context) {
 
 /**
  * POST /api/add-upload-imageset/:id
- * Upload a multi-variant image set (source + 5 variants)
+ * Upload a multi-variant image set (source + all configured variants)
  */
 export async function postAddUploadImageSet(c: Context) {
   const formData = await c.req.formData();
@@ -112,8 +112,16 @@ export async function postAddUploadImageSet(c: Context) {
     throw new BadRequestError(`Source file exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
   }
 
-  // Parse variant files (expecting exactly 5: thumbnail, square, wide, portrait, hero)
-  const variantTypes: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'portrait', 'hero'];
+  // Parse variant files (expecting all configured variants)
+  const variantTypes: ImageVariantType[] = [
+    'thumbnail',
+    'square',
+    'wide',
+    'social',
+    'editorial',
+    'portrait',
+    'hero'
+  ];
   const variantFiles: { type: ImageVariantType; file: File }[] = [];
 
   let totalSize = sourceFile.size;
@@ -141,7 +149,7 @@ export async function postAddUploadImageSet(c: Context) {
     variantFiles.push({ type, file });
   }
 
-  // Validate total size (source + 5 variants)
+  // Validate total size (source + all variants)
   if (totalSize > MAX_TOTAL_SIZE) {
     throw new BadRequestError(`Total upload size exceeds ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit`);
   }

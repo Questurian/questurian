@@ -6,7 +6,14 @@
 /**
  * Supported image variant types for different use cases
  */
-export type ImageVariantType = 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero';
+export type ImageVariantType =
+  | 'thumbnail'
+  | 'square'
+  | 'wide'
+  | 'social'
+  | 'editorial'
+  | 'portrait'
+  | 'hero';
 
 /**
  * Aspect ratio specification for each variant type
@@ -26,6 +33,8 @@ export const VARIANT_SPECS: Record<ImageVariantType, AspectRatioSpec> = {
   thumbnail: { ratio: 3 / 2, label: '3:2', width: 1200, height: 800 },
   square: { ratio: 1, label: '1:1', width: 1080, height: 1080 },
   wide: { ratio: 16 / 9, label: '16:9', width: 1920, height: 1080 },
+  social: { ratio: 1200 / 630, label: '1.91:1', width: 1200, height: 630 },
+  editorial: { ratio: 4 / 3, label: '4:3', width: 1600, height: 1200 },
   portrait: { ratio: 4 / 5, label: '4:5', width: 1200, height: 1500 },
   hero: { ratio: 21 / 9, label: '21:9', width: 2100, height: 900 },
 };
@@ -56,7 +65,7 @@ export interface ImageSet {
     size: number;
     format: string;
   };
-  variants: ImageVariant[];  // Array of 5 variants
+  variants: ImageVariant[];  // Array of 7 variants
   photographerCredit?: string | null;
   altText?: string;  // AI-generated alt text for the image set
   created_at: string;

@@ -175,10 +175,11 @@ async def upload_image(
     authorization: Optional[str] = Header(None),
 ) -> JSONResponse:
     """
-    Upload an image and process it into 5 variants server-side.
+    Upload an image and process it into all required variants server-side.
 
     The image will be:
-    1. Processed into 5 variants (thumbnail, square, wide, portrait, hero)
+    1. Processed into variants (thumbnail, square, wide, portrait, hero,
+       open_graph, editorial)
     2. Converted to WebP format with 85% quality
     3. Uploaded to Payload CMS as media-assets
     4. Linked in a new MediaSet
@@ -254,11 +255,14 @@ async def upload_image(
 async def upload_image_variants(
     variants: List[UploadFile] = File(
         ...,
-        description="The 5 variant image files",
+        description="The required variant image files",
     ),
     variant_types: List[str] = Form(
         ...,
-        description="Types for each variant (thumbnail, square, wide, portrait, hero)",
+        description=(
+            "Types for each variant (thumbnail, square, wide, portrait, hero, "
+            "open_graph, editorial)"
+        ),
     ),
     external_ref: str = Form(..., description="Unique reference for this image set"),
     alt_text: str = Form(..., description="Alt text for accessibility"),
@@ -271,7 +275,7 @@ async def upload_image_variants(
     """
     Upload pre-processed image variants (client-side cropped) to Payload CMS.
 
-    This endpoint accepts 5 already-cropped variant files and:
+    This endpoint accepts already-cropped variant files and:
     1. Uploads each to Payload CMS as media-assets
     2. Creates or reuses a MediaSet linking all variants
     """
@@ -290,7 +294,9 @@ async def upload_image_variants(
     if len(variants) != len(REQUIRED_VARIANT_TYPES):
         _raise_http_error(
             status_code=400,
-            message="Exactly 5 variants are required",
+            message=(
+                f"Exactly {len(REQUIRED_VARIANT_TYPES)} variants are required"
+            ),
             step="validate_variant_payload",
             expected_count=len(REQUIRED_VARIANT_TYPES),
             received_count=len(variants),
@@ -460,7 +466,7 @@ async def process_image_only(
     file: UploadFile = File(...),
     alt_text: str = Form(default="", description="Alt text for accessibility"),
 ) -> JSONResponse:
-    """Process an image into 5 variants without uploading to Payload."""
+    """Process an image into all required variants without uploading to Payload."""
     content = await _read_upload_file(file, step="validate_file")
 
     try:

@@ -564,8 +564,7 @@ async def upload_image_set(
         )
 
     variant_asset_ids = {}
-    for variant_type in [ImageVariantType.THUMBNAIL, ImageVariantType.SQUARE,
-                         ImageVariantType.WIDE, ImageVariantType.PORTRAIT, ImageVariantType.HERO]:
+    for variant_type in list(ImageVariantType):
         asset_id = await client.upload_image(
             variants[variant_type],
             alt_text,

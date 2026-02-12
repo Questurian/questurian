@@ -64,6 +64,7 @@ interface ImageUploadProps {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 type UploadMode = 'select' | 'alttext' | 'crop' | 'uploading';
+type VariantUploadFile = { type: ImageVariantType; file: File };
 
 export function ImageUpload({
   externalRef,
@@ -88,6 +89,7 @@ export function ImageUpload({
     progress: 0,
     message: ''
   });
+  const [preparedVariantFiles, setPreparedVariantFiles] = useState<VariantUploadFile[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const requestAltText = useCallback(async (file: File, focus: string) => {
@@ -168,6 +170,7 @@ export function ImageUpload({
   const handleClear = useCallback(() => {
     setSelectedFile(null);
     setPreview(null);
+    setPreparedVariantFiles(null);
     setMode('select');
     setProgress({ status: 'idle', progress: 0, message: '' });
     if (fileInputRef.current) {
@@ -175,7 +178,7 @@ export function ImageUpload({
     }
   }, []);
 
-  const handleCropConfirm = useCallback(async (variantFiles: { type: ImageVariantType; file: File }[]) => {
+  const uploadPreparedVariants = useCallback(async (variantFiles: VariantUploadFile[]) => {
     setMode('uploading');
 
     try {
@@ -194,9 +197,14 @@ export function ImageUpload({
         progress: 0,
         message: error instanceof Error ? error.message : 'Upload failed'
       });
-      setMode('crop');
+      setMode(selectedFile ? 'alttext' : 'select');
     }
-  }, [externalRef, altText, locationRef, token, onUploadComplete]);
+  }, [externalRef, altText, locationRef, token, onUploadComplete, selectedFile]);
+
+  const handleCropConfirm = useCallback(async (variantFiles: VariantUploadFile[]) => {
+    setPreparedVariantFiles(variantFiles);
+    await uploadPreparedVariants(variantFiles);
+  }, [uploadPreparedVariants]);
 
   const handleStartCropping = () => {
     if (!selectedFile) return;
@@ -270,11 +278,30 @@ export function ImageUpload({
           </span>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: '0.875rem', color: '#ef4444' }}>{progress.message}</p>
+            {preparedVariantFiles && (
+              <button
+                onClick={() => void uploadPreparedVariants(preparedVariantFiles)}
+                style={{ marginTop: '0.5rem', marginRight: '0.75rem', fontSize: '0.75rem', color: '#f36f2b', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Retry Upload
+              </button>
+            )}
+            {selectedFile && (
+              <button
+                onClick={() => {
+                  setProgress({ status: 'idle', progress: 0, message: '' });
+                  setMode('crop');
+                }}
+                style={{ marginTop: '0.5rem', marginRight: '0.75rem', fontSize: '0.75rem', color: '#71717a', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Back to Crop
+              </button>
+            )}
             <button
               onClick={handleClear}
               style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#71717a', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              Try again
+              Start Over
             </button>
           </div>
         </div>

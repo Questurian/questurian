@@ -5,7 +5,14 @@
 
 import type { Area } from 'react-easy-crop';
 
-export type ImageVariantType = 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero';
+export type ImageVariantType =
+  | 'thumbnail'
+  | 'square'
+  | 'wide'
+  | 'portrait'
+  | 'hero'
+  | 'open_graph'
+  | 'editorial';
 
 export interface VariantSpec {
   width: number;
@@ -20,9 +27,29 @@ export const VARIANT_SPECS: Record<ImageVariantType, VariantSpec> = {
   wide: { width: 1920, height: 1080, ratio: 16 / 9, label: '16:9' },
   portrait: { width: 1200, height: 1500, ratio: 4 / 5, label: '4:5' },
   hero: { width: 2100, height: 900, ratio: 21 / 9, label: '21:9' },
+  open_graph: {
+    width: 1200,
+    height: 630,
+    ratio: 1200 / 630,
+    label: 'Open Graph (1.91:1)',
+  },
+  editorial: {
+    width: 1600,
+    height: 1200,
+    ratio: 4 / 3,
+    label: 'Editorial (4:3)',
+  },
 };
 
-export const VARIANT_SEQUENCE: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'portrait', 'hero'];
+export const VARIANT_SEQUENCE: ImageVariantType[] = [
+  'thumbnail',
+  'square',
+  'wide',
+  'portrait',
+  'hero',
+  'open_graph',
+  'editorial',
+];
 
 export interface CropData {
   x: number;
@@ -165,7 +192,7 @@ function generateVariantFileName(
 }
 
 /**
- * Create all 5 variant images from crop states
+ * Create all variant images from crop states
  */
 export async function createMultiVariantImages(
   imageSrc: string,
@@ -209,6 +236,8 @@ export function initializeCropStates(imageWidth?: number, imageHeight?: number):
     wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    open_graph: { variantType: 'open_graph', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    editorial: { variantType: 'editorial', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
   };
 
   // If we have image dimensions, calculate default centered crops

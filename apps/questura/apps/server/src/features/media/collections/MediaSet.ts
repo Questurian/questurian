@@ -17,6 +17,8 @@ const VARIANT_HELP_TEXT: Record<MediaVariantKey, string> = {
   wide: '16:9 crop for wide placements',
   portrait: '4:5 crop for vertical placements',
   hero: '21:9 crop for hero banners',
+  open_graph: 'Open Graph/social share crop (1.91:1) - Pexels 1200x630, export 1200x630',
+  editorial: 'Editorial/news crop (4:3) - Pexels 1600x1200, export 1600x1200',
 }
 
 const variantFields: Field[] = MEDIA_VARIANT_OPTIONS.map((variant) => ({

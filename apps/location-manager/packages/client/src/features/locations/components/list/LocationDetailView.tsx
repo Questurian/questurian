@@ -373,7 +373,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         const variantPaths = imageSet.variants.map((v: ImageVariant) => v.path);
 
         // Find the index of the square variant (which is displayed in thumbnails)
-        // Variant order: ['thumbnail', 'square', 'wide', 'portrait', 'hero']
+        // Variant order: ['thumbnail', 'square', 'wide', 'social', 'editorial', 'portrait', 'hero']
         const squareVariantIndex = imageSet.variants.findIndex(v => v.type === 'square');
         const startIndex = squareVariantIndex >= 0 ? squareVariantIndex : 0;
 
@@ -753,7 +753,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
                         </div>
                         {/* Badge showing variant count */}
                         <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
-                          5 variants
+                          {imageSet.variants?.length || 0} variants
                         </div>
                         {/* Delete button */}
                         <Button

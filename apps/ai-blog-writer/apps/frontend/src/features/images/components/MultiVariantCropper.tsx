@@ -65,6 +65,11 @@ export function MultiVariantCropper({
   const currentVariantType = VARIANT_SEQUENCE[currentVariantIndex];
   const currentState = cropStates[currentVariantType];
   const currentSpec = VARIANT_SPECS[currentVariantType];
+  const formatVariantLabel = (variantType: ImageVariantType) =>
+    variantType
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
 
   // Create preview URL and load image dimensions when file changes
   useEffect(() => {
@@ -157,6 +162,7 @@ export function MultiVariantCropper({
     const state = cropStates[type];
     return state.croppedAreaPixels !== null && state.croppedAreaPixels.width > 0;
   }).length;
+  const totalVariants = VARIANT_SEQUENCE.length;
 
   return (
     <div className="stage-article-cropper-container">
@@ -167,10 +173,10 @@ export function MultiVariantCropper({
         flexShrink: 0
       }}>
         <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#f4f4f5', margin: 0 }}>
-          Crop: {currentVariantType.charAt(0).toUpperCase() + currentVariantType.slice(1)}
+          Crop: {formatVariantLabel(currentVariantType)}
         </h3>
         <p style={{ fontSize: '0.875rem', color: '#71717a', margin: '0.25rem 0 0 0' }}>
-          Step {currentVariantIndex + 1} of 5 • Target: {currentSpec.width}×{currentSpec.height}px ({currentSpec.label})
+          Step {currentVariantIndex + 1} of {totalVariants} • Target: {currentSpec.width}×{currentSpec.height}px ({currentSpec.label})
           {imageDimensions && ` • Source: ${imageDimensions.width}×${imageDimensions.height}`}
         </p>
       </div>
@@ -213,7 +219,7 @@ export function MultiVariantCropper({
                 className={`stage-article-cropper-variant-btn ${isActive ? 'active' : isCompleted ? 'completed' : 'pending'}`}
               >
                 {isCompleted && <CheckIcon />}
-                <span style={{ textTransform: 'capitalize' }}>{type}</span>
+                <span>{formatVariantLabel(type)}</span>
                 <span style={{ fontSize: '10px', opacity: 0.7 }}>({VARIANT_SPECS[type].label})</span>
               </button>
             );
@@ -308,8 +314,8 @@ export function MultiVariantCropper({
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.5rem 1rem',
-                background: completedCount === 5 ? '#f36f2b' : '#3f3f46',
-                color: completedCount === 5 ? '#fff' : '#71717a',
+                background: completedCount === totalVariants ? '#f36f2b' : '#3f3f46',
+                color: completedCount === totalVariants ? '#fff' : '#71717a',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -326,7 +332,9 @@ export function MultiVariantCropper({
               ) : (
                 <>
                   <CheckIcon />
-                  {completedCount === 5 ? 'Confirm All' : `Crop All (${completedCount}/5)`}
+                  {completedCount === totalVariants
+                    ? 'Confirm All'
+                    : `Crop All (${completedCount}/${totalVariants})`}
                 </>
               )}
             </button>

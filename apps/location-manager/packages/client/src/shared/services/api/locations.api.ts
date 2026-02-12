@@ -144,7 +144,7 @@ export const locationsApi = {
   },
 
   /**
-   * Upload image set (source + 5 variants) to a location with progress tracking
+   * Upload image set (source + all configured variants) to a location with progress tracking
    */
   async uploadImageSet(
     locationId: number,
@@ -167,7 +167,7 @@ export const locationsApi = {
     // Append source file (currently only supporting 1 source per upload)
     formData.append("source_0", sourceFile);
 
-    // Append all 5 variant files with naming convention: variant_0_{type}
+    // Append all variant files with naming convention: variant_0_{type}
     variantFiles.forEach(({ type, file }) => {
       formData.append(`variant_0_${type}`, file);
     });

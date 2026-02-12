@@ -170,9 +170,9 @@ function generateVariantFileName(originalName: string, variantType: ImageVariant
 }
 
 /**
- * Create all 5 variant images from crop states
+ * Create all variant images from crop states
  * @param imageSrc - Source image URL (object URL)
- * @param cropStates - Crop states for all 5 variants
+ * @param cropStates - Crop states for all variants
  * @param fileName - Original file name
  * @returns Array of variant files with their types
  */
@@ -181,7 +181,7 @@ export async function createMultiVariantImages(
   cropStates: Record<ImageVariantType, CropState>,
   fileName: string
 ): Promise<{ type: ImageVariantType; file: File }[]> {
-  // Process all 5 variants in parallel for performance
+  // Process all variants in parallel for performance
   const variantPromises = Object.entries(cropStates).map(async ([type, state]) => {
     const variantType = type as ImageVariantType;
     const spec = VARIANT_SPECS_IMPORT[variantType];

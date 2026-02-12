@@ -89,7 +89,7 @@ export class UploadsService {
    * Add a new multi-variant image set upload
    * @param locationId - Parent location ID
    * @param sourceFile - Original source image file
-   * @param variantFiles - Array of 5 variant files (thumbnail, square, wide, portrait, hero)
+   * @param variantFiles - Array of all configured variant files
    * @param photographerCredit - Optional photographer attribution
    * @returns ImageSetUpload with all variants saved
    */
@@ -114,12 +114,22 @@ export class UploadsService {
       throw new BadRequestError("Source file required");
     }
 
-    if (!variantFiles || variantFiles.length !== 5) {
-      throw new BadRequestError("Exactly 5 variant files required (thumbnail, square, wide, portrait, hero)");
+    if (!variantFiles || variantFiles.length !== 7) {
+      throw new BadRequestError(
+        "Exactly 7 variant files required (thumbnail, square, wide, social, editorial, portrait, hero)"
+      );
     }
 
     // Validate all variant types are present
-    const requiredTypes: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'portrait', 'hero'];
+    const requiredTypes: ImageVariantType[] = [
+      'thumbnail',
+      'square',
+      'wide',
+      'social',
+      'editorial',
+      'portrait',
+      'hero'
+    ];
     const providedTypes = new Set(variantFiles.map(v => v.type));
 
     for (const type of requiredTypes) {

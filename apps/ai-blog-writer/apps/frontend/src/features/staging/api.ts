@@ -58,7 +58,14 @@ export type MediaAsset = {
   alt_text?: string
   altText?: string
   mediaSet?: number | string | { id?: number | string } | null
-  variant?: 'thumbnail' | 'square' | 'wide' | 'portrait' | 'hero'
+  variant?:
+    | 'thumbnail'
+    | 'square'
+    | 'wide'
+    | 'portrait'
+    | 'hero'
+    | 'open_graph'
+    | 'editorial'
   url?: string
   mimeType?: string
   filesize?: number

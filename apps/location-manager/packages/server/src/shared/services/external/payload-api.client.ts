@@ -156,13 +156,7 @@ export interface PayloadMediaSetResponse {
     title: string;
     alt_text: string;
     status: "partial" | "complete";
-    variants: {
-      thumbnail: PayloadMediaSetVariant | null;
-      square: PayloadMediaSetVariant | null;
-      wide: PayloadMediaSetVariant | null;
-      portrait: PayloadMediaSetVariant | null;
-      hero: PayloadMediaSetVariant | null;
-    };
+    variants: Partial<Record<ImageVariantType, PayloadMediaSetVariant | null>>;
     externalRef?: string;
     location?: string;
     tags?: string[];
@@ -311,7 +305,7 @@ export class PayloadApiClient {
       locationRef?: string;
       photographerCredit?: string | null;
       mediaSet?: string;              // Media-set ID to link this variant to
-      variant?: ImageVariantType;     // Variant type (thumbnail, square, wide, portrait, hero)
+      variant?: ImageVariantType;     // Variant type (thumbnail, square, wide, social, editorial, portrait, hero)
     }
   ): Promise<string> {
     if (!this.isConfigured()) {

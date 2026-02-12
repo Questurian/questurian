@@ -70,12 +70,18 @@ export async function uploadLocationImages(
           console.log(`✅ [MEDIA-SET] Media-set ready: ${mediaSetId}`);
 
           // ⭐ STEP 2: Upload variants ONLY if this is a new media-set
+          const variantOrder: ImageVariantType[] = [
+            'thumbnail',
+            'square',
+            'wide',
+            'social',
+            'editorial',
+            'portrait',
+            'hero'
+          ];
           let uploadedVariantsCount = 0;
 
           if (shouldUploadVariants) {
-            // Define standard variant order for consistent upload sequence
-            const variantOrder: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'portrait', 'hero'];
-
             for (const variantType of variantOrder) {
               const variant = imageSet.variants.find(v => v.type === variantType);
 
@@ -134,7 +140,9 @@ export async function uploadLocationImages(
             // Add to gallery: either new media-set with variants, or existing media-set (re-sync)
             galleryImageIds.push(mediaSetId);
             if (shouldUploadVariants) {
-              console.log(`✅ [MEDIA-SET] Added new media-set ${mediaSetId} to gallery (${uploadedVariantsCount}/5 variants uploaded)`);
+              console.log(
+                `✅ [MEDIA-SET] Added new media-set ${mediaSetId} to gallery (${uploadedVariantsCount}/${variantOrder.length} variants uploaded)`
+              );
             } else {
               console.log(`✅ [MEDIA-SET] Added existing media-set ${mediaSetId} to gallery (already synced)`);
             }

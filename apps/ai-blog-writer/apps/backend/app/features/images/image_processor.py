@@ -1,4 +1,4 @@
-"""Image processing using Pillow - creates 5 variants from source image."""
+"""Image processing using Pillow - creates image variants from source image."""
 
 import io
 from dataclasses import dataclass
@@ -9,12 +9,14 @@ from PIL import Image
 
 
 class ImageVariantType(str, Enum):
-    """The 5 image variant types matching Payload CMS media-assets."""
+    """Image variant types matching Payload CMS media-assets."""
     THUMBNAIL = "thumbnail"
     SQUARE = "square"
     WIDE = "wide"
     PORTRAIT = "portrait"
     HERO = "hero"
+    OPEN_GRAPH = "open_graph"
+    EDITORIAL = "editorial"
 
 
 @dataclass
@@ -31,6 +33,8 @@ VARIANT_SPECS: Dict[ImageVariantType, VariantSpec] = {
     ImageVariantType.WIDE: VariantSpec(width=1920, height=1080),      # 16:9
     ImageVariantType.PORTRAIT: VariantSpec(width=1200, height=1500),  # 4:5
     ImageVariantType.HERO: VariantSpec(width=2100, height=900),       # 21:9
+    ImageVariantType.OPEN_GRAPH: VariantSpec(width=1200, height=630),  # 1.91:1
+    ImageVariantType.EDITORIAL: VariantSpec(width=1600, height=1200),  # 4:3
 }
 
 
@@ -53,7 +57,7 @@ def process_image_variants(
     quality: int = 85
 ) -> Dict[ImageVariantType, ProcessedVariant]:
     """
-    Process an image into 5 variants optimized for WebP format.
+    Process an image into variants optimized for WebP format.
 
     Args:
         source_buffer: The original image bytes

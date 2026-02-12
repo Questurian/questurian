@@ -15,7 +15,7 @@ import {
   addUploadFilesSchema,
   type AddUploadFilesFormData,
 } from "../../validation/add-upload-files.schema";
-import type { ImageVariantType } from "@questurian/lm-shared";
+import { type ImageVariantType, VARIANT_SPECS } from "@questurian/lm-shared";
 
 interface AddUploadFilesFormProps {
   locationId: number;
@@ -29,6 +29,7 @@ interface ProcessedImageSet {
 
 export function AddUploadFilesForm({ locationId }: AddUploadFilesFormProps) {
   const { showToast } = useToast();
+  const variantCount = Object.keys(VARIANT_SPECS).length;
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [processedImageSets, setProcessedImageSets] = useState<(ProcessedImageSet | null)[]>([]);
   const [cropModalState, setCropModalState] = useState<{
@@ -85,7 +86,7 @@ export function AddUploadFilesForm({ locationId }: AddUploadFilesFormProps) {
   const { mutate, isPending, uploadProgress } = useAddUploadImageSet(locationId, {
     onSuccess: () => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(`Image set uploaded successfully (5 variants)`, centerPosition);
+      showToast(`Image set uploaded successfully (${variantCount} variants)`, centerPosition);
       handleReset();
     },
     onError: (error) => {
@@ -342,7 +343,7 @@ export function AddUploadFilesForm({ locationId }: AddUploadFilesFormProps) {
             {isPending
               ? `Uploading... ${uploadProgress}%`
               : areAllFilesCropped()
-                ? "Upload Image Set (5 variants)"
+                ? `Upload Image Set (${variantCount} variants)`
                 : `Crop ${selectedFiles.length - processedImageSets.filter(Boolean).length} more image(s)`}
           </Button>
           <Button
