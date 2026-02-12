@@ -25,12 +25,14 @@ def _variant_form_parts(
     external_ref: str,
     alt_text: str,
     location_ref: int,
+    photographer_credit: str = "",
 ) -> list[tuple[str, tuple[None, str]]]:
     return (
         [("variant_types", (None, variant_type)) for variant_type in variant_types]
         + [
             ("external_ref", (None, external_ref)),
             ("alt_text", (None, alt_text)),
+            ("photographer_credit", (None, photographer_credit)),
             ("location_ref", (None, str(location_ref))),
         ]
     )
@@ -115,10 +117,12 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
         self,
         variant,
         alt_text: str,
+        photographer_credit: str = "",
         media_set_id: str | None = None,
         location_ref: int | None = None,
     ):
         assert location_ref == 321
+        assert photographer_credit == "Photo by Test Photographer"
         if variant.variant_type.value == "thumbnail":
             return "101"
         raise PayloadUploadError(
@@ -161,6 +165,7 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
             external_ref="article-500",
             alt_text="Alt text",
             location_ref=321,
+            photographer_credit="Photo by Test Photographer",
         ),
         headers=_auth_headers(),
     )

@@ -53,10 +53,10 @@ interface ImageUploadProps {
   locationRef: number;
   token: string;
   altText: string;
-  narrativeFocus?: string;
+  photographerCredit?: string;
   onUploadComplete: (result: UploadImageResponse) => void;
   onAltTextGenerated?: (altText: string) => void;
-  onNarrativeFocusChange?: (narrativeFocus: string) => void;
+  onPhotographerCreditChange?: (photographerCredit: string) => void;
   onCancel?: () => void;
   className?: string;
 }
@@ -72,10 +72,10 @@ export function ImageUpload({
   locationRef,
   token,
   altText,
-  narrativeFocus = '',
+  photographerCredit = '',
   onUploadComplete,
   onAltTextGenerated,
-  onNarrativeFocusChange,
+  onPhotographerCreditChange,
   onCancel,
   className = ''
 }: ImageUploadProps) {
@@ -92,12 +92,12 @@ export function ImageUpload({
   const [preparedVariantFiles, setPreparedVariantFiles] = useState<VariantUploadFile[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const requestAltText = useCallback(async (file: File, focus: string) => {
+  const requestAltText = useCallback(async (file: File) => {
     if (!onAltTextGenerated) return;
 
     setIsGeneratingAlt(true);
     try {
-      const generatedAlt = await generateAltText(file, focus);
+      const generatedAlt = await generateAltText(file);
       onAltTextGenerated(generatedAlt);
     } catch (err) {
       console.error('Alt text generation failed:', err);
@@ -137,8 +137,8 @@ export function ImageUpload({
     reader.readAsDataURL(file);
 
     // Auto-generate alt text
-    await requestAltText(file, narrativeFocus);
-  }, [narrativeFocus, requestAltText]);
+    await requestAltText(file);
+  }, [requestAltText]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -188,6 +188,7 @@ export function ImageUpload({
         altText,
         locationRef,
         token,
+        photographerCredit,
         setProgress
       );
       onUploadComplete(result);
@@ -199,7 +200,7 @@ export function ImageUpload({
       });
       setMode(selectedFile ? 'alttext' : 'select');
     }
-  }, [externalRef, altText, locationRef, token, onUploadComplete, selectedFile]);
+  }, [externalRef, altText, locationRef, token, photographerCredit, onUploadComplete, selectedFile]);
 
   const handleCropConfirm = useCallback(async (variantFiles: VariantUploadFile[]) => {
     setPreparedVariantFiles(variantFiles);
@@ -213,8 +214,8 @@ export function ImageUpload({
 
   const handleRegenerateAltText = useCallback(async () => {
     if (!selectedFile) return;
-    await requestAltText(selectedFile, narrativeFocus);
-  }, [narrativeFocus, requestAltText, selectedFile]);
+    await requestAltText(selectedFile);
+  }, [requestAltText, selectedFile]);
 
   // Render the cropper mode
   if (mode === 'crop' && selectedFile) {
@@ -343,14 +344,14 @@ export function ImageUpload({
               disabled={isGeneratingAlt}
             />
             <label className="stage-article-alttext-label" style={{ marginTop: '0.75rem' }}>
-              Narrative / Audience Focus (Optional)
+              Photographer Credit (Optional)
             </label>
             <input
               type="text"
               className="stage-article-alttext-input"
-              value={narrativeFocus}
-              onChange={(e) => onNarrativeFocusChange?.(e.target.value)}
-              placeholder="Example: Emphasize details relevant to travelers."
+              value={photographerCredit}
+              onChange={(e) => onPhotographerCreditChange?.(e.target.value)}
+              placeholder="Example: Jane Doe / Unsplash"
               disabled={isGeneratingAlt}
             />
             <div className="stage-article-upload-secondary" style={{ marginTop: '0.5rem' }}>
@@ -359,7 +360,7 @@ export function ImageUpload({
                 onClick={handleRegenerateAltText}
                 disabled={isGeneratingAlt || !selectedFile}
               >
-                Regenerate Alt Text With Focus
+                Regenerate Alt Text
               </button>
             </div>
           </div>

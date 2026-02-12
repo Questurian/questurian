@@ -168,6 +168,10 @@ async def upload_image(
         description="Unique reference for this image set (e.g., staged article ID)",
     ),
     alt_text: str = Form(..., description="Alt text for accessibility"),
+    photographer_credit: str = Form(
+        default="",
+        description="Optional photographer credit for uploaded assets",
+    ),
     location_ref: int = Form(
         ...,
         description="Payload location id to attach to uploaded images",
@@ -199,6 +203,7 @@ async def upload_image(
             jwt_token=jwt_token,
             external_ref=external_ref,
             alt_text=alt_text,
+            photographer_credit=photographer_credit,
             location_ref=valid_location_ref,
             variants=variants,
         )
@@ -266,6 +271,10 @@ async def upload_image_variants(
     ),
     external_ref: str = Form(..., description="Unique reference for this image set"),
     alt_text: str = Form(..., description="Alt text for accessibility"),
+    photographer_credit: str = Form(
+        default="",
+        description="Optional photographer credit for uploaded assets",
+    ),
     location_ref: int = Form(
         ...,
         description="Payload location id to attach to uploaded images",
@@ -373,6 +382,7 @@ async def upload_image_variants(
             asset_id = await client.upload_image(
                 variant=variant_obj,
                 alt_text=alt_text,
+                photographer_credit=photographer_credit,
                 media_set_id=media_set_id,
                 location_ref=valid_location_ref,
             )

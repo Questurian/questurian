@@ -1878,14 +1878,14 @@ export default function EditorialStageArticlePage({
   const [imageSearch, setImageSearch] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [imageAltText, setImageAltText] = useState('')
-  const [imageNarrativeFocus, setImageNarrativeFocus] = useState('')
+  const [imagePhotographerCredit, setImagePhotographerCredit] = useState('')
 
   // Modal state for block images
   const [blockImageModal, setBlockImageModal] = useState<BlockImageModalState | null>(null)
   const [blockImageSearch, setBlockImageSearch] = useState('')
   const [showBlockUploadModal, setShowBlockUploadModal] = useState(false)
   const [blockImageAltText, setBlockImageAltText] = useState('')
-  const [blockImageNarrativeFocus, setBlockImageNarrativeFocus] = useState('')
+  const [blockImagePhotographerCredit, setBlockImagePhotographerCredit] = useState('')
   const [imgBlockAssets, setImgBlockAssets] = useState<MediaAsset[]>([])
   const [isLoadingImgBlockAssets, setIsLoadingImgBlockAssets] = useState(false)
   const [imgBlockAssetsError, setImgBlockAssetsError] = useState<string | null>(null)
@@ -3036,7 +3036,7 @@ export default function EditorialStageArticlePage({
     setShowUploadModal(false)
     setShowImageModal(false)
     setImageAltText('')
-    setImageNarrativeFocus('')
+    setImagePhotographerCredit('')
   }
 
   const handleBlockImageUploadComplete = (result: UploadImageResponse) => {
@@ -3058,7 +3058,7 @@ export default function EditorialStageArticlePage({
 
     closeBlockImageModal()
     setBlockImageAltText('')
-    setBlockImageNarrativeFocus('')
+    setBlockImagePhotographerCredit('')
   }
 
   const getLocationDisplayName = (loc?: Location) => {
@@ -4087,7 +4087,7 @@ export default function EditorialStageArticlePage({
                     onClick={() => {
                       if (!hasValidUploadLocation) return
                       setImageAltText('')
-                      setImageNarrativeFocus('')
+                      setImagePhotographerCredit('')
                       setShowUploadModal(true)
                     }}
                   >
@@ -4170,10 +4170,10 @@ export default function EditorialStageArticlePage({
                       locationRef={selectedLocation.id}
                       token={token || ''}
                       altText={imageAltText}
-                      narrativeFocus={imageNarrativeFocus}
+                      photographerCredit={imagePhotographerCredit}
                       onUploadComplete={handleUploadComplete}
                       onAltTextGenerated={(text) => setImageAltText(text)}
-                      onNarrativeFocusChange={(text) => setImageNarrativeFocus(text)}
+                      onPhotographerCreditChange={(text) => setImagePhotographerCredit(text)}
                       onCancel={() => setShowUploadModal(false)}
                     />
                   ) : (
@@ -4228,7 +4228,7 @@ export default function EditorialStageArticlePage({
                       onClick={() => {
                         if (!hasValidUploadLocation) return
                         setBlockImageAltText('')
-                        setBlockImageNarrativeFocus('')
+                        setBlockImagePhotographerCredit('')
                         setShowBlockUploadModal(true)
                       }}
                     >
@@ -4387,10 +4387,10 @@ export default function EditorialStageArticlePage({
                       locationRef={selectedLocation.id}
                       token={token || ''}
                       altText={blockImageAltText}
-                      narrativeFocus={blockImageNarrativeFocus}
+                      photographerCredit={blockImagePhotographerCredit}
                       onUploadComplete={handleBlockImageUploadComplete}
                       onAltTextGenerated={(text) => setBlockImageAltText(text)}
-                      onNarrativeFocusChange={(text) => setBlockImageNarrativeFocus(text)}
+                      onPhotographerCreditChange={(text) => setBlockImagePhotographerCredit(text)}
                       onCancel={() => setShowBlockUploadModal(false)}
                     />
                   ) : (

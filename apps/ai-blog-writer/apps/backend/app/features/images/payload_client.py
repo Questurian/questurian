@@ -127,6 +127,7 @@ class PayloadClient:
         self,
         variant: ProcessedVariant,
         alt_text: str,
+        photographer_credit: str = "",
         media_set_id: Optional[str] = None,
         location_ref: Optional[int] = None,
     ) -> str:
@@ -143,10 +144,27 @@ class PayloadClient:
         if isinstance(media_set_value, str) and media_set_value.isdigit():
             media_set_value = int(media_set_value)
 
+        # Make uploads deterministic per (mediaSet, variant):
+        # if a variant already exists for this set, replace it so the latest upload wins.
+        if media_set_id is not None:
+            existing_asset = await self.find_media_asset_by_variant(
+                media_set_id=media_set_id,
+                variant=variant.variant_type.value,
+            )
+            existing_asset_id = existing_asset.get("id") if existing_asset else None
+            if existing_asset_id:
+                await self.delete_media_asset(str(existing_asset_id))
+                logger.info(
+                    "%s ↻ existing variant found for media_set_id=%s; deleted asset_id=%s before upload",
+                    step,
+                    media_set_id,
+                    existing_asset_id,
+                )
+
         for attempt in range(3):
             payload_obj = {
                 'alt_text': alt_text,
-                'photographer_credit': '',
+                'photographer_credit': photographer_credit.strip(),
                 'variant': variant.variant_type.value,
             }
             if media_set_value is not None:
@@ -237,13 +255,12 @@ class PayloadClient:
                             detail=parsed,
                         )
 
-                    await self.delete_media_asset(str(existing_asset_id))
                     logger.warning(
-                        "%s duplicate variant found; deleted asset_id=%s and retrying",
+                        "%s duplicate variant found after upload race; reusing existing asset_id=%s",
                         step,
                         existing_asset_id,
                     )
-                    continue
+                    return str(existing_asset_id)
 
                 if should_probe_existing_variant:
                     existing_asset = await self.find_media_asset_by_variant(
@@ -254,16 +271,15 @@ class PayloadClient:
                         existing_asset.get("id") if existing_asset else None
                     )
                     if existing_asset_id:
-                        await self.delete_media_asset(str(existing_asset_id))
                         logger.warning(
                             "%s received HTTP %d with generic payload error; "
-                            "existing %s variant asset_id=%s found and deleted, retrying once",
+                            "existing %s variant asset_id=%s found, reusing existing asset",
                             step,
                             response.status_code,
                             variant.variant_type.value,
                             existing_asset_id,
                         )
-                        continue
+                        return str(existing_asset_id)
 
                 raise PayloadUploadError(
                     step=step,
@@ -538,6 +554,7 @@ async def upload_image_set(
     jwt_token: str,
     external_ref: str,
     alt_text: str,
+    photographer_credit: str,
     location_ref: int,
     variants: dict[ImageVariantType, ProcessedVariant]
 ) -> dict:
@@ -568,6 +585,7 @@ async def upload_image_set(
         asset_id = await client.upload_image(
             variants[variant_type],
             alt_text,
+            photographer_credit,
             media_set_id,
             location_ref=location_ref,
         )
