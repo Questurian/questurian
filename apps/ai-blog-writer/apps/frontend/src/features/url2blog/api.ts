@@ -1,8 +1,10 @@
 import {
   convertMarkdownToLexical,
   createArticle,
+  fetchExternalImageSource,
   fetchLocations,
   fetchMediaAssets,
+  importExternalImage,
   searchPexelsImages,
   searchUnsplashImages,
   getArticleSyncStatus as getArticleSyncStatusForFeature,
@@ -298,8 +300,10 @@ export async function getArticleSyncStatus(
 export type { CreateArticlePayload, Location, MediaAsset }
 export {
   convertMarkdownToLexical,
+  fetchExternalImageSource,
   fetchLocations,
   fetchMediaAssets,
+  importExternalImage,
   searchPexelsImages,
   searchUnsplashImages,
   createArticle,

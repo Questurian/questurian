@@ -5,10 +5,17 @@ import remarkGfm from 'remark-gfm'
 import Masonry from 'react-masonry-css'
 import { useAuth } from '../../../providers/AuthProvider'
 import { ImageUpload, type UploadImageResponse } from '../../../features/images'
+import { MultiVariantCropper } from '../../../features/images/components/MultiVariantCropper'
+import {
+  type UploadProgress,
+  uploadImageVariants,
+} from '../../../features/images/api/imagesApi'
+import type { ImageVariantType } from '../../../features/images/utils/imageProcessing'
 import { MarkdownBlockEditor } from '../features/markdown-editor'
 import '../../youtube2blog/styles/stage-article.css'
 import type {
   CreateArticlePayload,
+  ExternalImageProvider,
   Location,
   MediaAsset,
   PexelsPhoto,
@@ -38,6 +45,8 @@ const CONTENT_BLOCK_WIDTH = 1920
 const CONTENT_BLOCK_HEIGHT = 1080
 const FEATURED_IMAGE_WIDTH = 1600
 const FEATURED_IMAGE_HEIGHT = 1200
+const UPLOAD_LOCATION_REQUIREMENT_MESSAGE =
+  'Select a valid location before uploading new images.'
 const IMG_BLOCK_MIN_WIDTH = 1200
 const IMG_BLOCK_MIN_HEIGHT = 1500
 const IMG_PAIR_REQUIRED_IMAGE_COUNT = 2
@@ -59,6 +68,10 @@ const EXTERNAL_MASONRY_BREAKPOINTS: Record<string, number> = {
   1500: 3,
   1100: 2,
   700: 1,
+}
+const EXTERNAL_PROVIDER_LABEL: Record<ExternalImageProvider, string> = {
+  unsplash: 'Unsplash',
+  pexels: 'Pexels',
 }
 
 const VARIANT_FALLBACK_ORDER: MediaVariant[] = [
@@ -126,6 +139,30 @@ type EditorialStageArticleApi = {
   ) => Promise<{
     photos: UnsplashPhoto[]
   }>
+  importExternalImage: (
+    input: {
+      sourceUrl: string
+      provider: ExternalImageProvider
+      externalRef: string
+      altText: string
+      photographerCredit: string
+      locationRef: number
+      photoId?: string | number
+    },
+    token: string
+  ) => Promise<UploadImageResponse>
+  fetchExternalImageSource: (
+    input: {
+      sourceUrl: string
+      provider: ExternalImageProvider
+      photoId?: string | number
+    },
+    token: string
+  ) => Promise<{
+    blob: Blob
+    fileName: string
+    contentType: string
+  }>
   rewriteBlockWithAi: (
     input: {
       prompt: string
@@ -161,6 +198,24 @@ type OpenBlockImageModalOptions = {
   trioFormat?: ImgTrioFormat
   selectedAssetIds?: number[]
   replaceExistingBlock?: boolean
+}
+
+type ExternalImageCropContext = 'featured' | 'block'
+
+type ExternalImageCropDraft = {
+  context: ExternalImageCropContext
+  provider: ExternalImageProvider
+  sourceUrl: string
+  photoId?: string | number
+  file: File
+  externalRef: string
+  fileNamePrefix: string
+  altText: string
+  photographerCredit: string
+  blockId?: string
+  replaceExistingBlock?: boolean
+  blockMode?: BlockImageModalMode
+  trioFormat?: ImgTrioFormat
 }
 
 function buildImageFileNamePrefix(articleTitle: string, externalRef: string): string {
@@ -2101,6 +2156,46 @@ function mergeMediaAssetLists(
   return Array.from(mergedAssets.values())
 }
 
+function getUnsplashPhotoImportUrl(photo: UnsplashPhoto): string {
+  return photo.image_url_raw || photo.image_url_full || photo.image_url_regular || photo.image_url
+}
+
+function getPexelsPhotoImportUrl(photo: PexelsPhoto): string {
+  return photo.image_url_original || photo.image_url_large || photo.image_url_portrait || photo.image_url
+}
+
+function buildExternalAltText(rawAlt: string | undefined, articleTitle: string): string {
+  const normalizedAlt = (rawAlt || '').trim()
+  if (normalizedAlt) return normalizedAlt
+  const normalizedTitle = articleTitle.trim()
+  return normalizedTitle ? `${normalizedTitle} image` : 'Article image'
+}
+
+function buildExternalPhotographerCredit(
+  photographer: string | undefined,
+  provider: ExternalImageProvider
+): string {
+  const normalizedPhotographer = (photographer || '').trim()
+  const providerLabel = EXTERNAL_PROVIDER_LABEL[provider]
+  return normalizedPhotographer
+    ? `${normalizedPhotographer} / ${providerLabel}`
+    : providerLabel
+}
+
+function buildExternalImportRef(
+  baseRef: string,
+  provider: ExternalImageProvider,
+  photoId?: string | number
+): string {
+  const token = String(photoId ?? 'image')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 32) || 'image'
+  return `${baseRef}_${provider}_${token}_${Date.now()}`
+}
+
 export default function EditorialStageArticlePage({
   storageKey,
   routes,
@@ -2113,6 +2208,8 @@ export default function EditorialStageArticlePage({
     convertMarkdownToLexical,
     fetchResult,
     markArticleSynced,
+    fetchExternalImageSource,
+    importExternalImage,
     searchPexelsImages,
     searchUnsplashImages,
     rewriteBlockWithAi,
@@ -2160,6 +2257,11 @@ export default function EditorialStageArticlePage({
   const [pexelsFeaturedError, setPexelsFeaturedError] = useState<string | null>(null)
   const [pexelsFeaturedOrientation, setPexelsFeaturedOrientation] = useState<PexelsOrientationOption>('')
   const [pexelsFeaturedPerPage, setPexelsFeaturedPerPage] = useState<number>(18)
+  const [isImportingFeaturedExternalImage, setIsImportingFeaturedExternalImage] = useState(false)
+  const [externalImageCropDraft, setExternalImageCropDraft] = useState<ExternalImageCropDraft | null>(null)
+  const [externalImageCropError, setExternalImageCropError] = useState<string | null>(null)
+  const [externalImageUploadProgress, setExternalImageUploadProgress] = useState<UploadProgress | null>(null)
+  const [isUploadingExternalImageVariants, setIsUploadingExternalImageVariants] = useState(false)
 
   // Modal state for block images
   const [blockImageModal, setBlockImageModal] = useState<BlockImageModalState | null>(null)
@@ -2185,6 +2287,7 @@ export default function EditorialStageArticlePage({
   const [pexelsBlockError, setPexelsBlockError] = useState<string | null>(null)
   const [pexelsBlockOrientation, setPexelsBlockOrientation] = useState<PexelsOrientationOption>('')
   const [pexelsBlockPerPage, setPexelsBlockPerPage] = useState<number>(18)
+  const [isImportingBlockExternalImage, setIsImportingBlockExternalImage] = useState(false)
 
   // Drag and drop state
   const [draggedTimelineItemId, setDraggedTimelineItemId] = useState<string | null>(null)
@@ -2455,6 +2558,7 @@ export default function EditorialStageArticlePage({
     setImgTrioFormat(IMG_TRIO_DEFAULT_FORMAT)
     setImgBlockAssetsError(null)
     setIsLoadingImgBlockAssets(false)
+    setIsImportingBlockExternalImage(false)
     setPexelsBlockQuery('')
     setPexelsBlockResults([])
     setIsSearchingPexelsBlock(false)
@@ -2467,6 +2571,10 @@ export default function EditorialStageArticlePage({
     setUnsplashBlockError(null)
     setUnsplashBlockOrientation('')
     setUnsplashBlockPerPage(18)
+    setExternalImageCropDraft(null)
+    setExternalImageCropError(null)
+    setExternalImageUploadProgress(null)
+    setIsUploadingExternalImageVariants(false)
   }, [])
 
   const openBlockImageModal = useCallback((
@@ -2492,6 +2600,11 @@ export default function EditorialStageArticlePage({
     setUnsplashBlockError(null)
     setUnsplashBlockOrientation('')
     setUnsplashBlockPerPage(18)
+    setIsImportingBlockExternalImage(false)
+    setExternalImageCropDraft(null)
+    setExternalImageCropError(null)
+    setExternalImageUploadProgress(null)
+    setIsUploadingExternalImageVariants(false)
     setOpenImagePickerTarget(null)
     setBlockImageModal({
       blockId,
@@ -2559,6 +2672,11 @@ export default function EditorialStageArticlePage({
   useEffect(() => {
     if (showImageModal) return
     setFeaturedImageSource('payload')
+    setIsImportingFeaturedExternalImage(false)
+    setExternalImageCropDraft(null)
+    setExternalImageCropError(null)
+    setExternalImageUploadProgress(null)
+    setIsUploadingExternalImageVariants(false)
     setPexelsFeaturedQuery('')
     setPexelsFeaturedResults([])
     setIsSearchingPexelsFeatured(false)
@@ -2848,10 +2966,25 @@ export default function EditorialStageArticlePage({
     imageId: number,
     imageAfterAltText?: string,
     replaceExisting = false
-  ) => {
-    if (!stagedArticle) return
+  ): string | null => {
+    if (!stagedArticle) return null
     const blockIndex = stagedArticle.blocks.findIndex((b) => b.id === blockId)
-    if (blockIndex === -1) return
+    if (blockIndex === -1) {
+      if (replaceExisting) {
+        return null
+      }
+
+      const fallbackBlockId = createMediaBlockId()
+      const fallbackImageBlock = createSingleImageBlock(
+        fallbackBlockId,
+        imageId,
+        imageAfterAltText
+      )
+      updateStagedArticle({
+        blocks: [...stagedArticle.blocks, fallbackImageBlock],
+      })
+      return fallbackBlockId
+    }
     const targetBlock = stagedArticle.blocks[blockIndex]
 
     if (replaceExisting && targetBlock.type === 'image') {
@@ -2861,7 +2994,7 @@ export default function EditorialStageArticlePage({
           : b
       )
       updateStagedArticle({ blocks: updatedBlocks })
-      return
+      return blockId
     }
 
     const newImageBlock = createSingleImageBlock(
@@ -2875,6 +3008,7 @@ export default function EditorialStageArticlePage({
       ...stagedArticle.blocks.slice(blockIndex + 1),
     ]
     updateStagedArticle({ blocks: updatedBlocks })
+    return newImageBlock.id
   }, [stagedArticle, updateStagedArticle])
 
   const addImgPairAfterBlock = useCallback((
@@ -3598,16 +3732,379 @@ export default function EditorialStageArticlePage({
     return preferred || selectedAsset
   }, [mediaAssets])
 
+  const refreshMediaAssets = useCallback(async () => {
+    if (!token) return
+    try {
+      const response = await fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
+      mergeMediaAssetsIntoState(response.docs || [])
+    } catch (err) {
+      setPublishResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to refresh media assets',
+      })
+    }
+  }, [token, fetchMediaAssets, mergeMediaAssetsIntoState])
+
+  const refreshModalImgBlockAssets = useCallback(async (
+    mode: BlockImageModalMode,
+    trioFormat: ImgTrioFormat
+  ) => {
+    if (!token || mode === 'default') return
+
+    let width = IMG_BLOCK_MIN_WIDTH
+    let height = IMG_BLOCK_MIN_HEIGHT
+    if (mode === 'img-trio') {
+      const dims = getImgTrioDimensions(trioFormat)
+      width = dims.width
+      height = dims.height
+    }
+
+    const response = await fetchMediaAssets(token, {
+      limit: 200,
+      mimeType: 'image/',
+      width,
+      height,
+    })
+    const docs = response.docs || []
+    setImgBlockAssets(docs)
+    mergeMediaAssetsIntoState(docs)
+  }, [token, fetchMediaAssets, mergeMediaAssetsIntoState])
+
+  const applyExternalUploadResult = useCallback(async (
+    result: UploadImageResponse,
+    draft: ExternalImageCropDraft
+  ) => {
+    if (draft.context === 'featured') {
+      const featuredAssetId = pickVariantAssetId(result.variantAssetIds, FEATURED_IMAGE_VARIANT)
+      if (!featuredAssetId) {
+        throw new Error('Imported image is missing an editorial (4:3) variant.')
+      }
+
+      updateStagedArticle({ featuredImageId: featuredAssetId })
+      await refreshMediaAssets()
+      setFeaturedImageSource('payload')
+      setShowImageModal(false)
+      return
+    }
+
+    if (!draft.blockId) {
+      throw new Error('Block target is missing for external image import.')
+    }
+
+    if (draft.blockMode === 'img' || draft.blockMode === 'img-trio') {
+      const requiredImageCount = draft.blockMode === 'img-trio'
+        ? IMG_TRIO_REQUIRED_IMAGE_COUNT
+        : IMG_PAIR_REQUIRED_IMAGE_COUNT
+      const trioFormat = draft.trioFormat || IMG_TRIO_DEFAULT_FORMAT
+      const selectionVariant: MediaVariant =
+        draft.blockMode === 'img'
+          ? IMG_BLOCK_VARIANT
+          : trioFormat === 'square'
+            ? 'square'
+            : CONTENT_BLOCK_VARIANT
+
+      const selectedAssetId = pickVariantAssetId(result.variantAssetIds, selectionVariant)
+      if (!selectedAssetId) {
+        throw new Error(
+          draft.blockMode === 'img'
+            ? 'Imported image is missing a portrait (4:5) variant for img pair.'
+            : `Imported image is missing a ${trioFormat} variant for img trio.`
+        )
+      }
+
+      await refreshModalImgBlockAssets(draft.blockMode, trioFormat)
+      setSelectedImgBlockAssetIds((current) => {
+        if (current.includes(selectedAssetId)) return current
+        if (current.length >= requiredImageCount) {
+          return [...current.slice(1), selectedAssetId]
+        }
+        return [...current, selectedAssetId]
+      })
+      return
+    }
+
+    const blockAssetId = pickVariantAssetId(result.variantAssetIds, CONTENT_BLOCK_VARIANT)
+    if (!blockAssetId) {
+      throw new Error('Imported image is missing a wide (16:9) variant.')
+    }
+
+    const addedBlockId = addImageAfterBlock(
+      draft.blockId,
+      blockAssetId,
+      draft.altText,
+      draft.replaceExistingBlock === true
+    )
+    if (!addedBlockId) {
+      throw new Error('Could not add the imported image block.')
+    }
+
+    setActiveEditingTimelineItemId(getImageTimelineItemId(addedBlockId))
+    await refreshMediaAssets()
+    closeBlockImageModal()
+  }, [
+    addImageAfterBlock,
+    closeBlockImageModal,
+    refreshMediaAssets,
+    refreshModalImgBlockAssets,
+    updateStagedArticle,
+  ])
+
+  const handleUploadExternalCroppedVariants = useCallback(async (
+    variantFiles: Array<{ type: ImageVariantType; file: File }>
+  ) => {
+    if (!externalImageCropDraft) return
+    if (!token) {
+      throw new Error('Please sign in again before importing images.')
+    }
+
+    const location = locations.find((loc) => loc.id === stagedArticle?.locationId)
+    if (!location) {
+      throw new Error(UPLOAD_LOCATION_REQUIREMENT_MESSAGE)
+    }
+
+    if (!externalImageCropDraft.photographerCredit.trim()) {
+      throw new Error('Photographer credit is required before importing.')
+    }
+
+    setIsUploadingExternalImageVariants(true)
+    setExternalImageCropError(null)
+
+    try {
+      const result = await uploadImageVariants(
+        variantFiles,
+        externalImageCropDraft.externalRef,
+        externalImageCropDraft.altText,
+        location.id,
+        token,
+        externalImageCropDraft.photographerCredit,
+        (progress) => setExternalImageUploadProgress(progress)
+      )
+      await applyExternalUploadResult(result, externalImageCropDraft)
+      setExternalImageCropDraft(null)
+      setExternalImageUploadProgress(null)
+      setExternalImageCropError(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to upload external image variants'
+      setExternalImageCropError(message)
+    } finally {
+      setIsUploadingExternalImageVariants(false)
+      setIsImportingFeaturedExternalImage(false)
+      setIsImportingBlockExternalImage(false)
+    }
+  }, [
+    applyExternalUploadResult,
+    externalImageCropDraft,
+    locations,
+    stagedArticle?.locationId,
+    token,
+  ])
+
+  const handleSkipCropExternalImport = useCallback(async () => {
+    if (!externalImageCropDraft || !token) return
+    const location = locations.find((loc) => loc.id === stagedArticle?.locationId)
+    if (!location) {
+      setExternalImageCropError(UPLOAD_LOCATION_REQUIREMENT_MESSAGE)
+      return
+    }
+
+    if (!externalImageCropDraft.photographerCredit.trim()) {
+      setExternalImageCropError('Photographer credit is required before importing.')
+      return
+    }
+
+    setExternalImageCropError(null)
+    setIsUploadingExternalImageVariants(true)
+    setExternalImageUploadProgress({
+      status: 'processing',
+      progress: 40,
+      message: 'Importing original image (auto-crop)...',
+    })
+
+    try {
+      const result = await importExternalImage(
+        {
+          sourceUrl: externalImageCropDraft.sourceUrl,
+          provider: externalImageCropDraft.provider,
+          externalRef: externalImageCropDraft.externalRef,
+          altText: externalImageCropDraft.altText,
+          photographerCredit: externalImageCropDraft.photographerCredit,
+          locationRef: location.id,
+          photoId: externalImageCropDraft.photoId,
+        },
+        token
+      )
+      await applyExternalUploadResult(result, externalImageCropDraft)
+      setExternalImageCropDraft(null)
+      setExternalImageUploadProgress(null)
+    } catch (err) {
+      setExternalImageCropError(
+        err instanceof Error ? err.message : 'Failed to import image'
+      )
+    } finally {
+      setIsUploadingExternalImageVariants(false)
+      setIsImportingFeaturedExternalImage(false)
+      setIsImportingBlockExternalImage(false)
+    }
+  }, [
+    applyExternalUploadResult,
+    externalImageCropDraft,
+    importExternalImage,
+    locations,
+    stagedArticle?.locationId,
+    token,
+  ])
+
+  const prepareExternalImageCropDraft = useCallback(async (
+    photo: UnsplashPhoto | PexelsPhoto,
+    provider: ExternalImageProvider,
+    context: ExternalImageCropContext,
+  ) => {
+    if (!stagedArticle) return
+
+    if (context === 'featured') {
+      if (provider === 'unsplash') setUnsplashFeaturedError(null)
+      if (provider === 'pexels') setPexelsFeaturedError(null)
+      setIsImportingFeaturedExternalImage(true)
+    } else {
+      if (provider === 'unsplash') setUnsplashBlockError(null)
+      if (provider === 'pexels') setPexelsBlockError(null)
+      setIsImportingBlockExternalImage(true)
+    }
+
+    if (!token) {
+      const message = 'Please sign in again before importing images.'
+      if (context === 'featured') {
+        if (provider === 'unsplash') setUnsplashFeaturedError(message)
+        if (provider === 'pexels') setPexelsFeaturedError(message)
+      } else {
+        if (provider === 'unsplash') setUnsplashBlockError(message)
+        if (provider === 'pexels') setPexelsBlockError(message)
+      }
+      setIsImportingFeaturedExternalImage(false)
+      setIsImportingBlockExternalImage(false)
+      return
+    }
+
+    const location = locations.find((loc) => loc.id === stagedArticle.locationId)
+    if (!location) {
+      if (context === 'featured') {
+        if (provider === 'unsplash') setUnsplashFeaturedError(UPLOAD_LOCATION_REQUIREMENT_MESSAGE)
+        if (provider === 'pexels') setPexelsFeaturedError(UPLOAD_LOCATION_REQUIREMENT_MESSAGE)
+      } else {
+        if (provider === 'unsplash') setUnsplashBlockError(UPLOAD_LOCATION_REQUIREMENT_MESSAGE)
+        if (provider === 'pexels') setPexelsBlockError(UPLOAD_LOCATION_REQUIREMENT_MESSAGE)
+      }
+      setIsImportingFeaturedExternalImage(false)
+      setIsImportingBlockExternalImage(false)
+      return
+    }
+
+    if (context === 'block' && !blockImageModal) {
+      setPublishResult({
+        success: false,
+        message: 'Image block target is not available. Re-open the image modal.',
+      })
+      setIsImportingBlockExternalImage(false)
+      return
+    }
+
+    const sourceUrl = provider === 'unsplash'
+      ? getUnsplashPhotoImportUrl(photo as UnsplashPhoto)
+      : getPexelsPhotoImportUrl(photo as PexelsPhoto)
+    const altText = buildExternalAltText(photo.alt, stagedArticle.title)
+    const photographerCredit = buildExternalPhotographerCredit(photo.photographer, provider)
+    const baseExternalRef = context === 'featured'
+      ? `${stagedArticle.id}_featured`
+      : `${stagedArticle.id}_block_${blockImageModal?.blockId || ''}`
+    const externalRef = buildExternalImportRef(baseExternalRef, provider, photo.id)
+    const fileNamePrefix = buildImageFileNamePrefix(stagedArticle.title, externalRef)
+
+    try {
+      setExternalImageCropError(null)
+      setExternalImageUploadProgress({
+        status: 'processing',
+        progress: 20,
+        message: 'Downloading source image...',
+      })
+
+      const externalSource = await fetchExternalImageSource(
+        {
+          sourceUrl,
+          provider,
+          photoId: photo.id,
+        },
+        token
+      )
+
+      const file = new File(
+        [externalSource.blob],
+        externalSource.fileName,
+        {
+          type: externalSource.contentType || externalSource.blob.type || 'image/jpeg',
+        }
+      )
+
+      setExternalImageCropDraft({
+        context,
+        provider,
+        sourceUrl,
+        photoId: photo.id,
+        file,
+        externalRef,
+        fileNamePrefix,
+        altText,
+        photographerCredit,
+        blockId: context === 'block' ? blockImageModal?.blockId : undefined,
+        replaceExistingBlock:
+          context === 'block' ? blockImageModal?.replaceExistingBlock === true : false,
+        blockMode: context === 'block' ? blockImageModal?.mode : undefined,
+        trioFormat: context === 'block' ? imgTrioFormat : undefined,
+      })
+      setExternalImageUploadProgress(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to download external image'
+      if (context === 'featured') {
+        if (provider === 'unsplash') setUnsplashFeaturedError(message)
+        if (provider === 'pexels') setPexelsFeaturedError(message)
+      } else {
+        if (provider === 'unsplash') setUnsplashBlockError(message)
+        if (provider === 'pexels') setPexelsBlockError(message)
+      }
+      setExternalImageUploadProgress(null)
+    } finally {
+      setIsImportingFeaturedExternalImage(false)
+      setIsImportingBlockExternalImage(false)
+    }
+  }, [
+    blockImageModal,
+    fetchExternalImageSource,
+    imgTrioFormat,
+    locations,
+    stagedArticle,
+    token,
+  ])
+
+  const handleImportFeaturedExternalImage = useCallback(async (
+    photo: UnsplashPhoto | PexelsPhoto,
+    provider: ExternalImageProvider
+  ) => {
+    await prepareExternalImageCropDraft(photo, provider, 'featured')
+  }, [prepareExternalImageCropDraft])
+
+  const handleImportBlockExternalImage = useCallback(async (
+    photo: UnsplashPhoto | PexelsPhoto,
+    provider: ExternalImageProvider
+  ) => {
+    await prepareExternalImageCropDraft(photo, provider, 'block')
+  }, [prepareExternalImageCropDraft])
+
   const handleUploadComplete = (result: UploadImageResponse) => {
     const featuredAssetId = pickVariantAssetId(result.variantAssetIds, FEATURED_IMAGE_VARIANT)
     if (featuredAssetId) {
       updateStagedArticle({ featuredImageId: featuredAssetId })
     }
 
-    if (token) {
-      fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
-        .then(res => mergeMediaAssetsIntoState(res.docs || []))
-    }
+    void refreshMediaAssets()
 
     setFeaturedImageSource('payload')
     setShowImageModal(false)
@@ -3624,18 +4121,24 @@ export default function EditorialStageArticlePage({
 
     const blockAssetId = pickVariantAssetId(result.variantAssetIds, CONTENT_BLOCK_VARIANT)
     if (blockAssetId) {
-      addImageAfterBlock(
+      const addedBlockId = addImageAfterBlock(
         blockImageModal.blockId,
         blockAssetId,
         blockImageAltText,
         blockImageModal.replaceExistingBlock === true
       )
+      if (!addedBlockId) {
+        setPublishResult({
+          success: false,
+          message: 'Could not add the image block. Try selecting the target position again.',
+        })
+        return
+      }
+
+      setActiveEditingTimelineItemId(getImageTimelineItemId(addedBlockId))
     }
 
-    if (token) {
-      fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
-        .then(res => mergeMediaAssetsIntoState(res.docs || []))
-    }
+    void refreshMediaAssets()
 
     closeBlockImageModal()
     setBlockImageAltText('')
@@ -3783,6 +4286,103 @@ export default function EditorialStageArticlePage({
     return img.url || `${import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'}/api/media-assets/file/${img.filename}`
   }
 
+  const renderExternalCropEditor = (context: ExternalImageCropContext) => {
+    if (!externalImageCropDraft || externalImageCropDraft.context !== context) {
+      return null
+    }
+
+    const providerLabel = EXTERNAL_PROVIDER_LABEL[externalImageCropDraft.provider]
+    const handleBackToResults = () => {
+      setExternalImageCropDraft(null)
+      setExternalImageCropError(null)
+      setExternalImageUploadProgress(null)
+      setIsUploadingExternalImageVariants(false)
+    }
+
+    return (
+      <div className="stage-article-upload-section">
+        <div className="stage-article-preview-container" style={{ marginBottom: '0.75rem' }}>
+          <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
+            Cropping {providerLabel} image before upload.
+          </p>
+
+          <label className="stage-article-alttext-label">Alt Text</label>
+          <input
+            type="text"
+            className="stage-article-alttext-input"
+            value={externalImageCropDraft.altText}
+            onChange={(event) => {
+              const nextAltText = event.target.value
+              setExternalImageCropDraft((current) =>
+                current ? { ...current, altText: nextAltText } : current
+              )
+            }}
+            placeholder="Describe the image for accessibility"
+            disabled={isUploadingExternalImageVariants}
+          />
+
+          <label className="stage-article-alttext-label" style={{ marginTop: '0.75rem' }}>
+            Photographer Credit <span className="required">*</span>
+          </label>
+          <input
+            type="text"
+            className="stage-article-alttext-input"
+            value={externalImageCropDraft.photographerCredit}
+            onChange={(event) => {
+              const nextCredit = event.target.value
+              setExternalImageCropDraft((current) =>
+                current ? { ...current, photographerCredit: nextCredit } : current
+              )
+            }}
+            placeholder={`Example: Photographer / ${providerLabel}`}
+            disabled={isUploadingExternalImageVariants}
+          />
+
+          {externalImageCropError && (
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#ef4444' }}>
+              {externalImageCropError}
+            </p>
+          )}
+          {externalImageUploadProgress && (
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b6b6b' }}>
+              {externalImageUploadProgress.message} ({externalImageUploadProgress.progress}%)
+            </p>
+          )}
+
+          <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="stage-article-modal-done"
+              onClick={() => {
+                void handleSkipCropExternalImport()
+              }}
+              disabled={isUploadingExternalImageVariants || isImportingFeaturedExternalImage || isImportingBlockExternalImage}
+            >
+              Skip Crop (Auto)
+            </button>
+            <button
+              type="button"
+              className="stage-article-modal-done"
+              onClick={handleBackToResults}
+              disabled={isUploadingExternalImageVariants}
+            >
+              Back to Results
+            </button>
+          </div>
+        </div>
+
+        <MultiVariantCropper
+          file={externalImageCropDraft.file}
+          fileNamePrefix={externalImageCropDraft.fileNamePrefix}
+          onConfirm={(variantFiles) => {
+            void handleUploadExternalCroppedVariants(variantFiles)
+          }}
+          onCancel={handleBackToResults}
+        />
+      </div>
+    )
+  }
+
   if (isLoading || !stagedArticle) {
     return (
       <div className="stage-article-page">
@@ -3811,8 +4411,6 @@ export default function EditorialStageArticlePage({
     stagedArticle.featuredImageId
       ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
       : null
-  const uploadLocationRequirementMessage =
-    'Select a valid location before uploading new images.'
   const featuredImageFileNamePrefix = buildImageFileNamePrefix(
     stagedArticle.title,
     stagedArticle.id
@@ -4983,7 +5581,7 @@ export default function EditorialStageArticlePage({
                     />
                   ) : (
                     <div className="stage-article-modal-empty">
-                      <p>{uploadLocationRequirementMessage}</p>
+                      <p>{UPLOAD_LOCATION_REQUIREMENT_MESSAGE}</p>
                     </div>
                   )}
                 </div>
@@ -4991,200 +5589,224 @@ export default function EditorialStageArticlePage({
             )}
 
             {featuredImageSource === 'unsplash' && (
-              <>
-                <div className="stage-article-modal-search stage-article-modal-search-inline">
-                  <input
-                    type="text"
-                    placeholder="Search with Unsplash..."
-                    value={unsplashFeaturedQuery}
-                    onChange={(e) => setUnsplashFeaturedQuery(e.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        void runFeaturedUnsplashSearch()
-                      }
-                    }}
-                    className="stage-article-modal-search-input"
-                  />
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={unsplashFeaturedOrientation}
-                    onChange={(event) => {
-                      setUnsplashFeaturedOrientation(event.target.value as PexelsOrientationOption)
-                    }}
-                  >
-                    <option value="">Any orientation</option>
-                    <option value="landscape">Landscape</option>
-                    <option value="portrait">Portrait</option>
-                    <option value="square">Square</option>
-                  </select>
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={String(unsplashFeaturedPerPage)}
-                    onChange={(event) => {
-                      const parsed = Number(event.target.value)
-                      setUnsplashFeaturedPerPage(Number.isFinite(parsed) ? parsed : 18)
-                    }}
-                  >
-                    <option value="12">12 results</option>
-                    <option value="18">18 results</option>
-                    <option value="30">30 results</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="stage-article-modal-search-btn"
-                    onClick={() => {
-                      void runFeaturedUnsplashSearch()
-                    }}
-                    disabled={isSearchingUnsplashFeatured}
-                  >
-                    {isSearchingUnsplashFeatured ? 'Searching...' : 'Search with Unsplash'}
-                  </button>
-                </div>
-
-                {unsplashFeaturedError && (
-                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
-                    <p>{unsplashFeaturedError}</p>
-                  </div>
-                )}
-
-                {unsplashFeaturedResults.length > 0 && (
+              externalImageCropDraft?.context === 'featured'
+                ? renderExternalCropEditor('featured')
+                : (
                   <>
-                    <div className="stage-article-modal-pexels-header">
-                      Unsplash results (preview only). Click image to open source.
+                    <div className="stage-article-modal-search stage-article-modal-search-inline">
+                      <input
+                        type="text"
+                        placeholder="Search with Unsplash..."
+                        value={unsplashFeaturedQuery}
+                        onChange={(e) => setUnsplashFeaturedQuery(e.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            void runFeaturedUnsplashSearch()
+                          }
+                        }}
+                        className="stage-article-modal-search-input"
+                      />
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={unsplashFeaturedOrientation}
+                        onChange={(event) => {
+                          setUnsplashFeaturedOrientation(event.target.value as PexelsOrientationOption)
+                        }}
+                      >
+                        <option value="">Any orientation</option>
+                        <option value="landscape">Landscape</option>
+                        <option value="portrait">Portrait</option>
+                        <option value="square">Square</option>
+                      </select>
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={String(unsplashFeaturedPerPage)}
+                        onChange={(event) => {
+                          const parsed = Number(event.target.value)
+                          setUnsplashFeaturedPerPage(Number.isFinite(parsed) ? parsed : 18)
+                        }}
+                      >
+                        <option value="12">12 results</option>
+                        <option value="18">18 results</option>
+                        <option value="30">30 results</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="stage-article-modal-search-btn"
+                        onClick={() => {
+                          void runFeaturedUnsplashSearch()
+                        }}
+                        disabled={isSearchingUnsplashFeatured}
+                      >
+                        {isSearchingUnsplashFeatured ? 'Searching...' : 'Search with Unsplash'}
+                      </button>
                     </div>
-                    <Masonry
-                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
-                      className="stage-article-masonry-grid"
-                      columnClassName="stage-article-masonry-column"
-                    >
-                      {unsplashFeaturedResults.map((photo) => (
-                        <a
-                          key={`featured-unsplash-${photo.id}`}
-                          href={photo.unsplash_url || photo.image_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={photo.photographer || 'Open on Unsplash'}
-                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
-                        >
-                          <img
-                            src={photo.image_url_raw || photo.image_url_full || photo.image_url_regular || photo.image_url}
-                            alt={photo.alt || 'Unsplash image'}
-                            loading="lazy"
-                            width={photo.width}
-                            height={photo.height}
-                          />
-                        </a>
-                      ))}
-                    </Masonry>
-                  </>
-                )}
 
-                {unsplashFeaturedResults.length === 0 && !unsplashFeaturedError && (
-                  <div className="stage-article-modal-empty">
-                    <p>Search Unsplash to preview external images.</p>
-                  </div>
-                )}
-              </>
+                    {unsplashFeaturedError && (
+                      <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                        <p>{unsplashFeaturedError}</p>
+                      </div>
+                    )}
+
+                    {unsplashFeaturedResults.length > 0 && (
+                      <>
+                        <div className="stage-article-modal-pexels-header">
+                          Unsplash results. Click an image to crop and import it into Payload.
+                        </div>
+                        <Masonry
+                          breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                          className="stage-article-masonry-grid"
+                          columnClassName="stage-article-masonry-column"
+                        >
+                          {unsplashFeaturedResults.map((photo) => (
+                            <button
+                              key={`featured-unsplash-${photo.id}`}
+                              type="button"
+                              title={photo.photographer || 'Import from Unsplash'}
+                              className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+                              onClick={() => {
+                                void handleImportFeaturedExternalImage(photo, 'unsplash')
+                              }}
+                              disabled={isImportingFeaturedExternalImage}
+                            >
+                              <img
+                                src={getUnsplashPhotoImportUrl(photo)}
+                                alt={photo.alt || 'Unsplash image'}
+                                loading="lazy"
+                                width={photo.width}
+                                height={photo.height}
+                              />
+                            </button>
+                          ))}
+                        </Masonry>
+                        {isImportingFeaturedExternalImage && (
+                          <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                            <p>Preparing selected image for crop...</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {unsplashFeaturedResults.length === 0 && !unsplashFeaturedError && (
+                      <div className="stage-article-modal-empty">
+                        <p>Search Unsplash to import an image into Payload.</p>
+                      </div>
+                    )}
+                  </>
+                )
             )}
 
             {featuredImageSource === 'pexels' && (
-              <>
-                <div className="stage-article-modal-search stage-article-modal-search-inline">
-                  <input
-                    type="text"
-                    placeholder="Search with Pexels..."
-                    value={pexelsFeaturedQuery}
-                    onChange={(e) => setPexelsFeaturedQuery(e.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        void runFeaturedPexelsSearch()
-                      }
-                    }}
-                    className="stage-article-modal-search-input"
-                  />
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={pexelsFeaturedOrientation}
-                    onChange={(event) => {
-                      setPexelsFeaturedOrientation(event.target.value as PexelsOrientationOption)
-                    }}
-                  >
-                    <option value="">Any orientation</option>
-                    <option value="landscape">Landscape</option>
-                    <option value="portrait">Portrait</option>
-                    <option value="square">Square</option>
-                  </select>
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={String(pexelsFeaturedPerPage)}
-                    onChange={(event) => {
-                      const parsed = Number(event.target.value)
-                      setPexelsFeaturedPerPage(Number.isFinite(parsed) ? parsed : 18)
-                    }}
-                  >
-                    <option value="12">12 results</option>
-                    <option value="18">18 results</option>
-                    <option value="30">30 results</option>
-                    <option value="50">50 results</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="stage-article-modal-search-btn"
-                    onClick={() => {
-                      void runFeaturedPexelsSearch()
-                    }}
-                    disabled={isSearchingPexelsFeatured}
-                  >
-                    {isSearchingPexelsFeatured ? 'Searching...' : 'Search with Pexels'}
-                  </button>
-                </div>
-
-                {pexelsFeaturedError && (
-                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
-                    <p>{pexelsFeaturedError}</p>
-                  </div>
-                )}
-
-                {pexelsFeaturedResults.length > 0 && (
+              externalImageCropDraft?.context === 'featured'
+                ? renderExternalCropEditor('featured')
+                : (
                   <>
-                    <div className="stage-article-modal-pexels-header">
-                      Pexels results (preview only). Click image to open source.
+                    <div className="stage-article-modal-search stage-article-modal-search-inline">
+                      <input
+                        type="text"
+                        placeholder="Search with Pexels..."
+                        value={pexelsFeaturedQuery}
+                        onChange={(e) => setPexelsFeaturedQuery(e.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            void runFeaturedPexelsSearch()
+                          }
+                        }}
+                        className="stage-article-modal-search-input"
+                      />
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={pexelsFeaturedOrientation}
+                        onChange={(event) => {
+                          setPexelsFeaturedOrientation(event.target.value as PexelsOrientationOption)
+                        }}
+                      >
+                        <option value="">Any orientation</option>
+                        <option value="landscape">Landscape</option>
+                        <option value="portrait">Portrait</option>
+                        <option value="square">Square</option>
+                      </select>
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={String(pexelsFeaturedPerPage)}
+                        onChange={(event) => {
+                          const parsed = Number(event.target.value)
+                          setPexelsFeaturedPerPage(Number.isFinite(parsed) ? parsed : 18)
+                        }}
+                      >
+                        <option value="12">12 results</option>
+                        <option value="18">18 results</option>
+                        <option value="30">30 results</option>
+                        <option value="50">50 results</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="stage-article-modal-search-btn"
+                        onClick={() => {
+                          void runFeaturedPexelsSearch()
+                        }}
+                        disabled={isSearchingPexelsFeatured}
+                      >
+                        {isSearchingPexelsFeatured ? 'Searching...' : 'Search with Pexels'}
+                      </button>
                     </div>
-                    <Masonry
-                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
-                      className="stage-article-masonry-grid"
-                      columnClassName="stage-article-masonry-column"
-                    >
-                      {pexelsFeaturedResults.map((photo) => (
-                        <a
-                          key={`featured-pexels-${photo.id}`}
-                          href={photo.pexels_url || photo.image_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={photo.photographer || 'Open on Pexels'}
-                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
-                        >
-                          <img
-                            src={photo.image_url_original || photo.image_url_large || photo.image_url_portrait || photo.image_url}
-                            alt={photo.alt || 'Pexels image'}
-                            loading="lazy"
-                            width={photo.width}
-                            height={photo.height}
-                          />
-                        </a>
-                      ))}
-                    </Masonry>
-                  </>
-                )}
 
-                {pexelsFeaturedResults.length === 0 && !pexelsFeaturedError && (
-                  <div className="stage-article-modal-empty">
-                    <p>Search Pexels to preview external images.</p>
-                  </div>
-                )}
-              </>
+                    {pexelsFeaturedError && (
+                      <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                        <p>{pexelsFeaturedError}</p>
+                      </div>
+                    )}
+
+                    {pexelsFeaturedResults.length > 0 && (
+                      <>
+                        <div className="stage-article-modal-pexels-header">
+                          Pexels results. Click an image to crop and import it into Payload.
+                        </div>
+                        <Masonry
+                          breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                          className="stage-article-masonry-grid"
+                          columnClassName="stage-article-masonry-column"
+                        >
+                          {pexelsFeaturedResults.map((photo) => (
+                            <button
+                              key={`featured-pexels-${photo.id}`}
+                              type="button"
+                              title={photo.photographer || 'Import from Pexels'}
+                              className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+                              onClick={() => {
+                                void handleImportFeaturedExternalImage(photo, 'pexels')
+                              }}
+                              disabled={isImportingFeaturedExternalImage}
+                            >
+                              <img
+                                src={getPexelsPhotoImportUrl(photo)}
+                                alt={photo.alt || 'Pexels image'}
+                                loading="lazy"
+                                width={photo.width}
+                                height={photo.height}
+                              />
+                            </button>
+                          ))}
+                        </Masonry>
+                        {isImportingFeaturedExternalImage && (
+                          <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                            <p>Preparing selected image for crop...</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {pexelsFeaturedResults.length === 0 && !pexelsFeaturedError && (
+                      <div className="stage-article-modal-empty">
+                        <p>Search Pexels to import an image into Payload.</p>
+                      </div>
+                    )}
+                  </>
+                )
             )}
           </div>
         </div>
@@ -5337,12 +5959,21 @@ export default function EditorialStageArticlePage({
 
                           const preferredAsset = findPreferredVariantAsset(img.id, CONTENT_BLOCK_VARIANT)
                           if (!preferredAsset) return
-                          addImageAfterBlock(
+                          const addedBlockId = addImageAfterBlock(
                             blockImageModal.blockId,
                             preferredAsset.id,
                             getMediaAssetAltText(preferredAsset),
                             blockImageModal.replaceExistingBlock === true
                           )
+                          if (!addedBlockId) {
+                            setPublishResult({
+                              success: false,
+                              message: 'Could not add the image block. Try selecting the target position again.',
+                            })
+                            return
+                          }
+
+                          setActiveEditingTimelineItemId(getImageTimelineItemId(addedBlockId))
                           mergeMediaAssetsIntoState([preferredAsset])
                           closeBlockImageModal()
                         }}
@@ -5427,7 +6058,7 @@ export default function EditorialStageArticlePage({
                       />
                     ) : (
                       <div className="stage-article-modal-empty">
-                        <p>{uploadLocationRequirementMessage}</p>
+                        <p>{UPLOAD_LOCATION_REQUIREMENT_MESSAGE}</p>
                       </div>
                     )}
                   </div>
@@ -5436,200 +6067,260 @@ export default function EditorialStageArticlePage({
             )}
 
             {blockImageSource === 'unsplash' && (
-              <>
-                <div className="stage-article-modal-search stage-article-modal-search-inline">
-                  <input
-                    type="text"
-                    placeholder="Search with Unsplash..."
-                    value={unsplashBlockQuery}
-                    onChange={(e) => setUnsplashBlockQuery(e.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        void runBlockUnsplashSearch()
-                      }
-                    }}
-                    className="stage-article-modal-search-input"
-                  />
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={unsplashBlockOrientation}
-                    onChange={(event) => {
-                      setUnsplashBlockOrientation(event.target.value as PexelsOrientationOption)
-                    }}
-                  >
-                    <option value="">Any orientation</option>
-                    <option value="landscape">Landscape</option>
-                    <option value="portrait">Portrait</option>
-                    <option value="square">Square</option>
-                  </select>
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={String(unsplashBlockPerPage)}
-                    onChange={(event) => {
-                      const parsed = Number(event.target.value)
-                      setUnsplashBlockPerPage(Number.isFinite(parsed) ? parsed : 18)
-                    }}
-                  >
-                    <option value="12">12 results</option>
-                    <option value="18">18 results</option>
-                    <option value="30">30 results</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="stage-article-modal-search-btn"
-                    onClick={() => {
-                      void runBlockUnsplashSearch()
-                    }}
-                    disabled={isSearchingUnsplashBlock}
-                  >
-                    {isSearchingUnsplashBlock ? 'Searching...' : 'Search with Unsplash'}
-                  </button>
-                </div>
-
-                {unsplashBlockError && (
-                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
-                    <p>{unsplashBlockError}</p>
-                  </div>
-                )}
-
-                {unsplashBlockResults.length > 0 && (
+              externalImageCropDraft?.context === 'block'
+                ? renderExternalCropEditor('block')
+                : (
                   <>
-                    <div className="stage-article-modal-pexels-header">
-                      Unsplash results (preview only). Click image to open source.
+                    <div className="stage-article-modal-search stage-article-modal-search-inline">
+                      <input
+                        type="text"
+                        placeholder="Search with Unsplash..."
+                        value={unsplashBlockQuery}
+                        onChange={(e) => setUnsplashBlockQuery(e.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            void runBlockUnsplashSearch()
+                          }
+                        }}
+                        className="stage-article-modal-search-input"
+                      />
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={unsplashBlockOrientation}
+                        onChange={(event) => {
+                          setUnsplashBlockOrientation(event.target.value as PexelsOrientationOption)
+                        }}
+                      >
+                        <option value="">Any orientation</option>
+                        <option value="landscape">Landscape</option>
+                        <option value="portrait">Portrait</option>
+                        <option value="square">Square</option>
+                      </select>
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={String(unsplashBlockPerPage)}
+                        onChange={(event) => {
+                          const parsed = Number(event.target.value)
+                          setUnsplashBlockPerPage(Number.isFinite(parsed) ? parsed : 18)
+                        }}
+                      >
+                        <option value="12">12 results</option>
+                        <option value="18">18 results</option>
+                        <option value="30">30 results</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="stage-article-modal-search-btn"
+                        onClick={() => {
+                          void runBlockUnsplashSearch()
+                        }}
+                        disabled={isSearchingUnsplashBlock}
+                      >
+                        {isSearchingUnsplashBlock ? 'Searching...' : 'Search with Unsplash'}
+                      </button>
                     </div>
-                    <Masonry
-                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
-                      className="stage-article-masonry-grid"
-                      columnClassName="stage-article-masonry-column"
-                    >
-                      {unsplashBlockResults.map((photo) => (
-                        <a
-                          key={`block-unsplash-${photo.id}`}
-                          href={photo.unsplash_url || photo.image_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={photo.photographer || 'Open on Unsplash'}
-                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
-                        >
-                          <img
-                            src={photo.image_url_raw || photo.image_url_full || photo.image_url_regular || photo.image_url}
-                            alt={photo.alt || 'Unsplash image'}
-                            loading="lazy"
-                            width={photo.width}
-                            height={photo.height}
-                          />
-                        </a>
-                      ))}
-                    </Masonry>
-                  </>
-                )}
 
-                {unsplashBlockResults.length === 0 && !unsplashBlockError && (
-                  <div className="stage-article-modal-empty">
-                    <p>Search Unsplash to preview external images.</p>
-                  </div>
-                )}
-              </>
+                    {unsplashBlockError && (
+                      <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                        <p>{unsplashBlockError}</p>
+                      </div>
+                    )}
+
+                    {unsplashBlockResults.length > 0 && (
+                      <>
+                        <div className="stage-article-modal-pexels-header">
+                          Unsplash results. Click an image to crop and import it into Payload.
+                        </div>
+                        <Masonry
+                          breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                          className="stage-article-masonry-grid"
+                          columnClassName="stage-article-masonry-column"
+                        >
+                          {unsplashBlockResults.map((photo) => (
+                            <button
+                              key={`block-unsplash-${photo.id}`}
+                              type="button"
+                              title={photo.photographer || 'Import from Unsplash'}
+                              className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+                              onClick={() => {
+                                void handleImportBlockExternalImage(photo, 'unsplash')
+                              }}
+                              disabled={isImportingBlockExternalImage}
+                            >
+                              <img
+                                src={getUnsplashPhotoImportUrl(photo)}
+                                alt={photo.alt || 'Unsplash image'}
+                                loading="lazy"
+                                width={photo.width}
+                                height={photo.height}
+                              />
+                            </button>
+                          ))}
+                        </Masonry>
+                        {isMultiImageModal && (
+                          <div className="stage-article-modal-footer">
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b6b6b' }}>
+                              Selected {selectedImgBlockAssetIds.length}/{requiredImageCount}
+                            </p>
+                            <button
+                              type="button"
+                              className="stage-article-modal-done"
+                              onClick={handleAddSelectedImgBlock}
+                              disabled={
+                                selectedImgBlockAssetIds.length !== requiredImageCount
+                                || isUploadingExternalImageVariants
+                              }
+                            >
+                              {isImgTrioModal ? 'Add Img Trio' : 'Add Img Pair'}
+                            </button>
+                          </div>
+                        )}
+                        {isImportingBlockExternalImage && (
+                          <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                            <p>Preparing selected image for crop...</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {unsplashBlockResults.length === 0 && !unsplashBlockError && (
+                      <div className="stage-article-modal-empty">
+                        <p>Search Unsplash to import an image into Payload.</p>
+                      </div>
+                    )}
+                  </>
+                )
             )}
 
             {blockImageSource === 'pexels' && (
-              <>
-                <div className="stage-article-modal-search stage-article-modal-search-inline">
-                  <input
-                    type="text"
-                    placeholder="Search with Pexels..."
-                    value={pexelsBlockQuery}
-                    onChange={(e) => setPexelsBlockQuery(e.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        void runBlockPexelsSearch()
-                      }
-                    }}
-                    className="stage-article-modal-search-input"
-                  />
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={pexelsBlockOrientation}
-                    onChange={(event) => {
-                      setPexelsBlockOrientation(event.target.value as PexelsOrientationOption)
-                    }}
-                  >
-                    <option value="">Any orientation</option>
-                    <option value="landscape">Landscape</option>
-                    <option value="portrait">Portrait</option>
-                    <option value="square">Square</option>
-                  </select>
-                  <select
-                    className="stage-article-modal-search-select"
-                    value={String(pexelsBlockPerPage)}
-                    onChange={(event) => {
-                      const parsed = Number(event.target.value)
-                      setPexelsBlockPerPage(Number.isFinite(parsed) ? parsed : 18)
-                    }}
-                  >
-                    <option value="12">12 results</option>
-                    <option value="18">18 results</option>
-                    <option value="30">30 results</option>
-                    <option value="50">50 results</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="stage-article-modal-search-btn"
-                    onClick={() => {
-                      void runBlockPexelsSearch()
-                    }}
-                    disabled={isSearchingPexelsBlock}
-                  >
-                    {isSearchingPexelsBlock ? 'Searching...' : 'Search with Pexels'}
-                  </button>
-                </div>
-
-                {pexelsBlockError && (
-                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
-                    <p>{pexelsBlockError}</p>
-                  </div>
-                )}
-
-                {pexelsBlockResults.length > 0 && (
+              externalImageCropDraft?.context === 'block'
+                ? renderExternalCropEditor('block')
+                : (
                   <>
-                    <div className="stage-article-modal-pexels-header">
-                      Pexels results (preview only). Click image to open source.
+                    <div className="stage-article-modal-search stage-article-modal-search-inline">
+                      <input
+                        type="text"
+                        placeholder="Search with Pexels..."
+                        value={pexelsBlockQuery}
+                        onChange={(e) => setPexelsBlockQuery(e.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            void runBlockPexelsSearch()
+                          }
+                        }}
+                        className="stage-article-modal-search-input"
+                      />
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={pexelsBlockOrientation}
+                        onChange={(event) => {
+                          setPexelsBlockOrientation(event.target.value as PexelsOrientationOption)
+                        }}
+                      >
+                        <option value="">Any orientation</option>
+                        <option value="landscape">Landscape</option>
+                        <option value="portrait">Portrait</option>
+                        <option value="square">Square</option>
+                      </select>
+                      <select
+                        className="stage-article-modal-search-select"
+                        value={String(pexelsBlockPerPage)}
+                        onChange={(event) => {
+                          const parsed = Number(event.target.value)
+                          setPexelsBlockPerPage(Number.isFinite(parsed) ? parsed : 18)
+                        }}
+                      >
+                        <option value="12">12 results</option>
+                        <option value="18">18 results</option>
+                        <option value="30">30 results</option>
+                        <option value="50">50 results</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="stage-article-modal-search-btn"
+                        onClick={() => {
+                          void runBlockPexelsSearch()
+                        }}
+                        disabled={isSearchingPexelsBlock}
+                      >
+                        {isSearchingPexelsBlock ? 'Searching...' : 'Search with Pexels'}
+                      </button>
                     </div>
-                    <Masonry
-                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
-                      className="stage-article-masonry-grid"
-                      columnClassName="stage-article-masonry-column"
-                    >
-                      {pexelsBlockResults.map((photo) => (
-                        <a
-                          key={`block-pexels-${photo.id}`}
-                          href={photo.pexels_url || photo.image_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={photo.photographer || 'Open on Pexels'}
-                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
-                        >
-                          <img
-                            src={photo.image_url_original || photo.image_url_large || photo.image_url_portrait || photo.image_url}
-                            alt={photo.alt || 'Pexels image'}
-                            loading="lazy"
-                            width={photo.width}
-                            height={photo.height}
-                          />
-                        </a>
-                      ))}
-                    </Masonry>
-                  </>
-                )}
 
-                {pexelsBlockResults.length === 0 && !pexelsBlockError && (
-                  <div className="stage-article-modal-empty">
-                    <p>Search Pexels to preview external images.</p>
-                  </div>
-                )}
-              </>
+                    {pexelsBlockError && (
+                      <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                        <p>{pexelsBlockError}</p>
+                      </div>
+                    )}
+
+                    {pexelsBlockResults.length > 0 && (
+                      <>
+                        <div className="stage-article-modal-pexels-header">
+                          Pexels results. Click an image to crop and import it into Payload.
+                        </div>
+                        <Masonry
+                          breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                          className="stage-article-masonry-grid"
+                          columnClassName="stage-article-masonry-column"
+                        >
+                          {pexelsBlockResults.map((photo) => (
+                            <button
+                              key={`block-pexels-${photo.id}`}
+                              type="button"
+                              title={photo.photographer || 'Import from Pexels'}
+                              className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+                              onClick={() => {
+                                void handleImportBlockExternalImage(photo, 'pexels')
+                              }}
+                              disabled={isImportingBlockExternalImage}
+                            >
+                              <img
+                                src={getPexelsPhotoImportUrl(photo)}
+                                alt={photo.alt || 'Pexels image'}
+                                loading="lazy"
+                                width={photo.width}
+                                height={photo.height}
+                              />
+                            </button>
+                          ))}
+                        </Masonry>
+                        {isMultiImageModal && (
+                          <div className="stage-article-modal-footer">
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b6b6b' }}>
+                              Selected {selectedImgBlockAssetIds.length}/{requiredImageCount}
+                            </p>
+                            <button
+                              type="button"
+                              className="stage-article-modal-done"
+                              onClick={handleAddSelectedImgBlock}
+                              disabled={
+                                selectedImgBlockAssetIds.length !== requiredImageCount
+                                || isUploadingExternalImageVariants
+                              }
+                            >
+                              {isImgTrioModal ? 'Add Img Trio' : 'Add Img Pair'}
+                            </button>
+                          </div>
+                        )}
+                        {isImportingBlockExternalImage && (
+                          <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                            <p>Preparing selected image for crop...</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {pexelsBlockResults.length === 0 && !pexelsBlockError && (
+                      <div className="stage-article-modal-empty">
+                        <p>Search Pexels to import an image into Payload.</p>
+                      </div>
+                    )}
+                  </>
+                )
             )}
           </div>
         </div>

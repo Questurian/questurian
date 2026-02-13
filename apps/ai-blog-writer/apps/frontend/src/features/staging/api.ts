@@ -41,6 +41,7 @@ export type PexelsPhoto = {
 }
 
 export type PexelsOrientation = 'landscape' | 'portrait' | 'square'
+export type ExternalImageProvider = 'unsplash' | 'pexels'
 
 export type UnsplashPhoto = {
   id: string
@@ -72,6 +73,47 @@ export type UnsplashSearchResponse = {
   per_page: number
   total_results: number
   photos: UnsplashPhoto[]
+}
+
+export type ImportExternalImageRequest = {
+  sourceUrl: string
+  provider: ExternalImageProvider
+  externalRef: string
+  altText: string
+  photographerCredit: string
+  locationRef: number
+  photoId?: string | number
+}
+
+export type ImportExternalImageResponse = {
+  success: boolean
+  mediaSetId: string
+  externalRef: string
+  provider: ExternalImageProvider
+  sourceUrl: string
+  variantAssetIds?: {
+    [key: string]: string
+  }
+  variants: {
+    [key: string]: {
+      filename: string
+      width: number
+      height: number
+      size: number
+    }
+  }
+}
+
+export type FetchExternalImageSourceRequest = {
+  sourceUrl: string
+  provider: ExternalImageProvider
+  photoId?: string | number
+}
+
+export type FetchExternalImageSourceResponse = {
+  blob: Blob
+  fileName: string
+  contentType: string
 }
 
 export type Location = {
@@ -352,6 +394,128 @@ export async function searchUnsplashImages(
   }
 
   return response.json()
+}
+
+export async function importExternalImage(
+  input: ImportExternalImageRequest,
+  token: string
+): Promise<ImportExternalImageResponse> {
+  const normalizedSourceUrl = input.sourceUrl.trim()
+  if (!normalizedSourceUrl) {
+    throw new Error('sourceUrl is required')
+  }
+
+  const formData = new FormData()
+  formData.append('source_url', normalizedSourceUrl)
+  formData.append('provider', input.provider)
+  formData.append('external_ref', input.externalRef)
+  formData.append('alt_text', input.altText)
+  formData.append('photographer_credit', input.photographerCredit)
+  formData.append('location_ref', String(input.locationRef))
+  if (input.photoId !== undefined && input.photoId !== null) {
+    formData.append('photo_id', String(input.photoId))
+  }
+
+  const response = await fetch(`${API_BASE_URL}/images/import-external`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ detail: { message: 'External image import failed' } }))
+    const detail = errorData.detail
+    if (typeof detail === 'string') {
+      throw new Error(detail)
+    }
+    if (detail?.message) {
+      throw new Error(detail.message)
+    }
+    if (typeof errorData.message === 'string' && errorData.message) {
+      throw new Error(errorData.message)
+    }
+    throw new Error('External image import failed')
+  }
+
+  return response.json()
+}
+
+function parseFileNameFromContentDisposition(
+  contentDisposition: string | null
+): string | null {
+  if (!contentDisposition) return null
+  const match = contentDisposition.match(/filename="([^"]+)"/i)
+  if (!match?.[1]) return null
+  return match[1].trim() || null
+}
+
+function buildExternalFallbackFileName(
+  provider: ExternalImageProvider,
+  photoId?: string | number
+): string {
+  const token = String(photoId ?? '').trim()
+  const normalizedToken = token.replace(/[^a-zA-Z0-9_-]+/g, '-') || 'image'
+  return `${provider}-${normalizedToken}.jpg`
+}
+
+export async function fetchExternalImageSource(
+  input: FetchExternalImageSourceRequest,
+  token: string
+): Promise<FetchExternalImageSourceResponse> {
+  const normalizedSourceUrl = input.sourceUrl.trim()
+  if (!normalizedSourceUrl) {
+    throw new Error('sourceUrl is required')
+  }
+
+  const queryParams = new URLSearchParams()
+  queryParams.append('source_url', normalizedSourceUrl)
+  queryParams.append('provider', input.provider)
+  if (input.photoId !== undefined && input.photoId !== null) {
+    queryParams.append('photo_id', String(input.photoId))
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/images/external-source?${queryParams.toString()}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ detail: { message: 'Failed to fetch external image source' } }))
+    const detail = errorData.detail
+    if (typeof detail === 'string') {
+      throw new Error(detail)
+    }
+    if (detail?.message) {
+      throw new Error(detail.message)
+    }
+    if (typeof errorData.message === 'string' && errorData.message) {
+      throw new Error(errorData.message)
+    }
+    throw new Error('Failed to fetch external image source')
+  }
+
+  const blob = await response.blob()
+  const contentType = response.headers.get('content-type') || blob.type || 'image/jpeg'
+  const fileName = parseFileNameFromContentDisposition(
+    response.headers.get('content-disposition')
+  ) || buildExternalFallbackFileName(input.provider, input.photoId)
+
+  return {
+    blob,
+    fileName,
+    contentType,
+  }
 }
 
 export async function fetchLocations(

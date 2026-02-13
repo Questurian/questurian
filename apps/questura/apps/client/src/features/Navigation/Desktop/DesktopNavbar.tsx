@@ -383,6 +383,7 @@ export default function DesktopNavbar() {
   const params = useParams();
   const pathname = usePathname();
   const shouldShowSubscribe = !isAuthenticated || user?.subscriptionStatus !== "active";
+  const setFavoriteCity = useLocationStore((state) => state.setFavoriteCity);
 
   const countrySlug = getParamValue(params.country)?.toLowerCase();
   const citySlug = getParamValue(params.city)?.toLowerCase();
@@ -401,6 +402,12 @@ export default function DesktopNavbar() {
     ? cities.find((city) => city.country === countrySlug)?.countryCode
     : "pe";
   const countryCode = selectedCity?.countryCode || fallbackCountryCode;
+
+  const handleModeChange = (mode: CityMode) => {
+    if (hasCityContext && countrySlug && citySlug) {
+      setFavoriteCity({ cityId: citySlug, country: countrySlug, mode });
+    }
+  };
 
   return (
     <div className="w-full overflow-hidden border-b border-black/10">
@@ -422,6 +429,7 @@ export default function DesktopNavbar() {
                 ? (mode) => `/${countrySlug}/${citySlug}/${mode}`
                 : undefined
             }
+            onModeSelect={handleModeChange}
           />
         </div>
       </nav>

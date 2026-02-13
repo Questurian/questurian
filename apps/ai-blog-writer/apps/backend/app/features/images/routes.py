@@ -2,12 +2,14 @@
 
 import logging
 import os
+import re
 from collections import Counter
 from typing import Any, Dict, List, Optional
+from urllib.parse import unquote, urlparse
 
 import httpx
 from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from .alt_text_generator import generate_alt_text
 from .image_processor import (
@@ -28,6 +30,11 @@ PEXELS_SEARCH_URL = "https://api.pexels.com/v1/search"
 PEXELS_ALLOWED_ORIENTATIONS = {"landscape", "portrait", "square"}
 UNSPLASH_SEARCH_URL = "https://api.unsplash.com/search/photos"
 UNSPLASH_ALLOWED_ORIENTATIONS = {"landscape", "portrait", "square"}
+EXTERNAL_IMPORT_ALLOWED_HOSTS = {
+    "unsplash": ("images.unsplash.com",),
+    "pexels": ("images.pexels.com",),
+}
+MAX_EXTERNAL_IMPORT_FILE_SIZE = 25 * 1024 * 1024
 VARIANT_DIMENSIONS = {
     variant.value: (spec.width, spec.height)
     for variant, spec in VARIANT_SPECS.items()
@@ -171,6 +178,167 @@ def _get_unsplash_access_key() -> str:
             env_var="UNSPLASH_ACCESS_KEY",
         )
     return access_key
+
+
+def _validate_external_provider(provider: str) -> str:
+    """Validate provider string used for external image imports."""
+    normalized_provider = provider.strip().lower()
+    if normalized_provider not in EXTERNAL_IMPORT_ALLOWED_HOSTS:
+        _raise_http_error(
+            status_code=400,
+            message="provider must be unsplash or pexels",
+            step="validate_external_provider",
+            provider=provider,
+        )
+    return normalized_provider
+
+
+def _is_allowed_external_host(hostname: str, allowed_hosts: tuple[str, ...]) -> bool:
+    """Return True when host exactly matches or is a subdomain of allowed hosts."""
+    normalized_host = hostname.strip().lower()
+    for allowed in allowed_hosts:
+        if normalized_host == allowed or normalized_host.endswith(f".{allowed}"):
+            return True
+    return False
+
+
+def _validate_external_source_url(source_url: str, provider: str) -> str:
+    """Validate source URL for external image imports."""
+    normalized_source_url = source_url.strip()
+    if not normalized_source_url:
+        _raise_http_error(
+            status_code=400,
+            message="source_url is required",
+            step="validate_external_source_url",
+        )
+
+    parsed = urlparse(normalized_source_url)
+    if parsed.scheme.lower() != "https":
+        _raise_http_error(
+            status_code=400,
+            message="source_url must use https",
+            step="validate_external_source_url",
+            source_url=normalized_source_url,
+        )
+
+    hostname = (parsed.hostname or "").strip().lower()
+    if not hostname:
+        _raise_http_error(
+            status_code=400,
+            message="source_url must include a hostname",
+            step="validate_external_source_url",
+            source_url=normalized_source_url,
+        )
+
+    allowed_hosts = EXTERNAL_IMPORT_ALLOWED_HOSTS[provider]
+    if not _is_allowed_external_host(hostname, allowed_hosts):
+        _raise_http_error(
+            status_code=400,
+            message="source_url host is not allowed for provider",
+            step="validate_external_source_url",
+            source_url=normalized_source_url,
+            hostname=hostname,
+            provider=provider,
+            allowed_hosts=list(allowed_hosts),
+        )
+
+    return normalized_source_url
+
+
+def _derive_external_filename(
+    source_url: str,
+    provider: str,
+    photo_id: Optional[str],
+) -> str:
+    """Build a stable filename used for generated variants."""
+    parsed = urlparse(source_url)
+    candidate = unquote(parsed.path.split("/")[-1]).strip()
+
+    if candidate and "." in candidate:
+        sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", candidate).strip("-")
+        if sanitized:
+            return sanitized
+
+    fallback_seed = (photo_id or "").strip() or "external-image"
+    fallback_seed = re.sub(r"[^A-Za-z0-9_-]+", "-", fallback_seed).strip("-")
+    if not fallback_seed:
+        fallback_seed = "external-image"
+    return f"{provider}-{fallback_seed}.jpg"
+
+
+async def _download_external_image(source_url: str, provider: str) -> Dict[str, Any]:
+    """Download and validate an external image before variant processing."""
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(
+                source_url,
+                headers={
+                    "User-Agent": "QuesturianStageImporter/1.0",
+                    "Accept": "image/*,*/*;q=0.8",
+                },
+            )
+    except httpx.RequestError as exc:
+        logger.exception(
+            "External image download failed | provider=%s source_url=%s",
+            provider,
+            source_url,
+        )
+        _raise_http_error(
+            status_code=502,
+            message="Failed to download external image",
+            step="download_external_image",
+            provider=provider,
+            source_url=source_url,
+            detail=str(exc),
+        )
+
+    if response.status_code >= 400:
+        _raise_http_error(
+            status_code=502,
+            message="External image provider returned an error",
+            step="download_external_image",
+            provider=provider,
+            source_url=source_url,
+            provider_status_code=response.status_code,
+        )
+
+    content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
+    if not content_type.startswith("image/"):
+        _raise_http_error(
+            status_code=400,
+            message="source_url did not return an image",
+            step="download_external_image",
+            provider=provider,
+            source_url=source_url,
+            content_type=content_type or None,
+        )
+
+    content = response.content
+    if not content:
+        _raise_http_error(
+            status_code=400,
+            message="Downloaded external image is empty",
+            step="download_external_image",
+            provider=provider,
+            source_url=source_url,
+        )
+
+    if len(content) > MAX_EXTERNAL_IMPORT_FILE_SIZE:
+        _raise_http_error(
+            status_code=400,
+            message="External image is too large",
+            step="download_external_image",
+            provider=provider,
+            source_url=source_url,
+            size_bytes=len(content),
+            max_size_bytes=MAX_EXTERNAL_IMPORT_FILE_SIZE,
+        )
+
+    return {
+        "content": content,
+        "content_type": content_type,
+        "size_bytes": len(content),
+    }
 
 
 async def _read_upload_file(file: UploadFile, step: str) -> bytes:
@@ -612,6 +780,145 @@ async def upload_image(
                 for variant_type, variant in variants.items()
             },
         }
+    )
+
+
+@router.post("/import-external")
+async def import_external_image(
+    source_url: str = Form(..., description="Direct image URL from provider"),
+    provider: str = Form(..., description="Image provider (unsplash or pexels)"),
+    external_ref: str = Form(
+        ...,
+        description="Unique reference for this image set (e.g., staged article ID)",
+    ),
+    alt_text: str = Form(..., description="Alt text for accessibility"),
+    photographer_credit: str = Form(
+        ...,
+        description="Photographer credit for uploaded assets",
+    ),
+    location_ref: int = Form(
+        ...,
+        description="Payload location id to attach to uploaded images",
+    ),
+    photo_id: Optional[str] = Form(
+        None,
+        description="Provider photo identifier for filename stability",
+    ),
+    authorization: Optional[str] = Header(None),
+) -> JSONResponse:
+    """Import an external provider image and upload processed variants to Payload."""
+    jwt_token = _extract_bearer_token(authorization)
+    valid_location_ref = _validate_location_ref(location_ref)
+    valid_photographer_credit = _validate_photographer_credit(photographer_credit)
+    valid_provider = _validate_external_provider(provider)
+    valid_source_url = _validate_external_source_url(source_url, valid_provider)
+    original_filename = _derive_external_filename(
+        valid_source_url,
+        valid_provider,
+        photo_id,
+    )
+
+    try:
+        downloaded_image = await _download_external_image(
+            valid_source_url,
+            valid_provider,
+        )
+        variants = process_image_variants(
+            source_buffer=downloaded_image["content"],
+            original_filename=original_filename,
+            alt_text=alt_text,
+        )
+
+        result = await upload_image_set(
+            jwt_token=jwt_token,
+            external_ref=external_ref,
+            alt_text=alt_text,
+            photographer_credit=valid_photographer_credit,
+            location_ref=valid_location_ref,
+            variants=variants,
+        )
+    except PayloadUploadError as exc:
+        logger.exception(
+            "Payload error during /images/import-external | external_ref=%s provider=%s",
+            external_ref,
+            valid_provider,
+        )
+        _raise_http_error(
+            status_code=_status_from_payload_error(exc),
+            message="Failed to upload imported image variants to Payload CMS",
+            step=exc.step,
+            detail=exc.detail or str(exc),
+            external_ref=external_ref,
+            location_ref=valid_location_ref,
+            provider=valid_provider,
+            source_url=valid_source_url,
+            payload_error=exc.to_dict(),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "Unexpected image import error | external_ref=%s provider=%s",
+            external_ref,
+            valid_provider,
+        )
+        _raise_http_error(
+            status_code=500,
+            message="Failed to import external image",
+            step="import_external_image",
+            detail=str(exc),
+            external_ref=external_ref,
+            location_ref=valid_location_ref,
+            provider=valid_provider,
+            source_url=valid_source_url,
+        )
+
+    return JSONResponse(
+        {
+            "success": True,
+            "mediaSetId": result["mediaSetId"],
+            "externalRef": external_ref,
+            "provider": valid_provider,
+            "sourceUrl": valid_source_url,
+            "variantAssetIds": result.get("variantAssetIds", {}),
+            "variants": {
+                variant_type.value: {
+                    "filename": variant.filename,
+                    "width": variant.width,
+                    "height": variant.height,
+                    "size": variant.file_size,
+                }
+                for variant_type, variant in variants.items()
+            },
+        }
+    )
+
+
+@router.get("/external-source")
+async def fetch_external_image_source(
+    source_url: str,
+    provider: str,
+    photo_id: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+) -> Response:
+    """Download a validated external image and return raw bytes for client-side cropping."""
+    _extract_bearer_token(authorization)
+    valid_provider = _validate_external_provider(provider)
+    valid_source_url = _validate_external_source_url(source_url, valid_provider)
+    original_filename = _derive_external_filename(
+        valid_source_url,
+        valid_provider,
+        photo_id,
+    )
+
+    downloaded_image = await _download_external_image(valid_source_url, valid_provider)
+
+    return Response(
+        content=downloaded_image["content"],
+        media_type=downloaded_image["content_type"],
+        headers={
+            "Content-Disposition": f'inline; filename="{original_filename}"',
+        },
     )
 
 

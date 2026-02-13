@@ -54,10 +54,17 @@ export function SubNav({
         `;
         const iconClassName = `${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} ${isActive ? 'text-[#1f2226]' : 'text-white/75'}`;
         const href = getHref?.(mode);
+        const handleModeSelect = () => onModeSelect?.(mode);
 
         if (href) {
           return (
-            <Link key={mode} href={href} aria-current={isActive ? 'page' : undefined} className={itemClassName}>
+            <Link
+              key={mode}
+              href={href}
+              aria-current={isActive ? 'page' : undefined}
+              className={itemClassName}
+              onClick={handleModeSelect}
+            >
               <Icon className={iconClassName} />
               {label}
             </Link>
@@ -69,7 +76,7 @@ export function SubNav({
             key={mode}
             type="button"
             aria-pressed={isActive}
-            onClick={() => onModeSelect?.(mode)}
+            onClick={handleModeSelect}
             className={itemClassName}
           >
             <Icon className={iconClassName} />
