@@ -1,0 +1,23 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const tslib_1 = require("tslib");
+const devkit_1 = require("@nx/devkit");
+const path_1 = tslib_1.__importDefault(require("path"));
+function generator(host) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        for (const project of (0, devkit_1.getProjects)(host)) {
+            const [projectName, projectConfig] = project;
+            const pyprojectTomlPath = path_1.default.join(projectConfig.root, 'pyproject.toml');
+            if (host.exists(pyprojectTomlPath)) {
+                projectConfig.release = projectConfig.release || {
+                    version: {
+                        generator: '@nxlv/python:release-version',
+                    },
+                };
+                (0, devkit_1.updateProjectConfiguration)(host, projectName, projectConfig);
+            }
+        }
+    });
+}
+exports.default = generator;
+//# sourceMappingURL=generator.js.map

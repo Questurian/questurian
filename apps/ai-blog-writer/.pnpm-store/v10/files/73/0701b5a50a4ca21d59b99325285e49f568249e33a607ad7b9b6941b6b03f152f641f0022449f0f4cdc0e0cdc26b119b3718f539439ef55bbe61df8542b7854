@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const run_commands_impl_1 = tslib_1.__importDefault(require("nx/src/executors/run-commands/run-commands.impl"));
+const poetry_1 = require("../utils/poetry");
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        (0, poetry_1.activateVenv)(context.root);
+        return (0, run_commands_impl_1.default)(options, context);
+    });
+}
+//# sourceMappingURL=executor.js.map

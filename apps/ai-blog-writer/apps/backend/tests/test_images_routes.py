@@ -25,7 +25,7 @@ def _variant_form_parts(
     external_ref: str,
     alt_text: str,
     location_ref: int,
-    photographer_credit: str = "",
+    photographer_credit: str = "Photo by Test",
 ) -> list[tuple[str, tuple[None, str]]]:
     return (
         [("variant_types", (None, variant_type)) for variant_type in variant_types]
@@ -95,6 +95,57 @@ def test_upload_variants_rejects_non_positive_location_ref():
     detail = response.json()["detail"]
     assert detail["step"] == "validate_location_ref"
     assert detail["location_ref"] == 0
+
+
+def test_upload_variants_rejects_blank_photographer_credit():
+    client = TestClient(app)
+
+    response = client.post(
+        "/images/upload-variants",
+        files=_variant_files()
+        + _variant_form_parts(
+            variant_types=[
+                "thumbnail",
+                "square",
+                "wide",
+                "portrait",
+                "hero",
+                "open_graph",
+                "editorial",
+            ],
+            external_ref="article-credit",
+            alt_text="Alt text",
+            location_ref=42,
+            photographer_credit="   ",
+        ),
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_photographer_credit"
+
+
+def test_upload_rejects_blank_photographer_credit():
+    client = TestClient(app)
+
+    response = client.post(
+        "/images/upload",
+        files={
+            "file": ("cover.jpg", b"image-bytes", "image/jpeg"),
+        },
+        data={
+            "external_ref": "article-upload-credit",
+            "alt_text": "Alt text",
+            "photographer_credit": "   ",
+            "location_ref": "42",
+        },
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_photographer_credit"
 
 
 def test_upload_variants_returns_structured_payload_error(monkeypatch):
@@ -239,6 +290,7 @@ def test_pexels_search_returns_mapped_results(monkeypatch):
             assert params["query"] == "mountains"
             assert params["per_page"] == 2
             assert params["page"] == 1
+            assert params["orientation"] == "portrait"
             return FakePexelsResponse()
 
     monkeypatch.setattr(
@@ -248,7 +300,7 @@ def test_pexels_search_returns_mapped_results(monkeypatch):
 
     response = client.get(
         "/images/pexels/search",
-        params={"query": "mountains", "per_page": 2},
+        params={"query": "mountains", "per_page": 2, "orientation": "portrait"},
     )
 
     assert response.status_code == 200
@@ -261,3 +313,122 @@ def test_pexels_search_returns_mapped_results(monkeypatch):
     assert payload["photos"][0]["id"] == 123
     assert payload["photos"][0]["photographer"] == "Jane Doe"
     assert payload["photos"][0]["image_url"].endswith("medium.jpeg")
+
+
+def test_pexels_search_rejects_invalid_orientation(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setenv("PEXELS_API_KEY", "test-pexels-key")
+
+    response = client.get(
+        "/images/pexels/search",
+        params={"query": "mountains", "orientation": "diagonal"},
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_pexels_query"
+    assert detail["orientation"] == "diagonal"
+
+
+def test_unsplash_search_requires_access_key(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.delenv("UNSPLASH_ACCESS_KEY", raising=False)
+
+    response = client.get("/images/unsplash/search", params={"query": "beach"})
+
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_unsplash_key"
+    assert detail["env_var"] == "UNSPLASH_ACCESS_KEY"
+
+
+def test_unsplash_search_returns_mapped_results(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setenv("UNSPLASH_ACCESS_KEY", "test-unsplash-key")
+
+    class FakeUnsplashResponse:
+        status_code = 200
+
+        def json(self):
+            return {
+                "total": 321,
+                "results": [
+                    {
+                        "id": "abc123",
+                        "width": 4000,
+                        "height": 2600,
+                        "description": "Sunset cliffs",
+                        "alt_description": "Orange sky over ocean cliffs",
+                        "urls": {
+                            "small": "https://images.unsplash.com/photo-small",
+                            "regular": "https://images.unsplash.com/photo-regular",
+                            "full": "https://images.unsplash.com/photo-full",
+                        },
+                        "links": {
+                            "html": "https://unsplash.com/photos/abc123",
+                        },
+                        "user": {
+                            "name": "Alex Lens",
+                            "links": {
+                                "html": "https://unsplash.com/@alexlens",
+                            },
+                        },
+                    }
+                ],
+            }
+
+    class FakeAsyncClient:
+        def __init__(self, timeout: float):
+            assert timeout == 15.0
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url: str, params: dict, headers: dict):
+            assert url == "https://api.unsplash.com/search/photos"
+            assert headers["Authorization"] == "Client-ID test-unsplash-key"
+            assert headers["Accept-Version"] == "v1"
+            assert params["query"] == "coastline"
+            assert params["per_page"] == 12
+            assert params["page"] == 1
+            assert params["orientation"] == "squarish"
+            return FakeUnsplashResponse()
+
+    monkeypatch.setattr(
+        "app.features.images.routes.httpx.AsyncClient",
+        FakeAsyncClient,
+    )
+
+    response = client.get(
+        "/images/unsplash/search",
+        params={"query": "coastline", "per_page": 12, "orientation": "square"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["query"] == "coastline"
+    assert payload["per_page"] == 12
+    assert payload["total_results"] == 321
+    assert len(payload["photos"]) == 1
+    assert payload["photos"][0]["id"] == "abc123"
+    assert payload["photos"][0]["photographer"] == "Alex Lens"
+    assert payload["photos"][0]["image_url"].endswith("photo-small")
+
+
+def test_unsplash_search_rejects_invalid_orientation(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setenv("UNSPLASH_ACCESS_KEY", "test-unsplash-key")
+
+    response = client.get(
+        "/images/unsplash/search",
+        params={"query": "coastline", "orientation": "diagonal"},
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_unsplash_query"
+    assert detail["orientation"] == "diagonal"

@@ -1,0 +1,3 @@
+import { Tree } from '@nx/devkit';
+declare function generator(host: Tree): Promise<void>;
+export default generator;

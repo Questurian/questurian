@@ -1,0 +1,3 @@
+import { Tree } from '@nx/devkit';
+import { PoetryProjectGeneratorSchema } from './schema';
+export default function (tree: Tree, options: PoetryProjectGeneratorSchema): Promise<() => void>;

@@ -1,0 +1,125 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.POETRY_EXECUTABLE = void 0;
+exports.checkPoetryExecutable = checkPoetryExecutable;
+exports.getPoetryVersion = getPoetryVersion;
+exports.addLocalProjectToPoetryProject = addLocalProjectToPoetryProject;
+exports.updateProject = updateProject;
+exports.getProjectTomlPath = getProjectTomlPath;
+exports.parseToml = parseToml;
+exports.readPyprojectToml = readPyprojectToml;
+exports.writePyprojectToml = writePyprojectToml;
+exports.getLocalDependencyConfig = getLocalDependencyConfig;
+exports.runPoetry = runPoetry;
+exports.activateVenv = activateVenv;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const cross_spawn_1 = tslib_1.__importDefault(require("cross-spawn"));
+const path_1 = tslib_1.__importDefault(require("path"));
+const toml_1 = tslib_1.__importStar(require("@iarna/toml"));
+const fs_1 = tslib_1.__importDefault(require("fs"));
+const command_exists_1 = tslib_1.__importDefault(require("command-exists"));
+exports.POETRY_EXECUTABLE = 'poetry';
+function checkPoetryExecutable() {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        try {
+            yield (0, command_exists_1.default)(exports.POETRY_EXECUTABLE);
+        }
+        catch (e) {
+            throw new Error('Poetry is not installed. Please install Poetry before running this command.');
+        }
+    });
+}
+function getPoetryVersion() {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        const result = cross_spawn_1.default.sync(exports.POETRY_EXECUTABLE, ['--version']);
+        if (result.error) {
+            throw new Error('Poetry is not installed. Please install Poetry before running this command.');
+        }
+        const versionRegex = /version (\d+\.\d+\.\d+)/;
+        const match = result.stdout.toString().trim().match(versionRegex);
+        const version = match && match[1];
+        return version;
+    });
+}
+function addLocalProjectToPoetryProject(targetConfig, dependencyConfig, dependencyPath, group, extras) {
+    const targetToml = getProjectTomlPath(targetConfig);
+    const dependencyToml = getProjectTomlPath(dependencyConfig);
+    const targetTomlData = parseToml(targetToml);
+    const dependencyTomlData = parseToml(dependencyToml);
+    const dependencyName = dependencyTomlData.tool.poetry.name;
+    if (group) {
+        targetTomlData.tool.poetry.group = targetTomlData.tool.poetry.group || {};
+        targetTomlData.tool.poetry.group[group] = targetTomlData.tool.poetry.group[group] || { dependencies: {} };
+        targetTomlData.tool.poetry.group[group].dependencies[dependencyName] = Object.assign({ path: dependencyPath, develop: true }, (extras ? { extras } : {}));
+    }
+    else {
+        targetTomlData.tool.poetry.dependencies[dependencyName] = Object.assign({ path: dependencyPath, develop: true }, (extras ? { extras } : {}));
+    }
+    fs_1.default.writeFileSync(targetToml, toml_1.default.stringify(targetTomlData));
+    return dependencyName;
+}
+function updateProject(cwd, updateLockOnly) {
+    runPoetry(['lock', '--no-update'], { cwd });
+    if (!updateLockOnly) {
+        runPoetry(['install'], { cwd });
+    }
+}
+function getProjectTomlPath(targetConfig) {
+    return path_1.default.join(targetConfig.root, 'pyproject.toml');
+}
+function parseToml(tomlFile) {
+    return toml_1.default.parse(fs_1.default.readFileSync(tomlFile, 'utf-8'));
+}
+function readPyprojectToml(tree, tomlFile) {
+    const content = tree.read(tomlFile, 'utf-8');
+    if (!content) {
+        return null;
+    }
+    return toml_1.default.parse(content);
+}
+function writePyprojectToml(tree, tomlFile, data) {
+    tree.write(tomlFile, toml_1.default.stringify(data));
+}
+function getLocalDependencyConfig(context, dependencyName) {
+    const dependencyConfig = context.projectsConfigurations.projects[dependencyName];
+    if (!dependencyConfig) {
+        throw new Error((0, chalk_1.default) `project {bold ${dependencyName}} not found in the Nx workspace`);
+    }
+    return dependencyConfig;
+}
+function runPoetry(args, options = {}) {
+    var _a, _b;
+    const log = (_a = options.log) !== null && _a !== void 0 ? _a : true;
+    const error = (_b = options.error) !== null && _b !== void 0 ? _b : true;
+    delete options.log;
+    delete options.error;
+    const commandStr = `${exports.POETRY_EXECUTABLE} ${args.join(' ')}`;
+    if (log) {
+        console.log((0, chalk_1.default) `{bold Running command}: ${commandStr} ${options.cwd && options.cwd !== '.'
+            ? (0, chalk_1.default) `at {bold ${options.cwd}} folder`
+            : ''}\n`);
+    }
+    const result = cross_spawn_1.default.sync(exports.POETRY_EXECUTABLE, args, Object.assign(Object.assign({}, options), { shell: false, stdio: 'inherit' }));
+    if (error && result.status !== 0) {
+        throw new Error((0, chalk_1.default) `{bold ${commandStr}} command failed with exit code {bold ${result.status}}`);
+    }
+}
+function activateVenv(workspaceRoot) {
+    var _a, _b;
+    if (!process.env.VIRTUAL_ENV) {
+        const rootPyproject = path_1.default.join(workspaceRoot, 'pyproject.toml');
+        if (fs_1.default.existsSync(rootPyproject)) {
+            const rootConfig = (0, toml_1.parse)(fs_1.default.readFileSync(rootPyproject, 'utf-8'));
+            const autoActivate = (_b = (_a = rootConfig.tool.nx) === null || _a === void 0 ? void 0 : _a.autoActivate) !== null && _b !== void 0 ? _b : false;
+            if (autoActivate) {
+                console.log((0, chalk_1.default) `\n{bold shared virtual environment detected and not activated, activating...}\n\n`);
+                const virtualEnv = path_1.default.resolve(workspaceRoot, '.venv');
+                process.env.VIRTUAL_ENV = virtualEnv;
+                process.env.PATH = `${virtualEnv}/bin:${process.env.PATH}`;
+                delete process.env.PYTHONHOME;
+            }
+        }
+    }
+}
+//# sourceMappingURL=poetry.js.map

@@ -1,0 +1,16 @@
+import { PyprojectToml } from '../../../graph/dependency-graph';
+import { Logger } from '../../utils/logger';
+import { Dependency } from './types';
+import { BuildExecutorSchema } from '../schema';
+import { ExecutorContext } from '@nx/devkit';
+export declare class ProjectDependencyResolver {
+    private logger;
+    private options;
+    private context;
+    constructor(logger: Logger, options: BuildExecutorSchema, context: ExecutorContext);
+    resolve(root: string, buildFolderPath: string, buildTomlData: PyprojectToml): Dependency[];
+    private resolveDependencies;
+    private addSource;
+    private getProjectConfig;
+    private resolveDuplicateSources;
+}

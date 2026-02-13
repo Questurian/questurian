@@ -1,0 +1,6 @@
+import { ExecutorContext } from '@nx/devkit';
+import { RunCommandsOptions } from 'nx/src/executors/run-commands/run-commands.impl';
+export default function executor(options: RunCommandsOptions, context: ExecutorContext): Promise<{
+    success: boolean;
+    terminalOutput: string;
+}>;

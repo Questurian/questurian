@@ -1,0 +1,5 @@
+import { ExecutorContext } from '@nx/devkit';
+import { ToxExecutorSchema } from './schema';
+export default function executor(options: ToxExecutorSchema, context: ExecutorContext): Promise<import("../build/schema").BuildExecutorOutput | {
+    success: boolean;
+}>;

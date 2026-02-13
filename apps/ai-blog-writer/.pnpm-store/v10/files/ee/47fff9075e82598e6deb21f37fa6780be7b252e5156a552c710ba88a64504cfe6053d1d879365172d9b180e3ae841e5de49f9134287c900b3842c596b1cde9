@@ -1,0 +1,109 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ProjectDependencyResolver = void 0;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const path_1 = require("path");
+const fs_extra_1 = require("fs-extra");
+const toml_1 = require("@iarna/toml");
+const utils_1 = require("./utils");
+const crypto_1 = require("crypto");
+class ProjectDependencyResolver {
+    constructor(logger, options, context) {
+        this.resolveDuplicateSources = (sources, { name, url }) => {
+            if (!sources) {
+                return [[{ name, url }], name];
+            }
+            const existing = sources.find((s) => s.name === name);
+            if (existing) {
+                if (existing.url === url) {
+                    return [sources, name];
+                }
+                const hash = (0, crypto_1.createHash)('md5').update(url).digest('hex');
+                const newName = `${name}-${hash}`;
+                this.logger.info((0, chalk_1.default) `  Duplicate source for {blue.bold ${name}} renamed to ${newName}`);
+                if (sources.find((s) => s.name === newName)) {
+                    return [sources, newName];
+                }
+                return [[...sources, { name: newName, url }], newName];
+            }
+            return [[...sources, { name, url }], name];
+        };
+        this.logger = logger;
+        this.options = options;
+        this.context = context;
+    }
+    resolve(root, buildFolderPath, buildTomlData) {
+        this.logger.info((0, chalk_1.default) `  Resolving dependencies...`);
+        const pyprojectPath = (0, path_1.join)(root, 'pyproject.toml');
+        const pyproject = (0, toml_1.parse)((0, fs_extra_1.readFileSync)(pyprojectPath).toString('utf-8'));
+        return this.resolveDependencies(pyproject, root, buildFolderPath, buildTomlData);
+    }
+    resolveDependencies(pyproject, root, buildFolderPath, buildTomlData, level = 1) {
+        var _a, _b, _c;
+        const tab = (0, utils_1.getLoggingTab)(level);
+        const deps = [];
+        const dependencies = Object.entries(pyproject.tool.poetry.dependencies).filter(([name]) => name != 'python');
+        for (const [name, data] of dependencies) {
+            const dep = {};
+            dep.name = name;
+            if (typeof data === 'string') {
+                dep.version = data;
+            }
+            else if (data.path) {
+                dep.extras = data.extras;
+                const depPath = (0, path_1.relative)(process.cwd(), (0, path_1.resolve)(root, data.path));
+                const depPyprojectPath = (0, path_1.join)(depPath, 'pyproject.toml');
+                const depPyproject = (0, toml_1.parse)((0, fs_extra_1.readFileSync)(depPyprojectPath).toString('utf-8'));
+                const config = this.getProjectConfig(depPath);
+                const targetOptions = (_b = (_a = config.targets) === null || _a === void 0 ? void 0 : _a.build) === null || _b === void 0 ? void 0 : _b.options;
+                const publisable = (_c = targetOptions === null || targetOptions === void 0 ? void 0 : targetOptions.publish) !== null && _c !== void 0 ? _c : true;
+                if (this.options.bundleLocalDependencies === true ||
+                    publisable === false) {
+                    const packageName = depPyproject.tool.poetry.name;
+                    this.logger.info((0, chalk_1.default) `${tab}• Adding {blue.bold ${packageName}} local dependency`);
+                    (0, utils_1.includeDependencyPackage)(depPyproject, depPath, buildFolderPath, buildTomlData);
+                    this.resolveDependencies(depPyproject, depPath, buildFolderPath, buildTomlData, level + 1).forEach((subDep) => deps.push(subDep));
+                    continue;
+                }
+                else {
+                    dep.version = depPyproject.tool.poetry.version;
+                    dep.source = this.addSource(buildTomlData, targetOptions);
+                }
+            }
+            else {
+                dep.version = data.version;
+                dep.extras = data.extras;
+                dep.git = data.git;
+                dep.optional = data.optional;
+                dep.rev = data.rev;
+                dep.markers = data.markers;
+            }
+            if (deps.findIndex((d) => d.name === dep.name) === -1) {
+                this.logger.info((0, chalk_1.default) `${tab}• Adding {blue.bold ${dep.name}@${dep.version}} dependency`);
+                deps.push(dep);
+            }
+        }
+        return deps;
+    }
+    addSource(buildTomlData, targetOptions) {
+        if (!(targetOptions === null || targetOptions === void 0 ? void 0 : targetOptions.customSourceUrl))
+            return undefined;
+        const [newSources, newSourceName] = this.resolveDuplicateSources(buildTomlData.tool.poetry.source, {
+            name: targetOptions.customSourceName,
+            url: targetOptions.customSourceUrl,
+        });
+        buildTomlData.tool.poetry.source = newSources;
+        return newSourceName;
+    }
+    getProjectConfig(root) {
+        for (const [, config] of Object.entries(this.context.projectsConfigurations.projects)) {
+            if ((0, path_1.normalize)(config.root) === (0, path_1.normalize)(root)) {
+                return config;
+            }
+        }
+        throw new Error(`Could not find project config for ${root}`);
+    }
+}
+exports.ProjectDependencyResolver = ProjectDependencyResolver;
+//# sourceMappingURL=project.js.map

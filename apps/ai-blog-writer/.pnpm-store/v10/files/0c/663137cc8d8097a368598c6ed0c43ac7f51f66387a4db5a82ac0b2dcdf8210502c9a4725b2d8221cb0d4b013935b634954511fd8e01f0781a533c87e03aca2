@@ -1,0 +1,6 @@
+export type SpawnPromiseResult = {
+    success: boolean;
+    code: number | null;
+    output: string;
+};
+export declare const spawnPromise: (command: string, cwd: string, envVars?: Record<string, string | undefined>, output?: boolean) => Promise<SpawnPromiseResult>;

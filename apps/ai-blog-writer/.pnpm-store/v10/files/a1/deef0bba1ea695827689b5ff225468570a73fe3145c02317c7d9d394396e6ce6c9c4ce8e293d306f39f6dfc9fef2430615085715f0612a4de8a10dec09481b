@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Serverless Framework Package Executor",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "stage": {
+      "type": "string",
+      "description": "Stage Name"
+    }
+  },
+  "required": ["stage"]
+}

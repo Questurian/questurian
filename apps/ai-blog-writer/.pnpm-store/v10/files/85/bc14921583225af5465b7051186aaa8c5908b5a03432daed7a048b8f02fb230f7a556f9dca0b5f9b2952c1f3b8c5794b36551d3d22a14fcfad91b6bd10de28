@@ -1,0 +1,19 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Logger = void 0;
+class Logger {
+    setOptions(options) {
+        this.options = options;
+    }
+    info(message) {
+        this.log(message, 'info');
+    }
+    log(message, level) {
+        var _a;
+        if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.silent)) {
+            console[level](message);
+        }
+    }
+}
+exports.Logger = Logger;
+//# sourceMappingURL=logger.js.map

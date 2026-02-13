@@ -1,0 +1,87 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const devkit_1 = require("@nx/devkit");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const logger_1 = require("../utils/logger");
+const poetry_1 = require("../utils/poetry");
+const fs_extra_1 = require("fs-extra");
+const cmd_1 = require("../utils/cmd");
+const logger = new logger_1.Logger();
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        var _a, e_1, _b, _c;
+        var _d;
+        logger.setOptions(options);
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        let buildFolderPath = '';
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            try {
+                for (var _e = true, _f = tslib_1.__asyncValues(yield (0, devkit_1.runExecutor)({
+                    project: context.projectName,
+                    target: options.buildTarget,
+                    configuration: context.configurationName,
+                }, {
+                    keepBuildFolder: true,
+                }, context)), _g; _g = yield _f.next(), _a = _g.done, !_a; _e = true) {
+                    _c = _g.value;
+                    _e = false;
+                    const output = _c;
+                    if (!output.success) {
+                        throw new Error('Build failed');
+                    }
+                    buildFolderPath = output.buildFolderPath;
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (!_e && !_a && (_b = _f.return)) yield _b.call(_f);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            if (!buildFolderPath) {
+                throw new Error('Cannot find the temporary build folder');
+            }
+            logger.info((0, chalk_1.default) `\n  {bold Publishing project {bgBlue  ${context.projectName} }...}\n`);
+            const commandArgs = [
+                'publish',
+                ...(options.dryRun ? ['--dry-run'] : []),
+                ...((_d = options.__unparsed__) !== null && _d !== void 0 ? _d : []),
+            ];
+            const commandStr = `${poetry_1.POETRY_EXECUTABLE} ${commandArgs.join(' ')}`;
+            console.log((0, chalk_1.default) `{bold Running command}: ${commandStr} ${buildFolderPath && buildFolderPath !== '.'
+                ? (0, chalk_1.default) `at {bold ${buildFolderPath}} folder`
+                : ''}\n`);
+            yield (0, cmd_1.spawnPromise)(commandStr, buildFolderPath);
+            (0, fs_extra_1.removeSync)(buildFolderPath);
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            if (buildFolderPath) {
+                (0, fs_extra_1.removeSync)(buildFolderPath);
+            }
+            if (typeof error === 'object' && 'code' in error && 'output' in error) {
+                if (error.code !== 0 && error.output.includes('File already exists')) {
+                    logger.info((0, chalk_1.default) `\n  {bgYellow.bold  WARNING } {bold The package is already published}\n`);
+                    return {
+                        success: true,
+                    };
+                }
+                else if (error.code !== 0) {
+                    logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } {bold The publish command failed}\n`);
+                }
+            }
+            return {
+                success: false,
+            };
+        }
+    });
+}
+//# sourceMappingURL=executor.js.map

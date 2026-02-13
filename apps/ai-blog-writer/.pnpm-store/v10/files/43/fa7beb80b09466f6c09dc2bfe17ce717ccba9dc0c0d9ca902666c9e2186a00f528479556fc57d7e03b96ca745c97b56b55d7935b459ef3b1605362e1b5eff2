@@ -1,0 +1,46 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const logger_1 = require("../utils/logger");
+const poetry_1 = require("../utils/poetry");
+const cross_spawn_1 = tslib_1.__importDefault(require("cross-spawn"));
+const logger = new logger_1.Logger();
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            logger.info((0, chalk_1.default) `\n{bold Running ruff check on project {bgBlue  ${context.projectName} }...}\n`);
+            const projectConfig = context.projectsConfigurations.projects[context.projectName];
+            const commandArgs = ['run', 'ruff', 'check']
+                .concat(options.lintFilePatterns)
+                .concat(options.__unparsed__);
+            runCheck(commandArgs, projectConfig.root);
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+    });
+}
+function runCheck(commandArgs, cwd) {
+    const command = `${poetry_1.POETRY_EXECUTABLE} ${commandArgs.join(' ')}`;
+    const result = cross_spawn_1.default.sync(command, {
+        stdio: 'inherit',
+        shell: true,
+        cwd,
+    });
+    if (result.status !== 0) {
+        throw new Error('Ruff check failed.');
+    }
+}
+//# sourceMappingURL=executor.js.map

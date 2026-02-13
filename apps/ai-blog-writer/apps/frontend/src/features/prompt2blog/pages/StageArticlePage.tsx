@@ -7,6 +7,7 @@ import {
   fetchResult,
   markArticleSynced,
   searchPexelsImages,
+  searchUnsplashImages,
   rewriteBlockWithAi,
 } from '../api'
 
@@ -33,6 +34,7 @@ export default function StageArticlePage() {
         fetchResult,
         markArticleSynced,
         searchPexelsImages,
+        searchUnsplashImages,
         rewriteBlockWithAi,
       }}
     />

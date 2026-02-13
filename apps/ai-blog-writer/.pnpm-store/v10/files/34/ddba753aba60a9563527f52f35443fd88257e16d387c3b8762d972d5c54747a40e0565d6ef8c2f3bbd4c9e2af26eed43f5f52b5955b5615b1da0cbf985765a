@@ -1,0 +1,4 @@
+import { Tree } from '@nx/devkit';
+import { Schema } from './schema';
+declare function generator(host: Tree, options: Schema): Promise<() => void>;
+export default generator;

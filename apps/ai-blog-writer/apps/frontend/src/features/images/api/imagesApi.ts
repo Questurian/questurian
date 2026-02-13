@@ -155,7 +155,7 @@ export async function uploadImageVariants(
   altText: string,
   locationRef: number,
   token: string,
-  photographerCredit?: string,
+  photographerCredit: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadImageResponse> {
   onProgress?.({
@@ -169,12 +169,12 @@ export async function uploadImageVariants(
   // Add each variant file with its type
   variantFiles.forEach(({ type, file }) => {
     formData.append(`variants`, file);
-    formData.append(`variant_types`, type);
+  formData.append(`variant_types`, type);
   });
   
   formData.append('external_ref', externalRef);
   formData.append('alt_text', altText);
-  formData.append('photographer_credit', photographerCredit?.trim() || '');
+  formData.append('photographer_credit', photographerCredit.trim());
   formData.append('location_ref', String(locationRef));
 
   onProgress?.({
@@ -236,7 +236,7 @@ export async function uploadImage(
   altText: string,
   locationRef: number,
   token: string,
-  photographerCredit?: string,
+  photographerCredit: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadImageResponse> {
   try {
@@ -250,7 +250,7 @@ export async function uploadImage(
     formData.append('file', file);
     formData.append('external_ref', externalRef);
     formData.append('alt_text', altText);
-    formData.append('photographer_credit', photographerCredit?.trim() || '');
+    formData.append('photographer_credit', photographerCredit.trim());
     formData.append('location_ref', String(locationRef));
 
     onProgress?.({

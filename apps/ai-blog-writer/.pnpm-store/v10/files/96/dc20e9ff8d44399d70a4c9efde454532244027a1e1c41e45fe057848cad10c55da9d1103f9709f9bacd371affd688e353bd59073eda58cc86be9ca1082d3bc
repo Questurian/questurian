@@ -1,0 +1,56 @@
+import { ProjectConfiguration, CreateDependencies } from '@nx/devkit';
+export type PyprojectTomlDependency = string | {
+    path?: string;
+    version?: string;
+    markers?: string;
+    optional?: boolean;
+    extras?: string[];
+    develop?: boolean;
+    git?: string;
+    rev?: string;
+    source?: string;
+};
+export type PyprojectTomlDependencies = {
+    [key: string]: PyprojectTomlDependency;
+};
+export type Dependency = {
+    name: string;
+    category: string;
+};
+export type PyprojectTomlSource = {
+    name: string;
+    url: string;
+};
+export type PyprojectToml = {
+    tool?: {
+        nx?: {
+            autoActivate?: boolean;
+        };
+        poetry?: {
+            name: string;
+            version: string;
+            packages?: Array<{
+                include: string;
+                from?: string;
+            }>;
+            dependencies?: PyprojectTomlDependencies;
+            group?: {
+                [key: string]: {
+                    dependencies: PyprojectTomlDependencies;
+                };
+            };
+            extras?: {
+                [key: string]: string[];
+            };
+            plugins?: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            source?: PyprojectTomlSource[];
+        };
+    };
+};
+export declare const getDependents: (projectName: string, projects: Record<string, ProjectConfiguration>, cwd: string) => string[];
+export declare const getDependencies: (projectName: string, projects: Record<string, ProjectConfiguration>, cwd: string) => Dependency[];
+export declare const createDependencies: CreateDependencies;

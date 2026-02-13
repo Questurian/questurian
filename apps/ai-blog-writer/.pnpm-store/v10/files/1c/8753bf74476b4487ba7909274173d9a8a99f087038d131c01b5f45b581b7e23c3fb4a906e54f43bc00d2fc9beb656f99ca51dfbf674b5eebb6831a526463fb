@@ -1,0 +1,1 @@
+{"version":3,"file":"executor.js","sourceRoot":"","sources":["../../../../../../packages/nx-python/src/executors/run-commands/executor.ts"],"names":[],"mappings":";;AAMA,2BAMC;;AAXD,gHAEyD;AACzD,4CAA+C;AAE/C,SAA8B,QAAQ,CACpC,OAA2B,EAC3B,OAAwB;;QAExB,IAAA,qBAAY,EAAC,OAAO,CAAC,IAAI,CAAC,CAAC;QAC3B,OAAO,IAAA,2BAAY,EAAC,OAAO,EAAE,OAAO,CAAC,CAAC;IACxC,CAAC;CAAA"}

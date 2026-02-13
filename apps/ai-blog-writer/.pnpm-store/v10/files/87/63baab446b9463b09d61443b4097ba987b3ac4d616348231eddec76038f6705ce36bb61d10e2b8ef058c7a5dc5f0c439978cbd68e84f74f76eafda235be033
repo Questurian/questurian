@@ -1,0 +1,60 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAllDependenciesFromPyprojectToml = void 0;
+exports.updateDependencyTree = updateDependencyTree;
+exports.updateDependents = updateDependents;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const dependency_graph_1 = require("../graph/dependency-graph");
+const poetry_1 = require("../executors/utils/poetry");
+const fs_extra_1 = require("fs-extra");
+const toml_1 = require("@iarna/toml");
+function updateDependencyTree(context) {
+    const rootPyprojectToml = (0, fs_extra_1.existsSync)('pyproject.toml');
+    const pkgName = getProjectPackageName(context, context.projectName);
+    updateDependents(context, context.projectsConfigurations, context.projectName, rootPyprojectToml, context.root);
+    if (rootPyprojectToml) {
+        const rootPyprojectToml = (0, toml_1.parse)((0, fs_extra_1.readFileSync)('pyproject.toml', { encoding: 'utf-8' }));
+        const allRootDependencyNames = Object.keys((0, exports.getAllDependenciesFromPyprojectToml)(rootPyprojectToml));
+        if (allRootDependencyNames.includes(pkgName)) {
+            console.log((0, chalk_1.default) `\nUpdating root {bold pyproject.toml} dependency {bold ${pkgName}}`);
+            (0, poetry_1.runPoetry)(['lock', '--no-update']);
+            (0, poetry_1.runPoetry)(['install', '--no-root']);
+        }
+    }
+}
+function updateDependents(context, workspace, projectName, updateLockOnly, workspaceRoot, updatedProjects = []) {
+    updatedProjects.push(projectName);
+    const deps = (0, dependency_graph_1.getDependents)(projectName, workspace.projects, workspaceRoot);
+    for (const dep of deps) {
+        if (updatedProjects.includes(dep)) {
+            continue;
+        }
+        console.log((0, chalk_1.default) `\nUpdating project {bold ${dep}}`);
+        const depConfig = workspace.projects[dep];
+        (0, poetry_1.updateProject)(depConfig.root, updateLockOnly);
+        updateDependents(context, workspace, dep, updateLockOnly, workspaceRoot, updatedProjects);
+    }
+}
+function getProjectPackageName(context, projectName) {
+    const projectConfig = context.projectsConfigurations.projects[projectName];
+    const projectToml = (0, poetry_1.getProjectTomlPath)(projectConfig);
+    const { tool: { poetry: { name }, }, } = (0, poetry_1.parseToml)(projectToml);
+    return name;
+}
+/**
+ * Parses all dependency names from a Pyproject.toml file
+ * and returns a flattened collection of dependencies
+ *
+ * Optionally you may supply a list of groups to ignore
+ */
+const getAllDependenciesFromPyprojectToml = (tomlData, 
+/** optional dependency groups to omit from collection */
+omitGroups = []) => {
+    var _a, _b, _c, _d, _e, _f;
+    return Object.assign(Object.assign({}, ((_c = (_b = (_a = tomlData.tool) === null || _a === void 0 ? void 0 : _a.poetry) === null || _b === void 0 ? void 0 : _b.dependencies) !== null && _c !== void 0 ? _c : {})), Object.fromEntries(Object.entries((_f = (_e = (_d = tomlData.tool) === null || _d === void 0 ? void 0 : _d.poetry) === null || _e === void 0 ? void 0 : _e.group) !== null && _f !== void 0 ? _f : {})
+        .filter(([name]) => !omitGroups.includes(name))
+        .flatMap(([, group]) => { var _a; return Object.entries((_a = group.dependencies) !== null && _a !== void 0 ? _a : {}); })));
+};
+exports.getAllDependenciesFromPyprojectToml = getAllDependenciesFromPyprojectToml;
+//# sourceMappingURL=update-dependency.js.map

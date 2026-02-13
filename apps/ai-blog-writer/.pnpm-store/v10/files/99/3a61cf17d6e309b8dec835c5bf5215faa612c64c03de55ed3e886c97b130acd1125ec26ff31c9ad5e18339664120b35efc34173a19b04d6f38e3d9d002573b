@@ -1,0 +1,30 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.includeDependencyPackage = includeDependencyPackage;
+exports.getLoggingTab = getLoggingTab;
+const path_1 = require("path");
+const fs_extra_1 = require("fs-extra");
+function includeDependencyPackage(tomlData, root, buildFolderPath, buildTomlData) {
+    var _a;
+    for (const pkg of tomlData.tool.poetry.packages) {
+        const pkgFolder = (0, path_1.join)(root, (_a = pkg.from) !== null && _a !== void 0 ? _a : '', pkg.include);
+        const buildPackageFolder = (0, path_1.join)(buildFolderPath, pkg.include);
+        (0, fs_extra_1.copySync)(pkgFolder, buildPackageFolder);
+        buildTomlData.tool.poetry.packages.push({
+            include: pkg.include,
+        });
+    }
+    if (tomlData.tool.poetry.plugins) {
+        if (!buildTomlData.tool.poetry.plugins) {
+            buildTomlData.tool.poetry.plugins = {};
+        }
+        for (const pluginName in tomlData.tool.poetry.plugins) {
+            buildTomlData.tool.poetry.plugins[pluginName] =
+                tomlData.tool.poetry.plugins[pluginName];
+        }
+    }
+}
+function getLoggingTab(level) {
+    return '    '.repeat(level);
+}
+//# sourceMappingURL=utils.js.map

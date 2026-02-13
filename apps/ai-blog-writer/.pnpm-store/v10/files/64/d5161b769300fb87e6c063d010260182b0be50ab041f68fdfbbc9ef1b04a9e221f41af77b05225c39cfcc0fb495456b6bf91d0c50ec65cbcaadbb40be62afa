@@ -1,0 +1,12 @@
+import { Tree } from '@nx/devkit';
+import { Schema } from './schema';
+export interface NormalizedSchema extends Schema {
+    projectName: string;
+    projectRoot: string;
+    moduleName: string;
+    projectDirectory: string;
+    parsedTags: string[];
+}
+export declare function normalizeOptions(host: Tree, options: Schema): NormalizedSchema;
+declare function generator(host: Tree, options: Schema): Promise<() => void>;
+export default generator;

@@ -1,0 +1,5 @@
+import { InstallExecutorSchema } from './schema';
+import { ExecutorContext } from '@nx/devkit';
+export default function executor(options: InstallExecutorSchema, context: ExecutorContext): Promise<{
+    success: boolean;
+}>;

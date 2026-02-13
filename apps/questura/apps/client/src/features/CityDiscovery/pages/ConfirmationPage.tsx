@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { getCityById, getIntentById } from '../lib/data';
+import { useLocationStore } from '@/lib/stores/locationStore';
 
 function ConfirmationContent() {
   const router = useRouter();
@@ -11,6 +12,8 @@ function ConfirmationContent() {
 
   const cityId = searchParams.get('city');
   const intentId = searchParams.get('intent');
+
+  const completeOnboarding = useLocationStore((state) => state.completeOnboarding);
 
   const city = getCityById(cityId || '');
   const intent = getIntentById(intentId || '');
@@ -23,6 +26,7 @@ function ConfirmationContent() {
   }
 
   const handleContinue = () => {
+    completeOnboarding({ cityId: city.id, country: city.country, mode: intent.id });
     router.push(`/${city.country}/${city.id}/${intent.id}`);
   };
 

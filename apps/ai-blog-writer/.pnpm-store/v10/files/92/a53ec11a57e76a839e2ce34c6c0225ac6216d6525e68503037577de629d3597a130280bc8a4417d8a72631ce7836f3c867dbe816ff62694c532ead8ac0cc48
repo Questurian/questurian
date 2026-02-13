@@ -1,0 +1,56 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const executor_1 = tslib_1.__importDefault(require("../build/executor"));
+const path_1 = tslib_1.__importDefault(require("path"));
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const logger_1 = require("../utils/logger");
+const fs_extra_1 = require("fs-extra");
+const poetry_1 = require("../utils/poetry");
+const logger = new logger_1.Logger();
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        logger.setOptions(options);
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            const projectConfig = context.projectsConfigurations.projects[context.projectName];
+            const distFolder = path_1.default.join(projectConfig.root, 'dist');
+            const buildResult = yield (0, executor_1.default)({
+                silent: options.silent,
+                keepBuildFolder: false,
+                ignorePaths: ['.venv', '.tox', 'tests'],
+                outputPath: distFolder,
+                devDependencies: true,
+                lockedVersions: true,
+                bundleLocalDependencies: true,
+            }, context);
+            if (!buildResult.success) {
+                return buildResult;
+            }
+            if (!(0, fs_extra_1.existsSync)(distFolder)) {
+                throw new Error((0, chalk_1.default) `Folder {blue.bold ${distFolder}} not found`);
+            }
+            const packageFile = (0, fs_extra_1.readdirSync)(distFolder).find((file) => file.endsWith('.tar.gz'));
+            if (!packageFile) {
+                throw new Error((0, chalk_1.default) `No package file {blue.bold *.tar.gz} found in the {bold ${distFolder}}`);
+            }
+            const packagePath = path_1.default.relative(projectConfig.root, path_1.default.join(distFolder, packageFile));
+            const toxArgs = ['run', 'tox', '--installpkg', packagePath].concat(options.args ? options.args.split(' ') : []);
+            (0, poetry_1.runPoetry)(toxArgs, { cwd: projectConfig.root });
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+    });
+}
+//# sourceMappingURL=executor.js.map

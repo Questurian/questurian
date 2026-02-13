@@ -1,0 +1,17 @@
+import { Tree } from '@nx/devkit';
+import { PyprojectToml, PyprojectTomlDependencies } from '../../../graph/dependency-graph';
+export declare class Package {
+    private tree;
+    private pyprojectToml;
+    private workspaceRelativeLocation;
+    name: string;
+    version: string;
+    location: string;
+    constructor(tree: Tree, pyprojectToml: PyprojectToml, workspaceRoot: string, workspaceRelativeLocation: string);
+    getLocalDependency(depName: string): {
+        collection: 'dependencies' | 'devDependencies' | 'optionalDependencies';
+        groupKey?: string;
+        spec: string;
+    } | null;
+}
+export declare function extractDependencyVersion(tree: Tree, projectLocation: string, dependencyGroup: PyprojectTomlDependencies, depName: string): string;

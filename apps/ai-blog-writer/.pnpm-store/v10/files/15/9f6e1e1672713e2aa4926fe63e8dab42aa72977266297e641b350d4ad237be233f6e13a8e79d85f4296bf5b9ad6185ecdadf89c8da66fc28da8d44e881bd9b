@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Build executor",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "buildTarget": {
+      "type": "string",
+      "description": "Nx build target",
+      "default": "build"
+    },
+    "silent": {
+      "type": "boolean",
+      "description": "Hide output text.",
+      "default": false
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "Do not publish the package.",
+      "default": false
+    },
+    "__unparsed__": {
+      "hidden": true,
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "$default": {
+        "$source": "unparsed"
+      },
+      "x-priority": "internal"
+    }
+  },
+  "required": ["buildTarget"]
+}

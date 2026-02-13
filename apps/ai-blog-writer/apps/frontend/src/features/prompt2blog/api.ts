@@ -4,6 +4,7 @@ import {
   fetchLocations,
   fetchMediaAssets,
   searchPexelsImages,
+  searchUnsplashImages,
   getArticleSyncStatus as getArticleSyncStatusForFeature,
   markArticleSynced as markArticleSyncedForFeature,
   rewriteBlockWithAi,
@@ -371,6 +372,7 @@ export {
   fetchLocations,
   fetchMediaAssets,
   searchPexelsImages,
+  searchUnsplashImages,
   createArticle,
   rewriteBlockWithAi,
 }

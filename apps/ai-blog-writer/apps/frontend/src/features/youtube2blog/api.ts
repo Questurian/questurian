@@ -12,6 +12,7 @@ export {
   fetchLocations,
   fetchMediaAssets,
   searchPexelsImages,
+  searchUnsplashImages,
   rewriteBlockWithAi,
 } from '../staging/api'
 
@@ -24,6 +25,8 @@ export type {
   MediaAsset,
   PexelsPhoto,
   PexelsSearchResponse,
+  UnsplashPhoto,
+  UnsplashSearchResponse,
   RewriteBlockWithAiResponse,
 } from '../staging/api'
 

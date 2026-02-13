@@ -1,0 +1,52 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const update_dependency_1 = require("../../dependency/update-dependency");
+const fs_extra_1 = require("fs-extra");
+const path_1 = tslib_1.__importDefault(require("path"));
+const poetry_1 = require("../utils/poetry");
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            const projectConfig = context.projectsConfigurations.projects[context.projectName];
+            const rootPyprojectToml = (0, fs_extra_1.existsSync)('pyproject.toml');
+            if (options.local) {
+                console.log((0, chalk_1.default) `\n  {bold Adding {bgBlue  ${options.name} } workspace dependency...}\n`);
+                updateLocalProject(context, options.name, projectConfig, rootPyprojectToml, options.group, options.extras);
+            }
+            else {
+                console.log((0, chalk_1.default) `\n  {bold Adding {bgBlue  ${options.name} } dependency...}\n`);
+                const installArgs = ['add', options.name]
+                    .concat(options.group ? ['--group', options.group] : [])
+                    .concat(options.args ? options.args.split(' ') : [])
+                    .concat(options.extras ? options.extras.map((ex) => `--extras=${ex}`) : [])
+                    .concat(rootPyprojectToml ? ['--lock'] : []);
+                (0, poetry_1.runPoetry)(installArgs, { cwd: projectConfig.root });
+            }
+            (0, update_dependency_1.updateDependencyTree)(context);
+            console.log((0, chalk_1.default) `\n  {green.bold '${options.name}'} {green dependency has been successfully added to the project}\n`);
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            console.log((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+    });
+}
+function updateLocalProject(context, dependencyName, projectConfig, updateLockOnly, group, extras) {
+    const dependencyConfig = (0, poetry_1.getLocalDependencyConfig)(context, dependencyName);
+    const dependencyPath = path_1.default.relative(projectConfig.root, dependencyConfig.root);
+    (0, poetry_1.addLocalProjectToPoetryProject)(projectConfig, dependencyConfig, dependencyPath, group, extras);
+    (0, poetry_1.updateProject)(projectConfig.root, updateLockOnly);
+}
+//# sourceMappingURL=executor.js.map

@@ -1,0 +1,45 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const logger_1 = require("../utils/logger");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const path_1 = tslib_1.__importDefault(require("path"));
+const poetry_1 = require("../utils/poetry");
+const logger = new logger_1.Logger();
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        logger.setOptions(options);
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        try {
+            yield (0, poetry_1.checkPoetryExecutable)();
+            const projectConfig = context.projectsConfigurations.projects[context.projectName];
+            let verboseArg = '-v';
+            if (options.debug) {
+                verboseArg = '-vvv';
+            }
+            else if (options.verbose) {
+                verboseArg = '-vv';
+            }
+            const installArgs = ['install', verboseArg].concat(options.args ? options.args.split(' ') : []);
+            const execOpts = {
+                cwd: projectConfig.root,
+            };
+            if (options.cacheDir) {
+                execOpts.env = Object.assign(Object.assign({}, process.env), { POETRY_CACHE_DIR: path_1.default.resolve(options.cacheDir) });
+            }
+            (0, poetry_1.runPoetry)(installArgs, execOpts);
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+    });
+}
+//# sourceMappingURL=executor.js.map

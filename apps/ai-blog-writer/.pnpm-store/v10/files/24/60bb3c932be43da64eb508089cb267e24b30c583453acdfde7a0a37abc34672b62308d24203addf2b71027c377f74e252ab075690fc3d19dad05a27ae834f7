@@ -1,0 +1,107 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const fs_extra_1 = require("fs-extra");
+const path_1 = require("path");
+const toml_1 = require("@iarna/toml");
+const os_1 = require("os");
+const uuid_1 = require("uuid");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const logger_1 = require("../utils/logger");
+const poetry_1 = require("../utils/poetry");
+const resolvers_1 = require("./resolvers");
+const logger = new logger_1.Logger();
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        logger.setOptions(options);
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            if (options.lockedVersions === true &&
+                options.bundleLocalDependencies === false) {
+                throw new Error('Not supported operations, you cannot use lockedVersions without bundleLocalDependencies');
+            }
+            logger.info((0, chalk_1.default) `\n  {bold Building project {bgBlue  ${context.projectName} }...}\n`);
+            const { root } = context.projectsConfigurations.projects[context.projectName];
+            const buildFolderPath = (0, path_1.join)((0, os_1.tmpdir)(), 'nx-python', 'build', (0, uuid_1.v4)());
+            (0, fs_extra_1.mkdirSync)(buildFolderPath, { recursive: true });
+            logger.info((0, chalk_1.default) `  Copying project files to a temporary folder`);
+            (0, fs_extra_1.readdirSync)(root).forEach((file) => {
+                if (!options.ignorePaths.includes(file)) {
+                    const source = (0, path_1.join)(root, file);
+                    const target = (0, path_1.join)(buildFolderPath, file);
+                    (0, fs_extra_1.copySync)(source, target);
+                }
+            });
+            const buildPyProjectToml = (0, path_1.join)(buildFolderPath, 'pyproject.toml');
+            const buildTomlData = (0, toml_1.parse)((0, fs_extra_1.readFileSync)(buildPyProjectToml).toString('utf-8'));
+            const deps = resolveDependencies(options, root, buildFolderPath, buildTomlData, workspaceRoot, context);
+            const pythonDependency = buildTomlData.tool.poetry.dependencies.python;
+            buildTomlData.tool.poetry.dependencies = {};
+            buildTomlData.tool.poetry.group = {
+                dev: {
+                    dependencies: {},
+                },
+            };
+            if (pythonDependency) {
+                buildTomlData.tool.poetry.dependencies['python'] = pythonDependency;
+            }
+            for (const dep of deps) {
+                const pyprojectDep = parseToPyprojectDependency(dep);
+                buildTomlData.tool.poetry.dependencies[dep.name] = pyprojectDep;
+            }
+            (0, fs_extra_1.writeFileSync)(buildPyProjectToml, (0, toml_1.stringify)(buildTomlData));
+            const distFolder = (0, path_1.join)(buildFolderPath, 'dist');
+            (0, fs_extra_1.removeSync)(distFolder);
+            logger.info((0, chalk_1.default) `  Generating sdist and wheel artifacts`);
+            const buildArgs = ['build'];
+            (0, poetry_1.runPoetry)(buildArgs, { cwd: buildFolderPath });
+            (0, fs_extra_1.removeSync)(options.outputPath);
+            (0, fs_extra_1.mkdirSync)(options.outputPath, { recursive: true });
+            logger.info((0, chalk_1.default) `  Artifacts generated at {bold ${options.outputPath}} folder`);
+            (0, fs_extra_1.copySync)(distFolder, options.outputPath);
+            if (!options.keepBuildFolder) {
+                (0, fs_extra_1.removeSync)(buildFolderPath);
+            }
+            return {
+                buildFolderPath,
+                success: true,
+            };
+        }
+        catch (error) {
+            logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                buildFolderPath: '',
+                success: false,
+            };
+        }
+    });
+}
+function parseToPyprojectDependency(dep) {
+    if (dep.markers || dep.optional || dep.extras || dep.git || dep.source) {
+        return {
+            version: dep.version,
+            markers: dep.markers,
+            optional: dep.optional,
+            extras: dep.extras,
+            git: dep.git,
+            rev: dep.rev,
+            source: dep.source,
+        };
+    }
+    else {
+        return dep.version;
+    }
+}
+function resolveDependencies(options, root, buildFolderPath, buildTomlData, workspaceRoot, context) {
+    if (options.lockedVersions) {
+        return new resolvers_1.LockedDependencyResolver(logger).resolve(root, buildFolderPath, buildTomlData, options.devDependencies, workspaceRoot);
+    }
+    else {
+        return new resolvers_1.ProjectDependencyResolver(logger, options, context).resolve(root, buildFolderPath, buildTomlData);
+    }
+}
+//# sourceMappingURL=executor.js.map

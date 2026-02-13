@@ -1,0 +1,19 @@
+import { ExecutorContext, ProjectConfiguration, Tree } from '@nx/devkit';
+import { PyprojectToml } from '../../graph/dependency-graph';
+import { SpawnSyncOptions } from 'child_process';
+export declare const POETRY_EXECUTABLE = "poetry";
+export declare function checkPoetryExecutable(): Promise<void>;
+export declare function getPoetryVersion(): Promise<string>;
+export declare function addLocalProjectToPoetryProject(targetConfig: ProjectConfiguration, dependencyConfig: ProjectConfiguration, dependencyPath: string, group?: string, extras?: string[]): string;
+export declare function updateProject(cwd: string, updateLockOnly: boolean): void;
+export declare function getProjectTomlPath(targetConfig: ProjectConfiguration): string;
+export declare function parseToml(tomlFile: string): PyprojectToml;
+export declare function readPyprojectToml(tree: Tree, tomlFile: string): PyprojectToml;
+export declare function writePyprojectToml(tree: Tree, tomlFile: string, data: PyprojectToml): void;
+export declare function getLocalDependencyConfig(context: ExecutorContext, dependencyName: string): ProjectConfiguration;
+export type RunPoetryOptions = {
+    log?: boolean;
+    error?: boolean;
+} & SpawnSyncOptions;
+export declare function runPoetry(args: string[], options?: RunPoetryOptions): void;
+export declare function activateVenv(workspaceRoot: string): void;

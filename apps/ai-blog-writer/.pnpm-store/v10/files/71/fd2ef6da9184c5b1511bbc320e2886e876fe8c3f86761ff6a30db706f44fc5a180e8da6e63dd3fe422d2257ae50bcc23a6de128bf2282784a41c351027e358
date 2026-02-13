@@ -1,0 +1,178 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.LockedDependencyResolver = void 0;
+const tslib_1 = require("tslib");
+const toml_1 = require("@iarna/toml");
+const fs_extra_1 = require("fs-extra");
+const path_1 = tslib_1.__importStar(require("path"));
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const poetry_1 = require("../../utils/poetry");
+const file_uri_to_path_1 = tslib_1.__importDefault(require("file-uri-to-path"));
+const utils_1 = require("./utils");
+const os_1 = require("../../utils/os");
+class LockedDependencyResolver {
+    constructor(logger) {
+        this.logger = logger;
+    }
+    resolve(root, buildFolderPath, buildTomlData, devDependencies, workspaceRoot) {
+        this.logger.info((0, chalk_1.default) `  Resolving dependencies...`);
+        return this.resolveDependencies(devDependencies, root, buildFolderPath, buildTomlData, workspaceRoot);
+    }
+    resolveDependencies(devDependencies, root, buildFolderPath, buildTomlData, workspaceRoot, deps = [], level = 1) {
+        const tab = (0, utils_1.getLoggingTab)(level);
+        const requerimentsTxt = this.getProjectRequirementsTxt(devDependencies, buildTomlData, root, buildFolderPath);
+        const lockData = (0, toml_1.parse)((0, fs_extra_1.readFileSync)((0, path_1.join)(root, 'poetry.lock')).toString('utf-8'));
+        const requerimentsLines = requerimentsTxt.split('\n');
+        for (const line of requerimentsLines) {
+            if (line.trim()) {
+                const dep = {};
+                const elements = line.split(';');
+                if (elements.length > 1) {
+                    dep.markers = elements[1].trim();
+                }
+                if (elements[0].includes('@') || elements[0].startsWith('-e file:')) {
+                    this.resolveSourceDependency(tab, elements, dep, lockData, workspaceRoot, buildFolderPath, buildTomlData, deps);
+                    continue;
+                }
+                dep.name = elements[0].split('==')[0];
+                dep.version = elements[0].split('==')[1];
+                this.logger.info((0, chalk_1.default) `${tab}• Adding {blue.bold ${dep.name}==${dep.version}} dependency`);
+                this.resolvePackageExtras(dep);
+                const lockedPkg = this.getLockedPackage(lockData, dep.name);
+                dep.optional = lockedPkg.optional;
+                deps.push(dep);
+            }
+        }
+        if (buildTomlData.tool.poetry.extras) {
+            for (const extra in buildTomlData.tool.poetry.extras) {
+                const originalExtraDeps = buildTomlData.tool.poetry.extras[extra];
+                const lockedDeps = originalExtraDeps.map((dep) => lockData.package.find((pkg) => pkg.name === dep));
+                const resolvedDeps = this.resolveExtrasLockedDependencyTree(lockData, lockedDeps, level);
+                this.logger.info((0, chalk_1.default) `${tab}• Extra: {blue.bold ${extra}} - {blue.bold ${resolvedDeps.join(', ')}} Locked Dependencies`);
+                buildTomlData.tool.poetry.extras[extra] = resolvedDeps;
+            }
+        }
+        return deps;
+    }
+    getProjectRequirementsTxt(devDependencies, buildTomlData, root, buildFolderPath) {
+        const requerimentsTxtFilename = 'requirements.txt';
+        const outputPath = (0, path_1.join)(buildFolderPath, requerimentsTxtFilename);
+        const exportArgs = [
+            'export',
+            '--format',
+            requerimentsTxtFilename,
+            '--without-hashes',
+            '--without-urls',
+            '--output',
+            (0, path_1.join)(buildFolderPath, requerimentsTxtFilename),
+        ].concat(devDependencies ? ['--dev'] : []);
+        const extras = this.getExtras(buildTomlData);
+        if (extras.length > 0) {
+            extras.forEach((extra) => {
+                exportArgs.push('--extras');
+                exportArgs.push(extra);
+            });
+        }
+        (0, poetry_1.runPoetry)(exportArgs, { cwd: root, log: false });
+        return (0, fs_extra_1.readFileSync)(outputPath, { encoding: 'utf-8' });
+    }
+    resolveSourceDependency(tab, exportedLineElements, dep, lockData, workspaceRoot, buildFolderPath, buildTomlData, deps) {
+        const { packageName, location } = this.extractLocalPackageInfo(exportedLineElements);
+        dep.name = packageName;
+        this.resolvePackageExtras(dep);
+        const lockedPkg = this.getLockedPackage(lockData, dep.name);
+        switch (lockedPkg.source.type) {
+            case 'directory':
+                this.includeDirectoryDependency(location, workspaceRoot, tab, packageName, buildFolderPath, buildTomlData);
+                break;
+            case 'git':
+                this.includeGitDependency(tab, lockedPkg, dep, deps);
+                break;
+            default:
+                throw new Error(`Unsupported source type: ${lockedPkg.source.type}`);
+        }
+    }
+    extractLocalPackageInfo(exportedLineElements) {
+        if (exportedLineElements[0].startsWith('-e file:')) {
+            const location = (0, os_1.isWindows)()
+                ? exportedLineElements[0].substring(11).trim() // -e file:///C:/Users/
+                : exportedLineElements[0].substring(10).trim(); // -e file:///Users/
+            const pyprojectToml = path_1.default.join(location, 'pyproject.toml');
+            if (!(0, fs_extra_1.existsSync)(pyprojectToml)) {
+                throw new Error((0, chalk_1.default) `pyproject.toml not found in {blue.bold ${location}}`);
+            }
+            const pyproject = (0, poetry_1.parseToml)(pyprojectToml);
+            return {
+                packageName: pyproject.tool.poetry.name,
+                location: `file://${location}`,
+            };
+        }
+        const atPosition = exportedLineElements[0].indexOf('@');
+        const packageName = exportedLineElements[0].substring(0, atPosition).trim();
+        const location = exportedLineElements[0].substring(atPosition + 1).trim();
+        return { packageName, location };
+    }
+    resolvePackageExtras(dep) {
+        if (dep.name.indexOf('[') !== -1) {
+            dep.extras = dep.name
+                .substring(dep.name.indexOf('[') + 1, dep.name.lastIndexOf(']'))
+                .split(',')
+                .map((extraName) => extraName.trim());
+            dep.name = dep.name.substring(0, dep.name.indexOf('['));
+        }
+    }
+    getLockedPackage(lockData, packageName) {
+        const lockedPkg = lockData.package.find((pkg) => pkg.name.toLowerCase() === packageName.toLowerCase());
+        if (!lockedPkg) {
+            throw new Error((0, chalk_1.default) `Package {blue.bold ${packageName.toLowerCase()}} not found in poetry.lock`);
+        }
+        return lockedPkg;
+    }
+    includeDirectoryDependency(localDepUrl, workspaceRoot, tab, packageName, buildFolderPath, buildTomlData) {
+        const rootFolder = (0, path_1.relative)(workspaceRoot, (0, file_uri_to_path_1.default)(localDepUrl));
+        const pyprojectToml = (0, path_1.join)(rootFolder, 'pyproject.toml');
+        const tomlData = (0, toml_1.parse)((0, fs_extra_1.readFileSync)(pyprojectToml).toString('utf-8'));
+        this.logger.info((0, chalk_1.default) `${tab}• Adding {blue.bold ${packageName}} local dependency`);
+        (0, utils_1.includeDependencyPackage)(tomlData, rootFolder, buildFolderPath, buildTomlData);
+    }
+    includeGitDependency(tab, lockedPkg, dep, deps) {
+        dep.git = lockedPkg.source.url;
+        dep.optional = lockedPkg.optional;
+        if (lockedPkg.source.reference !== 'HEAD') {
+            dep.rev = lockedPkg.source.reference;
+        }
+        this.logger.info((0, chalk_1.default) `${tab}• Adding {blue.bold ${dep.name}==${dep.git}@${lockedPkg.source.reference}} dependency`);
+        deps.push(dep);
+    }
+    resolveExtrasLockedDependencyTree(lockData, deps, level, resolvedDeps = []) {
+        var _a;
+        const tab = (0, utils_1.getLoggingTab)(level);
+        for (const dep of deps) {
+            this.logger.info((0, chalk_1.default) `${tab}• Resolving dependency: {blue.bold ${dep.name}}`);
+            if (((_a = dep.source) === null || _a === void 0 ? void 0 : _a.type) !== 'directory' &&
+                !resolvedDeps.includes(dep.name)) {
+                resolvedDeps.push(dep.name);
+            }
+            const pkgDeps = dep.dependencies ? Object.keys(dep.dependencies) : [];
+            const optionalPkgDeps = pkgDeps
+                .map((depName) => lockData.package.find((pkg) => pkg.name === depName && pkg.optional))
+                .filter((pkgDep) => pkgDep !== undefined && !resolvedDeps.includes(pkgDep.name));
+            optionalPkgDeps.forEach((pkgDep) => resolvedDeps.push(pkgDep.name));
+            if (optionalPkgDeps.length > 0) {
+                this.logger.info((0, chalk_1.default) `${tab}• Resolved Dependencies: {blue.bold ${optionalPkgDeps
+                    .map((pkgDep) => pkgDep.name)
+                    .join(' ')}}`);
+            }
+            this.resolveExtrasLockedDependencyTree(lockData, optionalPkgDeps, level, resolvedDeps);
+        }
+        return resolvedDeps;
+    }
+    getExtras(buildTomlData) {
+        if (buildTomlData.tool.poetry.extras) {
+            return Object.keys(buildTomlData.tool.poetry.extras);
+        }
+        return [];
+    }
+}
+exports.LockedDependencyResolver = LockedDependencyResolver;
+//# sourceMappingURL=locked.js.map

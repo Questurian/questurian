@@ -1,0 +1,58 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const cross_spawn_1 = tslib_1.__importDefault(require("cross-spawn"));
+const logger_1 = require("../utils/logger");
+const path_1 = tslib_1.__importDefault(require("path"));
+const fs_extra_1 = require("fs-extra");
+const poetry_1 = require("../utils/poetry");
+const logger = new logger_1.Logger();
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        (0, poetry_1.activateVenv)(workspaceRoot);
+        const projectConfig = context.projectsConfigurations.projects[context.projectName];
+        const cwd = projectConfig.root;
+        const requirementsTxt = path_1.default.join(cwd, 'requirements.txt');
+        try {
+            logger.info((0, chalk_1.default) `\n  {bold Running serverless framework deploy on project {bgBlue  ${context.projectName} }...}\n`);
+            const distFolder = path_1.default.join(cwd, 'dist');
+            if (!(0, fs_extra_1.existsSync)(distFolder)) {
+                throw new Error(`dist folder does not exist: ${distFolder}`);
+            }
+            const whlFile = (0, fs_extra_1.readdirSync)(distFolder).find((file) => file.endsWith('.whl'));
+            if (!whlFile) {
+                throw new Error(`No .whl file found in dist folder: ${distFolder}`);
+            }
+            (0, fs_extra_1.writeFileSync)(requirementsTxt, `./dist/${whlFile}`);
+            const executable = 'npx';
+            const deployArgs = ['sls', 'deploy', '--stage', options.stage]
+                .concat(options.verbose ? ['--verbose'] : [])
+                .concat(options.force ? ['--force'] : []);
+            const result = cross_spawn_1.default.sync(executable, deployArgs, {
+                cwd: cwd,
+                shell: false,
+                stdio: 'inherit',
+            });
+            if (result.status !== 0) {
+                throw new Error(`Serverless deploy failed`);
+            }
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+        finally {
+            (0, fs_extra_1.removeSync)(requirementsTxt);
+        }
+    });
+}
+//# sourceMappingURL=executor.js.map

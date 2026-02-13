@@ -37,6 +37,23 @@ export type PexelsPhoto = {
   image_url: string
   image_url_large?: string
   image_url_portrait?: string
+  image_url_original?: string
+}
+
+export type PexelsOrientation = 'landscape' | 'portrait' | 'square'
+
+export type UnsplashPhoto = {
+  id: string
+  width?: number
+  height?: number
+  alt?: string
+  photographer?: string
+  photographer_url?: string
+  unsplash_url?: string
+  image_url: string
+  image_url_regular?: string
+  image_url_full?: string
+  image_url_raw?: string
 }
 
 export type PexelsSearchResponse = {
@@ -46,6 +63,15 @@ export type PexelsSearchResponse = {
   per_page: number
   total_results: number
   photos: PexelsPhoto[]
+}
+
+export type UnsplashSearchResponse = {
+  success: boolean
+  query: string
+  page: number
+  per_page: number
+  total_results: number
+  photos: UnsplashPhoto[]
 }
 
 export type Location = {
@@ -249,6 +275,7 @@ export async function searchPexelsImages(
   params?: {
     perPage?: number
     page?: number
+    orientation?: PexelsOrientation
   }
 ): Promise<PexelsSearchResponse> {
   const normalizedQuery = query.trim()
@@ -260,6 +287,9 @@ export async function searchPexelsImages(
   queryParams.append('query', normalizedQuery)
   queryParams.append('per_page', String(params?.perPage ?? 9))
   queryParams.append('page', String(params?.page ?? 1))
+  if (params?.orientation) {
+    queryParams.append('orientation', params.orientation)
+  }
 
   const response = await fetch(
     `${API_BASE_URL}/images/pexels/search?${queryParams.toString()}`
@@ -277,6 +307,48 @@ export async function searchPexelsImages(
       throw new Error(detail.message)
     }
     throw new Error('Pexels search failed')
+  }
+
+  return response.json()
+}
+
+export async function searchUnsplashImages(
+  query: string,
+  params?: {
+    perPage?: number
+    page?: number
+    orientation?: PexelsOrientation
+  }
+): Promise<UnsplashSearchResponse> {
+  const normalizedQuery = query.trim()
+  if (!normalizedQuery) {
+    throw new Error('Search query is required')
+  }
+
+  const queryParams = new URLSearchParams()
+  queryParams.append('query', normalizedQuery)
+  queryParams.append('per_page', String(params?.perPage ?? 18))
+  queryParams.append('page', String(params?.page ?? 1))
+  if (params?.orientation) {
+    queryParams.append('orientation', params.orientation)
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/images/unsplash/search?${queryParams.toString()}`
+  )
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ detail: { message: 'Unsplash search failed' } }))
+    const detail = errorData.detail
+    if (typeof detail === 'string') {
+      throw new Error(detail)
+    }
+    if (detail?.message) {
+      throw new Error(detail.message)
+    }
+    throw new Error('Unsplash search failed')
   }
 
   return response.json()

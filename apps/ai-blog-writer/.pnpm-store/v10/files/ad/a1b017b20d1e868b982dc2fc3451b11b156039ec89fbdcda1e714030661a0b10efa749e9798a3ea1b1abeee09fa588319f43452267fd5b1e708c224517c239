@@ -1,0 +1,62 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createWorkspaceWithPackageDependencies = createWorkspaceWithPackageDependencies;
+const tslib_1 = require("tslib");
+const path_1 = tslib_1.__importDefault(require("path"));
+const poetry_1 = require("../../../executors/utils/poetry");
+function createWorkspaceWithPackageDependencies(tree, projectAndPackageData) {
+    var _a, _b, _c;
+    var _d, _e, _f, _g;
+    const projectGraph = {
+        nodes: {},
+        dependencies: {},
+    };
+    for (const [projectName, data] of Object.entries(projectAndPackageData)) {
+        const pyprojectTomlContents = {
+            tool: {
+                poetry: {
+                    name: data.packageName,
+                    version: data.version,
+                },
+            },
+        };
+        for (const dependency of data.localDependencies) {
+            const dependencyPackageName = projectAndPackageData[dependency.projectName].packageName;
+            if (dependency.dependencyCollection === 'dependencies') {
+                (_a = (_d = pyprojectTomlContents.tool.poetry).dependencies) !== null && _a !== void 0 ? _a : (_d.dependencies = {});
+                pyprojectTomlContents.tool.poetry.dependencies[dependencyPackageName] =
+                    {
+                        develop: true,
+                        path: path_1.default.relative(data.projectRoot, projectAndPackageData[dependency.projectName].projectRoot),
+                    };
+            }
+            else {
+                (_b = (_e = pyprojectTomlContents.tool.poetry).group) !== null && _b !== void 0 ? _b : (_e.group = {});
+                (_c = (_f = pyprojectTomlContents.tool.poetry.group)[_g = dependency.dependencyCollection]) !== null && _c !== void 0 ? _c : (_f[_g] = {
+                    dependencies: {},
+                });
+                pyprojectTomlContents.tool.poetry.group[dependency.dependencyCollection].dependencies[dependencyPackageName] = {
+                    develop: true,
+                    path: path_1.default.relative(data.projectRoot, projectAndPackageData[dependency.projectName].projectRoot),
+                };
+            }
+        }
+        // add the project and its nx project level dependencies to the projectGraph
+        projectGraph.nodes[projectName] = {
+            name: projectName,
+            type: 'lib',
+            data: {
+                root: data.projectRoot,
+            },
+        };
+        projectGraph.dependencies[projectName] = data.localDependencies.map((dependency) => ({
+            source: projectName,
+            target: dependency.projectName,
+            type: 'static',
+        }));
+        // create the pyproject.toml in the tree
+        (0, poetry_1.writePyprojectToml)(tree, data.pyprojectTomlPath, pyprojectTomlContents);
+    }
+    return projectGraph;
+}
+//# sourceMappingURL=create-workspace-with-package-dependencies.js.map

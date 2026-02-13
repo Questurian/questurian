@@ -1,0 +1,11 @@
+import { ExecutorContext, ProjectsConfigurations } from '@nx/devkit';
+import { PyprojectToml, PyprojectTomlDependencies } from '../graph/dependency-graph';
+export declare function updateDependencyTree(context: ExecutorContext): void;
+export declare function updateDependents(context: ExecutorContext, workspace: ProjectsConfigurations, projectName: string, updateLockOnly: boolean, workspaceRoot: string, updatedProjects?: string[]): void;
+/**
+ * Parses all dependency names from a Pyproject.toml file
+ * and returns a flattened collection of dependencies
+ *
+ * Optionally you may supply a list of groups to ignore
+ */
+export declare const getAllDependenciesFromPyprojectToml: (tomlData: PyprojectToml, omitGroups?: string[]) => PyprojectTomlDependencies;

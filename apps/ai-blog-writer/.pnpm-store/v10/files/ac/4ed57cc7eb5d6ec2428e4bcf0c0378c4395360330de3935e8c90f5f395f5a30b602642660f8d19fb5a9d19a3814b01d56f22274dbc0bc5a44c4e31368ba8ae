@@ -1,0 +1,98 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createDependencies = exports.getDependencies = exports.getDependents = void 0;
+const tslib_1 = require("tslib");
+const devkit_1 = require("@nx/devkit");
+const fs_1 = require("fs");
+const toml_1 = require("@iarna/toml");
+const path_1 = tslib_1.__importDefault(require("path"));
+const getDependents = (projectName, projects, cwd) => {
+    const deps = [];
+    const { root } = projects[projectName];
+    for (const project in projects) {
+        if (checkProjectIsDependent(projects, project, root, cwd)) {
+            deps.push(project);
+        }
+    }
+    return deps;
+};
+exports.getDependents = getDependents;
+const getDependencies = (projectName, projects, cwd) => {
+    var _a, _b, _c, _d;
+    const projectData = projects[projectName];
+    const pyprojectToml = (0, devkit_1.joinPathFragments)(projectData.root, 'pyproject.toml');
+    const deps = [];
+    if ((0, fs_1.existsSync)(pyprojectToml)) {
+        const tomlData = getPyprojectData(pyprojectToml);
+        resolveDependencies((_b = (_a = tomlData.tool) === null || _a === void 0 ? void 0 : _a.poetry) === null || _b === void 0 ? void 0 : _b.dependencies, projectData, projects, cwd, deps, 'main');
+        for (const group in ((_d = (_c = tomlData.tool) === null || _c === void 0 ? void 0 : _c.poetry) === null || _d === void 0 ? void 0 : _d.group) || {}) {
+            resolveDependencies(tomlData.tool.poetry.group[group].dependencies, projectData, projects, cwd, deps, group);
+        }
+    }
+    return deps;
+};
+exports.getDependencies = getDependencies;
+const getPyprojectData = (pyprojectToml) => {
+    const content = (0, fs_1.readFileSync)(pyprojectToml).toString('utf-8');
+    if (content.trim() === '')
+        return {};
+    return (0, toml_1.parse)((0, fs_1.readFileSync)(pyprojectToml).toString('utf-8'));
+};
+const checkProjectIsDependent = (projects, project, root, cwd) => {
+    var _a, _b, _c, _d;
+    const projectData = projects[project];
+    const pyprojectToml = (0, devkit_1.joinPathFragments)(projectData.root, 'pyproject.toml');
+    if ((0, fs_1.existsSync)(pyprojectToml)) {
+        const tomlData = getPyprojectData(pyprojectToml);
+        let isDep = isProjectDependent((_b = (_a = tomlData.tool) === null || _a === void 0 ? void 0 : _a.poetry) === null || _b === void 0 ? void 0 : _b.dependencies, projectData, root, cwd);
+        if (isDep)
+            return true;
+        for (const group in ((_d = (_c = tomlData.tool) === null || _c === void 0 ? void 0 : _c.poetry) === null || _d === void 0 ? void 0 : _d.group) || {}) {
+            isDep = isProjectDependent(tomlData.tool.poetry.group[group].dependencies, projectData, root, cwd);
+            if (isDep)
+                return true;
+        }
+    }
+    return false;
+};
+const isProjectDependent = (dependencies, projectData, root, cwd) => {
+    for (const dep in dependencies || {}) {
+        const depData = dependencies[dep];
+        if (depData instanceof Object && depData.path) {
+            const depAbsPath = path_1.default.resolve(projectData.root, depData.path);
+            if (path_1.default.normalize(root) === path_1.default.normalize(path_1.default.relative(cwd, depAbsPath))) {
+                return true;
+            }
+        }
+    }
+    return false;
+};
+const resolveDependencies = (dependencies, projectData, projects, cwd, deps, category) => {
+    for (const dep in dependencies || {}) {
+        const depData = dependencies[dep];
+        if (depData instanceof Object && depData.path) {
+            const depAbsPath = path_1.default.resolve(projectData.root, depData.path);
+            const depProjectName = Object.keys(projects).find((proj) => path_1.default.normalize(projects[proj].root) ===
+                path_1.default.normalize(path_1.default.relative(cwd, depAbsPath)));
+            if (depProjectName) {
+                deps.push({ name: depProjectName, category });
+            }
+        }
+    }
+};
+const createDependencies = (_, context) => {
+    const result = [];
+    for (const project in context.projects) {
+        const deps = (0, exports.getDependencies)(project, context.projects, process.cwd());
+        deps.forEach((dep) => {
+            result.push({
+                source: project,
+                target: dep.name,
+                type: devkit_1.DependencyType.implicit,
+            });
+        });
+    }
+    return result;
+};
+exports.createDependencies = createDependencies;
+//# sourceMappingURL=dependency-graph.js.map

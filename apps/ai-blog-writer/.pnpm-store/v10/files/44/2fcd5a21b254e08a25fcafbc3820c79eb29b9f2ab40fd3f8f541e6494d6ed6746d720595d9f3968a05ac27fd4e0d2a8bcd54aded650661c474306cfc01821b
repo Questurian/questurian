@@ -1,0 +1,39 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.spawnPromise = void 0;
+const child_process_1 = require("child_process");
+const spawnPromise = function (command, cwd, envVars, output = true) {
+    return new Promise((resolve, reject) => {
+        var _a, _b;
+        console.log(`Running command: ${command}`);
+        const env = Object.assign(Object.assign(Object.assign({}, process.env), (envVars !== null && envVars !== void 0 ? envVars : {})), (output ? { FORCE_COLOR: 'true' } : {}));
+        const args = {
+            cwd,
+            shell: true,
+            stdio: output ? ['inherit', 'pipe', 'pipe'] : 'inherit',
+            env,
+        };
+        const child = (0, child_process_1.spawn)(command, args);
+        let outputStr = '';
+        if (output) {
+            (_a = child.stdout) === null || _a === void 0 ? void 0 : _a.on('data', (data) => {
+                process.stdout.write(data);
+                outputStr += data;
+            });
+            (_b = child.stderr) === null || _b === void 0 ? void 0 : _b.on('data', (data) => {
+                process.stderr.write(data);
+                outputStr += data;
+            });
+        }
+        child.on('close', (code) => {
+            const result = {
+                success: code === 0,
+                code,
+                output: outputStr,
+            };
+            code === 0 ? resolve(result) : reject(result);
+        });
+    });
+};
+exports.spawnPromise = spawnPromise;
+//# sourceMappingURL=cmd.js.map

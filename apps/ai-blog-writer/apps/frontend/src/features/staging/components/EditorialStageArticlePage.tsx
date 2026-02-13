@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import Masonry from 'react-masonry-css'
 import { useAuth } from '../../../providers/AuthProvider'
 import { ImageUpload, type UploadImageResponse } from '../../../features/images'
 import { MarkdownBlockEditor } from '../features/markdown-editor'
@@ -11,6 +12,8 @@ import type {
   Location,
   MediaAsset,
   PexelsPhoto,
+  PexelsOrientation,
+  UnsplashPhoto,
 } from '../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../types'
 
@@ -24,6 +27,8 @@ type MediaVariant =
   | 'editorial'
 type BlockImageModalMode = 'default' | 'img' | 'img-trio'
 type ImgTrioFormat = 'square' | 'landscape'
+type PexelsOrientationOption = PexelsOrientation | ''
+type ImageSourceOption = 'payload' | 'upload' | 'unsplash' | 'pexels'
 type EditorModelName = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash'
 
 const CONTENT_BLOCK_VARIANT: MediaVariant = 'wide'
@@ -47,6 +52,13 @@ const EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string }> = [
 const IMG_TRIO_DIMENSIONS: Record<ImgTrioFormat, { width: number; height: number }> = {
   square: { width: 1080, height: 1080 },
   landscape: { width: 1920, height: 1080 },
+}
+const EXTERNAL_MASONRY_BREAKPOINTS: Record<string, number> = {
+  default: 5,
+  1900: 4,
+  1500: 3,
+  1100: 2,
+  700: 1,
 }
 
 const VARIANT_FALLBACK_ORDER: MediaVariant[] = [
@@ -96,9 +108,23 @@ type EditorialStageArticleApi = {
   ) => Promise<{ message: string; run_id: string; payload_article_id: number }>
   searchPexelsImages: (
     query: string,
-    params?: { perPage?: number; page?: number }
+    params?: {
+      perPage?: number
+      page?: number
+      orientation?: PexelsOrientation
+    }
   ) => Promise<{
     photos: PexelsPhoto[]
+  }>
+  searchUnsplashImages: (
+    query: string,
+    params?: {
+      perPage?: number
+      page?: number
+      orientation?: PexelsOrientation
+    }
+  ) => Promise<{
+    photos: UnsplashPhoto[]
   }>
   rewriteBlockWithAi: (
     input: {
@@ -2088,6 +2114,7 @@ export default function EditorialStageArticlePage({
     fetchResult,
     markArticleSynced,
     searchPexelsImages,
+    searchUnsplashImages,
     rewriteBlockWithAi,
   } = api
   const { token } = useAuth()
@@ -2117,19 +2144,27 @@ export default function EditorialStageArticlePage({
 
   // Modal state for featured image
   const [showImageModal, setShowImageModal] = useState(false)
+  const [featuredImageSource, setFeaturedImageSource] = useState<ImageSourceOption>('payload')
   const [imageSearch, setImageSearch] = useState('')
-  const [showUploadModal, setShowUploadModal] = useState(false)
   const [imageAltText, setImageAltText] = useState('')
   const [imagePhotographerCredit, setImagePhotographerCredit] = useState('')
+  const [unsplashFeaturedQuery, setUnsplashFeaturedQuery] = useState('')
+  const [unsplashFeaturedResults, setUnsplashFeaturedResults] = useState<UnsplashPhoto[]>([])
+  const [isSearchingUnsplashFeatured, setIsSearchingUnsplashFeatured] = useState(false)
+  const [unsplashFeaturedError, setUnsplashFeaturedError] = useState<string | null>(null)
+  const [unsplashFeaturedOrientation, setUnsplashFeaturedOrientation] = useState<PexelsOrientationOption>('')
+  const [unsplashFeaturedPerPage, setUnsplashFeaturedPerPage] = useState<number>(18)
   const [pexelsFeaturedQuery, setPexelsFeaturedQuery] = useState('')
   const [pexelsFeaturedResults, setPexelsFeaturedResults] = useState<PexelsPhoto[]>([])
   const [isSearchingPexelsFeatured, setIsSearchingPexelsFeatured] = useState(false)
   const [pexelsFeaturedError, setPexelsFeaturedError] = useState<string | null>(null)
+  const [pexelsFeaturedOrientation, setPexelsFeaturedOrientation] = useState<PexelsOrientationOption>('')
+  const [pexelsFeaturedPerPage, setPexelsFeaturedPerPage] = useState<number>(18)
 
   // Modal state for block images
   const [blockImageModal, setBlockImageModal] = useState<BlockImageModalState | null>(null)
+  const [blockImageSource, setBlockImageSource] = useState<ImageSourceOption>('payload')
   const [blockImageSearch, setBlockImageSearch] = useState('')
-  const [showBlockUploadModal, setShowBlockUploadModal] = useState(false)
   const [blockImageAltText, setBlockImageAltText] = useState('')
   const [blockImagePhotographerCredit, setBlockImagePhotographerCredit] = useState('')
   const [imgBlockAssets, setImgBlockAssets] = useState<MediaAsset[]>([])
@@ -2138,10 +2173,18 @@ export default function EditorialStageArticlePage({
   const [selectedImgBlockAssetIds, setSelectedImgBlockAssetIds] = useState<number[]>([])
   const [imgBlockCaption, setImgBlockCaption] = useState('')
   const [imgTrioFormat, setImgTrioFormat] = useState<ImgTrioFormat>(IMG_TRIO_DEFAULT_FORMAT)
+  const [unsplashBlockQuery, setUnsplashBlockQuery] = useState('')
+  const [unsplashBlockResults, setUnsplashBlockResults] = useState<UnsplashPhoto[]>([])
+  const [isSearchingUnsplashBlock, setIsSearchingUnsplashBlock] = useState(false)
+  const [unsplashBlockError, setUnsplashBlockError] = useState<string | null>(null)
+  const [unsplashBlockOrientation, setUnsplashBlockOrientation] = useState<PexelsOrientationOption>('')
+  const [unsplashBlockPerPage, setUnsplashBlockPerPage] = useState<number>(18)
   const [pexelsBlockQuery, setPexelsBlockQuery] = useState('')
   const [pexelsBlockResults, setPexelsBlockResults] = useState<PexelsPhoto[]>([])
   const [isSearchingPexelsBlock, setIsSearchingPexelsBlock] = useState(false)
   const [pexelsBlockError, setPexelsBlockError] = useState<string | null>(null)
+  const [pexelsBlockOrientation, setPexelsBlockOrientation] = useState<PexelsOrientationOption>('')
+  const [pexelsBlockPerPage, setPexelsBlockPerPage] = useState<number>(18)
 
   // Drag and drop state
   const [draggedTimelineItemId, setDraggedTimelineItemId] = useState<string | null>(null)
@@ -2405,7 +2448,7 @@ export default function EditorialStageArticlePage({
   }, [])
 
   const closeBlockImageModal = useCallback(() => {
-    setShowBlockUploadModal(false)
+    setBlockImageSource('payload')
     setBlockImageModal(null)
     setSelectedImgBlockAssetIds([])
     setImgBlockCaption('')
@@ -2416,6 +2459,14 @@ export default function EditorialStageArticlePage({
     setPexelsBlockResults([])
     setIsSearchingPexelsBlock(false)
     setPexelsBlockError(null)
+    setPexelsBlockOrientation('')
+    setPexelsBlockPerPage(18)
+    setUnsplashBlockQuery('')
+    setUnsplashBlockResults([])
+    setIsSearchingUnsplashBlock(false)
+    setUnsplashBlockError(null)
+    setUnsplashBlockOrientation('')
+    setUnsplashBlockPerPage(18)
   }, [])
 
   const openBlockImageModal = useCallback((
@@ -2424,7 +2475,7 @@ export default function EditorialStageArticlePage({
     options?: OpenBlockImageModalOptions
   ) => {
     setBlockImageSearch('')
-    setShowBlockUploadModal(false)
+    setBlockImageSource('payload')
     setSelectedImgBlockAssetIds(options?.selectedAssetIds || [])
     setImgBlockCaption(options?.caption || '')
     setImgTrioFormat(options?.trioFormat || IMG_TRIO_DEFAULT_FORMAT)
@@ -2433,6 +2484,14 @@ export default function EditorialStageArticlePage({
     setPexelsBlockResults([])
     setIsSearchingPexelsBlock(false)
     setPexelsBlockError(null)
+    setPexelsBlockOrientation('')
+    setPexelsBlockPerPage(18)
+    setUnsplashBlockQuery('')
+    setUnsplashBlockResults([])
+    setIsSearchingUnsplashBlock(false)
+    setUnsplashBlockError(null)
+    setUnsplashBlockOrientation('')
+    setUnsplashBlockPerPage(18)
     setOpenImagePickerTarget(null)
     setBlockImageModal({
       blockId,
@@ -2499,10 +2558,21 @@ export default function EditorialStageArticlePage({
 
   useEffect(() => {
     if (showImageModal) return
+    setFeaturedImageSource('payload')
     setPexelsFeaturedQuery('')
     setPexelsFeaturedResults([])
     setIsSearchingPexelsFeatured(false)
     setPexelsFeaturedError(null)
+    setPexelsFeaturedOrientation('')
+    setPexelsFeaturedPerPage(18)
+    setUnsplashFeaturedQuery('')
+    setUnsplashFeaturedResults([])
+    setIsSearchingUnsplashFeatured(false)
+    setUnsplashFeaturedError(null)
+    setUnsplashFeaturedOrientation('')
+    setUnsplashFeaturedPerPage(18)
+    setImageAltText('')
+    setImagePhotographerCredit('')
   }, [showImageModal])
 
   const toggleImgBlockAssetSelection = useCallback((
@@ -3539,7 +3609,7 @@ export default function EditorialStageArticlePage({
         .then(res => mergeMediaAssetsIntoState(res.docs || []))
     }
 
-    setShowUploadModal(false)
+    setFeaturedImageSource('payload')
     setShowImageModal(false)
     setImageAltText('')
     setImagePhotographerCredit('')
@@ -3548,7 +3618,7 @@ export default function EditorialStageArticlePage({
   const handleBlockImageUploadComplete = (result: UploadImageResponse) => {
     if (!blockImageModal) return
     if (blockImageModal.mode !== 'default') {
-      setShowBlockUploadModal(false)
+      setBlockImageSource('payload')
       return
     }
 
@@ -3572,6 +3642,39 @@ export default function EditorialStageArticlePage({
     setBlockImagePhotographerCredit('')
   }
 
+  const runFeaturedUnsplashSearch = useCallback(async () => {
+    const query = unsplashFeaturedQuery.trim()
+    if (!query) {
+      setUnsplashFeaturedError('Enter a search term first.')
+      setUnsplashFeaturedResults([])
+      return
+    }
+
+    setIsSearchingUnsplashFeatured(true)
+    setUnsplashFeaturedError(null)
+
+    try {
+      const response = await searchUnsplashImages(query, {
+        perPage: unsplashFeaturedPerPage,
+        page: 1,
+        orientation: unsplashFeaturedOrientation || undefined,
+      })
+      setUnsplashFeaturedResults(response.photos || [])
+    } catch (err) {
+      setUnsplashFeaturedResults([])
+      setUnsplashFeaturedError(
+        err instanceof Error ? err.message : 'Unsplash search failed'
+      )
+    } finally {
+      setIsSearchingUnsplashFeatured(false)
+    }
+  }, [
+    searchUnsplashImages,
+    unsplashFeaturedOrientation,
+    unsplashFeaturedPerPage,
+    unsplashFeaturedQuery,
+  ])
+
   const runFeaturedPexelsSearch = useCallback(async () => {
     const query = pexelsFeaturedQuery.trim()
     if (!query) {
@@ -3584,7 +3687,11 @@ export default function EditorialStageArticlePage({
     setPexelsFeaturedError(null)
 
     try {
-      const response = await searchPexelsImages(query, { perPage: 9, page: 1 })
+      const response = await searchPexelsImages(query, {
+        perPage: pexelsFeaturedPerPage,
+        page: 1,
+        orientation: pexelsFeaturedOrientation || undefined,
+      })
       setPexelsFeaturedResults(response.photos || [])
     } catch (err) {
       setPexelsFeaturedResults([])
@@ -3594,7 +3701,45 @@ export default function EditorialStageArticlePage({
     } finally {
       setIsSearchingPexelsFeatured(false)
     }
-  }, [pexelsFeaturedQuery, searchPexelsImages])
+  }, [
+    pexelsFeaturedOrientation,
+    pexelsFeaturedPerPage,
+    pexelsFeaturedQuery,
+    searchPexelsImages,
+  ])
+
+  const runBlockUnsplashSearch = useCallback(async () => {
+    const query = unsplashBlockQuery.trim()
+    if (!query) {
+      setUnsplashBlockError('Enter a search term first.')
+      setUnsplashBlockResults([])
+      return
+    }
+
+    setIsSearchingUnsplashBlock(true)
+    setUnsplashBlockError(null)
+
+    try {
+      const response = await searchUnsplashImages(query, {
+        perPage: unsplashBlockPerPage,
+        page: 1,
+        orientation: unsplashBlockOrientation || undefined,
+      })
+      setUnsplashBlockResults(response.photos || [])
+    } catch (err) {
+      setUnsplashBlockResults([])
+      setUnsplashBlockError(
+        err instanceof Error ? err.message : 'Unsplash search failed'
+      )
+    } finally {
+      setIsSearchingUnsplashBlock(false)
+    }
+  }, [
+    searchUnsplashImages,
+    unsplashBlockOrientation,
+    unsplashBlockPerPage,
+    unsplashBlockQuery,
+  ])
 
   const runBlockPexelsSearch = useCallback(async () => {
     const query = pexelsBlockQuery.trim()
@@ -3608,7 +3753,11 @@ export default function EditorialStageArticlePage({
     setPexelsBlockError(null)
 
     try {
-      const response = await searchPexelsImages(query, { perPage: 9, page: 1 })
+      const response = await searchPexelsImages(query, {
+        perPage: pexelsBlockPerPage,
+        page: 1,
+        orientation: pexelsBlockOrientation || undefined,
+      })
       setPexelsBlockResults(response.photos || [])
     } catch (err) {
       setPexelsBlockResults([])
@@ -3618,7 +3767,12 @@ export default function EditorialStageArticlePage({
     } finally {
       setIsSearchingPexelsBlock(false)
     }
-  }, [pexelsBlockQuery, searchPexelsImages])
+  }, [
+    pexelsBlockOrientation,
+    pexelsBlockPerPage,
+    pexelsBlockQuery,
+    searchPexelsImages,
+  ])
 
   const getLocationDisplayName = (loc?: Location) => {
     if (!loc) return ''
@@ -3657,7 +3811,6 @@ export default function EditorialStageArticlePage({
     stagedArticle.featuredImageId
       ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
       : null
-  const hasValidUploadLocation = Boolean(selectedLocation?.id)
   const uploadLocationRequirementMessage =
     'Select a valid location before uploading new images.'
   const featuredImageFileNamePrefix = buildImageFileNamePrefix(
@@ -4700,50 +4853,57 @@ export default function EditorialStageArticlePage({
         <div className="stage-article-modal-overlay" onClick={() => setShowImageModal(false)}>
           <div className="stage-article-modal" onClick={(e) => e.stopPropagation()}>
             <div className="stage-article-modal-header">
-              <h3>{showUploadModal ? 'Upload New Image' : 'Select Featured Image'}</h3>
+              <h3>
+                {featuredImageSource === 'upload'
+                  ? 'Upload Featured Image'
+                  : featuredImageSource === 'payload'
+                    ? 'Select Featured Image From Payload'
+                    : featuredImageSource === 'unsplash'
+                      ? 'Search Featured Images on Unsplash'
+                      : 'Search Featured Images on Pexels'}
+              </h3>
               <button
                 type="button"
                 className="stage-article-modal-close"
-                onClick={() => {
-                  if (showUploadModal) {
-                    setShowUploadModal(false)
-                  } else {
-                    setShowImageModal(false)
-                  }
-                }}
+                onClick={() => setShowImageModal(false)}
               >
                 ×
               </button>
             </div>
 
-            {!showUploadModal ? (
-              <>
-                <div className="stage-article-modal-actions">
-                  <button
-                    type="button"
-                    className="stage-article-modal-upload-btn"
-                    disabled={!hasValidUploadLocation}
-                    onClick={() => {
-                      if (!hasValidUploadLocation) return
-                      setImageAltText('')
-                      setImagePhotographerCredit('')
-                      setShowUploadModal(true)
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Upload New Image
-                  </button>
-                </div>
-                {!hasValidUploadLocation && (
-                  <div className="stage-article-modal-empty" style={{ marginBottom: '0.75rem' }}>
-                    <p>{uploadLocationRequirementMessage}</p>
-                  </div>
-                )}
+            <div className="stage-article-source-tabs">
+              <button
+                type="button"
+                className={`stage-article-source-tab ${featuredImageSource === 'upload' ? 'active' : ''}`}
+                onClick={() => setFeaturedImageSource('upload')}
+              >
+                Upload
+              </button>
+              <button
+                type="button"
+                className={`stage-article-source-tab ${featuredImageSource === 'payload' ? 'active' : ''}`}
+                onClick={() => setFeaturedImageSource('payload')}
+              >
+                From Payload
+              </button>
+              <button
+                type="button"
+                className={`stage-article-source-tab ${featuredImageSource === 'unsplash' ? 'active' : ''}`}
+                onClick={() => setFeaturedImageSource('unsplash')}
+              >
+                From Unsplash
+              </button>
+              <button
+                type="button"
+                className={`stage-article-source-tab ${featuredImageSource === 'pexels' ? 'active' : ''}`}
+                onClick={() => setFeaturedImageSource('pexels')}
+              >
+                From Pexels
+              </button>
+            </div>
 
+            {featuredImageSource === 'payload' && (
+              <>
                 <div className="stage-article-modal-search">
                   <input
                     type="text"
@@ -4753,67 +4913,6 @@ export default function EditorialStageArticlePage({
                     className="stage-article-modal-search-input"
                   />
                 </div>
-
-                <div className="stage-article-modal-search stage-article-modal-search-inline">
-                  <input
-                    type="text"
-                    placeholder="Search with Pexels..."
-                    value={pexelsFeaturedQuery}
-                    onChange={(e) => setPexelsFeaturedQuery(e.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        void runFeaturedPexelsSearch()
-                      }
-                    }}
-                    className="stage-article-modal-search-input"
-                  />
-                  <button
-                    type="button"
-                    className="stage-article-modal-search-btn"
-                    onClick={() => {
-                      void runFeaturedPexelsSearch()
-                    }}
-                    disabled={isSearchingPexelsFeatured}
-                  >
-                    {isSearchingPexelsFeatured ? 'Searching...' : 'Search with Pexels'}
-                  </button>
-                </div>
-
-                {pexelsFeaturedError && (
-                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
-                    <p>{pexelsFeaturedError}</p>
-                  </div>
-                )}
-
-                {pexelsFeaturedResults.length > 0 && (
-                  <>
-                    <div className="stage-article-modal-pexels-header">
-                      Pexels results (preview only). Click image to open source.
-                    </div>
-                    <div className="stage-article-modal-grid">
-                      {pexelsFeaturedResults.map((photo) => (
-                        <a
-                          key={`featured-pexels-${photo.id}`}
-                          href={photo.pexels_url || photo.image_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="stage-article-modal-image stage-article-modal-image-pexels"
-                        >
-                          <img
-                            src={photo.image_url}
-                            alt={photo.alt || 'Pexels image'}
-                            loading="lazy"
-                          />
-                          <span className="stage-article-modal-image-name">
-                            {photo.photographer || `Pexels ${photo.id}`}
-                          </span>
-                          <span className="stage-article-modal-pexels-meta">Pexels</span>
-                        </a>
-                      ))}
-                    </div>
-                  </>
-                )}
 
                 <div className="stage-article-modal-grid">
                   {filteredFeaturedImageAssets
@@ -4864,7 +4963,9 @@ export default function EditorialStageArticlePage({
                   </button>
                 </div>
               </>
-            ) : (
+            )}
+
+            {featuredImageSource === 'upload' && (
               <>
                 <div className="stage-article-upload-section">
                   {selectedLocation ? (
@@ -4878,7 +4979,7 @@ export default function EditorialStageArticlePage({
                       onUploadComplete={handleUploadComplete}
                       onAltTextGenerated={(text) => setImageAltText(text)}
                       onPhotographerCreditChange={(text) => setImagePhotographerCredit(text)}
-                      onCancel={() => setShowUploadModal(false)}
+                      onCancel={() => setFeaturedImageSource('payload')}
                     />
                   ) : (
                     <div className="stage-article-modal-empty">
@@ -4886,6 +4987,203 @@ export default function EditorialStageArticlePage({
                     </div>
                   )}
                 </div>
+              </>
+            )}
+
+            {featuredImageSource === 'unsplash' && (
+              <>
+                <div className="stage-article-modal-search stage-article-modal-search-inline">
+                  <input
+                    type="text"
+                    placeholder="Search with Unsplash..."
+                    value={unsplashFeaturedQuery}
+                    onChange={(e) => setUnsplashFeaturedQuery(e.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void runFeaturedUnsplashSearch()
+                      }
+                    }}
+                    className="stage-article-modal-search-input"
+                  />
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={unsplashFeaturedOrientation}
+                    onChange={(event) => {
+                      setUnsplashFeaturedOrientation(event.target.value as PexelsOrientationOption)
+                    }}
+                  >
+                    <option value="">Any orientation</option>
+                    <option value="landscape">Landscape</option>
+                    <option value="portrait">Portrait</option>
+                    <option value="square">Square</option>
+                  </select>
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={String(unsplashFeaturedPerPage)}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value)
+                      setUnsplashFeaturedPerPage(Number.isFinite(parsed) ? parsed : 18)
+                    }}
+                  >
+                    <option value="12">12 results</option>
+                    <option value="18">18 results</option>
+                    <option value="30">30 results</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="stage-article-modal-search-btn"
+                    onClick={() => {
+                      void runFeaturedUnsplashSearch()
+                    }}
+                    disabled={isSearchingUnsplashFeatured}
+                  >
+                    {isSearchingUnsplashFeatured ? 'Searching...' : 'Search with Unsplash'}
+                  </button>
+                </div>
+
+                {unsplashFeaturedError && (
+                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                    <p>{unsplashFeaturedError}</p>
+                  </div>
+                )}
+
+                {unsplashFeaturedResults.length > 0 && (
+                  <>
+                    <div className="stage-article-modal-pexels-header">
+                      Unsplash results (preview only). Click image to open source.
+                    </div>
+                    <Masonry
+                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                      className="stage-article-masonry-grid"
+                      columnClassName="stage-article-masonry-column"
+                    >
+                      {unsplashFeaturedResults.map((photo) => (
+                        <a
+                          key={`featured-unsplash-${photo.id}`}
+                          href={photo.unsplash_url || photo.image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={photo.photographer || 'Open on Unsplash'}
+                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                        >
+                          <img
+                            src={photo.image_url_raw || photo.image_url_full || photo.image_url_regular || photo.image_url}
+                            alt={photo.alt || 'Unsplash image'}
+                            loading="lazy"
+                            width={photo.width}
+                            height={photo.height}
+                          />
+                        </a>
+                      ))}
+                    </Masonry>
+                  </>
+                )}
+
+                {unsplashFeaturedResults.length === 0 && !unsplashFeaturedError && (
+                  <div className="stage-article-modal-empty">
+                    <p>Search Unsplash to preview external images.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {featuredImageSource === 'pexels' && (
+              <>
+                <div className="stage-article-modal-search stage-article-modal-search-inline">
+                  <input
+                    type="text"
+                    placeholder="Search with Pexels..."
+                    value={pexelsFeaturedQuery}
+                    onChange={(e) => setPexelsFeaturedQuery(e.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void runFeaturedPexelsSearch()
+                      }
+                    }}
+                    className="stage-article-modal-search-input"
+                  />
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={pexelsFeaturedOrientation}
+                    onChange={(event) => {
+                      setPexelsFeaturedOrientation(event.target.value as PexelsOrientationOption)
+                    }}
+                  >
+                    <option value="">Any orientation</option>
+                    <option value="landscape">Landscape</option>
+                    <option value="portrait">Portrait</option>
+                    <option value="square">Square</option>
+                  </select>
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={String(pexelsFeaturedPerPage)}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value)
+                      setPexelsFeaturedPerPage(Number.isFinite(parsed) ? parsed : 18)
+                    }}
+                  >
+                    <option value="12">12 results</option>
+                    <option value="18">18 results</option>
+                    <option value="30">30 results</option>
+                    <option value="50">50 results</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="stage-article-modal-search-btn"
+                    onClick={() => {
+                      void runFeaturedPexelsSearch()
+                    }}
+                    disabled={isSearchingPexelsFeatured}
+                  >
+                    {isSearchingPexelsFeatured ? 'Searching...' : 'Search with Pexels'}
+                  </button>
+                </div>
+
+                {pexelsFeaturedError && (
+                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                    <p>{pexelsFeaturedError}</p>
+                  </div>
+                )}
+
+                {pexelsFeaturedResults.length > 0 && (
+                  <>
+                    <div className="stage-article-modal-pexels-header">
+                      Pexels results (preview only). Click image to open source.
+                    </div>
+                    <Masonry
+                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                      className="stage-article-masonry-grid"
+                      columnClassName="stage-article-masonry-column"
+                    >
+                      {pexelsFeaturedResults.map((photo) => (
+                        <a
+                          key={`featured-pexels-${photo.id}`}
+                          href={photo.pexels_url || photo.image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={photo.photographer || 'Open on Pexels'}
+                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                        >
+                          <img
+                            src={photo.image_url_original || photo.image_url_large || photo.image_url_portrait || photo.image_url}
+                            alt={photo.alt || 'Pexels image'}
+                            loading="lazy"
+                            width={photo.width}
+                            height={photo.height}
+                          />
+                        </a>
+                      ))}
+                    </Masonry>
+                  </>
+                )}
+
+                {pexelsFeaturedResults.length === 0 && !pexelsFeaturedError && (
+                  <div className="stage-article-modal-empty">
+                    <p>Search Pexels to preview external images.</p>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -4898,59 +5196,73 @@ export default function EditorialStageArticlePage({
           <div className="stage-article-modal" onClick={(e) => e.stopPropagation()}>
             <div className="stage-article-modal-header">
               <h3>
-                {showBlockUploadModal
-                  ? 'Upload New Image'
-                  : isImgBlockModal
-                    ? 'Add Img Pair Between Blocks'
+                {blockImageSource === 'upload'
+                  ? isImgBlockModal
+                    ? 'Upload Is Unavailable for Img Pair'
                     : isImgTrioModal
-                      ? 'Add Img Trio Between Blocks'
-                    : 'Add Image Between Blocks'}
+                      ? 'Upload Is Unavailable for Img Trio'
+                      : 'Upload New Image'
+                  : blockImageSource === 'payload'
+                    ? isImgBlockModal
+                      ? 'Add Img Pair Between Blocks'
+                      : isImgTrioModal
+                        ? 'Add Img Trio Between Blocks'
+                        : 'Add Image Between Blocks'
+                    : blockImageSource === 'unsplash'
+                      ? 'Search Images on Unsplash'
+                      : 'Search Images on Pexels'}
               </h3>
               <button
                 type="button"
                 className="stage-article-modal-close"
-                onClick={() => {
-                  if (showBlockUploadModal) {
-                    setShowBlockUploadModal(false)
-                  } else {
-                    closeBlockImageModal()
-                  }
-                }}
+                onClick={closeBlockImageModal}
               >
                 ×
               </button>
             </div>
 
-            {!showBlockUploadModal ? (
-              <>
-                {!isMultiImageModal && (
-                  <div className="stage-article-modal-actions">
-                    <button
-                      type="button"
-                      className="stage-article-modal-upload-btn"
-                      disabled={!hasValidUploadLocation}
-                      onClick={() => {
-                        if (!hasValidUploadLocation) return
-                        setBlockImageAltText('')
-                        setBlockImagePhotographerCredit('')
-                        setShowBlockUploadModal(true)
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                      </svg>
-                      Upload New Image
-                    </button>
-                  </div>
-                )}
-                {!isMultiImageModal && !hasValidUploadLocation && (
-                  <div className="stage-article-modal-empty" style={{ marginBottom: '0.75rem' }}>
-                    <p>{uploadLocationRequirementMessage}</p>
-                  </div>
-                )}
+            <div className="stage-article-source-tabs">
+              <button
+                type="button"
+                className={`stage-article-source-tab ${blockImageSource === 'upload' ? 'active' : ''}`}
+                onClick={() => {
+                  if (isMultiImageModal) return
+                  setBlockImageSource('upload')
+                }}
+                disabled={isMultiImageModal}
+                title={
+                  isMultiImageModal
+                    ? 'Upload is currently available for single image blocks only.'
+                    : 'Upload a new image'
+                }
+              >
+                Upload
+              </button>
+              <button
+                type="button"
+                className={`stage-article-source-tab ${blockImageSource === 'payload' ? 'active' : ''}`}
+                onClick={() => setBlockImageSource('payload')}
+              >
+                From Payload
+              </button>
+              <button
+                type="button"
+                className={`stage-article-source-tab ${blockImageSource === 'unsplash' ? 'active' : ''}`}
+                onClick={() => setBlockImageSource('unsplash')}
+              >
+                From Unsplash
+              </button>
+              <button
+                type="button"
+                className={`stage-article-source-tab ${blockImageSource === 'pexels' ? 'active' : ''}`}
+                onClick={() => setBlockImageSource('pexels')}
+              >
+                From Pexels
+              </button>
+            </div>
 
+            {blockImageSource === 'payload' && (
+              <>
                 {isImgBlockModal && (
                   <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
                     Select exactly {IMG_PAIR_REQUIRED_IMAGE_COUNT} images. Showing only {IMG_BLOCK_MIN_WIDTH}x{IMG_BLOCK_MIN_HEIGHT} assets; saved block is locked to that exact size.
@@ -4997,67 +5309,6 @@ export default function EditorialStageArticlePage({
                     className="stage-article-modal-search-input"
                   />
                 </div>
-
-                <div className="stage-article-modal-search stage-article-modal-search-inline">
-                  <input
-                    type="text"
-                    placeholder="Search with Pexels..."
-                    value={pexelsBlockQuery}
-                    onChange={(e) => setPexelsBlockQuery(e.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        void runBlockPexelsSearch()
-                      }
-                    }}
-                    className="stage-article-modal-search-input"
-                  />
-                  <button
-                    type="button"
-                    className="stage-article-modal-search-btn"
-                    onClick={() => {
-                      void runBlockPexelsSearch()
-                    }}
-                    disabled={isSearchingPexelsBlock}
-                  >
-                    {isSearchingPexelsBlock ? 'Searching...' : 'Search with Pexels'}
-                  </button>
-                </div>
-
-                {pexelsBlockError && (
-                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
-                    <p>{pexelsBlockError}</p>
-                  </div>
-                )}
-
-                {pexelsBlockResults.length > 0 && (
-                  <>
-                    <div className="stage-article-modal-pexels-header">
-                      Pexels results (preview only). Click image to open source.
-                    </div>
-                    <div className="stage-article-modal-grid">
-                      {pexelsBlockResults.map((photo) => (
-                        <a
-                          key={`block-pexels-${photo.id}`}
-                          href={photo.pexels_url || photo.image_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="stage-article-modal-image stage-article-modal-image-pexels"
-                        >
-                          <img
-                            src={photo.image_url}
-                            alt={photo.alt || 'Pexels image'}
-                            loading="lazy"
-                          />
-                          <span className="stage-article-modal-image-name">
-                            {photo.photographer || `Pexels ${photo.id}`}
-                          </span>
-                          <span className="stage-article-modal-pexels-meta">Pexels</span>
-                        </a>
-                      ))}
-                    </div>
-                  </>
-                )}
 
                 {isMultiImageModal && isLoadingImgBlockAssets && (
                   <div className="stage-article-modal-empty">
@@ -5143,28 +5394,241 @@ export default function EditorialStageArticlePage({
                   </button>
                 </div>
               </>
-            ) : (
+            )}
+
+            {blockImageSource === 'upload' && (
               <>
-                <div className="stage-article-upload-section">
-                  {selectedLocation ? (
-                    <ImageUpload
-                      externalRef={blockImageExternalRef}
-                      fileNamePrefix={blockImageFileNamePrefix}
-                      locationRef={selectedLocation.id}
-                      token={token || ''}
-                      altText={blockImageAltText}
-                      photographerCredit={blockImagePhotographerCredit}
-                      onUploadComplete={handleBlockImageUploadComplete}
-                      onAltTextGenerated={(text) => setBlockImageAltText(text)}
-                      onPhotographerCreditChange={(text) => setBlockImagePhotographerCredit(text)}
-                      onCancel={() => setShowBlockUploadModal(false)}
-                    />
-                  ) : (
-                    <div className="stage-article-modal-empty">
-                      <p>{uploadLocationRequirementMessage}</p>
-                    </div>
-                  )}
+                {isMultiImageModal ? (
+                  <div className="stage-article-modal-empty">
+                    <p>Upload currently supports single image blocks only. Use Payload images for Img Pair and Img Trio blocks.</p>
+                    <button
+                      type="button"
+                      className="stage-article-modal-done"
+                      style={{ marginTop: '0.75rem' }}
+                      onClick={() => setBlockImageSource('payload')}
+                    >
+                      Switch to Payload
+                    </button>
+                  </div>
+                ) : (
+                  <div className="stage-article-upload-section">
+                    {selectedLocation ? (
+                      <ImageUpload
+                        externalRef={blockImageExternalRef}
+                        fileNamePrefix={blockImageFileNamePrefix}
+                        locationRef={selectedLocation.id}
+                        token={token || ''}
+                        altText={blockImageAltText}
+                        photographerCredit={blockImagePhotographerCredit}
+                        onUploadComplete={handleBlockImageUploadComplete}
+                        onAltTextGenerated={(text) => setBlockImageAltText(text)}
+                        onPhotographerCreditChange={(text) => setBlockImagePhotographerCredit(text)}
+                        onCancel={() => setBlockImageSource('payload')}
+                      />
+                    ) : (
+                      <div className="stage-article-modal-empty">
+                        <p>{uploadLocationRequirementMessage}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {blockImageSource === 'unsplash' && (
+              <>
+                <div className="stage-article-modal-search stage-article-modal-search-inline">
+                  <input
+                    type="text"
+                    placeholder="Search with Unsplash..."
+                    value={unsplashBlockQuery}
+                    onChange={(e) => setUnsplashBlockQuery(e.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void runBlockUnsplashSearch()
+                      }
+                    }}
+                    className="stage-article-modal-search-input"
+                  />
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={unsplashBlockOrientation}
+                    onChange={(event) => {
+                      setUnsplashBlockOrientation(event.target.value as PexelsOrientationOption)
+                    }}
+                  >
+                    <option value="">Any orientation</option>
+                    <option value="landscape">Landscape</option>
+                    <option value="portrait">Portrait</option>
+                    <option value="square">Square</option>
+                  </select>
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={String(unsplashBlockPerPage)}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value)
+                      setUnsplashBlockPerPage(Number.isFinite(parsed) ? parsed : 18)
+                    }}
+                  >
+                    <option value="12">12 results</option>
+                    <option value="18">18 results</option>
+                    <option value="30">30 results</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="stage-article-modal-search-btn"
+                    onClick={() => {
+                      void runBlockUnsplashSearch()
+                    }}
+                    disabled={isSearchingUnsplashBlock}
+                  >
+                    {isSearchingUnsplashBlock ? 'Searching...' : 'Search with Unsplash'}
+                  </button>
                 </div>
+
+                {unsplashBlockError && (
+                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                    <p>{unsplashBlockError}</p>
+                  </div>
+                )}
+
+                {unsplashBlockResults.length > 0 && (
+                  <>
+                    <div className="stage-article-modal-pexels-header">
+                      Unsplash results (preview only). Click image to open source.
+                    </div>
+                    <Masonry
+                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                      className="stage-article-masonry-grid"
+                      columnClassName="stage-article-masonry-column"
+                    >
+                      {unsplashBlockResults.map((photo) => (
+                        <a
+                          key={`block-unsplash-${photo.id}`}
+                          href={photo.unsplash_url || photo.image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={photo.photographer || 'Open on Unsplash'}
+                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                        >
+                          <img
+                            src={photo.image_url_raw || photo.image_url_full || photo.image_url_regular || photo.image_url}
+                            alt={photo.alt || 'Unsplash image'}
+                            loading="lazy"
+                            width={photo.width}
+                            height={photo.height}
+                          />
+                        </a>
+                      ))}
+                    </Masonry>
+                  </>
+                )}
+
+                {unsplashBlockResults.length === 0 && !unsplashBlockError && (
+                  <div className="stage-article-modal-empty">
+                    <p>Search Unsplash to preview external images.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {blockImageSource === 'pexels' && (
+              <>
+                <div className="stage-article-modal-search stage-article-modal-search-inline">
+                  <input
+                    type="text"
+                    placeholder="Search with Pexels..."
+                    value={pexelsBlockQuery}
+                    onChange={(e) => setPexelsBlockQuery(e.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void runBlockPexelsSearch()
+                      }
+                    }}
+                    className="stage-article-modal-search-input"
+                  />
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={pexelsBlockOrientation}
+                    onChange={(event) => {
+                      setPexelsBlockOrientation(event.target.value as PexelsOrientationOption)
+                    }}
+                  >
+                    <option value="">Any orientation</option>
+                    <option value="landscape">Landscape</option>
+                    <option value="portrait">Portrait</option>
+                    <option value="square">Square</option>
+                  </select>
+                  <select
+                    className="stage-article-modal-search-select"
+                    value={String(pexelsBlockPerPage)}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value)
+                      setPexelsBlockPerPage(Number.isFinite(parsed) ? parsed : 18)
+                    }}
+                  >
+                    <option value="12">12 results</option>
+                    <option value="18">18 results</option>
+                    <option value="30">30 results</option>
+                    <option value="50">50 results</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="stage-article-modal-search-btn"
+                    onClick={() => {
+                      void runBlockPexelsSearch()
+                    }}
+                    disabled={isSearchingPexelsBlock}
+                  >
+                    {isSearchingPexelsBlock ? 'Searching...' : 'Search with Pexels'}
+                  </button>
+                </div>
+
+                {pexelsBlockError && (
+                  <div className="stage-article-modal-empty" style={{ paddingTop: '0.75rem' }}>
+                    <p>{pexelsBlockError}</p>
+                  </div>
+                )}
+
+                {pexelsBlockResults.length > 0 && (
+                  <>
+                    <div className="stage-article-modal-pexels-header">
+                      Pexels results (preview only). Click image to open source.
+                    </div>
+                    <Masonry
+                      breakpointCols={EXTERNAL_MASONRY_BREAKPOINTS}
+                      className="stage-article-masonry-grid"
+                      columnClassName="stage-article-masonry-column"
+                    >
+                      {pexelsBlockResults.map((photo) => (
+                        <a
+                          key={`block-pexels-${photo.id}`}
+                          href={photo.pexels_url || photo.image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={photo.photographer || 'Open on Pexels'}
+                          className="stage-article-modal-masonry-item stage-article-modal-image-pexels"
+                        >
+                          <img
+                            src={photo.image_url_original || photo.image_url_large || photo.image_url_portrait || photo.image_url}
+                            alt={photo.alt || 'Pexels image'}
+                            loading="lazy"
+                            width={photo.width}
+                            height={photo.height}
+                          />
+                        </a>
+                      ))}
+                    </Masonry>
+                  </>
+                )}
+
+                {pexelsBlockResults.length === 0 && !pexelsBlockError && (
+                  <div className="stage-article-modal-empty">
+                    <p>Search Pexels to preview external images.</p>
+                  </div>
+                )}
               </>
             )}
           </div>

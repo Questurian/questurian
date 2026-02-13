@@ -1,0 +1,3 @@
+import { PyprojectToml } from '../../../graph/dependency-graph';
+export declare function includeDependencyPackage(tomlData: PyprojectToml, root: string, buildFolderPath: string, buildTomlData: PyprojectToml): void;
+export declare function getLoggingTab(level: number): string;

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "nx-python",
+  "version": "1.0.0",
+  "generators": {
+    "project": {
+      "factory": "./src/generators/project/generator",
+      "schema": "./src/generators/project/schema.json",
+      "description": "python project generator (Legacy)"
+    },
+    "migrate-to-shared-venv": {
+      "factory": "./src/generators/migrate-to-shared-venv/generator",
+      "schema": "./src/generators/migrate-to-shared-venv/schema.json",
+      "description": "Migrate Isolated Venv to Shared Venv"
+    },
+    "poetry-project": {
+      "factory": "./src/generators/poetry-project/generator",
+      "schema": "./src/generators/poetry-project/schema.json",
+      "description": "Python Poetry Project"
+    },
+    "release-version": {
+      "factory": "./src/generators/release-version/release-version",
+      "schema": "./src/generators/release-version/schema.json",
+      "description": "DO NOT INVOKE DIRECTLY WITH `nx generate`. Use `nx release version` instead.",
+      "hidden": true
+    },
+    "enable-releases": {
+      "factory": "./src/generators/enable-releases/generator",
+      "schema": "./src/generators/enable-releases/schema.json",
+      "description": "Enable Releases for Python projects",
+      "hidden": true
+    }
+  }
+}

@@ -1,0 +1,51 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const logger_1 = require("../utils/logger");
+const path_1 = tslib_1.__importDefault(require("path"));
+const fs_extra_1 = require("fs-extra");
+const poetry_1 = require("../utils/poetry");
+const logger = new logger_1.Logger();
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        logger.setOptions(options);
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            logger.info((0, chalk_1.default) `\n  {bold Running flake8 linting on project {bgBlue  ${context.projectName} }...}\n`);
+            const projectConfig = context.projectsConfigurations.projects[context.projectName];
+            const cwd = projectConfig.root;
+            const absPath = path_1.default.resolve(options.outputFile);
+            const reportFolder = path_1.default.dirname(absPath);
+            if (!(0, fs_extra_1.existsSync)(reportFolder)) {
+                (0, fs_extra_1.mkdirsSync)(reportFolder);
+            }
+            if ((0, fs_extra_1.existsSync)(absPath)) {
+                (0, fs_extra_1.rmSync)(absPath, { force: true });
+            }
+            const lintingArgs = ['run', 'flake8', '--output-file', absPath];
+            (0, poetry_1.runPoetry)(lintingArgs, { cwd, log: false, error: false });
+            const output = (0, fs_extra_1.readFileSync)(absPath, 'utf8');
+            const lines = output.split('\n').length;
+            if (lines > 1) {
+                logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } linting issues\n${output}`);
+                return { success: false };
+            }
+            logger.info((0, chalk_1.default) `\n  {green All files pass linting.}\n`);
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            logger.info((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+    });
+}
+//# sourceMappingURL=executor.js.map

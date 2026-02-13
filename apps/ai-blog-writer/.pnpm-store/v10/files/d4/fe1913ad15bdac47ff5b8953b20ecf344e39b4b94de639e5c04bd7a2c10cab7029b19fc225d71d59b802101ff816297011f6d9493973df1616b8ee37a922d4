@@ -1,0 +1,10 @@
+interface ExecutorLoggerOption {
+    silent: boolean;
+}
+export declare class Logger {
+    private options;
+    setOptions(options: ExecutorLoggerOption): void;
+    info(message: unknown): void;
+    private log;
+}
+export {};

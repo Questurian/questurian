@@ -1,0 +1,177 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.normalizeOptions = normalizeOptions;
+const tslib_1 = require("tslib");
+const devkit_1 = require("@nx/devkit");
+const path_1 = tslib_1.__importDefault(require("path"));
+const toml_1 = require("@iarna/toml");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const poetry_1 = require("../../executors/utils/poetry");
+function normalizeOptions(host, options) {
+    var _a;
+    const name = (0, devkit_1.names)(options.name).fileName;
+    const projectDirectory = options.directory
+        ? `${(0, devkit_1.names)(options.directory).fileName}/${name}`
+        : name;
+    const projectName = projectDirectory.replace(new RegExp('/', 'g'), '-');
+    const moduleName = options.moduleName
+        ? options.moduleName
+        : projectName.replace(new RegExp('-', 'g'), '_');
+    let projectRoot = '';
+    if (options.type === 'application') {
+        projectRoot = `${(0, devkit_1.getWorkspaceLayout)(host).appsDir}/${projectDirectory}`;
+    }
+    else {
+        projectRoot = `${(0, devkit_1.getWorkspaceLayout)(host).libsDir}/${projectDirectory}`;
+    }
+    const parsedTags = options.tags
+        ? options.tags.split(',').map((s) => s.trim())
+        : [];
+    return Object.assign(Object.assign({}, options), { description: (_a = options.description) !== null && _a !== void 0 ? _a : '', moduleName,
+        projectName,
+        projectRoot,
+        projectDirectory,
+        parsedTags });
+}
+function addFiles(host, options) {
+    const templateOptions = Object.assign(Object.assign(Object.assign({}, options), (0, devkit_1.names)(options.name)), { offsetFromRoot: (0, devkit_1.offsetFromRoot)(options.projectRoot), template: '', dot: '.' });
+    (0, devkit_1.generateFiles)(host, path_1.default.join(__dirname, 'files'), options.projectRoot, templateOptions);
+}
+function addPackageSource(normalizedOptions, host) {
+    if (normalizedOptions.customSource) {
+        if (!normalizedOptions.sourceName || !normalizedOptions.sourceUrl) {
+            throw new Error("Fields 'sourceName', 'sourceUrl' are required when the flag 'customSource' is true");
+        }
+        const pyprojectTomlPath = path_1.default.join(normalizedOptions.projectRoot, 'pyproject.toml');
+        const pyprojectTomlContent = host.read(pyprojectTomlPath).toString('utf-8');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pyprojectToml = (0, toml_1.parse)(pyprojectTomlContent);
+        pyprojectToml.tool.poetry.source = [
+            {
+                name: normalizedOptions.sourceName,
+                url: normalizedOptions.sourceUrl,
+                secondary: normalizedOptions.sourceSecondary,
+            },
+        ];
+        host.write(pyprojectTomlPath, (0, toml_1.stringify)(pyprojectToml));
+    }
+}
+function updateRootPyprojectToml(host, normalizedOptions) {
+    if (host.exists('./pyproject.toml')) {
+        const rootPyprojectToml = (0, toml_1.parse)(host.read('pyproject.toml', 'utf-8'));
+        rootPyprojectToml.tool.poetry.dependencies[normalizedOptions.packageName] =
+            {
+                path: normalizedOptions.projectRoot,
+                develop: true,
+            };
+        host.write('pyproject.toml', (0, toml_1.stringify)(rootPyprojectToml));
+    }
+}
+function updateRootPoetryLock(host, normalizedOptions) {
+    if (host.exists('./pyproject.toml')) {
+        console.log((0, chalk_1.default) `  Updating root {bgBlue poetry.lock}...`);
+        const updateArgs = ['update', normalizedOptions.packageName];
+        (0, poetry_1.runPoetry)(updateArgs, { log: false });
+        console.log((0, chalk_1.default) `\n  {bgBlue poetry.lock} updated.\n`);
+    }
+}
+function generator(host, options) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        yield (0, poetry_1.checkPoetryExecutable)();
+        const normalizedOptions = normalizeOptions(host, options);
+        (0, devkit_1.addProjectConfiguration)(host, normalizedOptions.projectName, {
+            root: normalizedOptions.projectRoot,
+            projectType: normalizedOptions.type,
+            sourceRoot: `${normalizedOptions.projectRoot}/${normalizedOptions.moduleName}`,
+            targets: {
+                docs: {
+                    executor: '@nxlv/python:run-commands',
+                    options: {
+                        command: `pydoc-markdown -p ${normalizedOptions.moduleName} --render-toc > docs/source/api.md`,
+                        cwd: normalizedOptions.projectRoot,
+                    },
+                },
+                lock: {
+                    executor: '@nxlv/python:run-commands',
+                    options: {
+                        command: 'poetry lock --no-update',
+                        cwd: normalizedOptions.projectRoot,
+                    },
+                },
+                add: {
+                    executor: '@nxlv/python:add',
+                    options: {},
+                },
+                update: {
+                    executor: '@nxlv/python:update',
+                    options: {},
+                },
+                remove: {
+                    executor: '@nxlv/python:remove',
+                    options: {},
+                },
+                build: {
+                    executor: '@nxlv/python:build',
+                    outputs: ['{projectRoot}/dist'],
+                    options: {
+                        outputPath: `${normalizedOptions.projectRoot}/dist`,
+                        publish: normalizedOptions.publishable,
+                        lockedVersions: normalizedOptions.buildLockedVersions,
+                        bundleLocalDependencies: normalizedOptions.buildBundleLocalDependencies,
+                    },
+                },
+                install: {
+                    executor: '@nxlv/python:install',
+                    options: {
+                        silent: false,
+                        args: '',
+                        cacheDir: `.cache/pypoetry`,
+                        verbose: false,
+                        debug: false,
+                    },
+                },
+                lint: {
+                    executor: '@nxlv/python:flake8',
+                    outputs: [
+                        `{workspaceRoot}/reports/${normalizedOptions.projectRoot}/pylint.txt`,
+                    ],
+                    options: {
+                        outputFile: `reports/${normalizedOptions.projectRoot}/pylint.txt`,
+                    },
+                },
+                test: {
+                    executor: '@nxlv/python:run-commands',
+                    outputs: [
+                        `{workspaceRoot}/reports/${normalizedOptions.projectRoot}/unittests`,
+                        `{workspaceRoot}/coverage/${normalizedOptions.projectRoot}`,
+                    ],
+                    options: {
+                        command: `poetry run pytest tests/`,
+                        cwd: normalizedOptions.projectRoot,
+                    },
+                },
+                tox: {
+                    executor: '@nxlv/python:tox',
+                    outputs: [
+                        `{workspaceRoot}/reports/${normalizedOptions.projectRoot}/unittests`,
+                        `{workspaceRoot}/coverage/${normalizedOptions.projectRoot}`,
+                    ],
+                    options: {
+                        silent: false,
+                        args: '',
+                    },
+                },
+            },
+            tags: normalizedOptions.parsedTags,
+        });
+        addFiles(host, normalizedOptions);
+        updateRootPyprojectToml(host, normalizedOptions);
+        addPackageSource(normalizedOptions, host);
+        yield (0, devkit_1.formatFiles)(host);
+        return () => {
+            updateRootPoetryLock(host, normalizedOptions);
+        };
+    });
+}
+exports.default = generator;
+//# sourceMappingURL=generator.js.map

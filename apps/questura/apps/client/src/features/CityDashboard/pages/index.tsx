@@ -4,6 +4,7 @@ import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { useProtectedRoute } from '@/lib/routing';
 import { useLoginModalStore } from '@/lib/stores/loginModalStore';
+import { useLocationStore } from '@/lib/stores/locationStore';
 
 type CityMode = 'explore' | 'stay' | 'move';
 
@@ -24,6 +25,7 @@ function CityDashboardContent() {
   const searchParams = useSearchParams();
   const params = useParams();
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
+  const setLastVisited = useLocationStore((state) => state.setLastVisited);
 
   const citySlug = getParamValue(params.city)?.toLowerCase();
   const countrySlug = getParamValue(params.country)?.toLowerCase();
@@ -43,6 +45,12 @@ function CityDashboardContent() {
       router.replace(canonicalPath);
     }
   }, [router, countrySlug, citySlug, modeSlug, activeMode]);
+
+  useEffect(() => {
+    if (citySlug && countrySlug) {
+      setLastVisited({ cityId: citySlug, country: countrySlug, mode: activeMode });
+    }
+  }, [citySlug, countrySlug, activeMode, setLastVisited]);
 
   useProtectedRoute({
     onLoginRequired: (redirectPath) => {

@@ -1,0 +1,46 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const fs_extra_1 = require("fs-extra");
+const update_dependency_1 = require("../../dependency/update-dependency");
+const poetry_1 = require("../utils/poetry");
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            const rootPyprojectToml = (0, fs_extra_1.existsSync)('pyproject.toml');
+            const projectConfig = context.projectsConfigurations.projects[context.projectName];
+            console.log((0, chalk_1.default) `\n  {bold Removing {bgBlue  ${options.name} } dependency...}\n`);
+            let dependencyName = options.name;
+            if (options.local) {
+                const dependencyConfig = (0, poetry_1.getLocalDependencyConfig)(context, options.name);
+                const pyprojectTomlPath = (0, poetry_1.getProjectTomlPath)(dependencyConfig);
+                const { tool: { poetry: { name }, }, } = (0, poetry_1.parseToml)(pyprojectTomlPath);
+                dependencyName = name;
+            }
+            const poetryVersion = yield (0, poetry_1.getPoetryVersion)();
+            const hasLockOption = poetryVersion >= '1.5.0';
+            const removeArgs = ['remove', dependencyName]
+                .concat(options.args ? options.args.split(' ') : [])
+                .concat(rootPyprojectToml && hasLockOption ? ['--lock'] : []);
+            (0, poetry_1.runPoetry)(removeArgs, { cwd: projectConfig.root });
+            (0, update_dependency_1.updateDependencyTree)(context);
+            console.log((0, chalk_1.default) `\n  {green.bold '${options.name}'} {green dependency has been successfully removed}\n`);
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            console.log((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+    });
+}
+//# sourceMappingURL=executor.js.map

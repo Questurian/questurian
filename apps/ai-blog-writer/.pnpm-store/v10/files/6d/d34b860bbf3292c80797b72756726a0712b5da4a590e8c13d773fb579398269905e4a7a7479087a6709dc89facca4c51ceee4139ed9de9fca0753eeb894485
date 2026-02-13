@@ -1,0 +1,18 @@
+import { PyprojectToml } from '../../../graph/dependency-graph';
+import { Dependency } from './types';
+import { Logger } from '../../utils/logger';
+export declare class LockedDependencyResolver {
+    private logger;
+    constructor(logger: Logger);
+    resolve(root: string, buildFolderPath: string, buildTomlData: PyprojectToml, devDependencies: boolean, workspaceRoot: string): Dependency[];
+    private resolveDependencies;
+    private getProjectRequirementsTxt;
+    private resolveSourceDependency;
+    private extractLocalPackageInfo;
+    private resolvePackageExtras;
+    private getLockedPackage;
+    private includeDirectoryDependency;
+    private includeGitDependency;
+    private resolveExtrasLockedDependencyTree;
+    private getExtras;
+}

@@ -1,0 +1,52 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = executor;
+const tslib_1 = require("tslib");
+const chalk_1 = tslib_1.__importDefault(require("chalk"));
+const poetry_1 = require("../utils/poetry");
+const update_dependency_1 = require("../../dependency/update-dependency");
+const fs_extra_1 = require("fs-extra");
+function executor(options, context) {
+    return tslib_1.__awaiter(this, void 0, void 0, function* () {
+        const workspaceRoot = context.root;
+        process.chdir(workspaceRoot);
+        try {
+            (0, poetry_1.activateVenv)(workspaceRoot);
+            yield (0, poetry_1.checkPoetryExecutable)();
+            const projectConfig = context.projectsConfigurations.projects[context.projectName];
+            const rootPyprojectToml = (0, fs_extra_1.existsSync)('pyproject.toml');
+            if (options.local && options.name) {
+                console.log((0, chalk_1.default) `\n  {bold Updating {bgBlue  ${options.name} } workspace dependency...}\n`);
+                if (!Object.keys(context.projectsConfigurations.projects).some((projectName) => options.name === projectName)) {
+                    throw new Error((0, chalk_1.default) `\n  {red.bold ${options.name}} workspace project does not exist\n`);
+                }
+                (0, poetry_1.updateProject)(projectConfig.root, rootPyprojectToml);
+            }
+            else {
+                if (options.name) {
+                    console.log((0, chalk_1.default) `\n  {bold Updating {bgBlue  ${options.name} } dependency...}\n`);
+                }
+                else {
+                    console.log((0, chalk_1.default) `\n  {bold Updating project dependencies...}\n`);
+                }
+                const updateArgs = ['update']
+                    .concat(options.name ? [options.name] : [])
+                    .concat(options.args ? options.args.split(' ') : [])
+                    .concat(rootPyprojectToml ? ['--lock'] : []);
+                (0, poetry_1.runPoetry)(updateArgs, { cwd: projectConfig.root });
+            }
+            (0, update_dependency_1.updateDependencyTree)(context);
+            console.log((0, chalk_1.default) `\n  {green.bold '${options.name}'} {green dependency has been successfully added to the project}\n`);
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            console.log((0, chalk_1.default) `\n  {bgRed.bold  ERROR } ${error.message}\n`);
+            return {
+                success: false,
+            };
+        }
+    });
+}
+//# sourceMappingURL=executor.js.map
