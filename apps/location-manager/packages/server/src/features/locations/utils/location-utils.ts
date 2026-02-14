@@ -257,9 +257,25 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
 export function transformLocationToBasicResponse(
   location: import('../models/location').Location & { uploadsCount: number; instagramEmbedsCount: number }
 ): import('../models/location').LocationBasic {
-  // Calculate completion status based on required fields
-  const hasMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
+  // Calculate completion status based on Payload CMS sync fields
+  // Required fields for Payload sync:
+  // - title (required)
+  // - gallery with at least one image (required by Payload schema)
+  // All optional fields should be present for "complete" status
+
+  const hasRequiredTitle = Boolean(location.title?.trim());
+  const hasRequiredMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
+
+  // Optional but required for "complete" status (fields sent to Payload)
+  const hasType = Boolean(location.type?.trim());
+  const hasLocationRef = Boolean(location.payload_location_ref?.trim());
+  const hasAddress = Boolean(location.address?.trim());
+  const hasCountryCode = Boolean(location.countryCode?.trim());
+  const hasPhoneNumber = Boolean(location.phoneNumber?.trim());
+  const hasWebsite = Boolean(location.website?.trim());
+  const hasEmail = Boolean(location.email?.trim());
   const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
+  const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
   const hasIdealFor = (() => {
     if (!location.idealForJson) return false;
     try {
@@ -269,28 +285,26 @@ export function transformLocationToBasicResponse(
       return false;
     }
   })();
+  const hasIanaTimeId = Boolean(location.ianaTimeId?.trim());
+  const hasLatitude = location.lat != null;
+  const hasLongitude = location.lng != null;
 
   const isComplete =
-    Boolean(location.title?.trim()) &&
-    Boolean(location.name?.trim()) &&
-    Boolean(location.address?.trim()) &&
-    Boolean(location.category) &&
-    Boolean(location.type?.trim()) &&
-    Boolean(location.locationKey?.trim()) &&
-    Boolean(location.district?.trim()) &&
-    Boolean(location.slug?.trim()) &&
-    location.lat != null &&
-    location.lng != null &&
-    Boolean(location.ianaTimeId?.trim()) &&
-    Boolean(location.countryCode?.trim()) &&
-    Boolean(location.phoneNumber?.trim()) &&
-    Boolean(location.website?.trim()) &&
-    Boolean(location.contactAddress?.trim()) &&
-    Boolean(location.url?.trim()) &&
-    Boolean(location.neighborhoodDescription?.trim()) &&
-    hasIdealFor &&
+    hasRequiredTitle &&
+    hasRequiredMedia &&
+    hasType &&
+    hasLocationRef &&
+    hasAddress &&
+    hasCountryCode &&
+    hasPhoneNumber &&
+    hasWebsite &&
+    hasEmail &&
     hasOperationHours &&
-    hasMedia;
+    hasCuisines &&
+    hasIdealFor &&
+    hasIanaTimeId &&
+    hasLatitude &&
+    hasLongitude;
 
   return {
     id: location.id!,

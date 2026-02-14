@@ -365,10 +365,23 @@ type SupportedEditorialComponent =
 const IMAGE_PICKER_OPTIONS: ReadonlyArray<{
   mode: BlockImageModalMode
   label: string
+  hint: string
 }> = [
-  { mode: 'default', label: 'Single Image' },
-  { mode: 'img', label: 'Img Pair (2)' },
-  { mode: 'img-trio', label: 'Img Trio (3)' },
+  {
+    mode: 'default',
+    label: 'Single Image',
+    hint: `wide | ${CONTENT_BLOCK_WIDTH}x${CONTENT_BLOCK_HEIGHT} | 16:9`,
+  },
+  {
+    mode: 'img',
+    label: 'Img Pair (2)',
+    hint: `portrait | ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT} | 4:5 each`,
+  },
+  {
+    mode: 'img-trio',
+    label: 'Img Trio (3)',
+    hint: `square ${IMG_TRIO_DIMENSIONS.square.width}x${IMG_TRIO_DIMENSIONS.square.height} (1:1) or wide ${IMG_TRIO_DIMENSIONS.landscape.width}x${IMG_TRIO_DIMENSIONS.landscape.height} (16:9)`,
+  },
 ]
 
 const EDITORIAL_PICKER_OPTIONS: ReadonlyArray<{
@@ -4447,7 +4460,8 @@ export default function EditorialStageArticlePage({
               className="block-editorial-option-btn"
               onClick={() => void openBlockImageModal(blockId, option.mode)}
             >
-              {option.label}
+              <span>{option.label}</span>
+              <span className="block-editorial-option-hint">{option.hint}</span>
             </button>
           ))}
         </div>
@@ -4522,6 +4536,17 @@ export default function EditorialStageArticlePage({
   const isImgBlockModal = blockImageModal?.mode === 'img'
   const isImgTrioModal = blockImageModal?.mode === 'img-trio'
   const isMultiImageModal = isImgBlockModal || isImgTrioModal
+  const featuredImageRequirementLabel = `editorial | ${FEATURED_IMAGE_WIDTH}x${FEATURED_IMAGE_HEIGHT} | 4:3`
+  const singleImageRequirementLabel = `wide | ${CONTENT_BLOCK_WIDTH}x${CONTENT_BLOCK_HEIGHT} | 16:9`
+  const imgPairRequirementLabel = `portrait | ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT} | 4:5 each`
+  const imgTrioRequirementLabel = imgTrioFormat === 'square'
+    ? `square | ${IMG_TRIO_DIMENSIONS.square.width}x${IMG_TRIO_DIMENSIONS.square.height} | 1:1 each`
+    : `wide | ${IMG_TRIO_DIMENSIONS.landscape.width}x${IMG_TRIO_DIMENSIONS.landscape.height} | 16:9 each`
+  const activeBlockImageRequirementLabel = isImgBlockModal
+    ? imgPairRequirementLabel
+    : isImgTrioModal
+      ? imgTrioRequirementLabel
+      : singleImageRequirementLabel
   const blockImageSearchableAssets = isMultiImageModal ? imgBlockAssets : mediaAssets
   const blockImageDimensionFilteredAssets = blockImageSearchableAssets.filter((img) => {
     if (isImgBlockModal) return hasExactImgBlockDimensions(img)
@@ -4875,7 +4900,11 @@ export default function EditorialStageArticlePage({
                                   <circle cx="8.5" cy="8.5" r="1.5"/>
                                   <polyline points="21 15 16 10 5 21"/>
                                 </svg>
-                                {block.imgTrioAfter ? 'Img Trio (3)' : block.imgPairAfter ? 'Img Pair (2)' : 'Image'}
+                                {block.imgTrioAfter
+                                  ? `Img Trio (3) | ${block.imgTrioAfter.format === 'square' ? '1:1' : '16:9'}`
+                                  : block.imgPairAfter
+                                    ? 'Img Pair (2) | 4:5'
+                                    : 'Image | 16:9'}
                               </span>
                             </div>
                             <div className="block-card-header-right">
@@ -5361,6 +5390,9 @@ export default function EditorialStageArticlePage({
               <label className="stage-article-label">
                 Featured Image <span className="required">*</span>
               </label>
+              <span className="stage-article-label-hint">
+                Required: {featuredImageRequirementLabel}
+              </span>
 
               {selectedFeaturedImage ? (
                 <div className="stage-article-featured-image">
@@ -5499,6 +5531,9 @@ export default function EditorialStageArticlePage({
                 From Pexels
               </button>
             </div>
+            <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
+              Required featured variant: {featuredImageRequirementLabel}
+            </p>
 
             {featuredImageSource === 'payload' && (
               <>
@@ -5885,15 +5920,20 @@ export default function EditorialStageArticlePage({
 
             {blockImageSource === 'payload' && (
               <>
+                {!isMultiImageModal && (
+                  <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
+                    Required block variant: {singleImageRequirementLabel}
+                  </p>
+                )}
                 {isImgBlockModal && (
                   <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
-                    Select exactly {IMG_PAIR_REQUIRED_IMAGE_COUNT} images. Showing only {IMG_BLOCK_MIN_WIDTH}x{IMG_BLOCK_MIN_HEIGHT} assets; saved block is locked to that exact size.
+                    Select exactly {IMG_PAIR_REQUIRED_IMAGE_COUNT} images. Required variant: {imgPairRequirementLabel}
                   </p>
                 )}
 
                 {isImgTrioModal && (
                   <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
-                    Select exactly {IMG_TRIO_REQUIRED_IMAGE_COUNT} images. Showing only {imgTrioDimensions.width}x{imgTrioDimensions.height} assets for the selected format.
+                    Select exactly {IMG_TRIO_REQUIRED_IMAGE_COUNT} images. Required variant: {imgTrioRequirementLabel}
                   </p>
                 )}
 
@@ -5904,8 +5944,8 @@ export default function EditorialStageArticlePage({
                       value={imgTrioFormat}
                       onChange={(e) => setImgTrioFormat(e.target.value as ImgTrioFormat)}
                     >
-                      <option value="square">Square (1080x1080)</option>
-                      <option value="landscape">Landscape (1920x1080)</option>
+                      <option value="square">Square | square | 1080x1080 | 1:1</option>
+                      <option value="landscape">Landscape | wide | 1920x1080 | 16:9</option>
                     </select>
                   </div>
                 )}
@@ -6071,6 +6111,9 @@ export default function EditorialStageArticlePage({
                 ? renderExternalCropEditor('block')
                 : (
                   <>
+                    <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
+                      Target for this block: {activeBlockImageRequirementLabel}
+                    </p>
                     <div className="stage-article-modal-search stage-article-modal-search-inline">
                       <input
                         type="text"
@@ -6199,6 +6242,9 @@ export default function EditorialStageArticlePage({
                 ? renderExternalCropEditor('block')
                 : (
                   <>
+                    <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
+                      Target for this block: {activeBlockImageRequirementLabel}
+                    </p>
                     <div className="stage-article-modal-search stage-article-modal-search-inline">
                       <input
                         type="text"

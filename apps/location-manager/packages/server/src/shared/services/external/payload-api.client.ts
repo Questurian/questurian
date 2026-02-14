@@ -178,6 +178,7 @@ export interface PayloadMediaSetQueryResponse {
 export interface PayloadEntryData {
   title: string;
   type?: string | null;
+  priceLevel?: string | null;
   /**
    * IMPORTANT: Use locationRef only, never include a 'location' field.
    * The Payload sync hook gives location precedence - if it exists (even if null),
@@ -192,12 +193,9 @@ export interface PayloadEntryData {
   phoneNumber?: string;
   website?: string;
   email?: string;
-  neighborhoodDescription?: string;
   operationHours?: Record<string, unknown>;
-  idealFor?: string[];
-  mealTypes?: string[];
   cuisines?: string[];
-  features?: string[];
+  idealFor?: string[];
   ianaTimeId?: string;
   latitude?: number;
   longitude?: number;
@@ -644,7 +642,6 @@ export class PayloadApiClient {
       idealFor: data.idealFor,
       mealTypes: data.mealTypes,
       cuisines: data.cuisines,
-      features: data.features,
       ianaTimeId: data.ianaTimeId,
       status: data.status,
     });
@@ -706,7 +703,6 @@ export class PayloadApiClient {
       idealFor: data.idealFor,
       mealTypes: data.mealTypes,
       cuisines: data.cuisines,
-      features: data.features,
       ianaTimeId: data.ianaTimeId,
       galleryCount: data.gallery?.length || 0,
       instagramGalleryCount: data.instagramGallery?.length || 0,

@@ -21,40 +21,48 @@
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `title` | `text` | Yes | - |
-| `tab:Details.type` | `select` | No | - |
-| `tab:Details.gallery` | `array` | No | - |
-| `tab:Details.gallery.image` | `relationship` | Yes | - |
-| `tab:Details.gallery.preview` | `ui` | No | - |
-| `tab:Details.instagramGallery` | `array` | No | - |
-| `tab:Details.instagramGallery.post` | `relationship` | No | - |
-| `tab:Details.instagramGallery.preview` | `ui` | No | - |
-| `tab:Location.location` | `text` | No | - |
-| `tab:Location.locationRef` | `relationship` | No | - |
-| `tab:Location.Contact Information` | `collapsible` | No | - |
-| `tab:Location.address` | `text` | No | - |
-| `tab:Location.[row]` | `row` | No | - |
-| `tab:Location.countryCode` | `select` | No | - |
-| `tab:Location.phoneNumber` | `text` | No | - |
-| `tab:Location.website` | `text` | No | - |
-| `tab:Location.Coordinates` | `collapsible` | No | - |
-| `tab:Location.[row]` | `row` | No | - |
-| `tab:Location.latitude` | `number` | No | - |
-| `tab:Location.longitude` | `number` | No | - |
+| `tab:Basic Info.type` | `select` | No | Type of establishment |
+| `tab:Basic Info.priceLevel` | `select` | No | Price range indicator ($, $$, $$$, $$$$) |
+| `tab:Basic Info.gallery` | `array` | No | - |
+| `tab:Basic Info.gallery.image` | `relationship` | Yes | - |
+| `tab:Basic Info.gallery.altText` | `text` | No | - |
+| `tab:Basic Info.gallery.caption` | `text` | No | - |
+| `tab:Basic Info.gallery.preview` | `ui` | No | - |
+| `tab:Basic Info.instagramGallery` | `array` | No | Instagram posts gallery |
+| `tab:Basic Info.instagramGallery.post` | `relationship` | No | - |
+| `tab:Basic Info.instagramGallery.preview` | `ui` | No | - |
+| `tab:Classification.cuisines` | `json` | No | String[] cuisines |
+| `tab:Classification.idealFor` | `json` | No | String[] ideal-for tags |
+| `tab:Classification.Location Manager Enrichment` | `collapsible` | No | - |
+| `tab:Location & Contact.location` | `text` | No | Location picker |
+| `tab:Location & Contact.locationRef` | `relationship` | No | - |
+| `tab:Location & Contact.Contact Information` | `collapsible` | No | - |
+| `tab:Location & Contact.address` | `text` | No | Google Maps URL |
+| `tab:Location & Contact.[row]` | `row` | No | - |
+| `tab:Location & Contact.countryCode` | `select` | No | Country Code |
+| `tab:Location & Contact.phoneNumber` | `text` | No | Contact phone number |
+| `tab:Location & Contact.website` | `text` | No | Website URL |
+| `tab:Location & Contact.email` | `email` | No | Contact email |
+| `tab:Location & Contact.operationHours` | `json` | No | Structured operation hours |
+| `tab:Location & Contact.ianaTimeId` | `text` | No | IANA timezone |
+| `tab:Location & Contact.Coordinates` | `collapsible` | No | - |
+| `tab:Location & Contact.[row]` | `row` | No | - |
+| `tab:Location & Contact.latitude` | `number` | No | - |
+| `tab:Location & Contact.longitude` | `number` | No | - |
 | `createdBy` | `relationship` | No | - |
 | `status` | `select` | No | - |
 
 #### Required Fields
 
 - `title`
-- `tab:Details.gallery.image`
 
 #### Relationship Fields
 
 | Field | Type | hasMany | Targets |
 | --- | --- | --- | --- |
-| `tab:Details.gallery.image` | `relationship` | No | `media-sets` |
-| `tab:Details.instagramGallery.post` | `relationship` | No | `instagram-posts` |
-| `tab:Location.locationRef` | `relationship` | No | `locations` |
+| `tab:Basic Info.gallery.image` | `relationship` | No | `media-sets` |
+| `tab:Basic Info.instagramGallery.post` | `relationship` | No | `instagram-posts` |
+| `tab:Location & Contact.locationRef` | `relationship` | No | `locations` |
 | `createdBy` | `relationship` | No | `users` |
 
 #### Block Definitions

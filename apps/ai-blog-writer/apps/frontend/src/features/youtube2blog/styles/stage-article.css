@@ -2677,6 +2677,10 @@
 
 .block-editorial-option-btn {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   text-align: left;
   padding: var(--space-2) var(--space-2);
   font-size: 0.75rem;
@@ -2687,13 +2691,24 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  white-space: nowrap;
+  white-space: normal;
   transition: all var(--transition-base);
+}
+
+.block-editorial-option-hint {
+  font-size: 0.66rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--muted);
 }
 
 .block-editorial-option-btn:hover {
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+.block-editorial-option-btn:hover .block-editorial-option-hint {
+  color: var(--accent);
 }
 
 @media (max-width: 640px) {

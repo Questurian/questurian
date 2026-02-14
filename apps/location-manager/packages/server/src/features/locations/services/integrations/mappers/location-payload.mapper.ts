@@ -3,6 +3,18 @@ import type { UploadedImagesResult } from "../types";
 import { extractPhoneNumber, convertIsoToPhoneCountryCode } from "../utils";
 
 /**
+ * Strip 'currently_open' from operationHours (real-time snapshot determined on frontend)
+ */
+function stripCurrentlyOpenFromOperationHours(
+  operationHours: Record<string, unknown> | null
+): Record<string, unknown> | null {
+  if (!operationHours) return null;
+
+  const { currently_open, ...rest } = operationHours as Record<string, unknown>;
+  return Object.keys(rest).length > 0 ? rest : null;
+}
+
+/**
  * Map url-util location to Payload format
  * @param locationRef - REQUIRED by Payload CMS, guaranteed to be present by caller
  */
@@ -11,12 +23,7 @@ export function mapLocationToPayloadFormat(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ) {
-  // Strip 'currently_open' if it exists in operationHours (calculated on frontend)
-  let operationHours = location.operationHours as Record<string, unknown> | null
-  if (operationHours && typeof operationHours === 'object' && 'currently_open' in operationHours) {
-    const { currently_open, ...rest } = operationHours
-    operationHours = Object.keys(rest).length > 0 ? rest : null
-  }
+  const cleanedOperationHours = stripCurrentlyOpenFromOperationHours(location.operationHours as Record<string, unknown> | null);
 
   return {
     title: location.title || location.source.name,
@@ -38,9 +45,9 @@ export function mapLocationToPayloadFormat(
     status: "published" as const,
     ...(location.type ? { type: location.type } : {}),
     ...(location.contact.email ? { email: location.contact.email } : {}),
-    ...(operationHours ? { operationHours } : {}),
-    ...(location.idealFor ? { idealFor: location.idealFor } : {}),
+    ...(cleanedOperationHours ? { operationHours: cleanedOperationHours } : {}),
     ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),
+    ...(location.idealFor ? { idealFor: location.idealFor } : {}),
     ...(location.ianaTimeId ? { ianaTimeId: location.ianaTimeId } : {}),
   };
 }

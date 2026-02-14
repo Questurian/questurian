@@ -40,7 +40,7 @@ export const Dining: CollectionConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Details',
+          label: 'Basic Info',
           fields: [
             {
               name: 'type',
@@ -71,11 +71,21 @@ export const Dining: CollectionConfig = {
                 { label: 'Juice Bar', value: 'juice-bar' },
                 { label: 'Smoothie Bar', value: 'smoothie-bar' },
                 { label: 'Pizza', value: 'pizza' },
-                
-
-
               ],
               admin: { description: 'Type of establishment' },
+            },
+            {
+              name: 'priceLevel',
+              type: 'select',
+              options: [
+                { label: '$', value: '1' },
+                { label: '$$', value: '2' },
+                { label: '$$$', value: '3' },
+                { label: '$$$$', value: '4' },
+              ],
+              admin: {
+                description: 'Price range indicator',
+              },
             },
             {
               name: 'gallery',
@@ -119,43 +129,6 @@ export const Dining: CollectionConfig = {
               ],
             },
             {
-              type: 'collapsible',
-              label: 'Location Manager Enrichment',
-              admin: {
-                initCollapsed: true,
-              },
-              fields: [
-                {
-                  name: 'idealFor',
-                  type: 'json',
-                  admin: {
-                    description: 'String[] ideal-for tags',
-                  },
-                },
-                {
-                  name: 'mealTypes',
-                  type: 'json',
-                  admin: {
-                    description: 'String[] meal types',
-                  },
-                },
-                {
-                  name: 'cuisines',
-                  type: 'json',
-                  admin: {
-                    description: 'String[] cuisines',
-                  },
-                },
-                {
-                  name: 'features',
-                  type: 'json',
-                  admin: {
-                    description: 'String[] dining features',
-                  },
-                },
-              ],
-            },
-            {
               name: 'instagramGallery',
               type: 'array',
               label: 'Instagram Gallery',
@@ -189,7 +162,34 @@ export const Dining: CollectionConfig = {
           ],
         },
         {
-          label: 'Location',
+          label: 'Classification',
+          fields: [
+            {
+              name: 'cuisines',
+              type: 'json',
+              admin: {
+                description: 'String[] cuisines',
+              },
+            },
+            {
+              name: 'idealFor',
+              type: 'json',
+              admin: {
+                description: 'String[] ideal-for tags',
+              },
+            },
+            {
+              type: 'collapsible',
+              label: 'Location Manager Enrichment',
+              admin: {
+                initCollapsed: true,
+              },
+              fields: [],
+            },
+          ],
+        },
+        {
+          label: 'Location & Contact',
           fields: [
             {
               name: 'location',
@@ -250,14 +250,6 @@ export const Dining: CollectionConfig = {
                   type: 'email',
                   admin: {
                     description: 'Contact email from Location Manager',
-                  },
-                },
-                {
-                  name: 'neighborhoodDescription',
-                  type: 'textarea',
-                  admin: {
-                    description: 'Neighborhood context from Location Manager',
-                    rows: 3,
                   },
                 },
                 {
