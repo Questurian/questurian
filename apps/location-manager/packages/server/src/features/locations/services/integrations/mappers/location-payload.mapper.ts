@@ -11,6 +11,13 @@ export function mapLocationToPayloadFormat(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ) {
+  // Strip 'currently_open' if it exists in operationHours (calculated on frontend)
+  let operationHours = location.operationHours as Record<string, unknown> | null
+  if (operationHours && typeof operationHours === 'object' && 'currently_open' in operationHours) {
+    const { currently_open, ...rest } = operationHours
+    operationHours = Object.keys(rest).length > 0 ? rest : null
+  }
+
   return {
     title: location.title || location.source.name,
     locationRef, // Always included - required by Payload
@@ -31,12 +38,9 @@ export function mapLocationToPayloadFormat(
     status: "published" as const,
     ...(location.type ? { type: location.type } : {}),
     ...(location.contact.email ? { email: location.contact.email } : {}),
-    ...(location.neighborhoodDescription ? { neighborhoodDescription: location.neighborhoodDescription } : {}),
-    ...(location.operationHours ? { operationHours: location.operationHours } : {}),
+    ...(operationHours ? { operationHours } : {}),
     ...(location.idealFor ? { idealFor: location.idealFor } : {}),
-    ...(location.tripadvisorMealTypes ? { mealTypes: location.tripadvisorMealTypes } : {}),
     ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),
-    ...(location.tripadvisorFeatures ? { features: location.tripadvisorFeatures } : {}),
     ...(location.ianaTimeId ? { ianaTimeId: location.ianaTimeId } : {}),
   };
 }

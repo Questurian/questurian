@@ -9,7 +9,6 @@ import {
 } from "@client/components/ui/dialog";
 import { Button } from "@client/components/ui/button";
 import { Input } from "@client/components/ui/input";
-import { Label } from "@client/components/ui/label";
 import { Plus, Trash2, Clock } from "lucide-react";
 
 const DAYS = [
@@ -36,7 +35,6 @@ export interface DayEntry {
 }
 
 export interface OperationHoursData {
-  currently_open: boolean;
   hours: Array< { day: string; hours: string } >;
 }
 
@@ -73,19 +71,17 @@ function dayEntryToHoursString(entry: DayEntry): string {
     .join(", ");
 }
 
-function parseOperationHoursJson(json: string): { currently_open: boolean; dayEntries: DayEntry[] } {
-  let currently_open = true;
+function parseOperationHoursJson(json: string): { dayEntries: DayEntry[] } {
   const dayEntries: DayEntry[] = DAYS.map((day) => ({
     day,
     closed: true,
     slots: [],
   }));
 
-  if (!json?.trim()) return { currently_open, dayEntries };
+  if (!json?.trim()) return { dayEntries };
 
   try {
     const data = JSON.parse(json) as OperationHoursData;
-    if (typeof data.currently_open === "boolean") currently_open = data.currently_open;
     if (Array.isArray(data.hours)) {
       for (const row of data.hours) {
         const dayName = (row.day || "").trim();
@@ -105,12 +101,11 @@ function parseOperationHoursJson(json: string): { currently_open: boolean; dayEn
   } catch {
     // keep defaults
   }
-  return { currently_open, dayEntries };
+  return { dayEntries };
 }
 
-function buildOperationHoursJson(currently_open: boolean, dayEntries: DayEntry[]): string {
+function buildOperationHoursJson(dayEntries: DayEntry[]): string {
   const data: OperationHoursData = {
-    currently_open,
     hours: dayEntries.map((entry) => ({
       day: entry.day,
       hours: dayEntryToHoursString(entry),
@@ -132,15 +127,13 @@ export function OperationHoursModal({
   value,
   onSave,
 }: OperationHoursModalProps) {
-  const [currentlyOpen, setCurrentlyOpen] = useState(true);
   const [dayEntries, setDayEntries] = useState<DayEntry[]>(() =>
     DAYS.map((day) => ({ day, closed: true, slots: [] }))
   );
 
   useEffect(() => {
     if (open) {
-      const { currently_open, dayEntries: entries } = parseOperationHoursJson(value);
-      setCurrentlyOpen(currently_open);
+      const { dayEntries: entries } = parseOperationHoursJson(value);
       setDayEntries(entries);
     }
   }, [open, value]);
@@ -182,7 +175,7 @@ export function OperationHoursModal({
   };
 
   const handleSave = () => {
-    onSave(buildOperationHoursJson(currentlyOpen, dayEntries));
+    onSave(buildOperationHoursJson(dayEntries));
     onOpenChange(false);
   };
 
@@ -200,19 +193,6 @@ export function OperationHoursModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="currently-open"
-              checked={currentlyOpen}
-              onChange={(e) => setCurrentlyOpen(e.target.checked)}
-              className="h-4 w-4 rounded border-input"
-            />
-            <Label htmlFor="currently-open" className="text-sm font-medium cursor-pointer">
-              Currently open (general status)
-            </Label>
-          </div>
-
           <div className="border rounded-lg divide-y bg-muted/30">
             {dayEntries.map((entry, dayIndex) => (
               <div key={entry.day} className="p-3 space-y-2">
