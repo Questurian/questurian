@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { batchUploadSchema, type BatchItem } from "../validation/add-location.schema";
 import type { BatchResult } from "../components/BatchUploadPhase";
+import type { Phase } from "./useAddLocationFlow";
 
-export function useBatchUploadFlow(onPhaseChange: (phase: string) => void) {
+export function useBatchUploadFlow(onPhaseChange: (phase: Phase) => void) {
   const [items, setItems] = useState<BatchItem[]>([]);
   const [results, setResults] = useState<BatchResult[]>([]);
   const [jsonInput, setJsonInput] = useState("");

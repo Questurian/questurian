@@ -1,0 +1,60 @@
+import type { UseFormReturn } from "react-hook-form";
+import { FormInput, FormSelect } from "@client/shared/components/forms";
+import { SelectItem } from "@client/components/ui";
+import type { EditLocationFormData } from "../validation/edit-location.schema";
+import { TIMEZONE_OPTIONS } from "../constants/edit-location.constants";
+
+interface ContactFieldsSectionProps {
+  form: UseFormReturn<EditLocationFormData>;
+}
+
+export function ContactFieldsSection({ form }: ContactFieldsSectionProps) {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Contact
+      </p>
+
+      <FormSelect
+        name="ianaTimeId"
+        label="Time Zone (IANA)"
+        control={form.control}
+        placeholder="Select a time zone"
+      >
+        {TIMEZONE_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </FormSelect>
+
+      <FormInput
+        name="contactAddress"
+        label="Contact Address"
+        control={form.control}
+        placeholder="Contact address (optional)"
+      />
+
+      <FormInput
+        name="phoneNumber"
+        label="Phone Number"
+        control={form.control}
+        placeholder="Phone number (optional)"
+      />
+
+      <FormInput
+        name="website"
+        label="Website"
+        control={form.control}
+        placeholder="Website URL (optional)"
+      />
+
+      <FormInput
+        name="email"
+        label="Email"
+        control={form.control}
+        placeholder="Email address (optional)"
+      />
+    </div>
+  );
+}
