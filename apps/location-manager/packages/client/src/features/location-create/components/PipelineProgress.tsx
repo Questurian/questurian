@@ -1,10 +1,7 @@
 import { Check, Loader2, X, Circle } from "lucide-react";
+import type { PipelineStep } from "../types/location-create.types";
 
-export interface PipelineStep {
-  label: string;
-  status: "pending" | "running" | "completed" | "failed";
-  detail?: string;
-}
+export type { PipelineStep };
 
 interface PipelineProgressProps {
   steps: PipelineStep[];

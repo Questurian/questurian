@@ -11,15 +11,7 @@ import { Button } from "@client/components/ui/button";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { type ImageVariantType, VARIANT_SPECS } from "@questurian/lm-shared";
 import { useToast } from "@client/shared/hooks/useToast";
-import { createMultiVariantImages } from "../../utils/image-processing";
-
-interface CropState {
-  variantType: ImageVariantType;
-  crop: Point;
-  zoom: number;
-  croppedAreaPixels: Area | null;
-  completed: boolean;
-}
+import { createMultiVariantImages, type CropState } from "../../utils/image-processing";
 
 interface MultiVariantCropperModalProps {
   file: File;

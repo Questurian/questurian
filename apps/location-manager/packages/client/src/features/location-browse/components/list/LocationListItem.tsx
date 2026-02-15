@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { LocationBasic } from "@client/shared/services/api/types";
 import { formatLocationHierarchy } from "@client/shared/lib/utils";
 import {
   AlertDialog,
@@ -23,13 +24,7 @@ import { LocationDetailView } from "../detail/LocationDetailView";
 import { AdvancedDataModal } from "./AdvancedDataModal";
 
 interface LocationListItemProps {
-  location: {
-    id: number;
-    name: string;
-    title: string | null;
-    category: string;
-    location?: string;
-  };
+  location: LocationBasic;
   onClick?: (id: number) => void;
 }
 
@@ -87,7 +82,7 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
           <h3 className="font-medium text-foreground text-base leading-tight truncate">
             {location.title || location.name}
           </h3>
-          {location.location && (
+          {location.location != null && (
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
               {formatLocationHierarchy(location.location)}
             </p>

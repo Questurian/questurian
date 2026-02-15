@@ -30,11 +30,7 @@ export function Home() {
   };
 
   const { data, isLoading, error, refetch } = useLocationsBasic(apiParams);
-  const allLocations = (data?.locations ?? []).map(location => ({
-    ...location,
-    location: location.location ?? undefined,
-    category: location.category
-  }));
+  const allLocations = data?.locations ?? [];
 
   // Apply completion status filter client-side
   const locations = useMemo(() => {

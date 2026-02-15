@@ -1,17 +1,8 @@
 import { formatLocationName } from "@questurian/lm-shared";
 import type { LocationHierarchyItem } from "@client/shared/services/api/types";
+import type { FilterOption, TaxonomyFilterState } from "../types/admin.types";
 
-export interface FilterOption {
-  value: string;
-  label: string;
-  count: number;
-}
-
-export interface TaxonomyFilterState {
-  country: string | null;
-  city: string | null;
-  neighborhood: string | null;
-}
+export type { FilterOption, TaxonomyFilterState };
 
 /**
  * Extract unique countries from approved taxonomy with counts

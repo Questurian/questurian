@@ -22,7 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@client/components/ui/alert-dialog";
 import type { Category } from "@client/shared/services/api/types";
-import type { SyncStatusResponse } from "@client/shared/services/api/payload.api";
+import type { SyncStatusResponse } from "@client/shared/services/api/types/payload.types";
 
 export function PayloadSync() {
   const { data: statusData, isLoading, error, refetch: refetchSyncStatus } = useSyncStatus();

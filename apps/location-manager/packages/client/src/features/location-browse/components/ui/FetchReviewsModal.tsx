@@ -78,7 +78,7 @@ export function FetchReviewsModal({
     onFetch(formData);
   }
 
-  function handleChange(field: keyof FetchReviewsRequest, value: any) {
+  function handleChange(field: keyof FetchReviewsRequest, value: FetchReviewsRequest[keyof FetchReviewsRequest]) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }
 

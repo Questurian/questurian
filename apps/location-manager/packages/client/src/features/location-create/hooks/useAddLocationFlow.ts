@@ -10,8 +10,9 @@ import {
   type ConfirmLocationFormData,
 } from "../validation/add-location.schema";
 import type { LocationCategory } from "@shared/types/location-category";
+import type { Phase } from "../types/location-create.types";
 
-export type Phase = "add" | "confirm" | "reviews" | "success" | "batch-input" | "batch-processing" | "batch-complete";
+export type { Phase };
 
 interface CreatedLocation {
   id: number;

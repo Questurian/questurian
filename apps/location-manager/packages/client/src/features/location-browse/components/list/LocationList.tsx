@@ -1,15 +1,8 @@
+import type { LocationBasic } from "@client/shared/services/api/types";
 import { LocationListItem } from "./LocationListItem";
 
-interface Location {
-  id: number;
-  name: string;
-  title: string | null;
-  category: string;
-  location?: string;
-}
-
 interface LocationListProps {
-  locations: Location[];
+  locations: LocationBasic[];
   onItemClick?: (id: number) => void;
 }
 

@@ -1,9 +1,7 @@
 import { apiGet } from "./client";
+import type { TypeOption } from "./types/common.types";
 
-export interface TypeOption {
-  label: string;
-  value: string;
-}
+export type { TypeOption };
 
 export const typesApi = {
   async getDiningTypes(): Promise<TypeOption[]> {

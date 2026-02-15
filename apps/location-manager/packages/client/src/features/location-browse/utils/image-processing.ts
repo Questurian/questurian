@@ -4,27 +4,9 @@
 
 import type { ImageVariantType } from "@questurian/lm-shared";
 import { VARIANT_SPECS as VARIANT_SPECS_IMPORT } from "@questurian/lm-shared";
-import type { Area } from "react-easy-crop";
+import type { CropData, TargetDimensions, CropState } from "../types/location-browse.types";
 
-export interface CropData {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface TargetDimensions {
-  width: number;
-  height: number;
-}
-
-export interface CropState {
-  variantType: ImageVariantType;
-  crop: { x: number; y: number };
-  zoom: number;
-  croppedAreaPixels: Area | null;
-  completed: boolean;
-}
+export type { CropData, TargetDimensions, CropState };
 
 /**
  * Creates a cropped image from a source image using canvas

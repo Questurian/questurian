@@ -3,20 +3,14 @@ import { Check, X, Loader2, Upload, AlertCircle } from "lucide-react";
 import { Button } from "@client/components/ui/button";
 import { locationsApi } from "@client/shared/services/api/locations.api";
 import type { BatchItem } from "../validation/add-location.schema";
+import type { BatchResult } from "../types/location-create.types";
+
+export type { BatchResult };
 
 interface BatchUploadPhaseProps {
   items: BatchItem[];
   onComplete: (results: BatchResult[]) => void;
   onCancel: () => void;
-}
-
-export interface BatchResult {
-  index: number;
-  item: BatchItem;
-  success: boolean;
-  locationId?: number;
-  locationName?: string;
-  error?: string;
 }
 
 type ItemStatus = "pending" | "creating" | "confirming" | "completed" | "failed";

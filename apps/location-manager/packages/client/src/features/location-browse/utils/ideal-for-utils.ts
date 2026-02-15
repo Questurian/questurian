@@ -1,22 +1,13 @@
 import { IDEAL_FOR_TAG_GROUPS, type IdealForTag } from "@shared/types/location-ideal-for";
+import type { ParsedIdealForInputResult } from "../types/location-browse.types";
+
+export type { ParsedIdealForInputResult };
 
 export const MAX_IDEAL_FOR_SELECTIONS = 4;
 export const IDEAL_FOR_TAG_OPTIONS: readonly IdealForTag[] = IDEAL_FOR_TAG_GROUPS.flatMap((group) => group.tags);
 export const IDEAL_FOR_TAG_BY_NORMALIZED = new Map<string, IdealForTag>(
   IDEAL_FOR_TAG_OPTIONS.map((tag) => [normalizeTagText(tag), tag] as const)
 );
-
-interface ParsedIdealForInputSuccess {
-  ok: true;
-  tags: IdealForTag[];
-}
-
-interface ParsedIdealForInputFailure {
-  ok: false;
-  error: string;
-}
-
-export type ParsedIdealForInputResult = ParsedIdealForInputSuccess | ParsedIdealForInputFailure;
 
 export function normalizeTagText(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
