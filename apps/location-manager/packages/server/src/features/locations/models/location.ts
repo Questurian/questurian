@@ -58,6 +58,7 @@ export interface Location {
   tripadvisorMealTypesJson?: string | null;
   tripadvisorCuisinesJson?: string | null;
   tripadvisorFeaturesJson?: string | null;
+  priceLevel?: string | null;
   slug?: string | null;
   placeId?: string | null;  // Google Place ID
   tripadvisorUrl?: string | null;
@@ -185,6 +186,7 @@ export interface LocationResponse {
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;
   tripadvisorFeatures: string[] | null;
+  priceLevel: string | null;
   contact: LocationContact;
   coordinates: LocationCoordinates;
   source: LocationSource;

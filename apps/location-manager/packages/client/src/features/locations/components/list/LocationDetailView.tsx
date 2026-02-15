@@ -354,6 +354,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
       },
       { key: "idealFor", label: "Ideal For", present: hasIdealFor },
       { key: "cuisines", label: "Cuisines", present: hasCuisines },
+      { key: "priceLevel", label: "Price Level", present: Boolean(locationDetail.priceLevel?.trim()) },
       { key: "operationHours", label: "Hours", present: hasOperationHours },
       { key: "media", label: "Images/Instagram", present: hasMedia },
     ];

@@ -50,6 +50,7 @@ export class TripAdvisorPlaceService {
     const phone = typeof placeResult.phone === "string" ? placeResult.phone.trim() : null;
     const website = typeof placeResult.website === "string" ? placeResult.website.trim() : null;
     const neighborhood = typeof placeResult.neighborhood === "string" ? placeResult.neighborhood.trim() : null;
+    const priceLevel = typeof placeResult.price_level === "string" ? placeResult.price_level.trim() : null;
     const mealTypes =
       normalizeTripadvisorStringList(placeResult.meal_types) ??
       normalizeTripadvisorStringList(placeResult.mealtypes);
@@ -89,6 +90,11 @@ export class TripAdvisorPlaceService {
       if (current.tripadvisorFeaturesJson !== nextFeaturesJson) {
         updates.tripadvisorFeaturesJson = nextFeaturesJson;
       }
+    }
+
+    // Price level — always overwrite with the mapped value from TripAdvisor
+    if (priceLevel && current.priceLevel !== priceLevel) {
+      updates.priceLevel = priceLevel;
     }
 
     // District fallback: use TripAdvisor neighborhood if district is empty

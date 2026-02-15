@@ -65,6 +65,7 @@ export const patchMapsSchema = z.object({
   email: z.string().trim().email().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   neighborhoodDescription: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   idealFor: idealForTagsSchema.optional(),
+  priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   operationHours: z.union([
     z.record(z.any()),
@@ -116,6 +117,7 @@ export const patchMapsSchema = z.object({
          data.neighborhoodDescription !== undefined ||
          data.idealFor !== undefined ||
          data.operationHours !== undefined ||
+         data.priceLevel !== undefined ||
          data.tripadvisorMealTypes !== undefined ||
          data.tripadvisorCuisines !== undefined ||
          data.tripadvisorFeatures !== undefined;

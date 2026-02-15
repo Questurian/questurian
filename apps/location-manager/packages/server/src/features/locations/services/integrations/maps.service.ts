@@ -454,6 +454,7 @@ export class MapsService {
       ...(tripadvisorMealTypesJson !== undefined && { tripadvisorMealTypesJson }),
       ...(tripadvisorCuisinesJson !== undefined && { tripadvisorCuisinesJson }),
       ...(tripadvisorFeaturesJson !== undefined && { tripadvisorFeaturesJson }),
+      ...(updates.priceLevel !== undefined && { priceLevel: updates.priceLevel }),
       ...(updates.placeId !== undefined && { placeId: updates.placeId }),
       ...(shouldUpdateUrl && { url: generateGoogleMapsUrl(nextName, nextAddress) }),
       ...(updates.tripadvisorUrl !== undefined && this.resolveTripadvisorFields(updates.tripadvisorUrl)),

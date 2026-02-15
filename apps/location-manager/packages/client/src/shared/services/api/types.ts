@@ -138,6 +138,7 @@ export interface LocationResponse {
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;
   tripadvisorFeatures: string[] | null;
+  priceLevel: string | null;
   contact: LocationContact;
   coordinates: LocationCoordinates;
   source: LocationSource;
@@ -211,6 +212,7 @@ export interface UpdateMapsRequest {
   tripadvisorMealTypes?: string[] | string | null;
   tripadvisorCuisines?: string[] | string | null;
   tripadvisorFeatures?: string[] | string | null;
+  priceLevel?: string | null;
   placeId?: string | null;
 }
 

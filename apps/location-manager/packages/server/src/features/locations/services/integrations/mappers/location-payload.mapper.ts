@@ -2,6 +2,14 @@ import type { LocationResponse, LocationCategory } from "../../../models/locatio
 import type { UploadedImagesResult } from "../types";
 import { extractPhoneNumber, convertIsoToPhoneCountryCode } from "../utils";
 
+// App stores $, $$, $$$, $$$$ — Payload expects "1", "2", "3", "4"
+const PRICE_LEVEL_TO_PAYLOAD: Record<string, string> = {
+  "$": "1",
+  "$$": "2",
+  "$$$": "3",
+  "$$$$": "4",
+};
+
 /**
  * Strip 'currently_open' from operationHours (real-time snapshot determined on frontend)
  */
@@ -44,6 +52,7 @@ export function mapLocationToPayloadFormat(
     longitude: location.coordinates.lng || undefined,
     status: "published" as const,
     ...(location.type ? { type: location.type } : {}),
+    ...(location.priceLevel && PRICE_LEVEL_TO_PAYLOAD[location.priceLevel] ? { priceLevel: PRICE_LEVEL_TO_PAYLOAD[location.priceLevel] } : {}),
     ...(location.contact.email ? { email: location.contact.email } : {}),
     ...(cleanedOperationHours ? { operationHours: cleanedOperationHours } : {}),
     ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),

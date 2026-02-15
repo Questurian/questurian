@@ -219,6 +219,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     tripadvisorFeatures: filterTripadvisorFeatures(
       parseTripadvisorStringListJson(location.tripadvisorFeaturesJson || null)
     ),
+    priceLevel: location.priceLevel || null,
     contact: {
       countryCode: location.countryCode || null,
       phoneNumber: location.phoneNumber || null,
@@ -285,6 +286,7 @@ export function transformLocationToBasicResponse(
   })();
   const hasIanaTimeId = Boolean(location.ianaTimeId?.trim());
   const hasCoordinates = location.lat != null && location.lng != null;
+  const hasPriceLevel = Boolean(location.priceLevel?.trim());
 
   // All fields synced to Payload must be present
   // Note: locationRef is excluded — it's auto-resolved during sync
@@ -300,7 +302,8 @@ export function transformLocationToBasicResponse(
     hasCuisines &&
     hasIdealFor &&
     hasIanaTimeId &&
-    hasCoordinates;
+    hasCoordinates &&
+    hasPriceLevel;
 
   return {
     id: location.id!,

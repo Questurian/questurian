@@ -51,6 +51,7 @@ export function EditLocation() {
       category: undefined,
       idealFor: [],
       type: undefined,
+      priceLevel: "",
       locationKey: "",
       district: "",
       contactAddress: "",
@@ -79,6 +80,7 @@ export function EditLocation() {
         category: location.category,
         idealFor: location.idealFor || [],
         type: location.type || undefined,
+        priceLevel: location.priceLevel || "",
         locationKey: location.locationKey || "",
         district: location.district || "",
         contactAddress: location.contact.contactAddress || "",
@@ -218,6 +220,18 @@ export function EditLocation() {
                 {option.label}
               </SelectItem>
             ))}
+          </FormSelect>
+
+          <FormSelect
+            name="priceLevel"
+            label="Price Level"
+            control={form.control}
+            placeholder="Select price level"
+          >
+            <SelectItem value="$">$</SelectItem>
+            <SelectItem value="$$">$$</SelectItem>
+            <SelectItem value="$$$">$$$</SelectItem>
+            <SelectItem value="$$$$">$$$$</SelectItem>
           </FormSelect>
 
           <FormTagMultiSelect

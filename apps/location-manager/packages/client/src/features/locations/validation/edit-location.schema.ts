@@ -73,6 +73,11 @@ export const editLocationSchema = z.object({
         return false;
       }
     }, { message: "Operation hours must be valid JSON" }),
+  priceLevel: z
+    .string()
+    .max(50, "Price level must be less than 50 characters")
+    .optional()
+    .or(z.literal("")),
   tripadvisorUrl: z
     .string()
     .url("TripAdvisor URL must be a valid URL")

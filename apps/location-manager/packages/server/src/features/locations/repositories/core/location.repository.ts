@@ -21,8 +21,8 @@ export function saveLocation(location: Location): number | boolean {
   try {
     const db = getDb();
     const query = db.query(`
-      INSERT INTO locations (name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, ideal_for_json, tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
-      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $ideal_for_json, $tripadvisor_meal_types, $tripadvisor_cuisines, $tripadvisor_features, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
+      INSERT INTO locations (name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, ideal_for_json, tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, price_level, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
+      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $ideal_for_json, $tripadvisor_meal_types, $tripadvisor_cuisines, $tripadvisor_features, $price_level, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
       ON CONFLICT(name, address) DO UPDATE SET
         title = excluded.title,
         url = excluded.url,
@@ -44,6 +44,7 @@ export function saveLocation(location: Location): number | boolean {
         tripadvisor_meal_types = excluded.tripadvisor_meal_types,
         tripadvisor_cuisines = excluded.tripadvisor_cuisines,
         tripadvisor_features = excluded.tripadvisor_features,
+        price_level = excluded.price_level,
         slug = excluded.slug,
         place_id = excluded.place_id,
         tripadvisor_url = excluded.tripadvisor_url,
@@ -74,6 +75,7 @@ export function saveLocation(location: Location): number | boolean {
       $tripadvisor_meal_types: location.tripadvisorMealTypesJson || null,
       $tripadvisor_cuisines: location.tripadvisorCuisinesJson || null,
       $tripadvisor_features: location.tripadvisorFeaturesJson || null,
+      $price_level: location.priceLevel || null,
       $slug: location.slug || null,
       $place_id: location.placeId || null,
       $tripadvisor_url: location.tripadvisorUrl || null,
@@ -203,6 +205,10 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
       setClause.push("tripadvisor_features = $tripadvisor_features");
       params.$tripadvisor_features = updates.tripadvisorFeaturesJson;
     }
+    if (updates.priceLevel !== undefined) {
+      setClause.push("price_level = $price_level");
+      params.$price_level = updates.priceLevel;
+    }
     if (updates.payload_location_ref !== undefined) {
       setClause.push("payload_location_ref = $payload_location_ref");
       params.$payload_location_ref = updates.payload_location_ref;
@@ -283,6 +289,7 @@ export function getAllLocations(): (Location & { uploadsCount: number; instagram
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.price_level as priceLevel,
            l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
@@ -315,6 +322,7 @@ export function getLocationsByCategory(category: string): (Location & { uploadsC
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.price_level as priceLevel,
            l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
@@ -348,6 +356,7 @@ export function getLocationById(id: number): Location | null {
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.price_level as priceLevel,
            l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
@@ -376,6 +385,7 @@ export function getLocationByIdForUpdate(id: number): Location | null {
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
+           l.price_level as priceLevel,
            l.slug, l.place_id as placeId,
            l.tripadvisor_url as tripadvisorUrl, l.tripadvisor_location_id as tripadvisorLocationId,
            l.payload_location_ref, l.reviews_fetched_at as reviewsFetchedAt,
@@ -426,6 +436,7 @@ export function findPotentialDuplicateLocations(params: {
            tripadvisor_meal_types as tripadvisorMealTypesJson,
            tripadvisor_cuisines as tripadvisorCuisinesJson,
            tripadvisor_features as tripadvisorFeaturesJson,
+           price_level as priceLevel,
            slug, place_id as placeId,
            tripadvisor_url as tripadvisorUrl, tripadvisor_location_id as tripadvisorLocationId,
            payload_location_ref, reviews_fetched_at as reviewsFetchedAt,
@@ -454,6 +465,7 @@ export function getLocationBySlug(slug: string): Location | null {
            tripadvisor_meal_types as tripadvisorMealTypesJson,
            tripadvisor_cuisines as tripadvisorCuisinesJson,
            tripadvisor_features as tripadvisorFeaturesJson,
+           price_level as priceLevel,
            slug, place_id as placeId,
            tripadvisor_url as tripadvisorUrl, tripadvisor_location_id as tripadvisorLocationId,
            payload_location_ref, reviews_fetched_at as reviewsFetchedAt,

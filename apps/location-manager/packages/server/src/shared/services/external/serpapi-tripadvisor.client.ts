@@ -13,6 +13,7 @@ export interface TripAdvisorPlaceResult {
   name?: string;
   rating?: number;
   price_range?: string;
+  price_level?: string;
   description?: string;
   phone?: string;
   website?: string;
@@ -65,6 +66,13 @@ export interface StoredTripAdvisorPlaceData {
   placeResult: TripAdvisorPlaceResult;
 }
 
+// Map TripAdvisor price level category names to app enum values ($, $$, $$$, $$$$)
+const TRIPADVISOR_PRICE_LEVEL_MAP: Record<string, string> = {
+  "Cheap Eats": "$",
+  "Mid-range": "$$",
+  "Fine Dining": "$$$$",
+};
+
 // Fields to exclude from the place_result response
 const EXCLUDED_FIELDS = [
   "related_stories",
@@ -114,6 +122,16 @@ export class SerpApiTripAdvisorClient {
     for (const [key, value] of Object.entries(placeResult)) {
       if (!EXCLUDED_FIELDS.includes(key)) {
         filtered[key] = value;
+      }
+    }
+
+    // Extract price level from categories before they are excluded
+    if (Array.isArray(placeResult.categories)) {
+      const priceCat = placeResult.categories.find(
+        (cat: { name?: string }) => typeof cat.name === "string" && cat.name in TRIPADVISOR_PRICE_LEVEL_MAP
+      );
+      if (priceCat && typeof priceCat.name === "string") {
+        filtered.price_level = TRIPADVISOR_PRICE_LEVEL_MAP[priceCat.name]!;
       }
     }
 

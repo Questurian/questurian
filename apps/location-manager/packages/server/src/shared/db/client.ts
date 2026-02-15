@@ -30,6 +30,7 @@ import { addTripadvisorTaxonomyFields } from "./migrations/add-tripadvisor-taxon
 import { addLocationEnrichmentFields } from "./migrations/add-location-enrichment-fields";
 import { addReviewsTracking } from "./migrations/add-reviews-tracking";
 import { addLocationIdealFor } from "./migrations/add-location-ideal-for";
+import { addLocationPriceLevel } from "./migrations/add-location-price-level";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -257,6 +258,9 @@ export function initDb() {
 
   // Run migration to add Ideal For tags field to locations table
   addLocationIdealFor(database);
+
+  // Run migration to add price_level column to locations table
+  addLocationPriceLevel(database);
 }
 
 export function getDb(): Database {
