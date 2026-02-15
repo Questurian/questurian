@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { EnvConfig } from "@server/shared/config/env.config";
-import { TripAdvisorReviewsApiClient } from "@server/shared/services/external/tripadvisor-reviews-api.client";
-import type { FetchTripAdvisorReviewsDto, TripAdvisorReview } from "@server/shared/services/external/tripadvisor-reviews.types";
+import { TripAdvisorReviewsApiClient } from "../../services/integrations/clients/tripadvisor-reviews-api.client";
+import type { FetchTripAdvisorReviewsDto, TripAdvisorReview } from "../../services/integrations/types/tripadvisor-reviews.types";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 

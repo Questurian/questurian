@@ -6,7 +6,7 @@
  */
 
 import { DistrictExtractionService } from '../services/geocoding/district-extraction.service';
-import type { AdministrativeLevel, InformativeLevel } from '@server/shared/services/external/bigdatacloud-api.client';
+import type { AdministrativeLevel, InformativeLevel } from '../services/integrations/clients/bigdatacloud-api.client';
 
 console.log('\n🇧🇷 Brazil Tourism Zone Extraction Demo\n');
 console.log('='.repeat(80));

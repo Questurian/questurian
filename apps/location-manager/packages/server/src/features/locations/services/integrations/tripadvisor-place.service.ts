@@ -1,6 +1,6 @@
 import type { Location } from "../../models/location";
-import type { TripAdvisorPlaceResult } from "@server/shared/services/external/serpapi-tripadvisor.client";
-import { SerpApiTripAdvisorClient } from "@server/shared/services/external/serpapi-tripadvisor.client";
+import type { TripAdvisorPlaceResult } from "./clients/serpapi-tripadvisor.client";
+import { SerpApiTripAdvisorClient } from "./clients/serpapi-tripadvisor.client";
 import { EnvConfig } from "@server/shared/config/env.config";
 import { getLocationByIdForUpdate, updateLocationById } from "../../repositories/core";
 import { saveTripAdvisorPlace } from "../../repositories/content/tripadvisor-place.repository";

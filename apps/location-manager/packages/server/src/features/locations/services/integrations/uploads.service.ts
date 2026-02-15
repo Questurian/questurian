@@ -1,8 +1,8 @@
 import type { Upload, ImageMetadata, ImageSetUpload } from "../../models/location";
 import type { ImageVariantType, ImageSet, ImageVariant, VARIANT_SPECS } from "@questurian/lm-shared";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
-import { ImageStorageService } from "@server/shared/services/storage/image-storage.service";
-import { AltTextApiClient } from "@server/shared/services/external/alt-text-api.client";
+import { ImageStorageService } from "../storage/image-storage.service";
+import { AltTextApiClient } from "./clients/alt-text-api.client";
 import { getLocationById } from "../../repositories/core";
 import { saveUpload, getUploadById, deleteUploadById } from "../../repositories/content";
 import { createFromUpload, createFromImageSetUpload } from "../geocoding/location-geocoding.helper";

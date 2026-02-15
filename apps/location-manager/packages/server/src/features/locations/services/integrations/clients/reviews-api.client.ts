@@ -1,4 +1,4 @@
-import { EnvConfig } from "../../config/env.config";
+import { EnvConfig } from "@server/shared/config/env.config";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";

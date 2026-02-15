@@ -6,7 +6,7 @@ import {
   getLocationBySlug,
   updateLocationById
 } from "../../repositories/core";
-import type { ImageStorageService } from "@server/shared/services/storage/image-storage.service";
+import type { ImageStorageService } from "../storage/image-storage.service";
 import { getPlaceDetails } from "../geocoding/location-geocoding.helper";
 import { EnvConfig } from "@server/shared/config/env.config";
 

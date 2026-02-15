@@ -1,7 +1,7 @@
 import type { AddInstagramRequest, InstagramEmbed } from "../../models/location";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
-import { ImageStorageService } from "@server/shared/services/storage/image-storage.service";
-import { InstagramApiClient } from "@server/shared/services/external/instagram-api.client";
+import { ImageStorageService } from "../storage/image-storage.service";
+import { InstagramApiClient } from "./clients/instagram-api.client";
 import { createFromInstagram, extractInstagramData } from "../geocoding/location-geocoding.helper";
 import { getLocationById } from "../../repositories/core";
 import {

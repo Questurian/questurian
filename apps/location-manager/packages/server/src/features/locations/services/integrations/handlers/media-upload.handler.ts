@@ -1,6 +1,6 @@
 import type { LocationResponse } from "../../../models/location";
-import type { PayloadApiClient } from "@server/shared/services/external/payload-api.client";
-import { ImageStorageService } from "@server/shared/services/storage/image-storage.service";
+import type { PayloadApiClient } from "../clients/payload-api.client";
+import { ImageStorageService } from "../../storage/image-storage.service";
 import type { UploadedImagesResult } from "../types";
 import { mapLocationKeyToPayloadLocation } from "../mappers";
 import type { ImageVariantType } from "@questurian/lm-shared";

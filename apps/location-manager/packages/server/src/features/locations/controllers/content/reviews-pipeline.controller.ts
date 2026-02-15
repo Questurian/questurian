@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { randomUUID } from "node:crypto";
 import { EnvConfig } from "@server/shared/config/env.config";
-import { ReviewsApiClient, type ReviewsQueryParams, type StoredReviewsData } from "@server/shared/services/external/reviews-api.client";
-import { TripAdvisorReviewsApiClient } from "@server/shared/services/external/tripadvisor-reviews-api.client";
+import { ReviewsApiClient, type ReviewsQueryParams, type StoredReviewsData } from "../../services/integrations/clients/reviews-api.client";
+import { TripAdvisorReviewsApiClient } from "../../services/integrations/clients/tripadvisor-reviews-api.client";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 import { runTranslateAndMergeReviews, type ReviewSource } from "./translate-merge-reviews.controller";

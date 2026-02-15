@@ -1,4 +1,4 @@
-import { EnvConfig } from "../../config/env.config";
+import { EnvConfig } from "@server/shared/config/env.config";
 
 export interface TranslationStats {
   total: number;

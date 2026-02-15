@@ -1,4 +1,4 @@
-import { EnvConfig } from "../../config/env.config";
+import { EnvConfig } from "@server/shared/config/env.config";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -8,7 +8,7 @@ import type {
   StoredTripAdvisorReviewsData,
   TripAdvisorReview,
   TripAdvisorReviewsStatus,
-} from "./tripadvisor-reviews.types";
+} from "../types/tripadvisor-reviews.types";
 
 export class TripAdvisorReviewsApiClient {
   private readonly apiKey: string;

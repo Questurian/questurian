@@ -461,7 +461,7 @@ export class ImageStorageService {
 
     try {
       // Import getDb here to avoid circular dependencies
-      const { getDb } = await import("../../db/client.js");
+      const { getDb } = await import("@server/shared/db/client");
       const db = getDb();
 
       // Get paths from locations table

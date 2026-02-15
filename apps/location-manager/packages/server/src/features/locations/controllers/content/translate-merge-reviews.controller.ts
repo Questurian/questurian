@@ -3,7 +3,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { mkdir, readdir } from "node:fs/promises";
 import { EnvConfig } from "@server/shared/config/env.config";
-import { TranslationApiClient } from "@server/shared/services/external/translation-api.client";
+import { TranslationApiClient } from "../../services/integrations/clients/translation-api.client";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 
 const config = EnvConfig.getInstance();

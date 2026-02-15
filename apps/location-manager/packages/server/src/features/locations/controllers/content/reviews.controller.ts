@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { EnvConfig } from "@server/shared/config/env.config";
-import { ReviewsApiClient, type ReviewsQueryParams, type StoredReviewsData } from "@server/shared/services/external/reviews-api.client";
+import { ReviewsApiClient, type ReviewsQueryParams, type StoredReviewsData } from "../../services/integrations/clients/reviews-api.client";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 

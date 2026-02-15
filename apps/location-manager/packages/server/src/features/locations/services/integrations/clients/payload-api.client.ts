@@ -1,5 +1,5 @@
-import { EnvConfig } from "../../config/env.config";
-import { ServiceUnavailableError } from "../../core/errors/http-error";
+import { EnvConfig } from "@server/shared/config/env.config";
+import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
 export interface PayloadAuthResponse {

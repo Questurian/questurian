@@ -1,10 +1,10 @@
 import { EnvConfig } from "@server/shared/config/env.config";
-import { ImageStorageService } from "@server/shared/services/storage/image-storage.service";
-import { InstagramApiClient } from "@server/shared/services/external/instagram-api.client";
-import { PayloadApiClient } from "@server/shared/services/external/payload-api.client";
-import { BigDataCloudClient } from "@server/shared/services/external/bigdatacloud-api.client";
-import { GeoapifyClient } from "@server/shared/services/external/geoapify-api.client";
-import { AltTextApiClient } from "@server/shared/services/external/alt-text-api.client";
+import { ImageStorageService } from "../services/storage/image-storage.service";
+import { InstagramApiClient } from "../services/integrations/clients/instagram-api.client";
+import { PayloadApiClient } from "../services/integrations/clients/payload-api.client";
+import { BigDataCloudClient } from "../services/integrations/clients/bigdatacloud-api.client";
+import { GeoapifyClient } from "../services/integrations/clients/geoapify-api.client";
+import { AltTextApiClient } from "../services/integrations/clients/alt-text-api.client";
 import {
   MapsService,
   InstagramService,

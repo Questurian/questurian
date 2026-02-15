@@ -1,8 +1,7 @@
-import { EnvConfig } from "../../config/env.config";
+import { EnvConfig } from "@server/shared/config/env.config";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { filterTripadvisorFeatures } from "@server/features/locations/utils/tripadvisor-utils";
 
 export interface SerpApiTripAdvisorParams {
   place_id: string;
@@ -98,6 +97,51 @@ const EXCLUDED_FIELDS = [
   "special_diets",
   "reviews_highlights",
 ];
+
+const EXCLUDED_FEATURE_TOKENS = new Set([
+  "delivery",
+  "takeout",
+  "seating",
+  "wheelchairaccessible",
+  "fullbar",
+  "acceptscreditcards",
+  "tableservice",
+  "livemusic",
+  "servesalcohol",
+  "freewifi",
+  "drivethru",
+  "dogfriendly",
+]);
+
+const FEATURE_REWRITE_BY_TOKEN: Record<string, string> = {
+  americanexpress: "AmEx accepted",
+  mastercard: "Mastercard accepted",
+  visa: "Visa accepted",
+};
+
+function normalizeFeatureToken(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function filterTripadvisorFeatures(features: string[] | null): string[] | null {
+  if (!features || features.length === 0) {
+    return null;
+  }
+
+  const filtered = features
+    .map((feature) => {
+      const token = normalizeFeatureToken(feature);
+      if (EXCLUDED_FEATURE_TOKENS.has(token)) {
+        return null;
+      }
+
+      return FEATURE_REWRITE_BY_TOKEN[token] ?? feature;
+    })
+    .filter((feature): feature is string => feature !== null);
+
+  const deduped = Array.from(new Set(filtered));
+  return deduped.length > 0 ? deduped : null;
+}
 
 export class SerpApiTripAdvisorClient {
   private readonly apiKey: string;

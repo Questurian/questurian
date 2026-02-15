@@ -1,5 +1,5 @@
 import type { LocationResponse } from "../../../models/location";
-import type { PayloadApiClient, PayloadLocationCreateData } from "@server/shared/services/external/payload-api.client";
+import type { PayloadApiClient, PayloadLocationCreateData } from "../clients/payload-api.client";
 import { parseLocationValue } from "../../../utils/location-utils";
 import { formatLocationName } from "@questurian/lm-shared";
 

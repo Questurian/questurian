@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
 import { DistrictExtractionService } from "../district-extraction.service";
-import type { AdministrativeLevel, InformativeLevel } from "@server/shared/services/external/bigdatacloud-api.client";
+import type { AdministrativeLevel, InformativeLevel } from "../../integrations/clients/bigdatacloud-api.client";
 
 describe("DistrictExtractionService", () => {
   const service = new DistrictExtractionService();

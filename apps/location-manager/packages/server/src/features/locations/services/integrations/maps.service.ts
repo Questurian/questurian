@@ -27,7 +27,7 @@ import {
 } from "../../utils/tripadvisor-utils";
 import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
 
-import type { PayloadApiClient } from "@server/shared/services/external/payload-api.client";
+import type { PayloadApiClient } from "./clients/payload-api.client";
 
 export class MapsService {
   constructor(

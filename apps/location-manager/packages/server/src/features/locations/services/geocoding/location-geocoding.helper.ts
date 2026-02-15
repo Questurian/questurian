@@ -1,5 +1,5 @@
 import type { LocationCategory, Location, InstagramEmbed, Upload } from "../models/location";
-import type { BigDataCloudResponse, AdministrativeLevel } from "@server/shared/services/external/bigdatacloud-api.client";
+import type { BigDataCloudResponse, AdministrativeLevel } from "../integrations/clients/bigdatacloud-api.client";
 import { BadRequestError } from "@server/shared/core/errors/http-error";
 
 const APPROVED_COUNTRIES = ['PE', 'CO', 'BR'] as const;

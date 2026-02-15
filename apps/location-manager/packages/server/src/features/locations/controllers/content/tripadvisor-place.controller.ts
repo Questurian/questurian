@@ -3,7 +3,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { EnvConfig } from "@server/shared/config/env.config";
-import { SerpApiTripAdvisorClient } from "@server/shared/services/external/serpapi-tripadvisor.client";
+import { SerpApiTripAdvisorClient } from "../../services/integrations/clients/serpapi-tripadvisor.client";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 import { filterTripadvisorFeatures, normalizeTripadvisorStringList } from "../../utils/tripadvisor-utils";

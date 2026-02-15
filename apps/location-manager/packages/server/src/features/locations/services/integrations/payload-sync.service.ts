@@ -4,8 +4,8 @@ import type {
   PayloadApiClient,
   PayloadEntryData,
   PayloadEntryResponse
-} from "@server/shared/services/external/payload-api.client";
-import { ImageStorageService } from "@server/shared/services/storage/image-storage.service";
+} from "./clients/payload-api.client";
+import { ImageStorageService } from "../storage/image-storage.service";
 import { LocationQueryService } from "../core/location-query.service";
 import * as PayloadSyncRepo from "../../repositories/integration";
 import { updateLocationById } from "../../repositories/core";
