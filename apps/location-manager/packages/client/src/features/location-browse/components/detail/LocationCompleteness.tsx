@@ -46,7 +46,6 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       { key: "countryCode", label: "Country Code", present: Boolean(contact.countryCode?.trim()) },
       { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim()) },
       { key: "website", label: "Website", present: Boolean(contact.website?.trim()) },
-      { key: "contactAddress", label: "Contact Address", present: Boolean(contact.contactAddress?.trim()) },
       { key: "contactUrl", label: "Google URL", present: Boolean(contact.url?.trim()) },
       {
         key: "neighborhoodDescription",

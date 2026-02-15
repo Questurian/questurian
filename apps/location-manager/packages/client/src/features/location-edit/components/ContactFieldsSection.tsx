@@ -29,13 +29,6 @@ export function ContactFieldsSection({ form }: ContactFieldsSectionProps) {
       </FormSelect>
 
       <FormInput
-        name="contactAddress"
-        label="Contact Address"
-        control={form.control}
-        placeholder="Contact address (optional)"
-      />
-
-      <FormInput
         name="phoneNumber"
         label="Phone Number"
         control={form.control}

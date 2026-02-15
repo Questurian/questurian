@@ -37,7 +37,6 @@ export const editLocationSchema = z.object({
   type: z.string().optional().or(z.literal("")),
   locationKey: z.string().optional().or(z.literal("")),
   district: z.string().optional().or(z.literal("")),
-  contactAddress: z.string().optional().or(z.literal("")),
   countryCode: z.string().length(2, "Country code must be 2 letters").optional().or(z.literal("")),
   ianaTimeId: z.string().optional().or(z.literal("")),
   placeId: z.string().optional().or(z.literal("")),
