@@ -233,7 +233,7 @@ export async function uploadLocationImages(
 /**
  * Create Instagram post title from username and location
  */
-export function createInstagramPostTitle(username: string, location: LocationResponse): string {
+function createInstagramPostTitle(username: string, location: LocationResponse): string {
   const locationName = location.title || location.source.name;
   const cleanUsername = username.replace(/^@/, "");
   return `@${cleanUsername} at ${locationName}`;

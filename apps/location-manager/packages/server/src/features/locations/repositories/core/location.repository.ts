@@ -478,25 +478,6 @@ export function getLocationBySlug(slug: string): Location | null {
 }
 
 /**
- * Clear all data from the locations table (for development/testing only).
- *
- * WARNING: This deletes all locations permanently. Use with caution.
- */
-export function clearDatabase() {
-  try {
-    const db = getDb();
-    db.run("DELETE FROM locations");
-    db.run("DELETE FROM instagram_embeds");
-    db.run("DELETE FROM uploads");
-    db.run("VACUUM");
-    return true;
-  } catch (error) {
-    console.error("Error clearing database:", error);
-    return false;
-  }
-}
-
-/**
  * Delete a location by ID along with all related content.
  *
  * Cascades deletion to related instagram_embeds and uploads tables.

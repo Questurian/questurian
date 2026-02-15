@@ -9,7 +9,7 @@ export const locationCategorySchema = z.enum([
   "nightlife"
 ] as const satisfies readonly LocationCategory[]);
 
-export const idealForTagSchema = z.enum(IDEAL_FOR_TAGS);
+const idealForTagSchema = z.enum(IDEAL_FOR_TAGS);
 
 const idealForTagsSchema = z
   .array(idealForTagSchema)

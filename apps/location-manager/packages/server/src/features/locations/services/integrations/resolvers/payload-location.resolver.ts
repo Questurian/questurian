@@ -39,7 +39,7 @@ export async function resolvePayloadLocationRef(
 /**
  * Build a Payload location payload from a locationKey
  */
-export function buildPayloadLocationData(locationKey: string): PayloadLocationCreateData | null {
+function buildPayloadLocationData(locationKey: string): PayloadLocationCreateData | null {
   const parsed = parseLocationValue(locationKey);
   if (!parsed) {
     return null;

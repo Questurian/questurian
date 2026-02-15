@@ -1,6 +1,6 @@
 import { getDb } from "@server/shared/db/client";
 
-export interface TripAdvisorPlaceData {
+interface TripAdvisorPlaceData {
   id?: number;
   location_id: number;
   tripadvisor_place_id: string;
@@ -83,40 +83,4 @@ export function getTripAdvisorPlaceByLocationId(locationId: number): TripAdvisor
 
   if (!row) return null;
   return mapRow(row);
-}
-
-export function getAllTripAdvisorPlacesByLocationId(locationId: number): TripAdvisorPlaceData[] {
-  const db = getDb();
-  const rows = db.query(`
-    SELECT id, location_id, tripadvisor_place_id, place_data, created_at
-    FROM tripadvisor_places
-    WHERE location_id = $location_id
-    ORDER BY created_at DESC
-  `).all({ $location_id: locationId }) as TripAdvisorPlaceDbRow[];
-
-  return rows.map(mapRow);
-}
-
-export function deleteTripAdvisorPlaceById(id: number): boolean {
-  try {
-    const db = getDb();
-    db.query("DELETE FROM tripadvisor_places WHERE id = $id").run({ $id: id });
-    return true;
-  } catch (error) {
-    console.error("Error deleting TripAdvisor place:", error);
-    return false;
-  }
-}
-
-export function deleteTripAdvisorPlacesByLocationId(locationId: number): boolean {
-  try {
-    const db = getDb();
-    db.query("DELETE FROM tripadvisor_places WHERE location_id = $location_id").run({
-      $location_id: locationId,
-    });
-    return true;
-  } catch (error) {
-    console.error("Error deleting TripAdvisor places for location:", error);
-    return false;
-  }
 }

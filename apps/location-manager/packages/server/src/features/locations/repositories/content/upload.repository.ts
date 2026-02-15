@@ -97,17 +97,6 @@ export function getUploadsByLocationId(locationId: number): Upload[] {
   return rows.map(mapRow);
 }
 
-export function getAllUploads(): Upload[] {
-  const db = getDb();
-  const query = db.query(`
-    SELECT id, location_id, imageSets, uploadFormat, created_at
-    FROM uploads
-    ORDER BY created_at DESC
-  `);
-  const rows = query.all() as UploadDbRow[];
-  return rows.map(mapRow);
-}
-
 /**
  * Efficiently fetch uploads for multiple location IDs
  * Returns a Map of location_id -> Upload[] for O(1) lookup

@@ -1,5 +1,1 @@
-export { uploadLocationImages, createInstagramPostTitle } from './media-upload.handler';
-
-
-
-
+export { uploadLocationImages } from "./media-upload.handler";

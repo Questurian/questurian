@@ -125,47 +125,6 @@ export function isLocationInScope(locationKey: string, parentLocationKey: string
 }
 
 /**
- * Generate all possible location combinations from hierarchical data
- * @param countries - Array of country data with cities and neighborhoods
- * @returns Array of all possible location hierarchy entries
- */
-export function generateLocationCombinations(countries: CountryData[]): LocationHierarchy[] {
-  const locations: LocationHierarchy[] = [];
-
-  countries.forEach(country => {
-    // Add country-only entry
-    locations.push({
-      country: country.code,
-      city: null,
-      neighborhood: null,
-      locationKey: country.code,
-    });
-
-    country.cities.forEach(city => {
-      // Add country|city entry
-      locations.push({
-        country: country.code,
-        city: city.value,
-        neighborhood: null,
-        locationKey: `${country.code}|${city.value}`,
-      });
-
-      // Add country|city|neighborhood entries
-      city.neighborhoods.forEach(neighborhood => {
-        locations.push({
-          country: country.code,
-          city: city.value,
-          neighborhood: neighborhood.value,
-          locationKey: `${country.code}|${city.value}|${neighborhood.value}`,
-        });
-      });
-    });
-  });
-
-  return locations;
-}
-
-/**
  * Transform a flat location with nested arrays to the API response format
  * with contact, coordinates, and source objects
  * @param location - Location with nested instagram_embeds and uploads

@@ -17,15 +17,6 @@ export const syncAllSchema = z.object({
   category: locationCategorySchema.optional()
 });
 
-/**
- * Schema for getting sync status (optional ID path parameter)
- * GET /api/payload/sync-status/:id?
- */
-export const getSyncStatusIdSchema = z.object({
-  id: z.coerce.number().int("ID must be an integer").positive("ID must be positive").optional()
-});
-
 // Type exports
 export type SyncLocationIdDto = z.infer<typeof syncLocationIdSchema>;
 export type SyncAllDto = z.infer<typeof syncAllSchema>;
-export type GetSyncStatusIdDto = z.infer<typeof getSyncStatusIdSchema>;

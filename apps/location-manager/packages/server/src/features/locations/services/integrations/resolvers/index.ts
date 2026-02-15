@@ -1,5 +1,1 @@
-export { resolvePayloadLocationRef, buildPayloadLocationData } from './payload-location.resolver';
-
-
-
-
+export { resolvePayloadLocationRef } from "./payload-location.resolver";

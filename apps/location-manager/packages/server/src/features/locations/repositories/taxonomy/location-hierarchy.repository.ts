@@ -1,8 +1,6 @@
 import { getDb } from "@server/shared/db/client";
 import type { LocationHierarchy, CountryData, CityData, NeighborhoodData } from "../../models/location";
 import {
-  filterCitiesByCountry,
-  filterNeighborhoodsByCity,
   getCountries as extractCountries,
   isLocationInScope,
   buildNestedHierarchy
@@ -42,22 +40,6 @@ export function getAllLocationHierarchy(): LocationHierarchy[] {
 export function getCountries(): LocationHierarchy[] {
   const allLocations = getAllLocationHierarchy();
   return extractCountries(allLocations);
-}
-
-/**
- * Get all cities for a specific country
- */
-export function getCitiesByCountry(country: string): LocationHierarchy[] {
-  const allLocations = getAllLocationHierarchy();
-  return filterCitiesByCountry(allLocations, country);
-}
-
-/**
- * Get all neighborhoods for a specific city
- */
-export function getNeighborhoodsByCity(country: string, city: string): LocationHierarchy[] {
-  const allLocations = getAllLocationHierarchy();
-  return filterNeighborhoodsByCity(allLocations, country, city);
 }
 
 /**

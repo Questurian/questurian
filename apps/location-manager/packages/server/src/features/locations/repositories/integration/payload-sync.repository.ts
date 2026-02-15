@@ -38,29 +38,6 @@ export function getSyncState(
 }
 
 /**
- * Get all sync states for a location (across all collections)
- */
-export function getSyncStatesByLocationId(locationId: number): PayloadSyncState[] {
-  try {
-    const db = getDb();
-    const query = db.query(`
-      SELECT *
-      FROM payload_sync_state
-      WHERE location_id = $locationId
-    `);
-
-    const results = query.all({
-      $locationId: locationId,
-    }) as PayloadSyncState[];
-
-    return results;
-  } catch (error) {
-    console.error("Error fetching sync states by location:", error);
-    return [];
-  }
-}
-
-/**
  * Get all synced locations, optionally filtered by collection
  */
 export function getAllSyncedLocations(
@@ -134,50 +111,3 @@ export function saveSyncState(
   }
 }
 
-/**
- * Delete sync state for a location (called when location is deleted)
- */
-export function deleteSyncState(locationId: number): boolean {
-  try {
-    const db = getDb();
-    const query = db.query(`
-      DELETE FROM payload_sync_state
-      WHERE location_id = $locationId
-    `);
-
-    query.run({ $locationId: locationId });
-    return true;
-  } catch (error) {
-    console.error("Error deleting sync state:", error);
-    return false;
-  }
-}
-
-/**
- * Get count of synced locations by status
- */
-export function getSyncStatistics(): {
-  total: number;
-  success: number;
-  failed: number;
-  pending: number;
-} {
-  try {
-    const db = getDb();
-
-    const totalQuery = db.query("SELECT COUNT(*) as count FROM payload_sync_state");
-    const successQuery = db.query("SELECT COUNT(*) as count FROM payload_sync_state WHERE sync_status = 'success'");
-    const failedQuery = db.query("SELECT COUNT(*) as count FROM payload_sync_state WHERE sync_status = 'failed'");
-    const pendingQuery = db.query("SELECT COUNT(*) as count FROM payload_sync_state WHERE sync_status = 'pending'");
-
-    const total = (totalQuery.get() as { count: number }).count;
-    const success = (successQuery.get() as { count: number }).count;
-    const failed = (failedQuery.get() as { count: number }).count;
-    const pending = (pendingQuery.get() as { count: number }).count;
-
-    return { total, success, failed, pending };
-  } catch (error) {
-    console.error("Error getting sync statistics:", error);
-    return { total: 0, success: 0, failed: 0, pending: 0 };
-  }
-}

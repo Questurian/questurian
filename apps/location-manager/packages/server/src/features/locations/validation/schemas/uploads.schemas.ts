@@ -27,7 +27,7 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB
 export const MAX_FILES = 20;
 
-export const uploadFileSchema = z.custom<File>(
+const uploadFileSchema = z.custom<File>(
   (file) => file instanceof File,
   "Must be a file"
 ).refine(
@@ -38,7 +38,7 @@ export const uploadFileSchema = z.custom<File>(
   `File size must be less than ${MAX_FILE_SIZE / 1024 / 1024}MB`
 );
 
-export const uploadFormDataSchema = z.object({
+const uploadFormDataSchema = z.object({
   // locationId removed - now comes from URL parameter (:id)
   photographerCredit: z.string().trim().optional().nullable(),
   files: z.array(uploadFileSchema)
@@ -52,5 +52,3 @@ export const uploadFormDataSchema = z.object({
       `Total size must be less than ${MAX_TOTAL_SIZE / 1024 / 1024}MB`
     )
 });
-
-export type UploadFormDataDto = z.infer<typeof uploadFormDataSchema>;

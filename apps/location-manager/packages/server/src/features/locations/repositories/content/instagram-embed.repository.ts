@@ -103,17 +103,6 @@ export function getInstagramEmbedsByLocationId(locationId: number): InstagramEmb
   return rows.map(mapRow);
 }
 
-export function getAllInstagramEmbeds(): InstagramEmbed[] {
-  const db = getDb();
-  const query = db.query(`
-    SELECT id, location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
-    FROM instagram_embeds
-    ORDER BY created_at DESC
-  `);
-  const rows = query.all() as InstagramEmbedDbRow[];
-  return rows.map(mapRow);
-}
-
 /**
  * Efficiently fetch instagram embeds for multiple location IDs
  * Returns a Map of location_id -> InstagramEmbed[] for O(1) lookup

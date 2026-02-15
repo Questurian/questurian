@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
 
-export interface ImageMetadata {
+interface ImageMetadata {
   width: number;
   height: number;
   size: number; // bytes
@@ -67,13 +67,4 @@ function normalizeFormat(format?: string): string {
   };
 
   return formatMap[format.toLowerCase()] || format.toLowerCase();
-}
-
-/**
- * Format file size in human-readable format
- */
-export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
