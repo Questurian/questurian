@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { locationsApi, useLocationsBasic } from "@client/shared/services/api";
 import { Button } from "@client/components/ui/button";
-import { LocationList, LocationListEmpty } from "../components/list";
-import { LocationFilters } from "../components/filters";
+import { LocationList } from "../components/list/LocationList";
+import { LocationListEmpty } from "../components/list/LocationListEmpty";
+import { LocationFilters } from "../components/filters/LocationFilters";
 import { useLocationFilters } from "../hooks/useLocationFilters";
 import { useCountries } from "@client/shared/hooks/useCountries";
 import { buildLocationKey } from "@client/shared/lib/filter-utils";

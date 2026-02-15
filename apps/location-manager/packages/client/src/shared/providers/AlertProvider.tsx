@@ -30,7 +30,7 @@ interface AlertContextValue {
   showError: (message: string, title?: string) => void;
 }
 
-export const AlertContext = createContext<AlertContextValue | null>(null);
+const AlertContext = createContext<AlertContextValue | null>(null);
 
 export function AlertProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{

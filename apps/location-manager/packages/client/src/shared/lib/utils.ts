@@ -9,52 +9,6 @@ export function cn(...inputs: ClassValue[]) {
 export const formatLocationHierarchy = sharedFormatLocationHierarchy;
 
 /**
- * Event handler that forces all input to be lowercase (typing, pasting, etc.)
- * @param event - The input event
- */
-export function handleLowercaseInput(event: React.FormEvent<HTMLInputElement>) {
-  const input = event.target as HTMLInputElement;
-  const currentValue = input.value;
-  const lowercaseValue = currentValue.toLowerCase();
-
-  // Only update if the value actually changed
-  if (currentValue !== lowercaseValue) {
-    const cursorPosition = input.selectionStart || 0;
-    input.value = lowercaseValue;
-
-    // Restore cursor position
-    input.setSelectionRange(cursorPosition, cursorPosition);
-  }
-}
-
-/**
- * Event handler for paste events that forces the pasted text to be lowercase
- * @param event - The paste event
- */
-export function handleLowercasePaste(event: React.ClipboardEvent<HTMLInputElement>) {
-  event.preventDefault();
-  const pastedText = event.clipboardData.getData('text');
-  const lowercaseText = pastedText.toLowerCase();
-
-  // Insert the lowercase text at the current cursor position
-  const input = event.target as HTMLInputElement;
-  const start = input.selectionStart || 0;
-  const end = input.selectionEnd || 0;
-  const currentValue = input.value;
-
-  // Replace selected text or insert at cursor position
-  const newValue = currentValue.substring(0, start) + lowercaseText + currentValue.substring(end);
-  input.value = newValue;
-
-  // Trigger change event to update React state
-  const changeEvent = new Event('input', { bubbles: true });
-  input.dispatchEvent(changeEvent);
-
-  // Set cursor position after the pasted text
-  input.setSelectionRange(start + lowercaseText.length, start + lowercaseText.length);
-}
-
-/**
  * Convert a string to a URL-friendly slug format
  * - Converts to lowercase
  * - Normalizes accented characters (ã → a, ç → c, etc.)
@@ -64,7 +18,7 @@ export function handleLowercasePaste(event: React.ClipboardEvent<HTMLInputElemen
  * @param text - The text to slugify
  * @returns Slugified string (e.g., "São Paulo" → "sao-paulo")
  */
-export function slugify(text: string): string {
+function slugify(text: string): string {
   return text
     .toLowerCase()
     .normalize("NFD") // Decompose accented characters

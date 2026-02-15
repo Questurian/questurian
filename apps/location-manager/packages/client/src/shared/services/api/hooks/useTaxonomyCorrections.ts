@@ -11,7 +11,7 @@ import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 /**
  * Query key for taxonomy corrections cache
  */
-export const TAXONOMY_CORRECTIONS_QUERY_KEY = ["admin", "taxonomy", "corrections"] as const;
+const TAXONOMY_CORRECTIONS_QUERY_KEY = ["admin", "taxonomy", "corrections"] as const;
 
 /**
  * Fetch all taxonomy correction rules

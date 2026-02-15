@@ -5,7 +5,7 @@ import { LOCATIONS_QUERY_KEY } from "./useLocations";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 import { LOCATION_BY_ID_QUERY_KEY } from "./useLocationById";
 
-export const TRIPADVISOR_PLACE_STATUS_QUERY_KEY = "tripadvisor-place-status";
+const TRIPADVISOR_PLACE_STATUS_QUERY_KEY = "tripadvisor-place-status";
 
 interface UseFetchTripAdvisorPlaceOptions {
   locationId: number;

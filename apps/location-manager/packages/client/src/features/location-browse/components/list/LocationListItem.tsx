@@ -13,12 +13,10 @@ import {
   AlertDialogTitle,
 } from "@client/components/ui";
 import { getCategoryBadgeStyles } from "../../utils";
-import {
-  useLocationDetail,
-  useLocationItemMenu,
-  useLocationDelete,
-  useClipboardCopy,
-} from "../../hooks";
+import { useLocationDetail } from "../../hooks/useLocationDetail";
+import { useLocationItemMenu } from "../../hooks/useLocationItemMenu";
+import { useLocationDelete } from "../../hooks/useLocationDelete";
+import { useClipboardCopy } from "../../hooks/useClipboardCopy";
 import { LocationItemMenu } from "./LocationItemMenu";
 import { LocationDetailView } from "../detail/LocationDetailView";
 import { AdvancedDataModal } from "./AdvancedDataModal";

@@ -99,50 +99,6 @@ function getMimeType(extension: string): string {
 }
 
 /**
- * Load an image and return its dimensions
- */
-export async function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = src;
-  });
-}
-
-/**
- * Validate if an image meets minimum resolution requirements
- */
-export async function validateImageResolution(
-  file: File,
-  minWidth: number,
-  minHeight: number
-): Promise<{ valid: boolean; error?: string; dimensions?: { width: number; height: number } }> {
-  try {
-    const url = URL.createObjectURL(file);
-    const img = await loadImage(url);
-    URL.revokeObjectURL(url);
-
-    const dimensions = { width: img.naturalWidth, height: img.naturalHeight };
-
-    if (img.naturalWidth < minWidth || img.naturalHeight < minHeight) {
-      return {
-        valid: false,
-        error: `Image resolution too low. Minimum: ${minWidth}×${minHeight}px, Got: ${img.naturalWidth}×${img.naturalHeight}px`,
-        dimensions,
-      };
-    }
-
-    return { valid: true, dimensions };
-  } catch (error) {
-    return {
-      valid: false,
-      error: error instanceof Error ? error.message : "Failed to validate image",
-    };
-  }
-}
-
-/**
  * Generate filename for a specific variant
  */
 function generateVariantFileName(originalName: string, variantType: ImageVariantType): string {

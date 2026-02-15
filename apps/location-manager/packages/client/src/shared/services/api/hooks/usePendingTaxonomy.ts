@@ -39,18 +39,3 @@ export function useApproveTaxonomy() {
   });
 }
 
-/**
- * Hook to reject a taxonomy entry
- */
-export function useRejectTaxonomy() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (locationKey: string) =>
-      taxonomyAdminApi.rejectEntry(locationKey),
-    onSuccess: () => {
-      // Invalidate pending taxonomy query to refetch
-      queryClient.invalidateQueries({ queryKey: PENDING_TAXONOMY_QUERY_KEY });
-    },
-  });
-}

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
 
-export const LEADS_API_HEALTH_QUERY_KEY = "leads-api-health";
+const LEADS_API_HEALTH_QUERY_KEY = "leads-api-health";
 
 interface UseLeadsApiHealthOptions {
   enabled?: boolean;
