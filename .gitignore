@@ -26,6 +26,9 @@ package-lock.json
 # IDE - VSCode
 **/.vscode/
 
+# Cursor local state
+.cursor/
+
 # misc
 /.sass-cache
 /connect.lock
