@@ -319,6 +319,9 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
       (locationDetail.uploads && locationDetail.uploads.length > 0) ||
       (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0);
     const hasIdealFor = Boolean(Array.isArray(locationDetail.idealFor) && locationDetail.idealFor.length > 0);
+    const hasCuisines = Boolean(
+      Array.isArray(locationDetail.tripadvisorCuisines) && locationDetail.tripadvisorCuisines.length > 0
+    );
 
     return [
       { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
@@ -350,6 +353,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         present: Boolean(locationDetail.neighborhoodDescription?.trim()),
       },
       { key: "idealFor", label: "Ideal For", present: hasIdealFor },
+      { key: "cuisines", label: "Cuisines", present: hasCuisines },
       { key: "operationHours", label: "Hours", present: hasOperationHours },
       { key: "media", label: "Images/Instagram", present: hasMedia },
     ];

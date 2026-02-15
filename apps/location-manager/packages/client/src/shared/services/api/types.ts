@@ -131,6 +131,7 @@ export interface LocationResponse {
   placeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  payload_location_ref: string | null;
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;

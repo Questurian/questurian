@@ -35,22 +35,52 @@ export function PayloadSync() {
 
   const [syncingId, setSyncingId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "synced" | "ready" | "incomplete">("all");
 
-  const completeLocationIds = useMemo(() => {
-    const ids = new Set<number>();
-    (locationsBasicData?.locations ?? []).forEach((location) => {
-      if (location.isComplete) {
-        ids.add(location.id);
-      }
-    });
-    return ids;
+  const completeLocations = useMemo(() => {
+    const locations = (locationsBasicData?.locations ?? []).filter(
+      (location) => location.isComplete
+    );
+    return locations;
   }, [locationsBasicData]);
 
-  // Show only data-complete locations, with optional category filter
-  const filteredData = useMemo(() => {
-    if (!statusData) return [];
+  // Create a map of sync status by locationId for quick lookup
+  const syncStatusMap = useMemo(() => {
+    const map = new Map<number, SyncStatusResponse>();
+    (statusData ?? []).forEach((item) => {
+      map.set(item.locationId, item);
+    });
+    return map;
+  }, [statusData]);
 
-    let filtered = statusData.filter(item => completeLocationIds.has(item.locationId));
+  // Show ALL locations with their sync status and completion status
+  const allLocationsWithStatus = useMemo(() => {
+    return (locationsBasicData?.locations ?? []).map((location) => {
+      const syncStatus = syncStatusMap.get(location.id);
+      return {
+        locationId: location.id,
+        title: location.title || location.name,
+        category: location.category,
+        isComplete: location.isComplete,
+        synced: !!syncStatus && syncStatus.synced,
+        needsResync: !!syncStatus && syncStatus.needsResync,
+        syncState: syncStatus?.syncState,
+      };
+    });
+  }, [locationsBasicData, syncStatusMap]);
+
+  // Filter by status and category
+  const filteredData = useMemo(() => {
+    let filtered = allLocationsWithStatus;
+
+    // Filter by status
+    if (statusFilter === "synced") {
+      filtered = filtered.filter(item => item.synced && !item.needsResync);
+    } else if (statusFilter === "ready") {
+      filtered = filtered.filter(item => !item.synced && item.isComplete);
+    } else if (statusFilter === "incomplete") {
+      filtered = filtered.filter(item => !item.isComplete);
+    }
 
     // Filter by category
     if (categoryFilter !== "all") {
@@ -58,20 +88,19 @@ export function PayloadSync() {
     }
 
     return filtered;
-  }, [statusData, categoryFilter, completeLocationIds]);
+  }, [allLocationsWithStatus, categoryFilter, statusFilter]);
 
   // Calculate statistics
   const stats = useMemo(() => {
-    if (!statusData) return { total: 0, synced: 0, failed: 0, notSynced: 0, needsResync: 0 };
+    const total = (locationsBasicData?.locations ?? []).length;
+    const synced = allLocationsWithStatus.filter(item => item.synced && !item.needsResync).length;
+    const ready = allLocationsWithStatus.filter(item => !item.synced && item.isComplete).length;
+    const incomplete = allLocationsWithStatus.filter(item => !item.isComplete).length;
+    const needsResync = allLocationsWithStatus.filter(item => item.needsResync).length;
+    const failed = allLocationsWithStatus.filter(item => item.syncState?.sync_status === "failed").length;
 
-    const total = statusData.length;
-    const synced = statusData.filter(item => item.synced && item.syncState?.sync_status === "success" && !item.needsResync).length;
-    const failed = statusData.filter(item => item.syncState?.sync_status === "failed").length;
-    const notSynced = statusData.filter(item => !item.synced).length;
-    const needsResync = statusData.filter(item => item.needsResync).length;
-
-    return { total, synced, failed, notSynced, needsResync };
-  }, [statusData]);
+    return { total, synced, ready, incomplete, needsResync, failed };
+  }, [locationsBasicData, allLocationsWithStatus]);
 
   const handleSyncLocation = async (locationId: number) => {
     setSyncingId(locationId);
@@ -98,9 +127,12 @@ export function PayloadSync() {
     }
   };
 
-  const getSyncStatusBadge = (item: SyncStatusResponse) => {
+  const getSyncStatusBadge = (item: typeof allLocationsWithStatus[number]) => {
     if (!item.syncState) {
-      return <span className="px-2 py-1 text-xs rounded bg-gray-200 text-gray-700">Not Synced</span>;
+      if (item.isComplete) {
+        return <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">Ready to Sync</span>;
+      }
+      return <span className="px-2 py-1 text-xs rounded bg-gray-200 text-gray-700">Incomplete</span>;
     }
 
     if (item.syncState.sync_status === "success") {
@@ -136,7 +168,7 @@ export function PayloadSync() {
               Payload CMS Sync
             </h2>
             <p className="text-muted-foreground">
-              Sync location data from url-util to Payload CMS. Showing data-complete locations only.
+              Sync location data from url-util to Payload CMS
             </p>
           </div>
 
@@ -202,14 +234,22 @@ export function PayloadSync() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-6 gap-4 mb-6">
           <div className="bg-muted p-4 rounded">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <div className="text-sm text-muted-foreground">Total Locations</div>
+            <div className="text-sm text-muted-foreground">Total</div>
           </div>
           <div className="bg-green-50 p-4 rounded">
             <div className="text-2xl font-bold text-green-700">{stats.synced}</div>
             <div className="text-sm text-green-600">Synced</div>
+          </div>
+          <div className="bg-blue-50 p-4 rounded">
+            <div className="text-2xl font-bold text-blue-700">{stats.ready}</div>
+            <div className="text-sm text-blue-600">Ready to Sync</div>
+          </div>
+          <div className="bg-amber-50 p-4 rounded">
+            <div className="text-2xl font-bold text-amber-700">{stats.incomplete}</div>
+            <div className="text-sm text-amber-600">Incomplete</div>
           </div>
           <div className="bg-orange-50 p-4 rounded">
             <div className="text-2xl font-bold text-orange-700">{stats.needsResync}</div>
@@ -219,16 +259,27 @@ export function PayloadSync() {
             <div className="text-2xl font-bold text-red-700">{stats.failed}</div>
             <div className="text-sm text-red-600">Failed</div>
           </div>
-          <div className="bg-gray-50 p-4 rounded">
-            <div className="text-2xl font-bold text-gray-700">{stats.notSynced}</div>
-            <div className="text-sm text-gray-600">Not Synced</div>
-          </div>
         </div>
 
         {/* Controls */}
         <div className="flex gap-4 mb-6">
           <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Category Filter</label>
+            <label className="block text-sm font-medium mb-1">Status</label>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "synced" | "ready" | "incomplete")}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="synced">✅ Synced</SelectItem>
+                <SelectItem value="ready">🚀 Ready for Sync (Complete Fields)</SelectItem>
+                <SelectItem value="incomplete">⚠️ Incomplete (Missing Fields)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-1">Category</label>
             <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as Category | "all")}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by category" />
@@ -246,7 +297,7 @@ export function PayloadSync() {
           <div className="flex items-end">
             <Button
               onClick={handleSyncAll}
-              disabled={syncAllMutation.isPending}
+              disabled={syncAllMutation.isPending || filteredData.length === 0}
               className="w-full"
             >
               {syncAllMutation.isPending ? "Syncing..." : "Sync All"}
@@ -270,7 +321,13 @@ export function PayloadSync() {
         ) : filteredData.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              No data-complete locations found for the selected category.
+              {statusFilter === "ready"
+                ? "No locations ready for sync. Complete missing fields to prepare locations."
+                : statusFilter === "incomplete"
+                  ? "No incomplete locations found."
+                  : statusFilter === "synced"
+                    ? "No synced locations found."
+                    : "No locations found for the selected filters."}
             </p>
           </div>
         ) : (

@@ -257,23 +257,21 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
 export function transformLocationToBasicResponse(
   location: import('../models/location').Location & { uploadsCount: number; instagramEmbedsCount: number }
 ): import('../models/location').LocationBasic {
-  // Calculate completion status based on Payload CMS sync fields
-  // Required fields for Payload sync:
-  // - title (required)
-  // - gallery with at least one image (required by Payload schema)
-  // All optional fields should be present for "complete" status
+  // Calculate completion status based on fields synced to Payload CMS
+  // A location is "complete" when it has all required fields:
+  // - title, type, gallery (at least 1 image or instagram embed)
+  // - address, countryCode, phoneNumber, website
+  // - operationHours, cuisines, idealFor, ianaTimeId
+  // - latitude, longitude
+  // Excluded: email (optional, hard to source), locationRef (auto-resolved during sync)
 
-  const hasRequiredTitle = Boolean(location.title?.trim());
-  const hasRequiredMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
-
-  // Optional but required for "complete" status (fields sent to Payload)
+  const hasTitle = Boolean(location.title?.trim());
   const hasType = Boolean(location.type?.trim());
-  const hasLocationRef = Boolean(location.payload_location_ref?.trim());
+  const hasMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
   const hasAddress = Boolean(location.address?.trim());
   const hasCountryCode = Boolean(location.countryCode?.trim());
   const hasPhoneNumber = Boolean(location.phoneNumber?.trim());
   const hasWebsite = Boolean(location.website?.trim());
-  const hasEmail = Boolean(location.email?.trim());
   const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
   const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
   const hasIdealFor = (() => {
@@ -286,25 +284,23 @@ export function transformLocationToBasicResponse(
     }
   })();
   const hasIanaTimeId = Boolean(location.ianaTimeId?.trim());
-  const hasLatitude = location.lat != null;
-  const hasLongitude = location.lng != null;
+  const hasCoordinates = location.lat != null && location.lng != null;
 
+  // All fields synced to Payload must be present
+  // Note: locationRef is excluded — it's auto-resolved during sync
   const isComplete =
-    hasRequiredTitle &&
-    hasRequiredMedia &&
+    hasTitle &&
     hasType &&
-    hasLocationRef &&
+    hasMedia &&
     hasAddress &&
     hasCountryCode &&
     hasPhoneNumber &&
     hasWebsite &&
-    hasEmail &&
     hasOperationHours &&
     hasCuisines &&
     hasIdealFor &&
     hasIanaTimeId &&
-    hasLatitude &&
-    hasLongitude;
+    hasCoordinates;
 
   return {
     id: location.id!,
