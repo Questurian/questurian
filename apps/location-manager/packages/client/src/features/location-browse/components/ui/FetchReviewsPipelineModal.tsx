@@ -101,8 +101,8 @@ export function FetchReviewsPipelineModal({
             <div className="flex flex-col items-center justify-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
               <div className="text-center">
-                <p className="text-lg font-medium text-gray-900">Running review pipeline...</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-lg font-medium text-foreground">Running review pipeline...</p>
+                <p className="text-sm text-muted-foreground mt-1">
                   Fetching, translating, and merging reviews. This may take a few minutes.
                 </p>
                 {statusMessage && (
@@ -114,7 +114,7 @@ export function FetchReviewsPipelineModal({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">Which sources do you want to use?</p>
+              <p className="text-sm font-medium text-foreground">Which sources do you want to use?</p>
               <div className="space-y-2">
                 <label className={`flex items-center gap-2 text-sm ${googleDisabled ? "opacity-50" : ""}`}>
                   <input
@@ -122,11 +122,11 @@ export function FetchReviewsPipelineModal({
                     checked={sources.google}
                     disabled={googleDisabled}
                     onChange={() => handleToggle("google")}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
                   <span>Google</span>
                   {googleDisabled && (
-                    <span className="text-xs text-gray-400">(Google Place ID required)</span>
+                    <span className="text-xs text-muted-foreground">(Google Place ID required)</span>
                   )}
                 </label>
                 <label className={`flex items-center gap-2 text-sm ${tripadvisorDisabled ? "opacity-50" : ""}`}>
@@ -135,13 +135,13 @@ export function FetchReviewsPipelineModal({
                     checked={sources.tripadvisor}
                     disabled={tripadvisorDisabled}
                     onChange={() => handleToggle("tripadvisor")}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
                   <span>TripAdvisor</span>
-                  <span className="text-xs text-gray-400">(default)</span>
+                  <span className="text-xs text-muted-foreground">(default)</span>
                 </label>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 TripAdvisor is selected by default since Google API quota is currently exhausted.
               </p>
             </div>

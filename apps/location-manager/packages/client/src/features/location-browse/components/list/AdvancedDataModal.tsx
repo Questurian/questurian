@@ -84,7 +84,8 @@ export function AdvancedDataModal({
   const downloadTripAdvisorPlace = useDownloadTripAdvisorPlace();
   const canDownloadAiJson = Boolean(
     tripAdvisorPlaceStatusQuery.data?.hasPlaceData &&
-      mergedReviewsStatusQuery.data?.hasMergedReviews
+      mergedReviewsStatusQuery.data?.hasMergedReviews &&
+      locationDetail?.neighborhoodDescription?.trim()
   );
 
   const refetchPlaceIdMutation = useRefetchPlaceId({
@@ -342,10 +343,10 @@ export function AdvancedDataModal({
                   TripAdvisor Place Data
                 </span>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  {locationDetail.tripadvisorLocationId ? "Available" : "Requires TripAdvisor ID"}
+                  {canFetchTripadvisor ? "URL available" : "Requires TripAdvisor URL"}
                 </span>
               </div>
-              {locationDetail.tripadvisorLocationId ? (
+              {canFetchTripadvisor ? (
                 <div className="flex flex-wrap items-center gap-2">
                   {fetchTripAdvisorPlaceMutation.isPending ? (
                     <span className="text-sm text-primary inline-flex items-center">
@@ -386,7 +387,7 @@ export function AdvancedDataModal({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Add a TripAdvisor URL to enable place data fetching.
+                  Add a TripAdvisor URL and save it to enable place data fetching.
                 </p>
               )}
             </section>
@@ -414,7 +415,7 @@ export function AdvancedDataModal({
                   title={
                     canDownloadAiJson
                       ? "Download AI-JSON (core TripAdvisor fields + filtered reviews)"
-                      : "Requires TripAdvisor place data and merged reviews"
+                      : "Requires TripAdvisor place data, merged reviews, and neighborhood description"
                   }
                 >
                   AI-JSON

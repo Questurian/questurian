@@ -8,14 +8,14 @@ export function getCategoryBadgeStyles(category: string): string {
 
   switch (categoryLower) {
     case 'accommodations':
-      return 'bg-blue-50 text-slate-600';
+      return 'bg-blue-500/15 text-blue-400';
     case 'nightlife':
-      return 'bg-purple-50 text-slate-600';
+      return 'bg-purple-500/15 text-purple-400';
     case 'dining':
-      return 'bg-orange-50 text-slate-600';
+      return 'bg-orange-500/15 text-orange-400';
     case 'attractions':
-      return 'bg-green-50 text-slate-600';
+      return 'bg-emerald-500/15 text-emerald-400';
     default:
-      return 'bg-gray-50 text-slate-600';
+      return 'bg-muted text-muted-foreground';
   }
 }

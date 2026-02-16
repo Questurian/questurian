@@ -29,8 +29,8 @@ function StepIcon({ status }: { status: PipelineStep["status"] }) {
       );
     default:
       return (
-        <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center">
-          <Circle className="w-2 h-2 text-gray-300" />
+        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center">
+          <Circle className="w-2 h-2 text-muted-foreground/30" />
         </div>
       );
   }
@@ -46,7 +46,7 @@ export function PipelineProgress({ steps }: PipelineProgressProps) {
             {index < steps.length - 1 && (
               <div
                 className={`w-0.5 h-6 mt-1 ${
-                  step.status === "completed" ? "bg-green-500" : "bg-gray-200"
+                  step.status === "completed" ? "bg-green-500" : "bg-muted"
                 }`}
               />
             )}
@@ -60,13 +60,13 @@ export function PipelineProgress({ steps }: PipelineProgressProps) {
                   ? "text-green-600"
                   : step.status === "failed"
                   ? "text-red-600"
-                  : "text-gray-500"
+                  : "text-muted-foreground"
               }`}
             >
               {step.label}
             </p>
             {step.detail && (
-              <p className="text-xs text-gray-500 mt-0.5">{step.detail}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{step.detail}</p>
             )}
           </div>
         </div>

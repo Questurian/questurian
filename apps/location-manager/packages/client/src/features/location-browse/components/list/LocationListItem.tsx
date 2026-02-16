@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Compass, Instagram, Search } from "lucide-react";
 import type { LocationBasic } from "@client/shared/services/api/types";
 import { formatLocationHierarchy } from "@client/shared/lib/utils";
 import {
@@ -26,10 +27,45 @@ interface LocationListItemProps {
   onClick?: (id: number) => void;
 }
 
+function formatLocationSegmentForSearch(segment: string): string {
+  return segment
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function buildSearchQueries(location: LocationBasic): {
+  google: string;
+  tripAdvisor: string;
+  instagram: string;
+} {
+  const title = (location.title || location.name || "").trim();
+  const locationSegments = (location.location || "")
+    .split("|")
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map(formatLocationSegmentForSearch);
+
+  const [country, city] = locationSegments;
+  const baseQuery = [title, city, country].filter(Boolean).join(" ").trim() || title;
+
+  return {
+    google: baseQuery,
+    tripAdvisor: `${baseQuery} TripAdvisor`,
+    instagram: `${baseQuery} Instagram`,
+  };
+}
+
+function buildGoogleSearchUrl(query: string): string {
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
 export function LocationListItem({ location, onClick }: LocationListItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const navigate = useNavigate();
+  const searchQueries = buildSearchQueries(location);
 
   // Custom hooks
   const { data: locationDetail, isLoading, error } = useLocationDetail(
@@ -70,16 +106,52 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
   };
 
   return (
-    <div data-theme="light" className="border border-border rounded-lg p-4 bg-background transition-all duration-200 hover:shadow-sm hover:border-border">
+    <div className="border border-border rounded-lg p-4 bg-card hover:bg-accent/30 transition-all duration-200">
       {/* Header Section */}
       <div
         className="flex items-start justify-between gap-3 cursor-pointer"
         onClick={handleClick}
       >
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-foreground text-base leading-tight truncate">
-            {location.title || location.name}
-          </h3>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+            <h3 className="font-medium text-foreground text-base leading-tight truncate min-w-0">
+              {location.title || location.name}
+            </h3>
+            <div className="inline-flex items-center gap-1.5 shrink-0 text-[11px] text-muted-foreground/85">
+              <a
+                href={buildGoogleSearchUrl(searchQueries.google)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-accent/60 hover:text-foreground"
+              >
+                <Search size={11} />
+                Google
+              </a>
+              <span aria-hidden="true" className="text-muted-foreground/50">|</span>
+              <a
+                href={buildGoogleSearchUrl(searchQueries.tripAdvisor)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-accent/60 hover:text-foreground"
+              >
+                <Compass size={11} />
+                TripAdvisor
+              </a>
+              <span aria-hidden="true" className="text-muted-foreground/50">|</span>
+              <a
+                href={buildGoogleSearchUrl(searchQueries.instagram)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-accent/60 hover:text-foreground"
+              >
+                <Instagram size={11} />
+                Instagram
+              </a>
+            </div>
+          </div>
           {location.location != null && (
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
               {formatLocationHierarchy(location.location)}

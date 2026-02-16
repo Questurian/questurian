@@ -115,11 +115,11 @@ export function AltTextReviewModal({
           </div>
 
           {/* Tips */}
-          <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-              💡 Alt Text Best Practices
+          <div className="bg-blue-500/10 p-3 rounded-lg">
+            <h4 className="text-sm font-medium text-blue-300 mb-1">
+              Alt Text Best Practices
             </h4>
-            <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+            <ul className="text-xs text-blue-400 space-y-1">
               <li>• Be descriptive and specific about what's in the image</li>
               <li>• Keep it concise (under 125 characters recommended)</li>
               <li>• Focus on key visual elements and context</li>

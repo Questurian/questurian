@@ -12,7 +12,7 @@ export function CountrySelect({ value, onChange, countries, isLoading }: Country
   return (
     <div>
       <Select value={value ?? ""} onValueChange={onChange} disabled={isLoading}>
-        <SelectTrigger style={{ width: "200px" }}>
+        <SelectTrigger className="w-[200px]">
           <SelectValue placeholder={isLoading ? "Loading..." : "Select country"} />
         </SelectTrigger>
         <SelectContent>

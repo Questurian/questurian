@@ -3,6 +3,8 @@ import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection } from
 import { useClearDatabase, useLocationsBasic } from "@client/shared/services/api/hooks";
 import { useToast } from "@client/shared/hooks/useToast";
 import { Button } from "@client/components/ui/button";
+import { Breadcrumbs } from "@client/shared/components/layout";
+import { SkeletonTable } from "@client/shared/components/ui";
 import {
   Select,
   SelectContent,
@@ -36,13 +38,6 @@ export function PayloadSync() {
   const [syncingId, setSyncingId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "synced" | "ready" | "incomplete">("all");
-
-  const completeLocations = useMemo(() => {
-    const locations = (locationsBasicData?.locations ?? []).filter(
-      (location) => location.isComplete
-    );
-    return locations;
-  }, [locationsBasicData]);
 
   // Create a map of sync status by locationId for quick lookup
   const syncStatusMap = useMemo(() => {
@@ -130,25 +125,25 @@ export function PayloadSync() {
   const getSyncStatusBadge = (item: typeof allLocationsWithStatus[number]) => {
     if (!item.syncState) {
       if (item.isComplete) {
-        return <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">Ready to Sync</span>;
+        return <span className="px-2 py-1 text-xs rounded bg-blue-500/15 text-blue-400">Ready to Sync</span>;
       }
-      return <span className="px-2 py-1 text-xs rounded bg-gray-200 text-gray-700">Incomplete</span>;
+      return <span className="px-2 py-1 text-xs rounded bg-muted text-muted-foreground">Incomplete</span>;
     }
 
     if (item.syncState.sync_status === "success") {
       // Check if location needs resync (changed after last sync)
       if (item.needsResync) {
-        return <span className="px-2 py-1 text-xs rounded bg-orange-100 text-orange-700">Needs Resync</span>;
+        return <span className="px-2 py-1 text-xs rounded bg-orange-500/15 text-orange-400">Needs Resync</span>;
       }
-      return <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Synced</span>;
+      return <span className="px-2 py-1 text-xs rounded bg-emerald-500/15 text-emerald-400">Synced</span>;
     }
 
     if (item.syncState.sync_status === "failed") {
-      return <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Failed</span>;
+      return <span className="px-2 py-1 text-xs rounded bg-red-500/15 text-red-400">Failed</span>;
     }
 
     if (item.syncState.sync_status === "pending") {
-      return <span className="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-700">Pending</span>;
+      return <span className="px-2 py-1 text-xs rounded bg-amber-500/15 text-amber-400">Pending</span>;
     }
 
     return null;
@@ -160,11 +155,12 @@ export function PayloadSync() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div data-theme="light" className="bg-background rounded-lg shadow-lg p-6">
+      <Breadcrumbs items={[{ label: "Admin" }, { label: "Payload Sync" }]} />
+      <div className="bg-card border border-border rounded-xl p-6">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between">
           <div>
-            <h2 className="text-[24px] font-bold mb-2 text-foreground underline">
+            <h2 className="text-[24px] font-bold mb-2 text-foreground">
               Payload CMS Sync
             </h2>
             <p className="text-muted-foreground">
@@ -204,30 +200,30 @@ export function PayloadSync() {
         {/* Connection Status */}
         <div className="mb-6">
           {isConnecting ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-yellow-700">🟡 Connecting to Payload...</span>
+                <span className="text-amber-400">🟡 Connecting to Payload...</span>
               </div>
             </div>
           ) : connectionStatus?.connected ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-green-700">🟢 Connected to Payload CMS</span>
+                <span className="text-emerald-400">🟢 Connected to Payload CMS</span>
               </div>
               <Button variant="ghost" size="sm" onClick={() => testConnection()}>
                 Test Again
               </Button>
             </div>
           ) : (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-red-700 font-medium">🔴 Not Connected</span>
+                <span className="text-red-400 font-medium">🔴 Not Connected</span>
                 <Button variant="outline" size="sm" onClick={() => testConnection()}>
                   Retry Connection
                 </Button>
               </div>
               {connectionStatus?.error && (
-                <p className="text-sm text-red-600 mt-2">{connectionStatus.error}</p>
+                <p className="text-sm text-red-400 mt-2">{connectionStatus.error}</p>
               )}
             </div>
           )}
@@ -235,29 +231,29 @@ export function PayloadSync() {
 
         {/* Statistics */}
         <div className="grid grid-cols-6 gap-4 mb-6">
-          <div className="bg-muted p-4 rounded">
+          <div className="bg-muted/50 border border-border p-4 rounded">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
             <div className="text-sm text-muted-foreground">Total</div>
           </div>
-          <div className="bg-green-50 p-4 rounded">
-            <div className="text-2xl font-bold text-green-700">{stats.synced}</div>
-            <div className="text-sm text-green-600">Synced</div>
+          <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded">
+            <div className="text-2xl font-bold text-emerald-400">{stats.synced}</div>
+            <div className="text-sm text-emerald-400/80">Synced</div>
           </div>
-          <div className="bg-blue-50 p-4 rounded">
-            <div className="text-2xl font-bold text-blue-700">{stats.ready}</div>
-            <div className="text-sm text-blue-600">Ready to Sync</div>
+          <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded">
+            <div className="text-2xl font-bold text-blue-400">{stats.ready}</div>
+            <div className="text-sm text-blue-400/80">Ready to Sync</div>
           </div>
-          <div className="bg-amber-50 p-4 rounded">
-            <div className="text-2xl font-bold text-amber-700">{stats.incomplete}</div>
-            <div className="text-sm text-amber-600">Incomplete</div>
+          <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded">
+            <div className="text-2xl font-bold text-amber-400">{stats.incomplete}</div>
+            <div className="text-sm text-amber-400/80">Incomplete</div>
           </div>
-          <div className="bg-orange-50 p-4 rounded">
-            <div className="text-2xl font-bold text-orange-700">{stats.needsResync}</div>
-            <div className="text-sm text-orange-600">Needs Resync</div>
+          <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded">
+            <div className="text-2xl font-bold text-orange-400">{stats.needsResync}</div>
+            <div className="text-sm text-orange-400/80">Needs Resync</div>
           </div>
-          <div className="bg-red-50 p-4 rounded">
-            <div className="text-2xl font-bold text-red-700">{stats.failed}</div>
-            <div className="text-sm text-red-600">Failed</div>
+          <div className="bg-red-500/10 border border-red-500/20 p-4 rounded">
+            <div className="text-2xl font-bold text-red-400">{stats.failed}</div>
+            <div className="text-sm text-red-400/80">Failed</div>
           </div>
         </div>
 
@@ -315,9 +311,7 @@ export function PayloadSync() {
 
         {/* Loading state */}
         {isLoading || isLoadingLocationsBasic ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
-          </div>
+          <SkeletonTable rows={8} cols={7} />
         ) : filteredData.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">

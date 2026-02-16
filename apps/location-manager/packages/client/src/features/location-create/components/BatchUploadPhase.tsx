@@ -173,7 +173,7 @@ export function BatchUploadPhase({
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div data-theme="light" className="w-full max-w-lg bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-lg bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
         <div className="flex items-center gap-2.5 mb-6">
           <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
@@ -199,29 +199,29 @@ export function BatchUploadPhase({
             />
           </div>
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span className="text-green-600">{completedCount} completed</span>
-            {failedCount > 0 && <span className="text-red-600">{failedCount} failed</span>}
+            <span className="text-emerald-400">{completedCount} completed</span>
+            {failedCount > 0 && <span className="text-red-400">{failedCount} failed</span>}
           </div>
         </div>
 
         {/* Current item status */}
         {isProcessing && currentItem && (
-          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-md">
             <div className="flex items-start gap-3">
               <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-blue-700 mb-1">
+                <p className="text-sm font-medium text-blue-400 mb-1">
                   Processing item {currentIndex + 1} of {items.length}
                 </p>
-                <p className="text-xs text-blue-600 truncate">
+                <p className="text-xs text-blue-400/80 truncate">
                   {currentState?.message || "Processing..."}
                 </p>
                 {currentItem.name && (
-                  <p className="text-xs text-blue-500 mt-1">
+                  <p className="text-xs text-blue-400/70 mt-1">
                     Name: {currentItem.name}
                   </p>
                 )}
-                <p className="text-xs text-blue-500 truncate">
+                <p className="text-xs text-blue-400/70 truncate">
                   Address: {currentItem.address}
                 </p>
               </div>
@@ -240,11 +240,11 @@ export function BatchUploadPhase({
                   key={index}
                   className={`p-3 flex items-start gap-3 ${
                     index === currentIndex && isProcessing
-                      ? "bg-blue-50"
+                      ? "bg-blue-500/5"
                       : state.status === "completed"
-                        ? "bg-green-50"
+                        ? "bg-emerald-500/5"
                         : state.status === "failed"
-                          ? "bg-red-50"
+                          ? "bg-red-500/5"
                           : ""
                   }`}
                 >
@@ -282,7 +282,7 @@ export function BatchUploadPhase({
                       {state.message}
                     </p>
                     {state.error && (
-                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         {state.error}
                       </p>

@@ -1,13 +1,20 @@
 import { useMemo, useState } from "react";
 import type { LocationResponse } from "@client/shared/services/api/types";
 import { Button } from "@client/components/ui";
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Loader2, RefreshCw, X } from "lucide-react";
+import { CompletenessFieldEditModal } from "./CompletenessFieldEditModal";
+import { useToast } from "@client/shared/hooks/useToast";
+import {
+  useFetchTripAdvisorPlace,
+  useTripAdvisorPlaceStatus,
+} from "@client/shared/services/api/hooks/useTripAdvisorPlace";
 
 interface LocationCompletenessProps {
   locationDetail: LocationResponse;
 }
 
 export function LocationCompleteness({ locationDetail }: LocationCompletenessProps) {
+  const { showToast } = useToast();
   const requiredFields = useMemo(() => {
     const contact = locationDetail.contact || {};
     const source = locationDetail.source || {};
@@ -47,11 +54,6 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim()) },
       { key: "website", label: "Website", present: Boolean(contact.website?.trim()) },
       { key: "contactUrl", label: "Google URL", present: Boolean(contact.url?.trim()) },
-      {
-        key: "neighborhoodDescription",
-        label: "Neighborhood",
-        present: Boolean(locationDetail.neighborhoodDescription?.trim()),
-      },
       { key: "idealFor", label: "Ideal For", present: hasIdealFor },
       { key: "cuisines", label: "Cuisines", present: hasCuisines },
       { key: "priceLevel", label: "Price Level", present: Boolean(locationDetail.priceLevel?.trim()) },
@@ -65,9 +67,27 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
     [requiredFields]
   );
   const isComplete = missingFields.length === 0;
+  const hasTripadvisorUrl = Boolean(locationDetail.tripadvisorUrl?.trim());
+  const shouldShowTripAdvisorButton = hasTripadvisorUrl && !isComplete;
 
   const [completenessExpanded, setCompletenessExpanded] = useState<boolean | undefined>(undefined);
   const isCompletenessExpanded = completenessExpanded ?? !isComplete;
+  const [editField, setEditField] = useState<{ key: string; label: string; present: boolean } | null>(null);
+  const tripAdvisorPlaceStatusQuery = useTripAdvisorPlaceStatus({
+    locationId: locationDetail.id,
+    enabled: shouldShowTripAdvisorButton,
+  });
+  const fetchTripAdvisorPlaceMutation = useFetchTripAdvisorPlace({
+    locationId: locationDetail.id,
+    onSuccess: (data) => {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(data.message, centerPosition);
+    },
+    onError: (error) => {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(error.message || "Failed to fetch TripAdvisor place data", centerPosition);
+    },
+  });
 
   return (
     <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
@@ -76,8 +96,8 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
           <span
             className={`text-xs font-semibold px-2 py-1 rounded shrink-0 ${
               isComplete
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-amber-100 text-amber-700"
+                ? "bg-emerald-500/15 text-emerald-400"
+                : "bg-amber-500/15 text-amber-400"
             }`}
           >
             {isComplete ? "Complete" : "Missing data"}
@@ -90,56 +110,91 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
                 } missing`}
           </span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="shrink-0 h-7 px-2 text-muted-foreground hover:text-foreground"
-          onClick={() => setCompletenessExpanded(!isCompletenessExpanded)}
-          aria-expanded={isCompletenessExpanded}
-        >
-          {isCompletenessExpanded ? (
-            <>
-              <ChevronUp className="h-3.5 w-3.5 mr-0.5" />
-              Hide
-            </>
-          ) : (
-            <>
-              <ChevronDown className="h-3.5 w-3.5 mr-0.5" />
-              Expand
-            </>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {shouldShowTripAdvisorButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => fetchTripAdvisorPlaceMutation.mutate()}
+              disabled={fetchTripAdvisorPlaceMutation.isPending}
+              title="Fetch TripAdvisor place data from SerpAPI"
+            >
+              {fetchTripAdvisorPlaceMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 mr-0.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-0.5" />
+              )}
+              {tripAdvisorPlaceStatusQuery.data?.hasPlaceData ? "Refetch place data" : "Fetch place data"}
+            </Button>
           )}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setCompletenessExpanded(!isCompletenessExpanded)}
+            aria-expanded={isCompletenessExpanded}
+          >
+            {isCompletenessExpanded ? (
+              <>
+                <ChevronUp className="h-3.5 w-3.5 mr-0.5" />
+                Hide
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3.5 w-3.5 mr-0.5" />
+                Expand
+              </>
+            )}
+          </Button>
+        </div>
       </div>
       {isCompletenessExpanded && (
         <>
           {!isComplete && (
             <div className="flex flex-wrap gap-1">
               {missingFields.map((field) => (
-                <span
+                <button
                   key={field.key}
-                  className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-700"
+                  type="button"
+                  onClick={() => setEditField(field)}
+                  className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                  title={`Click to edit ${field.label}`}
                 >
                   {field.label}
-                </span>
+                </button>
               ))}
             </div>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {requiredFields.map((field) => (
-              <div
+              <button
                 key={field.key}
-                className={`flex items-center gap-2 rounded border px-2 py-1 text-xs ${
+                type="button"
+                onClick={() => !field.present && setEditField(field)}
+                disabled={field.present}
+                title={field.present ? undefined : `Click to edit ${field.label}`}
+                className={`flex items-center gap-2 rounded border px-2 py-1 text-xs text-left w-full ${
                   field.present
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-amber-200 bg-amber-50 text-amber-700"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 cursor-default"
+                    : "border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
                 }`}
               >
                 {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                 <span>{field.label}</span>
-              </div>
+              </button>
             ))}
           </div>
         </>
+      )}
+
+      {editField && (
+        <CompletenessFieldEditModal
+          field={editField}
+          locationDetail={locationDetail}
+          open={Boolean(editField)}
+          onOpenChange={(open) => !open && setEditField(null)}
+        />
       )}
     </div>
   );

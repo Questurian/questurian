@@ -14,7 +14,7 @@ export function BatchCompletePhase({ results, onAddMore, onDone }: BatchComplete
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div data-theme="light" className="w-full max-w-lg bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-lg bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center gap-2.5 mb-6">
           <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
             <Check className="w-4 h-4 text-white" />
@@ -23,14 +23,14 @@ export function BatchCompletePhase({ results, onAddMore, onDone }: BatchComplete
         </div>
 
         <div className="mb-6 grid grid-cols-2 gap-4">
-          <div className="p-4 bg-green-50 border border-green-200 rounded-md text-center">
-            <p className="text-2xl font-semibold text-green-700">{successCount}</p>
-            <p className="text-sm text-green-600">Successful</p>
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-center">
+            <p className="text-2xl font-semibold text-emerald-400">{successCount}</p>
+            <p className="text-sm text-emerald-400/80">Successful</p>
           </div>
           {failedCount > 0 && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
-              <p className="text-2xl font-semibold text-red-700">{failedCount}</p>
-              <p className="text-sm text-red-600">Failed</p>
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-md text-center">
+              <p className="text-2xl font-semibold text-red-400">{failedCount}</p>
+              <p className="text-sm text-red-400/80">Failed</p>
             </div>
           )}
         </div>
@@ -40,7 +40,7 @@ export function BatchCompletePhase({ results, onAddMore, onDone }: BatchComplete
             {results.map((result, index) => (
               <div
                 key={index}
-                className={`p-3 flex items-start gap-3 ${result.success ? "bg-green-50" : "bg-red-50"}`}
+                className={`p-3 flex items-start gap-3 ${result.success ? "bg-emerald-500/5" : "bg-red-500/5"}`}
               >
                 <div className="flex-shrink-0 mt-0.5">
                   {result.success ? (
@@ -58,7 +58,7 @@ export function BatchCompletePhase({ results, onAddMore, onDone }: BatchComplete
                     {result.locationName || result.item.name || result.item.address}
                   </p>
                   {result.error && (
-                    <p className="text-xs text-red-600">{result.error}</p>
+                    <p className="text-xs text-red-400">{result.error}</p>
                   )}
                 </div>
               </div>

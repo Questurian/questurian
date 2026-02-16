@@ -13,7 +13,7 @@ interface BatchInputPhaseProps {
 export function BatchInputPhase({ batch, copyForAI, onCancel }: BatchInputPhaseProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div data-theme="light" className="w-full max-w-2xl bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-2xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2.5">
@@ -44,11 +44,11 @@ export function BatchInputPhase({ batch, copyForAI, onCancel }: BatchInputPhaseP
         </div>
 
         {/* Instructions */}
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <p className="text-sm text-blue-700 mb-2">
+        <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md">
+          <p className="text-sm text-blue-400 mb-2">
             Paste a JSON array of locations. Each item should have:
           </p>
-          <ul className="text-xs text-blue-600 list-disc list-inside space-y-1">
+          <ul className="text-xs text-blue-400/80 list-disc list-inside space-y-1">
             <li><strong>name</strong> (required) - Location name</li>
             <li><strong>address</strong> (required) - Full address including city and country</li>
             <li><strong>category</strong> (required) - dining, accommodations, attractions, or nightlife</li>
@@ -59,17 +59,17 @@ export function BatchInputPhase({ batch, copyForAI, onCancel }: BatchInputPhaseP
         </div>
 
         {/* TripAdvisor URL breakdown */}
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-xs font-medium text-amber-800 mb-2">TripAdvisor URL Format:</p>
-          <code className="text-xs text-amber-700 break-all block mb-2">
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
+          <p className="text-xs font-medium text-amber-400 mb-2">TripAdvisor URL Format:</p>
+          <code className="text-xs text-amber-400/80 break-all block mb-2">
             https://www.tripadvisor.com/Restaurant_Review-g294316-d23520604-Reviews-Asu-Lima_Lima_Region.html
           </code>
-          <div className="text-xs text-amber-600 space-y-0.5">
-            <p><span className="font-mono bg-amber-100 px-1 rounded">Restaurant_Review</span> — Type (Restaurant_Review, Hotel_Review, Attraction_Review)</p>
-            <p><span className="font-mono bg-amber-100 px-1 rounded">g294316</span> — City/Region ID</p>
-            <p><span className="font-mono bg-amber-100 px-1 rounded">d23520604</span> — Location ID (extracted automatically)</p>
-            <p><span className="font-mono bg-amber-100 px-1 rounded">Asu</span> — Location name slug</p>
-            <p><span className="font-mono bg-amber-100 px-1 rounded">Lima_Lima_Region</span> — City and region</p>
+          <div className="text-xs text-amber-400/70 space-y-0.5">
+            <p><span className="font-mono bg-amber-500/20 px-1 rounded">Restaurant_Review</span> — Type (Restaurant_Review, Hotel_Review, Attraction_Review)</p>
+            <p><span className="font-mono bg-amber-500/20 px-1 rounded">g294316</span> — City/Region ID</p>
+            <p><span className="font-mono bg-amber-500/20 px-1 rounded">d23520604</span> — Location ID (extracted automatically)</p>
+            <p><span className="font-mono bg-amber-500/20 px-1 rounded">Asu</span> — Location name slug</p>
+            <p><span className="font-mono bg-amber-500/20 px-1 rounded">Lima_Lima_Region</span> — City and region</p>
           </div>
         </div>
 
@@ -96,27 +96,27 @@ export function BatchInputPhase({ batch, copyForAI, onCancel }: BatchInputPhaseP
               JSON Data
             </label>
             {batch.jsonInput.trim() && !batch.jsonError && batch.isJsonValid && (
-              <span className="text-xs text-green-600 font-medium">Valid JSON</span>
+              <span className="text-xs text-emerald-400 font-medium">Valid JSON</span>
             )}
           </div>
           <textarea
             value={batch.jsonInput}
             onChange={(e) => batch.handleJsonChange(e.target.value)}
             placeholder="Paste your JSON array here..."
-            className={`w-full h-48 p-3 text-sm font-mono border rounded-md bg-white text-gray-900 resize-none focus:outline-none focus:ring-2 ${
+            className={`w-full h-48 p-3 text-sm font-mono border rounded-md bg-muted/50 text-foreground border-border resize-none focus:outline-none focus:ring-2 ${
               batch.jsonError
-                ? "border-red-300 focus:ring-red-500"
+                ? "border-red-500/50 focus:ring-red-500"
                 : batch.isJsonValid
-                  ? "border-green-300 focus:ring-green-500"
-                  : "focus:ring-blue-500"
+                  ? "border-emerald-500/50 focus:ring-emerald-500"
+                  : "focus:ring-primary"
             }`}
           />
         </div>
 
         {/* Error message */}
         {batch.jsonError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{batch.jsonError}</p>
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-md">
+            <p className="text-sm text-red-400">{batch.jsonError}</p>
           </div>
         )}
 

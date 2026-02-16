@@ -23,7 +23,7 @@ export function LocationItemMenu({ isOpen, onToggle, onEdit, onAdvanced, onDelet
         onClick={onToggle}
       />
       {isOpen && (
-        <div data-theme="light" className="absolute right-full mr-2 top-0 z-10 bg-background border border-border rounded-md py-1 min-w-[160px] shadow-sm">
+        <div className="absolute right-full mr-2 top-0 z-10 bg-popover border border-border rounded-lg py-1 min-w-[160px] shadow-xl shadow-black/20">
           <button
             className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors whitespace-nowrap"
             onClick={onEdit}

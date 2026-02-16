@@ -10,9 +10,9 @@ import { Health } from "@client/features/health/Health";
 function App() {
   return (
     <BrowserRouter>
-      <div className="app">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar />
-        <main className="main-content">
+        <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/add" element={<AddLocation />} />

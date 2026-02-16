@@ -100,7 +100,7 @@ export function ImageLightbox({
 
               {/* Metadata row */}
               {imageMetadata && currentIndex < imageMetadata.length && imageMetadata[currentIndex] && (
-                <div className="flex items-center justify-center gap-4 text-xs text-gray-300 mb-2">
+                <div className="flex items-center justify-center gap-4 text-xs text-white/60 mb-2">
                   <span>
                     {imageMetadata[currentIndex].width} × {imageMetadata[currentIndex].height}px
                   </span>
@@ -117,7 +117,7 @@ export function ImageLightbox({
 
               {/* Photographer credit */}
               {photographerCredit && (
-                <p className="text-xs text-gray-300 text-center">
+                <p className="text-xs text-white/60 text-center">
                   Photo by {photographerCredit}
                 </p>
               )}

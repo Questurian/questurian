@@ -213,7 +213,7 @@ export function MultiVariantCropperModal({
                       ? 'bg-blue-600 text-white'
                       : isCompleted
                         ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     }
                   `}
                 >

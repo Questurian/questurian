@@ -15,16 +15,16 @@ interface LocationDetailViewProps {
 export function LocationDetailView({ locationDetail, isLoading, error, onCopyField }: LocationDetailViewProps) {
   if (isLoading) {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-sm text-gray-600">Loading details...</p>
+      <div className="mt-4 pt-4 border-t border-border">
+        <p className="text-sm text-muted-foreground">Loading details...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-sm text-red-600">
+      <div className="mt-4 pt-4 border-t border-border">
+        <p className="text-sm text-destructive">
           Error loading details: {error.message}
         </p>
       </div>
@@ -42,7 +42,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
   const contactAddressLabel = showSourceAddress ? "Contact Address" : "Address";
 
   return (
-    <div className="mt-4 pt-4 border-t border-gray-200">
+    <div className="mt-4 pt-4 border-t border-border">
       <div className="space-y-3">
         <LocationCompleteness locationDetail={locationDetail} />
 

@@ -9,7 +9,7 @@ interface SuccessPhaseProps {
 export function SuccessPhase({ locationTitle, onAddAnother, onDone }: SuccessPhaseProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div data-theme="light" className="w-full max-w-sm bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center gap-2.5 mb-6">
           <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
             <Check className="w-4 h-4 text-white" />
@@ -17,8 +17,8 @@ export function SuccessPhase({ locationTitle, onAddAnother, onDone }: SuccessPha
           <h1 className="text-[24px]! opacity-70 font-medium text-foreground">Location Added Successfully</h1>
         </div>
 
-        <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-sm text-green-700">
+        <div className="mb-6 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
+          <p className="text-sm text-emerald-400">
             Location "{locationTitle}" has been added successfully!
           </p>
         </div>

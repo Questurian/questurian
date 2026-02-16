@@ -266,14 +266,14 @@ export function AddUploadFilesForm({ locationId }: AddUploadFilesFormProps) {
         {!hasCroppedImages() && (
           <div
             className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300"
+              isDragging ? "border-primary bg-primary/5" : "border-border"
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-600 mb-2">
+            <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground mb-2">
               Drag and drop images here, or click to select
             </p>
             <input
@@ -293,7 +293,7 @@ export function AddUploadFilesForm({ locationId }: AddUploadFilesFormProps) {
             >
               Choose Files
             </Button>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               {selectedFiles.length} file(s) selected
             </p>
           </div>
@@ -320,11 +320,11 @@ export function AddUploadFilesForm({ locationId }: AddUploadFilesFormProps) {
         {/* Progress bar */}
         {isPending && uploadProgress > 0 && (
           <div className="space-y-1">
-            <div className="flex justify-between text-xs text-gray-600">
+            <div className="flex justify-between text-xs text-muted-foreground">
               <span>Uploading...</span>
               <span>{uploadProgress}%</span>
             </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-500 transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}

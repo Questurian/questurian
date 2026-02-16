@@ -9,6 +9,7 @@ export function useLocationFilters() {
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedCompletionStatus, setSelectedCompletionStatus] = useState<CompletionStatus>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Cascading handlers - reset child selections when parent changes
   const handleCountryChange = (country: string | null) => {
@@ -32,6 +33,7 @@ export function useLocationFilters() {
     setSelectedNeighborhood(null);
     setSelectedCategory(null);
     setSelectedCompletionStatus("all");
+    setSearchQuery("");
   };
 
   return {
@@ -40,12 +42,14 @@ export function useLocationFilters() {
     selectedNeighborhood,
     selectedCategory,
     selectedCompletionStatus,
+    searchQuery,
     setCountry: handleCountryChange,
     setCity: handleCityChange,
     setNeighborhood: handleNeighborhoodChange,
     setCategory: setSelectedCategory,
     setCompletionStatus: setSelectedCompletionStatus,
+    setSearch: setSearchQuery,
     reset,
-    isFilterActive: !!(selectedCountry || selectedCity || selectedNeighborhood || selectedCategory || selectedCompletionStatus !== "all")
+    isFilterActive: !!(selectedCountry || selectedCity || selectedNeighborhood || selectedCategory || selectedCompletionStatus !== "all" || searchQuery)
   };
 }

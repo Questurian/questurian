@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { locationsApi, useLocationsBasic } from "@client/shared/services/api";
 import { Button } from "@client/components/ui/button";
+import { SkeletonList, ErrorAlert } from "@client/shared/components/ui";
 import { LocationList } from "../components/list/LocationList";
 import { LocationListEmpty } from "../components/list/LocationListEmpty";
 import { LocationFilters } from "../components/filters/LocationFilters";
@@ -34,7 +35,7 @@ export function Home() {
   const allLocations = data?.locations ?? [];
 
   // Apply completion status filter client-side
-  const locations = useMemo(() => {
+  const filteredByStatus = useMemo(() => {
     if (filters.selectedCompletionStatus === "all") {
       return allLocations;
     }
@@ -45,6 +46,17 @@ export function Home() {
       return !location.isComplete;
     });
   }, [allLocations, filters.selectedCompletionStatus]);
+
+  // Apply search filter client-side
+  const locations = useMemo(() => {
+    if (!filters.searchQuery) return filteredByStatus;
+    const query = filters.searchQuery.toLowerCase();
+    return filteredByStatus.filter(location => {
+      const title = (location.title || "").toLowerCase();
+      const name = (location.name || "").toLowerCase();
+      return title.includes(query) || name.includes(query);
+    });
+  }, [filteredByStatus, filters.searchQuery]);
 
   const handleDownloadAll = async () => {
     if (isDownloadingAll || locations.length === 0) return;
@@ -88,35 +100,35 @@ export function Home() {
 
   if (error) {
     return (
-      <div>
-        <p style={{ color: "red" }}>Error: {error.message}</p>
-        <button onClick={() => refetch()}>Retry</button>
+      <div className="py-6">
+        <ErrorAlert message={error.message} onRetry={() => refetch()} />
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "1.5rem" }}>
-
+    <div>
       <LocationFilters
         selectedCountry={filters.selectedCountry}
         selectedCity={filters.selectedCity}
         selectedNeighborhood={filters.selectedNeighborhood}
         selectedCategory={filters.selectedCategory}
         selectedCompletionStatus={filters.selectedCompletionStatus}
+        searchQuery={filters.searchQuery}
         onCountryChange={filters.setCountry}
         onCityChange={filters.setCity}
         onNeighborhoodChange={filters.setNeighborhood}
         onCategoryChange={filters.setCategory}
         onCompletionStatusChange={filters.setCompletionStatus}
+        onSearchChange={filters.setSearch}
         onReset={filters.reset}
         countries={countries}
         isLoadingCountries={isLoadingCountries}
       />
 
-      <div style={{ marginTop: "2.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", marginBottom: "1rem" }}>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: "600" }}>
+      <div className="mt-8">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h2>
             {filters.isFilterActive ? "Filtered Locations" : "All Locations"} ({locations.length})
           </h2>
           <Button
@@ -129,15 +141,15 @@ export function Home() {
           </Button>
         </div>
         {downloadError && (
-          <p style={{ color: "red", marginBottom: "1rem" }}>
-            {downloadError}
-          </p>
+          <div className="mb-4">
+            <ErrorAlert message={downloadError} />
+          </div>
         )}
 
         {isLoading ? (
-          <p>Loading lo1cations...</p>
+          <SkeletonList count={8} />
         ) : locations.length === 0 ? (
-          <LocationListEmpty />
+          <LocationListEmpty hasFilters={filters.isFilterActive} />
         ) : (
           <LocationList locations={locations} />
         )}

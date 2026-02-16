@@ -51,46 +51,46 @@ export function ReviewsReportDialog({
         ) : report ? (
           <div className="space-y-4">
             {/* Totals */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-muted/50 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
-                <FileText className="h-5 w-5 text-gray-600" />
-                <h3 className="font-medium text-gray-900">Review Totals</h3>
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-medium text-foreground">Review Totals</h3>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-gray-500">Total Reviews:</span>
+                  <span className="text-muted-foreground">Total Reviews:</span>
                   <span className="ml-2 font-semibold">{report.stats.totalReviews}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Google:</span>
+                  <span className="text-muted-foreground">Google:</span>
                   <span className="ml-2 font-semibold">{report.stats.googleReviews}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">TripAdvisor:</span>
+                  <span className="text-muted-foreground">TripAdvisor:</span>
                   <span className="ml-2 font-semibold">{report.stats.tripadvisorReviews}</span>
                 </div>
               </div>
             </div>
 
             {/* Translation */}
-            <div className="bg-blue-50 rounded-lg p-4">
+            <div className="bg-blue-500/10 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Languages className="h-5 w-5 text-blue-600" />
-                <h3 className="font-medium text-gray-900">Translation</h3>
+                <Languages className="h-5 w-5 text-blue-400" />
+                <h3 className="font-medium text-foreground">Translation</h3>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-gray-500">Translated:</span>
-                  <span className="ml-2 font-semibold text-blue-700">{report.stats.translated}</span>
+                  <span className="text-muted-foreground">Translated:</span>
+                  <span className="ml-2 font-semibold text-blue-400">{report.stats.translated}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Already English:</span>
+                  <span className="text-muted-foreground">Already English:</span>
                   <span className="ml-2 font-semibold">{report.stats.alreadyEnglish}</span>
                 </div>
                 {report.stats.errors > 0 && (
                   <div className="col-span-2">
-                    <span className="text-gray-500">Translation Errors:</span>
-                    <span className="ml-2 font-semibold text-amber-600">{report.stats.errors}</span>
+                    <span className="text-muted-foreground">Translation Errors:</span>
+                    <span className="ml-2 font-semibold text-amber-400">{report.stats.errors}</span>
                   </div>
                 )}
               </div>
@@ -98,22 +98,22 @@ export function ReviewsReportDialog({
 
             {/* Duplicates */}
             {report.rejectsReport && report.rejectsReport.totalRejected > 0 && (
-              <div className="bg-amber-50 rounded-lg p-4">
+              <div className="bg-amber-500/10 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle className="h-5 w-5 text-amber-600" />
-                  <h3 className="font-medium text-gray-900">Duplicates Removed</h3>
+                  <AlertCircle className="h-5 w-5 text-amber-400" />
+                  <h3 className="font-medium text-foreground">Duplicates Removed</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-gray-500">Total Rejected:</span>
+                    <span className="text-muted-foreground">Total Rejected:</span>
                     <span className="ml-2 font-semibold">{report.rejectsReport.totalRejected}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Replaced with English:</span>
+                    <span className="text-muted-foreground">Replaced with English:</span>
                     <span className="ml-2 font-semibold">{report.rejectsReport.replacedWithEnglish}</span>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   Duplicate reviews from multiple language files were deduplicated, preferring English versions.
                 </p>
               </div>
@@ -128,7 +128,7 @@ export function ReviewsReportDialog({
             </div>
           </div>
         ) : (
-          <div className="py-6 text-center text-gray-500">
+          <div className="py-6 text-center text-muted-foreground">
             No report data available.
           </div>
         )}

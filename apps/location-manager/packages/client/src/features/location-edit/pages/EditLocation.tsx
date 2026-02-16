@@ -1,5 +1,7 @@
 import { Pencil } from "lucide-react";
-import { SubmitButton } from "@client/shared/components/ui";
+import { SubmitButton, ErrorAlert } from "@client/shared/components/ui";
+import { Breadcrumbs } from "@client/shared/components/layout";
+import { Skeleton } from "@client/shared/components/ui";
 import { useEditLocationForm } from "../hooks/useEditLocationForm";
 import { CoreFieldsSection } from "../components/CoreFieldsSection";
 import { TaxonomyFieldsSection } from "../components/TaxonomyFieldsSection";
@@ -24,30 +26,48 @@ export function EditLocation() {
   } = useEditLocationForm();
 
   if (isLoading) {
-    return <div>Loading location...</div>;
+    return (
+      <div className="max-w-[1200px] mx-auto">
+        <Breadcrumbs items={[{ label: "Edit Location" }]} />
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    );
   }
 
   if (fetchError) {
     return (
-      <div>
-        <p style={{ color: "red" }}>Error loading location: {fetchError.message}</p>
-        <button onClick={navigateHome}>Back to locations</button>
+      <div className="max-w-[1200px] mx-auto">
+        <Breadcrumbs items={[{ label: "Edit Location" }]} />
+        <ErrorAlert
+          title="Error loading location"
+          message={fetchError.message}
+          onRetry={navigateHome}
+        />
       </div>
     );
   }
 
   if (!location) {
     return (
-      <div>
-        <p>Location not found</p>
-        <button onClick={navigateHome}>Back to locations</button>
+      <div className="max-w-[1200px] mx-auto">
+        <Breadcrumbs items={[{ label: "Edit Location" }]} />
+        <div className="bg-card border border-border rounded-xl p-6 text-center">
+          <p className="text-muted-foreground">Location not found</p>
+          <button onClick={navigateHome} className="mt-4 text-sm text-primary hover:underline">Back to locations</button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-background" data-theme="dark">
-      <div className="w-full max-w-[1200px] bg-background rounded-xl p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500" data-theme="light">
+    <div className="max-w-[1200px] mx-auto">
+      <Breadcrumbs items={[{ label: location.title || "Edit Location" }]} />
+      <div className="bg-card border border-border rounded-xl p-4 sm:p-6 animate-fade-in-up">
         <div className="flex items-center gap-2.5 mb-6">
           <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
             <Pencil className="w-4 h-4 text-muted-foreground" />
@@ -86,9 +106,7 @@ export function EditLocation() {
           </div>
 
           {updateError && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-600">
-              Error: {updateError.message}
-            </div>
+            <ErrorAlert message={updateError.message} />
           )}
         </form>
       </div>

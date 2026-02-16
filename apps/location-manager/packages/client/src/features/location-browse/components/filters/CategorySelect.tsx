@@ -18,7 +18,7 @@ export function CategorySelect({ value, onChange, disabled }: CategorySelectProp
   return (
     <div>
       <Select value={value ?? ""} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger style={{ width: "200px" }}>
+        <SelectTrigger className="w-[200px]">
           <SelectValue placeholder="Select category" />
         </SelectTrigger>
         <SelectContent>

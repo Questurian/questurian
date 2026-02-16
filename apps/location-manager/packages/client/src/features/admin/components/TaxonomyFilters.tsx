@@ -45,14 +45,14 @@ export function TaxonomyFilters({
   const hasActiveFilters = selectedCountry || selectedCity || selectedNeighborhood;
 
   return (
-    <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end", marginBottom: "1rem" }}>
+    <div className="flex gap-4 items-end mb-4 flex-wrap">
       {/* Country Filter */}
       <div>
-        <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--muted-foreground)" }}>
+        <label className="block text-sm font-medium mb-2 text-muted-foreground">
           Country
         </label>
         <Select value={selectedCountry ?? ""} onValueChange={onCountryChange}>
-          <SelectTrigger style={{ width: "200px" }}>
+          <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="All countries" />
           </SelectTrigger>
           <SelectContent>
@@ -67,7 +67,7 @@ export function TaxonomyFilters({
 
       {/* City Filter */}
       <div>
-        <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--muted-foreground)" }}>
+        <label className="block text-sm font-medium mb-2 text-muted-foreground">
           City
         </label>
         <Select
@@ -75,7 +75,7 @@ export function TaxonomyFilters({
           onValueChange={onCityChange}
           disabled={!selectedCountry || cities.length === 0}
         >
-          <SelectTrigger style={{ width: "200px" }}>
+          <SelectTrigger className="w-[200px]">
             <SelectValue placeholder={!selectedCountry ? "Select country first" : "All cities"} />
           </SelectTrigger>
           <SelectContent>
@@ -90,7 +90,7 @@ export function TaxonomyFilters({
 
       {/* Neighborhood Filter */}
       <div>
-        <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--muted-foreground)" }}>
+        <label className="block text-sm font-medium mb-2 text-muted-foreground">
           District/Neighborhood
         </label>
         <Select
@@ -98,7 +98,7 @@ export function TaxonomyFilters({
           onValueChange={onNeighborhoodChange}
           disabled={!selectedCity || neighborhoods.length === 0}
         >
-          <SelectTrigger style={{ width: "200px" }}>
+          <SelectTrigger className="w-[200px]">
             <SelectValue placeholder={!selectedCity ? "Select city first" : "All neighborhoods"} />
           </SelectTrigger>
           <SelectContent>
@@ -116,7 +116,7 @@ export function TaxonomyFilters({
         variant="outline"
         onClick={onClearFilters}
         disabled={!hasActiveFilters}
-        style={{ marginLeft: "auto" }}
+        className="ml-auto"
       >
         Clear All Filters
       </Button>

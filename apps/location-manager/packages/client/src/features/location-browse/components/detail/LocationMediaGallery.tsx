@@ -120,7 +120,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       {/* Existing Uploads Gallery */}
       {locationDetail.uploads && locationDetail.uploads.length > 0 && (
         <div className="space-y-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Uploaded Images:
           </span>
           <ul className="flex gap-2 ml-4 flex-wrap">
@@ -133,7 +133,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
                 const imageUrl = `/api/images/${squareVariant.path.replace(/^data\/images\//, '')}`;
                 return (
                   <li key={`${upload.id}-imageset`} className="relative group">
-                    <div className="shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-gray-100 hover:ring-2 ring-blue-400 transition-all">
+                    <div className="shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-muted hover:ring-2 ring-primary transition-all">
                       <img
                         src={imageUrl}
                         alt={imageSet.altText || imageSet.photographerCredit || "Uploaded image"}
@@ -167,7 +167,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       {/* Existing Instagram Embeds */}
       {locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0 && (
         <div className="space-y-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Instagram Posts:
           </span>
           <ul className="flex gap-2 ml-4 flex-wrap">
@@ -180,7 +180,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
               return (
                 <li key={embed.id} className="relative group">
                   {imageUrl && (
-                    <div className="shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-gray-100 hover:ring-2 ring-blue-400 transition-all">
+                    <div className="shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-muted hover:ring-2 ring-primary transition-all">
                       <img
                         src={imageUrl}
                         alt="Instagram"

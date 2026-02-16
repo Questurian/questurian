@@ -22,7 +22,7 @@ export function ReviewsStatusBadge({
 }: ReviewsStatusBadgeProps) {
   if (!hasReviews || !reviewsCount) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
         <MessageSquare className="w-3 h-3" />
         No reviews
       </span>
@@ -35,7 +35,7 @@ export function ReviewsStatusBadge({
 
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700"
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-blue-500/15 text-blue-400"
       title={tooltip}
     >
       <MessageSquare className="w-3 h-3" />

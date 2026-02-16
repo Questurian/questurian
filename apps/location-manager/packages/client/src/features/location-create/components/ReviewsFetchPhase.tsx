@@ -156,7 +156,7 @@ export function ReviewsFetchPhase({
   if (phaseState === "checking" && isCheckingHealth) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div data-theme="light" className="w-full max-w-sm bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-2.5 mb-6">
             <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center animate-pulse">
               <MessageSquare className="w-4 h-4 text-white" />
@@ -173,7 +173,7 @@ export function ReviewsFetchPhase({
   if (phaseState === "failed") {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div data-theme="light" className="w-full max-w-sm bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-2.5 mb-6">
             <div className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center">
               <AlertCircle className="w-4 h-4 text-white" />
@@ -181,8 +181,8 @@ export function ReviewsFetchPhase({
             <h1 className="text-[24px]! opacity-70 font-medium text-foreground">Reviews Unavailable</h1>
           </div>
 
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-700">{error || "Unable to fetch reviews at this time."}</p>
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-md">
+            <p className="text-sm text-red-400">{error || "Unable to fetch reviews at this time."}</p>
           </div>
 
           <Button onClick={handleSkip} className="w-full" variant="outline">
@@ -198,7 +198,7 @@ export function ReviewsFetchPhase({
   if (phaseState === "ready") {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div data-theme="light" className="w-full max-w-sm bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-2.5 mb-6">
             <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-white" />
@@ -206,8 +206,8 @@ export function ReviewsFetchPhase({
             <h1 className="text-[24px]! opacity-70 font-medium text-foreground">Fetch Reviews</h1>
           </div>
 
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700">
+          <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md">
+            <p className="text-sm text-blue-400">
               Fetch reviews for "{locationName}" from the following sources:
             </p>
           </div>
@@ -219,7 +219,7 @@ export function ReviewsFetchPhase({
                 checked={googleEnabled}
                 onChange={(e) => setGoogleEnabled(e.target.checked)}
                 disabled={!hasGooglePlaceId}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary disabled:opacity-50"
               />
               <span className={`text-sm ${!hasGooglePlaceId ? "text-muted-foreground" : ""}`}>
                 Google Reviews
@@ -233,7 +233,7 @@ export function ReviewsFetchPhase({
                 checked={tripadvisorEnabled}
                 onChange={(e) => setTripadvisorEnabled(e.target.checked)}
                 disabled={!hasTripadvisorUrl}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary disabled:opacity-50"
               />
               <span className={`text-sm ${!hasTripadvisorUrl ? "text-muted-foreground" : ""}`}>
                 TripAdvisor Reviews
@@ -265,7 +265,7 @@ export function ReviewsFetchPhase({
   if (phaseState === "running") {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div data-theme="light" className="w-full max-w-sm bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-2.5 mb-6">
             <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-white" />
@@ -273,8 +273,8 @@ export function ReviewsFetchPhase({
             <h1 className="text-[24px]! opacity-70 font-medium text-foreground">Fetching Reviews</h1>
           </div>
 
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700">
+          <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md">
+            <p className="text-sm text-blue-400">
               {pipelineStatus?.message || "Starting reviews pipeline..."}
             </p>
           </div>
@@ -282,10 +282,10 @@ export function ReviewsFetchPhase({
           <PipelineProgress steps={pipelineSteps} />
 
           {pipelineStatus?.warnings && pipelineStatus.warnings.length > 0 && (
-            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-              <p className="text-xs text-amber-700 font-medium mb-1">Warnings:</p>
+            <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
+              <p className="text-xs text-amber-400 font-medium mb-1">Warnings:</p>
               {pipelineStatus.warnings.map((warning, i) => (
-                <p key={i} className="text-xs text-amber-600">
+                <p key={i} className="text-xs text-amber-400/80">
                   {warning.source}: {warning.message}
                 </p>
               ))}
@@ -301,7 +301,7 @@ export function ReviewsFetchPhase({
     const stats = pipelineStatus?.result?.merged?.stats;
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div data-theme="light" className="w-full max-w-sm bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-2.5 mb-6">
             <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
               <Check className="w-4 h-4 text-white" />
@@ -309,8 +309,8 @@ export function ReviewsFetchPhase({
             <h1 className="text-[24px]! opacity-70 font-medium text-foreground">Reviews Fetched</h1>
           </div>
 
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-sm text-green-700">
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
+            <p className="text-sm text-emerald-400">
               Successfully fetched {stats?.totalReviews || 0} reviews for "{locationName}"
             </p>
           </div>

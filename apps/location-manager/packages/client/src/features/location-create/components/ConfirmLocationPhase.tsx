@@ -26,7 +26,7 @@ export function ConfirmLocationPhase({
 }: ConfirmLocationPhaseProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div data-theme="light" className="w-full max-w-sm bg-background rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center gap-2.5 mb-6">
           <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
             <Check className="w-4 h-4 text-white" />
@@ -34,8 +34,8 @@ export function ConfirmLocationPhase({
           <h1 className="text-[24px]! opacity-70 font-medium text-foreground">Confirm Location Details</h1>
         </div>
 
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-sm text-green-700">
+        <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
+          <p className="text-sm text-emerald-400">
             Location "{createdLocation.name}" added successfully!
           </p>
         </div>
@@ -74,7 +74,7 @@ export function ConfirmLocationPhase({
           />
 
           {updateError && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
               Error: {updateError.message}
             </div>
           )}

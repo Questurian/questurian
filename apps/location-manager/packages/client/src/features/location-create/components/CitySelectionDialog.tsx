@@ -52,7 +52,7 @@ export function CitySelectionDialog({
             <select
               value={selectedCountryCode || ""}
               onChange={(e) => onCountryChange(e.target.value || null)}
-              className="w-full h-10 px-3 text-sm border rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">Select a country...</option>
               {countries.map((country) => (
@@ -71,7 +71,7 @@ export function CitySelectionDialog({
               <select
                 value={selectedCityValue || ""}
                 onChange={(e) => onCityChange(e.target.value || null)}
-                className="w-full h-10 px-3 text-sm border rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select a city...</option>
                 {availableCities.map((city) => (
@@ -90,7 +90,7 @@ export function CitySelectionDialog({
             <select
               value={selectedCategory || ""}
               onChange={(e) => onCategoryChange((e.target.value || null) as LocationCategory | null)}
-              className="w-full h-10 px-3 text-sm border rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">All categories</option>
               <option value="dining">Dining</option>
