@@ -9,6 +9,11 @@ export interface FetchReviewsPipelineWarning {
   message: string;
 }
 
+export interface PipelineLocation {
+  placeId?: string | null;
+  tripadvisorUrl?: string | null;
+}
+
 export interface FetchedGoogleReviewsResult {
   message: string;
   reviewCount: number;
@@ -52,6 +57,14 @@ export interface PipelineResult {
   };
   merged: MergedReviewsResult;
   warnings: FetchReviewsPipelineWarning[] | null;
+}
+
+export interface PipelineSourceFetchResult {
+  warnings: FetchReviewsPipelineWarning[];
+  fetched: PipelineResult["fetched"];
+  googleFetched: boolean;
+  tripadvisorFetched: boolean;
+  anyFetched: boolean;
 }
 
 export type PipelineStatus = "queued" | "running" | "completed" | "failed";
