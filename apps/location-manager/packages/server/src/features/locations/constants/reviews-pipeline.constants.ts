@@ -1,4 +1,4 @@
-import type { ReviewSource } from "../controllers/content/translate-merge-reviews.controller";
+import type { ReviewSource } from "../types/translate-merge-reviews.types";
 import type { ReviewsQueryParams } from "../services/integrations/clients/reviews-api.client";
 
 export const DEFAULT_GOOGLE_PARAMS: Omit<ReviewsQueryParams, "business_id"> = {

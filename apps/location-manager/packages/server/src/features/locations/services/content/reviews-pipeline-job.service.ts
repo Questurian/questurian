@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
-import type { ReviewSource } from "../../controllers/content/translate-merge-reviews.controller";
+import type { ReviewSource } from "../../types/translate-merge-reviews.types";
 import { JOB_TTL_MS } from "../../constants/reviews-pipeline.constants";
 import { updateLocationReviewStats } from "../../repositories/content/reviews-pipeline.repository";
 import type { ReviewsPipelineJob } from "../../types/reviews-pipeline.types";

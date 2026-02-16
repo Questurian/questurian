@@ -1,4 +1,4 @@
-import type { ReviewSource } from "../controllers/content/translate-merge-reviews.controller";
+import type { ReviewSource } from "./translate-merge-reviews.types";
 
 export interface FetchReviewsPipelineDto {
   sources?: ReviewSource[];

@@ -1,5 +1,5 @@
 import { EnvConfig } from "@server/shared/config/env.config";
-import { runTranslateAndMergeReviews } from "../../controllers/content/translate-merge-reviews.controller";
+import { runTranslateAndMergeReviews } from "./translate-merge-reviews.service";
 import {
   DEFAULT_GOOGLE_PARAMS,
   DEFAULT_TRIPADVISOR_LANGUAGES,
