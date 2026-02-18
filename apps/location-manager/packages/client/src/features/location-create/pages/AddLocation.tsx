@@ -8,14 +8,30 @@ import { BatchCompletePhase } from "../components/BatchCompletePhase";
 import { ConfirmLocationPhase } from "../components/ConfirmLocationPhase";
 import { ReviewsFetchPhase } from "../components/ReviewsFetchPhase";
 import { SuccessPhase } from "../components/SuccessPhase";
+import type { LocationCategory } from "@shared/types/location-category";
 
-export function AddLocation() {
-  const flow = useAddLocationFlow();
+interface AddLocationProps {
+  forcedCategory?: LocationCategory;
+  heading?: string;
+  hideCategoryField?: boolean;
+  enableBatch?: boolean;
+}
+
+export function AddLocation({
+  forcedCategory,
+  heading = "Add Location",
+  hideCategoryField = false,
+  enableBatch = true,
+}: AddLocationProps) {
+  const flow = useAddLocationFlow(forcedCategory);
   const batch = useBatchUploadFlow(flow.setPhase);
   const copyForAI = useCopyForAI();
 
   switch (flow.phase) {
     case "batch-input":
+      if (!enableBatch) {
+        return null;
+      }
       return (
         <BatchInputPhase
           batch={batch}
@@ -25,6 +41,9 @@ export function AddLocation() {
       );
 
     case "batch-processing":
+      if (!enableBatch) {
+        return null;
+      }
       return (
         <BatchUploadPhase
           items={batch.items}
@@ -34,6 +53,9 @@ export function AddLocation() {
       );
 
     case "batch-complete":
+      if (!enableBatch) {
+        return null;
+      }
       return (
         <BatchCompletePhase
           results={batch.results}
@@ -84,7 +106,9 @@ export function AddLocation() {
           selectedCategory={flow.selectedCategory}
           locationTypes={flow.locationTypes}
           isLoadingTypes={flow.isLoadingTypes}
-          onBatchClick={() => flow.setPhase("batch-input")}
+          onBatchClick={enableBatch ? () => flow.setPhase("batch-input") : undefined}
+          heading={heading}
+          hideCategoryField={hideCategoryField}
         />
       );
   }

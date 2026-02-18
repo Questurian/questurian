@@ -31,6 +31,7 @@ import { addLocationEnrichmentFields } from "./migrations/add-location-enrichmen
 import { addReviewsTracking } from "./migrations/add-reviews-tracking";
 import { addLocationIdealFor } from "./migrations/add-location-ideal-for";
 import { addLocationPriceLevel } from "./migrations/add-location-price-level";
+import { addNightlifeDetails } from "./migrations/add-nightlife-details";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -128,6 +129,7 @@ export function initDb() {
       hours_json TEXT,
       neighborhood_description TEXT,
       ideal_for_json TEXT,
+      nightlife_details_json TEXT,
       tripadvisor_meal_types TEXT,
       tripadvisor_cuisines TEXT,
       tripadvisor_features TEXT,
@@ -261,6 +263,9 @@ export function initDb() {
 
   // Run migration to add price_level column to locations table
   addLocationPriceLevel(database);
+
+  // Run migration to add nightlife_details_json column to locations table
+  addNightlifeDetails(database);
 }
 
 export function getDb(): Database {

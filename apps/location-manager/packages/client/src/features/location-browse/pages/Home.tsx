@@ -60,6 +60,23 @@ export function Home() {
     });
   }, [filteredByStatus, filters.searchQuery]);
 
+  const diningLocations = useMemo(
+    () => locations.filter((location) => location.category === "dining"),
+    [locations]
+  );
+
+  const nightlifeLocations = useMemo(
+    () => locations.filter((location) => location.category === "nightlife"),
+    [locations]
+  );
+
+  const otherLocations = useMemo(
+    () => locations.filter((location) => location.category !== "dining" && location.category !== "nightlife"),
+    [locations]
+  );
+
+  const showSideBySideCategories = !filters.selectedCategory;
+
   const handleDownloadAll = async () => {
     if (isDownloadingAll || locations.length === 0) return;
 
@@ -152,6 +169,57 @@ export function Home() {
           <SkeletonList count={8} />
         ) : locations.length === 0 ? (
           <LocationListEmpty hasFilters={filters.isFilterActive} />
+        ) : showSideBySideCategories ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Restaurants ({diningLocations.length})
+                </h3>
+                {diningLocations.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-card/50 p-4 text-sm text-muted-foreground">
+                    No restaurant documents in this view.
+                  </div>
+                ) : (
+                  <LocationList
+                    locations={diningLocations}
+                    lastOpenedId={lastOpenedId}
+                    onExpand={setLastOpened}
+                  />
+                )}
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Nightlife ({nightlifeLocations.length})
+                </h3>
+                {nightlifeLocations.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-card/50 p-4 text-sm text-muted-foreground">
+                    No nightlife documents in this view.
+                  </div>
+                ) : (
+                  <LocationList
+                    locations={nightlifeLocations}
+                    lastOpenedId={lastOpenedId}
+                    onExpand={setLastOpened}
+                  />
+                )}
+              </section>
+            </div>
+
+            {otherLocations.length > 0 && (
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Other Categories ({otherLocations.length})
+                </h3>
+                <LocationList
+                  locations={otherLocations}
+                  lastOpenedId={lastOpenedId}
+                  onExpand={setLastOpened}
+                />
+              </section>
+            )}
+          </div>
         ) : (
           <LocationList
             locations={locations}

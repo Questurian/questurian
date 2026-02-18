@@ -55,6 +55,7 @@ export interface Location {
   hoursJson?: string | null;
   neighborhoodDescription?: string | null;
   idealForJson?: string | null;
+  nightlifeDetailsJson?: string | null;
   tripadvisorMealTypesJson?: string | null;
   tripadvisorCuisinesJson?: string | null;
   tripadvisorFeaturesJson?: string | null;
@@ -129,11 +130,12 @@ export interface CreateMapsRequest {
   name: string;
   address: string;
   category: LocationCategory;
-  idealFor: IdealForTag[];
+  idealFor?: IdealForTag[];
   type?: string;
   tripadvisorUrl?: string;
   email?: string;
   neighborhoodDescription?: string;
+  nightlifeDetails?: Record<string, unknown> | string;
   operationHours?: Record<string, unknown> | string;
   tripadvisorMealTypes?: string[] | string;
   tripadvisorCuisines?: string[] | string;
@@ -182,6 +184,7 @@ export interface LocationResponse {
   payload_location_ref: string | null;
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
+  nightlifeDetails: Record<string, unknown> | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;

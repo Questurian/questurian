@@ -140,6 +140,19 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
+  const parseNightlifeDetails = (nightlifeDetailsJson?: string | null): Record<string, unknown> | null => {
+    if (!nightlifeDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(nightlifeDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
   const parseIdealFor = (idealForJson?: string | null): IdealForTag[] | null => {
     if (!idealForJson) return null;
 
@@ -172,6 +185,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     payload_location_ref: location.payload_location_ref || null,
     neighborhoodDescription: location.neighborhoodDescription || null,
     idealFor: parseIdealFor(location.idealForJson || null),
+    nightlifeDetails: parseNightlifeDetails(location.nightlifeDetailsJson || null),
     operationHours: parseOperationHours(location.hoursJson || null),
     tripadvisorMealTypes: parseTripadvisorStringListJson(location.tripadvisorMealTypesJson || null),
     tripadvisorCuisines: parseTripadvisorStringListJson(location.tripadvisorCuisinesJson || null),

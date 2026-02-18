@@ -21,8 +21,8 @@ export function saveLocation(location: Location): number | boolean {
   try {
     const db = getDb();
     const query = db.query(`
-      INSERT INTO locations (name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, ideal_for_json, tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, price_level, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
-      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $ideal_for_json, $tripadvisor_meal_types, $tripadvisor_cuisines, $tripadvisor_features, $price_level, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
+      INSERT INTO locations (name, title, address, url, lat, lng, category, type, locationKey, district, contactAddress, countryCode, iana_time_id, phoneNumber, website, email, hours_json, neighborhood_description, ideal_for_json, nightlife_details_json, tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, price_level, slug, place_id, tripadvisor_url, tripadvisor_location_id, payload_location_ref, updated_at)
+      VALUES ($name, $title, $address, $url, $lat, $lng, $category, $type, $locationKey, $district, $contactAddress, $countryCode, $iana_time_id, $phoneNumber, $website, $email, $hours_json, $neighborhood_description, $ideal_for_json, $nightlife_details_json, $tripadvisor_meal_types, $tripadvisor_cuisines, $tripadvisor_features, $price_level, $slug, $place_id, $tripadvisor_url, $tripadvisor_location_id, $payload_location_ref, CURRENT_TIMESTAMP)
       ON CONFLICT(name, address) DO UPDATE SET
         title = excluded.title,
         url = excluded.url,
@@ -41,6 +41,7 @@ export function saveLocation(location: Location): number | boolean {
         hours_json = excluded.hours_json,
         neighborhood_description = excluded.neighborhood_description,
         ideal_for_json = excluded.ideal_for_json,
+        nightlife_details_json = excluded.nightlife_details_json,
         tripadvisor_meal_types = excluded.tripadvisor_meal_types,
         tripadvisor_cuisines = excluded.tripadvisor_cuisines,
         tripadvisor_features = excluded.tripadvisor_features,
@@ -72,6 +73,7 @@ export function saveLocation(location: Location): number | boolean {
       $hours_json: location.hoursJson || null,
       $neighborhood_description: location.neighborhoodDescription || null,
       $ideal_for_json: location.idealForJson || null,
+      $nightlife_details_json: location.nightlifeDetailsJson || null,
       $tripadvisor_meal_types: location.tripadvisorMealTypesJson || null,
       $tripadvisor_cuisines: location.tripadvisorCuisinesJson || null,
       $tripadvisor_features: location.tripadvisorFeaturesJson || null,
@@ -193,6 +195,10 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
       setClause.push("ideal_for_json = $ideal_for_json");
       params.$ideal_for_json = updates.idealForJson;
     }
+    if (updates.nightlifeDetailsJson !== undefined) {
+      setClause.push("nightlife_details_json = $nightlife_details_json");
+      params.$nightlife_details_json = updates.nightlifeDetailsJson;
+    }
     if (updates.tripadvisorMealTypesJson !== undefined) {
       setClause.push("tripadvisor_meal_types = $tripadvisor_meal_types");
       params.$tripadvisor_meal_types = updates.tripadvisorMealTypesJson;
@@ -286,6 +292,7 @@ export function getAllLocations(): (Location & { uploadsCount: number; instagram
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
+           l.nightlife_details_json as nightlifeDetailsJson,
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
@@ -319,6 +326,7 @@ export function getLocationsByCategory(category: string): (Location & { uploadsC
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
+           l.nightlife_details_json as nightlifeDetailsJson,
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
@@ -353,6 +361,7 @@ export function getLocationById(id: number): Location | null {
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
+           l.nightlife_details_json as nightlifeDetailsJson,
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
@@ -382,6 +391,7 @@ export function getLocationByIdForUpdate(id: number): Location | null {
            l.countryCode, l.iana_time_id as ianaTimeId, l.phoneNumber, l.website, l.email, l.hours_json as hoursJson,
            l.neighborhood_description as neighborhoodDescription,
            l.ideal_for_json as idealForJson,
+           l.nightlife_details_json as nightlifeDetailsJson,
            l.tripadvisor_meal_types as tripadvisorMealTypesJson,
            l.tripadvisor_cuisines as tripadvisorCuisinesJson,
            l.tripadvisor_features as tripadvisorFeaturesJson,
@@ -433,6 +443,7 @@ export function findPotentialDuplicateLocations(params: {
            countryCode, iana_time_id as ianaTimeId, phoneNumber, website, email, hours_json as hoursJson,
            neighborhood_description as neighborhoodDescription,
            ideal_for_json as idealForJson,
+           nightlife_details_json as nightlifeDetailsJson,
            tripadvisor_meal_types as tripadvisorMealTypesJson,
            tripadvisor_cuisines as tripadvisorCuisinesJson,
            tripadvisor_features as tripadvisorFeaturesJson,
@@ -462,6 +473,7 @@ export function getLocationBySlug(slug: string): Location | null {
            countryCode, iana_time_id as ianaTimeId, phoneNumber, website, email, hours_json as hoursJson,
            neighborhood_description as neighborhoodDescription,
            ideal_for_json as idealForJson,
+           nightlife_details_json as nightlifeDetailsJson,
            tripadvisor_meal_types as tripadvisorMealTypesJson,
            tripadvisor_cuisines as tripadvisorCuisinesJson,
            tripadvisor_features as tripadvisorFeaturesJson,

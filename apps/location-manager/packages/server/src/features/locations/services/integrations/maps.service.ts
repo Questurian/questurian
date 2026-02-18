@@ -56,6 +56,26 @@ export class MapsService {
     return JSON.stringify(input);
   }
 
+  private normalizeNightlifeDetails(
+    input?: Record<string, unknown> | string | null
+  ): string | null | undefined {
+    if (input === undefined) return undefined;
+    if (input === null) return null;
+
+    if (typeof input === "string") {
+      const trimmed = input.trim();
+      if (!trimmed) return null;
+      try {
+        JSON.parse(trimmed);
+      } catch {
+        throw new BadRequestError("Nightlife details must be valid JSON");
+      }
+      return trimmed;
+    }
+
+    return JSON.stringify(input);
+  }
+
   private resolveTripadvisorFields(tripadvisorUrl?: string | null): { tripadvisorUrl?: string | null; tripadvisorLocationId?: string | null } {
     if (tripadvisorUrl === undefined) {
       return {};
@@ -347,6 +367,7 @@ export class MapsService {
       entry.neighborhoodDescription = payload.neighborhoodDescription;
     }
     const hoursJson = this.normalizeOperationHours(payload.operationHours);
+    const nightlifeDetailsJson = this.normalizeNightlifeDetails(payload.nightlifeDetails);
     const idealForJson = this.normalizeIdealForTags(payload.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(payload.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(payload.tripadvisorCuisines);
@@ -355,6 +376,9 @@ export class MapsService {
     });
     if (hoursJson !== undefined) {
       entry.hoursJson = hoursJson;
+    }
+    if (nightlifeDetailsJson !== undefined) {
+      entry.nightlifeDetailsJson = nightlifeDetailsJson;
     }
     if (idealForJson !== undefined) {
       entry.idealForJson = idealForJson;
@@ -428,6 +452,7 @@ export class MapsService {
 
     // Perform partial update - only update provided fields
     const hoursJson = this.normalizeOperationHours(updates.operationHours);
+    const nightlifeDetailsJson = this.normalizeNightlifeDetails(updates.nightlifeDetails);
     const idealForJson = this.normalizeIdealForTags(updates.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(updates.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(updates.tripadvisorCuisines);
@@ -450,6 +475,7 @@ export class MapsService {
       ...(updates.email !== undefined && { email: updates.email }),
       ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
       ...(idealForJson !== undefined && { idealForJson }),
+      ...(nightlifeDetailsJson !== undefined && { nightlifeDetailsJson }),
       ...(hoursJson !== undefined && { hoursJson }),
       ...(tripadvisorMealTypesJson !== undefined && { tripadvisorMealTypesJson }),
       ...(tripadvisorCuisinesJson !== undefined && { tripadvisorCuisinesJson }),

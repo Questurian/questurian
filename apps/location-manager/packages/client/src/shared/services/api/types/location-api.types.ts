@@ -5,6 +5,7 @@ export interface CreateMapsRequest {
   name: string;
   address: string;
   category: Category;
+  nightlifeDetails?: Record<string, unknown> | string;
   type?: string;
   locationKey?: string;
   title?: string;
@@ -13,7 +14,7 @@ export interface CreateMapsRequest {
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string;
-  idealFor: IdealForTag[];
+  idealFor?: IdealForTag[];
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;
@@ -37,6 +38,7 @@ export interface UpdateMapsRequest {
   website?: string;
   tripadvisorUrl?: string;
   idealFor?: IdealForTag[];
+  nightlifeDetails?: Record<string, unknown> | string | null;
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;

@@ -13,7 +13,12 @@ export function Navbar() {
     { to: "/admin/payload-sync", label: "Payload Sync", icon: ArrowUpDown },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (path === "/add") {
+      return location.pathname === "/add" || location.pathname.startsWith("/add/");
+    }
+    return location.pathname === path;
+  };
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm text-foreground">

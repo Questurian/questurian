@@ -61,6 +61,7 @@ export interface Location {
   ianaTimeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  nightlifeDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;
@@ -103,6 +104,7 @@ export interface LocationResponse {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
+  nightlifeDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;

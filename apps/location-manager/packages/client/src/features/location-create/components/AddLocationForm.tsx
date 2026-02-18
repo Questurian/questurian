@@ -16,7 +16,9 @@ interface AddLocationFormProps {
   selectedCategory: LocationCategory | undefined;
   locationTypes: { value: string; label: string }[];
   isLoadingTypes: boolean;
-  onBatchClick: () => void;
+  onBatchClick?: () => void;
+  heading?: string;
+  hideCategoryField?: boolean;
 }
 
 export function AddLocationForm({
@@ -28,6 +30,8 @@ export function AddLocationForm({
   locationTypes,
   isLoadingTypes,
   onBatchClick,
+  heading = "Add Location",
+  hideCategoryField = false,
 }: AddLocationFormProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -37,18 +41,20 @@ export function AddLocationForm({
             <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
               <MapPin className="w-4 h-4 text-muted-foreground" />
             </div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground underline">Add Location</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground underline">{heading}</h1>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onBatchClick}
-            className="flex items-center gap-1.5 text-foreground border-border"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Batch
-          </Button>
+          {onBatchClick && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onBatchClick}
+              className="flex items-center gap-1.5 text-foreground border-border"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Batch
+            </Button>
+          )}
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -74,17 +80,24 @@ export function AddLocationForm({
             <h2 className="text-xs font-semibold tracking-wide text-foreground">
               Classification
             </h2>
-            <FormSelect
-              name="category"
-              label="Category"
-              control={form.control}
-              placeholder="Select a category"
-            >
-              <SelectItem value="dining">Dining</SelectItem>
-              <SelectItem value="accommodations">Accommodations</SelectItem>
-              <SelectItem value="attractions">Attractions</SelectItem>
-              <SelectItem value="nightlife">Nightlife</SelectItem>
-            </FormSelect>
+            {hideCategoryField ? (
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                <span className="text-xs text-muted-foreground block mb-1">Category</span>
+                {(selectedCategory || "dining").charAt(0).toUpperCase() + (selectedCategory || "dining").slice(1)}
+              </div>
+            ) : (
+              <FormSelect
+                name="category"
+                label="Category"
+                control={form.control}
+                placeholder="Select a category"
+              >
+                <SelectItem value="dining">Dining</SelectItem>
+                <SelectItem value="accommodations">Accommodations</SelectItem>
+                <SelectItem value="attractions">Attractions</SelectItem>
+                <SelectItem value="nightlife">Nightlife</SelectItem>
+              </FormSelect>
+            )}
             {selectedCategory && (
               <FormSelect
                 name="type"
