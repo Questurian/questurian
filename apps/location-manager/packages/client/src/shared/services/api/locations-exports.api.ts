@@ -1,31 +1,32 @@
 import { API_BASE_URL, API_ENDPOINTS } from "./config";
+import type { Category } from "./types";
 
 export const locationsExportsApi = {
-  getReviewsDownloadUrl(id: number): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_REVIEWS(id)}`;
+  getReviewsDownloadUrl(category: Category, id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_REVIEWS(category, id)}`;
   },
 
-  getTripAdvisorReviewsDownloadUrl(id: number, lang?: string): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_TRIPADVISOR_REVIEWS(id, lang)}`;
+  getTripAdvisorReviewsDownloadUrl(category: Category, id: number, lang?: string): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_TRIPADVISOR_REVIEWS(category, id, lang)}`;
   },
 
-  getMergedReviewsDownloadUrl(id: number): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_MERGED_REVIEWS(id)}`;
+  getMergedReviewsDownloadUrl(category: Category, id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_MERGED_REVIEWS(category, id)}`;
   },
 
-  getRejectsReportDownloadUrl(id: number): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_REJECTS_REPORT(id)}`;
+  getRejectsReportDownloadUrl(category: Category, id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_REJECTS_REPORT(category, id)}`;
   },
 
-  getTripAdvisorPlaceDownloadUrl(id: number): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_TRIPADVISOR_PLACE(id)}`;
+  getTripAdvisorPlaceDownloadUrl(category: Category, id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_TRIPADVISOR_PLACE(category, id)}`;
   },
 
-  getLocationExportDownloadUrl(id: number): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_LOCATION_EXPORT(id)}`;
+  getLocationExportDownloadUrl(category: Category, id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_LOCATION_EXPORT(category, id)}`;
   },
 
-  getAiJsonDownloadUrl(id: number): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_AI_JSON(id)}`;
+  getAiJsonDownloadUrl(category: Category, id: number): string {
+    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_AI_JSON(category, id)}`;
   },
 };

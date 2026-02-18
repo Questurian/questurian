@@ -82,7 +82,7 @@ export function BatchUploadPhase({
       });
 
       // Step 2: Auto-confirm with default values (skip manual confirmation)
-      await locationsApi.updateLocation(locationId, {
+      await locationsApi.updateLocation(item.category, locationId, {
         title: locationName,
         phoneNumber: createResponse.contact?.phoneNumber || undefined,
         website: createResponse.contact?.website || undefined,

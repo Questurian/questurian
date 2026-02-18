@@ -8,6 +8,7 @@ import {
   useFetchTripAdvisorPlace,
   useTripAdvisorPlaceStatus,
 } from "@client/shared/services/api/hooks/useTripAdvisorPlace";
+import { parseNightlifeDetails } from "../../utils/nightlife-details";
 
 interface LocationCompletenessProps {
   locationDetail: LocationResponse;
@@ -18,6 +19,8 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
   const requiredFields = useMemo(() => {
     const contact = locationDetail.contact || {};
     const source = locationDetail.source || {};
+    const isNightlife = locationDetail.category === "nightlife";
+    const nightlifeDetails = parseNightlifeDetails(locationDetail.nightlifeDetails);
     const hasOperationHours = Boolean(
       locationDetail.operationHours &&
         Object.keys(locationDetail.operationHours).length > 0
@@ -31,7 +34,51 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       Array.isArray(locationDetail.tripadvisorCuisines) && locationDetail.tripadvisorCuisines.length > 0
     );
 
-    return [
+    if (isNightlife) {
+      return [
+        { key: "name", label: "Name", present: Boolean(source.name?.trim() || nightlifeDetails.name) },
+        { key: "sourceAddress", label: "Location", present: Boolean(source.address?.trim() || nightlifeDetails.location) },
+        { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        {
+          key: "nightlife.clubType",
+          label: "Club Type",
+          present: Boolean(nightlifeDetails.clubType || locationDetail.type?.trim()),
+        },
+        { key: "nightlife.music", label: "Music", present: nightlifeDetails.music.length > 0 },
+        { key: "nightlife.venueType", label: "Venue Type", present: Boolean(nightlifeDetails.venueType) },
+        { key: "nightlife.venueSize", label: "Venue Size", present: Boolean(nightlifeDetails.venueSize) },
+        { key: "nightlife.spaceLayout", label: "Space Layout", present: nightlifeDetails.spaceLayout.length > 0 },
+        { key: "nightlife.vibe", label: "Vibe", present: nightlifeDetails.vibe.length > 0 },
+        { key: "nightlife.peakHours", label: "Peak Hours", present: Boolean(nightlifeDetails.peakHours) },
+        {
+          key: "nightlife.priceTier",
+          label: "Price Tier",
+          present: Boolean(nightlifeDetails.priceTier || locationDetail.priceLevel?.trim()),
+        },
+        { key: "nightlife.musicFormat", label: "Music Format", present: nightlifeDetails.musicFormat.length > 0 },
+        {
+          key: "nightlife.touristPresence",
+          label: "Tourist Presence",
+          present: Boolean(nightlifeDetails.touristPresence),
+        },
+        { key: "nightlife.dressCode", label: "Dress Code", present: nightlifeDetails.dressCode.length > 0 },
+        { key: "nightlife.energyLevel", label: "Energy Level", present: Boolean(nightlifeDetails.energyLevel) },
+        {
+          key: "nightlife.vipAndBottleService",
+          label: "VIP/Bottle Service",
+          present: Boolean(nightlifeDetails.vipAndBottleService),
+        },
+        { key: "nightlife.crowdProfile", label: "Crowd Profile", present: Boolean(nightlifeDetails.crowdProfile) },
+        {
+          key: "nightlife.daytimeRestaurant",
+          label: "Daytime Restaurant",
+          present: nightlifeDetails.daytimeRestaurant === "0" || nightlifeDetails.daytimeRestaurant === "1",
+        },
+        { key: "media", label: "Images/Instagram", present: hasMedia },
+      ];
+    }
+
+    const baseFields = [
       { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
       { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
       { key: "sourceAddress", label: "Source Address", present: Boolean(source.address?.trim()) },
@@ -54,10 +101,18 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim()) },
       { key: "website", label: "Website", present: Boolean(contact.website?.trim()) },
       { key: "contactUrl", label: "Google URL", present: Boolean(contact.url?.trim()) },
+    ];
+
+    const categoryFields = [
       { key: "idealFor", label: "Ideal For", present: hasIdealFor },
       { key: "cuisines", label: "Cuisines", present: hasCuisines },
       { key: "priceLevel", label: "Price Level", present: Boolean(locationDetail.priceLevel?.trim()) },
       { key: "operationHours", label: "Hours", present: hasOperationHours },
+    ];
+
+    return [
+      ...baseFields,
+      ...categoryFields,
       { key: "media", label: "Images/Instagram", present: hasMedia },
     ];
   }, [locationDetail]);
@@ -73,11 +128,25 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
   const [completenessExpanded, setCompletenessExpanded] = useState<boolean | undefined>(undefined);
   const isCompletenessExpanded = completenessExpanded ?? !isComplete;
   const [editField, setEditField] = useState<{ key: string; label: string; present: boolean } | null>(null);
+
+  const getEditField = (field: { key: string; label: string; present: boolean }) => {
+    if (field.key.startsWith("nightlife.")) {
+      return {
+        key: "nightlifeDetails",
+        label: "Nightlife Profile",
+        present: field.present,
+      };
+    }
+    return field;
+  };
+
   const tripAdvisorPlaceStatusQuery = useTripAdvisorPlaceStatus({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     enabled: shouldShowTripAdvisorButton,
   });
   const fetchTripAdvisorPlaceMutation = useFetchTripAdvisorPlace({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     onSuccess: (data) => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -157,7 +226,7 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
                 <button
                   key={field.key}
                   type="button"
-                  onClick={() => setEditField(field)}
+                  onClick={() => setEditField(getEditField(field))}
                   className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
                   title={`Click to edit ${field.label}`}
                 >
@@ -171,7 +240,7 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
               <button
                 key={field.key}
                 type="button"
-                onClick={() => !field.present && setEditField(field)}
+                onClick={() => !field.present && setEditField(getEditField(field))}
                 disabled={field.present}
                 title={field.present ? undefined : `Click to edit ${field.label}`}
                 className={`flex items-center gap-2 rounded border px-2 py-1 text-xs text-left w-full ${

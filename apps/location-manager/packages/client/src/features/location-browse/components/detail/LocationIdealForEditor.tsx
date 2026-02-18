@@ -28,6 +28,8 @@ interface LocationIdealForEditorProps {
 }
 
 export function LocationIdealForEditor({ locationDetail }: LocationIdealForEditorProps) {
+  if (locationDetail.category === "nightlife") return null;
+
   const { showToast } = useToast();
   const { mutate: updateLocation, isPending: isUpdatingLocation } = useUpdateLocation();
 
@@ -99,6 +101,7 @@ export function LocationIdealForEditor({ locationDetail }: LocationIdealForEdito
 
     updateLocation(
       {
+        category: locationDetail.category,
         id: locationDetail.id,
         data: { idealFor: idealForDraft },
       },

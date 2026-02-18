@@ -11,7 +11,7 @@ const container = ServiceContainer.getInstance();
 const MAX_TRIPADVISOR_REVIEWS_PER_LANGUAGE = 150;
 
 /**
- * POST /api/locations/:id/tripadvisor-reviews/fetch
+ * POST /api/{category}/:id/tripadvisor-reviews/fetch
  * Fetch TripAdvisor reviews for a location
  */
 export async function fetchTripAdvisorReviews(c: Context) {
@@ -80,7 +80,7 @@ export async function fetchTripAdvisorReviews(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/tripadvisor-reviews/download
+ * GET /api/{category}/:id/tripadvisor-reviews/download
  * Download TripAdvisor reviews for a location
  * Query param: ?lang=en (optional, downloads all languages if not specified)
  */
@@ -155,7 +155,7 @@ export async function downloadTripAdvisorReviews(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/tripadvisor-reviews/status
+ * GET /api/{category}/:id/tripadvisor-reviews/status
  * Check the status of TripAdvisor reviews for a location
  */
 export async function getTripAdvisorReviewsStatus(c: Context) {

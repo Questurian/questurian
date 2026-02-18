@@ -464,15 +464,6 @@ export class ImageStorageService {
       const { getDb } = await import("@server/shared/db/client");
       const db = getDb();
 
-      // Get paths from locations table
-      const locations = db.query("SELECT images FROM locations WHERE images IS NOT NULL").all() as Array<{ images: string }>;
-      for (const location of locations) {
-        if (location.images) {
-          const images = JSON.parse(location.images);
-          paths.push(...images);
-        }
-      }
-
       // Get paths from instagram_embeds table
       const instagramEmbeds = db.query("SELECT images FROM instagram_embeds WHERE images IS NOT NULL").all() as Array<{ images: string }>;
       for (const embed of instagramEmbeds) {

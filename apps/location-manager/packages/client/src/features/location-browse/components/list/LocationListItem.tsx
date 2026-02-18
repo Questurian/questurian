@@ -80,7 +80,8 @@ export function LocationListItem({ location, onClick, defaultExpanded = false, o
 
   // Custom hooks
   const { data: locationDetail, isLoading, error } = useLocationDetail(
-    isExpanded || isAdvancedOpen ? location.id : null
+    isExpanded || isAdvancedOpen ? location.id : null,
+    location.category
   );
   const { isMenuOpen, menuRef, toggleMenu, closeMenu } = useLocationItemMenu();
   const { copyToClipboard } = useClipboardCopy();
@@ -93,6 +94,7 @@ export function LocationListItem({ location, onClick, defaultExpanded = false, o
     isDeleting,
   } = useLocationDelete({
     locationId: location.id,
+    category: location.category,
     onMenuClose: closeMenu,
   });
 
@@ -111,7 +113,7 @@ export function LocationListItem({ location, onClick, defaultExpanded = false, o
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     closeMenu();
-    navigate(`/edit/${location.id}`);
+    navigate(`/edit/${location.category}/${location.id}`);
   };
 
   const handleAdvancedClick = (e: React.MouseEvent) => {

@@ -33,7 +33,7 @@ export function saveTripAdvisorPlace(data: TripAdvisorPlaceData): number | false
     // Check if record already exists (upsert logic)
     const existing = db.query(`
       SELECT id FROM tripadvisor_places
-      WHERE location_id = $location_id AND tripadvisor_place_id = $tripadvisor_place_id
+      WHERE entity_id = $location_id AND tripadvisor_place_id = $tripadvisor_place_id
     `).get({
       $location_id: data.location_id,
       $tripadvisor_place_id: data.tripadvisor_place_id,
@@ -54,7 +54,7 @@ export function saveTripAdvisorPlace(data: TripAdvisorPlaceData): number | false
     } else {
       // Insert new record
       db.query(`
-        INSERT INTO tripadvisor_places (location_id, tripadvisor_place_id, place_data)
+        INSERT INTO tripadvisor_places (entity_id, tripadvisor_place_id, place_data)
         VALUES ($location_id, $tripadvisor_place_id, $place_data)
       `).run({
         $location_id: data.location_id,
@@ -74,9 +74,9 @@ export function saveTripAdvisorPlace(data: TripAdvisorPlaceData): number | false
 export function getTripAdvisorPlaceByLocationId(locationId: number): TripAdvisorPlaceData | null {
   const db = getDb();
   const row = db.query(`
-    SELECT id, location_id, tripadvisor_place_id, place_data, created_at
+    SELECT id, entity_id as location_id, tripadvisor_place_id, place_data, created_at
     FROM tripadvisor_places
-    WHERE location_id = $location_id
+    WHERE entity_id = $location_id
     ORDER BY created_at DESC
     LIMIT 1
   `).get({ $location_id: locationId }) as TripAdvisorPlaceDbRow | undefined;

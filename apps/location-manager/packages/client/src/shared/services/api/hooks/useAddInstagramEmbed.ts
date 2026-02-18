@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
-import type { InstagramEmbed } from "@client/shared/services/api/types";
+import { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
+import type { Category, InstagramEmbed } from "@client/shared/services/api/types";
 
 interface UseAddInstagramEmbedOptions {
   onSuccess?: (data: InstagramEmbed) => void;
@@ -9,17 +10,23 @@ interface UseAddInstagramEmbedOptions {
 }
 
 export function useAddInstagramEmbed(
+  category: Category | null,
   locationId: number,
   options?: UseAddInstagramEmbedOptions
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (embedCode: string) =>
-      locationsApi.addInstagramEmbed(locationId, { embedCode }),
+    mutationFn: (embedCode: string) => {
+      if (!category) {
+        throw new Error("Category is required to add Instagram embeds");
+      }
+      return locationsApi.addInstagramEmbed(category, locationId, { embedCode });
+    },
     onSuccess: (data) => {
+      if (!category) return;
       // Invalidate location detail query to refresh embeds list
-      queryClient.invalidateQueries({ queryKey: ["location-detail", locationId] });
+      queryClient.invalidateQueries({ queryKey: LOCATION_DETAIL_QUERY_KEY(category, locationId) });
       // Also invalidate locations list in case it affects overview
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: LOCATIONS_BASIC_QUERY_KEY });

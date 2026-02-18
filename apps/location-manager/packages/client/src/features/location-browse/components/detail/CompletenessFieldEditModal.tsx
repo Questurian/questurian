@@ -212,6 +212,10 @@ function getInitialValue(field: FieldDef, locationDetail: LocationResponse): str
         : "";
     case "priceLevel":
       return locationDetail.priceLevel?.trim() ?? "";
+    case "nightlifeDetails":
+      return locationDetail.nightlifeDetails
+        ? JSON.stringify(locationDetail.nightlifeDetails, null, 2)
+        : "";
     case "operationHours":
       return locationDetail.operationHours
         ? JSON.stringify(locationDetail.operationHours, null, 2)
@@ -234,9 +238,7 @@ function buildUpdatePayload(
     case "sourceAddress":
       return { address: trimmed || undefined };
     case "category":
-      if (!["dining", "accommodations", "attractions", "nightlife"].includes(trimmed))
-        return null;
-      return { category: trimmed as "dining" | "accommodations" | "attractions" | "nightlife" };
+      return null;
     case "type":
       return { type: trimmed || undefined };
     case "locationKey":
@@ -271,6 +273,8 @@ function buildUpdatePayload(
       return { tripadvisorCuisines: trimmed || null };
     case "priceLevel":
       return { priceLevel: trimmed || null };
+    case "nightlifeDetails":
+      return { nightlifeDetails: trimmed || null };
     case "operationHours":
       return { operationHours: trimmed || undefined };
     case "media":
@@ -365,7 +369,11 @@ export function CompletenessFieldEditModal({
 
     if (field.key === "operationHours") {
       updateLocation(
-        { id: locationDetail.id, data: { operationHours: buildOperationHoursJson(dayEntries) } },
+        {
+          category: locationDetail.category,
+          id: locationDetail.id,
+          data: { operationHours: buildOperationHoursJson(dayEntries) },
+        },
         {
           onSuccess: () => {
             const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -391,7 +399,11 @@ export function CompletenessFieldEditModal({
       }
 
       updateLocation(
-        { id: locationDetail.id, data: { name: sourceName, address: sourceAddress } },
+        {
+          category: locationDetail.category,
+          id: locationDetail.id,
+          data: { name: sourceName, address: sourceAddress },
+        },
         {
           onSuccess: () => {
             const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -414,7 +426,11 @@ export function CompletenessFieldEditModal({
         return;
       }
       updateLocation(
-        { id: locationDetail.id, data: { idealFor: idealForDraft } },
+        {
+          category: locationDetail.category,
+          id: locationDetail.id,
+          data: { idealFor: idealForDraft },
+        },
         {
           onSuccess: () => {
             const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -434,7 +450,11 @@ export function CompletenessFieldEditModal({
     if (payload === null) return;
 
     updateLocation(
-      { id: locationDetail.id, data: payload },
+      {
+        category: locationDetail.category,
+        id: locationDetail.id,
+        data: payload,
+      },
       {
         onSuccess: () => {
           const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -512,6 +532,16 @@ export function CompletenessFieldEditModal({
               ))}
             </SelectContent>
           </Select>
+        );
+      case "nightlifeDetails":
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            rows={12}
+            placeholder='{"name":"Venue Name","price_tier":"$$$"}'
+            className="font-mono text-xs"
+          />
         );
       case "ianaTimeId":
         return (

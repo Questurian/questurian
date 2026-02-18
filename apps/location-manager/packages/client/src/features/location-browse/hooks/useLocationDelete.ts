@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteLocation } from "@client/shared/services/api/hooks";
+import type { Category } from "@client/shared/services/api/types";
 
 interface UseLocationDeleteProps {
   locationId: number;
+  category: Category;
   onMenuClose: () => void;
 }
 
@@ -13,7 +15,7 @@ interface UseLocationDeleteProps {
  * @param onMenuClose - Callback to close the settings menu
  * @returns Delete dialog state, handlers, and loading state
  */
-export function useLocationDelete({ locationId, onMenuClose }: UseLocationDeleteProps) {
+export function useLocationDelete({ locationId, category, onMenuClose }: UseLocationDeleteProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { showToast } = useToast();
   const deleteLocationMutation = useDeleteLocation();
@@ -26,7 +28,7 @@ export function useLocationDelete({ locationId, onMenuClose }: UseLocationDelete
 
   const handleDeleteConfirm = async () => {
     try {
-      await deleteLocationMutation.mutateAsync(locationId);
+      await deleteLocationMutation.mutateAsync({ category, id: locationId });
       showToast('Location deleted successfully', { x: window.innerWidth / 2, y: 100 });
       setIsDeleteDialogOpen(false);
     } catch (error) {

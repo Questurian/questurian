@@ -1,11 +1,10 @@
-import type { CreateMapsRequest, Location, LocationResponse } from "../../models/location";
+import type { CreateMapsRequest, Location, LocationCategory, LocationResponse } from "../../models/location";
 import type { PatchMapsDto } from "../../validation/schemas/maps.schemas";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { EnvConfig } from "@server/shared/config/env.config";
 import {
   createFromMaps,
   generateGoogleMapsUrl,
-  geocode,
 } from "../geocoding/location-geocoding.helper";
 import {
   findPotentialDuplicateLocations,
@@ -28,6 +27,16 @@ import {
 import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
 
 import type { PayloadApiClient } from "./clients/payload-api.client";
+
+export interface GooglePrefillResult {
+  googleUrl: string;
+  placeId: string;
+  lat: number;
+  lng: number;
+  locationKey: string | null;
+  district: string | null;
+  ianaTimeId: string | null;
+}
 
 export class MapsService {
   constructor(
@@ -62,18 +71,50 @@ export class MapsService {
     if (input === undefined) return undefined;
     if (input === null) return null;
 
+    const stripSpendLevel = (value: Record<string, unknown>): Record<string, unknown> => {
+      const details = value.details;
+      if (!details || typeof details !== "object" || Array.isArray(details)) {
+        return value;
+      }
+
+      const detailsRecord = details as Record<string, unknown>;
+      const scene = detailsRecord.theScene;
+      if (!scene || typeof scene !== "object" || Array.isArray(scene)) {
+        return value;
+      }
+
+      const sceneRecord = scene as Record<string, unknown>;
+      if (!Object.prototype.hasOwnProperty.call(sceneRecord, "spendLevel")) {
+        return value;
+      }
+
+      const nextScene = { ...sceneRecord };
+      delete nextScene.spendLevel;
+
+      return {
+        ...value,
+        details: {
+          ...detailsRecord,
+          theScene: nextScene,
+        },
+      };
+    };
+
     if (typeof input === "string") {
       const trimmed = input.trim();
       if (!trimmed) return null;
       try {
-        JSON.parse(trimmed);
+        const parsed = JSON.parse(trimmed);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          return trimmed;
+        }
+        return JSON.stringify(stripSpendLevel(parsed as Record<string, unknown>));
       } catch {
         throw new BadRequestError("Nightlife details must be valid JSON");
       }
-      return trimmed;
     }
 
-    return JSON.stringify(input);
+    return JSON.stringify(stripSpendLevel(input));
   }
 
   private resolveTripadvisorFields(tripadvisorUrl?: string | null): { tripadvisorUrl?: string | null; tripadvisorLocationId?: string | null } {
@@ -265,8 +306,8 @@ export class MapsService {
       throw new BadRequestError("Duplicate location found without a valid ID");
     }
 
-    const existingCategory = existingLocation.category || "attractions";
-    const incomingCategory = incomingEntry.category || "attractions";
+    const existingCategory = validateCategory(existingLocation.category);
+    const incomingCategory = validateCategory(incomingEntry.category);
 
     if (existingCategory !== incomingCategory) {
       throw new BadRequestError(
@@ -348,16 +389,104 @@ export class MapsService {
     });
   }
 
-  async addMapsLocation(payload: CreateMapsRequest): Promise<LocationResponse> {
+  async resolveGooglePrefill(
+    name: string,
+    address: string
+  ): Promise<GooglePrefillResult> {
+    const trimmedName = name.trim();
+    const trimmedAddress = address.trim();
+
+    if (!trimmedName || !trimmedAddress) {
+      throw new BadRequestError("Name and address required");
+    }
+
+    if (!this.config.hasGoogleMapsKey()) {
+      throw new BadRequestError("Google Maps API key not configured");
+    }
+
+    const entry = await createFromMaps(
+      trimmedName,
+      trimmedAddress,
+      this.config.GOOGLE_MAPS_API_KEY,
+      "nightlife"
+    );
+
+    if (entry.lat == null || entry.lng == null || !entry.placeId) {
+      throw new BadRequestError(
+        "Could not resolve Place ID and coordinates from Google for this name and address"
+      );
+    }
+
+    return {
+      googleUrl: generateGoogleMapsUrl(trimmedName, trimmedAddress),
+      placeId: entry.placeId,
+      lat: entry.lat,
+      lng: entry.lng,
+      locationKey: entry.locationKey ?? null,
+      district: entry.district ?? null,
+      ianaTimeId: entry.ianaTimeId ?? null,
+    };
+  }
+
+  async addMapsLocation(
+    payload: CreateMapsRequest,
+    expectedCategory?: LocationCategory
+  ): Promise<LocationResponse> {
     if (!payload.name || !payload.address) {
       throw new BadRequestError("Name and address required");
     }
 
-    const category = validateCategory(payload.category);
+    if (expectedCategory && payload.category !== expectedCategory) {
+      throw new BadRequestError(`Category must be "${expectedCategory}" for this endpoint`);
+    }
 
-    const apiKey = this.config.hasGoogleMapsKey() ? this.config.GOOGLE_MAPS_API_KEY : undefined;
+    const category = validateCategory(payload.category);
+    const shouldAutoEnrichFromApis = category !== "nightlife";
+    const apiKey = shouldAutoEnrichFromApis && this.config.hasGoogleMapsKey()
+      ? this.config.GOOGLE_MAPS_API_KEY
+      : undefined;
     const entry = await createFromMaps(payload.name, payload.address, apiKey, category, payload.type);
     entry.category = category;
+    if (category === "nightlife") {
+      // Nightlife creation is manual-first: keep Google URL empty until explicitly set.
+      entry.url = "";
+    }
+    if (payload.title !== undefined) {
+      entry.title = payload.title;
+    }
+    if (payload.url !== undefined) {
+      entry.url = payload.url;
+    }
+    if (payload.lat !== undefined) {
+      entry.lat = payload.lat;
+    }
+    if (payload.lng !== undefined) {
+      entry.lng = payload.lng;
+    }
+    if (payload.locationKey !== undefined) {
+      entry.locationKey = payload.locationKey;
+    }
+    if (payload.district !== undefined) {
+      entry.district = payload.district;
+    }
+    if (payload.contactAddress !== undefined) {
+      entry.contactAddress = payload.contactAddress;
+    }
+    if (payload.countryCode) {
+      entry.countryCode = payload.countryCode;
+    }
+    if (payload.ianaTimeId !== undefined) {
+      entry.ianaTimeId = payload.ianaTimeId;
+    }
+    if (payload.placeId !== undefined) {
+      entry.placeId = payload.placeId;
+    }
+    if (payload.phoneNumber !== undefined) {
+      entry.phoneNumber = payload.phoneNumber;
+    }
+    if (payload.website !== undefined) {
+      entry.website = payload.website;
+    }
     const tripadvisorFields = this.resolveTripadvisorFields(payload.tripadvisorUrl);
     Object.assign(entry, tripadvisorFields);
     if (payload.email) {
@@ -412,8 +541,8 @@ export class MapsService {
       throw new BadRequestError("Failed to save location to database");
     }
 
-    // Auto-fetch TripAdvisor place data if tripadvisorLocationId is available
-    if (entry.tripadvisorLocationId) {
+    // Auto-fetch TripAdvisor place data for non-nightlife categories only.
+    if (entry.tripadvisorLocationId && category !== "nightlife") {
       try {
         await this.tripAdvisorPlaceService.fetchAndMergePlaceData(savedId, entry.tripadvisorLocationId);
       } catch (error) {
@@ -429,15 +558,20 @@ export class MapsService {
   }
 
 
-  async updateMapsLocationById(id: number, updates: PatchMapsDto): Promise<LocationResponse> {
+  async updateMapsLocationById(
+    id: number,
+    updates: PatchMapsDto,
+    expectedCategory?: LocationCategory
+  ): Promise<LocationResponse> {
     console.log(`📝 [UPDATE] Location ${id} received updates:`, updates);
 
     const currentLocation = getLocationByIdForUpdate(id);
     if (!currentLocation) {
       throw new NotFoundError("Location", id);
     }
-
-    const category = updates.category ? validateCategory(updates.category) : undefined;
+    if (expectedCategory && currentLocation.category !== expectedCategory) {
+      throw new NotFoundError("Location", id);
+    }
 
     const nextName = updates.name ?? currentLocation.name;
     const nextAddress = updates.address ?? currentLocation.address;
@@ -463,7 +597,6 @@ export class MapsService {
       ...(updates.name !== undefined && { name: updates.name }),
       ...(updates.address !== undefined && { address: updates.address }),
       ...(updates.title !== undefined && { title: updates.title }),
-      ...(category !== undefined && { category }),
       ...(updates.type !== undefined && { type: updates.type }),
       ...(updates.locationKey !== undefined && { locationKey: updates.locationKey }),
       ...(updates.district !== undefined && { district: updates.district }),

@@ -2,13 +2,20 @@ import type { Context } from "hono";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 import type { ListLocationsQueryDto, DeleteLocationSlugDto, DeleteLocationIdDto } from "../../validation/schemas/locations.schemas";
+import type { LocationCategory } from "../../models/location";
+import { getLocationByIdForUpdate } from "../../repositories/core";
 
 const container = ServiceContainer.getInstance();
 
+function resolveCategoryFromRoute(c: Context): LocationCategory | undefined {
+  return c.get("routeCategory") as LocationCategory | undefined;
+}
+
 export function getLocations(c: Context) {
   const query = c.get("validatedQuery") as ListLocationsQueryDto | undefined;
+  const routeCategory = resolveCategoryFromRoute(c);
   const locations = container.locationQueryService.listLocations(
-    query?.category,
+    routeCategory || query?.category,
     query?.locationKey
   );
   return c.json(successResponse({ locations }));
@@ -16,8 +23,9 @@ export function getLocations(c: Context) {
 
 export function getLocationsBasic(c: Context) {
   const query = c.get("validatedQuery") as ListLocationsQueryDto | undefined;
+  const routeCategory = resolveCategoryFromRoute(c);
   const locations = container.locationQueryService.listLocationsBasic(
-    query?.category,
+    routeCategory || query?.category,
     query?.locationKey
   );
   return c.json(successResponse({ locations }));
@@ -37,6 +45,14 @@ export async function deleteLocationBySlug(c: Context) {
 
 export async function deleteLocationById(c: Context) {
   const dto = c.get("validatedParams") as DeleteLocationIdDto;
+  const routeCategory = resolveCategoryFromRoute(c);
+
+  if (routeCategory) {
+    const location = getLocationByIdForUpdate(dto.id);
+    if (!location || location.category !== routeCategory) {
+      return c.json(errorResponse("Location not found"), 404);
+    }
+  }
 
   const deleted = await container.locationMutationService.deleteLocationById(dto.id);
 
@@ -49,10 +65,14 @@ export async function deleteLocationById(c: Context) {
 
 export function getLocationById(c: Context) {
   const dto = c.get("validatedParams") as DeleteLocationIdDto;
+  const routeCategory = resolveCategoryFromRoute(c);
 
   const location = container.locationQueryService.getLocationById(dto.id);
 
   if (!location) {
+    return c.json(errorResponse("Location not found"), 404);
+  }
+  if (routeCategory && location.category !== routeCategory) {
     return c.json(errorResponse("Location not found"), 404);
   }
 
@@ -61,6 +81,14 @@ export function getLocationById(c: Context) {
 
 export async function refetchPlaceId(c: Context) {
   const dto = c.get("validatedParams") as DeleteLocationIdDto;
+  const routeCategory = resolveCategoryFromRoute(c);
+
+  if (routeCategory) {
+    const location = getLocationByIdForUpdate(dto.id);
+    if (!location || location.category !== routeCategory) {
+      return c.json(errorResponse("Location not found"), 404);
+    }
+  }
 
   const result = await container.locationMutationService.refetchPlaceId(dto.id);
 

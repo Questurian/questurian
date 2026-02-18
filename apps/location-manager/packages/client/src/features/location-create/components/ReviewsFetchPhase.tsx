@@ -4,9 +4,10 @@ import { Button } from "@client/components/ui/button";
 import { PipelineProgress, type PipelineStep } from "./PipelineProgress";
 import { useLeadsApiHealth } from "@client/shared/services/api/hooks";
 import { useFetchReviewsPipeline } from "@client/shared/services/api/hooks/useReviewsPipeline";
-import type { ReviewsPipelineJobStatus, ReviewSource } from "@client/shared/services/api/types";
+import type { Category, ReviewsPipelineJobStatus, ReviewSource } from "@client/shared/services/api/types";
 
 interface ReviewsFetchPhaseProps {
+  category: Category;
   locationId: number;
   locationName: string;
   tripadvisorUrl: string | null;
@@ -18,6 +19,7 @@ interface ReviewsFetchPhaseProps {
 type PhaseState = "checking" | "ready" | "running" | "completed" | "failed" | "skipped";
 
 export function ReviewsFetchPhase({
+  category,
   locationId,
   locationName,
   tripadvisorUrl,
@@ -56,6 +58,7 @@ export function ReviewsFetchPhase({
   }, [healthData, healthError, phaseState]);
 
   const fetchReviewsPipeline = useFetchReviewsPipeline({
+    category,
     locationId,
     onSuccess: () => {
       setPhaseState("completed");

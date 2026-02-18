@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from "./client";
 import { API_ENDPOINTS } from "./config";
 import type {
+  Category,
   FetchReviewsRequest,
   FetchReviewsResponse,
   ReviewsStatusResponse,
@@ -11,35 +12,37 @@ import type {
 } from "./types";
 
 export const locationsReviewsApi = {
-  async fetchReviews(id: number, params: FetchReviewsRequest): Promise<FetchReviewsResponse["data"]> {
+  async fetchReviews(category: Category, id: number, params: FetchReviewsRequest): Promise<FetchReviewsResponse["data"]> {
     return apiPost<FetchReviewsResponse["data"]>(
-      API_ENDPOINTS.FETCH_REVIEWS(id),
+      API_ENDPOINTS.FETCH_REVIEWS(category, id),
       params
     );
   },
 
   async fetchReviewsPipeline(
+    category: Category,
     id: number,
     params: FetchReviewsPipelineRequest
   ): Promise<FetchReviewsPipelineStartResponse["data"]> {
     return apiPost<FetchReviewsPipelineStartResponse["data"]>(
-      API_ENDPOINTS.FETCH_REVIEWS_PIPELINE(id),
+      API_ENDPOINTS.FETCH_REVIEWS_PIPELINE(category, id),
       params
     );
   },
 
   async getReviewsPipelineStatus(
+    category: Category,
     id: number,
     jobId: string
   ): Promise<ReviewsPipelineJobStatus> {
     return apiGet<FetchReviewsPipelineStatusResponse["data"]>(
-      API_ENDPOINTS.REVIEWS_PIPELINE_STATUS(id, jobId)
+      API_ENDPOINTS.REVIEWS_PIPELINE_STATUS(category, id, jobId)
     );
   },
 
-  async getReviewsStatus(id: number): Promise<ReviewsStatusResponse["data"]> {
+  async getReviewsStatus(category: Category, id: number): Promise<ReviewsStatusResponse["data"]> {
     return apiGet<ReviewsStatusResponse["data"]>(
-      API_ENDPOINTS.REVIEWS_STATUS(id)
+      API_ENDPOINTS.REVIEWS_STATUS(category, id)
     );
   },
 };

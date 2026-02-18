@@ -23,6 +23,26 @@ export const createMapsSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   address: z.string().trim().min(1, "Address is required"),
   category: locationCategorySchema,
+  title: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  url: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  locationKey: z.string()
+    .trim()
+    .regex(/^[a-z0-9-]+(\|[a-z0-9-]+){0,2}$/, "Invalid locationKey format. Expected: country or country|city or country|city|neighborhood")
+    .optional()
+    .or(z.literal(""))
+    .transform(val => val === "" ? undefined : val),
+  district: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  contactAddress: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  countryCode: z
+    .union([z.string().length(2), z.literal("")])
+    .optional()
+    .transform(val => (val === "" || val === undefined ? undefined : val.toUpperCase())),
+  ianaTimeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  phoneNumber: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  website: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   idealFor: idealForTagsSchema.optional(),
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
@@ -69,13 +89,18 @@ export const createMapsSchema = z.object({
   }
 });
 
+export const googlePrefillSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  address: z.string().trim().min(1, "Address is required"),
+});
+
 // PATCH /api/maps/:id schema - only updatable fields allowed
 export const patchMapsSchema = z.object({
   // Updatable fields only
   name: z.string().trim().min(1).optional(),
   address: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1).optional(),
-  category: locationCategorySchema.optional(),
+  category: z.never().optional(),
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   locationKey: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   district: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
@@ -129,7 +154,6 @@ export const patchMapsSchema = z.object({
   return data.title !== undefined ||
          data.name !== undefined ||
          data.address !== undefined ||
-         data.category !== undefined ||
          data.type !== undefined ||
          data.locationKey !== undefined ||
          data.district !== undefined ||
@@ -154,4 +178,5 @@ export const patchMapsSchema = z.object({
 });
 
 export type CreateMapsDto = z.infer<typeof createMapsSchema>;
+export type GooglePrefillDto = z.infer<typeof googlePrefillSchema>;
 export type PatchMapsDto = z.infer<typeof patchMapsSchema>;

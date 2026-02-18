@@ -1,0 +1,461 @@
+import type { Database } from "bun:sqlite";
+
+const CATEGORY_VALUES = ["dining", "accommodations", "attractions", "nightlife"] as const;
+
+function tableExists(db: Database, tableName: string): boolean {
+  const row = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(tableName) as { name: string } | null;
+  return !!row;
+}
+
+function getTableColumns(db: Database, tableName: string): Set<string> {
+  const rows = db
+    .query(`PRAGMA table_info(${tableName})`)
+    .all() as Array<{ name: string }>;
+  return new Set(rows.map((row) => row.name));
+}
+
+function ensureEntitySchema(db: Database): void {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS entities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL CHECK(category IN ('dining', 'accommodations', 'attractions', 'nightlife')),
+      name TEXT NOT NULL,
+      title TEXT,
+      address TEXT NOT NULL,
+      url TEXT NOT NULL,
+      lat REAL,
+      lng REAL,
+      locationKey TEXT,
+      district TEXT,
+      contactAddress TEXT,
+      countryCode TEXT,
+      iana_time_id TEXT,
+      phoneNumber TEXT,
+      website TEXT,
+      email TEXT,
+      neighborhood_description TEXT,
+      slug TEXT UNIQUE,
+      place_id TEXT,
+      tripadvisor_url TEXT,
+      tripadvisor_location_id TEXT,
+      payload_location_ref TEXT,
+      reviews_fetched_at TEXT,
+      reviews_count INTEGER,
+      reviews_google_count INTEGER,
+      reviews_tripadvisor_count INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(category, name, address)
+    )
+  `);
+
+  for (const category of CATEGORY_VALUES) {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS ${category}_locations (
+        entity_id INTEGER PRIMARY KEY,
+        type TEXT,
+        hours_json TEXT,
+        ideal_for_json TEXT,
+        nightlife_details_json TEXT,
+        tripadvisor_meal_types TEXT,
+        tripadvisor_cuisines TEXT,
+        tripadvisor_features TEXT,
+        price_level TEXT,
+        FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE
+      )
+    `);
+  }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS instagram_embeds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      url TEXT NOT NULL,
+      embed_code TEXT NOT NULL,
+      instagram TEXT,
+      images TEXT,
+      original_image_urls TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS uploads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_id INTEGER NOT NULL,
+      imageSets TEXT,
+      uploadFormat TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tripadvisor_places (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_id INTEGER NOT NULL,
+      tripadvisor_place_id TEXT NOT NULL,
+      place_data TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+      UNIQUE(entity_id, tripadvisor_place_id)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS payload_sync_state (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_id INTEGER NOT NULL,
+      payload_collection TEXT NOT NULL CHECK(payload_collection IN ('dining', 'accommodations', 'attractions', 'nightlife')),
+      payload_doc_id TEXT NOT NULL,
+      last_synced_at TEXT NOT NULL,
+      sync_status TEXT NOT NULL DEFAULT 'success' CHECK(sync_status IN ('success', 'failed', 'pending')),
+      error_message TEXT,
+      FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+      UNIQUE(entity_id, payload_collection)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS location_taxonomy (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      country TEXT NOT NULL,
+      city TEXT,
+      neighborhood TEXT,
+      locationKey TEXT UNIQUE NOT NULL,
+      status TEXT DEFAULT 'approved' CHECK(status IN ('approved', 'pending')),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS taxonomy_corrections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      incorrect_value TEXT NOT NULL,
+      correct_value TEXT NOT NULL,
+      part_type TEXT NOT NULL CHECK(part_type IN ('country', 'city', 'neighborhood')),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(incorrect_value, part_type)
+    )
+  `);
+}
+
+function ensureEntityIndexesAndTriggers(db: Database): void {
+  db.run("CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_entities_location_key ON entities(locationKey)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_entities_updated_at ON entities(updated_at)");
+
+  db.run("CREATE INDEX IF NOT EXISTS idx_uploads_entity_id ON uploads(entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_instagram_embeds_entity_id ON instagram_embeds(entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_tripadvisor_places_entity_id ON tripadvisor_places(entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_payload_sync_entity ON payload_sync_state(entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_payload_sync_status ON payload_sync_state(sync_status)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_payload_sync_collection ON payload_sync_state(payload_collection)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_corrections_lookup ON taxonomy_corrections(incorrect_value, part_type)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_location_taxonomy_status_key ON location_taxonomy(status, locationKey)");
+
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_uploads_insert
+    AFTER INSERT ON uploads
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.entity_id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_uploads_update
+    AFTER UPDATE ON uploads
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.entity_id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_uploads_delete
+    AFTER DELETE ON uploads
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = OLD.entity_id;
+    END;
+  `);
+
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_instagram_embeds_insert
+    AFTER INSERT ON instagram_embeds
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.entity_id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_instagram_embeds_update
+    AFTER UPDATE ON instagram_embeds
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.entity_id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_instagram_embeds_delete
+    AFTER DELETE ON instagram_embeds
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = OLD.entity_id;
+    END;
+  `);
+
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_tripadvisor_places_insert
+    AFTER INSERT ON tripadvisor_places
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.entity_id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_tripadvisor_places_update
+    AFTER UPDATE ON tripadvisor_places
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.entity_id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_tripadvisor_places_delete
+    AFTER DELETE ON tripadvisor_places
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = OLD.entity_id;
+    END;
+  `);
+
+  db.run(`
+    INSERT OR IGNORE INTO taxonomy_corrections (incorrect_value, correct_value, part_type)
+    VALUES ('bras-lia', 'brasilia', 'city')
+  `);
+}
+
+function bumpSequence(db: Database, tableName: string): void {
+  try {
+    db.run(
+      `INSERT OR REPLACE INTO sqlite_sequence(name, seq)
+       VALUES (?, COALESCE((SELECT MAX(id) FROM ${tableName}), 0))`,
+      [tableName]
+    );
+  } catch {
+    // sqlite_sequence may not exist yet; ignore.
+  }
+}
+
+function renameLegacyTable(db: Database, tableName: string): string | null {
+  if (!tableExists(db, tableName)) return null;
+
+  const backupName = `${tableName}_legacy_backup`;
+  if (tableExists(db, backupName)) {
+    throw new Error(
+      `Expected to create backup table "${backupName}", but it already exists. ` +
+      `Manual intervention required before migration can continue.`
+    );
+  }
+
+  db.run(`ALTER TABLE ${tableName} RENAME TO ${backupName}`);
+  return backupName;
+}
+
+function migrateLocationsBackupIntoEntities(db: Database, backupTable: string): void {
+  const columns = getTableColumns(db, backupTable);
+  const col = (name: string, fallback = "NULL") => (columns.has(name) ? name : fallback);
+
+  db.run(`
+    INSERT INTO entities (
+      id, category, name, title, address, url, lat, lng, locationKey, district,
+      contactAddress, countryCode, iana_time_id, phoneNumber, website, email,
+      neighborhood_description, slug, place_id, tripadvisor_url, tripadvisor_location_id,
+      payload_location_ref, reviews_fetched_at, reviews_count, reviews_google_count,
+      reviews_tripadvisor_count, created_at, updated_at
+    )
+    SELECT
+      id,
+      COALESCE(${col("category", "'attractions'")}, 'attractions'),
+      ${col("name", "''")},
+      ${col("title")},
+      ${col("address", "''")},
+      ${col("url", "''")},
+      ${col("lat")},
+      ${col("lng")},
+      ${col("locationKey")},
+      ${col("district")},
+      ${col("contactAddress")},
+      ${col("countryCode")},
+      ${col("iana_time_id")},
+      ${col("phoneNumber")},
+      ${col("website")},
+      ${col("email")},
+      ${col("neighborhood_description")},
+      ${col("slug")},
+      ${col("place_id")},
+      ${col("tripadvisor_url")},
+      ${col("tripadvisor_location_id")},
+      ${col("payload_location_ref")},
+      ${col("reviews_fetched_at")},
+      ${col("reviews_count")},
+      ${col("reviews_google_count")},
+      ${col("reviews_tripadvisor_count")},
+      COALESCE(${col("created_at", "CURRENT_TIMESTAMP")}, CURRENT_TIMESTAMP),
+      COALESCE(${col("updated_at")}, ${col("created_at", "CURRENT_TIMESTAMP")}, CURRENT_TIMESTAMP)
+    FROM ${backupTable}
+  `);
+
+  for (const category of CATEGORY_VALUES) {
+    db.run(`
+      INSERT INTO ${category}_locations (
+        entity_id, type, hours_json, ideal_for_json, nightlife_details_json,
+        tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, price_level
+      )
+      SELECT
+        id,
+        ${col("type")},
+        ${col("hours_json")},
+        ${col("ideal_for_json")},
+        ${col("nightlife_details_json")},
+        ${col("tripadvisor_meal_types")},
+        ${col("tripadvisor_cuisines")},
+        ${col("tripadvisor_features")},
+        ${col("price_level")}
+      FROM ${backupTable}
+      WHERE COALESCE(${col("category", "'attractions'")}, 'attractions') = '${category}'
+    `);
+  }
+}
+
+function migrateLegacyChildren(db: Database, tableName: string | null): void {
+  if (!tableName) return;
+
+  if (tableName.startsWith("instagram_embeds")) {
+    const columns = getTableColumns(db, tableName);
+    const fkColumn = columns.has("location_id") ? "location_id" : "entity_id";
+    db.run(`
+      INSERT INTO instagram_embeds (
+        id, entity_id, username, url, embed_code, instagram, images, original_image_urls, created_at
+      )
+      SELECT
+        id, ${fkColumn}, username, url, embed_code, instagram, images, original_image_urls, created_at
+      FROM ${tableName}
+    `);
+    return;
+  }
+
+  if (tableName.startsWith("uploads")) {
+    const columns = getTableColumns(db, tableName);
+    const fkColumn = columns.has("location_id") ? "location_id" : "entity_id";
+    const imageSetsExpr = columns.has("imageSets") ? "imageSets" : "NULL";
+    const uploadFormatExpr = columns.has("uploadFormat") ? "uploadFormat" : "'imageset'";
+
+    db.run(`
+      INSERT INTO uploads (id, entity_id, imageSets, uploadFormat, created_at)
+      SELECT id, ${fkColumn}, ${imageSetsExpr}, COALESCE(${uploadFormatExpr}, 'imageset'), created_at
+      FROM ${tableName}
+    `);
+    return;
+  }
+
+  if (tableName.startsWith("payload_sync_state")) {
+    const columns = getTableColumns(db, tableName);
+    const fkColumn = columns.has("location_id") ? "location_id" : "entity_id";
+    db.run(`
+      INSERT INTO payload_sync_state (
+        id, entity_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message
+      )
+      SELECT
+        id, ${fkColumn}, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message
+      FROM ${tableName}
+    `);
+    return;
+  }
+
+  if (tableName.startsWith("tripadvisor_places")) {
+    const columns = getTableColumns(db, tableName);
+    const fkColumn = columns.has("location_id") ? "location_id" : "entity_id";
+    db.run(`
+      INSERT INTO tripadvisor_places (
+        id, entity_id, tripadvisor_place_id, place_data, created_at
+      )
+      SELECT
+        id, ${fkColumn}, tripadvisor_place_id, place_data, created_at
+      FROM ${tableName}
+    `);
+  }
+}
+
+function validateRowCounts(db: Database, legacyLocationsTable: string | null): void {
+  if (!legacyLocationsTable) return;
+
+  const legacyLocationCount = db.query(`SELECT COUNT(*) as count FROM ${legacyLocationsTable}`).get() as { count: number };
+  const entitiesCount = db.query("SELECT COUNT(*) as count FROM entities").get() as { count: number };
+  const typedCount = db.query(`
+    SELECT
+      (SELECT COUNT(*) FROM dining_locations) +
+      (SELECT COUNT(*) FROM nightlife_locations) +
+      (SELECT COUNT(*) FROM accommodations_locations) +
+      (SELECT COUNT(*) FROM attractions_locations) AS count
+  `).get() as { count: number };
+
+  if (legacyLocationCount.count !== entitiesCount.count || entitiesCount.count !== typedCount.count) {
+    throw new Error(
+      `Entity migration row count mismatch. ` +
+      `legacy=${legacyLocationCount.count}, entities=${entitiesCount.count}, typed=${typedCount.count}`
+    );
+  }
+}
+
+export function splitLocationsToEntities(db: Database): void {
+  const alreadyMigrated = tableExists(db, "entities");
+  if (alreadyMigrated) {
+    ensureEntitySchema(db);
+    ensureEntityIndexesAndTriggers(db);
+    return;
+  }
+
+  db.run("PRAGMA foreign_keys = OFF");
+  db.run("BEGIN TRANSACTION");
+
+  try {
+    const legacyLocationsTable = renameLegacyTable(db, "locations");
+    const legacyInstagramTable = renameLegacyTable(db, "instagram_embeds");
+    const legacyUploadsTable = renameLegacyTable(db, "uploads");
+    const legacyPayloadSyncTable = renameLegacyTable(db, "payload_sync_state");
+    const legacyTripadvisorPlacesTable = renameLegacyTable(db, "tripadvisor_places");
+
+    ensureEntitySchema(db);
+
+    if (legacyLocationsTable) {
+      migrateLocationsBackupIntoEntities(db, legacyLocationsTable);
+    }
+
+    migrateLegacyChildren(db, legacyInstagramTable);
+    migrateLegacyChildren(db, legacyUploadsTable);
+    migrateLegacyChildren(db, legacyPayloadSyncTable);
+    migrateLegacyChildren(db, legacyTripadvisorPlacesTable);
+
+    validateRowCounts(db, legacyLocationsTable);
+
+    ensureEntityIndexesAndTriggers(db);
+
+    bumpSequence(db, "entities");
+    bumpSequence(db, "instagram_embeds");
+    bumpSequence(db, "uploads");
+    bumpSequence(db, "tripadvisor_places");
+    bumpSequence(db, "payload_sync_state");
+
+    db.run("COMMIT");
+  } catch (error) {
+    db.run("ROLLBACK");
+    throw error;
+  } finally {
+    db.run("PRAGMA foreign_keys = ON");
+  }
+}

@@ -44,7 +44,7 @@ function parseLocationIdOrError(c: Context): { ok: true; locationId: number } | 
 }
 
 /**
- * POST /api/locations/:id/tripadvisor-place/fetch
+ * POST /api/{category}/:id/tripadvisor-place/fetch
  * Fetch TripAdvisor place data from SerpAPI for a location
  */
 export async function fetchTripAdvisorPlace(c: Context) {
@@ -63,7 +63,7 @@ export async function fetchTripAdvisorPlace(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/tripadvisor-place/download
+ * GET /api/{category}/:id/tripadvisor-place/download
  * Download TripAdvisor place data for a location
  */
 export async function downloadTripAdvisorPlace(c: Context) {
@@ -83,7 +83,7 @@ export async function downloadTripAdvisorPlace(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/export
+ * GET /api/{category}/:id/export
  * Download complete location data with TripAdvisor place data (no reviews)
  */
 export async function downloadLocationExport(c: Context) {
@@ -103,7 +103,7 @@ export async function downloadLocationExport(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/ai-json/download
+ * GET /api/{category}/:id/ai-json/download
  * Download AI-ready JSON (core TripAdvisor fields + filtered reviews)
  */
 export async function downloadAiJson(c: Context) {
@@ -123,7 +123,7 @@ export async function downloadAiJson(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/tripadvisor-place/status
+ * GET /api/{category}/:id/tripadvisor-place/status
  * Check if TripAdvisor place data exists for a location
  */
 export async function getTripAdvisorPlaceStatus(c: Context) {

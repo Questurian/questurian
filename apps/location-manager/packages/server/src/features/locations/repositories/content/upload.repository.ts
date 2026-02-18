@@ -54,12 +54,10 @@ export function saveUpload(upload: Upload): number | boolean {
       return imageSetUpload.id;
     } else {
       // Insert new
-      const query = db.query(`
-        INSERT INTO uploads (location_id, imageSets, uploadFormat)
+      db.query(`
+        INSERT INTO uploads (entity_id, imageSets, uploadFormat)
         VALUES ($location_id, $imageSets, 'imageset')
-      `);
-
-      query.run({
+      `).run({
         $location_id: imageSetUpload.location_id,
         $imageSets: imageSetUpload.imageSet ? JSON.stringify(imageSetUpload.imageSet) : null,
       });
@@ -76,7 +74,7 @@ export function saveUpload(upload: Upload): number | boolean {
 export function getUploadById(id: number): Upload | null {
   const db = getDb();
   const query = db.query(`
-    SELECT id, location_id, imageSets, uploadFormat, created_at
+    SELECT id, entity_id as location_id, imageSets, uploadFormat, created_at
     FROM uploads
     WHERE id = $id
   `);
@@ -88,9 +86,9 @@ export function getUploadById(id: number): Upload | null {
 export function getUploadsByLocationId(locationId: number): Upload[] {
   const db = getDb();
   const query = db.query(`
-    SELECT id, location_id, imageSets, uploadFormat, created_at
+    SELECT id, entity_id as location_id, imageSets, uploadFormat, created_at
     FROM uploads
-    WHERE location_id = $locationId
+    WHERE entity_id = $locationId
     ORDER BY created_at DESC
   `);
   const rows = query.all({ $locationId: locationId }) as UploadDbRow[];
@@ -110,9 +108,9 @@ export function getUploadsByLocationIds(locationIds: number[]): Map<number, Uplo
   const db = getDb();
   const placeholders = locationIds.map(() => '?').join(',');
   const query = db.query(`
-    SELECT id, location_id, imageSets, uploadFormat, created_at
+    SELECT id, entity_id as location_id, imageSets, uploadFormat, created_at
     FROM uploads
-    WHERE location_id IN (${placeholders})
+    WHERE entity_id IN (${placeholders})
     ORDER BY created_at DESC
   `);
 

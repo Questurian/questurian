@@ -205,7 +205,7 @@ export function getLocationCountByTaxonomy(locationKey: string): number {
   const db = getDb();
   const query = db.query(`
     SELECT COUNT(*) as count
-    FROM locations
+    FROM entities
     WHERE locationKey = $locationKey
   `);
   const result = query.get({ $locationKey: locationKey }) as { count: number };

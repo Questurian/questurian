@@ -130,6 +130,18 @@ export interface CreateMapsRequest {
   name: string;
   address: string;
   category: LocationCategory;
+  title?: string;
+  url?: string;
+  lat?: number;
+  lng?: number;
+  locationKey?: string;
+  district?: string;
+  contactAddress?: string;
+  countryCode?: string;
+  ianaTimeId?: string;
+  placeId?: string;
+  phoneNumber?: string;
+  website?: string;
   idealFor?: IdealForTag[];
   type?: string;
   tripadvisorUrl?: string;

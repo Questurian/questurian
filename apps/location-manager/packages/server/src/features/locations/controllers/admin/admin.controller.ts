@@ -8,62 +8,55 @@ const container = ServiceContainer.getInstance();
 
 export async function clearDatabase(c: Context) {
   const db = getDb();
+  const normalizedTables = [
+    "entities",
+    "dining_locations",
+    "nightlife_locations",
+    "accommodations_locations",
+    "attractions_locations",
+    "instagram_embeds",
+    "uploads",
+    "tripadvisor_places",
+    "location_taxonomy",
+    "taxonomy_corrections",
+    "payload_sync_state",
+  ] as const;
 
-  // Discover available tables so we can support both old and new schemas
-  const tableRows = db
-    .query("SELECT name FROM sqlite_master WHERE type='table'")
-    .all() as { name: string }[];
-  const tables = new Set(tableRows.map((row) => row.name));
-
-  // Clear all rows but keep table structure
-  // New normalized tables
-  if (tables.has("locations")) {
-    db.run("DELETE FROM locations");
-    db.run("DELETE FROM sqlite_sequence WHERE name='locations'");
-  }
-  if (tables.has("instagram_embeds")) {
+  db.run("BEGIN TRANSACTION");
+  try {
+    // Parent first cascades typed/media tables; explicit deletes keep intent obvious.
+    db.run("DELETE FROM entities");
+    db.run("DELETE FROM dining_locations");
+    db.run("DELETE FROM nightlife_locations");
+    db.run("DELETE FROM accommodations_locations");
+    db.run("DELETE FROM attractions_locations");
     db.run("DELETE FROM instagram_embeds");
-    db.run("DELETE FROM sqlite_sequence WHERE name='instagram_embeds'");
-  }
-  if (tables.has("uploads")) {
     db.run("DELETE FROM uploads");
-    db.run("DELETE FROM sqlite_sequence WHERE name='uploads'");
-  }
-
-  // Legacy single table schema
-  if (tables.has("location")) {
-    db.run("DELETE FROM location");
-    db.run("DELETE FROM sqlite_sequence WHERE name='location'");
-  }
-
-  // Clear location hierarchy/taxonomy
-  if (tables.has("location_taxonomy")) {
+    db.run("DELETE FROM tripadvisor_places");
     db.run("DELETE FROM location_taxonomy");
-    db.run("DELETE FROM sqlite_sequence WHERE name='location_taxonomy'");
-  }
-
-  // Clear taxonomy corrections
-  if (tables.has("taxonomy_corrections")) {
     db.run("DELETE FROM taxonomy_corrections");
-    db.run("DELETE FROM sqlite_sequence WHERE name='taxonomy_corrections'");
-  }
-
-  // Clear Payload sync state
-  if (tables.has("payload_sync_state")) {
     db.run("DELETE FROM payload_sync_state");
+
+    db.run("DELETE FROM sqlite_sequence WHERE name='entities'");
+    db.run("DELETE FROM sqlite_sequence WHERE name='instagram_embeds'");
+    db.run("DELETE FROM sqlite_sequence WHERE name='uploads'");
+    db.run("DELETE FROM sqlite_sequence WHERE name='tripadvisor_places'");
+    db.run("DELETE FROM sqlite_sequence WHERE name='location_taxonomy'");
+    db.run("DELETE FROM sqlite_sequence WHERE name='taxonomy_corrections'");
     db.run("DELETE FROM sqlite_sequence WHERE name='payload_sync_state'");
+
+    db.run("COMMIT");
+  } catch (error) {
+    db.run("ROLLBACK");
+    throw error;
   }
 
   // Clean up file size after mass deletes
   db.run("VACUUM");
 
-  const clearedTables = Array.from(tables).filter((name) =>
-    ["locations", "instagram_embeds", "uploads", "location", "location_taxonomy", "taxonomy_corrections", "payload_sync_state"].includes(name)
-  );
-
   return c.json({
     success: true,
-    message: `Database cleared successfully${clearedTables.length ? ` (${clearedTables.join(", ")})` : ""}`,
+    message: `Database cleared successfully (${normalizedTables.join(", ")})`,
   });
 }
 
@@ -107,7 +100,7 @@ export function getPayloadLocationRefs(c: Context) {
       locationKey,
       payload_location_ref,
       created_at
-    FROM locations
+    FROM entities
     ORDER BY id DESC
   `).all();
 

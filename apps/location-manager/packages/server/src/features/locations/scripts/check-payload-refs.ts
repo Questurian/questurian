@@ -1,5 +1,6 @@
-import { getDb } from "@server/shared/db/client";
+import { getDb, initDb } from "@server/shared/db/client";
 
+initDb();
 const db = getDb();
 
 const query = db.query(`
@@ -14,7 +15,7 @@ const query = db.query(`
       WHEN payload_location_ref = '' THEN 'EMPTY STRING'
       ELSE 'HAS VALUE'
     END as status
-  FROM locations
+  FROM entities
   ORDER BY id DESC
   LIMIT 20
 `);
@@ -23,7 +24,7 @@ const results = query.all();
 
 console.table(results);
 console.log('\n📊 Summary:');
-console.log('Total locations checked:', results.length);
+console.log('Total entities checked:', results.length);
 console.log('With values:', results.filter((r: any) => r.status === 'HAS VALUE').length);
 console.log('NULL:', results.filter((r: any) => r.status === 'NULL').length);
 console.log('Empty string:', results.filter((r: any) => r.status === 'EMPTY STRING').length);

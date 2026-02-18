@@ -55,12 +55,11 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
       return embed.id;
     } else {
       // Insert new embed
-      const query = db.query(`
-        INSERT INTO instagram_embeds (location_id, username, url, embed_code, instagram, images, original_image_urls)
+      const insertSql = `
+        INSERT INTO instagram_embeds (entity_id, username, url, embed_code, instagram, images, original_image_urls)
         VALUES ($location_id, $username, $url, $embed_code, $instagram, $images, $original_image_urls)
-      `);
-
-      query.run({
+      `;
+      db.query(insertSql).run({
         $location_id: embed.location_id,
         $username: embed.username,
         $url: embed.url,
@@ -82,7 +81,7 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
 export function getInstagramEmbedById(id: number): InstagramEmbed | null {
   const db = getDb();
   const query = db.query(`
-    SELECT id, location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
+    SELECT id, entity_id as location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
     FROM instagram_embeds
     WHERE id = $id
   `);
@@ -94,9 +93,9 @@ export function getInstagramEmbedById(id: number): InstagramEmbed | null {
 export function getInstagramEmbedsByLocationId(locationId: number): InstagramEmbed[] {
   const db = getDb();
   const query = db.query(`
-    SELECT id, location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
+    SELECT id, entity_id as location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
     FROM instagram_embeds
-    WHERE location_id = $locationId
+    WHERE entity_id = $locationId
     ORDER BY created_at DESC
   `);
   const rows = query.all({ $locationId: locationId }) as InstagramEmbedDbRow[];
@@ -116,9 +115,9 @@ export function getInstagramEmbedsByLocationIds(locationIds: number[]): Map<numb
   const db = getDb();
   const placeholders = locationIds.map(() => '?').join(',');
   const query = db.query(`
-    SELECT id, location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
+    SELECT id, entity_id as location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
     FROM instagram_embeds
-    WHERE location_id IN (${placeholders})
+    WHERE entity_id IN (${placeholders})
     ORDER BY created_at DESC
   `);
 

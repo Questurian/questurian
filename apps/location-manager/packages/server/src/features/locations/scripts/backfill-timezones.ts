@@ -43,7 +43,7 @@ async function backfillTimezones() {
 
   const rows = db.query(`
     SELECT id, name, lat, lng
-    FROM locations
+    FROM entities
     WHERE (iana_time_id IS NULL OR TRIM(iana_time_id) = '')
       AND lat IS NOT NULL
       AND lng IS NOT NULL

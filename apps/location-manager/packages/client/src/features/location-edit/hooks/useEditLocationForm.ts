@@ -6,14 +6,26 @@ import { editLocationSchema, type EditLocationFormData } from "../validation/edi
 import { useLocationById, useUpdateLocation, useLocationTypes } from "@client/shared/services/api";
 import type { LocationCategory } from "@shared/types/location-category";
 
+const VALID_CATEGORIES: readonly LocationCategory[] = [
+  "dining",
+  "accommodations",
+  "attractions",
+  "nightlife",
+];
+
 export function useEditLocationForm() {
-  const { id } = useParams<{ id: string }>();
+  const { id, category } = useParams<{ id: string; category: LocationCategory }>();
   const navigate = useNavigate();
   const locationId = id ? parseInt(id, 10) : null;
-  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | undefined>(undefined);
+  const routeCategory = VALID_CATEGORIES.includes((category || "") as LocationCategory)
+    ? (category as LocationCategory)
+    : null;
+  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | undefined>(
+    routeCategory ?? undefined
+  );
   const [operationHoursModalOpen, setOperationHoursModalOpen] = useState(false);
 
-  const { data: location, isLoading, error: fetchError } = useLocationById(locationId);
+  const { data: location, isLoading, error: fetchError } = useLocationById(locationId, routeCategory);
   const { mutate, isPending, isSuccess, error: updateError } = useUpdateLocation();
   const { data: locationTypes = [], isLoading: isLoadingTypes } = useLocationTypes(selectedCategory);
 
@@ -23,7 +35,6 @@ export function useEditLocationForm() {
       name: "",
       address: "",
       title: "",
-      category: undefined,
       idealFor: [],
       type: undefined,
       priceLevel: "",
@@ -51,7 +62,6 @@ export function useEditLocationForm() {
         name: location.source?.name || "",
         address: location.source?.address || "",
         title: location.title || "",
-        category: location.category,
         idealFor: location.idealFor || [],
         type: location.type || undefined,
         priceLevel: location.priceLevel || "",
@@ -74,19 +84,6 @@ export function useEditLocationForm() {
     }
   }, [location, form]);
 
-  const watchedCategory = form.watch("category");
-  useEffect(() => {
-    if (watchedCategory === undefined) return;
-    if (selectedCategory === undefined) {
-      setSelectedCategory(watchedCategory);
-      return;
-    }
-    if (watchedCategory !== selectedCategory) {
-      setSelectedCategory(watchedCategory);
-      form.setValue("type", "");
-    }
-  }, [watchedCategory, selectedCategory, form]);
-
   // Redirect on successful update
   useEffect(() => {
     if (isSuccess) {
@@ -101,7 +98,10 @@ export function useEditLocationForm() {
       Object.entries(data).filter(([, value]) => value !== undefined)
     );
 
-    mutate({ id: locationId, data: updateData });
+    const categoryForUpdate = routeCategory || location?.category || null;
+    if (!categoryForUpdate) return;
+
+    mutate({ category: categoryForUpdate, id: locationId, data: updateData });
   }
 
   function navigateHome() {

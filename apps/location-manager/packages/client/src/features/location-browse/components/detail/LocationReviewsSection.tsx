@@ -30,10 +30,12 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
   const canRunPipeline = canFetchGoogle || canFetchTripadvisor;
   const [pipelineStatusMessage, setPipelineStatusMessage] = useState<string | null>(null);
   const tripAdvisorPlaceStatusQuery = useTripAdvisorPlaceStatus({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     enabled: Boolean(locationDetail.id),
   });
   const mergedReviewsStatusQuery = useMergedReviewsStatus({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     enabled: Boolean(locationDetail.id),
   });
@@ -42,6 +44,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
   const [tripAdvisorFetchError, setTripAdvisorFetchError] = useState<string | null>(null);
 
   const fetchTripAdvisorPlaceMutation = useFetchTripAdvisorPlace({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     onSuccess: (data) => {
       setTripAdvisorFetchError(null);
@@ -55,6 +58,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
     },
   });
   const mergedReviewsReportQuery = useMergedReviewsReport({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     enabled: hasMergedReviews && isReportOpen,
   });
@@ -94,6 +98,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
   }, [canFetchGoogle, canFetchTripadvisor]);
 
   const fetchReviewsPipelineMutation = useFetchReviewsPipeline({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     onSuccess: (data) => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -168,7 +173,10 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
             variant="ghost"
             className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
             onClick={() => {
-              window.open(locationsApi.getMergedReviewsDownloadUrl(locationDetail.id), "_blank");
+              window.open(
+                locationsApi.getMergedReviewsDownloadUrl(locationDetail.category, locationDetail.id),
+                "_blank"
+              );
             }}
             disabled={fetchReviewsPipelineMutation.isPending}
             title="Download merged reviews file"
@@ -182,7 +190,10 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
           variant="ghost"
           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => {
-            window.open(locationsApi.getAiJsonDownloadUrl(locationDetail.id), "_blank");
+            window.open(
+              locationsApi.getAiJsonDownloadUrl(locationDetail.category, locationDetail.id),
+              "_blank"
+            );
           }}
           disabled={fetchReviewsPipelineMutation.isPending || !canDownloadAiJson}
           title={
@@ -318,7 +329,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
         report={mergedReviewsReportQuery.data ?? null}
         isLoading={mergedReviewsReportQuery.isLoading}
         error={mergedReviewsReportQuery.error}
-        locationName={locationDetail.name}
+        locationName={locationDetail.source?.name}
       />
     </div>
   );

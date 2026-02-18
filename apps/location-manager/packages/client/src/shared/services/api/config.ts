@@ -12,19 +12,22 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 /**
  * API endpoint paths
  */
+type Category = "dining" | "accommodations" | "attractions" | "nightlife";
+
 export const API_ENDPOINTS = {
-  // Location management
-  LOCATIONS: "/api/locations",
-  LOCATIONS_BASIC: "/api/locations-basic",
-  GET_LOCATION_BY_ID: (id: number) => `/api/locations/${id}`,
-  CREATE_LOCATION: "/api/locations",
-  UPDATE_LOCATION: (id: number) => `/api/locations/${id}`,
-  DELETE_LOCATION: (id: number) => `/api/locations/${id}`,
-  REFETCH_PLACE_ID: (id: number) => `/api/locations/${id}/refetch-place-id`,
-  ADD_INSTAGRAM: (locationId: number) => `/api/add-instagram/${locationId}`,
+  // Category-specific location management
+  LOCATIONS: (category: Category) => `/api/${category}`,
+  LOCATIONS_BASIC: (category: Category) => `/api/${category}-basic`,
+  GET_LOCATION_BY_ID: (category: Category, id: number) => `/api/${category}/${id}`,
+  CREATE_LOCATION: (category: Category) => `/api/${category}`,
+  GOOGLE_PREFILL: (category: Category) => `/api/${category}/google-prefill`,
+  UPDATE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
+  DELETE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
+  REFETCH_PLACE_ID: (category: Category, id: number) => `/api/${category}/${id}/refetch-place-id`,
+  ADD_INSTAGRAM: (category: Category, locationId: number) => `/api/${category}/${locationId}/instagram`,
   DELETE_INSTAGRAM_EMBED: (embedId: number) => `/api/instagram-embeds/${embedId}`,
-  ADD_UPLOAD: (locationId: number) => `/api/add-upload/${locationId}`,
-  ADD_UPLOAD_IMAGESET: (locationId: number) => `/api/add-upload-imageset/${locationId}`,
+  ADD_UPLOAD: (category: Category, locationId: number) => `/api/${category}/${locationId}/uploads`,
+  ADD_UPLOAD_IMAGESET: (category: Category, locationId: number) => `/api/${category}/${locationId}/uploads/imageset`,
   GENERATE_ALT_TEXT: "/api/generate-alt-text",
   DELETE_UPLOAD: (uploadId: number) => `/api/uploads/${uploadId}`,
   CLEAR_DB: "/api/clear-db",
@@ -57,33 +60,33 @@ export const API_ENDPOINTS = {
   IMAGES: "/api/images",
 
   // Google Reviews
-  FETCH_REVIEWS: (id: number) => `/api/locations/${id}/reviews/fetch`,
-  FETCH_REVIEWS_PIPELINE: (id: number) => `/api/locations/${id}/reviews/fetch-pipeline`,
-  REVIEWS_PIPELINE_STATUS: (id: number, jobId: string) => `/api/locations/${id}/reviews/pipeline-status?jobId=${jobId}`,
-  DOWNLOAD_REVIEWS: (id: number) => `/api/locations/${id}/reviews/download`,
-  REVIEWS_STATUS: (id: number) => `/api/locations/${id}/reviews/status`,
+  FETCH_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/fetch`,
+  FETCH_REVIEWS_PIPELINE: (category: Category, id: number) => `/api/${category}/${id}/reviews/fetch-pipeline`,
+  REVIEWS_PIPELINE_STATUS: (category: Category, id: number, jobId: string) => `/api/${category}/${id}/reviews/pipeline-status?jobId=${jobId}`,
+  DOWNLOAD_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/download`,
+  REVIEWS_STATUS: (category: Category, id: number) => `/api/${category}/${id}/reviews/status`,
 
   // TripAdvisor Reviews
-  FETCH_TRIPADVISOR_REVIEWS: (id: number) => `/api/locations/${id}/tripadvisor-reviews/fetch`,
-  DOWNLOAD_TRIPADVISOR_REVIEWS: (id: number, lang?: string) =>
-    `/api/locations/${id}/tripadvisor-reviews/download${lang ? `?lang=${lang}` : ""}`,
-  TRIPADVISOR_REVIEWS_STATUS: (id: number) => `/api/locations/${id}/tripadvisor-reviews/status`,
+  FETCH_TRIPADVISOR_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-reviews/fetch`,
+  DOWNLOAD_TRIPADVISOR_REVIEWS: (category: Category, id: number, lang?: string) =>
+    `/api/${category}/${id}/tripadvisor-reviews/download${lang ? `?lang=${lang}` : ""}`,
+  TRIPADVISOR_REVIEWS_STATUS: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-reviews/status`,
 
   // TripAdvisor Place (SerpAPI)
-  FETCH_TRIPADVISOR_PLACE: (id: number) => `/api/locations/${id}/tripadvisor-place/fetch`,
-  DOWNLOAD_TRIPADVISOR_PLACE: (id: number) => `/api/locations/${id}/tripadvisor-place/download`,
-  TRIPADVISOR_PLACE_STATUS: (id: number) => `/api/locations/${id}/tripadvisor-place/status`,
+  FETCH_TRIPADVISOR_PLACE: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-place/fetch`,
+  DOWNLOAD_TRIPADVISOR_PLACE: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-place/download`,
+  TRIPADVISOR_PLACE_STATUS: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-place/status`,
 
   // Location Export (location + TripAdvisor place, no reviews)
-  DOWNLOAD_LOCATION_EXPORT: (id: number) => `/api/locations/${id}/export`,
-  DOWNLOAD_AI_JSON: (id: number) => `/api/locations/${id}/ai-json/download`,
+  DOWNLOAD_LOCATION_EXPORT: (category: Category, id: number) => `/api/${category}/${id}/export`,
+  DOWNLOAD_AI_JSON: (category: Category, id: number) => `/api/${category}/${id}/ai-json/download`,
 
   // Merged Reviews (translate & merge)
-  TRANSLATE_MERGE_REVIEWS: (id: number) => `/api/locations/${id}/reviews/translate-merge`,
-  DOWNLOAD_MERGED_REVIEWS: (id: number) => `/api/locations/${id}/reviews/merged/download`,
-  MERGED_REVIEWS_STATUS: (id: number) => `/api/locations/${id}/reviews/merged/status`,
-  MERGED_REVIEWS_REPORT: (id: number) => `/api/locations/${id}/reviews/merged/report`,
-  DOWNLOAD_REJECTS_REPORT: (id: number) => `/api/locations/${id}/reviews/rejects/download`,
+  TRANSLATE_MERGE_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/translate-merge`,
+  DOWNLOAD_MERGED_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/merged/download`,
+  MERGED_REVIEWS_STATUS: (category: Category, id: number) => `/api/${category}/${id}/reviews/merged/status`,
+  MERGED_REVIEWS_REPORT: (category: Category, id: number) => `/api/${category}/${id}/reviews/merged/report`,
+  DOWNLOAD_REJECTS_REPORT: (category: Category, id: number) => `/api/${category}/${id}/reviews/rejects/download`,
 
   // Health checks
   LEADS_API_HEALTH: "/api/health/leads-api",

@@ -62,11 +62,13 @@ export function LocationTripAdvisorSection({ locationDetail }: LocationTripAdvis
   );
 
   const tripAdvisorPlaceStatusQuery = useTripAdvisorPlaceStatus({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     enabled: shouldShow,
   });
 
   const fetchTripAdvisorPlaceMutation = useFetchTripAdvisorPlace({
+    category: locationDetail.category,
     locationId: locationDetail.id,
     onSuccess: (data) => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -108,4 +110,3 @@ export function LocationTripAdvisorSection({ locationDetail }: LocationTripAdvis
     </div>
   );
 }
-

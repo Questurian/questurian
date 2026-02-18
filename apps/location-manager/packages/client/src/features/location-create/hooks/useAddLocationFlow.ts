@@ -16,6 +16,7 @@ export type { Phase };
 
 interface CreatedLocation {
   id: number;
+  category: LocationCategory;
   name: string;
   title: string;
   phoneNumber?: string;
@@ -86,6 +87,7 @@ export function useAddLocationFlow(forcedCategory?: LocationCategory) {
       onSuccess: (response) => {
         setCreatedLocation({
           id: response.id,
+          category: response.category,
           name: response.source.name,
           title: response.title || response.source.name,
           phoneNumber: response.contact?.phoneNumber || undefined,
@@ -109,6 +111,7 @@ export function useAddLocationFlow(forcedCategory?: LocationCategory) {
     if (!createdLocation) return;
 
     updateLocation({
+      category: createdLocation.category,
       id: createdLocation.id,
       data: {
         title: data.title,

@@ -24,6 +24,8 @@ export type {
 export type {
   CreateMapsRequest,
   UpdateMapsRequest,
+  GooglePrefillRequest,
+  GooglePrefillResponse,
   AddInstagramRequest,
   OpenFolderRequest,
 } from "./location-api.types";

@@ -23,18 +23,6 @@ export function CoreFieldsSection({ form, locationTypes, isLoadingTypes }: CoreF
         placeholder="Location name"
       />
 
-      <FormSelect
-        name="category"
-        label="Category"
-        control={form.control}
-        placeholder="Select a category"
-      >
-        <SelectItem value="dining">Dining</SelectItem>
-        <SelectItem value="accommodations">Accommodations</SelectItem>
-        <SelectItem value="attractions">Attractions</SelectItem>
-        <SelectItem value="nightlife">Nightlife</SelectItem>
-      </FormSelect>
-
       <FormInput
         name="address"
         label="Address"

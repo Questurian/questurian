@@ -30,7 +30,7 @@ function resolveHttpError(error: unknown, fallbackMessage: string): { message: s
 }
 
 /**
- * POST /api/locations/:id/reviews/translate-merge
+ * POST /api/{category}/:id/reviews/translate-merge
  * Collect all reviews, translate non-English ones, and merge into a single file
  */
 export async function translateAndMergeReviews(c: Context) {
@@ -52,7 +52,7 @@ export async function translateAndMergeReviews(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/reviews/merged/download
+ * GET /api/{category}/:id/reviews/merged/download
  * Download the latest merged reviews file in minimal format (text, rating, date array)
  */
 export async function downloadMergedReviews(c: Context) {
@@ -70,7 +70,7 @@ export async function downloadMergedReviews(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/reviews/merged/report
+ * GET /api/{category}/:id/reviews/merged/report
  * Get the full report data (stats, errors, translations) for display in a dialog
  */
 export async function getMergedReviewsReport(c: Context) {
@@ -86,7 +86,7 @@ export async function getMergedReviewsReport(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/reviews/rejects/download
+ * GET /api/{category}/:id/reviews/rejects/download
  * Download the latest rejects report for a location
  */
 export async function downloadRejectsReport(c: Context) {
@@ -104,7 +104,7 @@ export async function downloadRejectsReport(c: Context) {
 }
 
 /**
- * GET /api/locations/:id/reviews/merged/status
+ * GET /api/{category}/:id/reviews/merged/status
  * Check if merged reviews exist for a location
  */
 export async function getMergedReviewsStatus(c: Context) {

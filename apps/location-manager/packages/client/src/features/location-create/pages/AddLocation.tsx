@@ -78,6 +78,7 @@ export function AddLocation({
     case "reviews":
       return (
         <ReviewsFetchPhase
+          category={flow.createdLocation!.category}
           locationId={flow.createdLocation!.id}
           locationName={flow.createdLocation!.title || flow.createdLocation!.name}
           tripadvisorUrl={flow.createdLocation!.tripadvisorUrl || null}

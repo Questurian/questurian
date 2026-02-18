@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type {
+  Category,
   LocationResponse,
   FetchReviewsPipelineRequest,
   ReviewsPipelineJobStatus,
@@ -66,20 +67,25 @@ export function AdvancedDataModal({
   const canFetchGoogle = Boolean(locationDetail?.placeId);
   const canFetchTripadvisor = Boolean(locationDetail?.tripadvisorUrl);
   const canRunPipeline = canFetchGoogle || canFetchTripadvisor;
+  const category = locationDetail?.category;
+  const hasCategory = Boolean(category);
 
   const mergedReviewsStatusQuery = useMergedReviewsStatus({
+    category: category as Category,
     locationId: locationDetail?.id || 0,
-    enabled: isOpen && Boolean(locationDetail?.id),
+    enabled: isOpen && Boolean(locationDetail?.id) && hasCategory,
   });
   const mergedReviewsReportQuery = useMergedReviewsReport({
+    category: category as Category,
     locationId: locationDetail?.id || 0,
-    enabled: isReviewsReportDialogOpen && Boolean(locationDetail?.id),
+    enabled: isReviewsReportDialogOpen && Boolean(locationDetail?.id) && hasCategory,
   });
   const downloadMergedReviews = useDownloadMergedReviews();
 
   const tripAdvisorPlaceStatusQuery = useTripAdvisorPlaceStatus({
+    category: category as Category,
     locationId: locationDetail?.id || 0,
-    enabled: isOpen && Boolean(locationDetail?.id),
+    enabled: isOpen && Boolean(locationDetail?.id) && hasCategory,
   });
   const downloadTripAdvisorPlace = useDownloadTripAdvisorPlace();
   const canDownloadAiJson = Boolean(
@@ -89,6 +95,7 @@ export function AdvancedDataModal({
   );
 
   const refetchPlaceIdMutation = useRefetchPlaceId({
+    category: category as Category,
     locationId: locationDetail?.id || 0,
     onSuccess: (placeId) => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -101,6 +108,7 @@ export function AdvancedDataModal({
   });
 
   const fetchTripAdvisorPlaceMutation = useFetchTripAdvisorPlace({
+    category: category as Category,
     locationId: locationDetail?.id || 0,
     onSuccess: (data) => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -113,6 +121,7 @@ export function AdvancedDataModal({
   });
 
   const fetchReviewsPipelineMutation = useFetchReviewsPipeline({
+    category: category as Category,
     locationId: locationDetail?.id || 0,
     onSuccess: (data) => {
       setPipelineStatus(null);
@@ -138,6 +147,11 @@ export function AdvancedDataModal({
   const locationName = locationDetail?.source?.name;
 
   function handleFetchReviewsPipeline(params: FetchReviewsPipelineRequest) {
+    if (!category || !locationDetail?.id) {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast("Category is required to fetch reviews.", centerPosition);
+      return;
+    }
     fetchReviewsPipelineMutation.mutate(params);
   }
 
@@ -152,7 +166,7 @@ export function AdvancedDataModal({
     }
 
     updateLocationMutation.mutate(
-      { id: locationDetail.id, data: { tripadvisorUrl: trimmed } },
+      { category: locationDetail.category, id: locationDetail.id, data: { tripadvisorUrl: trimmed } },
       {
         onSuccess: () => {
           showToast("TripAdvisor URL saved successfully", centerPosition);
@@ -272,7 +286,7 @@ export function AdvancedDataModal({
                   size="sm"
                   className="h-9 px-3 text-sm"
                   onClick={() => refetchPlaceIdMutation.mutate()}
-                  disabled={refetchPlaceIdMutation.isPending}
+                  disabled={refetchPlaceIdMutation.isPending || !hasCategory}
                   title={locationDetail.placeId ? "Refetch Place ID from Google" : "Fetch Place ID from Google"}
                 >
                   <RefreshCw className={`h-3.5 w-3.5 mr-1.5 shrink-0 ${refetchPlaceIdMutation.isPending ? "animate-spin" : ""}`} />
@@ -304,7 +318,7 @@ export function AdvancedDataModal({
                   size="sm"
                   className="h-9 px-3 text-sm"
                   onClick={() => setIsReviewsPipelineModalOpen(true)}
-                  disabled={fetchReviewsPipelineMutation.isPending || !canRunPipeline}
+                  disabled={fetchReviewsPipelineMutation.isPending || !canRunPipeline || !hasCategory}
                   title={canRunPipeline ? "Fetch reviews and build the merged dataset" : "Add a Google Place ID or TripAdvisor URL first"}
                 >
                   <Star className="h-3.5 w-3.5 mr-1.5 shrink-0" />
@@ -326,8 +340,8 @@ export function AdvancedDataModal({
                       variant="outline"
                       size="sm"
                       className="h-9 px-3 text-sm"
-                      onClick={() => downloadMergedReviews.download(locationDetail.id)}
-                      disabled={fetchReviewsPipelineMutation.isPending}
+                      onClick={() => downloadMergedReviews.download(locationDetail.category, locationDetail.id)}
+                      disabled={fetchReviewsPipelineMutation.isPending || !hasCategory}
                       title="Download the latest merged reviews file"
                     >
                       Download
@@ -366,7 +380,7 @@ export function AdvancedDataModal({
                     size="sm"
                     className="h-9 px-3 text-sm"
                     onClick={() => fetchTripAdvisorPlaceMutation.mutate()}
-                    disabled={fetchTripAdvisorPlaceMutation.isPending}
+                    disabled={fetchTripAdvisorPlaceMutation.isPending || !hasCategory}
                     title="Fetch TripAdvisor place data from SerpAPI"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 mr-1.5 shrink-0 ${fetchTripAdvisorPlaceMutation.isPending ? "animate-spin" : ""}`} />
@@ -377,8 +391,8 @@ export function AdvancedDataModal({
                       variant="outline"
                       size="sm"
                       className="h-9 px-3 text-sm"
-                      onClick={() => downloadTripAdvisorPlace.download(locationDetail.id)}
-                      disabled={fetchTripAdvisorPlaceMutation.isPending}
+                      onClick={() => downloadTripAdvisorPlace.download(locationDetail.category, locationDetail.id)}
+                      disabled={fetchTripAdvisorPlaceMutation.isPending || !hasCategory}
                       title="Download TripAdvisor place data as JSON"
                     >
                       Download
@@ -401,7 +415,13 @@ export function AdvancedDataModal({
                   variant="outline"
                   size="sm"
                   className="h-9 px-3 text-sm"
-                  onClick={() => window.open(locationsApi.getLocationExportDownloadUrl(locationDetail.id), "_blank")}
+                  onClick={() =>
+                    window.open(
+                      locationsApi.getLocationExportDownloadUrl(locationDetail.category, locationDetail.id),
+                      "_blank"
+                    )
+                  }
+                  disabled={!hasCategory}
                   title="Download location data with TripAdvisor place info (no reviews)"
                 >
                   Export Location
@@ -410,8 +430,13 @@ export function AdvancedDataModal({
                   variant="outline"
                   size="sm"
                   className="h-9 px-3 text-sm"
-                  onClick={() => window.open(locationsApi.getAiJsonDownloadUrl(locationDetail.id), "_blank")}
-                  disabled={!canDownloadAiJson}
+                  onClick={() =>
+                    window.open(
+                      locationsApi.getAiJsonDownloadUrl(locationDetail.category, locationDetail.id),
+                      "_blank"
+                    )
+                  }
+                  disabled={!canDownloadAiJson || !hasCategory}
                   title={
                     canDownloadAiJson
                       ? "Download AI-JSON (core TripAdvisor fields + filtered reviews)"

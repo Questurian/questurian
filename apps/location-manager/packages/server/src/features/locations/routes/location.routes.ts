@@ -1,20 +1,23 @@
 import { app } from "@server/shared/http/server";
 import { validateBody, validateParams, validateQuery } from "@server/shared/core/middleware/validation.middleware";
-import { createMapsSchema, patchMapsSchema } from "../validation/schemas/maps.schemas";
+import { errorResponse } from "@shared/types/api-response";
+import { createMapsSchema, googlePrefillSchema, patchMapsSchema } from "../validation/schemas/maps.schemas";
 import { addInstagramSchema, addInstagramParamsSchema, deleteInstagramEmbedParamsSchema } from "../validation/schemas/instagram.schemas";
 import { addUploadParamsSchema, deleteUploadParamsSchema } from "../validation/schemas/uploads.schemas";
-import { listLocationsQuerySchema, deleteLocationSlugSchema, deleteLocationIdSchema } from "../validation/schemas/locations.schemas";
+import { listLocationsQuerySchema, deleteLocationIdSchema } from "../validation/schemas/locations.schemas";
 import { taxonomyLocationKeyParamsSchema } from "../validation/schemas/taxonomy.schemas";
 import { createCorrectionSchema, deleteCorrectionParamsSchema } from "../validation/schemas/taxonomy-correction.schemas";
 import { syncLocationIdSchema, syncAllSchema } from "../validation/schemas/payload.schemas";
+import type { LocationCategory } from "../models/location";
+import { getLocationByIdForUpdate } from "../repositories/core";
 
 // Import controllers
 import {
   // Core
-  getLocations, getLocationsBasic, getLocationById, deleteLocationBySlug, deleteLocationById,
+  getLocations, getLocationsBasic, getLocationById, deleteLocationById,
   refetchPlaceId,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes,
-  postAddMaps, patchMapsById,
+  postAddMaps, patchMapsById, postGooglePrefill,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
   // Content
@@ -37,30 +40,100 @@ import {
   postSyncLocation, postSyncAll, getSyncStatus, getTestConnection,
 } from "../controllers";
 
-// Location routes
-app.get("/api/locations", validateQuery(listLocationsQuerySchema), getLocations);
-app.get("/api/locations-basic", validateQuery(listLocationsQuerySchema), getLocationsBasic);
-app.get("/api/locations/:id", validateParams(deleteLocationIdSchema), getLocationById);
-app.post("/api/locations", validateBody(createMapsSchema), postAddMaps);
-app.patch("/api/locations/:id", validateBody(patchMapsSchema), patchMapsById);
-app.delete("/api/locations/:id", validateParams(deleteLocationIdSchema), deleteLocationById);
-app.post("/api/locations/:id/refetch-place-id", validateParams(deleteLocationIdSchema), refetchPlaceId);
-app.post(
-  "/api/add-instagram/:id",
-  validateParams(addInstagramParamsSchema),
-  validateBody(addInstagramSchema),
-  postAddInstagram
-);
-app.post(
-  "/api/add-upload/:id",
-  validateParams(addUploadParamsSchema),
-  postAddUpload
-);
-app.post(
-  "/api/add-upload-imageset/:id",
-  validateParams(addUploadParamsSchema),
-  postAddUploadImageSet
-);
+const CATEGORY_ROUTES: readonly LocationCategory[] = [
+  "dining",
+  "accommodations",
+  "attractions",
+  "nightlife",
+];
+
+function withRouteCategory(category: LocationCategory) {
+  return async (c: any, next: any) => {
+    c.set("routeCategory", category);
+
+    const rawId = c.req.param("id");
+    if (rawId !== undefined) {
+      const id = Number(rawId);
+      if (!Number.isNaN(id) && id > 0) {
+        const location = getLocationByIdForUpdate(id);
+        if (!location || location.category !== category) {
+          return c.json(errorResponse("Location not found"), 404);
+        }
+      }
+    }
+
+    await next();
+  };
+}
+
+for (const category of CATEGORY_ROUTES) {
+  const routeCategory = withRouteCategory(category);
+
+  // Category-specific CRUD
+  app.get(`/api/${category}`, routeCategory, validateQuery(listLocationsQuerySchema), getLocations);
+  app.get(`/api/${category}-basic`, routeCategory, validateQuery(listLocationsQuerySchema), getLocationsBasic);
+  app.get(`/api/${category}/:id`, routeCategory, validateParams(deleteLocationIdSchema), getLocationById);
+  app.post(`/api/${category}`, routeCategory, validateBody(createMapsSchema), postAddMaps);
+  app.post(`/api/${category}/google-prefill`, routeCategory, validateBody(googlePrefillSchema), postGooglePrefill);
+  app.patch(`/api/${category}/:id`, routeCategory, validateBody(patchMapsSchema), patchMapsById);
+  app.delete(`/api/${category}/:id`, routeCategory, validateParams(deleteLocationIdSchema), deleteLocationById);
+  app.post(
+    `/api/${category}/:id/refetch-place-id`,
+    routeCategory,
+    validateParams(deleteLocationIdSchema),
+    refetchPlaceId
+  );
+
+  // Category-specific content
+  app.post(
+    `/api/${category}/:id/instagram`,
+    routeCategory,
+    validateParams(addInstagramParamsSchema),
+    validateBody(addInstagramSchema),
+    postAddInstagram
+  );
+  app.post(
+    `/api/${category}/:id/uploads`,
+    routeCategory,
+    validateParams(addUploadParamsSchema),
+    postAddUpload
+  );
+  app.post(
+    `/api/${category}/:id/uploads/imageset`,
+    routeCategory,
+    validateParams(addUploadParamsSchema),
+    postAddUploadImageSet
+  );
+
+  // Google Reviews
+  app.post(`/api/${category}/:id/reviews/fetch`, routeCategory, validateParams(deleteLocationIdSchema), fetchReviews);
+  app.post(`/api/${category}/:id/reviews/fetch-pipeline`, routeCategory, validateParams(deleteLocationIdSchema), fetchReviewsPipeline);
+  app.get(`/api/${category}/:id/reviews/pipeline-status`, routeCategory, validateParams(deleteLocationIdSchema), getReviewsPipelineStatus);
+  app.get(`/api/${category}/:id/reviews/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadReviews);
+  app.get(`/api/${category}/:id/reviews/status`, routeCategory, validateParams(deleteLocationIdSchema), getReviewsStatus);
+
+  // TripAdvisor Reviews
+  app.post(`/api/${category}/:id/tripadvisor-reviews/fetch`, routeCategory, validateParams(deleteLocationIdSchema), fetchTripAdvisorReviews);
+  app.get(`/api/${category}/:id/tripadvisor-reviews/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadTripAdvisorReviews);
+  app.get(`/api/${category}/:id/tripadvisor-reviews/status`, routeCategory, validateParams(deleteLocationIdSchema), getTripAdvisorReviewsStatus);
+
+  // TripAdvisor Place (SerpAPI)
+  app.post(`/api/${category}/:id/tripadvisor-place/fetch`, routeCategory, validateParams(deleteLocationIdSchema), fetchTripAdvisorPlace);
+  app.get(`/api/${category}/:id/tripadvisor-place/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadTripAdvisorPlace);
+  app.get(`/api/${category}/:id/tripadvisor-place/status`, routeCategory, validateParams(deleteLocationIdSchema), getTripAdvisorPlaceStatus);
+
+  // Export (location + TripAdvisor place data)
+  app.get(`/api/${category}/:id/export`, routeCategory, validateParams(deleteLocationIdSchema), downloadLocationExport);
+  app.get(`/api/${category}/:id/ai-json/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadAiJson);
+
+  // Merged Reviews (translate & merge)
+  app.post(`/api/${category}/:id/reviews/translate-merge`, routeCategory, validateParams(deleteLocationIdSchema), translateAndMergeReviews);
+  app.get(`/api/${category}/:id/reviews/merged/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadMergedReviews);
+  app.get(`/api/${category}/:id/reviews/merged/status`, routeCategory, validateParams(deleteLocationIdSchema), getMergedReviewsStatus);
+  app.get(`/api/${category}/:id/reviews/merged/report`, routeCategory, validateParams(deleteLocationIdSchema), getMergedReviewsReport);
+  app.get(`/api/${category}/:id/reviews/rejects/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadRejectsReport);
+}
+
 app.post("/api/generate-alt-text", postGenerateAltText);
 app.delete(
   "/api/uploads/:id",
@@ -145,31 +218,3 @@ app.get("/api/payload/test-connection", getTestConnection);
 
 // Serve uploaded images
 app.get("/api/images/*", serveImage);
-
-// Google Reviews routes
-app.post("/api/locations/:id/reviews/fetch", validateParams(deleteLocationIdSchema), fetchReviews);
-app.post("/api/locations/:id/reviews/fetch-pipeline", validateParams(deleteLocationIdSchema), fetchReviewsPipeline);
-app.get("/api/locations/:id/reviews/pipeline-status", validateParams(deleteLocationIdSchema), getReviewsPipelineStatus);
-app.get("/api/locations/:id/reviews/download", validateParams(deleteLocationIdSchema), downloadReviews);
-app.get("/api/locations/:id/reviews/status", validateParams(deleteLocationIdSchema), getReviewsStatus);
-
-// TripAdvisor Reviews routes
-app.post("/api/locations/:id/tripadvisor-reviews/fetch", validateParams(deleteLocationIdSchema), fetchTripAdvisorReviews);
-app.get("/api/locations/:id/tripadvisor-reviews/download", validateParams(deleteLocationIdSchema), downloadTripAdvisorReviews);
-app.get("/api/locations/:id/tripadvisor-reviews/status", validateParams(deleteLocationIdSchema), getTripAdvisorReviewsStatus);
-
-// TripAdvisor Place routes (SerpAPI)
-app.post("/api/locations/:id/tripadvisor-place/fetch", validateParams(deleteLocationIdSchema), fetchTripAdvisorPlace);
-app.get("/api/locations/:id/tripadvisor-place/download", validateParams(deleteLocationIdSchema), downloadTripAdvisorPlace);
-app.get("/api/locations/:id/tripadvisor-place/status", validateParams(deleteLocationIdSchema), getTripAdvisorPlaceStatus);
-
-// Location export (location + TripAdvisor place data, no reviews)
-app.get("/api/locations/:id/export", validateParams(deleteLocationIdSchema), downloadLocationExport);
-app.get("/api/locations/:id/ai-json/download", validateParams(deleteLocationIdSchema), downloadAiJson);
-
-// Merged Reviews routes (translate & merge)
-app.post("/api/locations/:id/reviews/translate-merge", validateParams(deleteLocationIdSchema), translateAndMergeReviews);
-app.get("/api/locations/:id/reviews/merged/download", validateParams(deleteLocationIdSchema), downloadMergedReviews);
-app.get("/api/locations/:id/reviews/merged/status", validateParams(deleteLocationIdSchema), getMergedReviewsStatus);
-app.get("/api/locations/:id/reviews/merged/report", validateParams(deleteLocationIdSchema), getMergedReviewsReport);
-app.get("/api/locations/:id/reviews/rejects/download", validateParams(deleteLocationIdSchema), downloadRejectsReport);

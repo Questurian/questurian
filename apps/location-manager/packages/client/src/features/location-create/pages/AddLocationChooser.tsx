@@ -37,7 +37,7 @@ export function AddLocationChooser() {
               <h2 className="text-lg font-semibold text-foreground">Nightlife</h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Full nightlife field form (space, scene, contact, media) stored as a nightlife document.
+              Full nightlife field form (space, scene, contact) stored as a nightlife document. Add media from Home after creation.
             </p>
           </Link>
         </div>

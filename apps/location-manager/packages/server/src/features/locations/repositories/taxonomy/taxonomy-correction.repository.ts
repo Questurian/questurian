@@ -162,7 +162,7 @@ export function countAffectedLocations(
 
   const query = db.query(`
     SELECT COUNT(*) as count
-    FROM locations
+    FROM entities
     WHERE locationKey LIKE $pattern
   `);
 
@@ -196,7 +196,7 @@ export function findAffectedLocationSamples(
 
   const query = db.query(`
     SELECT id, name, locationKey
-    FROM locations
+    FROM entities
     WHERE locationKey LIKE $pattern
     LIMIT 5
   `);

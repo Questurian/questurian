@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { locationsApi } from "../locations.api";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
-import type { Upload } from "@client/shared/services/api/types";
+import { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
+import type { Category, Upload } from "@client/shared/services/api/types";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
 interface UseAddUploadImageSetOptions {
@@ -11,6 +12,7 @@ interface UseAddUploadImageSetOptions {
 }
 
 export function useAddUploadImageSet(
+  category: Category | null,
   locationId: number,
   options?: UseAddUploadImageSetOptions
 ) {
@@ -28,18 +30,24 @@ export function useAddUploadImageSet(
       variantFiles: { type: ImageVariantType; file: File }[];
       photographerCredit?: string;
       altText?: string;
-    }) =>
-      locationsApi.uploadImageSet(
+    }) => {
+      if (!category) {
+        throw new Error("Category is required to upload image sets");
+      }
+      return locationsApi.uploadImageSet(
+        category,
         locationId,
         sourceFile,
         variantFiles,
         photographerCredit,
         setUploadProgress,
         altText
-      ),
+      );
+    },
     onSuccess: (data) => {
+      if (!category) return;
       setUploadProgress(0);
-      queryClient.invalidateQueries({ queryKey: ["location-detail", locationId] });
+      queryClient.invalidateQueries({ queryKey: LOCATION_DETAIL_QUERY_KEY(category, locationId) });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: LOCATIONS_BASIC_QUERY_KEY });
       options?.onSuccess?.(data);

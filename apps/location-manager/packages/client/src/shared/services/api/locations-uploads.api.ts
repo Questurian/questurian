@@ -3,9 +3,11 @@ import { API_ENDPOINTS } from "./config";
 import { uploadWithProgress } from "./upload-with-progress";
 import type { UploadResponse } from "./types";
 import type { ImageVariantType } from "@questurian/lm-shared";
+import type { Category } from "./types";
 
 export const locationsUploadsApi = {
   async uploadFiles(
+    category: Category,
     locationId: number,
     files: File[],
     photographerCredit?: string,
@@ -22,13 +24,14 @@ export const locationsUploadsApi = {
     });
 
     return uploadWithProgress(
-      API_ENDPOINTS.ADD_UPLOAD(locationId),
+      API_ENDPOINTS.ADD_UPLOAD(category, locationId),
       formData,
       onProgress
     );
   },
 
   async uploadImageSet(
+    category: Category,
     locationId: number,
     sourceFile: File,
     variantFiles: { type: ImageVariantType; file: File }[],
@@ -53,7 +56,7 @@ export const locationsUploadsApi = {
     });
 
     return uploadWithProgress(
-      API_ENDPOINTS.ADD_UPLOAD_IMAGESET(locationId),
+      API_ENDPOINTS.ADD_UPLOAD_IMAGESET(category, locationId),
       formData,
       onProgress
     );

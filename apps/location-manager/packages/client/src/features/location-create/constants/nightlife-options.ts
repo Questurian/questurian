@@ -197,14 +197,6 @@ export const MUSIC_FORMAT_OPTIONS: NightlifeOption[] = [
   { value: "Theme Nights", label: "Theme Nights", description: "Format changes by scheduled theme concept." },
 ];
 
-export const SPEND_LEVEL_VALUES = ["$", "$$", "$$$", "$$$$"] as const;
-export const SPEND_LEVEL_OPTIONS: NightlifeOption[] = [
-  { value: "$", label: "$", description: "Low average spend per guest." },
-  { value: "$$", label: "$$", description: "Standard nightlife spend per guest." },
-  { value: "$$$", label: "$$$", description: "Premium spend profile with table demand." },
-  { value: "$$$$", label: "$$$$", description: "Luxury spend profile with strong bottle-service dependence." },
-];
-
 export const DRESS_CODE_VALUES = [
   "Casual",
   "Smart Casual",

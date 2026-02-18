@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
 import type {
+  Category,
   FetchReviewsPipelineRequest,
   ReviewsPipelineJobStatus,
   ReviewsPipelineResult,
@@ -10,6 +11,7 @@ import { TRIPADVISOR_REVIEWS_STATUS_QUERY_KEY } from "./useTripAdvisorReviews";
 import { MERGED_REVIEWS_STATUS_QUERY_KEY } from "./useMergedReviews";
 
 interface UseFetchReviewsPipelineOptions {
+  category: Category;
   locationId: number;
   onSuccess?: (data: ReviewsPipelineResult) => void;
   onError?: (error: Error) => void;
@@ -25,12 +27,12 @@ export function useFetchReviewsPipeline(options: UseFetchReviewsPipelineOptions)
 
   return useMutation({
     mutationFn: async (params: FetchReviewsPipelineRequest) => {
-      const start = await locationsApi.fetchReviewsPipeline(options.locationId, params);
+      const start = await locationsApi.fetchReviewsPipeline(options.category, options.locationId, params);
       const jobId = start.jobId;
       const startedAt = Date.now();
 
       while (true) {
-        const status = await locationsApi.getReviewsPipelineStatus(options.locationId, jobId);
+        const status = await locationsApi.getReviewsPipelineStatus(options.category, options.locationId, jobId);
         options.onProgress?.(status);
 
         if (status.status === "completed") {
@@ -50,13 +52,13 @@ export function useFetchReviewsPipeline(options: UseFetchReviewsPipelineOptions)
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: [REVIEWS_STATUS_QUERY_KEY, options.locationId],
+        queryKey: [REVIEWS_STATUS_QUERY_KEY, options.category, options.locationId],
       });
       queryClient.invalidateQueries({
-        queryKey: [TRIPADVISOR_REVIEWS_STATUS_QUERY_KEY, options.locationId],
+        queryKey: [TRIPADVISOR_REVIEWS_STATUS_QUERY_KEY, options.category, options.locationId],
       });
       queryClient.invalidateQueries({
-        queryKey: [MERGED_REVIEWS_STATUS_QUERY_KEY, options.locationId],
+        queryKey: [MERGED_REVIEWS_STATUS_QUERY_KEY, options.category, options.locationId],
       });
       options.onSuccess?.(data);
     },

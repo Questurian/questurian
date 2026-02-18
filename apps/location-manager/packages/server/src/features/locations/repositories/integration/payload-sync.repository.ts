@@ -20,9 +20,9 @@ export function getSyncState(
   try {
     const db = getDb();
     const query = db.query(`
-      SELECT *
+      SELECT id, entity_id as location_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message
       FROM payload_sync_state
-      WHERE location_id = $locationId AND payload_collection = $collection
+      WHERE entity_id = $locationId AND payload_collection = $collection
     `);
 
     const result = query.get({
@@ -48,7 +48,7 @@ export function getAllSyncedLocations(
 
     if (collection) {
       const query = db.query(`
-        SELECT *
+        SELECT id, entity_id as location_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message
         FROM payload_sync_state
         WHERE payload_collection = $collection
         ORDER BY last_synced_at DESC
@@ -57,7 +57,7 @@ export function getAllSyncedLocations(
       return results;
     } else {
       const query = db.query(`
-        SELECT *
+        SELECT id, entity_id as location_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message
         FROM payload_sync_state
         ORDER BY last_synced_at DESC
       `);
@@ -86,9 +86,9 @@ export function saveSyncState(
     const syncTimestamp = timestamp || new Date().toISOString();
 
     const query = db.query(`
-      INSERT INTO payload_sync_state (location_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message)
+      INSERT INTO payload_sync_state (entity_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message)
       VALUES ($locationId, $collection, $payloadDocId, $timestamp, $status, $errorMessage)
-      ON CONFLICT(location_id, payload_collection) DO UPDATE SET
+      ON CONFLICT(entity_id, payload_collection) DO UPDATE SET
         payload_doc_id = CASE WHEN excluded.sync_status = 'success' THEN excluded.payload_doc_id ELSE payload_sync_state.payload_doc_id END,
         last_synced_at = excluded.last_synced_at,
         sync_status = excluded.sync_status,
@@ -110,4 +110,3 @@ export function saveSyncState(
     return false;
   }
 }
-

@@ -4,13 +4,56 @@ import type {
   CityData,
   NeighborhoodData,
   LocationWithNested,
-  LocationResponse
+  LocationResponse,
+  LocationCategory
 } from '../models/location';
 import { formatLocationName } from '@questurian/lm-shared';
 import { filterTripadvisorFeatures, parseTripadvisorStringListJson } from './tripadvisor-utils';
 import { IDEAL_FOR_TAGS, type IdealForTag } from "@shared/types/location-ideal-for";
 
 const IDEAL_FOR_TAG_SET = new Set<string>(IDEAL_FOR_TAGS);
+const CATEGORY_VALUES: readonly LocationCategory[] = [
+  "dining",
+  "accommodations",
+  "attractions",
+  "nightlife",
+];
+
+function assertCategory(category: unknown): LocationCategory {
+  if (typeof category === "string" && CATEGORY_VALUES.includes(category as LocationCategory)) {
+    return category as LocationCategory;
+  }
+  throw new Error(`Invalid location category in database row: ${String(category)}`);
+}
+
+function stripNightlifeSpendLevel(details: Record<string, unknown>): Record<string, unknown> {
+  const detailsNode = details.details;
+  if (!detailsNode || typeof detailsNode !== "object" || Array.isArray(detailsNode)) {
+    return details;
+  }
+
+  const detailsRecord = detailsNode as Record<string, unknown>;
+  const sceneNode = detailsRecord.theScene;
+  if (!sceneNode || typeof sceneNode !== "object" || Array.isArray(sceneNode)) {
+    return details;
+  }
+
+  const sceneRecord = sceneNode as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(sceneRecord, "spendLevel")) {
+    return details;
+  }
+
+  const nextScene = { ...sceneRecord };
+  delete nextScene.spendLevel;
+
+  return {
+    ...details,
+    details: {
+      ...detailsRecord,
+      theScene: nextScene,
+    },
+  };
+}
 
 /**
  * Parse a pipe-delimited location key into its components
@@ -131,6 +174,8 @@ export function isLocationInScope(locationKey: string, parentLocationKey: string
  * @returns Transformed location response with nested objects
  */
 export function transformLocationToResponse(location: LocationWithNested): LocationResponse {
+  const category = assertCategory(location.category);
+
   const parseOperationHours = (hoursJson?: string | null): Record<string, unknown> | null => {
     if (!hoursJson) return null;
     try {
@@ -147,7 +192,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         return null;
       }
-      return parsed as Record<string, unknown>;
+      return stripNightlifeSpendLevel(parsed as Record<string, unknown>);
     } catch {
       return null;
     }
@@ -174,7 +219,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
   return {
     id: location.id!,
     title: location.title || null,
-    category: location.category || 'attractions',
+    category,
     type: location.type || null,
     locationKey: location.locationKey || null,
     district: location.district || null,
@@ -231,21 +276,81 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
 export function transformLocationToBasicResponse(
   location: import('../models/location').Location & { uploadsCount: number; instagramEmbedsCount: number }
 ): import('../models/location').LocationBasic {
-  // Calculate completion status based on fields synced to Payload CMS
-  // A location is "complete" when it has all required fields:
-  // - title, type, gallery (at least 1 image or instagram embed)
-  // - address, countryCode, phoneNumber, website
-  // - operationHours, cuisines, idealFor, ianaTimeId
-  // - latitude, longitude
-  // Excluded: email (optional, hard to source), locationRef (auto-resolved during sync)
+  const category = assertCategory(location.category);
+  const isNightlife = category === "nightlife";
+
+  const parseNightlifeDetails = (): Record<string, unknown> | null => {
+    if (!location.nightlifeDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(location.nightlifeDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return stripNightlifeSpendLevel(parsed as Record<string, unknown>);
+    } catch {
+      return null;
+    }
+  };
+
+  const nightlifeDetails = parseNightlifeDetails();
+  const nightlifeSectionValue = (section: "theSpace" | "theScene", key: string): unknown => {
+    const detailsRoot = nightlifeDetails?.["details"];
+    if (!detailsRoot || typeof detailsRoot !== "object" || Array.isArray(detailsRoot)) return null;
+    const sectionRoot = (detailsRoot as Record<string, unknown>)[section];
+    if (!sectionRoot || typeof sectionRoot !== "object" || Array.isArray(sectionRoot)) return null;
+    const field = (sectionRoot as Record<string, unknown>)[key];
+    if (!field || typeof field !== "object" || Array.isArray(field)) return null;
+    return (field as Record<string, unknown>).value ?? null;
+  };
+
+  const nightlifeString = (value: unknown): string | null => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    return null;
+  };
+
+  const nightlifeArrayHasValues = (value: unknown): boolean => {
+    if (!Array.isArray(value)) return false;
+    return value.some((item) => typeof item === "string" && item.trim().length > 0);
+  };
+
+  const nightlifePhone = nightlifeString(nightlifeDetails?.["phone"]);
+  const nightlifeWebsite = nightlifeString(nightlifeDetails?.["website"]);
+
+  const nightlifeClubType = nightlifeString(nightlifeDetails?.["club_type"]);
+  const nightlifePriceTier = nightlifeString(nightlifeDetails?.["price_tier"]);
+  const nightlifeMusic = nightlifeDetails?.["music"];
+  const nightlifeVenueType = nightlifeSectionValue("theSpace", "venueType");
+  const nightlifeVenueSize = nightlifeSectionValue("theSpace", "venueSize");
+  const nightlifeSpaceLayout = nightlifeSectionValue("theSpace", "spaceLayout");
+  const nightlifeVibe = nightlifeSectionValue("theSpace", "vibe");
+  const nightlifePeakHours = nightlifeSectionValue("theSpace", "peakHours");
+  const nightlifeTouristPresence =
+    nightlifeSectionValue("theScene", "touristPresence") ??
+    nightlifeSectionValue("theSpace", "touristPresence");
+  const nightlifeMusicFormat = nightlifeSectionValue("theScene", "musicFormat");
+  const nightlifeDressCode = nightlifeSectionValue("theScene", "dressCode");
+  const nightlifeEnergy = nightlifeSectionValue("theScene", "energyLevel");
+  const nightlifeVipAndBottleService = nightlifeSectionValue("theScene", "vipAndBottleService");
+  const nightlifeCrowdProfile = nightlifeSectionValue("theScene", "crowdProfile");
+  const nightlifeDaytimeRestaurant = nightlifeString(nightlifeDetails?.["daytime_restaurant"]);
+
+  // Calculate completion status based on category-specific required fields.
+  // Non-nightlife records require shared geocoding/contact fields.
+  // Nightlife records are evaluated against nightlife profile fields + media/contact basics.
 
   const hasTitle = Boolean(location.title?.trim());
   const hasType = Boolean(location.type?.trim());
   const hasMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
   const hasAddress = Boolean(location.address?.trim());
   const hasCountryCode = Boolean(location.countryCode?.trim());
-  const hasPhoneNumber = Boolean(location.phoneNumber?.trim());
-  const hasWebsite = Boolean(location.website?.trim());
+  const hasPhoneNumber = Boolean(location.phoneNumber?.trim()) || (isNightlife && Boolean(nightlifePhone));
+  const hasWebsite = Boolean(location.website?.trim()) || (isNightlife && Boolean(nightlifeWebsite));
   const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
   const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
   const hasIdealFor = (() => {
@@ -261,29 +366,77 @@ export function transformLocationToBasicResponse(
   const hasCoordinates = location.lat != null && location.lng != null;
   const hasPriceLevel = Boolean(location.priceLevel?.trim());
 
-  // All fields synced to Payload must be present
-  // Note: locationRef is excluded — it's auto-resolved during sync
-  const isComplete =
+  const hasNightlifeProfile = Boolean(nightlifeDetails && Object.keys(nightlifeDetails).length > 0);
+  const hasNightlifeClubType = Boolean(nightlifeClubType || location.type?.trim());
+  const hasNightlifeMusic = nightlifeArrayHasValues(nightlifeMusic);
+  const hasNightlifeVenueType = Boolean(nightlifeString(nightlifeVenueType));
+  const hasNightlifeVenueSize = Boolean(nightlifeString(nightlifeVenueSize));
+  const hasNightlifeSpaceLayout = nightlifeArrayHasValues(nightlifeSpaceLayout);
+  const hasNightlifeVibe = nightlifeArrayHasValues(nightlifeVibe);
+  const hasNightlifePeakHours = Boolean(nightlifeString(nightlifePeakHours));
+  const hasNightlifeTouristPresence = Boolean(nightlifeString(nightlifeTouristPresence));
+  const hasNightlifeMusicFormat = nightlifeArrayHasValues(nightlifeMusicFormat);
+  const hasNightlifeDressCode = nightlifeArrayHasValues(nightlifeDressCode);
+  const hasNightlifeEnergy = Boolean(nightlifeString(nightlifeEnergy));
+  const hasNightlifeVipAndBottleService = Boolean(nightlifeString(nightlifeVipAndBottleService));
+  const hasNightlifeCrowdProfile = Boolean(nightlifeString(nightlifeCrowdProfile));
+  const hasNightlifeDaytimeRestaurant =
+    nightlifeDaytimeRestaurant === "0" || nightlifeDaytimeRestaurant === "1";
+  const hasNightlifePriceTier = Boolean(nightlifePriceTier || hasPriceLevel);
+
+  const hasSharedCommonFields =
     hasTitle &&
     hasType &&
     hasMedia &&
     hasAddress &&
     hasCountryCode &&
-    hasPhoneNumber &&
-    hasWebsite &&
-    hasOperationHours &&
-    hasCuisines &&
-    hasIdealFor &&
     hasIanaTimeId &&
-    hasCoordinates &&
-    hasPriceLevel;
+    hasCoordinates;
+
+  const hasNightlifeCommonFields =
+    hasTitle &&
+    hasType &&
+    hasMedia &&
+    hasAddress;
+
+  const isComplete = isNightlife
+    ? (
+      hasNightlifeCommonFields &&
+      hasNightlifeProfile &&
+      hasNightlifeClubType &&
+      hasNightlifeMusic &&
+      hasNightlifeVenueType &&
+      hasNightlifeVenueSize &&
+      hasNightlifeSpaceLayout &&
+      hasNightlifeVibe &&
+      hasNightlifePeakHours &&
+      hasNightlifeTouristPresence &&
+      hasNightlifeMusicFormat &&
+      hasNightlifeDressCode &&
+      hasNightlifeEnergy &&
+      hasNightlifeVipAndBottleService &&
+      hasNightlifeCrowdProfile &&
+      hasNightlifeDaytimeRestaurant &&
+      hasNightlifePriceTier &&
+      hasPhoneNumber &&
+      hasWebsite
+    )
+    : (
+      hasSharedCommonFields &&
+      hasPhoneNumber &&
+      hasWebsite &&
+      hasOperationHours &&
+      hasCuisines &&
+      hasIdealFor &&
+      hasPriceLevel
+    );
 
   return {
     id: location.id!,
     name: location.name,
     title: location.title ?? null,
     location: location.locationKey ? formatLocationForDisplay(location.locationKey) : null,
-    category: location.category || 'attractions',
+    category,
     isComplete,
     // Reviews tracking fields
     reviewsFetchedAt: location.reviewsFetchedAt || null,

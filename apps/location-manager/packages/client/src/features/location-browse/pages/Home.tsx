@@ -86,7 +86,7 @@ export function Home() {
     try {
       const exports = await Promise.all(
         locations.map(async (location) => {
-          const url = locationsApi.getLocationExportDownloadUrl(location.id);
+          const url = locationsApi.getLocationExportDownloadUrl(location.category, location.id);
           const response = await fetch(url);
 
           if (!response.ok) {

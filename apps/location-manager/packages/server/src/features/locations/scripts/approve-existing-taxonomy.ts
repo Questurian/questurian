@@ -5,19 +5,19 @@ import { getDb, initDb } from '../../../shared/db/client';
 /**
  * One-time script: Auto-approve any taxonomy entries referenced by existing locations
  *
- * This script ensures that all locationKeys currently in use by locations
+ * This script ensures that all locationKeys currently in use by entities
  * have their corresponding taxonomy entries marked as 'approved'.
  */
 function approveExistingTaxonomy(): void {
-  console.log("🔍 Finding taxonomy entries in use by locations...");
+  console.log("🔍 Finding taxonomy entries in use by entities...");
 
   initDb();
   const db = getDb();
 
-  // Get all distinct locationKeys from locations table
+  // Get all distinct locationKeys from entities table
   const locationKeys = db.query(`
     SELECT DISTINCT locationKey
-    FROM locations
+    FROM entities
     WHERE locationKey IS NOT NULL
   `).all() as Array<{ locationKey: string }>;
 

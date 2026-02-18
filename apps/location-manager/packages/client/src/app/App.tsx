@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navbar } from "@client/shared/components/layout";
 import { Home } from "@client/features/location-browse";
-import { AddLocationChooser, AddNightlifeLocation, AddRestaurantLocation } from "@client/features/location-create";
-import { EditLocation } from "@client/features/location-edit";
+import {
+  AddLocationChooser,
+  AddNightlifeLocation,
+  AddRestaurantLocation,
+} from "@client/features/location-create";
 import { TaxonomyReview } from "@client/features/admin/pages/TaxonomyReview";
 import { PayloadSync } from "@client/features/admin/pages/PayloadSync";
 import { Health } from "@client/features/health/Health";
+import { EditLocationRoute } from "./EditLocationRoute";
 
 function App() {
   return (
@@ -18,7 +22,7 @@ function App() {
             <Route path="/add" element={<AddLocationChooser />} />
             <Route path="/add/restaurant" element={<AddRestaurantLocation />} />
             <Route path="/add/nightlife" element={<AddNightlifeLocation />} />
-            <Route path="/edit/:id" element={<EditLocation />} />
+            <Route path="/edit/:category/:id" element={<EditLocationRoute />} />
 
             <Route path="/admin/taxonomy" element={<TaxonomyReview />} />
             <Route path="/admin/payload-sync" element={<PayloadSync />} />
