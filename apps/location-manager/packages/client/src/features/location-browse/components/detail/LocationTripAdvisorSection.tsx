@@ -102,7 +102,7 @@ export function LocationTripAdvisorSection({ locationDetail }: LocationTripAdvis
           ) : (
             <RefreshCw className="h-3.5 w-3.5 mr-1" />
           )}
-          {tripAdvisorPlaceStatusQuery.data?.hasPlaceData ? "Refetch place data" : "Fetch place data"}
+          {tripAdvisorPlaceStatusQuery.data?.hasPlaceData ? "Refetch data" : "Fetch data"}
         </Button>
       </div>
     </div>

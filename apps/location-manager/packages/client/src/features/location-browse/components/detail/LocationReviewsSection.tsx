@@ -4,12 +4,16 @@ import type {
   LocationResponse,
 } from "@client/shared/services/api/types";
 import { Button } from "@client/components/ui";
-import { Check, Download, Loader2, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, Check, Download, Loader2, RefreshCw, X } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { locationsApi } from "@client/shared/services/api/locations.api";
 import { useFetchReviewsPipeline } from "@client/shared/services/api/hooks/useReviewsPipeline";
-import { useMergedReviewsStatus } from "@client/shared/services/api/hooks/useMergedReviews";
-import { useTripAdvisorPlaceStatus } from "@client/shared/services/api/hooks/useTripAdvisorPlace";
+import { useMergedReviewsStatus, useMergedReviewsReport } from "@client/shared/services/api/hooks/useMergedReviews";
+import {
+  useFetchTripAdvisorPlace,
+  useTripAdvisorPlaceStatus,
+} from "@client/shared/services/api/hooks/useTripAdvisorPlace";
+import { ReviewsReportDialog } from "../ui/ReviewsReportDialog";
 import { CompletenessFieldEditModal } from "./CompletenessFieldEditModal";
 
 interface LocationReviewsSectionProps {
@@ -19,6 +23,7 @@ interface LocationReviewsSectionProps {
 export function LocationReviewsSection({ locationDetail }: LocationReviewsSectionProps) {
   const { showToast } = useToast();
   const [editField, setEditField] = useState<{ key: string; label: string; present: boolean } | null>(null);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const hasReviews = Boolean(locationDetail.reviewsFetchedAt);
   const canFetchGoogle = Boolean(locationDetail.placeId?.trim());
   const canFetchTripadvisor = Boolean(locationDetail.tripadvisorUrl?.trim());
@@ -32,6 +37,27 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
     locationId: locationDetail.id,
     enabled: Boolean(locationDetail.id),
   });
+  const hasTripAdvisorPlaceData = Boolean(tripAdvisorPlaceStatusQuery.data?.hasPlaceData);
+  const hasMergedReviews = Boolean(mergedReviewsStatusQuery.data?.hasMergedReviews);
+  const [tripAdvisorFetchError, setTripAdvisorFetchError] = useState<string | null>(null);
+
+  const fetchTripAdvisorPlaceMutation = useFetchTripAdvisorPlace({
+    locationId: locationDetail.id,
+    onSuccess: (data) => {
+      setTripAdvisorFetchError(null);
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(data.message, centerPosition);
+    },
+    onError: (error) => {
+      setTripAdvisorFetchError(error.message || "Failed to fetch TripAdvisor place data");
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(error.message || "Failed to fetch TripAdvisor place data", centerPosition);
+    },
+  });
+  const mergedReviewsReportQuery = useMergedReviewsReport({
+    locationId: locationDetail.id,
+    enabled: hasMergedReviews && isReportOpen,
+  });
   const hasNeighborhoodDescription = Boolean(locationDetail.neighborhoodDescription?.trim());
 
   const aiJsonPrerequisites = useMemo(
@@ -44,7 +70,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
       {
         key: "mergedReviews",
         label: "Merged reviews",
-        present: Boolean(mergedReviewsStatusQuery.data?.hasMergedReviews),
+        present: hasMergedReviews,
       },
       {
         key: "neighborhoodDescription",
@@ -54,7 +80,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
     ],
     [
       hasNeighborhoodDescription,
-      mergedReviewsStatusQuery.data?.hasMergedReviews,
+      hasMergedReviews,
       tripAdvisorPlaceStatusQuery.data?.hasPlaceData,
     ]
   );
@@ -94,6 +120,14 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
     fetchReviewsPipelineMutation.mutate({ sources });
   }
 
+  function handleMergedReviewsClick(present: boolean) {
+    if (present) {
+      setIsReportOpen(true);
+    } else if (canRunPipeline) {
+      handleFetchReviews();
+    }
+  }
+
   const statusText = fetchReviewsPipelineMutation.isPending
     ? (pipelineStatusMessage || "Running reviews pipeline...")
     : hasReviews
@@ -101,6 +135,8 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
       : canRunPipeline
         ? "Source IDs ready. Fetch reviews to build merged review data."
         : "Add a Google Place ID or TripAdvisor URL to fetch reviews.";
+
+  const isMergedReviewsLoading = fetchReviewsPipelineMutation.isPending;
 
   return (
     <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
@@ -159,33 +195,112 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
         </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {aiJsonPrerequisites.map((field) => (
-          <button
-            key={field.key}
-            type="button"
-            onClick={() =>
-              !field.present &&
-              field.key === "neighborhoodDescription" &&
-              setEditField(field)
+        {aiJsonPrerequisites.map((field) => {
+          const isTripAdvisorField = field.key === "tripadvisorPlaceData";
+          const isMergedField = field.key === "mergedReviews";
+          const isNeighborhoodField = field.key === "neighborhoodDescription";
+          const isMergedBlocked = isMergedField && !hasTripAdvisorPlaceData && !field.present;
+
+          const isTripAdvisorLoading = fetchTripAdvisorPlaceMutation.isPending;
+          const isTripAdvisorError = isTripAdvisorField && !field.present && tripAdvisorFetchError !== null;
+          const hasTripAdvisorUrl = canFetchTripadvisor;
+
+          const isTripAdvisorMissingUrl = isTripAdvisorField && !hasTripAdvisorUrl && !field.present;
+
+          const isClickable = isTripAdvisorField
+            ? !isTripAdvisorLoading && (hasTripAdvisorUrl || isTripAdvisorMissingUrl)
+            : isMergedField
+              ? !isMergedBlocked && (field.present || canRunPipeline) && !isMergedReviewsLoading
+              : isNeighborhoodField
+                ? !field.present
+                : false;
+
+          function handleClick() {
+            if (isTripAdvisorField) {
+              if (isTripAdvisorMissingUrl) {
+                setEditField({ key: "tripadvisorUrl", label: "TripAdvisor URL", present: false });
+              } else if (hasTripAdvisorUrl && !isTripAdvisorLoading) {
+                setTripAdvisorFetchError(null);
+                fetchTripAdvisorPlaceMutation.mutate();
+              }
+            } else if (isMergedField && !isMergedBlocked) {
+              handleMergedReviewsClick(field.present);
+            } else if (isNeighborhoodField && !field.present) {
+              setEditField(field);
             }
-            disabled={field.present || field.key !== "neighborhoodDescription"}
-            title={
-              !field.present && field.key === "neighborhoodDescription"
-                ? `Click to edit ${field.label}`
-                : undefined
+          }
+
+          function getTitle(): string | undefined {
+            if (isTripAdvisorField) {
+              if (isTripAdvisorError) return `Fetch failed: ${tripAdvisorFetchError} — click to retry`;
+              if (field.present) return "Click to refetch TripAdvisor place data";
+              if (hasTripAdvisorUrl) return "Click to fetch TripAdvisor place data";
+              return "TripAdvisor URL missing — click to add";
             }
-            className={`flex items-center gap-2 rounded border px-2 py-1 text-xs ${
-              field.present
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 cursor-default"
-                : field.key === "neighborhoodDescription"
-                  ? "border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer text-left"
-                  : "border-amber-500/20 bg-amber-500/10 text-amber-400 cursor-default"
-            }`}
-          >
-            {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-            <span>{field.label}</span>
-          </button>
-        ))}
+            if (isMergedField) {
+              if (isMergedBlocked) return "Requires TripAdvisor place data first";
+              if (field.present) return "Click to view merged reviews report";
+              if (canRunPipeline) return "Click to fetch and merge reviews";
+              return "Add a Google Place ID or TripAdvisor URL first";
+            }
+            if (isNeighborhoodField && !field.present) return `Click to edit ${field.label}`;
+            return undefined;
+          }
+
+          function getClassName(): string {
+            const base = "flex items-center gap-2 rounded border px-2 py-1 text-xs transition-colors";
+            if (isTripAdvisorField) {
+              if (isTripAdvisorLoading) return `${base} border-blue-500/20 bg-blue-500/10 text-blue-400 cursor-wait`;
+              if (isTripAdvisorError) return `${base} border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 cursor-pointer`;
+              if (field.present) return `${base} border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer`;
+              if (hasTripAdvisorUrl) return `${base} border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 cursor-pointer`;
+              return `${base} border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 cursor-pointer`;
+            }
+            if (isMergedBlocked) return `${base} border-zinc-500/20 bg-zinc-500/10 text-zinc-500 cursor-not-allowed opacity-50`;
+            if (isMergedField && isMergedReviewsLoading) return `${base} border-blue-500/20 bg-blue-500/10 text-blue-400 cursor-wait`;
+            if (field.present) {
+              if (isMergedField) return `${base} border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer`;
+              return `${base} border-emerald-500/20 bg-emerald-500/10 text-emerald-400 cursor-default`;
+            }
+            if (isClickable) return `${base} border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 cursor-pointer text-left`;
+            return `${base} border-amber-500/20 bg-amber-500/10 text-amber-400 cursor-default`;
+          }
+
+          function renderIcon() {
+            if (isTripAdvisorField) {
+              if (isTripAdvisorLoading) return <Loader2 className="h-3 w-3 animate-spin" />;
+              if (isTripAdvisorError) return <AlertTriangle className="h-3 w-3" />;
+              if (field.present) return <Check className="h-3 w-3" />;
+              return <X className="h-3 w-3" />;
+            }
+            if (isMergedBlocked) return <X className="h-3 w-3" />;
+            if (isMergedField && isMergedReviewsLoading) return <Loader2 className="h-3 w-3 animate-spin" />;
+            if (field.present) return <Check className="h-3 w-3" />;
+            return <X className="h-3 w-3" />;
+          }
+
+          function renderLabel() {
+            if (isTripAdvisorField && isTripAdvisorLoading) return "Fetching place data...";
+            if (isTripAdvisorField && isTripAdvisorError) return "Fetch failed — retry";
+            if (isTripAdvisorMissingUrl) return "TripAdvisor URL missing";
+            if (isMergedField && isMergedReviewsLoading) return pipelineStatusMessage || "Fetching reviews...";
+            return field.label;
+          }
+
+          return (
+            <button
+              key={field.key}
+              type="button"
+              onClick={handleClick}
+              disabled={!isClickable}
+              title={getTitle()}
+              className={getClassName()}
+            >
+              {renderIcon()}
+              <span>{renderLabel()}</span>
+            </button>
+          );
+        })}
       </div>
 
       {editField && (
@@ -196,6 +311,15 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
           onOpenChange={(open) => !open && setEditField(null)}
         />
       )}
+
+      <ReviewsReportDialog
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        report={mergedReviewsReportQuery.data ?? null}
+        isLoading={mergedReviewsReportQuery.isLoading}
+        error={mergedReviewsReportQuery.error}
+        locationName={locationDetail.name}
+      />
     </div>
   );
 }

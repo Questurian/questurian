@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Compass, Instagram, Search } from "lucide-react";
 import type { LocationBasic } from "@client/shared/services/api/types";
@@ -25,6 +25,8 @@ import { AdvancedDataModal } from "./AdvancedDataModal";
 interface LocationListItemProps {
   location: LocationBasic;
   onClick?: (id: number) => void;
+  defaultExpanded?: boolean;
+  onExpand?: (id: number) => void;
 }
 
 function formatLocationSegmentForSearch(segment: string): string {
@@ -61,11 +63,20 @@ function buildGoogleSearchUrl(query: string): string {
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
-export function LocationListItem({ location, onClick }: LocationListItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function LocationListItem({ location, onClick, defaultExpanded = false, onExpand }: LocationListItemProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const itemRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const searchQueries = buildSearchQueries(location);
+
+  useEffect(() => {
+    if (defaultExpanded && itemRef.current) {
+      requestAnimationFrame(() => {
+        itemRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [defaultExpanded]);
 
   // Custom hooks
   const { data: locationDetail, isLoading, error } = useLocationDetail(
@@ -89,7 +100,11 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
     if (onClick) {
       onClick(location.id);
     } else {
-      setIsExpanded(!isExpanded);
+      const willExpand = !isExpanded;
+      setIsExpanded(willExpand);
+      if (willExpand && onExpand) {
+        onExpand(location.id);
+      }
     }
   };
 
@@ -106,7 +121,7 @@ export function LocationListItem({ location, onClick }: LocationListItemProps) {
   };
 
   return (
-    <div className="border border-border rounded-lg p-4 bg-card hover:bg-accent/30 transition-all duration-200">
+    <div ref={itemRef} className="border border-border rounded-lg p-4 bg-card hover:bg-accent/30 transition-all duration-200">
       {/* Header Section */}
       <div
         className="flex items-start justify-between gap-3 cursor-pointer"

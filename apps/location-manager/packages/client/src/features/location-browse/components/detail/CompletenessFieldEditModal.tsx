@@ -200,6 +200,8 @@ function getInitialValue(field: FieldDef, locationDetail: LocationResponse): str
       return contact.website?.trim() ?? "";
     case "contactUrl":
       return contact.url?.trim() ?? "";
+    case "tripadvisorUrl":
+      return locationDetail.tripadvisorUrl?.trim() ?? "";
     case "neighborhoodDescription":
       return locationDetail.neighborhoodDescription?.trim() ?? "";
     case "idealFor":
@@ -253,6 +255,8 @@ function buildUpdatePayload(
       return { website: trimmed || undefined };
     case "contactUrl":
       return null;
+    case "tripadvisorUrl":
+      return { tripadvisorUrl: trimmed || undefined };
     case "neighborhoodDescription":
       return { neighborhoodDescription: trimmed || undefined };
     case "idealFor": {

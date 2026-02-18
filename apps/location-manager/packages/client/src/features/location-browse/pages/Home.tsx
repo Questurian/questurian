@@ -6,11 +6,13 @@ import { LocationList } from "../components/list/LocationList";
 import { LocationListEmpty } from "../components/list/LocationListEmpty";
 import { LocationFilters } from "../components/filters/LocationFilters";
 import { useLocationFilters } from "../hooks/useLocationFilters";
+import { useLastOpenedLocation } from "../hooks/useLastOpenedLocation";
 import { useCountries } from "@client/shared/hooks/useCountries";
 import { buildLocationKey } from "@client/shared/lib/filter-utils";
 
 export function Home() {
   const filters = useLocationFilters();
+  const { lastOpenedId, setLastOpened } = useLastOpenedLocation();
   const { data: countries = [], isLoading: isLoadingCountries } = useCountries();
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -151,7 +153,11 @@ export function Home() {
         ) : locations.length === 0 ? (
           <LocationListEmpty hasFilters={filters.isFilterActive} />
         ) : (
-          <LocationList locations={locations} />
+          <LocationList
+            locations={locations}
+            lastOpenedId={lastOpenedId}
+            onExpand={setLastOpened}
+          />
         )}
       </div>
     </div>
