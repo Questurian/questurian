@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useCountries } from "@client/shared/hooks/useCountries";
 import { extractCitiesForCountry, buildLocationKey } from "@client/shared/lib/filter-utils";
 import { locationsApi } from "@client/shared/services/api";
-import { AI_PROMPT_TEMPLATE } from "../constants/ai-prompt-template";
+import { buildAiPromptTemplate } from "../constants/ai-prompt-template";
 import type { LocationCategory } from "@shared/types/location-category";
 
 export function useCopyForAI() {
@@ -58,7 +58,7 @@ export function useCopyForAI() {
         ? `\n\n## IMPORTANT - Existing ${categoryLabel} Locations in ${cityLabel}, ${countryLabel}:\nThe following locations are ALREADY in the database. Do NOT include these in your output:\n${existingNames.map((name) => `- ${name}`).join("\n")}\n`
         : `\n\n## Note: No existing ${categoryLabel.toLowerCase()} locations found for ${cityLabel}, ${countryLabel}\n`;
 
-      const enhancedPrompt = AI_PROMPT_TEMPLATE.replace(
+      const enhancedPrompt = buildAiPromptTemplate(selectedDialogCategory).replace(
         "[PASTE YOUR LOCATIONS HERE]",
         `[PASTE YOUR ${selectedDialogCategory ? selectedDialogCategory.toUpperCase() + " " : ""}LOCATIONS FOR ${cityLabel.toUpperCase()}, ${countryLabel.toUpperCase()} HERE]`
       ) + existingLocationsSection;

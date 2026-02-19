@@ -25,6 +25,7 @@ import {
   normalizeTripadvisorStringList,
 } from "../../utils/tripadvisor-utils";
 import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
+import { isValidIdealForTag } from "@shared/types/location-ideal-for";
 
 import type { PayloadApiClient } from "./clients/payload-api.client";
 
@@ -140,6 +141,42 @@ export class MapsService {
     return JSON.stringify(input);
   }
 
+  private normalizeAttractionsDetails(
+    input?: Record<string, unknown> | string | null
+  ): string | null | undefined {
+    if (input === undefined) return undefined;
+    if (input === null) return null;
+
+    if (typeof input === "string") {
+      const trimmed = input.trim();
+      if (!trimmed) return null;
+      try {
+        JSON.parse(trimmed);
+      } catch {
+        throw new BadRequestError("Attractions details must be valid JSON");
+      }
+      return trimmed;
+    }
+
+    return JSON.stringify(input);
+  }
+
+  private validateIdealForTagsByCategory(
+    category: LocationCategory,
+    input?: string[]
+  ): void {
+    if (!input) return;
+
+    const uniqueTags = Array.from(new Set(input.map((tag) => tag.trim()).filter(Boolean)));
+    const invalidTags = uniqueTags.filter((tag) => !isValidIdealForTag(category, tag));
+
+    if (invalidTags.length > 0) {
+      throw new BadRequestError(
+        `Invalid Ideal For tags for ${category}: ${invalidTags.join(", ")}`
+      );
+    }
+  }
+
   private resolveTripadvisorFields(tripadvisorUrl?: string | null): { tripadvisorUrl?: string | null; tripadvisorLocationId?: string | null } {
     if (tripadvisorUrl === undefined) {
       return {};
@@ -211,7 +248,14 @@ export class MapsService {
 
   private normalizeIdealForTags(input?: string[]): string | undefined {
     if (input === undefined) return undefined;
-    return JSON.stringify(Array.from(new Set(input)));
+    const normalized = Array.from(
+      new Set(
+        input
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0)
+      )
+    );
+    return JSON.stringify(normalized);
   }
 
   private normalizeAddressForDuplicateCheck(address: string): string {
@@ -359,6 +403,7 @@ export class MapsService {
       ...(!existingLocation.placeId && incomingEntry.placeId && { placeId: incomingEntry.placeId }),
       ...(!existingLocation.tripadvisorUrl && incomingEntry.tripadvisorUrl && { tripadvisorUrl: incomingEntry.tripadvisorUrl }),
       ...(!existingLocation.tripadvisorLocationId && incomingEntry.tripadvisorLocationId && { tripadvisorLocationId: incomingEntry.tripadvisorLocationId }),
+      ...(!existingLocation.attractionsDetailsJson && incomingEntry.attractionsDetailsJson && { attractionsDetailsJson: incomingEntry.attractionsDetailsJson }),
       ...(!existingLocation.tripadvisorMealTypesJson && incomingEntry.tripadvisorMealTypesJson && { tripadvisorMealTypesJson: incomingEntry.tripadvisorMealTypesJson }),
       ...(!existingLocation.tripadvisorCuisinesJson && incomingEntry.tripadvisorCuisinesJson && { tripadvisorCuisinesJson: incomingEntry.tripadvisorCuisinesJson }),
       ...(!existingLocation.tripadvisorFeaturesJson && incomingEntry.tripadvisorFeaturesJson && { tripadvisorFeaturesJson: incomingEntry.tripadvisorFeaturesJson }),
@@ -539,9 +584,11 @@ export class MapsService {
     if (payload.reviewsEnabled !== undefined) {
       entry.reviewsEnabled = payload.reviewsEnabled;
     }
+    this.validateIdealForTagsByCategory(category, payload.idealFor);
     const hoursJson = this.normalizeOperationHours(payload.operationHours);
     const nightlifeDetailsJson = this.normalizeNightlifeDetails(payload.nightlifeDetails);
     const accommodationsDetailsJson = this.normalizeAccommodationsDetails(payload.accommodationsDetails);
+    const attractionsDetailsJson = this.normalizeAttractionsDetails(payload.attractionsDetails);
     const idealForJson = this.normalizeIdealForTags(payload.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(payload.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(payload.tripadvisorCuisines);
@@ -556,6 +603,9 @@ export class MapsService {
     }
     if (accommodationsDetailsJson !== undefined) {
       entry.accommodationsDetailsJson = accommodationsDetailsJson;
+    }
+    if (attractionsDetailsJson !== undefined) {
+      entry.attractionsDetailsJson = attractionsDetailsJson;
     }
     if (payload.priceLevel !== undefined) {
       entry.priceLevel = payload.priceLevel;
@@ -623,6 +673,7 @@ export class MapsService {
     if (expectedCategory && currentLocation.category !== expectedCategory) {
       throw new NotFoundError("Location", id);
     }
+    const category = validateCategory(currentLocation.category);
 
     const nextName = updates.name ?? currentLocation.name;
     const nextAddress = updates.address ?? currentLocation.address;
@@ -636,9 +687,11 @@ export class MapsService {
     }
 
     // Perform partial update - only update provided fields
+    this.validateIdealForTagsByCategory(category, updates.idealFor);
     const hoursJson = this.normalizeOperationHours(updates.operationHours);
     const nightlifeDetailsJson = this.normalizeNightlifeDetails(updates.nightlifeDetails);
     const accommodationsDetailsJson = this.normalizeAccommodationsDetails(updates.accommodationsDetails);
+    const attractionsDetailsJson = this.normalizeAttractionsDetails(updates.attractionsDetails);
     const idealForJson = this.normalizeIdealForTags(updates.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(updates.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(updates.tripadvisorCuisines);
@@ -662,6 +715,7 @@ export class MapsService {
       ...(idealForJson !== undefined && { idealForJson }),
       ...(nightlifeDetailsJson !== undefined && { nightlifeDetailsJson }),
       ...(accommodationsDetailsJson !== undefined && { accommodationsDetailsJson }),
+      ...(attractionsDetailsJson !== undefined && { attractionsDetailsJson }),
       ...(hoursJson !== undefined && { hoursJson }),
       ...(tripadvisorMealTypesJson !== undefined && { tripadvisorMealTypesJson }),
       ...(tripadvisorCuisinesJson !== undefined && { tripadvisorCuisinesJson }),

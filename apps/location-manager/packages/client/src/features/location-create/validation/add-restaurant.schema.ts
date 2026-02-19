@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { IDEAL_FOR_TAGS } from "@questurian/lm-shared";
+import { DINING_IDEAL_FOR_TAGS } from "@questurian/lm-shared";
 
 const idealForSchema = z
-  .array(z.enum(IDEAL_FOR_TAGS))
+  .array(z.enum(DINING_IDEAL_FOR_TAGS))
   .min(1, "Select at least 1 Ideal For tag")
   .max(4, "Select up to 4 Ideal For tags")
   .refine((tags) => new Set(tags).size === tags.length, {

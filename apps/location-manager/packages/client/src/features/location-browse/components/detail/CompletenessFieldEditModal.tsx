@@ -23,8 +23,7 @@ import {
 import { useUpdateLocation } from "@client/shared/services/api/hooks/useUpdateLocation";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
-import { IDEAL_FOR_TAG_GROUPS } from "@shared/types/location-ideal-for";
-import type { IdealForTag } from "@shared/types/location-ideal-for";
+import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import { Plus, Trash2, X } from "lucide-react";
 
 interface FieldDef {
@@ -48,6 +47,7 @@ const CATEGORIES = [
 ] as const;
 
 const PRICE_LEVELS = [
+  { value: "free", label: "free" },
   { value: "$", label: "$" },
   { value: "$$", label: "$$" },
   { value: "$$$", label: "$$$" },
@@ -220,6 +220,10 @@ function getInitialValue(field: FieldDef, locationDetail: LocationResponse): str
       return locationDetail.accommodationsDetails
         ? JSON.stringify(locationDetail.accommodationsDetails, null, 2)
         : "";
+    case "attractionsDetails":
+      return locationDetail.attractionsDetails
+        ? JSON.stringify(locationDetail.attractionsDetails, null, 2)
+        : "";
     case "operationHours":
       return locationDetail.operationHours
         ? JSON.stringify(locationDetail.operationHours, null, 2)
@@ -281,6 +285,8 @@ function buildUpdatePayload(
       return { nightlifeDetails: trimmed || null };
     case "accommodationsDetails":
       return { accommodationsDetails: trimmed || null };
+    case "attractionsDetails":
+      return { attractionsDetails: trimmed || null };
     case "operationHours":
       return { operationHours: trimmed || undefined };
     case "media":
@@ -302,7 +308,7 @@ export function CompletenessFieldEditModal({
     field.key === "type" ? locationDetail.category : undefined
   );
   const [value, setValue] = useState("");
-  const [idealForDraft, setIdealForDraft] = useState<IdealForTag[]>(
+  const [idealForDraft, setIdealForDraft] = useState<string[]>(
     Array.isArray(locationDetail.idealFor) ? locationDetail.idealFor : []
   );
   const [dayEntries, setDayEntries] = useState<DayEntry[]>(() =>
@@ -477,17 +483,16 @@ export function CompletenessFieldEditModal({
 
   const addIdealForTag = (tag: string) => {
     setIdealForDraft((prev) => {
-      const next = tag as IdealForTag;
-      if (prev.includes(next) || prev.length >= 4) return prev;
-      return [...prev, next];
+      if (prev.includes(tag) || prev.length >= 4) return prev;
+      return [...prev, tag];
     });
   };
 
-  const removeIdealForTag = (tagToRemove: IdealForTag) => {
+  const removeIdealForTag = (tagToRemove: string) => {
     setIdealForDraft((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
-  const availableIdealForGroups = IDEAL_FOR_TAG_GROUPS.map((group) => ({
+  const availableIdealForGroups = getIdealForGroups(locationDetail.category).map((group) => ({
     ...group,
     tags: group.tags.filter((tag) => !idealForDraft.includes(tag)),
   })).filter((group) => group.tags.length > 0);
@@ -556,6 +561,16 @@ export function CompletenessFieldEditModal({
             onChange={(e) => setValue(e.target.value)}
             rows={12}
             placeholder='{"core":{"name":"The Meridian Grand","price":"$$$$"}}'
+            className="font-mono text-xs"
+          />
+        );
+      case "attractionsDetails":
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            rows={12}
+            placeholder='{"core":{"attraction_type":"museum","pricing":"$$"}}'
             className="font-mono text-xs"
           />
         );

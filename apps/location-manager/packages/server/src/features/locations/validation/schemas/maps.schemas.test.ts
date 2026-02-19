@@ -8,7 +8,7 @@ const basePayload = {
 };
 
 describe("maps create schema category rules", () => {
-  test("accepts dining payload when idealFor is provided", () => {
+  test("accepts dining payload when dining idealFor tags are provided", () => {
     const result = createMapsSchema.safeParse({
       ...basePayload,
       category: "dining",
@@ -22,6 +22,16 @@ describe("maps create schema category rules", () => {
     const result = createMapsSchema.safeParse({
       ...basePayload,
       category: "dining",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects dining payload with non-dining idealFor tags", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "dining",
+      idealFor: ["Families"],
     });
 
     expect(result.success).toBe(false);
@@ -41,43 +51,24 @@ describe("maps create schema category rules", () => {
     expect(result.success).toBe(true);
   });
 
-  test("accepts optional shared entities fields for nightlife payload", () => {
-    const result = createMapsSchema.safeParse({
-      ...basePayload,
-      category: "nightlife",
-      type: "nightclub",
-      title: "Manual Nightlife Title",
-      url: "https://www.google.com/maps/search/?api=1&query=test",
-      lat: -12.0464,
-      lng: -77.0428,
-      locationKey: "peru|lima|miraflores",
-      district: "miraflores",
-      contactAddress: "Manual Contact Address",
-      countryCode: "pe",
-      ianaTimeId: "America/Lima",
-      placeId: "manual-place-id",
-      phoneNumber: "+51 999 111 222",
-      website: "https://example.com/nightlife",
-      nightlifeDetails: {
-        vibe: "high-energy",
-        dressCode: "smart-casual",
-      },
-    });
-
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-
-    expect(result.data.countryCode).toBe("PE");
-    expect(result.data.lat).toBe(-12.0464);
-    expect(result.data.lng).toBe(-77.0428);
-    expect(result.data.locationKey).toBe("peru|lima|miraflores");
-  });
-
   test("rejects nightlife payload when nightlifeDetails is missing", () => {
     const result = createMapsSchema.safeParse({
       ...basePayload,
       category: "nightlife",
       type: "nightclub",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects nightlife payload with non-nightlife idealFor tags", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "nightlife",
+      nightlifeDetails: {
+        vibe: "high-energy",
+      },
+      idealFor: ["Families"],
     });
 
     expect(result.success).toBe(false);
@@ -112,10 +103,56 @@ describe("maps create schema category rules", () => {
     expect(result.success).toBe(false);
   });
 
+  test("accepts attractions payload with attractionsDetails and attractions idealFor", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "attractions",
+      type: "museum",
+      idealFor: ["Families", "History Buffs"],
+      attractionsDetails: {
+        core: {
+          attraction_type: "museum",
+        },
+        visit: {
+          booking_required: false,
+          ideal_for: ["Families", "History Buffs"],
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   test("rejects attractions payload when idealFor is missing", () => {
     const result = createMapsSchema.safeParse({
       ...basePayload,
       category: "attractions",
+      attractionsDetails: {
+        core: { attraction_type: "museum" },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects attractions payload when attractionsDetails is missing", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "attractions",
+      idealFor: ["Families"],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects attractions payload with non-attractions idealFor tags", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "attractions",
+      idealFor: ["Date Nights"],
+      attractionsDetails: {
+        core: { attraction_type: "museum" },
+      },
     });
 
     expect(result.success).toBe(false);
@@ -152,5 +189,17 @@ describe("maps patch schema reviews toggle", () => {
     if (!result.success) return;
 
     expect(result.data.reviewsEnabled).toBe(false);
+  });
+
+  test("accepts attractionsDetails as a patch field", () => {
+    const result = patchMapsSchema.safeParse({
+      attractionsDetails: {
+        visit: {
+          booking_required: true,
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
   });
 });

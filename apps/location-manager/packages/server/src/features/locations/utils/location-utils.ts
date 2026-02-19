@@ -9,9 +9,6 @@ import type {
 } from '../models/location';
 import { formatLocationName } from '@questurian/lm-shared';
 import { filterTripadvisorFeatures, parseTripadvisorStringListJson } from './tripadvisor-utils';
-import { IDEAL_FOR_TAGS, type IdealForTag } from "@shared/types/location-ideal-for";
-
-const IDEAL_FOR_TAG_SET = new Set<string>(IDEAL_FOR_TAGS);
 const CATEGORY_VALUES: readonly LocationCategory[] = [
   "dining",
   "accommodations",
@@ -225,19 +222,33 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
-  const parseIdealFor = (idealForJson?: string | null): IdealForTag[] | null => {
+  const parseAttractionsDetails = (attractionsDetailsJson?: string | null): Record<string, unknown> | null => {
+    if (!attractionsDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(attractionsDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
+  const parseIdealFor = (idealForJson?: string | null): string[] | null => {
     if (!idealForJson) return null;
 
     try {
       const parsed = JSON.parse(idealForJson);
       if (!Array.isArray(parsed)) return null;
 
-      const normalized = parsed.filter(
-        (tag): tag is IdealForTag => typeof tag === "string" && IDEAL_FOR_TAG_SET.has(tag)
-      );
+      const normalized = parsed
+        .filter((tag): tag is string => typeof tag === "string")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
 
       if (normalized.length === 0) return null;
-      return Array.from(new Set(normalized)).slice(0, 4);
+      return Array.from(new Set(normalized));
     } catch {
       return null;
     }
@@ -259,6 +270,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     idealFor: parseIdealFor(location.idealForJson || null),
     nightlifeDetails: parseNightlifeDetails(location.nightlifeDetailsJson || null),
     accommodationsDetails: parseAccommodationsDetails(location.accommodationsDetailsJson || null),
+    attractionsDetails: parseAttractionsDetails(location.attractionsDetailsJson || null),
     operationHours: parseOperationHours(location.hoursJson || null),
     tripadvisorMealTypes: parseTripadvisorStringListJson(location.tripadvisorMealTypesJson || null),
     tripadvisorCuisines: parseTripadvisorStringListJson(location.tripadvisorCuisinesJson || null),
@@ -308,6 +320,7 @@ export function transformLocationToBasicResponse(
   const category = assertCategory(location.category);
   const isNightlife = category === "nightlife";
   const isAccommodations = category === "accommodations";
+  const isAttractions = category === "attractions";
 
   const parseNightlifeDetails = (): Record<string, unknown> | null => {
     if (!location.nightlifeDetailsJson) return null;
@@ -335,8 +348,22 @@ export function transformLocationToBasicResponse(
     }
   };
 
+  const parseAttractionsDetails = (): Record<string, unknown> | null => {
+    if (!location.attractionsDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(location.attractionsDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
   const nightlifeDetails = parseNightlifeDetails();
   const accommodationsDetails = parseAccommodationsDetails();
+  const attractionsDetails = parseAttractionsDetails();
   const nightlifeSectionValue = (section: "theSpace" | "theScene", key: string): unknown => {
     const detailsRoot = nightlifeDetails?.["details"];
     if (!detailsRoot || typeof detailsRoot !== "object" || Array.isArray(detailsRoot)) return null;
@@ -352,6 +379,15 @@ export function transformLocationToBasicResponse(
     key: string
   ): unknown => {
     const sectionRoot = accommodationsDetails?.[section];
+    if (!sectionRoot || typeof sectionRoot !== "object" || Array.isArray(sectionRoot)) return null;
+    return (sectionRoot as Record<string, unknown>)[key] ?? null;
+  };
+
+  const attractionsSectionValue = (
+    section: "core" | "visit" | "contact",
+    key: string
+  ): unknown => {
+    const sectionRoot = attractionsDetails?.[section];
     if (!sectionRoot || typeof sectionRoot !== "object" || Array.isArray(sectionRoot)) return null;
     return (sectionRoot as Record<string, unknown>)[key] ?? null;
   };
@@ -449,6 +485,18 @@ export function transformLocationToBasicResponse(
   const accommodationsWalkability = accommodationsSectionValue("the_details", "walkability");
   const accommodationsCheckIn = accommodationsSectionValue("the_details", "check_in_time");
   const accommodationsCheckOut = accommodationsSectionValue("the_details", "check_out_time");
+  const attractionsType =
+    accommodationsString(attractionsSectionValue("core", "attraction_type")) ||
+    accommodationsString(location.type);
+  const attractionsPricing =
+    accommodationsString(attractionsSectionValue("core", "pricing")) ||
+    accommodationsString(location.priceLevel);
+  const attractionsVisitHours = attractionsSectionValue("visit", "hours");
+  const attractionsBookingRequired = attractionsSectionValue("visit", "booking_required");
+  const attractionsIdealFor = attractionsSectionValue("visit", "ideal_for");
+  const attractionsWebsite =
+    accommodationsString(attractionsSectionValue("contact", "website")) ||
+    accommodationsString(location.website);
 
   // Calculate completion status based on category-specific required fields.
   // Non-nightlife records require shared geocoding/contact fields.
@@ -466,7 +514,8 @@ export function transformLocationToBasicResponse(
   const hasWebsite =
     Boolean(location.website?.trim()) ||
     (isNightlife && Boolean(nightlifeWebsite)) ||
-    (isAccommodations && Boolean(accommodationsWebsite));
+    (isAccommodations && Boolean(accommodationsWebsite)) ||
+    (isAttractions && Boolean(attractionsWebsite));
   const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
   const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
   const hasIdealFor = (() => {
@@ -518,6 +567,26 @@ export function transformLocationToBasicResponse(
   const hasAccommodationsWalkability = Boolean(accommodationsString(accommodationsWalkability));
   const hasAccommodationsCheckIn = Boolean(accommodationsString(accommodationsCheckIn));
   const hasAccommodationsCheckOut = Boolean(accommodationsString(accommodationsCheckOut));
+  const hasAttractionsProfile = Boolean(attractionsDetails && Object.keys(attractionsDetails).length > 0);
+  const hasAttractionsType = Boolean(attractionsType);
+  const hasAttractionsPricing = Boolean(attractionsPricing);
+  const hasAttractionsBookingRequired = accommodationsBooleanPresent(attractionsBookingRequired);
+  const hasAttractionsIdealFor =
+    hasIdealFor || accommodationsArrayHasValues(attractionsIdealFor);
+  const hasAttractionsVisitHours = (() => {
+    if (hasOperationHours) return true;
+    if (!attractionsVisitHours) return false;
+    if (typeof attractionsVisitHours === "string") {
+      return attractionsVisitHours.trim().length > 0;
+    }
+    if (Array.isArray(attractionsVisitHours)) {
+      return attractionsVisitHours.some((item) => accommodationsString(item) !== null);
+    }
+    if (typeof attractionsVisitHours === "object") {
+      return Object.keys(attractionsVisitHours as Record<string, unknown>).length > 0;
+    }
+    return false;
+  })();
 
   const hasSharedCommonFields =
     hasTitle &&
@@ -537,6 +606,14 @@ export function transformLocationToBasicResponse(
   const hasAccommodationsCommonFields =
     hasTitle &&
     hasType &&
+    hasMedia &&
+    hasAddress &&
+    hasCountryCode &&
+    hasIanaTimeId &&
+    hasCoordinates;
+
+  const hasAttractionsCommonFields =
+    hasTitle &&
     hasMedia &&
     hasAddress &&
     hasCountryCode &&
@@ -588,6 +665,17 @@ export function transformLocationToBasicResponse(
         hasAccommodationsCheckIn &&
         hasAccommodationsCheckOut &&
         hasPhoneNumber &&
+        hasWebsite
+      )
+    : isAttractions
+      ? (
+        hasAttractionsCommonFields &&
+        hasAttractionsProfile &&
+        hasAttractionsType &&
+        hasAttractionsPricing &&
+        hasAttractionsBookingRequired &&
+        hasAttractionsIdealFor &&
+        hasAttractionsVisitHours &&
         hasWebsite
       )
     : (

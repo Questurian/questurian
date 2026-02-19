@@ -10,6 +10,7 @@ import {
 } from "@client/shared/services/api/hooks/useTripAdvisorPlace";
 import { parseNightlifeDetails } from "../../utils/nightlife-details";
 import { parseAccommodationsDetails } from "@client/shared/lib/accommodations-details";
+import { parseAttractionsDetails } from "@client/shared/lib/attractions-details";
 
 interface LocationCompletenessProps {
   locationDetail: LocationResponse;
@@ -22,8 +23,10 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
     const source = locationDetail.source || {};
     const isNightlife = locationDetail.category === "nightlife";
     const isAccommodations = locationDetail.category === "accommodations";
+    const isAttractions = locationDetail.category === "attractions";
     const nightlifeDetails = parseNightlifeDetails(locationDetail.nightlifeDetails);
     const accommodationsDetails = parseAccommodationsDetails(locationDetail.accommodationsDetails);
+    const attractionsDetails = parseAttractionsDetails(locationDetail.attractionsDetails);
     const hasOperationHours = Boolean(
       locationDetail.operationHours &&
         Object.keys(locationDetail.operationHours).length > 0
@@ -195,6 +198,45 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       ];
     }
 
+    if (isAttractions) {
+      return [
+        { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
+        { key: "sourceAddress", label: "Address", present: Boolean(source.address?.trim()) },
+        { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        {
+          key: "attractions.type",
+          label: "Type",
+          present: Boolean(locationDetail.type?.trim() || attractionsDetails.attractionType),
+        },
+        {
+          key: "attractions.pricing",
+          label: "Pricing",
+          present: Boolean(locationDetail.priceLevel?.trim() || attractionsDetails.pricing),
+        },
+        {
+          key: "idealFor",
+          label: "Ideal For",
+          present: hasIdealFor || attractionsDetails.idealFor.length > 0,
+        },
+        {
+          key: "attractions.bookingRequired",
+          label: "Booking Required",
+          present: attractionsDetails.bookingRequired !== null,
+        },
+        {
+          key: "operationHours",
+          label: "Hours",
+          present: hasOperationHours || attractionsDetails.hasVisitHours,
+        },
+        {
+          key: "website",
+          label: "Website",
+          present: Boolean(contact.website?.trim() || attractionsDetails.website),
+        },
+        { key: "media", label: "Images/Instagram", present: hasMedia },
+      ];
+    }
+
     const baseFields = [
       { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
       { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
@@ -258,6 +300,13 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       return {
         key: "accommodationsDetails",
         label: "Accommodations Profile",
+        present: field.present,
+      };
+    }
+    if (field.key.startsWith("attractions.")) {
+      return {
+        key: "attractionsDetails",
+        label: "Attractions Profile",
         present: field.present,
       };
     }

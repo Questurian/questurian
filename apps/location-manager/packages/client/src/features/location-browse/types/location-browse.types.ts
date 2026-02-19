@@ -1,5 +1,4 @@
 import type { ImageVariantType } from "@questurian/lm-shared";
-import type { IdealForTag } from "@shared/types/location-ideal-for";
 import type { Area } from "react-easy-crop";
 
 // Image processing types
@@ -26,7 +25,7 @@ export interface CropState {
 // Ideal-for input parsing types
 interface ParsedIdealForInputSuccess {
   ok: true;
-  tags: IdealForTag[];
+  tags: string[];
 }
 
 interface ParsedIdealForInputFailure {

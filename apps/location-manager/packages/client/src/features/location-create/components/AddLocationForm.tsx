@@ -4,7 +4,7 @@ import { FormInput, FormSelect, FormTagMultiSelect } from "@client/shared/compon
 import { SelectItem } from "@client/components/ui";
 import { SubmitButton } from "@client/shared/components/ui";
 import { Button } from "@client/components/ui/button";
-import { IDEAL_FOR_OPTION_GROUPS } from "../constants/ai-prompt-template";
+import { getIdealForOptionGroups } from "../constants/ai-prompt-template";
 import type { AddLocationFormData } from "../validation/add-location.schema";
 import type { LocationCategory } from "@shared/types/location-category";
 
@@ -33,6 +33,12 @@ export function AddLocationForm({
   heading = "Add Location",
   hideCategoryField = false,
 }: AddLocationFormProps) {
+  const idealForOptionGroups = getIdealForOptionGroups(selectedCategory || "dining");
+  const idealForDescription =
+    selectedCategory === "dining" || selectedCategory === "attractions"
+      ? "Choose 1 to 4 tags"
+      : "Optional: choose up to 4 tags";
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -117,9 +123,9 @@ export function AddLocationForm({
               name="idealFor"
               label="Ideal For"
               control={form.control}
-              optionGroups={IDEAL_FOR_OPTION_GROUPS}
+              optionGroups={idealForOptionGroups}
               maxSelections={4}
-              description="Choose 1 to 4 tags"
+              description={idealForDescription}
               allowDirectTagArrayInput
             />
           </section>

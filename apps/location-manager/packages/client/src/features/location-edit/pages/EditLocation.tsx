@@ -78,7 +78,12 @@ export function EditLocation() {
         </div>
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          <CoreFieldsSection form={form} locationTypes={locationTypes} isLoadingTypes={isLoadingTypes} />
+          <CoreFieldsSection
+            form={form}
+            locationTypes={locationTypes}
+            isLoadingTypes={isLoadingTypes}
+            category={location.category}
+          />
           <TaxonomyFieldsSection form={form} />
           <ContactFieldsSection form={form} />
           <DetailsFieldsSection

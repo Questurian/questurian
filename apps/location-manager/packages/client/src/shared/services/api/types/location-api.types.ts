@@ -1,4 +1,3 @@
-import type { IdealForTag } from "@shared/types/location-ideal-for";
 import type { Category } from "./common.types";
 
 export interface CreateMapsRequest {
@@ -22,8 +21,9 @@ export interface CreateMapsRequest {
   tripadvisorUrl?: string;
   nightlifeDetails?: Record<string, unknown> | string;
   accommodationsDetails?: Record<string, unknown> | string;
+  attractionsDetails?: Record<string, unknown> | string;
   priceLevel?: string;
-  idealFor?: IdealForTag[];
+  idealFor?: string[];
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;
   tripadvisorMealTypes?: string[] | string;
@@ -63,9 +63,10 @@ export interface UpdateMapsRequest {
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string;
-  idealFor?: IdealForTag[];
+  idealFor?: string[];
   nightlifeDetails?: Record<string, unknown> | string | null;
   accommodationsDetails?: Record<string, unknown> | string | null;
+  attractionsDetails?: Record<string, unknown> | string | null;
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;

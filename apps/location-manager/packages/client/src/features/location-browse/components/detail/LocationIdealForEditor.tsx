@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { LocationResponse } from "@client/shared/services/api/types";
-import type { IdealForTag } from "@shared/types/location-ideal-for";
-import { IDEAL_FOR_TAG_GROUPS } from "@shared/types/location-ideal-for";
+import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import {
   Button,
   Select,
@@ -28,8 +27,6 @@ interface LocationIdealForEditorProps {
 }
 
 export function LocationIdealForEditor({ locationDetail }: LocationIdealForEditorProps) {
-  if (locationDetail.category === "nightlife") return null;
-
   const { showToast } = useToast();
   const { mutate: updateLocation, isPending: isUpdatingLocation } = useUpdateLocation();
 
@@ -37,7 +34,7 @@ export function LocationIdealForEditor({ locationDetail }: LocationIdealForEdito
     Array.isArray(locationDetail?.idealFor) && locationDetail.idealFor.length > 0
   );
 
-  const [idealForDraft, setIdealForDraft] = useState<IdealForTag[]>([]);
+  const [idealForDraft, setIdealForDraft] = useState<string[]>([]);
   const [isDirectInputEnabled, setIsDirectInputEnabled] = useState(false);
   const [directInputValue, setDirectInputValue] = useState("");
   const [directInputError, setDirectInputError] = useState<string | null>(null);
@@ -55,15 +52,14 @@ export function LocationIdealForEditor({ locationDetail }: LocationIdealForEdito
     if (isUpdatingLocation) return;
 
     setIdealForDraft((prev) => {
-      const nextTag = tag as IdealForTag;
-      if (prev.includes(nextTag) || prev.length >= MAX_IDEAL_FOR_SELECTIONS) return prev;
-      return [...prev, nextTag];
+      if (prev.includes(tag) || prev.length >= MAX_IDEAL_FOR_SELECTIONS) return prev;
+      return [...prev, tag];
     });
     setDirectInputError(null);
     setDirectInputFeedback(null);
   };
 
-  const removeIdealForTag = (tagToRemove: IdealForTag) => {
+  const removeIdealForTag = (tagToRemove: string) => {
     setIdealForDraft((prev) => prev.filter((tag) => tag !== tagToRemove));
     setDirectInputError(null);
     setDirectInputFeedback(null);
@@ -80,7 +76,7 @@ export function LocationIdealForEditor({ locationDetail }: LocationIdealForEdito
   };
 
   const handleApplyDirectInput = () => {
-    const parseResult = parseIdealForDirectInput(directInputValue);
+    const parseResult = parseIdealForDirectInput(locationDetail.category, directInputValue);
 
     if (!parseResult.ok) {
       setDirectInputError(parseResult.error);
@@ -118,7 +114,7 @@ export function LocationIdealForEditor({ locationDetail }: LocationIdealForEdito
     );
   };
 
-  const availableIdealForGroups = IDEAL_FOR_TAG_GROUPS.map((group) => ({
+  const availableIdealForGroups = getIdealForGroups(locationDetail.category).map((group) => ({
     ...group,
     tags: group.tags.filter((tag) => !idealForDraft.includes(tag)),
   })).filter((group) => group.tags.length > 0);

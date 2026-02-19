@@ -1,13 +1,10 @@
-import { IDEAL_FOR_TAG_GROUPS, type IdealForTag } from "@shared/types/location-ideal-for";
+import { getIdealForTags } from "@shared/types/location-ideal-for";
+import type { LocationCategory } from "@shared/types/location-category";
 import type { ParsedIdealForInputResult } from "../types/location-browse.types";
 
 export type { ParsedIdealForInputResult };
 
 export const MAX_IDEAL_FOR_SELECTIONS = 4;
-export const IDEAL_FOR_TAG_OPTIONS: readonly IdealForTag[] = IDEAL_FOR_TAG_GROUPS.flatMap((group) => group.tags);
-export const IDEAL_FOR_TAG_BY_NORMALIZED = new Map<string, IdealForTag>(
-  IDEAL_FOR_TAG_OPTIONS.map((tag) => [normalizeTagText(tag), tag] as const)
-);
 
 export function normalizeTagText(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
@@ -60,12 +57,22 @@ export function levenshteinDistance(a: string, b: string): number {
   return previousRow[b.length];
 }
 
-export function getClosestTagSuggestion(token: string): string | null {
+function getIdealForTagOptions(category: LocationCategory): readonly string[] {
+  return getIdealForTags(category);
+}
+
+function getIdealForTagByNormalized(category: LocationCategory): Map<string, string> {
+  return new Map(
+    getIdealForTagOptions(category).map((tag) => [normalizeTagText(tag), tag] as const)
+  );
+}
+
+export function getClosestTagSuggestion(category: LocationCategory, token: string): string | null {
   const normalizedToken = normalizeTagText(token);
   let bestMatch: string | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
-  IDEAL_FOR_TAG_OPTIONS.forEach((option) => {
+  getIdealForTagOptions(category).forEach((option) => {
     const distance = levenshteinDistance(normalizedToken, normalizeTagText(option));
     if (distance < bestDistance) {
       bestDistance = distance;
@@ -78,18 +85,22 @@ export function getClosestTagSuggestion(token: string): string | null {
   return bestDistance <= maxDistance ? bestMatch : null;
 }
 
-export function parseIdealForDirectInput(rawInput: string): ParsedIdealForInputResult {
+export function parseIdealForDirectInput(
+  category: LocationCategory,
+  rawInput: string
+): ParsedIdealForInputResult {
   const parsedTokens = tokenizeTagInput(rawInput);
 
   if (parsedTokens.length === 0) {
     return { ok: false, error: "Enter at least one tag before applying." };
   }
 
-  const resolvedTags: IdealForTag[] = [];
+  const idealForTagByNormalized = getIdealForTagByNormalized(category);
+  const resolvedTags: string[] = [];
   const unknownTokens: string[] = [];
 
   parsedTokens.forEach((token) => {
-    const resolvedTag = IDEAL_FOR_TAG_BY_NORMALIZED.get(normalizeTagText(token));
+    const resolvedTag = idealForTagByNormalized.get(normalizeTagText(token));
     if (resolvedTag) {
       resolvedTags.push(resolvedTag);
     } else {
@@ -100,7 +111,7 @@ export function parseIdealForDirectInput(rawInput: string): ParsedIdealForInputR
   if (unknownTokens.length > 0) {
     const unknownTokenMessage = unknownTokens
       .map((token) => {
-        const suggestion = getClosestTagSuggestion(token);
+        const suggestion = getClosestTagSuggestion(category, token);
         return suggestion
           ? `"${token}" (did you mean "${suggestion}"?)`
           : `"${token}"`;
@@ -129,6 +140,6 @@ export function parseIdealForDirectInput(rawInput: string): ParsedIdealForInputR
   return { ok: true, tags: resolvedTags };
 }
 
-export function formatTagsAsArray(tags: readonly IdealForTag[]): string {
+export function formatTagsAsArray(tags: readonly string[]): string {
   return `[${tags.map((tag) => `"${tag}"`).join(", ")}]`;
 }

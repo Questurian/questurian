@@ -6,6 +6,7 @@ import { LocationIdealForEditor } from "./LocationIdealForEditor";
 import { LocationMediaGallery } from "./LocationMediaGallery";
 import { LocationNightlifeDetails } from "./LocationNightlifeDetails";
 import { LocationAccommodationsDetails } from "./LocationAccommodationsDetails";
+import { LocationAttractionsDetails } from "./LocationAttractionsDetails";
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -42,8 +43,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
   const showSourceAddress = Boolean(sourceAddress);
   const showContactAddress = Boolean(contactAddress) && contactAddress !== sourceAddress;
   const contactAddressLabel = showSourceAddress ? "Contact Address" : "Address";
-  const isNightlife = locationDetail.category === "nightlife";
-  const isAccommodations = locationDetail.category === "accommodations";
 
   return (
     <div className="mt-4 pt-4 border-t border-border">
@@ -52,7 +51,7 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
 
         <LocationReviewsSection locationDetail={locationDetail} />
 
-        {!isNightlife && !isAccommodations && <LocationIdealForEditor locationDetail={locationDetail} />}
+        <LocationIdealForEditor locationDetail={locationDetail} />
 
         <LocationNightlifeDetails
           locationDetail={locationDetail}
@@ -60,6 +59,11 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         />
 
         <LocationAccommodationsDetails
+          locationDetail={locationDetail}
+          onCopyField={onCopyField}
+        />
+
+        <LocationAttractionsDetails
           locationDetail={locationDetail}
           onCopyField={onCopyField}
         />

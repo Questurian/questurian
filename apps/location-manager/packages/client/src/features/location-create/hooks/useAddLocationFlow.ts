@@ -70,6 +70,7 @@ export function useAddLocationFlow(forcedCategory?: LocationCategory) {
     if (watchedCategory !== selectedCategory) {
       setSelectedCategory(watchedCategory);
       addForm.setValue("type", undefined);
+      addForm.setValue("idealFor", []);
     }
   }, [watchedCategory, selectedCategory, addForm, forcedCategory]);
 

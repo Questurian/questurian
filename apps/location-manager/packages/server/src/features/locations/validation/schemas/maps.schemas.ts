@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { LocationCategory } from "@shared/types/location-category";
-import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
+import { getIdealForTags, isValidIdealForTag } from "@shared/types/location-ideal-for";
 
 export const locationCategorySchema = z.enum([
   "dining",
@@ -9,15 +9,36 @@ export const locationCategorySchema = z.enum([
   "nightlife"
 ] as const satisfies readonly LocationCategory[]);
 
-const idealForTagSchema = z.enum(IDEAL_FOR_TAGS);
-
 const idealForTagsSchema = z
-  .array(idealForTagSchema)
+  .array(z.string().trim().min(1, "Ideal For tags cannot be empty"))
   .min(1, "Select at least 1 Ideal For tag")
   .max(4, "Select up to 4 Ideal For tags")
   .refine((tags) => new Set(tags).size === tags.length, {
     message: "Ideal For tags must be unique",
   });
+
+function validateIdealForTagsForCategory(
+  category: LocationCategory,
+  tags: string[] | undefined,
+  ctx: z.RefinementCtx
+) {
+  if (!tags) return;
+
+  tags.forEach((tag, index) => {
+    if (isValidIdealForTag(category, tag)) return;
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["idealFor", index],
+      message: `Invalid Ideal For tag "${tag}" for ${category}. Allowed tags: ${getIdealForTags(category).join(", ")}`,
+    });
+  });
+}
+
+const recordOrStringSchema = z.union([
+  z.record(z.any()),
+  z.string().trim(),
+]);
 
 export const createMapsSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -48,18 +69,10 @@ export const createMapsSchema = z.object({
   tripadvisorUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   email: z.string().trim().email().optional().or(z.literal("")),
   neighborhoodDescription: z.string().trim().optional().or(z.literal("")),
-  nightlifeDetails: z.union([
-    z.record(z.any()),
-    z.string().trim(),
-  ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
-  accommodationsDetails: z.union([
-    z.record(z.any()),
-    z.string().trim(),
-  ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
-  operationHours: z.union([
-    z.record(z.any()),
-    z.string().trim(),
-  ]).optional(),
+  nightlifeDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  accommodationsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  attractionsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  operationHours: recordOrStringSchema.optional(),
   priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorMealTypes: z.union([
     z.array(z.string().trim()),
@@ -75,29 +88,36 @@ export const createMapsSchema = z.object({
   ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   reviewsEnabled: z.boolean().optional(),
 }).superRefine((data, ctx) => {
-  if (data.category === "nightlife") {
-    if (data.nightlifeDetails === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["nightlifeDetails"],
-        message: "Nightlife details JSON is required for nightlife category",
-      });
-    }
-    return;
+  validateIdealForTagsForCategory(data.category, data.idealFor, ctx);
+
+  if (data.category === "nightlife" && data.nightlifeDetails === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["nightlifeDetails"],
+      message: "Nightlife details JSON is required for nightlife category",
+    });
   }
 
-  if (data.category === "accommodations") {
-    if (data.accommodationsDetails === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["accommodationsDetails"],
-        message: "Accommodations details JSON is required for accommodations category",
-      });
-    }
-    return;
+  if (data.category === "accommodations" && data.accommodationsDetails === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["accommodationsDetails"],
+      message: "Accommodations details JSON is required for accommodations category",
+    });
   }
 
-  if ((data.category === "dining" || data.category === "attractions") && (!data.idealFor || data.idealFor.length === 0)) {
+  if (data.category === "attractions" && data.attractionsDetails === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["attractionsDetails"],
+      message: "Attractions details JSON is required for attractions category",
+    });
+  }
+
+  if (
+    (data.category === "dining" || data.category === "attractions") &&
+    (!data.idealFor || data.idealFor.length === 0)
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["idealFor"],
@@ -130,20 +150,12 @@ export const patchMapsSchema = z.object({
   email: z.string().trim().email().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   neighborhoodDescription: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   idealFor: idealForTagsSchema.optional(),
-  nightlifeDetails: z.union([
-    z.record(z.any()),
-    z.string().trim(),
-  ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
-  accommodationsDetails: z.union([
-    z.record(z.any()),
-    z.string().trim(),
-  ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  nightlifeDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  accommodationsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  attractionsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
   priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
-  operationHours: z.union([
-    z.record(z.any()),
-    z.string().trim(),
-  ]).optional(),
+  operationHours: recordOrStringSchema.optional(),
   tripadvisorMealTypes: z.union([
     z.array(z.string().trim()),
     z.string().trim(),
@@ -191,6 +203,7 @@ export const patchMapsSchema = z.object({
          data.idealFor !== undefined ||
          data.nightlifeDetails !== undefined ||
          data.accommodationsDetails !== undefined ||
+         data.attractionsDetails !== undefined ||
          data.operationHours !== undefined ||
          data.priceLevel !== undefined ||
          data.tripadvisorMealTypes !== undefined ||

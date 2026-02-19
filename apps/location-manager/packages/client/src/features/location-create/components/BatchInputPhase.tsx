@@ -52,7 +52,7 @@ export function BatchInputPhase({ batch, copyForAI, onCancel }: BatchInputPhaseP
             <li><strong>name</strong> (required) - Location name</li>
             <li><strong>address</strong> (required) - Full address including city and country</li>
             <li><strong>category</strong> (required) - dining, accommodations, attractions, or nightlife</li>
-            <li><strong>idealFor</strong> (required) - Array of 1-4 tags (see "Copy for AI" for full list)</li>
+            <li><strong>idealFor</strong> (required for dining/attractions) - Array of 1-4 tags from that item&apos;s category list</li>
             <li><strong>type</strong> (optional) - Location type</li>
             <li><strong>tripadvisorUrl</strong> (optional) - Full TripAdvisor URL</li>
           </ul>

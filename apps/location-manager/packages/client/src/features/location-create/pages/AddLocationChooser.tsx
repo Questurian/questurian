@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { UtensilsCrossed, Music2, BedDouble } from "lucide-react";
+import { UtensilsCrossed, Music2, BedDouble, Landmark } from "lucide-react";
 
 export function AddLocationChooser() {
   return (
@@ -10,7 +10,7 @@ export function AddLocationChooser() {
           Choose which document flow you want to use.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <Link
             to="/add/restaurant"
             className="rounded-xl border border-border bg-card p-5 hover:bg-accent/40 transition-colors"
@@ -53,6 +53,21 @@ export function AddLocationChooser() {
             </div>
             <p className="text-sm text-muted-foreground">
               Full accommodations flow: Google entities prefill, structured stay/experience/details fields, and an accommodations JSON document.
+            </p>
+          </Link>
+
+          <Link
+            to="/add/attractions"
+            className="rounded-xl border border-border bg-card p-5 hover:bg-accent/40 transition-colors"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                <Landmark className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Attractions</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Staged attractions flow: Google prefill, profile dropdowns, category-specific Ideal For tags, and attractions details JSON.
             </p>
           </Link>
         </div>

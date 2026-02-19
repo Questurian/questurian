@@ -66,6 +66,7 @@ function ensureEntitySchema(db: Database): void {
         ideal_for_json TEXT,
         nightlife_details_json TEXT,
         accommodations_details_json TEXT,
+        attractions_details_json TEXT,
         tripadvisor_meal_types TEXT,
         tripadvisor_cuisines TEXT,
         tripadvisor_features TEXT,
@@ -77,6 +78,9 @@ function ensureEntitySchema(db: Database): void {
     const typedColumns = getTableColumns(db, `${category}_locations`);
     if (!typedColumns.has("accommodations_details_json")) {
       db.run(`ALTER TABLE ${category}_locations ADD COLUMN accommodations_details_json TEXT`);
+    }
+    if (!typedColumns.has("attractions_details_json")) {
+      db.run(`ALTER TABLE ${category}_locations ADD COLUMN attractions_details_json TEXT`);
     }
   }
 
@@ -326,7 +330,7 @@ function migrateLocationsBackupIntoEntities(db: Database, backupTable: string): 
   for (const category of CATEGORY_VALUES) {
     db.run(`
       INSERT INTO ${category}_locations (
-        entity_id, type, hours_json, ideal_for_json, nightlife_details_json, accommodations_details_json,
+        entity_id, type, hours_json, ideal_for_json, nightlife_details_json, accommodations_details_json, attractions_details_json,
         tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, price_level
       )
       SELECT
@@ -336,6 +340,7 @@ function migrateLocationsBackupIntoEntities(db: Database, backupTable: string): 
         ${col("ideal_for_json")},
         ${col("nightlife_details_json")},
         ${col("accommodations_details_json")},
+        ${col("attractions_details_json")},
         ${col("tripadvisor_meal_types")},
         ${col("tripadvisor_cuisines")},
         ${col("tripadvisor_features")},

@@ -1,26 +1,27 @@
 import { useEffect, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { CheckCircle2, ChevronLeft, UtensilsCrossed } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Clock, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
 import { FormTagMultiSelect } from "@client/shared/components/forms";
+import { OperationHoursModal } from "./OperationHoursModal";
 import { getIdealForOptionGroups } from "../constants/ai-prompt-template";
-import type { AddRestaurantFormData } from "../validation/add-restaurant.schema";
+import type { AddAttractionsFormData } from "../validation/add-attractions.schema";
 
-type RestaurantFormSection = "step1" | "entities" | "classification" | "optional";
+type AttractionsFormSection = "step1" | "entities" | "profile" | "visitContact";
 
-const RESTAURANT_SECTION_ORDER: RestaurantFormSection[] = [
+const ATTRACTIONS_SECTION_ORDER: AttractionsFormSection[] = [
   "step1",
   "entities",
-  "classification",
-  "optional",
+  "profile",
+  "visitContact",
 ];
 
-interface AddRestaurantStagedFormProps {
-  form: UseFormReturn<AddRestaurantFormData>;
-  onSubmit: (data: AddRestaurantFormData) => void;
+interface AddAttractionsStagedFormProps {
+  form: UseFormReturn<AddAttractionsFormData>;
+  onSubmit: (data: AddAttractionsFormData) => void;
   onRunGooglePrefill: () => Promise<boolean>;
   isPrefillingGoogle: boolean;
   isCreating: boolean;
@@ -33,7 +34,7 @@ interface AddRestaurantStagedFormProps {
   isLoadingTypes: boolean;
 }
 
-export function AddRestaurantStagedForm({
+export function AddAttractionsStagedForm({
   form,
   onSubmit,
   onRunGooglePrefill,
@@ -46,10 +47,11 @@ export function AddRestaurantStagedForm({
   isPrefillReady,
   locationTypes,
   isLoadingTypes,
-}: AddRestaurantStagedFormProps) {
-  const idealForOptionGroups = getIdealForOptionGroups("dining");
-  const [activeSection, setActiveSection] = useState<RestaurantFormSection>("step1");
+}: AddAttractionsStagedFormProps) {
+  const idealForOptionGroups = getIdealForOptionGroups("attractions");
+  const [activeSection, setActiveSection] = useState<AttractionsFormSection>("step1");
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [operationHoursModalOpen, setOperationHoursModalOpen] = useState(false);
 
   const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
   const stepOneComplete = isPrefillReady;
@@ -57,53 +59,69 @@ export function AddRestaurantStagedForm({
     hasValue(form.watch("placeId")) &&
     hasValue(form.watch("latitude")) &&
     hasValue(form.watch("longitude"));
-  const classificationComplete = (form.watch("idealFor")?.length ?? 0) > 0;
-  const optionalComplete = !form.formState.errors.tripadvisorUrl;
+  const profileComplete =
+    hasValue(form.watch("type")) &&
+    hasValue(form.watch("priceLevel")) &&
+    hasValue(form.watch("bookingRequired")) &&
+    (form.watch("idealFor")?.length ?? 0) > 0;
+  const visitContactComplete =
+    hasValue(form.watch("website")) &&
+    hasValue(form.watch("hours"));
 
   const flowSections: Array<{
-    key: RestaurantFormSection;
+    key: AttractionsFormSection;
     label: string;
     complete: boolean;
   }> = [
     { key: "step1", label: "Step 1", complete: stepOneComplete },
     { key: "entities", label: "Entities", complete: entitiesComplete },
-    { key: "classification", label: "Classification", complete: classificationComplete },
-    { key: "optional", label: "Optional", complete: optionalComplete },
+    { key: "profile", label: "Profile", complete: profileComplete },
+    { key: "visitContact", label: "Visit & Contact", complete: visitContactComplete },
   ];
 
-  const canOpenSection = (section: RestaurantFormSection) => {
+  const canOpenSection = (section: AttractionsFormSection) => {
     if (section === "step1") return true;
     return isPrefillReady;
   };
 
-  const goToSection = (section: RestaurantFormSection) => {
+  const goToSection = (section: AttractionsFormSection) => {
     if (!canOpenSection(section)) return;
     setActiveSection(section);
   };
 
   const goToPreviousSection = () => {
-    const currentIndex = RESTAURANT_SECTION_ORDER.indexOf(activeSection);
-    const previousSection = RESTAURANT_SECTION_ORDER[currentIndex - 1];
+    const currentIndex = ATTRACTIONS_SECTION_ORDER.indexOf(activeSection);
+    const previousSection = ATTRACTIONS_SECTION_ORDER[currentIndex - 1];
     if (previousSection) {
       goToSection(previousSection);
     }
   };
 
   const goToNextSection = async () => {
-    const currentIndex = RESTAURANT_SECTION_ORDER.indexOf(activeSection);
-    const nextSection = RESTAURANT_SECTION_ORDER[currentIndex + 1];
+    const currentIndex = ATTRACTIONS_SECTION_ORDER.indexOf(activeSection);
+    const nextSection = ATTRACTIONS_SECTION_ORDER[currentIndex + 1];
     if (!nextSection) return;
 
     if (activeSection === "entities") {
       const isValid = await form.trigger(["placeId", "latitude", "longitude"]);
       if (!isValid) return;
     }
-    if (activeSection === "classification") {
-      const isValid = await form.trigger(["idealFor", "type"]);
+
+    if (activeSection === "profile") {
+      const isValid = await form.trigger([
+        "type",
+        "priceLevel",
+        "bookingRequired",
+        "idealFor",
+      ]);
       if (!isValid) return;
     }
-    if (activeSection === "optional") {
-      const isValid = await form.trigger(["tripadvisorUrl"]);
+
+    if (activeSection === "visitContact") {
+      const isValid = await form.trigger([
+        "website",
+        "hours",
+      ]);
       if (!isValid) return;
     }
 
@@ -133,10 +151,10 @@ export function AddRestaurantStagedForm({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                  <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                  <Landmark className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <h1 className="text-3xl font-semibold tracking-tight text-foreground underline">
-                  Add Restaurant
+                  Add Attractions
                 </h1>
               </div>
               <Button
@@ -191,18 +209,14 @@ export function AddRestaurantStagedForm({
                     <Label>Name</Label>
                     <Input placeholder="Location Name" {...form.register("name")} />
                     {form.formState.errors.name && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.name.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label>Address</Label>
                     <Input placeholder="Location Address" {...form.register("address")} />
                     {form.formState.errors.address && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.address.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.address.message}</p>
                     )}
                   </div>
                 </div>
@@ -239,77 +253,55 @@ export function AddRestaurantStagedForm({
 
             {isPrefillReady && activeSection === "entities" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  Entities Fields (Editable)
-                </h2>
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">Entities Fields (Editable)</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Google URL</Label>
-                    <Input
-                      placeholder="https://www.google.com/maps/..."
-                      {...form.register("googleUrl")}
-                    />
+                    <Input placeholder="https://www.google.com/maps/..." {...form.register("googleUrl")} />
                     {form.formState.errors.googleUrl && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.googleUrl.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.googleUrl.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label>Place ID</Label>
                     <Input placeholder="ChIJ..." {...form.register("placeId")} />
                     {form.formState.errors.placeId && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.placeId.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.placeId.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label>Latitude</Label>
                     <Input placeholder="-12.0464" {...form.register("latitude")} />
                     {form.formState.errors.latitude && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.latitude.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.latitude.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label>Longitude</Label>
                     <Input placeholder="-77.0428" {...form.register("longitude")} />
                     {form.formState.errors.longitude && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.longitude.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.longitude.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label>Time Zone (IANA)</Label>
                     <Input placeholder="America/Lima" {...form.register("ianaTimeId")} />
                     {form.formState.errors.ianaTimeId && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.ianaTimeId.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.ianaTimeId.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label>District</Label>
                     <Input placeholder="Miraflores" {...form.register("district")} />
                     {form.formState.errors.district && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.district.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.district.message}</p>
                     )}
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label>Location Key</Label>
-                    <Input
-                      placeholder="peru|lima|miraflores"
-                      {...form.register("locationKey")}
-                    />
+                    <Input placeholder="peru|lima|miraflores" {...form.register("locationKey")} />
                     {form.formState.errors.locationKey && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.locationKey.message}
-                      </p>
+                      <p className="text-xs text-destructive">{form.formState.errors.locationKey.message}</p>
                     )}
                   </div>
                 </div>
@@ -325,34 +317,77 @@ export function AddRestaurantStagedForm({
               </section>
             )}
 
-            {isPrefillReady && activeSection === "classification" && (
+            {isPrefillReady && activeSection === "profile" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  Classification
-                </h2>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <select
-                    value={form.watch("type") || ""}
-                    onChange={(event) =>
-                      form.setValue("type", event.target.value, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                        shouldTouch: true,
-                      })
-                    }
-                    disabled={isLoadingTypes}
-                    className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
-                  >
-                    <option value="">
-                      {isLoadingTypes ? "Loading types..." : "Not set"}
-                    </option>
-                    {locationTypes.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">Profile</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <select
+                      value={form.watch("type") || ""}
+                      onChange={(event) =>
+                        form.setValue("type", event.target.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                          shouldTouch: true,
+                        })
+                      }
+                      disabled={isLoadingTypes}
+                      className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
+                    >
+                      <option value="">{isLoadingTypes ? "Loading types..." : "Select type"}</option>
+                      {locationTypes.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {form.formState.errors.type && (
+                      <p className="text-xs text-destructive">{form.formState.errors.type.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Pricing</Label>
+                    <select
+                      value={form.watch("priceLevel")}
+                      onChange={(event) =>
+                        form.setValue("priceLevel", event.target.value as AddAttractionsFormData["priceLevel"], {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                          shouldTouch: true,
+                        })
+                      }
+                      className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
+                    >
+                      <option value="free">free</option>
+                      <option value="$">$</option>
+                      <option value="$$">$$</option>
+                      <option value="$$$">$$$</option>
+                      <option value="$$$$">$$$$</option>
+                    </select>
+                    {form.formState.errors.priceLevel && (
+                      <p className="text-xs text-destructive">{form.formState.errors.priceLevel.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Booking Required</Label>
+                    <select
+                      value={form.watch("bookingRequired")}
+                      onChange={(event) =>
+                        form.setValue("bookingRequired", event.target.value as AddAttractionsFormData["bookingRequired"], {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                          shouldTouch: true,
+                        })
+                      }
+                      className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
+                    >
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                  </div>
                 </div>
 
                 <FormTagMultiSelect
@@ -376,19 +411,72 @@ export function AddRestaurantStagedForm({
               </section>
             )}
 
-            {isPrefillReady && activeSection === "optional" && (
+            {isPrefillReady && activeSection === "visitContact" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">Optional</h2>
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">Visit & Contact</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Operating Hours</Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setOperationHoursModalOpen(true)}
+                      >
+                        <Clock className="h-4 w-4" />
+                        {form.watch("hours") ? "Edit schedule" : "Set schedule"}
+                      </Button>
+                      {form.watch("hours") && (
+                        <span className="text-xs text-muted-foreground">
+                          Schedule configured - open modal to edit
+                        </span>
+                      )}
+                    </div>
+                    {operationHoursModalOpen && (
+                      <OperationHoursModal
+                        open={operationHoursModalOpen}
+                        onOpenChange={setOperationHoursModalOpen}
+                        value={form.watch("hours") ?? ""}
+                        onSave={(json) => {
+                          form.setValue("hours", json, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                            shouldTouch: true,
+                          });
+                        }}
+                      />
+                    )}
+                    {form.formState.errors.hours && (
+                      <p className="text-xs text-destructive">{form.formState.errors.hours.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Website</Label>
+                    <Input placeholder="https://example.com" {...form.register("website")} />
+                    {form.formState.errors.website && (
+                      <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone (optional)</Label>
+                    <Input placeholder="+51 1 461-1312" {...form.register("phone")} />
+                    {form.formState.errors.phone && (
+                      <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label>TripAdvisor URL</Label>
-                  <Input
-                    placeholder="https://www.tripadvisor.com/..."
-                    {...form.register("tripadvisorUrl")}
-                  />
+                  <Label>TripAdvisor URL (optional)</Label>
+                  <Input placeholder="https://www.tripadvisor.com/..." {...form.register("tripadvisorUrl")} />
                   {form.formState.errors.tripadvisorUrl && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.tripadvisorUrl.message}
-                    </p>
+                    <p className="text-xs text-destructive">{form.formState.errors.tripadvisorUrl.message}</p>
                   )}
                 </div>
 
@@ -396,11 +484,8 @@ export function AddRestaurantStagedForm({
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>
                     Previous
                   </Button>
-                  <Button
-                    type="submit"
-                    disabled={!isPrefillReady || !form.formState.isValid || isCreating}
-                  >
-                    {isCreating ? "Creating..." : "Create Restaurant Document"}
+                  <Button type="submit" disabled={!isPrefillReady || !form.formState.isValid || isCreating}>
+                    {isCreating ? "Creating..." : "Create Attractions Document"}
                   </Button>
                 </div>
               </section>

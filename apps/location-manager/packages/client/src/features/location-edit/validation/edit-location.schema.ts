@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
 
 const idealForSchema = z
-  .array(z.enum(IDEAL_FOR_TAGS))
+  .array(z.string().trim().min(1, "Ideal For tags cannot be empty"))
   .min(1, "Select at least 1 Ideal For tag")
   .max(4, "Select up to 4 Ideal For tags")
   .refine((tags) => new Set(tags).size === tags.length, {

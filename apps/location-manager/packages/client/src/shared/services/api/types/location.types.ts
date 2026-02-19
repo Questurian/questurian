@@ -1,5 +1,4 @@
 import type { ImageSet } from "@questurian/lm-shared";
-import type { IdealForTag } from "@shared/types/location-ideal-for";
 import type { Category } from "./common.types";
 
 export interface ContactInfo {
@@ -64,8 +63,9 @@ export interface Location {
   reviewsEnabled: boolean;
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
+  attractionsDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
-  idealFor: IdealForTag[] | null;
+  idealFor: string[] | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;
@@ -109,8 +109,9 @@ export interface LocationResponse {
   payload_location_ref: string | null;
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
+  attractionsDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
-  idealFor: IdealForTag[] | null;
+  idealFor: string[] | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;

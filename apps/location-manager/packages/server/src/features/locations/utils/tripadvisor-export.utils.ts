@@ -23,6 +23,7 @@ export function buildLocationExportPayload(
     idealFor: location.idealFor,
     operationHours: location.operationHours,
     accommodationsDetails: location.accommodationsDetails,
+    attractionsDetails: location.attractionsDetails,
     tripadvisorMealTypes: location.tripadvisorMealTypes,
     tripadvisorCuisines: location.tripadvisorCuisines,
     tripadvisorFeatures: location.tripadvisorFeatures,

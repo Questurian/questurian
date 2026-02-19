@@ -1,5 +1,3 @@
-import { IDEAL_FOR_TAG_GROUPS } from "@shared/types/location-ideal-for";
-
 export const TIMEZONE_OPTIONS = [
   { value: "America/Lima", label: "America/Lima (Peru)" },
   { value: "America/Bogota", label: "America/Bogota (Colombia)" },
@@ -7,8 +5,3 @@ export const TIMEZONE_OPTIONS = [
   { value: "America/Rio_Branco", label: "America/Rio_Branco (Brazil)" },
   { value: "America/Argentina/Buenos_Aires", label: "America/Argentina/Buenos_Aires (Argentina)" },
 ];
-
-export const IDEAL_FOR_OPTION_GROUPS = IDEAL_FOR_TAG_GROUPS.map((group) => ({
-  label: group.label,
-  options: group.tags.map((tag) => ({ value: tag, label: tag })),
-}));

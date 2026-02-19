@@ -32,6 +32,7 @@ const LOCATION_SELECT_COLUMNS = `
   COALESCE(d.ideal_for_json, n.ideal_for_json, a.ideal_for_json, at.ideal_for_json) as idealForJson,
   COALESCE(d.nightlife_details_json, n.nightlife_details_json, a.nightlife_details_json, at.nightlife_details_json) as nightlifeDetailsJson,
   COALESCE(d.accommodations_details_json, n.accommodations_details_json, a.accommodations_details_json, at.accommodations_details_json) as accommodationsDetailsJson,
+  COALESCE(d.attractions_details_json, n.attractions_details_json, a.attractions_details_json, at.attractions_details_json) as attractionsDetailsJson,
   COALESCE(d.tripadvisor_meal_types, n.tripadvisor_meal_types, a.tripadvisor_meal_types, at.tripadvisor_meal_types) as tripadvisorMealTypesJson,
   COALESCE(d.tripadvisor_cuisines, n.tripadvisor_cuisines, a.tripadvisor_cuisines, at.tripadvisor_cuisines) as tripadvisorCuisinesJson,
   COALESCE(d.tripadvisor_features, n.tripadvisor_features, a.tripadvisor_features, at.tripadvisor_features) as tripadvisorFeaturesJson,
@@ -94,6 +95,7 @@ function upsertTypedRow(
     idealForJson?: string | null;
     nightlifeDetailsJson?: string | null;
     accommodationsDetailsJson?: string | null;
+    attractionsDetailsJson?: string | null;
     tripadvisorMealTypesJson?: string | null;
     tripadvisorCuisinesJson?: string | null;
     tripadvisorFeaturesJson?: string | null;
@@ -110,6 +112,7 @@ function upsertTypedRow(
       ideal_for_json,
       nightlife_details_json,
       accommodations_details_json,
+      attractions_details_json,
       tripadvisor_meal_types,
       tripadvisor_cuisines,
       tripadvisor_features,
@@ -122,6 +125,7 @@ function upsertTypedRow(
       $ideal_for_json,
       $nightlife_details_json,
       $accommodations_details_json,
+      $attractions_details_json,
       $tripadvisor_meal_types,
       $tripadvisor_cuisines,
       $tripadvisor_features,
@@ -133,6 +137,7 @@ function upsertTypedRow(
       ideal_for_json = excluded.ideal_for_json,
       nightlife_details_json = excluded.nightlife_details_json,
       accommodations_details_json = excluded.accommodations_details_json,
+      attractions_details_json = excluded.attractions_details_json,
       tripadvisor_meal_types = excluded.tripadvisor_meal_types,
       tripadvisor_cuisines = excluded.tripadvisor_cuisines,
       tripadvisor_features = excluded.tripadvisor_features,
@@ -144,6 +149,7 @@ function upsertTypedRow(
     $ideal_for_json: params.idealForJson ?? null,
     $nightlife_details_json: params.nightlifeDetailsJson ?? null,
     $accommodations_details_json: params.accommodationsDetailsJson ?? null,
+    $attractions_details_json: params.attractionsDetailsJson ?? null,
     $tripadvisor_meal_types: params.tripadvisorMealTypesJson ?? null,
     $tripadvisor_cuisines: params.tripadvisorCuisinesJson ?? null,
     $tripadvisor_features: params.tripadvisorFeaturesJson ?? null,
@@ -338,6 +344,7 @@ export function saveLocation(location: Location): number | boolean {
       idealForJson: location.idealForJson || null,
       nightlifeDetailsJson: location.nightlifeDetailsJson || null,
       accommodationsDetailsJson: location.accommodationsDetailsJson || null,
+      attractionsDetailsJson: location.attractionsDetailsJson || null,
       tripadvisorMealTypesJson: location.tripadvisorMealTypesJson || null,
       tripadvisorCuisinesJson: location.tripadvisorCuisinesJson || null,
       tripadvisorFeaturesJson: location.tripadvisorFeaturesJson || null,
@@ -496,6 +503,10 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
     if (updates.accommodationsDetailsJson !== undefined) {
       typedSetClause.push("accommodations_details_json = $accommodations_details_json");
       typedParams.$accommodations_details_json = updates.accommodationsDetailsJson;
+    }
+    if (updates.attractionsDetailsJson !== undefined) {
+      typedSetClause.push("attractions_details_json = $attractions_details_json");
+      typedParams.$attractions_details_json = updates.attractionsDetailsJson;
     }
     if (updates.tripadvisorMealTypesJson !== undefined) {
       typedSetClause.push("tripadvisor_meal_types = $tripadvisor_meal_types");
