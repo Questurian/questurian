@@ -22,7 +22,7 @@ export function AddLocationChooser() {
               <h2 className="text-lg font-semibold text-foreground">Restaurant</h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Existing restaurant flow with current fields, validation, and pipeline.
+              Staged restaurant flow: name/address lookup, entities review, classification, then optional fields before creation.
             </p>
           </Link>
 
