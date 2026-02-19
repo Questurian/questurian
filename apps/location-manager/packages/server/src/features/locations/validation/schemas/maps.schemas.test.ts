@@ -82,6 +82,44 @@ describe("maps create schema category rules", () => {
 
     expect(result.success).toBe(false);
   });
+
+  test("accepts accommodations payload with accommodationsDetails and no idealFor", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "accommodations",
+      type: "hotel",
+      priceLevel: "$$$$",
+      accommodationsDetails: {
+        core: {
+          name: "The Meridian Grand",
+          price: "$$$$",
+          district: "Financial District",
+          type: "Hotel",
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("rejects accommodations payload when accommodationsDetails is missing", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "accommodations",
+      type: "hotel",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects attractions payload when idealFor is missing", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "attractions",
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("google prefill schema", () => {

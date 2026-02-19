@@ -63,6 +63,7 @@ export interface Location {
   tripadvisorLocationId: string | null;
   reviewsEnabled: boolean;
   nightlifeDetails: Record<string, unknown> | null;
+  accommodationsDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;
@@ -107,6 +108,7 @@ export interface LocationResponse {
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
   nightlifeDetails: Record<string, unknown> | null;
+  accommodationsDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
   operationHours: Record<string, unknown> | null;

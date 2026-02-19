@@ -52,10 +52,15 @@ export const createMapsSchema = z.object({
     z.record(z.any()),
     z.string().trim(),
   ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  accommodationsDetails: z.union([
+    z.record(z.any()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   operationHours: z.union([
     z.record(z.any()),
     z.string().trim(),
   ]).optional(),
+  priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorMealTypes: z.union([
     z.array(z.string().trim()),
     z.string().trim(),
@@ -81,7 +86,18 @@ export const createMapsSchema = z.object({
     return;
   }
 
-  if (!data.idealFor || data.idealFor.length === 0) {
+  if (data.category === "accommodations") {
+    if (data.accommodationsDetails === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["accommodationsDetails"],
+        message: "Accommodations details JSON is required for accommodations category",
+      });
+    }
+    return;
+  }
+
+  if ((data.category === "dining" || data.category === "attractions") && (!data.idealFor || data.idealFor.length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["idealFor"],
@@ -115,6 +131,10 @@ export const patchMapsSchema = z.object({
   neighborhoodDescription: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   idealFor: idealForTagsSchema.optional(),
   nightlifeDetails: z.union([
+    z.record(z.any()),
+    z.string().trim(),
+  ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  accommodationsDetails: z.union([
     z.record(z.any()),
     z.string().trim(),
   ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
@@ -170,6 +190,7 @@ export const patchMapsSchema = z.object({
          data.neighborhoodDescription !== undefined ||
          data.idealFor !== undefined ||
          data.nightlifeDetails !== undefined ||
+         data.accommodationsDetails !== undefined ||
          data.operationHours !== undefined ||
          data.priceLevel !== undefined ||
          data.tripadvisorMealTypes !== undefined ||

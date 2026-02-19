@@ -56,6 +56,7 @@ export interface Location {
   neighborhoodDescription?: string | null;
   idealForJson?: string | null;
   nightlifeDetailsJson?: string | null;
+  accommodationsDetailsJson?: string | null;
   tripadvisorMealTypesJson?: string | null;
   tripadvisorCuisinesJson?: string | null;
   tripadvisorFeaturesJson?: string | null;
@@ -149,6 +150,8 @@ export interface CreateMapsRequest {
   email?: string;
   neighborhoodDescription?: string;
   nightlifeDetails?: Record<string, unknown> | string;
+  accommodationsDetails?: Record<string, unknown> | string;
+  priceLevel?: string;
   operationHours?: Record<string, unknown> | string;
   tripadvisorMealTypes?: string[] | string;
   tripadvisorCuisines?: string[] | string;
@@ -199,6 +202,7 @@ export interface LocationResponse {
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
   nightlifeDetails: Record<string, unknown> | null;
+  accommodationsDetails: Record<string, unknown> | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;

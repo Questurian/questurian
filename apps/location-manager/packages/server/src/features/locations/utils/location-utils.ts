@@ -212,6 +212,19 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
+  const parseAccommodationsDetails = (accommodationsDetailsJson?: string | null): Record<string, unknown> | null => {
+    if (!accommodationsDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(accommodationsDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
   const parseIdealFor = (idealForJson?: string | null): IdealForTag[] | null => {
     if (!idealForJson) return null;
 
@@ -245,6 +258,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     neighborhoodDescription: location.neighborhoodDescription || null,
     idealFor: parseIdealFor(location.idealForJson || null),
     nightlifeDetails: parseNightlifeDetails(location.nightlifeDetailsJson || null),
+    accommodationsDetails: parseAccommodationsDetails(location.accommodationsDetailsJson || null),
     operationHours: parseOperationHours(location.hoursJson || null),
     tripadvisorMealTypes: parseTripadvisorStringListJson(location.tripadvisorMealTypesJson || null),
     tripadvisorCuisines: parseTripadvisorStringListJson(location.tripadvisorCuisinesJson || null),
@@ -293,6 +307,7 @@ export function transformLocationToBasicResponse(
 ): import('../models/location').LocationBasic {
   const category = assertCategory(location.category);
   const isNightlife = category === "nightlife";
+  const isAccommodations = category === "accommodations";
 
   const parseNightlifeDetails = (): Record<string, unknown> | null => {
     if (!location.nightlifeDetailsJson) return null;
@@ -307,7 +322,21 @@ export function transformLocationToBasicResponse(
     }
   };
 
+  const parseAccommodationsDetails = (): Record<string, unknown> | null => {
+    if (!location.accommodationsDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(location.accommodationsDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
   const nightlifeDetails = parseNightlifeDetails();
+  const accommodationsDetails = parseAccommodationsDetails();
   const nightlifeSectionValue = (section: "theSpace" | "theScene", key: string): unknown => {
     const detailsRoot = nightlifeDetails?.["details"];
     if (!detailsRoot || typeof detailsRoot !== "object" || Array.isArray(detailsRoot)) return null;
@@ -316,6 +345,15 @@ export function transformLocationToBasicResponse(
     const field = (sectionRoot as Record<string, unknown>)[key];
     if (!field || typeof field !== "object" || Array.isArray(field)) return null;
     return (field as Record<string, unknown>).value ?? null;
+  };
+
+  const accommodationsSectionValue = (
+    section: "core" | "the_stay" | "the_experience" | "the_details",
+    key: string
+  ): unknown => {
+    const sectionRoot = accommodationsDetails?.[section];
+    if (!sectionRoot || typeof sectionRoot !== "object" || Array.isArray(sectionRoot)) return null;
+    return (sectionRoot as Record<string, unknown>)[key] ?? null;
   };
 
   const nightlifeString = (value: unknown): string | null => {
@@ -334,8 +372,45 @@ export function transformLocationToBasicResponse(
     return value.some((item) => typeof item === "string" && item.trim().length > 0);
   };
 
+  const accommodationsString = (value: unknown): string | null => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    return null;
+  };
+
+  const accommodationsArrayHasValues = (value: unknown): boolean => {
+    if (!Array.isArray(value)) return false;
+    return value.some((item) => accommodationsString(item) !== null);
+  };
+
+  const accommodationsBooleanPresent = (value: unknown): boolean => {
+    if (typeof value === "boolean") return true;
+    if (typeof value === "number") return value === 0 || value === 1;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      return normalized === "true" ||
+             normalized === "false" ||
+             normalized === "yes" ||
+             normalized === "no" ||
+             normalized === "1" ||
+             normalized === "0";
+    }
+    return false;
+  };
+
   const nightlifePhone = nightlifeString(nightlifeDetails?.["phone"]);
   const nightlifeWebsite = nightlifeString(nightlifeDetails?.["website"]);
+  const accommodationsPhone =
+    accommodationsString(accommodationsSectionValue("the_details", "phone")) ||
+    accommodationsString(accommodationsDetails?.["phone"]);
+  const accommodationsWebsite =
+    accommodationsString(accommodationsSectionValue("the_details", "website_url")) ||
+    accommodationsString(accommodationsDetails?.["website_url"]);
 
   const nightlifeClubType = nightlifeString(nightlifeDetails?.["club_type"]);
   const nightlifePriceTier = nightlifeString(nightlifeDetails?.["price_tier"]);
@@ -354,6 +429,26 @@ export function transformLocationToBasicResponse(
   const nightlifeVipAndBottleService = nightlifeSectionValue("theScene", "vipAndBottleService");
   const nightlifeCrowdProfile = nightlifeSectionValue("theScene", "crowdProfile");
   const nightlifeDaytimeRestaurant = nightlifeString(nightlifeDetails?.["daytime_restaurant"]);
+  const accommodationsCorePrice =
+    accommodationsString(accommodationsSectionValue("core", "price")) ||
+    accommodationsString(location.priceLevel);
+  const accommodationsPerfectFor = accommodationsSectionValue("the_stay", "perfect_for");
+  const accommodationsKidFriendly = accommodationsSectionValue("the_stay", "kid_friendly");
+  const accommodationsAc = accommodationsSectionValue("the_stay", "ac");
+  const accommodationsWifi = accommodationsSectionValue("the_stay", "wifi");
+  const accommodationsExtraGuestFee = accommodationsSectionValue("the_stay", "extra_guest_fee");
+  const accommodationsParking = accommodationsSectionValue("the_stay", "parking");
+  const accommodationsBreakfastServed = accommodationsSectionValue("the_stay", "breakfast_served");
+  const accommodationsVibe = accommodationsSectionValue("the_experience", "vibe");
+  const accommodationsWorkspace = accommodationsSectionValue("the_experience", "workspace");
+  const accommodationsRestaurant = accommodationsSectionValue("the_experience", "restaurant");
+  const accommodationsPool = accommodationsSectionValue("the_experience", "pool");
+  const accommodationsRooftopLounge = accommodationsSectionValue("the_experience", "rooftop_lounge");
+  const accommodationsJacuzzi = accommodationsSectionValue("the_experience", "jacuzzi");
+  const accommodationsGym = accommodationsSectionValue("the_experience", "gym");
+  const accommodationsWalkability = accommodationsSectionValue("the_details", "walkability");
+  const accommodationsCheckIn = accommodationsSectionValue("the_details", "check_in_time");
+  const accommodationsCheckOut = accommodationsSectionValue("the_details", "check_out_time");
 
   // Calculate completion status based on category-specific required fields.
   // Non-nightlife records require shared geocoding/contact fields.
@@ -364,8 +459,14 @@ export function transformLocationToBasicResponse(
   const hasMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
   const hasAddress = Boolean(location.address?.trim());
   const hasCountryCode = Boolean(location.countryCode?.trim());
-  const hasPhoneNumber = Boolean(location.phoneNumber?.trim()) || (isNightlife && Boolean(nightlifePhone));
-  const hasWebsite = Boolean(location.website?.trim()) || (isNightlife && Boolean(nightlifeWebsite));
+  const hasPhoneNumber =
+    Boolean(location.phoneNumber?.trim()) ||
+    (isNightlife && Boolean(nightlifePhone)) ||
+    (isAccommodations && Boolean(accommodationsPhone));
+  const hasWebsite =
+    Boolean(location.website?.trim()) ||
+    (isNightlife && Boolean(nightlifeWebsite)) ||
+    (isAccommodations && Boolean(accommodationsWebsite));
   const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
   const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
   const hasIdealFor = (() => {
@@ -398,6 +499,25 @@ export function transformLocationToBasicResponse(
   const hasNightlifeDaytimeRestaurant =
     nightlifeDaytimeRestaurant === "0" || nightlifeDaytimeRestaurant === "1";
   const hasNightlifePriceTier = Boolean(nightlifePriceTier || hasPriceLevel);
+  const hasAccommodationsProfile = Boolean(accommodationsDetails && Object.keys(accommodationsDetails).length > 0);
+  const hasAccommodationsPrice = Boolean(accommodationsCorePrice);
+  const hasAccommodationsPerfectFor = accommodationsArrayHasValues(accommodationsPerfectFor);
+  const hasAccommodationsKidFriendly = accommodationsBooleanPresent(accommodationsKidFriendly);
+  const hasAccommodationsAc = accommodationsBooleanPresent(accommodationsAc);
+  const hasAccommodationsWifi = accommodationsBooleanPresent(accommodationsWifi);
+  const hasAccommodationsExtraGuestFee = accommodationsBooleanPresent(accommodationsExtraGuestFee);
+  const hasAccommodationsParking = accommodationsArrayHasValues(accommodationsParking);
+  const hasAccommodationsBreakfastServed = accommodationsBooleanPresent(accommodationsBreakfastServed);
+  const hasAccommodationsVibe = accommodationsArrayHasValues(accommodationsVibe);
+  const hasAccommodationsWorkspace = Boolean(accommodationsString(accommodationsWorkspace));
+  const hasAccommodationsRestaurant = accommodationsBooleanPresent(accommodationsRestaurant);
+  const hasAccommodationsPool = accommodationsArrayHasValues(accommodationsPool);
+  const hasAccommodationsRooftopLounge = accommodationsBooleanPresent(accommodationsRooftopLounge);
+  const hasAccommodationsJacuzzi = accommodationsArrayHasValues(accommodationsJacuzzi);
+  const hasAccommodationsGym = Boolean(accommodationsString(accommodationsGym));
+  const hasAccommodationsWalkability = Boolean(accommodationsString(accommodationsWalkability));
+  const hasAccommodationsCheckIn = Boolean(accommodationsString(accommodationsCheckIn));
+  const hasAccommodationsCheckOut = Boolean(accommodationsString(accommodationsCheckOut));
 
   const hasSharedCommonFields =
     hasTitle &&
@@ -413,6 +533,15 @@ export function transformLocationToBasicResponse(
     hasType &&
     hasMedia &&
     hasAddress;
+
+  const hasAccommodationsCommonFields =
+    hasTitle &&
+    hasType &&
+    hasMedia &&
+    hasAddress &&
+    hasCountryCode &&
+    hasIanaTimeId &&
+    hasCoordinates;
 
   const isComplete = isNightlife
     ? (
@@ -436,6 +565,31 @@ export function transformLocationToBasicResponse(
       hasPhoneNumber &&
       hasWebsite
     )
+    : isAccommodations
+      ? (
+        hasAccommodationsCommonFields &&
+        hasAccommodationsProfile &&
+        hasAccommodationsPrice &&
+        hasAccommodationsPerfectFor &&
+        hasAccommodationsKidFriendly &&
+        hasAccommodationsAc &&
+        hasAccommodationsWifi &&
+        hasAccommodationsExtraGuestFee &&
+        hasAccommodationsParking &&
+        hasAccommodationsBreakfastServed &&
+        hasAccommodationsVibe &&
+        hasAccommodationsWorkspace &&
+        hasAccommodationsRestaurant &&
+        hasAccommodationsPool &&
+        hasAccommodationsRooftopLounge &&
+        hasAccommodationsJacuzzi &&
+        hasAccommodationsGym &&
+        hasAccommodationsWalkability &&
+        hasAccommodationsCheckIn &&
+        hasAccommodationsCheckOut &&
+        hasPhoneNumber &&
+        hasWebsite
+      )
     : (
       hasSharedCommonFields &&
       hasPhoneNumber &&

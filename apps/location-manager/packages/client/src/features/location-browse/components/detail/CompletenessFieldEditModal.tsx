@@ -216,6 +216,10 @@ function getInitialValue(field: FieldDef, locationDetail: LocationResponse): str
       return locationDetail.nightlifeDetails
         ? JSON.stringify(locationDetail.nightlifeDetails, null, 2)
         : "";
+    case "accommodationsDetails":
+      return locationDetail.accommodationsDetails
+        ? JSON.stringify(locationDetail.accommodationsDetails, null, 2)
+        : "";
     case "operationHours":
       return locationDetail.operationHours
         ? JSON.stringify(locationDetail.operationHours, null, 2)
@@ -275,6 +279,8 @@ function buildUpdatePayload(
       return { priceLevel: trimmed || null };
     case "nightlifeDetails":
       return { nightlifeDetails: trimmed || null };
+    case "accommodationsDetails":
+      return { accommodationsDetails: trimmed || null };
     case "operationHours":
       return { operationHours: trimmed || undefined };
     case "media":
@@ -540,6 +546,16 @@ export function CompletenessFieldEditModal({
             onChange={(e) => setValue(e.target.value)}
             rows={12}
             placeholder='{"name":"Venue Name","price_tier":"$$$"}'
+            className="font-mono text-xs"
+          />
+        );
+      case "accommodationsDetails":
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            rows={12}
+            placeholder='{"core":{"name":"The Meridian Grand","price":"$$$$"}}'
             className="font-mono text-xs"
           />
         );

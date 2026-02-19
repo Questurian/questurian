@@ -9,6 +9,7 @@ import {
   useTripAdvisorPlaceStatus,
 } from "@client/shared/services/api/hooks/useTripAdvisorPlace";
 import { parseNightlifeDetails } from "../../utils/nightlife-details";
+import { parseAccommodationsDetails } from "@client/shared/lib/accommodations-details";
 
 interface LocationCompletenessProps {
   locationDetail: LocationResponse;
@@ -20,7 +21,9 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
     const contact = locationDetail.contact || {};
     const source = locationDetail.source || {};
     const isNightlife = locationDetail.category === "nightlife";
+    const isAccommodations = locationDetail.category === "accommodations";
     const nightlifeDetails = parseNightlifeDetails(locationDetail.nightlifeDetails);
+    const accommodationsDetails = parseAccommodationsDetails(locationDetail.accommodationsDetails);
     const hasOperationHours = Boolean(
       locationDetail.operationHours &&
         Object.keys(locationDetail.operationHours).length > 0
@@ -73,6 +76,120 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
           key: "nightlife.daytimeRestaurant",
           label: "Daytime Restaurant",
           present: nightlifeDetails.daytimeRestaurant === "0" || nightlifeDetails.daytimeRestaurant === "1",
+        },
+        { key: "media", label: "Images/Instagram", present: hasMedia },
+      ];
+    }
+
+    if (isAccommodations) {
+      return [
+        { key: "name", label: "Name", present: Boolean(source.name?.trim() || accommodationsDetails.coreName) },
+        { key: "sourceAddress", label: "Address", present: Boolean(source.address?.trim() || accommodationsDetails.address) },
+        { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        {
+          key: "accommodations.type",
+          label: "Type",
+          present: Boolean(locationDetail.type?.trim() || accommodationsDetails.coreType),
+        },
+        {
+          key: "accommodations.price",
+          label: "Price",
+          present: Boolean(locationDetail.priceLevel?.trim() || accommodationsDetails.corePrice),
+        },
+        {
+          key: "accommodations.perfectFor",
+          label: "Perfect For",
+          present: accommodationsDetails.perfectFor.length > 0,
+        },
+        {
+          key: "accommodations.kidFriendly",
+          label: "Kid Friendly",
+          present: accommodationsDetails.kidFriendly !== null,
+        },
+        {
+          key: "accommodations.ac",
+          label: "AC",
+          present: accommodationsDetails.ac !== null,
+        },
+        {
+          key: "accommodations.wifi",
+          label: "WiFi",
+          present: accommodationsDetails.wifi !== null,
+        },
+        {
+          key: "accommodations.extraGuestFee",
+          label: "Extra Guest Fee",
+          present: accommodationsDetails.extraGuestFee !== null,
+        },
+        {
+          key: "accommodations.parking",
+          label: "Parking",
+          present: accommodationsDetails.parking.length > 0,
+        },
+        {
+          key: "accommodations.breakfastServed",
+          label: "Breakfast Served",
+          present: accommodationsDetails.breakfastServed !== null,
+        },
+        {
+          key: "accommodations.vibe",
+          label: "Vibe",
+          present: accommodationsDetails.vibe.length > 0,
+        },
+        {
+          key: "accommodations.workspace",
+          label: "Workspace",
+          present: Boolean(accommodationsDetails.workspace),
+        },
+        {
+          key: "accommodations.restaurant",
+          label: "Restaurant",
+          present: accommodationsDetails.restaurant !== null,
+        },
+        {
+          key: "accommodations.pool",
+          label: "Pool",
+          present: accommodationsDetails.pool.length > 0,
+        },
+        {
+          key: "accommodations.rooftopLounge",
+          label: "Rooftop Lounge",
+          present: accommodationsDetails.rooftopLounge !== null,
+        },
+        {
+          key: "accommodations.jacuzzi",
+          label: "Jacuzzi",
+          present: accommodationsDetails.jacuzzi.length > 0,
+        },
+        {
+          key: "accommodations.gym",
+          label: "Gym",
+          present: Boolean(accommodationsDetails.gym),
+        },
+        {
+          key: "accommodations.walkability",
+          label: "Walkability",
+          present: Boolean(accommodationsDetails.walkability),
+        },
+        {
+          key: "accommodations.checkInTime",
+          label: "Check-In",
+          present: Boolean(accommodationsDetails.checkInTime),
+        },
+        {
+          key: "accommodations.checkOutTime",
+          label: "Check-Out",
+          present: Boolean(accommodationsDetails.checkOutTime),
+        },
+        {
+          key: "phone",
+          label: "Phone",
+          present: Boolean(contact.phoneNumber?.trim() || accommodationsDetails.phone),
+        },
+        {
+          key: "website",
+          label: "Website",
+          present: Boolean(contact.website?.trim() || accommodationsDetails.websiteUrl),
         },
         { key: "media", label: "Images/Instagram", present: hasMedia },
       ];
@@ -134,6 +251,13 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       return {
         key: "nightlifeDetails",
         label: "Nightlife Profile",
+        present: field.present,
+      };
+    }
+    if (field.key.startsWith("accommodations.")) {
+      return {
+        key: "accommodationsDetails",
+        label: "Accommodations Profile",
         present: field.present,
       };
     }

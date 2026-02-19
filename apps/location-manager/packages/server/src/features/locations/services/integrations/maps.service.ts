@@ -120,6 +120,26 @@ export class MapsService {
     return JSON.stringify(stripSpendLevel(input));
   }
 
+  private normalizeAccommodationsDetails(
+    input?: Record<string, unknown> | string | null
+  ): string | null | undefined {
+    if (input === undefined) return undefined;
+    if (input === null) return null;
+
+    if (typeof input === "string") {
+      const trimmed = input.trim();
+      if (!trimmed) return null;
+      try {
+        JSON.parse(trimmed);
+      } catch {
+        throw new BadRequestError("Accommodations details must be valid JSON");
+      }
+      return trimmed;
+    }
+
+    return JSON.stringify(input);
+  }
+
   private resolveTripadvisorFields(tripadvisorUrl?: string | null): { tripadvisorUrl?: string | null; tripadvisorLocationId?: string | null } {
     if (tripadvisorUrl === undefined) {
       return {};
@@ -521,6 +541,7 @@ export class MapsService {
     }
     const hoursJson = this.normalizeOperationHours(payload.operationHours);
     const nightlifeDetailsJson = this.normalizeNightlifeDetails(payload.nightlifeDetails);
+    const accommodationsDetailsJson = this.normalizeAccommodationsDetails(payload.accommodationsDetails);
     const idealForJson = this.normalizeIdealForTags(payload.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(payload.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(payload.tripadvisorCuisines);
@@ -532,6 +553,12 @@ export class MapsService {
     }
     if (nightlifeDetailsJson !== undefined) {
       entry.nightlifeDetailsJson = nightlifeDetailsJson;
+    }
+    if (accommodationsDetailsJson !== undefined) {
+      entry.accommodationsDetailsJson = accommodationsDetailsJson;
+    }
+    if (payload.priceLevel !== undefined) {
+      entry.priceLevel = payload.priceLevel;
     }
     if (idealForJson !== undefined) {
       entry.idealForJson = idealForJson;
@@ -611,6 +638,7 @@ export class MapsService {
     // Perform partial update - only update provided fields
     const hoursJson = this.normalizeOperationHours(updates.operationHours);
     const nightlifeDetailsJson = this.normalizeNightlifeDetails(updates.nightlifeDetails);
+    const accommodationsDetailsJson = this.normalizeAccommodationsDetails(updates.accommodationsDetails);
     const idealForJson = this.normalizeIdealForTags(updates.idealFor);
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(updates.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(updates.tripadvisorCuisines);
@@ -633,6 +661,7 @@ export class MapsService {
       ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
       ...(idealForJson !== undefined && { idealForJson }),
       ...(nightlifeDetailsJson !== undefined && { nightlifeDetailsJson }),
+      ...(accommodationsDetailsJson !== undefined && { accommodationsDetailsJson }),
       ...(hoursJson !== undefined && { hoursJson }),
       ...(tripadvisorMealTypesJson !== undefined && { tripadvisorMealTypesJson }),
       ...(tripadvisorCuisinesJson !== undefined && { tripadvisorCuisinesJson }),

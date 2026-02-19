@@ -21,6 +21,8 @@ export interface CreateMapsRequest {
   placeId?: string;
   tripadvisorUrl?: string;
   nightlifeDetails?: Record<string, unknown> | string;
+  accommodationsDetails?: Record<string, unknown> | string;
+  priceLevel?: string;
   idealFor?: IdealForTag[];
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;
@@ -63,6 +65,7 @@ export interface UpdateMapsRequest {
   tripadvisorUrl?: string;
   idealFor?: IdealForTag[];
   nightlifeDetails?: Record<string, unknown> | string | null;
+  accommodationsDetails?: Record<string, unknown> | string | null;
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;

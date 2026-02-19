@@ -31,6 +31,7 @@ const LOCATION_SELECT_COLUMNS = `
   e.neighborhood_description as neighborhoodDescription,
   COALESCE(d.ideal_for_json, n.ideal_for_json, a.ideal_for_json, at.ideal_for_json) as idealForJson,
   COALESCE(d.nightlife_details_json, n.nightlife_details_json, a.nightlife_details_json, at.nightlife_details_json) as nightlifeDetailsJson,
+  COALESCE(d.accommodations_details_json, n.accommodations_details_json, a.accommodations_details_json, at.accommodations_details_json) as accommodationsDetailsJson,
   COALESCE(d.tripadvisor_meal_types, n.tripadvisor_meal_types, a.tripadvisor_meal_types, at.tripadvisor_meal_types) as tripadvisorMealTypesJson,
   COALESCE(d.tripadvisor_cuisines, n.tripadvisor_cuisines, a.tripadvisor_cuisines, at.tripadvisor_cuisines) as tripadvisorCuisinesJson,
   COALESCE(d.tripadvisor_features, n.tripadvisor_features, a.tripadvisor_features, at.tripadvisor_features) as tripadvisorFeaturesJson,
@@ -92,6 +93,7 @@ function upsertTypedRow(
     hoursJson?: string | null;
     idealForJson?: string | null;
     nightlifeDetailsJson?: string | null;
+    accommodationsDetailsJson?: string | null;
     tripadvisorMealTypesJson?: string | null;
     tripadvisorCuisinesJson?: string | null;
     tripadvisorFeaturesJson?: string | null;
@@ -107,6 +109,7 @@ function upsertTypedRow(
       hours_json,
       ideal_for_json,
       nightlife_details_json,
+      accommodations_details_json,
       tripadvisor_meal_types,
       tripadvisor_cuisines,
       tripadvisor_features,
@@ -118,6 +121,7 @@ function upsertTypedRow(
       $hours_json,
       $ideal_for_json,
       $nightlife_details_json,
+      $accommodations_details_json,
       $tripadvisor_meal_types,
       $tripadvisor_cuisines,
       $tripadvisor_features,
@@ -128,6 +132,7 @@ function upsertTypedRow(
       hours_json = excluded.hours_json,
       ideal_for_json = excluded.ideal_for_json,
       nightlife_details_json = excluded.nightlife_details_json,
+      accommodations_details_json = excluded.accommodations_details_json,
       tripadvisor_meal_types = excluded.tripadvisor_meal_types,
       tripadvisor_cuisines = excluded.tripadvisor_cuisines,
       tripadvisor_features = excluded.tripadvisor_features,
@@ -138,6 +143,7 @@ function upsertTypedRow(
     $hours_json: params.hoursJson ?? null,
     $ideal_for_json: params.idealForJson ?? null,
     $nightlife_details_json: params.nightlifeDetailsJson ?? null,
+    $accommodations_details_json: params.accommodationsDetailsJson ?? null,
     $tripadvisor_meal_types: params.tripadvisorMealTypesJson ?? null,
     $tripadvisor_cuisines: params.tripadvisorCuisinesJson ?? null,
     $tripadvisor_features: params.tripadvisorFeaturesJson ?? null,
@@ -331,6 +337,7 @@ export function saveLocation(location: Location): number | boolean {
       hoursJson: location.hoursJson || null,
       idealForJson: location.idealForJson || null,
       nightlifeDetailsJson: location.nightlifeDetailsJson || null,
+      accommodationsDetailsJson: location.accommodationsDetailsJson || null,
       tripadvisorMealTypesJson: location.tripadvisorMealTypesJson || null,
       tripadvisorCuisinesJson: location.tripadvisorCuisinesJson || null,
       tripadvisorFeaturesJson: location.tripadvisorFeaturesJson || null,
@@ -485,6 +492,10 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
     if (updates.nightlifeDetailsJson !== undefined) {
       typedSetClause.push("nightlife_details_json = $nightlife_details_json");
       typedParams.$nightlife_details_json = updates.nightlifeDetailsJson;
+    }
+    if (updates.accommodationsDetailsJson !== undefined) {
+      typedSetClause.push("accommodations_details_json = $accommodations_details_json");
+      typedParams.$accommodations_details_json = updates.accommodationsDetailsJson;
     }
     if (updates.tripadvisorMealTypesJson !== undefined) {
       typedSetClause.push("tripadvisor_meal_types = $tripadvisor_meal_types");
