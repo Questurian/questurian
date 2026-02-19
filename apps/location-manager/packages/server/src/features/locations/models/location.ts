@@ -70,6 +70,7 @@ export interface Location {
   reviewsCount?: number | null;          // Total merged reviews
   reviewsGoogleCount?: number | null;    // From Google
   reviewsTripadvisorCount?: number | null; // From TripAdvisor
+  reviewsEnabled?: boolean | number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -152,6 +153,7 @@ export interface CreateMapsRequest {
   tripadvisorMealTypes?: string[] | string;
   tripadvisorCuisines?: string[] | string;
   tripadvisorFeatures?: string[] | string;
+  reviewsEnabled?: boolean;
 }
 
 
@@ -213,6 +215,7 @@ export interface LocationResponse {
   reviewsCount: number | null;
   reviewsGoogleCount: number | null;
   reviewsTripadvisorCount: number | null;
+  reviewsEnabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -232,4 +235,5 @@ export interface LocationBasic {
   reviewsCount: number | null;
   reviewsGoogleCount: number | null;
   reviewsTripadvisorCount: number | null;
+  reviewsEnabled: boolean;
 }

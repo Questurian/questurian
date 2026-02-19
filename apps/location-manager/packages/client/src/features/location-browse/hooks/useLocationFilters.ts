@@ -7,7 +7,7 @@ export function useLocationFilters() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedCompletionStatus, setSelectedCompletionStatus] = useState<CompletionStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -27,11 +27,19 @@ export function useLocationFilters() {
     setSelectedNeighborhood(neighborhood);
   };
 
+  const toggleCategory = (category: Category) => {
+    setSelectedCategories((current) =>
+      current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category]
+    );
+  };
+
   const reset = () => {
     setSelectedCountry(null);
     setSelectedCity(null);
     setSelectedNeighborhood(null);
-    setSelectedCategory(null);
+    setSelectedCategories([]);
     setSelectedCompletionStatus("all");
     setSearchQuery("");
   };
@@ -40,16 +48,23 @@ export function useLocationFilters() {
     selectedCountry,
     selectedCity,
     selectedNeighborhood,
-    selectedCategory,
+    selectedCategories,
     selectedCompletionStatus,
     searchQuery,
     setCountry: handleCountryChange,
     setCity: handleCityChange,
     setNeighborhood: handleNeighborhoodChange,
-    setCategory: setSelectedCategory,
+    toggleCategory,
     setCompletionStatus: setSelectedCompletionStatus,
     setSearch: setSearchQuery,
     reset,
-    isFilterActive: !!(selectedCountry || selectedCity || selectedNeighborhood || selectedCategory || selectedCompletionStatus !== "all" || searchQuery)
+    isFilterActive: !!(
+      selectedCountry ||
+      selectedCity ||
+      selectedNeighborhood ||
+      selectedCategories.length > 0 ||
+      selectedCompletionStatus !== "all" ||
+      searchQuery
+    )
   };
 }

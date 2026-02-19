@@ -68,6 +68,7 @@ export const createMapsSchema = z.object({
     z.array(z.string().trim()),
     z.string().trim(),
   ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  reviewsEnabled: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.category === "nightlife") {
     if (data.nightlifeDetails === undefined) {
@@ -135,6 +136,7 @@ export const patchMapsSchema = z.object({
     z.array(z.string().trim()),
     z.string().trim(),
   ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  reviewsEnabled: z.boolean().optional(),
 
   // Reject immutable fields - these should not be present in request body
   id: z.never().optional(),
@@ -172,7 +174,8 @@ export const patchMapsSchema = z.object({
          data.priceLevel !== undefined ||
          data.tripadvisorMealTypes !== undefined ||
          data.tripadvisorCuisines !== undefined ||
-         data.tripadvisorFeatures !== undefined;
+         data.tripadvisorFeatures !== undefined ||
+         data.reviewsEnabled !== undefined;
 }, {
   message: "At least one field must be provided for update"
 });

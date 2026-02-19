@@ -13,13 +13,13 @@ interface LocationFiltersProps {
   selectedCountry: string | null;
   selectedCity: string | null;
   selectedNeighborhood: string | null;
-  selectedCategory: Category | null;
+  selectedCategories: Category[];
   selectedCompletionStatus: CompletionStatus;
   searchQuery: string;
   onCountryChange: (value: string) => void;
   onCityChange: (value: string) => void;
   onNeighborhoodChange: (value: string) => void;
-  onCategoryChange: (value: Category) => void;
+  onCategoryToggle: (value: Category) => void;
   onCompletionStatusChange: (value: CompletionStatus) => void;
   onSearchChange: (value: string) => void;
   onReset: () => void;
@@ -31,13 +31,13 @@ export function LocationFilters({
   selectedCountry,
   selectedCity,
   selectedNeighborhood,
-  selectedCategory,
+  selectedCategories,
   selectedCompletionStatus,
   searchQuery,
   onCountryChange,
   onCityChange,
   onNeighborhoodChange,
-  onCategoryChange,
+  onCategoryToggle,
   onCompletionStatusChange,
   onSearchChange,
   onReset,
@@ -55,7 +55,13 @@ export function LocationFilters({
     return extractNeighborhoodsForCity(countries, selectedCountry, selectedCity);
   }, [countries, selectedCountry, selectedCity]);
 
-  const hasFilters = selectedCountry || selectedCity || selectedNeighborhood || selectedCategory || selectedCompletionStatus !== "all" || searchQuery;
+  const hasFilters =
+    selectedCountry ||
+    selectedCity ||
+    selectedNeighborhood ||
+    selectedCategories.length > 0 ||
+    selectedCompletionStatus !== "all" ||
+    searchQuery;
 
   return (
     <div className="space-y-4">
@@ -129,8 +135,8 @@ export function LocationFilters({
         <div>
           <label className="block text-xs font-medium mb-1.5 text-muted-foreground">Category</label>
           <CategorySelect
-            value={selectedCategory}
-            onChange={onCategoryChange}
+            value={selectedCategories}
+            onChange={onCategoryToggle}
             disabled={false}
           />
         </div>

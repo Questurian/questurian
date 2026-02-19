@@ -43,18 +43,22 @@ export const addNightlifeSchema = z.object({
   countryCode: z.enum(SUPPORTED_COUNTRY_CODES),
 
   location: z.string().min(1, "Location is required"),
-  phone: z.string().optional().or(z.literal("")),
+  phone: z.string().trim().min(1, "Phone number is required"),
   hours: z.string().optional().or(z.literal("")),
   website: z
     .string()
-    .optional()
-    .or(z.literal(""))
-    .refine((value) => value == null || value === "" || /^https?:\/\//i.test(value), "Website must be a valid URL"),
+    .trim()
+    .min(1, "Website is required")
+    .refine((value) => /^https?:\/\//i.test(value), "Website must be a valid URL"),
   reserveUrl: z
     .string()
+    .trim()
     .optional()
     .or(z.literal(""))
-    .refine((value) => value == null || value === "" || /^https?:\/\//i.test(value), "Reserve URL must be a valid URL"),
+    .refine(
+      (value) => value == null || value === "" || /^https?:\/\//i.test(value),
+      "Reservations URL must be a valid URL"
+    ),
   district: z.string().optional().or(z.literal("")),
   locationKey: z
     .string()

@@ -45,11 +45,17 @@ function ensureEntitySchema(db: Database): void {
       reviews_count INTEGER,
       reviews_google_count INTEGER,
       reviews_tripadvisor_count INTEGER,
+      reviews_enabled INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(category, name, address)
     )
   `);
+
+  const entityColumns = getTableColumns(db, "entities");
+  if (!entityColumns.has("reviews_enabled")) {
+    db.run("ALTER TABLE entities ADD COLUMN reviews_enabled INTEGER NOT NULL DEFAULT 1");
+  }
 
   for (const category of CATEGORY_VALUES) {
     db.run(`
@@ -276,7 +282,7 @@ function migrateLocationsBackupIntoEntities(db: Database, backupTable: string): 
       contactAddress, countryCode, iana_time_id, phoneNumber, website, email,
       neighborhood_description, slug, place_id, tripadvisor_url, tripadvisor_location_id,
       payload_location_ref, reviews_fetched_at, reviews_count, reviews_google_count,
-      reviews_tripadvisor_count, created_at, updated_at
+      reviews_tripadvisor_count, reviews_enabled, created_at, updated_at
     )
     SELECT
       id,
@@ -305,6 +311,7 @@ function migrateLocationsBackupIntoEntities(db: Database, backupTable: string): 
       ${col("reviews_count")},
       ${col("reviews_google_count")},
       ${col("reviews_tripadvisor_count")},
+      COALESCE(${col("reviews_enabled", "1")}, 1),
       COALESCE(${col("created_at", "CURRENT_TIMESTAMP")}, CURRENT_TIMESTAMP),
       COALESCE(${col("updated_at")}, ${col("created_at", "CURRENT_TIMESTAMP")}, CURRENT_TIMESTAMP)
     FROM ${backupTable}

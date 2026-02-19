@@ -36,6 +36,9 @@ export interface GooglePrefillResult {
   locationKey: string | null;
   district: string | null;
   ianaTimeId: string | null;
+  phoneNumber: string | null;
+  website: string | null;
+  operationHours: Record<string, unknown> | null;
 }
 
 export class MapsService {
@@ -408,7 +411,9 @@ export class MapsService {
       trimmedName,
       trimmedAddress,
       this.config.GOOGLE_MAPS_API_KEY,
-      "nightlife"
+      "nightlife",
+      undefined,
+      { includeOperationHours: true }
     );
 
     if (entry.lat == null || entry.lng == null || !entry.placeId) {
@@ -416,6 +421,19 @@ export class MapsService {
         "Could not resolve Place ID and coordinates from Google for this name and address"
       );
     }
+
+    const operationHours = (() => {
+      if (!entry.hoursJson) return null;
+      try {
+        const parsed = JSON.parse(entry.hoursJson);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          return null;
+        }
+        return parsed as Record<string, unknown>;
+      } catch {
+        return null;
+      }
+    })();
 
     return {
       googleUrl: generateGoogleMapsUrl(trimmedName, trimmedAddress),
@@ -425,6 +443,9 @@ export class MapsService {
       locationKey: entry.locationKey ?? null,
       district: entry.district ?? null,
       ianaTimeId: entry.ianaTimeId ?? null,
+      phoneNumber: entry.phoneNumber ?? null,
+      website: entry.website ?? null,
+      operationHours,
     };
   }
 
@@ -494,6 +515,9 @@ export class MapsService {
     }
     if (payload.neighborhoodDescription) {
       entry.neighborhoodDescription = payload.neighborhoodDescription;
+    }
+    if (payload.reviewsEnabled !== undefined) {
+      entry.reviewsEnabled = payload.reviewsEnabled;
     }
     const hoursJson = this.normalizeOperationHours(payload.operationHours);
     const nightlifeDetailsJson = this.normalizeNightlifeDetails(payload.nightlifeDetails);
@@ -615,6 +639,7 @@ export class MapsService {
       ...(tripadvisorFeaturesJson !== undefined && { tripadvisorFeaturesJson }),
       ...(updates.priceLevel !== undefined && { priceLevel: updates.priceLevel }),
       ...(updates.placeId !== undefined && { placeId: updates.placeId }),
+      ...(updates.reviewsEnabled !== undefined && { reviewsEnabled: updates.reviewsEnabled }),
       ...(shouldUpdateUrl && { url: generateGoogleMapsUrl(nextName, nextAddress) }),
       ...(updates.tripadvisorUrl !== undefined && this.resolveTripadvisorFields(updates.tripadvisorUrl)),
     };

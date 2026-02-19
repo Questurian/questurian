@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createMapsSchema, googlePrefillSchema } from "./maps.schemas";
+import { createMapsSchema, googlePrefillSchema, patchMapsSchema } from "./maps.schemas";
 
 const basePayload = {
   name: "Test Location",
@@ -101,5 +101,18 @@ describe("google prefill schema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("maps patch schema reviews toggle", () => {
+  test("accepts reviewsEnabled as the only patch field", () => {
+    const result = patchMapsSchema.safeParse({
+      reviewsEnabled: false,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.reviewsEnabled).toBe(false);
   });
 });

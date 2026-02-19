@@ -26,6 +26,20 @@ function assertCategory(category: unknown): LocationCategory {
   throw new Error(`Invalid location category in database row: ${String(category)}`);
 }
 
+function toReviewsEnabled(value: unknown): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized !== "0" && normalized !== "false" && normalized.length > 0;
+  }
+  return true;
+}
+
 function stripNightlifeSpendLevel(details: Record<string, unknown>): Record<string, unknown> {
   const detailsNode = details.details;
   if (!detailsNode || typeof detailsNode !== "object" || Array.isArray(detailsNode)) {
@@ -262,6 +276,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     reviewsCount: location.reviewsCount ?? null,
     reviewsGoogleCount: location.reviewsGoogleCount ?? null,
     reviewsTripadvisorCount: location.reviewsTripadvisorCount ?? null,
+    reviewsEnabled: toReviewsEnabled(location.reviewsEnabled),
     created_at: location.created_at || new Date().toISOString(),
     updated_at: location.updated_at || location.created_at || new Date().toISOString(),
   };
@@ -443,6 +458,7 @@ export function transformLocationToBasicResponse(
     reviewsCount: location.reviewsCount ?? null,
     reviewsGoogleCount: location.reviewsGoogleCount ?? null,
     reviewsTripadvisorCount: location.reviewsTripadvisorCount ?? null,
+    reviewsEnabled: toReviewsEnabled(location.reviewsEnabled),
   };
 }
 

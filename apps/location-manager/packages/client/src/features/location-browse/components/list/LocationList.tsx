@@ -4,11 +4,16 @@ import { LocationListItem } from "./LocationListItem";
 interface LocationListProps {
   locations: LocationBasic[];
   onItemClick?: (id: number) => void;
-  lastOpenedId?: number | null;
-  onExpand?: (id: number) => void;
+  isLocationExpanded: (location: LocationBasic) => boolean;
+  onLocationExpandedChange: (location: LocationBasic, expanded: boolean) => void;
 }
 
-export function LocationList({ locations, onItemClick, lastOpenedId, onExpand }: LocationListProps) {
+export function LocationList({
+  locations,
+  onItemClick,
+  isLocationExpanded,
+  onLocationExpandedChange,
+}: LocationListProps) {
   return (
     <div className="flex flex-col gap-2">
       {locations.map((location) => (
@@ -16,8 +21,8 @@ export function LocationList({ locations, onItemClick, lastOpenedId, onExpand }:
           key={location.id}
           location={location}
           onClick={onItemClick}
-          defaultExpanded={location.id === lastOpenedId}
-          onExpand={onExpand}
+          isExpanded={isLocationExpanded(location)}
+          onExpandedChange={(expanded) => onLocationExpandedChange(location, expanded)}
         />
       ))}
     </div>

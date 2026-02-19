@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { Clock, Music2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Clock, Music2 } from 'lucide-react';
 import { Input } from '@client/components/ui/input';
 import { Label } from '@client/components/ui/label';
 import { Button } from '@client/components/ui/button';
@@ -31,6 +31,7 @@ import {
 } from '../constants/nightlife-options';
 
 type MultiField = 'music' | 'spaceLayout' | 'vibe' | 'musicFormat' | 'dressCode';
+type NightlifeFormSection = 'step1' | 'entities' | 'core' | 'space' | 'scene' | 'contact';
 
 interface OptionTableProps {
   label: string;
@@ -38,6 +39,12 @@ interface OptionTableProps {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+}
+
+interface SectionHeaderProps {
+  title: string;
+  isComplete?: boolean;
+  helperText?: string;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -54,13 +61,21 @@ function buildPrefillSignature(name: string, address: string) {
 }
 
 const NIGHTLIFE_DRAFT_STORAGE_KEY = 'lm:add-nightlife:draft:v1';
+const NIGHTLIFE_SECTION_ORDER: NightlifeFormSection[] = [
+  'step1',
+  'entities',
+  'core',
+  'space',
+  'scene',
+  'contact',
+];
 
 const NIGHTLIFE_FORM_DEFAULT_VALUES: AddNightlifeFormData = {
   name: '',
   priceTier: '$$$',
-  clubType: 'Night Club',
+  clubType: 'Cocktail Bar',
   music: ['House', 'EDM'],
-  venueType: 'Nightclub',
+  venueType: 'Bar',
   venueSize: 'Large',
   spaceLayout: ['Indoor', 'Rooftop'],
   vibe: ['Upscale', 'Exclusive', 'High-Energy'],
@@ -170,8 +185,8 @@ function OptionSelect({ label, options, value, onChange, error }: OptionTablePro
         <table className="w-full text-xs">
           <thead className="bg-muted/40">
             <tr>
-              <th className="text-left px-2 py-1.5 font-medium">Option</th>
-              <th className="text-left px-2 py-1.5 font-medium">Description</th>
+              <th className="text-left px-2 py-1.5 font-medium">Option Label</th>
+              <th className="text-left px-2 py-1.5 font-medium">What This Means</th>
             </tr>
           </thead>
           <tbody>
@@ -206,8 +221,8 @@ function MultiOptionTable({ label, options, values, onToggle, error }: MultiOpti
           <thead className="bg-muted/40">
             <tr>
               <th className="text-left px-2 py-1.5 font-medium w-24">Select</th>
-              <th className="text-left px-2 py-1.5 font-medium w-44">Option</th>
-              <th className="text-left px-2 py-1.5 font-medium">Description</th>
+              <th className="text-left px-2 py-1.5 font-medium w-44">Option Label</th>
+              <th className="text-left px-2 py-1.5 font-medium">What This Means</th>
             </tr>
           </thead>
           <tbody>
@@ -238,7 +253,27 @@ function MultiOptionTable({ label, options, values, onToggle, error }: MultiOpti
   );
 }
 
+function SectionHeader({ title, isComplete = false, helperText }: SectionHeaderProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+        {isComplete && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Complete
+          </span>
+        )}
+      </div>
+      {helperText ? (
+        <p className="text-xs text-muted-foreground">{helperText}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function AddNightlifeLocation() {
+  const [activeSection, setActiveSection] = useState<NightlifeFormSection>('step1');
   const [isPrefillingGoogle, setIsPrefillingGoogle] = useState(false);
   const [operationHoursModalOpen, setOperationHoursModalOpen] = useState(false);
   const [prefillMessage, setPrefillMessage] = useState<string | null>(null);
@@ -300,6 +335,72 @@ export function AddNightlifeLocation() {
   );
   const isPrefillReady = prefillSignature !== null && prefillSignature === currentPrefillSignature;
   const prefillIsStale = prefillSignature !== null && !isPrefillReady;
+  const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
+
+  const stepOneComplete = isPrefillReady;
+  const entitiesComplete = isPrefillReady;
+  const coreComplete = Boolean(form.watch('clubType')) && (form.watch('music')?.length ?? 0) > 0;
+  const spaceComplete =
+    Boolean(form.watch('priceTier')) &&
+    Boolean(form.watch('venueType')) &&
+    Boolean(form.watch('venueSize')) &&
+    (form.watch('spaceLayout')?.length ?? 0) > 0 &&
+    (form.watch('vibe')?.length ?? 0) > 0 &&
+    Boolean(form.watch('peakHours'));
+  const sceneComplete =
+    (form.watch('musicFormat')?.length ?? 0) > 0 &&
+    Boolean(form.watch('touristPresence')) &&
+    Boolean(form.watch('energyLevel')) &&
+    Boolean(form.watch('vipAndBottleService')) &&
+    Boolean(form.watch('crowdProfile')) &&
+    (form.watch('dressCode')?.length ?? 0) > 0;
+  const contactComplete =
+    Boolean(form.watch('countryCode')) &&
+    hasValue(form.watch('phone')) &&
+    hasValue(form.watch('website')) &&
+    !form.formState.errors.phone &&
+    !form.formState.errors.website;
+
+  const canOpenSection = (section: NightlifeFormSection) => {
+    if (section === 'step1') return true;
+    return isPrefillReady;
+  };
+
+  const goToSection = (section: NightlifeFormSection) => {
+    if (!canOpenSection(section)) return;
+    setActiveSection(section);
+  };
+
+  const goToNextSection = () => {
+    const currentIndex = NIGHTLIFE_SECTION_ORDER.indexOf(activeSection);
+    const nextSection = NIGHTLIFE_SECTION_ORDER[currentIndex + 1];
+    if (nextSection) {
+      goToSection(nextSection);
+    }
+  };
+
+  const goToPreviousSection = () => {
+    const currentIndex = NIGHTLIFE_SECTION_ORDER.indexOf(activeSection);
+    const previousSection = NIGHTLIFE_SECTION_ORDER[currentIndex - 1];
+    if (previousSection) {
+      goToSection(previousSection);
+    }
+  };
+
+  const flowSections: Array<{ key: NightlifeFormSection; label: string; complete: boolean }> = [
+    { key: 'step1', label: 'Step 1', complete: stepOneComplete },
+    { key: 'entities', label: 'Entities', complete: entitiesComplete },
+    { key: 'core', label: 'Core', complete: coreComplete },
+    { key: 'space', label: 'Space', complete: spaceComplete },
+    { key: 'scene', label: 'Scene', complete: sceneComplete },
+    { key: 'contact', label: 'Contact', complete: contactComplete },
+  ];
+
+  useEffect(() => {
+    if (!isPrefillReady && activeSection !== 'step1') {
+      setActiveSection('step1');
+    }
+  }, [isPrefillReady, activeSection]);
 
   const toggleMultiOption = (field: MultiField, value: string) => {
     const currentValues = (form.getValues(field) || []) as string[];
@@ -376,9 +477,33 @@ export function AddNightlifeLocation() {
         shouldValidate: true,
         shouldTouch: true,
       });
+      if (prefill.phoneNumber) {
+        form.setValue('phone', prefill.phoneNumber, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+      if (prefill.website) {
+        form.setValue('website', prefill.website, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+      if (prefill.operationHours) {
+        form.setValue('hours', JSON.stringify(prefill.operationHours, null, 2), {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
 
       setPrefillSignature(buildPrefillSignature(name, normalizedAddress));
-      setPrefillMessage('Google lookup complete. Place ID, coordinates, location key, district, and time zone were prefilled.');
+      setPrefillMessage(
+        'Google lookup complete. Place ID, coordinates, location key, district, time zone, phone, website, and hours were prefilled when available.'
+      );
+      setActiveSection('entities');
     } catch (lookupError) {
       setPrefillSignature(null);
       setPrefillError(getErrorMessage(lookupError));
@@ -465,6 +590,7 @@ export function AddNightlifeLocation() {
           setPrefillSignature(null);
           setPrefillMessage(null);
           setPrefillError(null);
+          setActiveSection('step1');
           clearNightlifeDraftFromStorage();
         },
       }
@@ -472,61 +598,101 @@ export function AddNightlifeLocation() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div className="w-full max-w-6xl bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center gap-2.5 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-            <Music2 className="w-4 h-4 text-muted-foreground" />
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="w-full max-w-6xl rounded-2xl border border-border/80 bg-card p-5 shadow-sm sm:p-6">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="mb-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <Music2 className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground underline">
+                  Add Nightlife
+                </h1>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                asChild
+                className="h-9 border-border/80 bg-background/60 px-3 text-foreground hover:bg-accent/70"
+              >
+                <Link to="/add">
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </Link>
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {flowSections.map((section, index) => {
+                const isActive = activeSection === section.key;
+                const isDisabled = !canOpenSection(section.key);
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    onClick={() => goToSection(section.key)}
+                    disabled={isDisabled}
+                    className={`inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'border-border bg-muted text-foreground'
+                        : isDisabled
+                          ? 'cursor-not-allowed border-border/50 bg-background text-muted-foreground/55'
+                          : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground'
+                    }`}
+                  >
+                    <span>{index + 1}.</span>
+                    <span>{section.label}</span>
+                    {section.complete && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground underline">
-            Add Nightlife
-          </h1>
-        </div>
 
-        {createdName && (
-          <div className="mb-6 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
-            Created nightlife document: {createdName}
-            <p className="mt-1 text-xs text-emerald-300">
-              Add media from Home after opening this document.
-            </p>
-          </div>
-        )}
+          {createdName && (
+            <div className="mb-6 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
+              Created nightlife document: {createdName}
+              <p className="mt-1 text-xs text-emerald-300">
+                Add media from Home after opening this document.
+              </p>
+            </div>
+          )}
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-          <section className="space-y-4">
-            <h2 className="text-xs font-semibold tracking-wide text-foreground">Step 1: Name + Address (Required)</h2>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          {activeSection === 'step1' && (
+          <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
+            <SectionHeader
+              title="Step 1"
+              isComplete={stepOneComplete}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Name</Label>
-                <Input placeholder="Nebula" {...form.register('name')} />
+                <Input placeholder="Location Name" {...form.register('name')} />
                 {form.formState.errors.name && (
                   <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label>Address</Label>
-                <Input placeholder="Av. La Mar 1337, Miraflores, Lima" {...form.register('location')} />
+                <Input placeholder="Location Address" {...form.register('location')} />
                 {form.formState.errors.location && (
                   <p className="text-xs text-destructive">{form.formState.errors.location.message}</p>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex justify-end border-t border-border/70 pt-4">
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => void handleGooglePrefill()}
                 disabled={isPrefillingGoogle || isPending}
               >
-                {isPrefillingGoogle ? 'Fetching Google data...' : 'Fetch Place ID + Coordinates'}
+                {isPrefillingGoogle ? 'Continuing...' : 'Continue'}
               </Button>
-              {!isPrefillReady && (
-                <p className="text-xs text-muted-foreground">
-                  Run Google lookup first, then complete the rest of the nightlife fields.
-                </p>
-              )}
             </div>
 
             {prefillMessage && (
@@ -546,11 +712,16 @@ export function AddNightlifeLocation() {
                 Name or address changed after lookup. Run Google lookup again to refresh Place ID and coordinates.
               </div>
             )}
-          </section>
 
-          {isPrefillReady && (
-          <section className="space-y-4">
-            <h2 className="text-xs font-semibold tracking-wide text-foreground">Entities Table (Optional Manual)</h2>
+          </section>
+          )}
+
+          {isPrefillReady && activeSection === 'entities' && (
+          <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
+            <SectionHeader
+              title="Entities Fields (Optional Manual Overrides)"
+              isComplete={entitiesComplete}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Google URL</Label>
@@ -602,15 +773,27 @@ export function AddNightlifeLocation() {
                 )}
               </div>
             </div>
+
+            <div className="flex justify-between border-t border-border/70 pt-4">
+              <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                Previous
+              </Button>
+              <Button type="button" onClick={goToNextSection}>
+                Next
+              </Button>
+            </div>
           </section>
           )}
 
-          {isPrefillReady && (
-          <section className="space-y-4">
-            <h2 className="text-xs font-semibold tracking-wide text-foreground">Core</h2>
+          {isPrefillReady && activeSection === 'core' && (
+          <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
+            <SectionHeader
+              title="Core Identity"
+              isComplete={coreComplete}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <OptionSelect
-                label="Club Type"
+                label="Venue Category"
                 options={CLUB_TYPE_OPTIONS}
                 value={form.watch('clubType')}
                 onChange={(value) => form.setValue('clubType', value as AddNightlifeFormData['clubType'], { shouldValidate: true })}
@@ -619,35 +802,47 @@ export function AddNightlifeLocation() {
             </div>
 
             <MultiOptionTable
-              label="Music"
+              label="Primary Music Genres"
               options={MUSIC_OPTIONS}
               values={form.watch('music')}
               onToggle={(value) => toggleMultiOption('music', value)}
               error={form.formState.errors.music?.message as string | undefined}
             />
+
+            <div className="flex justify-between border-t border-border/70 pt-4">
+              <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                Previous
+              </Button>
+              <Button type="button" onClick={goToNextSection}>
+                Next
+              </Button>
+            </div>
           </section>
           )}
 
-          {isPrefillReady && (
-          <section className="space-y-4">
-            <h2 className="text-xs font-semibold tracking-wide text-foreground">The Space</h2>
+          {isPrefillReady && activeSection === 'space' && (
+          <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
+            <SectionHeader
+              title="The Space"
+              isComplete={spaceComplete}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <OptionSelect
-                label="Price Tier"
+                label="Price Tier (Spend Level)"
                 options={PRICE_TIER_OPTIONS}
                 value={form.watch('priceTier')}
                 onChange={(value) => form.setValue('priceTier', value as AddNightlifeFormData['priceTier'], { shouldValidate: true })}
                 error={form.formState.errors.priceTier?.message}
               />
               <OptionSelect
-                label="Venue Type"
+                label="Space Type"
                 options={VENUE_TYPE_OPTIONS}
                 value={form.watch('venueType')}
                 onChange={(value) => form.setValue('venueType', value as AddNightlifeFormData['venueType'], { shouldValidate: true })}
                 error={form.formState.errors.venueType?.message}
               />
               <OptionSelect
-                label="Venue Size"
+                label="Venue Capacity"
                 options={VENUE_SIZE_OPTIONS}
                 value={form.watch('venueSize')}
                 onChange={(value) => form.setValue('venueSize', value as AddNightlifeFormData['venueSize'], { shouldValidate: true })}
@@ -656,7 +851,7 @@ export function AddNightlifeLocation() {
             </div>
 
             <MultiOptionTable
-              label="Layout"
+              label="Layout & Zones"
               options={SPACE_LAYOUT_OPTIONS}
               values={form.watch('spaceLayout')}
               onToggle={(value) => toggleMultiOption('spaceLayout', value)}
@@ -664,7 +859,7 @@ export function AddNightlifeLocation() {
             />
 
             <MultiOptionTable
-              label="Vibe"
+              label="Atmosphere / Vibe"
               options={VIBE_OPTIONS}
               values={form.watch('vibe')}
               onToggle={(value) => toggleMultiOption('vibe', value)}
@@ -673,21 +868,33 @@ export function AddNightlifeLocation() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <OptionSelect
-                label="Peak Hours"
+                label="Peak Hours (Busiest Window)"
                 options={PEAK_HOURS_OPTIONS}
                 value={form.watch('peakHours')}
                 onChange={(value) => form.setValue('peakHours', value as AddNightlifeFormData['peakHours'], { shouldValidate: true })}
                 error={form.formState.errors.peakHours?.message}
               />
             </div>
+
+            <div className="flex justify-between border-t border-border/70 pt-4">
+              <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                Previous
+              </Button>
+              <Button type="button" onClick={goToNextSection}>
+                Next
+              </Button>
+            </div>
           </section>
           )}
 
-          {isPrefillReady && (
-          <section className="space-y-4">
-            <h2 className="text-xs font-semibold tracking-wide text-foreground">The Scene</h2>
+          {isPrefillReady && activeSection === 'scene' && (
+          <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
+            <SectionHeader
+              title="The Scene"
+              isComplete={sceneComplete}
+            />
             <MultiOptionTable
-              label="Music Format"
+              label="DJ / Music Format"
               options={MUSIC_FORMAT_OPTIONS}
               values={form.watch('musicFormat')}
               onToggle={(value) => toggleMultiOption('musicFormat', value)}
@@ -696,7 +903,7 @@ export function AddNightlifeLocation() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <OptionSelect
-                label="Tourist Presence"
+                label="Tourist vs Local Mix"
                 options={TOURIST_PRESENCE_OPTIONS}
                 value={form.watch('touristPresence')}
                 onChange={(value) => form.setValue('touristPresence', value as AddNightlifeFormData['touristPresence'], { shouldValidate: true })}
@@ -710,7 +917,7 @@ export function AddNightlifeLocation() {
                 error={form.formState.errors.energyLevel?.message}
               />
               <OptionSelect
-                label="VIP & Bottle Service"
+                label="VIP / Bottle Service Availability"
                 options={VIP_BOTTLE_SERVICE_OPTIONS}
                 value={form.watch('vipAndBottleService')}
                 onChange={(value) => form.setValue('vipAndBottleService', value as AddNightlifeFormData['vipAndBottleService'], { shouldValidate: true })}
@@ -726,20 +933,32 @@ export function AddNightlifeLocation() {
             </div>
 
             <MultiOptionTable
-              label="Dress Code"
+              label="Expected Dress Code"
               options={DRESS_CODE_OPTIONS}
               values={form.watch('dressCode')}
               onToggle={(value) => toggleMultiOption('dressCode', value)}
               error={form.formState.errors.dressCode?.message as string | undefined}
             />
+
+            <div className="flex justify-between border-t border-border/70 pt-4">
+              <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                Previous
+              </Button>
+              <Button type="button" onClick={goToNextSection}>
+                Next
+              </Button>
+            </div>
           </section>
           )}
 
-          {isPrefillReady && (
-          <section className="space-y-4">
-            <h2 className="text-xs font-semibold tracking-wide text-foreground">Contact & Access</h2>
+          {isPrefillReady && activeSection === 'contact' && (
+          <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
+            <SectionHeader
+              title="Contact & Access"
+              isComplete={contactComplete}
+            />
             <div className="space-y-2 max-w-xs">
-              <Label>Country</Label>
+              <Label>Country (Phone Region)</Label>
               <select
                 value={form.watch('countryCode')}
                 onChange={(event) =>
@@ -756,11 +975,14 @@ export function AddNightlifeLocation() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Phone</Label>
+                <Label>Phone Number (Public)</Label>
                 <Input placeholder="+1 (555) 234-5678" {...form.register('phone')} />
+                {form.formState.errors.phone && (
+                  <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>Hours</Label>
+                <Label>Operating Hours</Label>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     type="button"
@@ -794,14 +1016,14 @@ export function AddNightlifeLocation() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Website</Label>
+                <Label>Official Website</Label>
                 <Input placeholder="https://example.com/nebula" {...form.register('website')} />
                 {form.formState.errors.website && (
                   <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Reserve URL</Label>
+                <Label>Reservations URL</Label>
                 <Input placeholder="https://example.com/nebula/reserve" {...form.register('reserveUrl')} />
                 {form.formState.errors.reserveUrl && (
                   <p className="text-xs text-destructive">{form.formState.errors.reserveUrl.message}</p>
@@ -809,7 +1031,7 @@ export function AddNightlifeLocation() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Daytime Restaurant (0 or 1)</Label>
+              <Label>Daytime Restaurant Service</Label>
               <select
                 value={form.watch('daytimeRestaurant')}
                 onChange={(event) => form.setValue('daytimeRestaurant', event.target.value as AddNightlifeFormData['daytimeRestaurant'], { shouldValidate: true })}
@@ -825,8 +1047,8 @@ export function AddNightlifeLocation() {
                 <table className="w-full text-xs">
                   <thead className="bg-muted/40">
                     <tr>
-                      <th className="text-left px-2 py-1.5 font-medium">Option</th>
-                      <th className="text-left px-2 py-1.5 font-medium">Description</th>
+                      <th className="text-left px-2 py-1.5 font-medium">Option Label</th>
+                      <th className="text-left px-2 py-1.5 font-medium">What This Means</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -843,6 +1065,15 @@ export function AddNightlifeLocation() {
                 <p className="text-xs text-destructive">{form.formState.errors.daytimeRestaurant.message}</p>
               )}
             </div>
+
+            <div className="flex justify-between border-t border-border/70 pt-4">
+              <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                Previous
+              </Button>
+              <Button type="submit" disabled={!isPrefillReady || !form.formState.isValid || isPending}>
+                {isPending ? 'Creating...' : 'Create Nightlife Document'}
+              </Button>
+            </div>
           </section>
           )}
 
@@ -852,15 +1083,8 @@ export function AddNightlifeLocation() {
             </div>
           )}
 
-          <div className="flex gap-3">
-            <Button type="button" variant="outline" asChild>
-              <Link to="/add">Back</Link>
-            </Button>
-            <Button type="submit" disabled={!isPrefillReady || !form.formState.isValid || isPending}>
-              {isPending ? 'Creating...' : 'Create Nightlife Document'}
-            </Button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

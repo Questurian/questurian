@@ -27,6 +27,7 @@ export interface CreateMapsRequest {
   tripadvisorMealTypes?: string[] | string;
   tripadvisorCuisines?: string[] | string;
   tripadvisorFeatures?: string[] | string;
+  reviewsEnabled?: boolean;
 }
 
 export interface GooglePrefillRequest {
@@ -42,6 +43,9 @@ export interface GooglePrefillResponse {
   locationKey: string | null;
   district: string | null;
   ianaTimeId: string | null;
+  phoneNumber: string | null;
+  website: string | null;
+  operationHours: Record<string, unknown> | null;
 }
 
 export interface UpdateMapsRequest {
@@ -67,6 +71,7 @@ export interface UpdateMapsRequest {
   tripadvisorFeatures?: string[] | string | null;
   priceLevel?: string | null;
   placeId?: string | null;
+  reviewsEnabled?: boolean;
 }
 
 export interface AddInstagramRequest {

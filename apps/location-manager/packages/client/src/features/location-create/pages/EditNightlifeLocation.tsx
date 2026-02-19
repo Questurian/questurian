@@ -115,9 +115,9 @@ const COUNTRY_OPTIONS = [
 const NIGHTLIFE_FORM_DEFAULT_VALUES: EditNightlifeFormData = {
   name: "",
   priceTier: "$$$",
-  clubType: "Night Club",
+  clubType: "Cocktail Bar",
   music: ["House", "EDM"],
-  venueType: "Nightclub",
+  venueType: "Bar",
   venueSize: "Large",
   spaceLayout: ["Indoor", "Rooftop"],
   vibe: ["Upscale", "Exclusive", "High-Energy"],
@@ -578,9 +578,32 @@ export function EditNightlifeLocation() {
         shouldValidate: true,
         shouldTouch: true,
       });
+      if (prefill.phoneNumber) {
+        form.setValue("phone", prefill.phoneNumber, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+      if (prefill.website) {
+        form.setValue("website", prefill.website, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+      if (prefill.operationHours) {
+        form.setValue("hours", JSON.stringify(prefill.operationHours, null, 2), {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
 
       setPrefillSignature(buildPrefillSignature(name, normalizedAddress));
-      setPrefillMessage("Google lookup complete. Place ID, location key, district, and time zone were refreshed.");
+      setPrefillMessage(
+        "Google lookup complete. Place ID, location key, district, time zone, phone, website, and hours were refreshed when available."
+      );
     } catch (lookupError) {
       setPrefillSignature(null);
       setPrefillError(getErrorMessage(lookupError));
@@ -832,7 +855,7 @@ export function EditNightlifeLocation() {
             <h2 className="text-xs font-semibold tracking-wide text-foreground">Core</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <OptionSelect
-                label="Club Type"
+                label="Venue Category"
                 options={CLUB_TYPE_OPTIONS}
                 value={form.watch("clubType")}
                 onChange={(value) =>
@@ -1037,6 +1060,9 @@ export function EditNightlifeLocation() {
               <div className="space-y-2">
                 <Label>Phone</Label>
                 <Input placeholder="+1 (555) 234-5678" {...form.register("phone")} />
+                {form.formState.errors.phone && (
+                  <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Hours</Label>
@@ -1095,7 +1121,7 @@ export function EditNightlifeLocation() {
             </div>
 
             <div className="space-y-2">
-              <Label>Daytime Restaurant (0 or 1)</Label>
+              <Label>Daytime Restaurant Service</Label>
               <select
                 value={form.watch("daytimeRestaurant")}
                 onChange={(event) =>
@@ -1121,8 +1147,8 @@ export function EditNightlifeLocation() {
                 <table className="w-full text-xs">
                   <thead className="bg-muted/40">
                     <tr>
-                      <th className="text-left px-2 py-1.5 font-medium">Option</th>
-                      <th className="text-left px-2 py-1.5 font-medium">Description</th>
+                      <th className="text-left px-2 py-1.5 font-medium">Option Label</th>
+                      <th className="text-left px-2 py-1.5 font-medium">What This Means</th>
                     </tr>
                   </thead>
                   <tbody>

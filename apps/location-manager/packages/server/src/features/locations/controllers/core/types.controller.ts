@@ -34,11 +34,22 @@ const ATTRACTIONS_TYPES: TypeOption[] = [
 ];
 
 const NIGHTLIFE_TYPES: TypeOption[] = [
+  { label: "Bar", value: "bar" },
+  { label: "Cocktail Bar", value: "cocktail-bar" },
+  { label: "Sports Bar", value: "sports-bar" },
+  { label: "Tavern", value: "tavern" },
+  { label: "Dive Bar", value: "dive-bar" },
+  { label: "Wine Bar", value: "wine-bar" },
+  { label: "Whiskey Bar", value: "whiskey-bar" },
+  { label: "Karaoke Bar", value: "karaoke-bar" },
+  { label: "Brewpub", value: "brewpub" },
+  { label: "Pub", value: "pub" },
+  { label: "Speakeasy", value: "speakeasy" },
   { label: "Nightclub", value: "nightclub" },
   { label: "Lounge", value: "lounge" },
   { label: "Live Music", value: "live-music" },
-  { label: "Cocktail Bar", value: "cocktail-bar" },
   { label: "Dance Club", value: "dance-club" },
+  { label: "Rooftop", value: "rooftop" },
 ];
 
 export function getDiningTypes(c: Context) {

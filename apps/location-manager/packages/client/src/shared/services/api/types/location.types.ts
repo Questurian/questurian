@@ -61,6 +61,7 @@ export interface Location {
   ianaTimeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  reviewsEnabled: boolean;
   nightlifeDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
   idealFor: IdealForTag[] | null;
@@ -90,6 +91,7 @@ export interface LocationBasic {
   reviewsCount: number | null;
   reviewsGoogleCount: number | null;
   reviewsTripadvisorCount: number | null;
+  reviewsEnabled: boolean;
 }
 
 export interface LocationResponse {
@@ -123,6 +125,7 @@ export interface LocationResponse {
   reviewsCount: number | null;
   reviewsGoogleCount: number | null;
   reviewsTripadvisorCount: number | null;
+  reviewsEnabled: boolean;
   created_at: string;
   updated_at: string;
 }

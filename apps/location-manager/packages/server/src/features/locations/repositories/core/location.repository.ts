@@ -44,6 +44,7 @@ const LOCATION_SELECT_COLUMNS = `
   e.reviews_count as reviewsCount,
   e.reviews_google_count as reviewsGoogleCount,
   e.reviews_tripadvisor_count as reviewsTripadvisorCount,
+  e.reviews_enabled as reviewsEnabled,
   e.created_at,
   e.updated_at
 `;
@@ -213,6 +214,7 @@ export function saveLocation(location: Location): number | boolean {
           tripadvisor_url = $tripadvisor_url,
           tripadvisor_location_id = $tripadvisor_location_id,
           payload_location_ref = $payload_location_ref,
+          reviews_enabled = COALESCE($reviews_enabled, reviews_enabled),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $id
       `).run({
@@ -235,6 +237,10 @@ export function saveLocation(location: Location): number | boolean {
         $tripadvisor_url: location.tripadvisorUrl || null,
         $tripadvisor_location_id: location.tripadvisorLocationId || null,
         $payload_location_ref: location.payload_location_ref || null,
+        $reviews_enabled:
+          location.reviewsEnabled == null
+            ? null
+            : (location.reviewsEnabled ? 1 : 0),
       });
     } else {
       db.query(`
@@ -260,6 +266,7 @@ export function saveLocation(location: Location): number | boolean {
           tripadvisor_url,
           tripadvisor_location_id,
           payload_location_ref,
+          reviews_enabled,
           created_at,
           updated_at
         )
@@ -285,6 +292,7 @@ export function saveLocation(location: Location): number | boolean {
           $tripadvisor_url,
           $tripadvisor_location_id,
           $payload_location_ref,
+          $reviews_enabled,
           CURRENT_TIMESTAMP,
           CURRENT_TIMESTAMP
         )
@@ -310,6 +318,7 @@ export function saveLocation(location: Location): number | boolean {
         $tripadvisor_url: location.tripadvisorUrl || null,
         $tripadvisor_location_id: location.tripadvisorLocationId || null,
         $payload_location_ref: location.payload_location_ref || null,
+        $reviews_enabled: location.reviewsEnabled === false ? 0 : 1,
       });
 
       const inserted = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
@@ -446,6 +455,10 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
     if (updates.reviewsTripadvisorCount !== undefined) {
       entitySetClause.push("reviews_tripadvisor_count = $reviews_tripadvisor_count");
       entityParams.$reviews_tripadvisor_count = updates.reviewsTripadvisorCount;
+    }
+    if (updates.reviewsEnabled !== undefined) {
+      entitySetClause.push("reviews_enabled = $reviews_enabled");
+      entityParams.$reviews_enabled = updates.reviewsEnabled ? 1 : 0;
     }
     if (updates.updated_at !== undefined) {
       entitySetClause.push("updated_at = $updated_at");

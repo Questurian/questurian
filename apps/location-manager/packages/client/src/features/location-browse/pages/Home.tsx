@@ -1,18 +1,19 @@
 import { useMemo, useState } from "react";
 import { locationsApi, useLocationsBasic } from "@client/shared/services/api";
+import type { Category } from "@client/shared/services/api/types";
 import { Button } from "@client/components/ui/button";
 import { SkeletonList, ErrorAlert } from "@client/shared/components/ui";
 import { LocationList } from "../components/list/LocationList";
 import { LocationListEmpty } from "../components/list/LocationListEmpty";
 import { LocationFilters } from "../components/filters/LocationFilters";
 import { useLocationFilters } from "../hooks/useLocationFilters";
-import { useLastOpenedLocation } from "../hooks/useLastOpenedLocation";
+import { useLocationExpansionState } from "../hooks/useLocationExpansionState";
 import { useCountries } from "@client/shared/hooks/useCountries";
 import { buildLocationKey } from "@client/shared/lib/filter-utils";
 
 export function Home() {
   const filters = useLocationFilters();
-  const { lastOpenedId, setLastOpened } = useLastOpenedLocation();
+  const { isExpanded, setExpanded } = useLocationExpansionState();
   const { data: countries = [], isLoading: isLoadingCountries } = useCountries();
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -27,27 +28,44 @@ export function Home() {
     );
   }, [countries, filters.selectedCountry, filters.selectedCity, filters.selectedNeighborhood]);
 
+  const apiCategory = useMemo(() => {
+    if (filters.selectedCategories.length !== 1) {
+      return null;
+    }
+    return filters.selectedCategories[0] as Category;
+  }, [filters.selectedCategories]);
+
   // Build API params - both category and locationKey are optional
   const apiParams = {
-    ...(filters.selectedCategory && { category: filters.selectedCategory }),
+    ...(apiCategory && { category: apiCategory }),
     ...(locationKey && { locationKey })
   };
 
   const { data, isLoading, error, refetch } = useLocationsBasic(apiParams);
   const allLocations = data?.locations ?? [];
 
+  // Apply category filtering client-side to support multi-select category checkboxes.
+  const filteredByCategory = useMemo(() => {
+    if (filters.selectedCategories.length === 0) {
+      return allLocations;
+    }
+    return allLocations.filter((location) =>
+      filters.selectedCategories.includes(location.category)
+    );
+  }, [allLocations, filters.selectedCategories]);
+
   // Apply completion status filter client-side
   const filteredByStatus = useMemo(() => {
     if (filters.selectedCompletionStatus === "all") {
-      return allLocations;
+      return filteredByCategory;
     }
-    return allLocations.filter(location => {
+    return filteredByCategory.filter(location => {
       if (filters.selectedCompletionStatus === "complete") {
         return location.isComplete;
       }
       return !location.isComplete;
     });
-  }, [allLocations, filters.selectedCompletionStatus]);
+  }, [filteredByCategory, filters.selectedCompletionStatus]);
 
   // Apply search filter client-side
   const locations = useMemo(() => {
@@ -60,13 +78,12 @@ export function Home() {
     });
   }, [filteredByStatus, filters.searchQuery]);
 
-  const diningLocations = useMemo(
-    () => locations.filter((location) => location.category === "dining"),
-    [locations]
-  );
-
-  const nightlifeLocations = useMemo(
-    () => locations.filter((location) => location.category === "nightlife"),
+  const diningAndNightlifeLocations = useMemo(
+    () =>
+      locations.filter(
+        (location) =>
+          location.category === "dining" || location.category === "nightlife"
+      ),
     [locations]
   );
 
@@ -75,7 +92,7 @@ export function Home() {
     [locations]
   );
 
-  const showSideBySideCategories = !filters.selectedCategory;
+  const showCategorySections = filters.selectedCategories.length === 0;
 
   const handleDownloadAll = async () => {
     if (isDownloadingAll || locations.length === 0) return;
@@ -131,13 +148,13 @@ export function Home() {
         selectedCountry={filters.selectedCountry}
         selectedCity={filters.selectedCity}
         selectedNeighborhood={filters.selectedNeighborhood}
-        selectedCategory={filters.selectedCategory}
+        selectedCategories={filters.selectedCategories}
         selectedCompletionStatus={filters.selectedCompletionStatus}
         searchQuery={filters.searchQuery}
         onCountryChange={filters.setCountry}
         onCityChange={filters.setCity}
         onNeighborhoodChange={filters.setNeighborhood}
-        onCategoryChange={filters.setCategory}
+        onCategoryToggle={filters.toggleCategory}
         onCompletionStatusChange={filters.setCompletionStatus}
         onSearchChange={filters.setSearch}
         onReset={filters.reset}
@@ -169,43 +186,21 @@ export function Home() {
           <SkeletonList count={8} />
         ) : locations.length === 0 ? (
           <LocationListEmpty hasFilters={filters.isFilterActive} />
-        ) : showSideBySideCategories ? (
+        ) : showCategorySections ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Restaurants ({diningLocations.length})
-                </h3>
-                {diningLocations.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border bg-card/50 p-4 text-sm text-muted-foreground">
-                    No restaurant documents in this view.
-                  </div>
-                ) : (
-                  <LocationList
-                    locations={diningLocations}
-                    lastOpenedId={lastOpenedId}
-                    onExpand={setLastOpened}
-                  />
-                )}
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Nightlife ({nightlifeLocations.length})
-                </h3>
-                {nightlifeLocations.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border bg-card/50 p-4 text-sm text-muted-foreground">
-                    No nightlife documents in this view.
-                  </div>
-                ) : (
-                  <LocationList
-                    locations={nightlifeLocations}
-                    lastOpenedId={lastOpenedId}
-                    onExpand={setLastOpened}
-                  />
-                )}
-              </section>
-            </div>
+            <section className="space-y-3">
+              {diningAndNightlifeLocations.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border bg-card/50 p-4 text-sm text-muted-foreground">
+                  No restaurant or nightlife documents in this view.
+                </div>
+              ) : (
+                <LocationList
+                  locations={diningAndNightlifeLocations}
+                  isLocationExpanded={isExpanded}
+                  onLocationExpandedChange={setExpanded}
+                />
+              )}
+            </section>
 
             {otherLocations.length > 0 && (
               <section className="space-y-3">
@@ -214,8 +209,8 @@ export function Home() {
                 </h3>
                 <LocationList
                   locations={otherLocations}
-                  lastOpenedId={lastOpenedId}
-                  onExpand={setLastOpened}
+                  isLocationExpanded={isExpanded}
+                  onLocationExpandedChange={setExpanded}
                 />
               </section>
             )}
@@ -223,8 +218,8 @@ export function Home() {
         ) : (
           <LocationList
             locations={locations}
-            lastOpenedId={lastOpenedId}
-            onExpand={setLastOpened}
+            isLocationExpanded={isExpanded}
+            onLocationExpandedChange={setExpanded}
           />
         )}
       </div>
