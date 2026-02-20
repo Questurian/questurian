@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 
-const CATEGORY_VALUES = ["dining", "accommodations", "attractions", "nightlife"] as const;
+const CATEGORY_VALUES = ["dining", "accommodations", "attractions", "nightlife", "key_locations"] as const;
 
 function tableExists(db: Database, tableName: string): boolean {
   const row = db
@@ -16,11 +16,88 @@ function getTableColumns(db: Database, tableName: string): Set<string> {
   return new Set(rows.map((row) => row.name));
 }
 
+function ensureEntitiesTableAcceptsKeyLocations(db: Database): void {
+  if (!tableExists(db, "entities")) return;
+
+  const schemaRow = db
+    .query("SELECT sql FROM sqlite_master WHERE type='table' AND name='entities'")
+    .get() as { sql: string } | null;
+  const sql = schemaRow?.sql ?? "";
+  if (sql.includes("'key_locations'")) {
+    return;
+  }
+
+  db.run("PRAGMA foreign_keys = OFF");
+  db.run("BEGIN TRANSACTION");
+  try {
+    db.run(`
+      CREATE TABLE entities_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL CHECK(category IN ('dining', 'accommodations', 'attractions', 'nightlife', 'key_locations')),
+        name TEXT NOT NULL,
+        title TEXT,
+        address TEXT NOT NULL,
+        url TEXT NOT NULL,
+        lat REAL,
+        lng REAL,
+        locationKey TEXT,
+        district TEXT,
+        contactAddress TEXT,
+        countryCode TEXT,
+        iana_time_id TEXT,
+        phoneNumber TEXT,
+        website TEXT,
+        email TEXT,
+        neighborhood_description TEXT,
+        slug TEXT UNIQUE,
+        place_id TEXT,
+        tripadvisor_url TEXT,
+        tripadvisor_location_id TEXT,
+        payload_location_ref TEXT,
+        reviews_fetched_at TEXT,
+        reviews_count INTEGER,
+        reviews_google_count INTEGER,
+        reviews_tripadvisor_count INTEGER,
+        reviews_enabled INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(category, name, address)
+      )
+    `);
+
+    db.run(`
+      INSERT INTO entities_new (
+        id, category, name, title, address, url, lat, lng, locationKey, district,
+        contactAddress, countryCode, iana_time_id, phoneNumber, website, email,
+        neighborhood_description, slug, place_id, tripadvisor_url, tripadvisor_location_id,
+        payload_location_ref, reviews_fetched_at, reviews_count, reviews_google_count,
+        reviews_tripadvisor_count, reviews_enabled, created_at, updated_at
+      )
+      SELECT
+        id, category, name, title, address, url, lat, lng, locationKey, district,
+        contactAddress, countryCode, iana_time_id, phoneNumber, website, email,
+        neighborhood_description, slug, place_id, tripadvisor_url, tripadvisor_location_id,
+        payload_location_ref, reviews_fetched_at, reviews_count, reviews_google_count,
+        reviews_tripadvisor_count, reviews_enabled, created_at, updated_at
+      FROM entities
+    `);
+
+    db.run("DROP TABLE entities");
+    db.run("ALTER TABLE entities_new RENAME TO entities");
+    db.run("COMMIT");
+  } catch (error) {
+    db.run("ROLLBACK");
+    throw error;
+  } finally {
+    db.run("PRAGMA foreign_keys = ON");
+  }
+}
+
 function ensureEntitySchema(db: Database): void {
   db.run(`
     CREATE TABLE IF NOT EXISTS entities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      category TEXT NOT NULL CHECK(category IN ('dining', 'accommodations', 'attractions', 'nightlife')),
+      category TEXT NOT NULL CHECK(category IN ('dining', 'accommodations', 'attractions', 'nightlife', 'key_locations')),
       name TEXT NOT NULL,
       title TEXT,
       address TEXT NOT NULL,
@@ -52,6 +129,8 @@ function ensureEntitySchema(db: Database): void {
     )
   `);
 
+  ensureEntitiesTableAcceptsKeyLocations(db);
+
   const entityColumns = getTableColumns(db, "entities");
   if (!entityColumns.has("reviews_enabled")) {
     db.run("ALTER TABLE entities ADD COLUMN reviews_enabled INTEGER NOT NULL DEFAULT 1");
@@ -67,6 +146,7 @@ function ensureEntitySchema(db: Database): void {
         nightlife_details_json TEXT,
         accommodations_details_json TEXT,
         attractions_details_json TEXT,
+        key_locations_details_json TEXT,
         tripadvisor_meal_types TEXT,
         tripadvisor_cuisines TEXT,
         tripadvisor_features TEXT,
@@ -81,6 +161,9 @@ function ensureEntitySchema(db: Database): void {
     }
     if (!typedColumns.has("attractions_details_json")) {
       db.run(`ALTER TABLE ${category}_locations ADD COLUMN attractions_details_json TEXT`);
+    }
+    if (!typedColumns.has("key_locations_details_json")) {
+      db.run(`ALTER TABLE ${category}_locations ADD COLUMN key_locations_details_json TEXT`);
     }
   }
 
@@ -331,6 +414,7 @@ function migrateLocationsBackupIntoEntities(db: Database, backupTable: string): 
     db.run(`
       INSERT INTO ${category}_locations (
         entity_id, type, hours_json, ideal_for_json, nightlife_details_json, accommodations_details_json, attractions_details_json,
+        key_locations_details_json,
         tripadvisor_meal_types, tripadvisor_cuisines, tripadvisor_features, price_level
       )
       SELECT
@@ -341,6 +425,7 @@ function migrateLocationsBackupIntoEntities(db: Database, backupTable: string): 
         ${col("nightlife_details_json")},
         ${col("accommodations_details_json")},
         ${col("attractions_details_json")},
+        ${col("key_locations_details_json")},
         ${col("tripadvisor_meal_types")},
         ${col("tripadvisor_cuisines")},
         ${col("tripadvisor_features")},
@@ -420,7 +505,8 @@ function validateRowCounts(db: Database, legacyLocationsTable: string | null): v
       (SELECT COUNT(*) FROM dining_locations) +
       (SELECT COUNT(*) FROM nightlife_locations) +
       (SELECT COUNT(*) FROM accommodations_locations) +
-      (SELECT COUNT(*) FROM attractions_locations) AS count
+      (SELECT COUNT(*) FROM attractions_locations) +
+      (SELECT COUNT(*) FROM key_locations_locations) AS count
   `).get() as { count: number };
 
   if (legacyLocationCount.count !== entitiesCount.count || entitiesCount.count !== typedCount.count) {

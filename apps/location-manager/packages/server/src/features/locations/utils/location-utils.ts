@@ -14,6 +14,7 @@ const CATEGORY_VALUES: readonly LocationCategory[] = [
   "accommodations",
   "attractions",
   "nightlife",
+  "key_locations",
 ];
 
 function assertCategory(category: unknown): LocationCategory {
@@ -235,6 +236,19 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
+  const parseKeyLocationsDetails = (keyLocationsDetailsJson?: string | null): Record<string, unknown> | null => {
+    if (!keyLocationsDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(keyLocationsDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
   const parseIdealFor = (idealForJson?: string | null): string[] | null => {
     if (!idealForJson) return null;
 
@@ -271,6 +285,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     nightlifeDetails: parseNightlifeDetails(location.nightlifeDetailsJson || null),
     accommodationsDetails: parseAccommodationsDetails(location.accommodationsDetailsJson || null),
     attractionsDetails: parseAttractionsDetails(location.attractionsDetailsJson || null),
+    keyLocationsDetails: parseKeyLocationsDetails(location.keyLocationsDetailsJson || null),
     operationHours: parseOperationHours(location.hoursJson || null),
     tripadvisorMealTypes: parseTripadvisorStringListJson(location.tripadvisorMealTypesJson || null),
     tripadvisorCuisines: parseTripadvisorStringListJson(location.tripadvisorCuisinesJson || null),
@@ -321,6 +336,7 @@ export function transformLocationToBasicResponse(
   const isNightlife = category === "nightlife";
   const isAccommodations = category === "accommodations";
   const isAttractions = category === "attractions";
+  const isKeyLocations = category === "key_locations";
 
   const parseNightlifeDetails = (): Record<string, unknown> | null => {
     if (!location.nightlifeDetailsJson) return null;
@@ -361,9 +377,23 @@ export function transformLocationToBasicResponse(
     }
   };
 
+  const parseKeyLocationsDetails = (): Record<string, unknown> | null => {
+    if (!location.keyLocationsDetailsJson) return null;
+    try {
+      const parsed = JSON.parse(location.keyLocationsDetailsJson);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
   const nightlifeDetails = parseNightlifeDetails();
   const accommodationsDetails = parseAccommodationsDetails();
   const attractionsDetails = parseAttractionsDetails();
+  const keyLocationsDetails = parseKeyLocationsDetails();
   const nightlifeSectionValue = (section: "theSpace" | "theScene", key: string): unknown => {
     const detailsRoot = nightlifeDetails?.["details"];
     if (!detailsRoot || typeof detailsRoot !== "object" || Array.isArray(detailsRoot)) return null;
@@ -392,6 +422,11 @@ export function transformLocationToBasicResponse(
     return (sectionRoot as Record<string, unknown>)[key] ?? null;
   };
 
+  const keyLocationsValue = (key: string): unknown => {
+    if (!keyLocationsDetails || typeof keyLocationsDetails !== "object") return null;
+    return keyLocationsDetails[key] ?? null;
+  };
+
   const nightlifeString = (value: unknown): string | null => {
     if (typeof value === "string") {
       const trimmed = value.trim();
@@ -409,6 +444,17 @@ export function transformLocationToBasicResponse(
   };
 
   const accommodationsString = (value: unknown): string | null => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    return null;
+  };
+
+  const keyLocationsString = (value: unknown): string | null => {
     if (typeof value === "string") {
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
@@ -497,6 +543,28 @@ export function transformLocationToBasicResponse(
   const attractionsWebsite =
     accommodationsString(attractionsSectionValue("contact", "website")) ||
     accommodationsString(location.website);
+  const keyLocationsType =
+    keyLocationsString(keyLocationsValue("location_type")) ||
+    keyLocationsString(location.type);
+  const keyLocationsStatus = keyLocationsString(keyLocationsValue("status"));
+  const keyLocationsDetailsNode = keyLocationsValue("details");
+  const keyLocationsAccess =
+    keyLocationsDetailsNode &&
+    typeof keyLocationsDetailsNode === "object" &&
+    !Array.isArray(keyLocationsDetailsNode)
+      ? (keyLocationsDetailsNode as Record<string, unknown>).access
+      : null;
+  const keyLocationsInfo =
+    keyLocationsDetailsNode &&
+    typeof keyLocationsDetailsNode === "object" &&
+    !Array.isArray(keyLocationsDetailsNode)
+      ? (keyLocationsDetailsNode as Record<string, unknown>).info
+      : null;
+  const keyLocationsWebsite = keyLocationsString(keyLocationsValue("website")) || accommodationsString(location.website);
+  const keyLocationsPhone = keyLocationsString(keyLocationsValue("phone")) || accommodationsString(location.phoneNumber);
+  const keyLocationsHours = keyLocationsValue("hours");
+  const keyLocationsDistrict = keyLocationsString(keyLocationsValue("neighborhood")) || accommodationsString(location.district);
+  const keyLocationsImages = keyLocationsValue("images");
 
   // Calculate completion status based on category-specific required fields.
   // Non-nightlife records require shared geocoding/contact fields.
@@ -510,12 +578,14 @@ export function transformLocationToBasicResponse(
   const hasPhoneNumber =
     Boolean(location.phoneNumber?.trim()) ||
     (isNightlife && Boolean(nightlifePhone)) ||
-    (isAccommodations && Boolean(accommodationsPhone));
+    (isAccommodations && Boolean(accommodationsPhone)) ||
+    (isKeyLocations && Boolean(keyLocationsPhone));
   const hasWebsite =
     Boolean(location.website?.trim()) ||
     (isNightlife && Boolean(nightlifeWebsite)) ||
     (isAccommodations && Boolean(accommodationsWebsite)) ||
-    (isAttractions && Boolean(attractionsWebsite));
+    (isAttractions && Boolean(attractionsWebsite)) ||
+    (isKeyLocations && Boolean(keyLocationsWebsite));
   const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
   const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
   const hasIdealFor = (() => {
@@ -587,6 +657,37 @@ export function transformLocationToBasicResponse(
     }
     return false;
   })();
+  const hasKeyLocationsProfile = Boolean(keyLocationsDetails && Object.keys(keyLocationsDetails).length > 0);
+  const hasKeyLocationsType = Boolean(keyLocationsType);
+  const hasKeyLocationsStatus = Boolean(keyLocationsStatus);
+  const hasKeyLocationsAccess = Boolean(
+    keyLocationsAccess &&
+      typeof keyLocationsAccess === "object" &&
+      !Array.isArray(keyLocationsAccess) &&
+      Object.keys(keyLocationsAccess as Record<string, unknown>).length > 0
+  );
+  const hasKeyLocationsInfo = Boolean(
+    keyLocationsInfo &&
+      typeof keyLocationsInfo === "object" &&
+      !Array.isArray(keyLocationsInfo) &&
+      Object.keys(keyLocationsInfo as Record<string, unknown>).length > 0
+  );
+  const hasKeyLocationsVisitHours = (() => {
+    if (hasOperationHours) return true;
+    if (!keyLocationsHours) return false;
+    if (typeof keyLocationsHours === "string") {
+      return keyLocationsHours.trim().length > 0;
+    }
+    if (Array.isArray(keyLocationsHours)) {
+      return keyLocationsHours.length > 0;
+    }
+    if (typeof keyLocationsHours === "object") {
+      return Object.keys(keyLocationsHours as Record<string, unknown>).length > 0;
+    }
+    return false;
+  })();
+  const hasKeyLocationsDistrict = Boolean(keyLocationsDistrict);
+  const hasKeyLocationsImages = Array.isArray(keyLocationsImages) && keyLocationsImages.length > 0;
 
   const hasSharedCommonFields =
     hasTitle &&
@@ -613,6 +714,13 @@ export function transformLocationToBasicResponse(
     hasCoordinates;
 
   const hasAttractionsCommonFields =
+    hasTitle &&
+    hasMedia &&
+    hasAddress &&
+    hasCountryCode &&
+    hasIanaTimeId &&
+    hasCoordinates;
+  const hasKeyLocationsCommonFields =
     hasTitle &&
     hasMedia &&
     hasAddress &&
@@ -676,6 +784,20 @@ export function transformLocationToBasicResponse(
         hasAttractionsBookingRequired &&
         hasAttractionsIdealFor &&
         hasAttractionsVisitHours &&
+        hasWebsite
+      )
+    : isKeyLocations
+      ? (
+        hasKeyLocationsCommonFields &&
+        hasKeyLocationsProfile &&
+        hasKeyLocationsType &&
+        hasKeyLocationsStatus &&
+        hasKeyLocationsAccess &&
+        hasKeyLocationsInfo &&
+        hasKeyLocationsVisitHours &&
+        hasKeyLocationsDistrict &&
+        (hasMedia || hasKeyLocationsImages) &&
+        hasPhoneNumber &&
         hasWebsite
       )
     : (

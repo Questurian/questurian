@@ -6,6 +6,7 @@ const CATEGORY_LABELS: Record<LocationCategory, string> = {
   accommodations: "Accommodations",
   attractions: "Attractions",
   nightlife: "Nightlife",
+  key_locations: "Key Locations",
 };
 
 const CATEGORY_ORDER: LocationCategory[] = [
@@ -13,6 +14,7 @@ const CATEGORY_ORDER: LocationCategory[] = [
   "accommodations",
   "attractions",
   "nightlife",
+  "key_locations",
 ];
 
 export function getIdealForOptionGroups(category: LocationCategory) {
@@ -48,7 +50,7 @@ function buildIdealForInstructions(category?: LocationCategory | null): string {
 export function buildAiPromptTemplate(category?: LocationCategory | null): string {
   const categoryLine = category
     ? `- **category** (string) - Must be "${category}"`
-    : '- **category** (string) - One of: "dining", "accommodations", "attractions", "nightlife"';
+    : '- **category** (string) - One of: "dining", "accommodations", "attractions", "nightlife", "key_locations"';
 
   const categoryExample = category || "dining";
 

@@ -23,4 +23,9 @@ export const typesApi = {
     const response = await apiGet<{ options: TypeOption[] }>("/api/nightlife-types");
     return response.options;
   },
+
+  async getKeyLocationsTypes(): Promise<TypeOption[]> {
+    const response = await apiGet<{ options: TypeOption[] }>("/api/key-locations-types");
+    return response.options;
+  },
 };

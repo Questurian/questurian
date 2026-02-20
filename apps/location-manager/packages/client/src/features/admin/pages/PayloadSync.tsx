@@ -23,8 +23,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@client/components/ui/alert-dialog";
-import type { Category } from "@client/shared/services/api/types";
+import type { Category, PayloadSyncCategory } from "@client/shared/services/api/types";
 import type { SyncStatusResponse } from "@client/shared/services/api/types/payload.types";
+
+function isPayloadSyncCategory(category: Category): category is PayloadSyncCategory {
+  return category !== "key_locations";
+}
 
 export function PayloadSync() {
   const { data: statusData, isLoading, error, refetch: refetchSyncStatus } = useSyncStatus();
@@ -70,9 +74,9 @@ export function PayloadSync() {
 
     // Filter by status
     if (statusFilter === "synced") {
-      filtered = filtered.filter(item => item.synced && !item.needsResync);
+      filtered = filtered.filter(item => isPayloadSyncCategory(item.category) && item.synced && !item.needsResync);
     } else if (statusFilter === "ready") {
-      filtered = filtered.filter(item => !item.synced && item.isComplete);
+      filtered = filtered.filter(item => isPayloadSyncCategory(item.category) && !item.synced && item.isComplete);
     } else if (statusFilter === "incomplete") {
       filtered = filtered.filter(item => !item.isComplete);
     }
@@ -88,16 +92,22 @@ export function PayloadSync() {
   // Calculate statistics
   const stats = useMemo(() => {
     const total = (locationsBasicData?.locations ?? []).length;
-    const synced = allLocationsWithStatus.filter(item => item.synced && !item.needsResync).length;
-    const ready = allLocationsWithStatus.filter(item => !item.synced && item.isComplete).length;
+    const synced = allLocationsWithStatus.filter(item => isPayloadSyncCategory(item.category) && item.synced && !item.needsResync).length;
+    const ready = allLocationsWithStatus.filter(item => isPayloadSyncCategory(item.category) && !item.synced && item.isComplete).length;
     const incomplete = allLocationsWithStatus.filter(item => !item.isComplete).length;
     const needsResync = allLocationsWithStatus.filter(item => item.needsResync).length;
     const failed = allLocationsWithStatus.filter(item => item.syncState?.sync_status === "failed").length;
+    const unsupported = allLocationsWithStatus.filter(item => !isPayloadSyncCategory(item.category)).length;
 
-    return { total, synced, ready, incomplete, needsResync, failed };
+    return { total, synced, ready, incomplete, needsResync, failed, unsupported };
   }, [locationsBasicData, allLocationsWithStatus]);
 
-  const handleSyncLocation = async (locationId: number) => {
+  const handleSyncLocation = async (locationId: number, category: Category) => {
+    if (!isPayloadSyncCategory(category)) {
+      showToast("Payload sync does not support Key Locations yet.", { x: window.innerWidth / 2, y: 100 });
+      return;
+    }
+
     setSyncingId(locationId);
     try {
       await syncLocationMutation.mutateAsync(locationId);
@@ -108,7 +118,13 @@ export function PayloadSync() {
 
   const handleSyncAll = async () => {
     const category = categoryFilter !== "all" ? categoryFilter : undefined;
-    await syncAllMutation.mutateAsync(category);
+    if (category && !isPayloadSyncCategory(category)) {
+      showToast("Payload sync does not support Key Locations yet.", { x: window.innerWidth / 2, y: 100 });
+      return;
+    }
+    const syncCategory: PayloadSyncCategory | undefined =
+      category && isPayloadSyncCategory(category) ? category : undefined;
+    await syncAllMutation.mutateAsync(syncCategory);
   };
 
   const handleClearDatabase = async () => {
@@ -123,6 +139,10 @@ export function PayloadSync() {
   };
 
   const getSyncStatusBadge = (item: typeof allLocationsWithStatus[number]) => {
+    if (!isPayloadSyncCategory(item.category)) {
+      return <span className="px-2 py-1 text-xs rounded bg-muted text-muted-foreground">Unsupported</span>;
+    }
+
     if (!item.syncState) {
       if (item.isComplete) {
         return <span className="px-2 py-1 text-xs rounded bg-blue-500/15 text-blue-400">Ready to Sync</span>;
@@ -148,6 +168,11 @@ export function PayloadSync() {
 
     return null;
   };
+
+  const syncableFilteredCount = useMemo(
+    () => filteredData.filter((item) => isPayloadSyncCategory(item.category)).length,
+    [filteredData]
+  );
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -230,7 +255,7 @@ export function PayloadSync() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-7 gap-4 mb-6">
           <div className="bg-muted/50 border border-border p-4 rounded">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
             <div className="text-sm text-muted-foreground">Total</div>
@@ -254,6 +279,10 @@ export function PayloadSync() {
           <div className="bg-red-500/10 border border-red-500/20 p-4 rounded">
             <div className="text-2xl font-bold text-red-400">{stats.failed}</div>
             <div className="text-sm text-red-400/80">Failed</div>
+          </div>
+          <div className="bg-muted/50 border border-border p-4 rounded">
+            <div className="text-2xl font-bold text-muted-foreground">{stats.unsupported}</div>
+            <div className="text-sm text-muted-foreground">Unsupported</div>
           </div>
         </div>
 
@@ -286,6 +315,7 @@ export function PayloadSync() {
                 <SelectItem value="accommodations">Accommodations</SelectItem>
                 <SelectItem value="attractions">Attractions</SelectItem>
                 <SelectItem value="nightlife">Nightlife</SelectItem>
+                <SelectItem value="key_locations">Key Locations</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -293,7 +323,7 @@ export function PayloadSync() {
           <div className="flex items-end">
             <Button
               onClick={handleSyncAll}
-              disabled={syncAllMutation.isPending || filteredData.length === 0}
+              disabled={syncAllMutation.isPending || syncableFilteredCount === 0}
               className="w-full"
             >
               {syncAllMutation.isPending ? "Syncing..." : "Sync All"}
@@ -377,12 +407,18 @@ export function PayloadSync() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       <Button
-                        onClick={() => handleSyncLocation(item.locationId)}
-                        disabled={syncingId === item.locationId || (item.synced && !item.needsResync)}
+                        onClick={() => handleSyncLocation(item.locationId, item.category)}
+                        disabled={
+                          !isPayloadSyncCategory(item.category) ||
+                          syncingId === item.locationId ||
+                          (item.synced && !item.needsResync)
+                        }
                         variant="outline"
                         size="sm"
                       >
-                        {syncingId === item.locationId
+                        {!isPayloadSyncCategory(item.category)
+                          ? "Unsupported"
+                          : syncingId === item.locationId
                           ? "Syncing..."
                           : !item.synced
                             ? "Sync"

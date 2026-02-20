@@ -8,7 +8,8 @@
     "dev:clean": "lsof -ti:4002 | xargs kill -9 2>/dev/null || true; pnpm install --filter @questurian/lm-server... && node scripts/show-commands.cjs && bun run src/server/main.ts",
     "build": "echo 'No build step needed for Bun'",
     "lint": "echo 'Lint intentionally skipped for lm-server (TypeScript baseline not yet clean)'",
-    "test": "bun test"
+    "test": "bun test",
+    "seed:key-locations": "bun run src/features/locations/scripts/import-key-locations.ts"
   },
   "dependencies": {
     "@questurian/lm-shared": "workspace:*",

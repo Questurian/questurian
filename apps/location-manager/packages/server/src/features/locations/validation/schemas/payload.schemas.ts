@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { locationCategorySchema } from "./maps.schemas";
+
+export const payloadSyncCategorySchema = z.enum([
+  "dining",
+  "accommodations",
+  "attractions",
+  "nightlife",
+]);
 
 /**
  * Schema for syncing a single location by ID (path parameter)
@@ -14,9 +20,10 @@ export const syncLocationIdSchema = z.object({
  * POST /api/payload/sync-all
  */
 export const syncAllSchema = z.object({
-  category: locationCategorySchema.optional()
+  category: payloadSyncCategorySchema.optional()
 });
 
 // Type exports
 export type SyncLocationIdDto = z.infer<typeof syncLocationIdSchema>;
 export type SyncAllDto = z.infer<typeof syncAllSchema>;
+export type PayloadSyncCategoryDto = z.infer<typeof payloadSyncCategorySchema>;

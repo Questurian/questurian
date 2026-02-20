@@ -78,22 +78,6 @@ export function Home() {
     });
   }, [filteredByStatus, filters.searchQuery]);
 
-  const diningAndNightlifeLocations = useMemo(
-    () =>
-      locations.filter(
-        (location) =>
-          location.category === "dining" || location.category === "nightlife"
-      ),
-    [locations]
-  );
-
-  const otherLocations = useMemo(
-    () => locations.filter((location) => location.category !== "dining" && location.category !== "nightlife"),
-    [locations]
-  );
-
-  const showCategorySections = filters.selectedCategories.length === 0;
-
   const handleDownloadAll = async () => {
     if (isDownloadingAll || locations.length === 0) return;
 
@@ -186,35 +170,6 @@ export function Home() {
           <SkeletonList count={8} />
         ) : locations.length === 0 ? (
           <LocationListEmpty hasFilters={filters.isFilterActive} />
-        ) : showCategorySections ? (
-          <div className="space-y-6">
-            <section className="space-y-3">
-              {diningAndNightlifeLocations.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border bg-card/50 p-4 text-sm text-muted-foreground">
-                  No restaurant or nightlife documents in this view.
-                </div>
-              ) : (
-                <LocationList
-                  locations={diningAndNightlifeLocations}
-                  isLocationExpanded={isExpanded}
-                  onLocationExpandedChange={setExpanded}
-                />
-              )}
-            </section>
-
-            {otherLocations.length > 0 && (
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Other Categories ({otherLocations.length})
-                </h3>
-                <LocationList
-                  locations={otherLocations}
-                  isLocationExpanded={isExpanded}
-                  onLocationExpandedChange={setExpanded}
-                />
-              </section>
-            )}
-          </div>
         ) : (
           <LocationList
             locations={locations}

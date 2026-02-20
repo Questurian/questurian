@@ -22,6 +22,7 @@ export interface CreateMapsRequest {
   nightlifeDetails?: Record<string, unknown> | string;
   accommodationsDetails?: Record<string, unknown> | string;
   attractionsDetails?: Record<string, unknown> | string;
+  keyLocationsDetails?: Record<string, unknown> | string;
   priceLevel?: string;
   idealFor?: string[];
   neighborhoodDescription?: string;
@@ -67,6 +68,7 @@ export interface UpdateMapsRequest {
   nightlifeDetails?: Record<string, unknown> | string | null;
   accommodationsDetails?: Record<string, unknown> | string | null;
   attractionsDetails?: Record<string, unknown> | string | null;
+  keyLocationsDetails?: Record<string, unknown> | string | null;
   email?: string;
   neighborhoodDescription?: string;
   operationHours?: Record<string, unknown> | string;

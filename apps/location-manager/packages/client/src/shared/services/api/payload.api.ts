@@ -4,8 +4,8 @@
 
 import { apiPost, apiGet } from "./client";
 import { API_ENDPOINTS } from "./config";
-import type { Category } from "./types";
 import type {
+  PayloadSyncCategory,
   SyncResult,
   SyncLocationResponse,
   SyncAllResponse,
@@ -29,7 +29,7 @@ export const payloadApi = {
   /**
    * Sync all locations to Payload CMS (optionally filtered by category)
    */
-  async syncAll(category?: Category): Promise<SyncResult[]> {
+  async syncAll(category?: PayloadSyncCategory): Promise<SyncResult[]> {
     const response = await apiPost<SyncAllResponse>(
       API_ENDPOINTS.PAYLOAD_SYNC_ALL,
       { category }

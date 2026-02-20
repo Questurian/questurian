@@ -12,7 +12,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 /**
  * API endpoint paths
  */
-type Category = "dining" | "accommodations" | "attractions" | "nightlife";
+type Category = "dining" | "accommodations" | "attractions" | "nightlife" | "key_locations";
 
 export const API_ENDPOINTS = {
   // Category-specific location management

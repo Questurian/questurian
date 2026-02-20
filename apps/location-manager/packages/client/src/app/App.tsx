@@ -5,6 +5,7 @@ import {
   AddLocationChooser,
   AddAccommodationsLocation,
   AddAttractionsLocation,
+  AddKeyLocationsLocation,
   AddNightlifeLocation,
   AddRestaurantLocation,
 } from "@client/features/location-create";
@@ -26,6 +27,7 @@ function App() {
             <Route path="/add/nightlife" element={<AddNightlifeLocation />} />
             <Route path="/add/accommodations" element={<AddAccommodationsLocation />} />
             <Route path="/add/attractions" element={<AddAttractionsLocation />} />
+            <Route path="/add/key-locations" element={<AddKeyLocationsLocation />} />
             <Route path="/edit/:category/:id" element={<EditLocationRoute />} />
 
             <Route path="/admin/taxonomy" element={<TaxonomyReview />} />

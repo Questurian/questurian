@@ -34,6 +34,13 @@ export function AddLocationForm({
   hideCategoryField = false,
 }: AddLocationFormProps) {
   const idealForOptionGroups = getIdealForOptionGroups(selectedCategory || "dining");
+  const categoryLabelByValue: Record<LocationCategory, string> = {
+    dining: "Dining",
+    accommodations: "Accommodations",
+    attractions: "Attractions",
+    nightlife: "Nightlife",
+    key_locations: "Key Locations",
+  };
   const idealForDescription =
     selectedCategory === "dining" || selectedCategory === "attractions"
       ? "Choose 1 to 4 tags"
@@ -89,7 +96,7 @@ export function AddLocationForm({
             {hideCategoryField ? (
               <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
                 <span className="text-xs text-muted-foreground block mb-1">Category</span>
-                {(selectedCategory || "dining").charAt(0).toUpperCase() + (selectedCategory || "dining").slice(1)}
+                {categoryLabelByValue[selectedCategory || "dining"]}
               </div>
             ) : (
               <FormSelect
@@ -102,6 +109,7 @@ export function AddLocationForm({
                 <SelectItem value="accommodations">Accommodations</SelectItem>
                 <SelectItem value="attractions">Attractions</SelectItem>
                 <SelectItem value="nightlife">Nightlife</SelectItem>
+                <SelectItem value="key_locations">Key Locations</SelectItem>
               </FormSelect>
             )}
             {selectedCategory && (

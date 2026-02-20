@@ -97,6 +97,7 @@ export function CitySelectionDialog({
               <option value="accommodations">Accommodations</option>
               <option value="attractions">Attractions</option>
               <option value="nightlife">Nightlife</option>
+              <option value="key_locations">Key Locations</option>
             </select>
           </div>
         </div>

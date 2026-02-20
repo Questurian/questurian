@@ -26,7 +26,7 @@ export const locationsCrudApi = {
       return apiGet<LocationsResponse>(API_ENDPOINTS.LOCATIONS(params.category), queryParams);
     }
 
-    const categories: Category[] = ["dining", "accommodations", "attractions", "nightlife"];
+    const categories: Category[] = ["dining", "accommodations", "attractions", "nightlife", "key_locations"];
     const results = await Promise.all(
       categories.map((category) =>
         apiGet<LocationsResponse>(API_ENDPOINTS.LOCATIONS(category), queryParams)
@@ -46,7 +46,7 @@ export const locationsCrudApi = {
       return apiGet<LocationsBasicResponse>(API_ENDPOINTS.LOCATIONS_BASIC(params.category), queryParams);
     }
 
-    const categories: Category[] = ["dining", "accommodations", "attractions", "nightlife"];
+    const categories: Category[] = ["dining", "accommodations", "attractions", "nightlife", "key_locations"];
     const results = await Promise.all(
       categories.map((category) =>
         apiGet<LocationsBasicResponse>(API_ENDPOINTS.LOCATIONS_BASIC(category), queryParams)

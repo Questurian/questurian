@@ -157,6 +157,39 @@ describe("maps create schema category rules", () => {
 
     expect(result.success).toBe(false);
   });
+
+  test("accepts key_locations payload with keyLocationsDetails", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "key_locations",
+      type: "airport",
+      keyLocationsDetails: {
+        location_type: "airport",
+        description: "Main international airport",
+        status: "active",
+        details: {
+          access: {
+            taxi: { available: true },
+          },
+          info: {
+            terminals: 2,
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("rejects key_locations payload when keyLocationsDetails is missing", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "key_locations",
+      type: "airport",
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("google prefill schema", () => {

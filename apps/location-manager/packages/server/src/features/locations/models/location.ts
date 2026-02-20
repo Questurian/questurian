@@ -1,4 +1,4 @@
-export type LocationCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife';
+export type LocationCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key_locations';
 
 // Hierarchical Location Taxonomy Types
 export interface NeighborhoodData {
@@ -56,6 +56,7 @@ export interface Location {
   nightlifeDetailsJson?: string | null;
   accommodationsDetailsJson?: string | null;
   attractionsDetailsJson?: string | null;
+  keyLocationsDetailsJson?: string | null;
   tripadvisorMealTypesJson?: string | null;
   tripadvisorCuisinesJson?: string | null;
   tripadvisorFeaturesJson?: string | null;
@@ -151,6 +152,7 @@ export interface CreateMapsRequest {
   nightlifeDetails?: Record<string, unknown> | string;
   accommodationsDetails?: Record<string, unknown> | string;
   attractionsDetails?: Record<string, unknown> | string;
+  keyLocationsDetails?: Record<string, unknown> | string;
   priceLevel?: string;
   operationHours?: Record<string, unknown> | string;
   tripadvisorMealTypes?: string[] | string;
@@ -204,6 +206,7 @@ export interface LocationResponse {
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
   attractionsDetails: Record<string, unknown> | null;
+  keyLocationsDetails: Record<string, unknown> | null;
   operationHours: Record<string, unknown> | null;
   tripadvisorMealTypes: string[] | null;
   tripadvisorCuisines: string[] | null;

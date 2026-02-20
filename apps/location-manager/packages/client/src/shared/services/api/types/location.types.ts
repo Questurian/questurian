@@ -64,6 +64,7 @@ export interface Location {
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
   attractionsDetails: Record<string, unknown> | null;
+  keyLocationsDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
   idealFor: string[] | null;
   operationHours: Record<string, unknown> | null;
@@ -110,6 +111,7 @@ export interface LocationResponse {
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
   attractionsDetails: Record<string, unknown> | null;
+  keyLocationsDetails: Record<string, unknown> | null;
   neighborhoodDescription: string | null;
   idealFor: string[] | null;
   operationHours: Record<string, unknown> | null;

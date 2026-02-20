@@ -14,6 +14,7 @@ export async function clearDatabase(c: Context) {
     "nightlife_locations",
     "accommodations_locations",
     "attractions_locations",
+    "key_locations_locations",
     "instagram_embeds",
     "uploads",
     "tripadvisor_places",
@@ -30,6 +31,7 @@ export async function clearDatabase(c: Context) {
     db.run("DELETE FROM nightlife_locations");
     db.run("DELETE FROM accommodations_locations");
     db.run("DELETE FROM attractions_locations");
+    db.run("DELETE FROM key_locations_locations");
     db.run("DELETE FROM instagram_embeds");
     db.run("DELETE FROM uploads");
     db.run("DELETE FROM tripadvisor_places");

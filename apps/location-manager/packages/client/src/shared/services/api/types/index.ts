@@ -94,6 +94,7 @@ export type {
 
 // Payload sync types
 export type {
+  PayloadSyncCategory,
   SyncResult,
   SyncStatusResponse,
   SyncLocationResponse,

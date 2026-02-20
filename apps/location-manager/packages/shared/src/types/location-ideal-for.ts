@@ -87,15 +87,28 @@ export const ATTRACTIONS_IDEAL_FOR_TAGS = [
   "Kid-Friendly",
 ] as const;
 
+export const KEY_LOCATIONS_IDEAL_FOR_TAGS = [
+  "First-Time Visitors",
+  "Airport Transfers",
+  "Intercity Travel",
+  "Late Arrivals",
+  "Early Departures",
+  "Transit Connections",
+  "Currency Exchange",
+  "Bus Travelers",
+] as const;
+
 export type DiningIdealForTag = typeof DINING_IDEAL_FOR_TAGS[number];
 export type NightlifeIdealForTag = typeof NIGHTLIFE_IDEAL_FOR_TAGS[number];
 export type AccommodationsIdealForTag = typeof ACCOMMODATIONS_IDEAL_FOR_TAGS[number];
 export type AttractionsIdealForTag = typeof ATTRACTIONS_IDEAL_FOR_TAGS[number];
+export type KeyLocationsIdealForTag = typeof KEY_LOCATIONS_IDEAL_FOR_TAGS[number];
 export type AnyIdealForTag =
   | DiningIdealForTag
   | NightlifeIdealForTag
   | AccommodationsIdealForTag
-  | AttractionsIdealForTag;
+  | AttractionsIdealForTag
+  | KeyLocationsIdealForTag;
 
 export interface IdealForTagGroup<TTag extends string = string> {
   label: string;
@@ -107,6 +120,7 @@ export const IDEAL_FOR_TAGS_BY_CATEGORY = {
   nightlife: NIGHTLIFE_IDEAL_FOR_TAGS,
   accommodations: ACCOMMODATIONS_IDEAL_FOR_TAGS,
   attractions: ATTRACTIONS_IDEAL_FOR_TAGS,
+  key_locations: KEY_LOCATIONS_IDEAL_FOR_TAGS,
 } as const satisfies Record<LocationCategory, readonly string[]>;
 
 export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
@@ -263,6 +277,31 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
       ],
     },
   ] satisfies readonly IdealForTagGroup<AttractionsIdealForTag>[],
+  key_locations: [
+    {
+      label: "Arrival & Departure",
+      tags: [
+        "First-Time Visitors",
+        "Late Arrivals",
+        "Early Departures",
+        "Airport Transfers",
+      ],
+    },
+    {
+      label: "Transit",
+      tags: [
+        "Intercity Travel",
+        "Transit Connections",
+        "Bus Travelers",
+      ],
+    },
+    {
+      label: "Essential Services",
+      tags: [
+        "Currency Exchange",
+      ],
+    },
+  ] satisfies readonly IdealForTagGroup<KeyLocationsIdealForTag>[],
 } as const satisfies Record<LocationCategory, readonly IdealForTagGroup[]>;
 
 export function getIdealForTags<C extends LocationCategory>(

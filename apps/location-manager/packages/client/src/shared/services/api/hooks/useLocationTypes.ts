@@ -7,6 +7,7 @@ const TYPES_QUERY_KEYS = {
   accommodations: ["accommodations-types"],
   attractions: ["attractions-types"],
   nightlife: ["nightlife-types"],
+  key_locations: ["key-locations-types"],
 } as const;
 
 export function useLocationTypes(category?: LocationCategory) {
@@ -22,6 +23,8 @@ export function useLocationTypes(category?: LocationCategory) {
           return typesApi.getAttractionsTypes();
         case "nightlife":
           return typesApi.getNightlifeTypes();
+        case "key_locations":
+          return typesApi.getKeyLocationsTypes();
         default:
           return Promise.resolve([]);
       }

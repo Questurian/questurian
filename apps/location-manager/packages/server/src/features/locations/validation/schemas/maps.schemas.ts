@@ -6,7 +6,8 @@ export const locationCategorySchema = z.enum([
   "dining",
   "accommodations",
   "attractions",
-  "nightlife"
+  "nightlife",
+  "key_locations",
 ] as const satisfies readonly LocationCategory[]);
 
 const idealForTagsSchema = z
@@ -72,6 +73,7 @@ export const createMapsSchema = z.object({
   nightlifeDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   accommodationsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   attractionsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  keyLocationsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   operationHours: recordOrStringSchema.optional(),
   priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorMealTypes: z.union([
@@ -114,6 +116,14 @@ export const createMapsSchema = z.object({
     });
   }
 
+  if (data.category === "key_locations" && data.keyLocationsDetails === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["keyLocationsDetails"],
+      message: "Key locations details JSON is required for key_locations category",
+    });
+  }
+
   if (
     (data.category === "dining" || data.category === "attractions") &&
     (!data.idealFor || data.idealFor.length === 0)
@@ -153,6 +163,7 @@ export const patchMapsSchema = z.object({
   nightlifeDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
   accommodationsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
   attractionsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  keyLocationsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
   priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   operationHours: recordOrStringSchema.optional(),
@@ -204,6 +215,7 @@ export const patchMapsSchema = z.object({
          data.nightlifeDetails !== undefined ||
          data.accommodationsDetails !== undefined ||
          data.attractionsDetails !== undefined ||
+         data.keyLocationsDetails !== undefined ||
          data.operationHours !== undefined ||
          data.priceLevel !== undefined ||
          data.tripadvisorMealTypes !== undefined ||

@@ -7,6 +7,7 @@ const CATEGORY_VALUES: readonly LocationCategory[] = [
   "accommodations",
   "attractions",
   "nightlife",
+  "key_locations",
 ];
 
 const LOCATION_SELECT_COLUMNS = `
@@ -18,7 +19,7 @@ const LOCATION_SELECT_COLUMNS = `
   e.lat,
   e.lng,
   e.category,
-  COALESCE(d.type, n.type, a.type, at.type) as type,
+  COALESCE(d.type, n.type, a.type, at.type, kl.type) as type,
   e.locationKey,
   e.district,
   e.contactAddress,
@@ -27,16 +28,17 @@ const LOCATION_SELECT_COLUMNS = `
   e.phoneNumber,
   e.website,
   e.email,
-  COALESCE(d.hours_json, n.hours_json, a.hours_json, at.hours_json) as hoursJson,
+  COALESCE(d.hours_json, n.hours_json, a.hours_json, at.hours_json, kl.hours_json) as hoursJson,
   e.neighborhood_description as neighborhoodDescription,
-  COALESCE(d.ideal_for_json, n.ideal_for_json, a.ideal_for_json, at.ideal_for_json) as idealForJson,
-  COALESCE(d.nightlife_details_json, n.nightlife_details_json, a.nightlife_details_json, at.nightlife_details_json) as nightlifeDetailsJson,
-  COALESCE(d.accommodations_details_json, n.accommodations_details_json, a.accommodations_details_json, at.accommodations_details_json) as accommodationsDetailsJson,
-  COALESCE(d.attractions_details_json, n.attractions_details_json, a.attractions_details_json, at.attractions_details_json) as attractionsDetailsJson,
-  COALESCE(d.tripadvisor_meal_types, n.tripadvisor_meal_types, a.tripadvisor_meal_types, at.tripadvisor_meal_types) as tripadvisorMealTypesJson,
-  COALESCE(d.tripadvisor_cuisines, n.tripadvisor_cuisines, a.tripadvisor_cuisines, at.tripadvisor_cuisines) as tripadvisorCuisinesJson,
-  COALESCE(d.tripadvisor_features, n.tripadvisor_features, a.tripadvisor_features, at.tripadvisor_features) as tripadvisorFeaturesJson,
-  COALESCE(d.price_level, n.price_level, a.price_level, at.price_level) as priceLevel,
+  COALESCE(d.ideal_for_json, n.ideal_for_json, a.ideal_for_json, at.ideal_for_json, kl.ideal_for_json) as idealForJson,
+  COALESCE(d.nightlife_details_json, n.nightlife_details_json, a.nightlife_details_json, at.nightlife_details_json, kl.nightlife_details_json) as nightlifeDetailsJson,
+  COALESCE(d.accommodations_details_json, n.accommodations_details_json, a.accommodations_details_json, at.accommodations_details_json, kl.accommodations_details_json) as accommodationsDetailsJson,
+  COALESCE(d.attractions_details_json, n.attractions_details_json, a.attractions_details_json, at.attractions_details_json, kl.attractions_details_json) as attractionsDetailsJson,
+  COALESCE(d.key_locations_details_json, n.key_locations_details_json, a.key_locations_details_json, at.key_locations_details_json, kl.key_locations_details_json) as keyLocationsDetailsJson,
+  COALESCE(d.tripadvisor_meal_types, n.tripadvisor_meal_types, a.tripadvisor_meal_types, at.tripadvisor_meal_types, kl.tripadvisor_meal_types) as tripadvisorMealTypesJson,
+  COALESCE(d.tripadvisor_cuisines, n.tripadvisor_cuisines, a.tripadvisor_cuisines, at.tripadvisor_cuisines, kl.tripadvisor_cuisines) as tripadvisorCuisinesJson,
+  COALESCE(d.tripadvisor_features, n.tripadvisor_features, a.tripadvisor_features, at.tripadvisor_features, kl.tripadvisor_features) as tripadvisorFeaturesJson,
+  COALESCE(d.price_level, n.price_level, a.price_level, at.price_level, kl.price_level) as priceLevel,
   e.slug,
   e.place_id as placeId,
   e.tripadvisor_url as tripadvisorUrl,
@@ -57,6 +59,7 @@ const LOCATION_FROM_AND_JOINS = `
   LEFT JOIN nightlife_locations n ON n.entity_id = e.id
   LEFT JOIN accommodations_locations a ON a.entity_id = e.id
   LEFT JOIN attractions_locations at ON at.entity_id = e.id
+  LEFT JOIN key_locations_locations kl ON kl.entity_id = e.id
 `;
 
 const LOCATION_SELECT = `
@@ -75,6 +78,8 @@ function getTypedTable(category: LocationCategory): string {
       return "accommodations_locations";
     case "attractions":
       return "attractions_locations";
+    case "key_locations":
+      return "key_locations_locations";
   }
   throw new Error(`Invalid location category: ${String(category)}`);
 }
@@ -96,6 +101,7 @@ function upsertTypedRow(
     nightlifeDetailsJson?: string | null;
     accommodationsDetailsJson?: string | null;
     attractionsDetailsJson?: string | null;
+    keyLocationsDetailsJson?: string | null;
     tripadvisorMealTypesJson?: string | null;
     tripadvisorCuisinesJson?: string | null;
     tripadvisorFeaturesJson?: string | null;
@@ -113,6 +119,7 @@ function upsertTypedRow(
       nightlife_details_json,
       accommodations_details_json,
       attractions_details_json,
+      key_locations_details_json,
       tripadvisor_meal_types,
       tripadvisor_cuisines,
       tripadvisor_features,
@@ -126,6 +133,7 @@ function upsertTypedRow(
       $nightlife_details_json,
       $accommodations_details_json,
       $attractions_details_json,
+      $key_locations_details_json,
       $tripadvisor_meal_types,
       $tripadvisor_cuisines,
       $tripadvisor_features,
@@ -138,6 +146,7 @@ function upsertTypedRow(
       nightlife_details_json = excluded.nightlife_details_json,
       accommodations_details_json = excluded.accommodations_details_json,
       attractions_details_json = excluded.attractions_details_json,
+      key_locations_details_json = excluded.key_locations_details_json,
       tripadvisor_meal_types = excluded.tripadvisor_meal_types,
       tripadvisor_cuisines = excluded.tripadvisor_cuisines,
       tripadvisor_features = excluded.tripadvisor_features,
@@ -150,6 +159,7 @@ function upsertTypedRow(
     $nightlife_details_json: params.nightlifeDetailsJson ?? null,
     $accommodations_details_json: params.accommodationsDetailsJson ?? null,
     $attractions_details_json: params.attractionsDetailsJson ?? null,
+    $key_locations_details_json: params.keyLocationsDetailsJson ?? null,
     $tripadvisor_meal_types: params.tripadvisorMealTypesJson ?? null,
     $tripadvisor_cuisines: params.tripadvisorCuisinesJson ?? null,
     $tripadvisor_features: params.tripadvisorFeaturesJson ?? null,
@@ -163,6 +173,7 @@ function clearTypedRowsForEntity(entityId: number): void {
   db.run("DELETE FROM nightlife_locations WHERE entity_id = ?", [entityId]);
   db.run("DELETE FROM accommodations_locations WHERE entity_id = ?", [entityId]);
   db.run("DELETE FROM attractions_locations WHERE entity_id = ?", [entityId]);
+  db.run("DELETE FROM key_locations_locations WHERE entity_id = ?", [entityId]);
 }
 
 function buildLocationRowWithCountsQuery(whereClause: string): string {
@@ -345,6 +356,7 @@ export function saveLocation(location: Location): number | boolean {
       nightlifeDetailsJson: location.nightlifeDetailsJson || null,
       accommodationsDetailsJson: location.accommodationsDetailsJson || null,
       attractionsDetailsJson: location.attractionsDetailsJson || null,
+      keyLocationsDetailsJson: location.keyLocationsDetailsJson || null,
       tripadvisorMealTypesJson: location.tripadvisorMealTypesJson || null,
       tripadvisorCuisinesJson: location.tripadvisorCuisinesJson || null,
       tripadvisorFeaturesJson: location.tripadvisorFeaturesJson || null,
@@ -507,6 +519,10 @@ export function updateLocationById(id: number, updates: Partial<Location>): bool
     if (updates.attractionsDetailsJson !== undefined) {
       typedSetClause.push("attractions_details_json = $attractions_details_json");
       typedParams.$attractions_details_json = updates.attractionsDetailsJson;
+    }
+    if (updates.keyLocationsDetailsJson !== undefined) {
+      typedSetClause.push("key_locations_details_json = $key_locations_details_json");
+      typedParams.$key_locations_details_json = updates.keyLocationsDetailsJson;
     }
     if (updates.tripadvisorMealTypesJson !== undefined) {
       typedSetClause.push("tripadvisor_meal_types = $tripadvisor_meal_types");

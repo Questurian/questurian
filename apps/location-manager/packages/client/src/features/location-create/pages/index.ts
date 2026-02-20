@@ -4,5 +4,6 @@ export { AddRestaurantLocation } from "./AddRestaurantLocation";
 export { AddNightlifeLocation } from "./AddNightlifeLocation";
 export { AddAccommodationsLocation } from "./AddAccommodationsLocation";
 export { AddAttractionsLocation } from "./AddAttractionsLocation";
+export { AddKeyLocationsLocation } from "./AddKeyLocationsLocation";
 export { EditNightlifeLocation } from "./EditNightlifeLocation";
 export { EditAccommodationsLocation } from "./EditAccommodationsLocation";

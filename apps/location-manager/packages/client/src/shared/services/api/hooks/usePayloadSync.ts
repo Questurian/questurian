@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { payloadApi } from "../payload.api";
-import type { Category } from "../types";
+import type { PayloadSyncCategory } from "../types";
 
 const PAYLOAD_SYNC_STATUS_QUERY_KEY = ["payload-sync-status"] as const;
 
@@ -38,7 +38,7 @@ export function useSyncAll() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (category?: Category) => payloadApi.syncAll(category),
+    mutationFn: (category?: PayloadSyncCategory) => payloadApi.syncAll(category),
     onSuccess: () => {
       // Invalidate sync status to show updated state
       queryClient.invalidateQueries({ queryKey: PAYLOAD_SYNC_STATUS_QUERY_KEY });

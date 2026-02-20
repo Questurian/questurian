@@ -1,0 +1,187 @@
+[
+  {
+    "id": 1,
+    "name": "Jorge Chavez International Airport",
+    "location_type": "airport",
+    "images": [
+      "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1200&q=80",
+      "https://images.unsplash.com/photo-1544015759-62a9f9b6b7c4?w=1200&q=80"
+    ],
+    "description": "Lima's primary international airport in Callao with arrivals, departures, and ground transport services.",
+    "address": "Av. Elmer Faucett s/n, Callao",
+    "neighborhood": "Callao",
+    "hours": {
+      "hours": [
+        { "day": "Sunday", "hours": "00:00:00 - 23:59:59" },
+        { "day": "Monday", "hours": "00:00:00 - 23:59:59" },
+        { "day": "Tuesday", "hours": "00:00:00 - 23:59:59" },
+        { "day": "Wednesday", "hours": "00:00:00 - 23:59:59" },
+        { "day": "Thursday", "hours": "00:00:00 - 23:59:59" },
+        { "day": "Friday", "hours": "00:00:00 - 23:59:59" },
+        { "day": "Saturday", "hours": "00:00:00 - 23:59:59" }
+      ],
+      "notes": "Check-in counters usually open 3 hours before international departures."
+    },
+    "phone": "+51 1 517-3100",
+    "website": "https://www.lima-airport.com",
+    "tags": ["airport", "international", "transport", "arrivals", "departures"],
+    "details": {
+      "access": {
+        "taxi": { "available": true, "notes": "Authorized taxi booths in arrivals hall." },
+        "rideshare": { "available": true, "pickup": "Designated curbside pickup lanes." },
+        "bus": { "available": true, "line": "Airport Express Lima" }
+      },
+      "info": {
+        "terminals": { "count": 1, "notes": "Unified passenger terminal." },
+        "airlines": { "international": true, "domestic": true },
+        "atm": { "available": true, "currency": ["PEN", "USD"] }
+      }
+    },
+    "status": "active",
+    "countryCode": "PE",
+    "ianaTimeId": "America/Lima",
+    "locationKey": "peru|lima|callao",
+    "lat": -12.0219,
+    "lng": -77.1143,
+    "placeId": "ChIJj4xG1yDCBZER6WsTtQJ8W4g",
+    "googleUrl": "https://maps.google.com/?q=Jorge+Chavez+International+Airport"
+  },
+  {
+    "id": 2,
+    "name": "Ovalo Miraflores Bus Stop",
+    "location_type": "bus_stop",
+    "images": [
+      "https://images.unsplash.com/photo-1474487548417-781cb71495f3?w=1200&q=80"
+    ],
+    "description": "Central Miraflores stop used by airport buses, local routes, and neighborhood transfers.",
+    "address": "Av. Pardo 1, Miraflores, Lima",
+    "neighborhood": "Miraflores",
+    "hours": {
+      "hours": [
+        { "day": "Sunday", "hours": "05:00:00 - 23:30:00" },
+        { "day": "Monday", "hours": "05:00:00 - 23:30:00" },
+        { "day": "Tuesday", "hours": "05:00:00 - 23:30:00" },
+        { "day": "Wednesday", "hours": "05:00:00 - 23:30:00" },
+        { "day": "Thursday", "hours": "05:00:00 - 23:30:00" },
+        { "day": "Friday", "hours": "05:00:00 - 23:30:00" },
+        { "day": "Saturday", "hours": "05:00:00 - 23:30:00" }
+      ],
+      "notes": "Service frequency increases during morning and evening commute windows."
+    },
+    "phone": "+51 1 700-0000",
+    "website": "https://www.miraflores.gob.pe",
+    "tags": ["bus", "stop", "public-transport", "airport-link"],
+    "details": {
+      "access": {
+        "taxi": { "available": true },
+        "rideshare": { "available": true },
+        "bus": { "available": true, "routes": ["Airport Express", "Metropolitano feeder"] }
+      },
+      "info": {
+        "shelter": { "available": true },
+        "ticketing": { "onsite": false, "notes": "Pay onboard for most routes." },
+        "atm": { "available": false }
+      }
+    },
+    "status": "active",
+    "countryCode": "PE",
+    "ianaTimeId": "America/Lima",
+    "locationKey": "peru|lima|miraflores",
+    "lat": -12.1216,
+    "lng": -77.0297,
+    "placeId": "ChIJY0x4V8nIBZERw2Jv5T4Pj3A",
+    "googleUrl": "https://maps.google.com/?q=Ovalo+Miraflores+Bus+Stop"
+  },
+  {
+    "id": 3,
+    "name": "Western Union - Miraflores",
+    "location_type": "currency_exchange",
+    "images": [
+      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=1200&q=80"
+    ],
+    "description": "Currency exchange and money transfer branch near Parque Kennedy for travelers.",
+    "address": "Av. Jose Larco 345, Miraflores, Lima",
+    "neighborhood": "Miraflores",
+    "hours": {
+      "hours": [
+        { "day": "Sunday", "hours": "10:00:00 - 18:00:00" },
+        { "day": "Monday", "hours": "09:00:00 - 19:00:00" },
+        { "day": "Tuesday", "hours": "09:00:00 - 19:00:00" },
+        { "day": "Wednesday", "hours": "09:00:00 - 19:00:00" },
+        { "day": "Thursday", "hours": "09:00:00 - 19:00:00" },
+        { "day": "Friday", "hours": "09:00:00 - 19:00:00" },
+        { "day": "Saturday", "hours": "09:00:00 - 18:00:00" }
+      ],
+      "notes": "Bring passport for larger exchange or transfer transactions."
+    },
+    "phone": "+51 1 241-0010",
+    "website": "https://www.westernunion.com",
+    "tags": ["currency", "exchange", "money-transfer", "travel-services"],
+    "details": {
+      "access": {
+        "taxi": { "available": true },
+        "rideshare": { "available": true },
+        "bus": { "available": true, "stop": "Parque Kennedy" }
+      },
+      "info": {
+        "currencies": { "supported": ["PEN", "USD", "EUR"] },
+        "idRequired": { "passport": true, "nationalId": true },
+        "atm": { "available": true }
+      }
+    },
+    "status": "active",
+    "countryCode": "PE",
+    "ianaTimeId": "America/Lima",
+    "locationKey": "peru|lima|miraflores",
+    "lat": -12.1258,
+    "lng": -77.0306,
+    "placeId": "ChIJ4w9mA8nIBZERf7P6I2H3S0M",
+    "googleUrl": "https://maps.google.com/?q=Western+Union+Miraflores"
+  },
+  {
+    "id": 4,
+    "name": "Cruz del Sur Bus Terminal - Javier Prado",
+    "location_type": "bus_terminal",
+    "images": [
+      "https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=1200&q=80"
+    ],
+    "description": "Long-distance bus terminal with departures across Peru and travel support services.",
+    "address": "Av. Javier Prado Este 1109, La Victoria, Lima",
+    "neighborhood": "La Victoria",
+    "hours": {
+      "hours": [
+        { "day": "Sunday", "hours": "04:30:00 - 23:30:00" },
+        { "day": "Monday", "hours": "04:30:00 - 23:30:00" },
+        { "day": "Tuesday", "hours": "04:30:00 - 23:30:00" },
+        { "day": "Wednesday", "hours": "04:30:00 - 23:30:00" },
+        { "day": "Thursday", "hours": "04:30:00 - 23:30:00" },
+        { "day": "Friday", "hours": "04:30:00 - 23:30:00" },
+        { "day": "Saturday", "hours": "04:30:00 - 23:30:00" }
+      ],
+      "notes": "Arrive early for baggage tagging and boarding procedures."
+    },
+    "phone": "+51 1 311-5050",
+    "website": "https://www.cruzdelsur.com.pe",
+    "tags": ["bus", "terminal", "intercity", "transport"],
+    "details": {
+      "access": {
+        "taxi": { "available": true, "notes": "Official taxi rank outside arrivals." },
+        "rideshare": { "available": true, "pickup": "Main gate" },
+        "bus": { "available": true, "routes": ["Javier Prado corridor"] }
+      },
+      "info": {
+        "ticketing": { "online": true, "onsite": true },
+        "luggage": { "checkin": true, "carryOn": true },
+        "atm": { "available": true }
+      }
+    },
+    "status": "active",
+    "countryCode": "PE",
+    "ianaTimeId": "America/Lima",
+    "locationKey": "peru|lima|la-victoria",
+    "lat": -12.0887,
+    "lng": -77.0076,
+    "placeId": "ChIJFxy4lM3IBZERvN2vQqIZ61M",
+    "googleUrl": "https://maps.google.com/?q=Cruz+del+Sur+Javier+Prado"
+  }
+]

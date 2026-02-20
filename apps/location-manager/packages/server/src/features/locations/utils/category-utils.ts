@@ -4,7 +4,8 @@ const VALID_CATEGORIES: readonly LocationCategory[] = [
   "dining",
   "accommodations",
   "attractions",
-  "nightlife"
+  "nightlife",
+  "key_locations",
 ] as const;
 
 function isValidCategory(category: unknown): category is LocationCategory {

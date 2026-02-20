@@ -82,6 +82,19 @@ export const editLocationSchema = z.object({
     .max(2000, "Cuisines must be less than 2000 characters")
     .optional()
     .or(z.literal("")),
+  keyLocationsDetails: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((val) => {
+      if (!val) return true;
+      try {
+        JSON.parse(val);
+        return true;
+      } catch {
+        return false;
+      }
+    }, { message: "Key locations details must be valid JSON" }),
   tripadvisorFeatures: z
     .string()
     .max(4000, "Features must be less than 4000 characters")

@@ -6,7 +6,8 @@ const locationCategorySchema = z.enum([
   "dining",
   "accommodations",
   "attractions",
-  "nightlife"
+  "nightlife",
+  "key_locations",
 ] as const satisfies readonly LocationCategory[]);
 
 const idealForSchema = z

@@ -10,7 +10,8 @@ const CATEGORIES: { value: Category; label: string }[] = [
   { value: "dining", label: "Restaurants" },
   { value: "nightlife", label: "Nightlife" },
   { value: "accommodations", label: "Accommodations" },
-  { value: "attractions", label: "Attractions" }
+  { value: "attractions", label: "Attractions" },
+  { value: "key_locations", label: "Key Locations" },
 ];
 
 export function CategorySelect({ value, onChange, disabled }: CategorySelectProps) {

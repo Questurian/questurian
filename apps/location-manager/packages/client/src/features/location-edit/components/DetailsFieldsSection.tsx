@@ -5,6 +5,7 @@ import { FormTextarea } from "@client/shared/components/forms";
 import { Button } from "@client/components/ui";
 import { Field, FieldLabel } from "@client/shared/components/ui";
 import type { EditLocationFormData } from "../validation/edit-location.schema";
+import type { LocationCategory } from "@shared/types/location-category";
 
 const OperationHoursModal = lazy(
   () =>
@@ -17,12 +18,14 @@ interface DetailsFieldsSectionProps {
   form: UseFormReturn<EditLocationFormData>;
   operationHoursModalOpen: boolean;
   setOperationHoursModalOpen: (open: boolean) => void;
+  category?: LocationCategory;
 }
 
 export function DetailsFieldsSection({
   form,
   operationHoursModalOpen,
   setOperationHoursModalOpen,
+  category,
 }: DetailsFieldsSectionProps) {
   return (
     <div className="space-y-4">
@@ -72,6 +75,17 @@ export function DetailsFieldsSection({
           </Suspense>
         )}
       </Field>
+
+      {category === "key_locations" && (
+        <FormTextarea
+          name="keyLocationsDetails"
+          label="Key Locations Details JSON"
+          control={form.control}
+          placeholder='{"location_type":"airport","status":"active","details":{"access":{},"info":{}}}'
+          description="Structured JSON profile for key locations."
+          rows={10}
+        />
+      )}
     </div>
   );
 }

@@ -166,8 +166,14 @@ export class PayloadSyncService {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
+    if (category === "key_locations") {
+      throw new BadRequestError("Payload sync does not support key_locations category");
+    }
+
     // Get all locations
-    const locations = this.locationQuery.listLocations(category);
+    const locations = this.locationQuery
+      .listLocations(category)
+      .filter((location) => location.category !== "key_locations");
 
     const results: SyncResult[] = [];
 
@@ -190,6 +196,17 @@ export class PayloadSyncService {
       const location = this.locationQuery.getLocationById(locationId);
       if (!location) {
         throw new NotFoundError("Location", locationId);
+      }
+
+      if (location.category === "key_locations") {
+        return [{
+          locationId,
+          title: location.title || location.source.name,
+          category: location.category,
+          synced: false,
+          needsResync: false,
+          syncState: undefined,
+        }];
       }
 
       const collection = mapCategoryToCollection(location.category);
@@ -350,6 +367,10 @@ export class PayloadSyncService {
     const location = this.locationQuery.getLocationById(locationId);
     if (!location) {
       throw new NotFoundError("Location", locationId);
+    }
+
+    if (location.category === "key_locations") {
+      throw new BadRequestError("Payload sync does not support key_locations category");
     }
 
     return mapCategoryToCollection(location.category);

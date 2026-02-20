@@ -44,6 +44,7 @@ const CATEGORIES = [
   { value: "accommodations", label: "Accommodations" },
   { value: "attractions", label: "Attractions" },
   { value: "nightlife", label: "Nightlife" },
+  { value: "key_locations", label: "Key Locations" },
 ] as const;
 
 const PRICE_LEVELS = [
@@ -224,6 +225,10 @@ function getInitialValue(field: FieldDef, locationDetail: LocationResponse): str
       return locationDetail.attractionsDetails
         ? JSON.stringify(locationDetail.attractionsDetails, null, 2)
         : "";
+    case "keyLocationsDetails":
+      return locationDetail.keyLocationsDetails
+        ? JSON.stringify(locationDetail.keyLocationsDetails, null, 2)
+        : "";
     case "operationHours":
       return locationDetail.operationHours
         ? JSON.stringify(locationDetail.operationHours, null, 2)
@@ -287,6 +292,8 @@ function buildUpdatePayload(
       return { accommodationsDetails: trimmed || null };
     case "attractionsDetails":
       return { attractionsDetails: trimmed || null };
+    case "keyLocationsDetails":
+      return { keyLocationsDetails: trimmed || null };
     case "operationHours":
       return { operationHours: trimmed || undefined };
     case "media":
@@ -571,6 +578,16 @@ export function CompletenessFieldEditModal({
             onChange={(e) => setValue(e.target.value)}
             rows={12}
             placeholder='{"core":{"attraction_type":"museum","pricing":"$$"}}'
+            className="font-mono text-xs"
+          />
+        );
+      case "keyLocationsDetails":
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            rows={12}
+            placeholder='{"location_type":"airport","status":"active","details":{"access":{},"info":{}}}'
             className="font-mono text-xs"
           />
         );

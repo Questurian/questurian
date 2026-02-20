@@ -24,9 +24,28 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
     const isNightlife = locationDetail.category === "nightlife";
     const isAccommodations = locationDetail.category === "accommodations";
     const isAttractions = locationDetail.category === "attractions";
+    const isKeyLocations = locationDetail.category === "key_locations";
     const nightlifeDetails = parseNightlifeDetails(locationDetail.nightlifeDetails);
     const accommodationsDetails = parseAccommodationsDetails(locationDetail.accommodationsDetails);
     const attractionsDetails = parseAttractionsDetails(locationDetail.attractionsDetails);
+    const asRecord = (value: unknown): Record<string, unknown> | null =>
+      value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+    const asString = (value: unknown): string | null => {
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      }
+      if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+      }
+      return null;
+    };
+    const keyLocationsDetails = asRecord(locationDetail.keyLocationsDetails);
+    const keyLocationsNestedDetails = asRecord(keyLocationsDetails?.details);
+    const keyLocationsAccess = asRecord(keyLocationsNestedDetails?.access);
+    const keyLocationsInfo = asRecord(keyLocationsNestedDetails?.info);
     const hasOperationHours = Boolean(
       locationDetail.operationHours &&
         Object.keys(locationDetail.operationHours).length > 0
@@ -39,6 +58,18 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
     const hasCuisines = Boolean(
       Array.isArray(locationDetail.tripadvisorCuisines) && locationDetail.tripadvisorCuisines.length > 0
     );
+    const hasKeyLocationsHours = (() => {
+      if (hasOperationHours) return true;
+      const hoursValue = keyLocationsDetails?.hours;
+      if (!hoursValue) return false;
+      if (typeof hoursValue === "string") return hoursValue.trim().length > 0;
+      if (Array.isArray(hoursValue)) return hoursValue.length > 0;
+      if (typeof hoursValue === "object") {
+        return Object.keys(hoursValue as Record<string, unknown>).length > 0;
+      }
+      return false;
+    })();
+    const hasKeyLocationImages = Array.isArray(keyLocationsDetails?.images) && keyLocationsDetails.images.length > 0;
 
     if (isNightlife) {
       return [
@@ -237,6 +268,55 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       ];
     }
 
+    if (isKeyLocations) {
+      return [
+        { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
+        { key: "sourceAddress", label: "Address", present: Boolean(source.address?.trim()) },
+        { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        {
+          key: "keyLocations.type",
+          label: "Type",
+          present: Boolean(locationDetail.type?.trim() || asString(keyLocationsDetails?.location_type)),
+        },
+        {
+          key: "keyLocations.status",
+          label: "Status",
+          present: Boolean(asString(keyLocationsDetails?.status)),
+        },
+        {
+          key: "keyLocations.access",
+          label: "Access",
+          present: Boolean(keyLocationsAccess && Object.keys(keyLocationsAccess).length > 0),
+        },
+        {
+          key: "keyLocations.info",
+          label: "Info",
+          present: Boolean(keyLocationsInfo && Object.keys(keyLocationsInfo).length > 0),
+        },
+        {
+          key: "operationHours",
+          label: "Hours",
+          present: hasKeyLocationsHours,
+        },
+        {
+          key: "district",
+          label: "District",
+          present: Boolean(locationDetail.district?.trim() || asString(keyLocationsDetails?.neighborhood)),
+        },
+        {
+          key: "phone",
+          label: "Phone",
+          present: Boolean(contact.phoneNumber?.trim() || asString(keyLocationsDetails?.phone)),
+        },
+        {
+          key: "website",
+          label: "Website",
+          present: Boolean(contact.website?.trim() || asString(keyLocationsDetails?.website)),
+        },
+        { key: "media", label: "Images/Instagram", present: hasMedia || hasKeyLocationImages },
+      ];
+    }
+
     const baseFields = [
       { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
       { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
@@ -307,6 +387,13 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       return {
         key: "attractionsDetails",
         label: "Attractions Profile",
+        present: field.present,
+      };
+    }
+    if (field.key.startsWith("keyLocations.")) {
+      return {
+        key: "keyLocationsDetails",
+        label: "Key Locations Profile",
         present: field.present,
       };
     }

@@ -89,6 +89,13 @@ const NIGHTLIFE_TYPES: TypeOption[] = [
   { label: "Rooftop", value: "rooftop" },
 ];
 
+const KEY_LOCATIONS_TYPES: TypeOption[] = [
+  { label: "Airport", value: "airport" },
+  { label: "Bus Stop", value: "bus_stop" },
+  { label: "Currency Exchange", value: "currency_exchange" },
+  { label: "Bus Terminal", value: "bus_terminal" },
+];
+
 export function getDiningTypes(c: Context) {
   return c.json({ options: DINING_TYPES });
 }
@@ -103,4 +110,8 @@ export function getAttractionsTypes(c: Context) {
 
 export function getNightlifeTypes(c: Context) {
   return c.json({ options: NIGHTLIFE_TYPES });
+}
+
+export function getKeyLocationsTypes(c: Context) {
+  return c.json({ options: KEY_LOCATIONS_TYPES });
 }

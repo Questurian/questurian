@@ -90,6 +90,7 @@ export function EditLocation() {
             form={form}
             operationHoursModalOpen={operationHoursModalOpen}
             setOperationHoursModalOpen={setOperationHoursModalOpen}
+            category={location.category}
           />
           <ExternalFieldsSection form={form} />
 

@@ -1,4 +1,5 @@
 import type { LocationResponse, LocationCategory } from "../../../models/location";
+import { BadRequestError } from "@shared/errors/http-error";
 import type { UploadedImagesResult } from "../types";
 import { extractPhoneNumber, convertIsoToPhoneCountryCode } from "../utils";
 
@@ -67,8 +68,19 @@ export function mapLocationToPayloadFormat(
 export function mapCategoryToCollection(
   category: LocationCategory
 ): "dining" | "accommodations" | "attractions" | "nightlife" {
-  // Direct mapping - categories match collection names
-  return category as "dining" | "accommodations" | "attractions" | "nightlife";
+  switch (category) {
+    case "dining":
+    case "accommodations":
+    case "attractions":
+    case "nightlife":
+      return category;
+    case "key_locations":
+      throw new BadRequestError("Payload sync does not support key_locations category");
+    default: {
+      const exhaustiveCheck: never = category;
+      throw new BadRequestError(`Unsupported payload category: ${String(exhaustiveCheck)}`);
+    }
+  }
 }
 
 /**

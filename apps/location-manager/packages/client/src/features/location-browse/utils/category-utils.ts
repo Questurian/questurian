@@ -15,6 +15,8 @@ export function getCategoryBadgeStyles(category: string): string {
       return 'bg-orange-500/15 text-orange-400';
     case 'attractions':
       return 'bg-emerald-500/15 text-emerald-400';
+    case 'key_locations':
+      return 'bg-cyan-500/15 text-cyan-400';
     default:
       return 'bg-muted text-muted-foreground';
   }

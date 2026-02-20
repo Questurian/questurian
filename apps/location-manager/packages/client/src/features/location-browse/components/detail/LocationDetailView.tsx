@@ -7,6 +7,7 @@ import { LocationMediaGallery } from "./LocationMediaGallery";
 import { LocationNightlifeDetails } from "./LocationNightlifeDetails";
 import { LocationAccommodationsDetails } from "./LocationAccommodationsDetails";
 import { LocationAttractionsDetails } from "./LocationAttractionsDetails";
+import { LocationKeyLocationsDetails } from "./LocationKeyLocationsDetails";
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -64,6 +65,11 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         />
 
         <LocationAttractionsDetails
+          locationDetail={locationDetail}
+          onCopyField={onCopyField}
+        />
+
+        <LocationKeyLocationsDetails
           locationDetail={locationDetail}
           onCopyField={onCopyField}
         />

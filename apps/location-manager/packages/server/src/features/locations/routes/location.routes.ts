@@ -16,7 +16,7 @@ import {
   // Core
   getLocations, getLocationsBasic, getLocationById, deleteLocationById,
   refetchPlaceId,
-  getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes,
+  getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
   postAddMaps, patchMapsById, postGooglePrefill,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
@@ -45,6 +45,7 @@ const CATEGORY_ROUTES: readonly LocationCategory[] = [
   "accommodations",
   "attractions",
   "nightlife",
+  "key_locations",
 ];
 
 function withRouteCategory(category: LocationCategory) {
@@ -169,6 +170,7 @@ app.get("/api/dining-types", getDiningTypes);
 app.get("/api/accommodations-types", getAccommodationsTypes);
 app.get("/api/attractions-types", getAttractionsTypes);
 app.get("/api/nightlife-types", getNightlifeTypes);
+app.get("/api/key-locations-types", getKeyLocationsTypes);
 
 // Admin taxonomy routes
 app.get("/api/admin/taxonomy/pending", getPendingTaxonomy);

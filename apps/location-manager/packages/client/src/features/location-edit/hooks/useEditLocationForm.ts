@@ -11,6 +11,7 @@ const VALID_CATEGORIES: readonly LocationCategory[] = [
   "accommodations",
   "attractions",
   "nightlife",
+  "key_locations",
 ];
 
 export function useEditLocationForm() {
@@ -51,6 +52,7 @@ export function useEditLocationForm() {
       tripadvisorUrl: "",
       tripadvisorMealTypes: "",
       tripadvisorCuisines: "",
+      keyLocationsDetails: "",
     },
   });
 
@@ -80,6 +82,9 @@ export function useEditLocationForm() {
         tripadvisorUrl: location.tripadvisorUrl || "",
         tripadvisorMealTypes: location.tripadvisorMealTypes?.join(", ") || "",
         tripadvisorCuisines: location.tripadvisorCuisines?.join(", ") || "",
+        keyLocationsDetails: location.keyLocationsDetails
+          ? JSON.stringify(location.keyLocationsDetails, null, 2)
+          : "",
       });
     }
   }, [location, form]);
