@@ -17,6 +17,16 @@ interface ImageLightboxProps {
   onCopySuccess?: (message: string, position?: { x: number; y: number }) => void;
 }
 
+function toImageApiPath(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  const stripped = normalized
+    .replace(/^\/+/, "")
+    .replace(/^data\/images\//, "")
+    .replace(/^packages\/server\/data\/images\//, "")
+    .replace(/^apps\/location-manager\/packages\/server\/data\/images\//, "");
+  return `/api/images/${stripped}`;
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -37,7 +47,7 @@ export function ImageLightbox({
   onCopySuccess,
 }: ImageLightboxProps) {
   const currentImage = images[currentIndex];
-  const imageUrl = `/api/images/${currentImage.replace(/^data\/images\//, '')}`;
+  const imageUrl = toImageApiPath(currentImage);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

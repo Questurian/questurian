@@ -14,8 +14,25 @@ interface LocationMediaGalleryProps {
   locationDetail: LocationResponse;
 }
 
+function toImageApiPath(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  const stripped = normalized
+    .replace(/^\/+/, "")
+    .replace(/^data\/images\//, "")
+    .replace(/^packages\/server\/data\/images\//, "")
+    .replace(/^apps\/location-manager\/packages\/server\/data\/images\//, "");
+  return `/api/images/${stripped}`;
+}
+
 export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryProps) {
   const { showToast } = useToast();
+  const uploadsWithPreview = (locationDetail.uploads || []).filter((upload) => {
+    const squareVariant = upload.imageSet?.variants?.find((v) => v.type === "square");
+    return Boolean(squareVariant?.path?.trim());
+  });
+  const instagramEmbedsWithPreview = (locationDetail.instagram_embeds || []).filter((embed) =>
+    Boolean(embed.images?.[0]?.trim())
+  );
 
   const [lightboxState, setLightboxState] = useState({
     isOpen: false,
@@ -120,19 +137,19 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
   return (
     <>
       {/* Existing Uploads Gallery */}
-      {locationDetail.uploads && locationDetail.uploads.length > 0 && (
+      {uploadsWithPreview.length > 0 && (
         <div className="space-y-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Uploaded Images:
           </span>
           <ul className="flex gap-2 ml-4 flex-wrap">
-            {locationDetail.uploads.map((upload) => {
+            {uploadsWithPreview.map((upload) => {
               if (upload.imageSet) {
                 const imageSet = upload.imageSet;
                 const squareVariant = imageSet.variants?.find(v => v.type === 'square');
                 if (!squareVariant) return null;
 
-                const imageUrl = `/api/images/${squareVariant.path.replace(/^data\/images\//, '')}`;
+                const imageUrl = `${toImageApiPath(squareVariant.path)}?v=${upload.id ?? "upload"}`;
                 return (
                   <li key={`${upload.id}-imageset`} className="relative group">
                     <div className="shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-muted hover:ring-2 ring-primary transition-all">
@@ -167,16 +184,16 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       )}
 
       {/* Existing Instagram Embeds */}
-      {locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0 && (
+      {instagramEmbedsWithPreview.length > 0 && (
         <div className="space-y-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Instagram Posts:
           </span>
           <ul className="flex gap-2 ml-4 flex-wrap">
-            {locationDetail.instagram_embeds.map((embed) => {
+            {instagramEmbedsWithPreview.map((embed) => {
               const firstImage = embed.images?.[0];
               const imageUrl = firstImage
-                ? `/api/images/${firstImage.replace(/^data\/images\//, '')}`
+                ? `${toImageApiPath(firstImage)}?v=${embed.id ?? "embed"}`
                 : null;
 
               return (
@@ -211,7 +228,11 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       {/* Instagram and Upload Forms */}
       <div className="flex gap-4">
         <div className="flex-1">
-          <AddInstagramEmbedForm category={locationDetail.category} locationId={locationDetail.id} />
+          <AddInstagramEmbedForm
+            category={locationDetail.category}
+            locationId={locationDetail.id}
+            locationLabel={locationDetail.title || locationDetail.source?.name || ""}
+          />
         </div>
         <div className="flex-1">
           <AddUploadFilesForm category={locationDetail.category} locationId={locationDetail.id} />

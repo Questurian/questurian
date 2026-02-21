@@ -15,10 +15,11 @@ import {
 interface AddInstagramEmbedFormProps {
   category?: Category;
   locationId?: number;
+  locationLabel?: string;
   onQueueEmbed?: (payload: QueuedInstagramEmbedPayload) => void;
 }
 
-export function AddInstagramEmbedForm({ category, locationId, onQueueEmbed }: AddInstagramEmbedFormProps) {
+export function AddInstagramEmbedForm({ category, locationId, locationLabel, onQueueEmbed }: AddInstagramEmbedFormProps) {
   const { showToast } = useToast();
   const isUploadMode = typeof locationId === 'number' && !!category;
 
@@ -77,6 +78,11 @@ export function AddInstagramEmbedForm({ category, locationId, onQueueEmbed }: Ad
         {isUploadMode ? 'Add Instagram Embed' : 'Queue Instagram Embed'}
         {!isUploadMode && <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
       </h4>
+      {isUploadMode && (
+        <p className="text-xs text-muted-foreground">
+          Target: #{locationId}{locationLabel ? ` ${locationLabel}` : ""}
+        </p>
+      )}
 
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
         <FormTextarea

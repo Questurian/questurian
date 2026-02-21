@@ -13,6 +13,15 @@ export interface PayloadAuthResponse {
   exp: number;
 }
 
+interface PayloadCustomAuthResponse {
+  token: string;
+  user?: {
+    id?: string;
+    email?: string;
+    role?: string;
+  };
+}
+
 export interface PayloadMediaAssetResponse {
   message: string;
   doc: {
@@ -227,34 +236,64 @@ export class PayloadApiClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const response = await fetch(`${this.apiUrl}/api/users/login`, {
+    const primaryUrl = `${this.apiUrl}/api/users/login`;
+    const payload = {
+      email: this.serviceEmail,
+      password: this.servicePassword,
+    };
+
+    const response = await fetch(primaryUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        email: this.serviceEmail,
-        password: this.servicePassword,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Payload authentication failed: ${response.status} - ${errorText}`);
+    // Primary: standard Payload auth endpoint
+    if (response.ok) {
+      const data = await response.json() as PayloadAuthResponse;
+      this.authToken = data.token;
+      this.tokenExpiry = data.exp * 1000;
+      console.log(`✓ Authenticated with Payload via /api/users/login. Token expires: ${new Date(this.tokenExpiry)}`);
+      return data.token;
     }
 
-    const data = await response.json() as PayloadAuthResponse;
+    const primaryError = await response.text();
+    console.warn(
+      `[Payload] /api/users/login failed (${response.status}). Trying /api/auth/login fallback...`
+    );
 
-    // Store token and expiry (convert Unix timestamp to milliseconds)
-    this.authToken = data.token;
-    this.tokenExpiry = data.exp * 1000;
+    // Fallback: custom auth route used by some Payload app wrappers
+    const fallbackUrl = `${this.apiUrl}/api/auth/login`;
+    const fallbackResponse = await fetch(fallbackUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-    console.log(`✓ Authenticated with Payload. Token expires: ${new Date(this.tokenExpiry)}`);
+    if (!fallbackResponse.ok) {
+      const fallbackError = await fallbackResponse.text();
+      throw new Error(
+        `Payload authentication failed on both endpoints. ` +
+        `[users/login ${response.status}] ${primaryError} | ` +
+        `[auth/login ${fallbackResponse.status}] ${fallbackError}`
+      );
+    }
 
-    // Log the token for Postman testing
-    console.log('🔑 PAYLOAD JWT TOKEN:', data.token);
+    const fallbackData = await fallbackResponse.json() as PayloadCustomAuthResponse;
+    if (!fallbackData?.token) {
+      throw new Error("Payload auth fallback succeeded but no token was returned");
+    }
 
-    return data.token;
+    this.authToken = fallbackData.token;
+    // Fallback response often has no exp. Use conservative 55-minute TTL.
+    this.tokenExpiry = Date.now() + 55 * 60 * 1000;
+    console.log("✓ Authenticated with Payload via /api/auth/login fallback.");
+
+    return fallbackData.token;
   }
 
   /**

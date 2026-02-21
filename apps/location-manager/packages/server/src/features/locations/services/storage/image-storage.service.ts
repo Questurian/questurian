@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, rm, readdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 export interface ImageStorageConfig {
@@ -38,10 +39,65 @@ export interface DeletionResult {
 }
 
 export class ImageStorageService {
+  private readonly serverRoot: string;
+  private readonly repoRoot: string;
   private readonly baseImagesDir: string;
 
-  constructor(baseImagesDir: string = process.env.IMAGES_PATH || join(process.cwd(), "data/images")) {
-    this.baseImagesDir = baseImagesDir;
+  constructor(baseImagesDir?: string) {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    this.serverRoot = resolve(currentDir, "../../../../../");
+    this.repoRoot = resolve(this.serverRoot, "../../../..");
+    this.baseImagesDir = this.resolveImagesBaseDir(baseImagesDir ?? process.env.IMAGES_PATH);
+  }
+
+  private resolveImagesBaseDir(rawPath?: string): string {
+    const defaultImagesPath = join(this.serverRoot, "data/images");
+    if (!rawPath) {
+      return defaultImagesPath;
+    }
+
+    if (isAbsolute(rawPath)) {
+      return rawPath;
+    }
+
+    const normalized = rawPath.replace(/^\.\//, "");
+    if (
+      normalized.startsWith("packages/") ||
+      normalized.startsWith("apps/")
+    ) {
+      if (normalized === "packages/server/data/images") {
+        return join(this.serverRoot, "data/images");
+      }
+      return resolve(this.repoRoot, normalized);
+    }
+
+    return resolve(this.serverRoot, normalized);
+  }
+
+  private toStoredPath(absolutePath: string): string {
+    const relativePath = relative(this.serverRoot, absolutePath).replace(/\\/g, "/");
+    if (relativePath.startsWith("..")) {
+      return absolutePath;
+    }
+    return relativePath;
+  }
+
+  private toAbsolutePath(pathValue: string): string {
+    if (pathValue.startsWith("/")) {
+      return pathValue;
+    }
+
+    const normalized = pathValue.replace(/^\.\//, "");
+    if (normalized.startsWith("data/")) {
+      return resolve(this.serverRoot, normalized);
+    }
+    if (normalized.startsWith("packages/") || normalized.startsWith("apps/")) {
+      if (normalized === "packages/server/data/images") {
+        return join(this.serverRoot, "data/images");
+      }
+      return resolve(this.repoRoot, normalized);
+    }
+    return resolve(this.serverRoot, normalized);
   }
 
   /**
@@ -76,14 +132,14 @@ export class ImageStorageService {
 
     // Ensure base directory exists
     if (!existsSync(current)) {
-      await mkdir(current);
+      await mkdir(current, { recursive: true });
     }
 
     // Create each subdirectory
     for (const part of parts) {
       current = join(current, part);
       if (!existsSync(current)) {
-        await mkdir(current);
+        await mkdir(current, { recursive: true });
       }
     }
   }
@@ -101,10 +157,26 @@ export class ImageStorageService {
     const savedPaths: string[] = [];
     const errors: Array<{ index: number; error: string }> = [];
 
+    const fetchWithRetry = async (url: string): Promise<Response> => {
+      // First attempt: plain fetch
+      let res = await fetch(url);
+      if (res.ok) return res;
+
+      // Retry once with browser-like headers (helps with some Instagram CDN URLs)
+      res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          "Referer": "https://www.instagram.com/",
+        },
+      });
+      return res;
+    };
+
     for (let i = 0; i < imageUrls.length; i++) {
       const imgUrl = imageUrls[i];
       try {
-        const imgRes = await fetch(imgUrl!);
+        const imgRes = await fetchWithRetry(imgUrl!);
         if (!imgRes.ok) {
           throw new Error(`HTTP ${imgRes.status}`);
         }
@@ -113,9 +185,7 @@ export class ImageStorageService {
         const filePath = join(storagePath, filename);
         await Bun.write(filePath, await imgRes.blob());
 
-        // Generate relative path from project root
-        const relativePath = filePath.replace(process.cwd() + "/", "");
-        savedPaths.push(relativePath);
+        savedPaths.push(this.toStoredPath(filePath));
       } catch (err) {
         errors.push({
           index: i,
@@ -160,8 +230,7 @@ export class ImageStorageService {
         const filePath = join(storagePath, filename);
         await Bun.write(filePath, webpBuffer);
 
-        const relativePath = filePath.replace(process.cwd() + "/", "");
-        savedPaths.push(relativePath);
+        savedPaths.push(this.toStoredPath(filePath));
       } catch (err) {
         errors.push({
           index: i,
@@ -178,9 +247,7 @@ export class ImageStorageService {
    */
   async readImage(filePath: string): Promise<Buffer> {
     // Handle both relative and absolute paths
-    const absolutePath = filePath.startsWith("/")
-      ? filePath
-      : join(process.cwd(), filePath);
+    const absolutePath = this.toAbsolutePath(filePath);
 
     const file = Bun.file(absolutePath);
 
@@ -228,7 +295,7 @@ export class ImageStorageService {
 
       // Build absolute path to timestamp directory
       const timestampDir = join(
-        process.cwd(),
+        this.serverRoot,
         parts.slice(0, imagesIndex + 4).join("/")
       );
 
@@ -382,7 +449,7 @@ export class ImageStorageService {
               if (!fileStat.isFile()) continue;
 
               // Convert to relative path
-              const relativePath = filePath.replace(process.cwd() + "/", "");
+              const relativePath = this.toStoredPath(filePath);
 
               // Check if path exists in database
               if (!dbPathSet.has(relativePath)) {
@@ -422,7 +489,7 @@ export class ImageStorageService {
 
     for (const relativePath of paths) {
       try {
-        const absolutePath = join(process.cwd(), relativePath);
+        const absolutePath = this.toAbsolutePath(relativePath);
 
         if (!existsSync(absolutePath)) {
           console.warn("File already deleted", { relativePath });
