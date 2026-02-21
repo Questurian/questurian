@@ -9,8 +9,16 @@ import config from '@/payload.config'
 
 interface TagData {
   label: string
-  category: string
-  applicableTypes: string[]
+  category:
+    | 'group-size'
+    | 'occasion'
+    | 'vibe'
+    | 'time-of-day'
+    | 'dietary'
+    | 'activity-level'
+    | 'budget'
+    | 'special-features'
+  applicableTypes: Array<'dining' | 'attractions' | 'nightlife' | 'accommodations'>
   description?: string
 }
 

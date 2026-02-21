@@ -1,7 +1,9 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 interface CitySelectionTopSectionProps {
-  children: JSX.Element;
+  children: ReactNode;
 }
 
 export function CitySelectionTopSection({ children }: CitySelectionTopSectionProps) {

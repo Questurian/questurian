@@ -146,11 +146,23 @@ const createLocationIfMissing = async (
   const existing = await findLocationByKey(payload, locationKey)
   if (existing) return existing
 
+  const normalizedData = {
+    ...data,
+    country: data.country ?? undefined,
+    city: data.city ?? undefined,
+    neighborhood: data.neighborhood ?? undefined,
+    countryName: data.countryName ?? undefined,
+    cityName: data.cityName ?? undefined,
+    neighborhoodName: data.neighborhoodName ?? undefined,
+    parentKey: data.parentKey ?? undefined,
+  }
+
   return payload.create({
     collection: 'locations',
-    data,
+    data: normalizedData as any,
+    draft: false,
     overrideAccess: true,
-  })
+  } as any)
 }
 
 const ensureParentLocations = async (payload: Payload, data: LocationInput) => {
@@ -425,17 +437,15 @@ export const Locations: CollectionConfig = {
       },
     ],
     beforeDelete: [
-      async ({ req, id, doc }) => {
-        const location =
-          doc ??
-          (id
-            ? await req.payload.findByID({
-                collection: 'locations',
-                id,
-                depth: 0,
-                overrideAccess: true,
-              })
-            : null)
+      async ({ req, id }) => {
+        const location = id
+          ? await req.payload.findByID({
+              collection: 'locations',
+              id,
+              depth: 0,
+              overrideAccess: true,
+            })
+          : null
 
         const locationKey = location?.locationKey
         if (!locationKey) return

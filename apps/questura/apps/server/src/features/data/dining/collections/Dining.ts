@@ -265,7 +265,7 @@ export const Dining: CollectionConfig = {
                   admin: {
                     description: 'IANA timezone (example: America/Bogota)',
                   },
-                  validate: (value) => {
+                  validate: (value: string | null | undefined) => {
                     if (!value) return true
                     return typeof value === 'string' && value.includes('/')
                       ? true

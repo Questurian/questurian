@@ -12,16 +12,6 @@ export const DataAffiliateBlock: Block = {
     singular: 'Affiliate Product',
     plural: 'Affiliate Products',
   },
-  admin: {
-    initCollapsed: false,
-  },
-  // Custom label that shows the item's title instead of "Untitled"
-  label: ({ data }) => {
-    if (data?.item && typeof data.item === 'object' && 'title' in data.item) {
-      return (data.item as { title: string }).title || 'Affiliate Product'
-    }
-    return 'Affiliate Product'
-  },
   fields: [
     {
       name: 'item',
@@ -42,4 +32,3 @@ export const DataAffiliateBlock: Block = {
     },
   ],
 }
-

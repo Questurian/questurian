@@ -32,7 +32,7 @@ export const Categories: CollectionConfig = {
       admin: {
         description: 'Category name (e.g., "News", "Crime", "Guides")',
       },
-      validate: (value) => {
+      validate: (value: string | null | undefined) => {
         if (value && value !== value.trim()) {
           return 'Category name should not have leading/trailing spaces'
         }

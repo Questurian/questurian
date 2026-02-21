@@ -163,7 +163,7 @@ async function clearTestCollections() {
         console.log(`Found ${result.docs.length} documents to delete\n`)
 
         let deleted = 0
-        const errors: Array<{ id: string; error: string }> = []
+        const errors: Array<{ id: string | number; error: string }> = []
 
         // Delete each document
         for (const doc of result.docs) {

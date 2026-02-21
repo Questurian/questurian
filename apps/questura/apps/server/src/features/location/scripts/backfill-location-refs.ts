@@ -42,7 +42,7 @@ const backfillLocationRefs = async () => {
     let skipped = 0
     let missing = 0
 
-    for (const doc of result.docs) {
+    for (const doc of result.docs as any[]) {
       const locationKey = typeof doc.location === 'string' ? doc.location : ''
       const locationRef = doc.locationRef
 
@@ -73,7 +73,7 @@ const backfillLocationRefs = async () => {
           locationRef: locationId,
         },
         overrideAccess: true,
-      })
+      } as any)
 
       updated += 1
     }

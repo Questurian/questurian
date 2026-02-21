@@ -45,7 +45,7 @@ export const Places: CollectionConfig = {
     {
       name: 'categories',
       type: 'relationship',
-      relationTo: 'place-categories',
+      relationTo: 'place-categories' as any,
       hasMany: true,
       required: true,
       admin: {
@@ -318,7 +318,7 @@ export const Places: CollectionConfig = {
         let currentCategories: any[] = []
         if (currentCategoryIds.length > 0) {
           const categoriesResult = await req.payload.find({
-            collection: 'place-categories',
+            collection: 'place-categories' as any,
             where: { id: { in: currentCategoryIds } },
             depth: 0,
           })
@@ -372,7 +372,7 @@ export const Places: CollectionConfig = {
 
           if (removedCategoryIds.length > 0) {
             const removedCategories = await req.payload.find({
-              collection: 'place-categories',
+              collection: 'place-categories' as any,
               where: { id: { in: removedCategoryIds } },
               depth: 0,
             })

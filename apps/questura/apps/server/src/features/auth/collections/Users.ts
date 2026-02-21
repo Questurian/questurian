@@ -91,8 +91,14 @@ export const Users: CollectionConfig = {
           // Only admins can attempt role changes
           if (user?.role !== 'admin') return false
 
+          // Payload types allow undefined here; reject invalid requests early
+          if (id === undefined || id === null) return false
+
           // Admins cannot change their own role
           if (user?.id === id) return false
+
+          const requestedRole = data?.role
+          if (requestedRole !== 'editor') return false
 
           // Allow Writer → Editor promotion only
           try {
@@ -102,7 +108,7 @@ export const Users: CollectionConfig = {
               depth: 0,
             })
             // Allow Writer to be promoted to Editor (one-time)
-            if (targetUser?.role === 'writer' && data.role === 'editor') {
+            if (targetUser?.role === 'writer') {
               return true
             }
           } catch (error) {

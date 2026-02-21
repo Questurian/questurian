@@ -63,7 +63,7 @@ export default buildConfig({
     defaultFromName: 'Questurian',
     apiKey: APP_CONFIG.email.apiKey,
   }),
-  sharp,
+  sharp: sharp as any,
   plugins: [
     payloadCloudPlugin(),
     bunnyStorage({

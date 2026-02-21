@@ -12,7 +12,6 @@ export const seo: Field = {
       name: 'seo',
       type: 'relationship',
       relationTo: 'seo-metadata',
-      hasOne: true,
       admin: {
         description: 'SEO metadata for search engines and social sharing',
         allowCreate: true,
@@ -20,4 +19,3 @@ export const seo: Field = {
     },
   ],
 }
-

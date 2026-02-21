@@ -68,7 +68,12 @@ const GalleryImagePicker: React.FC<GalleryImagePickerProps> = ({
     if (typeof itemValue === 'number' || typeof itemValue === 'string') {
       return itemValue
     }
-    if (typeof itemValue === 'object' && itemValue?.id) {
+    if (
+      typeof itemValue === 'object' &&
+      itemValue !== null &&
+      'id' in itemValue &&
+      (typeof itemValue.id === 'string' || typeof itemValue.id === 'number')
+    ) {
       return itemValue.id
     }
     return null

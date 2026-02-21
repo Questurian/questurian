@@ -37,10 +37,7 @@ class Logger {
 
       console.log(`${emoji} [${logData.level.toUpperCase()}] ${logData.message}`)
       if (Object.keys(logData).length > 3) {
-        const extraData = { ...logData }
-        delete extraData.level
-        delete extraData.message
-        delete extraData.timestamp
+        const { level: _level, message: _message, timestamp: _timestamp, ...extraData } = logData
         console.log('  ', extraData)
       }
     } else {

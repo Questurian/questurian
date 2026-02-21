@@ -24,7 +24,7 @@
  * }
  */
 
-import type { FilterOptionsProps } from 'payload'
+import type { FilterOptionsProps, Where } from 'payload'
 
 /**
  * Creates a location-based filter function for relationship fields
@@ -33,7 +33,7 @@ import type { FilterOptionsProps } from 'payload'
  * @returns A filter function compatible with Payload's filterOptions API
  */
 export const createLocationFilter = (collectionName: string) => {
-  return ({ data, siblingData, req }: FilterOptionsProps) => {
+  return ({ data, siblingData, req }: FilterOptionsProps): Where => {
     // Extract parent document's location field
     const parentLocation = data?.location as string | undefined
 
@@ -51,11 +51,11 @@ export const createLocationFilter = (collectionName: string) => {
       console.log(`[${collectionName} filterOptions] ========== END ==========`)
       return {
         status: { equals: 'published' },
-      }
+      } satisfies Where
     }
 
     // Create where constraint to filter by exact location match AND published status
-    const whereConstraint = {
+    const whereConstraint: Where = {
       and: [
         { location: { equals: parentLocation } },
         { status: { equals: 'published' } },
@@ -71,3 +71,5 @@ export const createLocationFilter = (collectionName: string) => {
     return whereConstraint
   }
 }
+
+export const createPlaceLocationFilter = () => createLocationFilter('places')

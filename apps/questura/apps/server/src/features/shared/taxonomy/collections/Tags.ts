@@ -32,7 +32,7 @@ export const Tags: CollectionConfig = {
       admin: {
         description: 'Tag name (e.g., "solo-travel", "family-friendly")',
       },
-      validate: (value) => {
+      validate: (value: string | null | undefined) => {
         if (value && value !== value.trim()) {
           return 'Tag name should not have leading/trailing spaces'
         }

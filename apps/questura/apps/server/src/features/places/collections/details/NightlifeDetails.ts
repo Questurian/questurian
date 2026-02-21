@@ -35,7 +35,7 @@ export const NightlifeDetails: CollectionConfig = {
     {
       name: 'place',
       type: 'relationship',
-      relationTo: 'places',
+      relationTo: 'places' as any,
       required: true,
       unique: true,
       admin: { description: 'The place this detail belongs to (1:1 relationship)' },

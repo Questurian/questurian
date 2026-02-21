@@ -13,16 +13,6 @@ export const DataNightlifeBlock: Block = {
     singular: 'Nightlife Item',
     plural: 'Nightlife Items',
   },
-  admin: {
-    initCollapsed: false,
-  },
-  // Custom label that shows the item's title instead of "Untitled"
-  label: ({ data }) => {
-    if (data?.item && typeof data.item === 'object' && 'title' in data.item) {
-      return (data.item as { title: string }).title || 'Nightlife Item'
-    }
-    return 'Nightlife Item'
-  },
   fields: [
     {
       name: 'item',
@@ -47,7 +37,7 @@ export const DataNightlifeBlock: Block = {
           Field: 'src/features/articles/rankings/components/collection-wrappers/gallery-pickers/NightlifeGalleryImagePicker.tsx',
         },
       },
-      validate: (value) => {
+      validate: (value: unknown) => {
         if (!Array.isArray(value)) return 'Must be an array'
         if (value.length > 5) return 'Maximum 5 images allowed'
         if (!value.every((v: any) => typeof v === 'number' && v >= 0)) {

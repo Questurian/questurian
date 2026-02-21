@@ -51,7 +51,7 @@ async function backfillRankingsCreatedBy() {
     console.log(`📌 Using admin user as fallback creator: ${fallbackCreator.email} (ID: ${fallbackCreator.id})\n`)
 
     let updated = 0
-    const errors: Array<{ title: string; id: string; error: string }> = []
+    const errors: Array<{ title: string; id: string | number; error: string }> = []
 
     for (const ranking of rankingsWithoutCreator.docs) {
       try {

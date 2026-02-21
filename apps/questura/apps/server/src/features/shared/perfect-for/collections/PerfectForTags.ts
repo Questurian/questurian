@@ -33,7 +33,7 @@ export const PerfectForTags: CollectionConfig = {
       admin: {
         description: 'Tag display name (e.g., "First Date", "Big Groups")',
       },
-      validate: (value) => {
+      validate: (value: string | null | undefined) => {
         // Enforce consistent capitalization and no extra spaces
         if (value && value !== value.trim()) {
           return 'Label should not have leading/trailing spaces'

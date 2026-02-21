@@ -79,7 +79,7 @@ export const SeoMetadata: CollectionConfig = {
             description: 'Page title for search engines (50-60 chars optimal). Auto-generated from content title if empty.',
             placeholder: 'Auto-generated from content title',
           },
-          validate: (val) => {
+          validate: (val: string | null | undefined) => {
             if (val && val.length > 60 && val.length <= 70) {
               return 'Title exceeds recommended 60 characters. Search engines may truncate it.'
             }
@@ -94,7 +94,7 @@ export const SeoMetadata: CollectionConfig = {
             description: 'Description for search results (50-160 chars optimal). Auto-generated from content description if empty.',
             placeholder: 'Auto-generated from content description',
           },
-          validate: (val) => {
+          validate: (val: string | null | undefined) => {
             if (val && val.length > 160 && val.length <= 170) {
               return 'Description exceeds recommended 160 characters. Search engines may truncate it.'
             }

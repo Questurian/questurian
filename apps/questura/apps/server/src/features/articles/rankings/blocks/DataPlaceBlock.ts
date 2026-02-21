@@ -18,7 +18,7 @@ export const DataPlaceBlock: Block = {
     {
       name: 'item',
       type: 'relationship',
-      relationTo: 'places',
+      relationTo: 'places' as any,
       required: true,
       filterOptions: createPlaceLocationFilter(),
       admin: {
@@ -38,7 +38,7 @@ export const DataPlaceBlock: Block = {
           Field: 'src/features/articles/rankings/components/collection-wrappers/gallery-pickers/PlaceGalleryImagePicker.tsx',
         },
       },
-      validate: (value) => {
+      validate: (value: unknown) => {
         if (!Array.isArray(value)) return 'Must be an array'
         if (value.length > 5) return 'Maximum 5 images allowed'
         if (!value.every((v: any) => typeof v === 'number' && v >= 0)) {
