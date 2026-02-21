@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/user/hooks';
 import { useLinkGoogleMutation } from '@/features/AccountPage/hooks/useAccountMutations';
@@ -29,12 +30,12 @@ export default function LinkGooglePage() {
           <p className="text-gray-600 mb-6">
             Please log in to link your Google account.
           </p>
-          <a
+          <Link
             href="/login"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
           >
             Go to Login
-          </a>
+          </Link>
         </div>
       </div>
     );

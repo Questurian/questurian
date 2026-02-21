@@ -7,7 +7,7 @@ import { useLoginModalStore } from '@/lib/stores/loginModalStore';
 
 function HomeContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
 
   useProtectedRoute({

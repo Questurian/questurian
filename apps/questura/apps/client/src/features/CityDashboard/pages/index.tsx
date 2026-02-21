@@ -22,8 +22,8 @@ function getParamValue(param: string | string[] | undefined): string | undefined
 
 function CityDashboardContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const params = useParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
+  const params = ((useParams() ?? {}) as Record<string, string | string[]>);
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
   const setLastVisited = useLocationStore((state) => state.setLastVisited);
 

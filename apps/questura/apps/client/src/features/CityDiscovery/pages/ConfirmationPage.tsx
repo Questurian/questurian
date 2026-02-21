@@ -8,7 +8,7 @@ import { useLocationStore } from '@/lib/stores/locationStore';
 
 function ConfirmationContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
 
   const cityId = searchParams.get('city');
   const intentId = searchParams.get('intent');

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { isActiveMember } from '../lib/membership';
 import type { MembershipGuardProps } from '../types';
 
@@ -21,12 +22,12 @@ export default function MembershipGuard({ user, children, fallback }: Membership
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           You already have an active membership. Visit your account to manage your settings.
         </p>
-        <a
+        <Link
           href="/account"
           className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
         >
           Go to Account
-        </a>
+        </Link>
       </div>
     </div>
   );

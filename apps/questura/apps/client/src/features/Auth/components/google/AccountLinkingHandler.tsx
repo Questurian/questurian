@@ -11,7 +11,7 @@ import LoadingSpinner from '@/components/shared/ui/LoadingSpinner';
 
 export default function AccountLinkingHandler() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);

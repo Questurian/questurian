@@ -14,7 +14,7 @@ export interface UseProtectedRouteOptions {
  * Used when protected pages redirect to home with showLogin param
  */
 export function useProtectedRoute(options?: UseProtectedRouteOptions) {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const hasTriggeredRef = useRef(false);
 
   const showLogin = searchParams.get(routeConfig.showLoginParam) === 'true';

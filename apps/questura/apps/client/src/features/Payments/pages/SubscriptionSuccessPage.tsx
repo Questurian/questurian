@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState, Suspense } from 'react';
 
 function SubscriptionSuccessContent() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const sessionId = searchParams?.get('session_id');
   const [mounted, setMounted] = useState(false);
 

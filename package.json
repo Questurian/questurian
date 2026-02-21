@@ -22,6 +22,7 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "bun",
       "esbuild",
       "nx",
       "sharp",

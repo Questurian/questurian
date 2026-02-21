@@ -381,13 +381,13 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
 export default function DesktopNavbar() {
   const { user, loading, isAuthenticated } = useAuth();
   const params = useParams();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const shouldShowSubscribe = !isAuthenticated || user?.subscriptionStatus !== "active";
   const setFavoriteCity = useLocationStore((state) => state.setFavoriteCity);
 
-  const countrySlug = getParamValue(params.country)?.toLowerCase();
-  const citySlug = getParamValue(params.city)?.toLowerCase();
-  const modeSlugFromParams = getParamValue(params.mode)?.toLowerCase();
+  const countrySlug = getParamValue(params?.country)?.toLowerCase();
+  const citySlug = getParamValue(params?.city)?.toLowerCase();
+  const modeSlugFromParams = getParamValue(params?.mode)?.toLowerCase();
 
   const pathnameSegments = pathname.split("/").filter(Boolean);
   const modeSlugFromPath = pathnameSegments[2]?.toLowerCase();
@@ -395,7 +395,7 @@ export default function DesktopNavbar() {
   const activeMode: CityMode = cityModes.includes(rawMode as CityMode) ? (rawMode as CityMode) : "explore";
 
   const hasCityContext = Boolean(countrySlug && citySlug);
-  const selectedCity = hasCityContext ? getCityBySlug(countrySlug, citySlug) : undefined;
+  const selectedCity = countrySlug && citySlug ? getCityBySlug(countrySlug, citySlug) : undefined;
   const cityName = selectedCity?.name || (citySlug ? formatSlugLabel(citySlug) : "Lima");
   const countryName = selectedCity?.displayCountry || (countrySlug ? formatSlugLabel(countrySlug) : "Peru");
   const fallbackCountryCode = countrySlug

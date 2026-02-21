@@ -8,7 +8,7 @@ import { intents, getCityById } from '../lib/data';
 
 function IntentSelectionContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
 
   const cityId = searchParams.get('city');
   const city = getCityById(cityId || '');

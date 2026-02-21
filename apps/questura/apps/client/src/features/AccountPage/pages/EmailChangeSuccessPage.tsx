@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 export default function EmailChangeSuccessPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const [newEmail, setNewEmail] = useState<string | null>(null);
   const [googleWasUnlinked, setGoogleWasUnlinked] = useState(false);
 
