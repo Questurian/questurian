@@ -17,9 +17,9 @@ export default function MobileNavbar() {
   const params = useParams();
   const shouldShowSubscribe = !isAuthenticated || user?.subscriptionStatus !== "active";
 
-  const countrySlug = getParamValue(params.country)?.toLowerCase();
-  const citySlug = getParamValue(params.city)?.toLowerCase();
-  const modeSlug = getParamValue(params.mode)?.toLowerCase();
+  const countrySlug = getParamValue(params?.country)?.toLowerCase();
+  const citySlug = getParamValue(params?.city)?.toLowerCase();
+  const modeSlug = getParamValue(params?.mode)?.toLowerCase();
   const hasCityContext = Boolean(countrySlug && citySlug);
   const activeMode = (["explore", "stay", "move"] as const).includes(modeSlug as "explore" | "stay" | "move") ? modeSlug : "explore";
   const logoHref = hasCityContext ? `/${countrySlug}/${citySlug}/${activeMode}` : "/";

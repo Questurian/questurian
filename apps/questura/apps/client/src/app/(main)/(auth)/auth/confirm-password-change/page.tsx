@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useConfirmPasswordChangeMutation } from '@/features/AccountPage/hooks/usePasswordChangeMutations';
 
 function ConfirmPasswordChangeContent() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
 

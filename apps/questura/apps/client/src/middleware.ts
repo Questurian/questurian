@@ -15,7 +15,7 @@ export function middleware(request: NextRequest) {
             new URL(`/${country}/${cityId}/${mode}`, request.url)
           );
         }
-      } catch (error) {
+      } catch {
         // Invalid cookie, continue to home page
       }
     }

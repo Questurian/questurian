@@ -9,7 +9,7 @@ import { getSafeRedirectPath, parseSafeUserData } from '@/lib/validations';
 
 function AuthPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,7 +1,7 @@
 'use client'
 
-import { SerializeLexicalToReact } from '@payloadcms/richtext-lexical/react'
-import { defaultHTMLConverters } from '@payloadcms/richtext-lexical/html'
+import { RichText } from '@payloadcms/richtext-lexical/react'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
 interface TextBlockProps {
   content?: unknown
@@ -10,14 +10,11 @@ interface TextBlockProps {
 
 export const TextBlock: React.FC<TextBlockProps> = ({ content, text }) => {
   // Handle both Lexical content and plain text
-  if (content && typeof content === 'object') {
+  if (content && typeof content === 'object' && 'root' in content) {
     // Lexical editor JSON content
     return (
       <div className="prose prose-lg max-w-none my-6 text-gray-700">
-        <SerializeLexicalToReact
-          nodes={content}
-          converters={defaultHTMLConverters}
-        />
+        <RichText data={content as SerializedEditorState} />
       </div>
     )
   }

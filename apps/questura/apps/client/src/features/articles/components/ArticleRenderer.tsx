@@ -77,9 +77,13 @@ const RenderBlock: React.FC<RenderBlockProps> = ({ block }) => {
       )
 
     case 'image':
+      if (typeof block.image !== 'string' && typeof block.imageFile !== 'string' && typeof block.image !== 'object' && typeof block.imageFile !== 'object') {
+        return null
+      }
+
       return (
         <ImageBlock
-          image={block.image || block.imageFile}
+          image={(block.image || block.imageFile) as string | { id: string; filename?: string }}
           alt={block.alt || block.altText || 'Article image'}
         />
       )
