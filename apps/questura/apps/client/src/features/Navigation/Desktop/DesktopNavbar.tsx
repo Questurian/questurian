@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, ArrowLeft, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, ArrowLeft, Star, Compass } from "lucide-react";
 import {
   MenuIcon,
   Logo,
@@ -17,6 +17,7 @@ import LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { cities, getCityBySlug } from "@/features/CityDiscovery/lib/data";
 import { useLocationStore } from "@/lib/stores/locationStore";
+import { useIntentModalStore } from "@/lib/stores/intentModalStore";
 
 const cityModes: CityMode[] = ["explore", "stay", "move"];
 
@@ -62,14 +63,17 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
   const [view, setView] = useState<DropdownView>("main");
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const locationLabel = `${cityName}, ${countryName}`;
 
   const favoriteCity = useLocationStore((state) => state.favoriteCity);
   const setFavoriteCity = useLocationStore((state) => state.setFavoriteCity);
-  const clearFavoriteCity = useLocationStore((state) => state.clearFavoriteCity);
+  const getCityMode = useLocationStore((state) => state.getCityMode);
+  const openIntentModal = useIntentModalStore((state) => state.openIntentModal);
 
   const isCurrentCityFavorite =
     favoriteCity !== null &&
@@ -98,6 +102,17 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
     const rect = triggerRef.current.getBoundingClientRect();
     setDropdownPos({ top: rect.bottom + 8, left: rect.left });
   }, []);
+
+  useEffect(() => {
+    if (!isOpen || !contentRef.current) return;
+    const el = contentRef.current;
+    const observer = new ResizeObserver(([entry]) => {
+      setContentHeight(entry.contentRect.height);
+    });
+    observer.observe(el);
+    setContentHeight(el.scrollHeight);
+    return () => observer.disconnect();
+  }, [isOpen, view]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -142,28 +157,22 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
     setIsOpen((prev) => !prev);
   };
 
-  const handleToggleFavorite = () => {
+  const handleSetAsHome = () => {
     if (!currentCityId || !currentCountry) return;
-
-    if (isCurrentCityFavorite) {
-      clearFavoriteCity();
-    } else {
-      setFavoriteCity({ cityId: currentCityId, country: currentCountry, mode: currentMode });
-    }
+    setFavoriteCity({ cityId: currentCityId, country: currentCountry, mode: currentMode });
   };
 
   const handleCityClick = (city: typeof cities[number]) => {
     setIsOpen(false);
-    router.push(`/${city.country}/${city.id}/${currentMode}`);
+    const savedMode = getCityMode(city.id, city.country);
+    if (savedMode) {
+      router.push(`/${city.country}/${city.id}/${savedMode}`);
+    } else {
+      openIntentModal(city.id, city.country, city.name);
+    }
   };
 
   const handleCountryClick = (country: CountryInfo) => {
-    const countryCities = cities.filter((c) => c.country === country.slug);
-    if (countryCities.length === 1) {
-      setIsOpen(false);
-      router.push(`/${countryCities[0].country}/${countryCities[0].id}/${currentMode}`);
-      return;
-    }
     setSelectedCountry(country);
     setView("country-cities");
   };
@@ -214,17 +223,15 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
       case "main":
         return (
           <>
-            {currentCityId && currentCountry ? (
+            {currentCityId && currentCountry && !isCurrentCityFavorite ? (
               <div className="border-b border-white/10 p-1.5">
                 <button
                   type="button"
                   className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-white/90 hover:bg-white/10"
-                  onClick={handleToggleFavorite}
+                  onClick={handleSetAsHome}
                 >
-                  <Star
-                    className={`h-3.5 w-3.5 ${isCurrentCityFavorite ? "fill-amber-400 text-amber-400" : "text-white/50"}`}
-                  />
-                  {isCurrentCityFavorite ? "Remove as home city" : "Set as home city"}
+                  <Star className="h-3.5 w-3.5 text-white/50" />
+                  Set as home city
                 </button>
               </div>
             ) : null}
@@ -250,6 +257,17 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
                 Change Country
                 <ChevronRight className="h-3.5 w-3.5 text-white/40" />
               </button>
+            </div>
+
+            <div className="border-t border-white/10 p-1.5">
+              <Link
+                href="/?browse"
+                className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-white/90 hover:bg-white/10"
+                onClick={() => setIsOpen(false)}
+              >
+                <Compass className="h-3.5 w-3.5 text-white/50" />
+                Explore all cities
+              </Link>
             </div>
           </>
         );
@@ -356,6 +374,9 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
           )}
         </span>
         <span className="text-[0.78rem] font-medium tracking-[0.02em]">{locationLabel}</span>
+        {isCurrentCityFavorite ? (
+          <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+        ) : null}
         <ChevronDown
           className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
@@ -366,10 +387,16 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
             <div
               ref={dropdownRef}
               role="menu"
-              className="fixed z-[9999] w-56 rounded-md border border-white/15 bg-[#2d2f33] shadow-lg"
-              style={{ top: dropdownPos.top, left: dropdownPos.left }}
+              className="fixed z-9999 w-56 overflow-hidden rounded-md border border-white/15 bg-[#2d2f33] shadow-lg transition-[height] duration-150 ease-out"
+              style={{
+                top: dropdownPos.top,
+                left: dropdownPos.left,
+                height: contentHeight !== undefined ? contentHeight : "auto",
+              }}
             >
-              {renderDropdownContent()}
+              <div ref={contentRef}>
+                {renderDropdownContent()}
+              </div>
             </div>,
             document.body
           )
@@ -384,6 +411,7 @@ export default function DesktopNavbar() {
   const pathname = usePathname();
   const shouldShowSubscribe = !isAuthenticated || user?.subscriptionStatus !== "active";
   const setFavoriteCity = useLocationStore((state) => state.setFavoriteCity);
+  const setCityMode = useLocationStore((state) => state.setCityMode);
 
   const countrySlug = getParamValue(params.country)?.toLowerCase();
   const citySlug = getParamValue(params.city)?.toLowerCase();
@@ -405,6 +433,7 @@ export default function DesktopNavbar() {
 
   const handleModeChange = (mode: CityMode) => {
     if (hasCityContext && countrySlug && citySlug) {
+      setCityMode(citySlug, countrySlug, mode);
       setFavoriteCity({ cityId: citySlug, country: countrySlug, mode });
     }
   };
