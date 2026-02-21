@@ -5,6 +5,7 @@ import LoginModalRenderer from "../components/layout/LoginModalRenderer";
 import PasswordResetModalRenderer from "../components/layout/PasswordResetModalRenderer";
 import UserModalRenderer from "../components/layout/UserModalRenderer";
 import MenuModalRenderer from "../components/layout/MenuModalRenderer";
+import IntentModalRenderer from "../components/layout/IntentModalRenderer";
 import { QueryProvider } from "../components/providers/QueryProvider";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -46,6 +47,7 @@ export default function RootLayout({
             <PasswordResetModalRenderer />
             <UserModalRenderer />
             <MenuModalRenderer />
+            <IntentModalRenderer />
           </QueryProvider>
         </div>
       </body>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface LocationInfo {
+export interface LocationInfo {
   cityId: string;
   country: string;
   mode: string;
@@ -11,37 +11,44 @@ interface LocationState {
   isOnboarded: boolean;
   favoriteCity: LocationInfo | null;
   lastVisited: LocationInfo | null;
+  visitedCities: Record<string, LocationInfo>;
 }
 
 interface LocationActions {
   completeOnboarding: (city: LocationInfo) => void;
   setFavoriteCity: (city: LocationInfo) => void;
-  clearFavoriteCity: () => void;
   setLastVisited: (location: LocationInfo) => void;
+  setCityMode: (cityId: string, country: string, mode: string) => void;
+  getCityMode: (cityId: string, country: string) => string | null;
 }
 
 type LocationStore = LocationState & LocationActions;
 
-// Helper to sync favorite city to cookie for middleware
-const syncFavoriteCityToCookie = (city: LocationInfo | null) => {
-  if (typeof document === 'undefined') return;
+function cityKey(cityId: string, country: string): string {
+  return `${country}:${cityId}`;
+}
 
-  if (city) {
-    document.cookie = `questura-location-redirect=${encodeURIComponent(JSON.stringify(city))}; path=/; max-age=31536000`;
-  } else {
-    document.cookie = 'questura-location-redirect=; path=/; max-age=0';
-  }
+const syncFavoriteCityToCookie = (city: LocationInfo) => {
+  if (typeof document === 'undefined') return;
+  document.cookie = `questura-location-redirect=${encodeURIComponent(JSON.stringify(city))}; path=/; max-age=31536000`;
 };
 
 export const useLocationStore = create<LocationStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isOnboarded: false,
       favoriteCity: null,
       lastVisited: null,
+      visitedCities: {},
 
       completeOnboarding: (city) => {
-        set({ isOnboarded: true, favoriteCity: city, lastVisited: city });
+        const key = cityKey(city.cityId, city.country);
+        set((state) => ({
+          isOnboarded: true,
+          favoriteCity: city,
+          lastVisited: city,
+          visitedCities: { ...state.visitedCities, [key]: city },
+        }));
         syncFavoriteCityToCookie(city);
       },
 
@@ -50,13 +57,21 @@ export const useLocationStore = create<LocationStore>()(
         syncFavoriteCityToCookie(city);
       },
 
-      clearFavoriteCity: () => {
-        set({ favoriteCity: null });
-        syncFavoriteCityToCookie(null);
-      },
-
       setLastVisited: (location) =>
         set({ lastVisited: location }),
+
+      setCityMode: (cityId, country, mode) => {
+        const key = cityKey(cityId, country);
+        const info: LocationInfo = { cityId, country, mode };
+        set((state) => ({
+          visitedCities: { ...state.visitedCities, [key]: info },
+        }));
+      },
+
+      getCityMode: (cityId, country) => {
+        const key = cityKey(cityId, country);
+        return get().visitedCities[key]?.mode ?? null;
+      },
     }),
     { name: 'questura-location' }
   )
