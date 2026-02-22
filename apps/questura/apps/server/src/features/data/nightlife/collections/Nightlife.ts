@@ -40,7 +40,7 @@ export const Nightlife: CollectionConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Details',
+          label: 'Basic Info',
           fields: [
             {
               name: 'type',
@@ -70,6 +70,99 @@ export const Nightlife: CollectionConfig = {
                 description: 'Price range indicator',
               },
             },
+          ],
+        },
+        {
+          label: 'Profile',
+          fields: [
+            {
+              name: 'nightlifeDetails',
+              type: 'group',
+              admin: {
+                description: 'Structured nightlife details from Location Manager sync',
+              },
+              fields: [
+                {
+                  type: 'tabs',
+                  tabs: [
+                    {
+                      label: 'Core',
+                      fields: [
+                        {
+                          name: 'core',
+                          type: 'group',
+                          fields: [
+                            { name: 'name', type: 'text' },
+                            { name: 'clubType', type: 'text' },
+                            { name: 'priceTier', type: 'text' },
+                            { name: 'music', type: 'text', hasMany: true },
+                            { name: 'idealFor', type: 'text', hasMany: true },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      label: 'Space',
+                      fields: [
+                        {
+                          name: 'theSpace',
+                          type: 'group',
+                          fields: [
+                            { name: 'venueType', type: 'text' },
+                            { name: 'venueSize', type: 'text' },
+                            { name: 'spaceLayout', type: 'text', hasMany: true },
+                            { name: 'vibe', type: 'text', hasMany: true },
+                            { name: 'peakHours', type: 'text' },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      label: 'Scene',
+                      fields: [
+                        {
+                          name: 'theScene',
+                          type: 'group',
+                          fields: [
+                            { name: 'musicFormat', type: 'text', hasMany: true },
+                            { name: 'touristPresence', type: 'text' },
+                            { name: 'dressCode', type: 'text', hasMany: true },
+                            { name: 'energyLevel', type: 'text' },
+                            { name: 'vipAndBottleService', type: 'text' },
+                            { name: 'crowdProfile', type: 'text' },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      label: 'Logistics',
+                      fields: [
+                        {
+                          name: 'theDetails',
+                          type: 'group',
+                          fields: [
+                            {
+                              name: 'operationHours',
+                              type: 'json',
+                              admin: {
+                                description: 'Raw operation hours object from Location Manager',
+                              },
+                            },
+                            { name: 'reserveUrl', type: 'text' },
+                            { name: 'daytimeRestaurant', type: 'checkbox' },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Media',
+          fields: [
             {
               name: 'gallery',
               type: 'array',
@@ -110,20 +203,6 @@ export const Nightlife: CollectionConfig = {
                   },
                 },
               ],
-            },
-            {
-              name: 'idealFor',
-              type: 'json',
-              admin: {
-                description: 'String[] ideal-for tags',
-              },
-            },
-            {
-              name: 'nightlifeDetails',
-              type: 'json',
-              admin: {
-                description: 'Structured nightlife details JSON from Location Manager',
-              },
             },
             {
               name: 'instagramGallery',
@@ -224,13 +303,6 @@ export const Nightlife: CollectionConfig = {
                   },
                 },
                 {
-                  name: 'operationHours',
-                  type: 'json',
-                  admin: {
-                    description: 'Structured operation hours object from Location Manager',
-                  },
-                },
-                {
                   name: 'ianaTimeId',
                   type: 'text',
                   admin: {
@@ -241,35 +313,6 @@ export const Nightlife: CollectionConfig = {
                     return typeof value === 'string' && value.includes('/')
                       ? true
                       : 'Use IANA timezone format, e.g. America/Bogota'
-                  },
-                },
-                {
-                  name: 'neighborhoodDescription',
-                  type: 'textarea',
-                  admin: {
-                    description: 'Neighborhood context from Location Manager',
-                    rows: 3,
-                  },
-                },
-                {
-                  name: 'tripadvisorUrl',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor URL from Location Manager',
-                  },
-                },
-                {
-                  name: 'tripadvisorLocationId',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor location ID from Location Manager',
-                  },
-                },
-                {
-                  name: 'placeId',
-                  type: 'text',
-                  admin: {
-                    description: 'Google Place ID from Location Manager',
                   },
                 },
               ],

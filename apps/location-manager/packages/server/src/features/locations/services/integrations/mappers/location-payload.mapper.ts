@@ -1,7 +1,7 @@
 import type { LocationResponse, LocationCategory } from "../../../models/location";
 import { BadRequestError } from "@shared/errors/http-error";
 import type { UploadedImagesResult } from "../types";
-import type { PayloadEntryData } from "../clients/payload-api.client";
+import type { PayloadEntryData, PayloadNightlifeDetails } from "../clients/payload-api.client";
 import { extractPhoneNumber, convertIsoToPhoneCountryCode } from "../utils";
 
 export type PayloadCollection = "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations";
@@ -105,12 +105,93 @@ function asStringArray(value: unknown): string[] | undefined {
 
 function asBoolean(value: unknown): boolean | undefined {
   if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
     if (normalized === "true" || normalized === "yes" || normalized === "1") return true;
     if (normalized === "false" || normalized === "no" || normalized === "0") return false;
   }
   return undefined;
+}
+
+function unwrapLabeledValue(value: unknown): unknown {
+  const record = asRecord(value);
+  if (!record) return value;
+  if (Object.prototype.hasOwnProperty.call(record, "value")) {
+    return record.value;
+  }
+  return value;
+}
+
+function getNightlifeSectionValue(
+  details: Record<string, unknown>,
+  section: "theSpace" | "theScene" | "theDetails",
+  key: string
+): unknown {
+  const newSchemaSection = asRecord(details[section]);
+  const oldSchemaDetails = asRecord(details.details);
+  const oldSchemaSection = asRecord(oldSchemaDetails?.[section]);
+  const candidate = newSchemaSection?.[key] ?? oldSchemaSection?.[key];
+  return unwrapLabeledValue(candidate);
+}
+
+function getNightlifeDetailsPayload(location: LocationResponse): PayloadNightlifeDetails {
+  const details = asRecord(location.nightlifeDetails) ?? {};
+  const core = asRecord(details.core);
+  const sectionDetails = asRecord(details.theDetails);
+
+  const coreName = asString(core?.name) ?? asString(details.name) ?? location.title ?? location.source.name ?? "";
+  const clubType = asString(core?.clubType) ?? asString(details.club_type) ?? asString(location.type) ?? "";
+  const priceTier = asString(core?.priceTier) ?? asString(details.price_tier) ?? asString(location.priceLevel) ?? "";
+  const music = asStringArray(core?.music ?? details.music) ?? [];
+  const idealFor = asStringArray(core?.idealFor ?? location.idealFor) ?? [];
+
+  const operationHours =
+    asRecord(sectionDetails?.operationHours)
+    ?? asRecord(getNightlifeSectionValue(details, "theDetails", "operationHours"))
+    ?? location.operationHours
+    ?? {};
+  const reserveUrl = asString(sectionDetails?.reserveUrl)
+    ?? asString(details.reserve_url)
+    ?? asString(getNightlifeSectionValue(details, "theDetails", "reserveUrl"))
+    ?? "";
+  const daytimeRestaurant = asBoolean(sectionDetails?.daytimeRestaurant)
+    ?? asBoolean(details.daytime_restaurant)
+    ?? asBoolean(getNightlifeSectionValue(details, "theDetails", "daytimeRestaurant"))
+    ?? false;
+
+  return {
+    core: {
+      name: coreName,
+      clubType,
+      priceTier,
+      music,
+      idealFor,
+    },
+    theSpace: {
+      venueType: asString(getNightlifeSectionValue(details, "theSpace", "venueType")) ?? "",
+      venueSize: asString(getNightlifeSectionValue(details, "theSpace", "venueSize")) ?? "",
+      spaceLayout: asStringArray(getNightlifeSectionValue(details, "theSpace", "spaceLayout")) ?? [],
+      vibe: asStringArray(getNightlifeSectionValue(details, "theSpace", "vibe")) ?? [],
+      peakHours: asString(getNightlifeSectionValue(details, "theSpace", "peakHours")) ?? "",
+    },
+    theScene: {
+      musicFormat: asStringArray(getNightlifeSectionValue(details, "theScene", "musicFormat")) ?? [],
+      touristPresence: asString(getNightlifeSectionValue(details, "theScene", "touristPresence")) ?? "",
+      dressCode: asStringArray(getNightlifeSectionValue(details, "theScene", "dressCode")) ?? [],
+      energyLevel: asString(getNightlifeSectionValue(details, "theScene", "energyLevel")) ?? "",
+      vipAndBottleService: asString(getNightlifeSectionValue(details, "theScene", "vipAndBottleService")) ?? "",
+      crowdProfile: asString(getNightlifeSectionValue(details, "theScene", "crowdProfile")) ?? "",
+    },
+    theDetails: {
+      operationHours,
+      reserveUrl,
+      daytimeRestaurant,
+    },
+  };
 }
 
 function parseAccommodationsGroups(location: LocationResponse): Record<string, unknown> {
@@ -271,10 +352,13 @@ function mapNightlifePayload(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ): PayloadEntryData {
+  const sharedFields = mapSharedPayloadFields(location, uploadedImages, locationRef);
+  const { countryCodeIso, sourceName, ...nightlifeSharedFields } = sharedFields;
   return {
-    ...mapSharedPayloadFields(location, uploadedImages, locationRef),
+    ...nightlifeSharedFields,
     ...mapCategoryCommonPayloadFields(location),
-    ...(location.nightlifeDetails ? { nightlifeDetails: location.nightlifeDetails } : {}),
+    location: location.locationKey ?? "",
+    nightlifeDetails: getNightlifeDetailsPayload(location),
   };
 }
 
