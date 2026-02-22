@@ -192,7 +192,7 @@ export const KeyLocations: CollectionConfig = {
                     },
                   },
                 },
-              },
+              ],
             },
           ],
         },
