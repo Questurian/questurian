@@ -93,7 +93,6 @@ export const KeyLocations: CollectionConfig = {
                           type: 'group',
                           fields: [
                             { name: 'locationType', type: 'text' },
-                            { name: 'description', type: 'textarea' },
                             { name: 'status', type: 'text' },
                             { name: 'neighborhood', type: 'text' },
                           ],

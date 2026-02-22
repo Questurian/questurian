@@ -22,7 +22,6 @@ describe("mapLocationToPayloadFormat key_locations", () => {
       attractionsDetails: null,
       keyLocationsDetails: {
         location_type: "airport",
-        description: "Main international airport",
         status: "active",
         neighborhood: "Callao",
         website: "https://keylocation.example.com",
@@ -72,7 +71,6 @@ describe("mapLocationToPayloadFormat key_locations", () => {
     expect(payload.keyLocationsDetails).toEqual({
       core: {
         locationType: "airport",
-        description: "Main international airport",
         status: "active",
         neighborhood: "Callao",
       },

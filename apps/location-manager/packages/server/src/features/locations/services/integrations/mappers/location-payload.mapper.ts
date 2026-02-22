@@ -230,13 +230,11 @@ function getKeyLocationsDetailsPayload(location: LocationResponse): Record<strin
     ?? asString(core?.locationType)
     ?? asString(core?.location_type)
     ?? asString(location.type);
-  const description = asString(details.description) ?? asString(core?.description);
   const status = asString(details.status) ?? asString(core?.status);
   const neighborhood = asString(details.neighborhood) ?? asString(core?.neighborhood);
 
   const payloadCore = {
     ...(locationType ? { locationType } : {}),
-    ...(description ? { description } : {}),
     ...(status ? { status } : {}),
     ...(neighborhood ? { neighborhood } : {}),
   };
