@@ -59,7 +59,7 @@ export const Accommodations: CollectionConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Details',
+          label: 'Basic Info',
           fields: [
             {
               name: 'type',
@@ -91,6 +91,192 @@ export const Accommodations: CollectionConfig = {
                 description: 'Price range indicator',
               },
             },
+          ],
+        },
+        {
+          label: 'Profile',
+          fields: [
+            {
+              type: 'tabs',
+              admin: {
+                description: 'Structured accommodations profile synced from Location Manager',
+              },
+              tabs: [
+                {
+                  label: 'Core',
+                  fields: [
+                    {
+                      name: 'core',
+                      type: 'group',
+                      admin: {
+                        description: 'Name, pricing, district, and subtype from Location Manager core section.',
+                      },
+                      fields: [
+                        { name: 'name', type: 'text' },
+                        {
+                          name: 'price',
+                          type: 'select',
+                          options: [
+                            { label: '$', value: '$' },
+                            { label: '$$', value: '$$' },
+                            { label: '$$$', value: '$$$' },
+                            { label: '$$$$', value: '$$$$' },
+                          ],
+                        },
+                        { name: 'district', type: 'text' },
+                        { name: 'type', type: 'text' },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  label: 'The Stay',
+                  fields: [
+                    {
+                      name: 'theStay',
+                      type: 'group',
+                      admin: {
+                        description: 'Practical stay amenities and family/parking/breakfast signals.',
+                      },
+                      fields: [
+                        {
+                          name: 'perfectFor',
+                          type: 'select',
+                          hasMany: true,
+                          options: [
+                            { label: 'Solo', value: 'Solo' },
+                            { label: 'Couples', value: 'Couples' },
+                            { label: 'Groups', value: 'Groups' },
+                          ],
+                        },
+                        { name: 'kidFriendly', type: 'checkbox' },
+                        { name: 'ac', type: 'checkbox' },
+                        { name: 'wifi', type: 'checkbox' },
+                        { name: 'extraGuestFee', type: 'checkbox' },
+                        {
+                          name: 'parking',
+                          type: 'select',
+                          hasMany: true,
+                          options: [
+                            { label: 'Onsite', value: 'onsite' },
+                            { label: 'Valet', value: 'valet' },
+                            { label: 'Street', value: 'street' },
+                            { label: 'Garage', value: 'garage' },
+                          ],
+                        },
+                        { name: 'breakfastServed', type: 'checkbox' },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  label: 'The Experience',
+                  fields: [
+                    {
+                      name: 'theExperience',
+                      type: 'group',
+                      admin: {
+                        description: 'Atmosphere and lifestyle amenities like vibe, workspace, pool, and gym.',
+                      },
+                      fields: [
+                        {
+                          name: 'vibe',
+                          type: 'select',
+                          hasMany: true,
+                          options: [
+                            { label: 'Luxury', value: 'Luxury' },
+                            { label: 'Social', value: 'Social' },
+                            { label: 'Quiet', value: 'Quiet' },
+                            { label: 'Boutique', value: 'Boutique' },
+                            { label: 'Family-Friendly', value: 'Family-Friendly' },
+                            { label: 'Business-Friendly', value: 'Business-Friendly' },
+                          ],
+                        },
+                        {
+                          name: 'workspace',
+                          type: 'select',
+                          options: [
+                            { label: 'None', value: 'None' },
+                            { label: 'Shared Lounge', value: 'Shared Lounge' },
+                            { label: 'Dedicated Desk', value: 'Dedicated Desk' },
+                            { label: 'Co-working Space', value: 'Co-working Space' },
+                          ],
+                        },
+                        { name: 'restaurant', type: 'checkbox' },
+                        {
+                          name: 'pool',
+                          type: 'select',
+                          hasMany: true,
+                          options: [
+                            { label: 'Indoor', value: 'indoor' },
+                            { label: 'Outdoor', value: 'outdoor' },
+                            { label: 'Rooftop', value: 'rooftop' },
+                            { label: 'Infinity', value: 'infinity' },
+                          ],
+                        },
+                        { name: 'rooftopLounge', type: 'checkbox' },
+                        {
+                          name: 'jacuzzi',
+                          type: 'select',
+                          hasMany: true,
+                          options: [
+                            { label: 'Private', value: 'private' },
+                            { label: 'Shared', value: 'shared' },
+                            { label: 'Rooftop', value: 'rooftop' },
+                          ],
+                        },
+                        {
+                          name: 'gym',
+                          type: 'select',
+                          options: [
+                            { label: 'None', value: 'None' },
+                            { label: 'Basic', value: 'Basic' },
+                            { label: 'Full', value: 'Full' },
+                            { label: '24/7', value: '24/7' },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  label: 'The Details',
+                  fields: [
+                    {
+                      name: 'theDetails',
+                      type: 'group',
+                      admin: {
+                        description: 'Address and operational details like check-in/out, contact, and booking links.',
+                      },
+                      fields: [
+                        { name: 'address', type: 'text' },
+                        {
+                          name: 'walkability',
+                          type: 'select',
+                          options: [
+                            { label: 'Walkable Downtown', value: 'Walkable Downtown' },
+                            { label: 'Transit-Friendly', value: 'Transit-Friendly' },
+                            { label: 'Car Needed', value: 'Car Needed' },
+                            { label: 'Secluded', value: 'Secluded' },
+                          ],
+                        },
+                        { name: 'checkInTime', type: 'text' },
+                        { name: 'checkOutTime', type: 'text' },
+                        { name: 'phone', type: 'text' },
+                        { name: 'websiteUrl', type: 'text' },
+                        { name: 'bookingUrl', type: 'text' },
+                        { name: 'googleMapsUrl', type: 'text' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Media',
+          fields: [
             {
               name: 'gallery',
               type: 'array',
@@ -131,189 +317,6 @@ export const Accommodations: CollectionConfig = {
                       Field: 'src/features/media/components/MediaSetPreview.tsx',
                     },
                   },
-                },
-              ],
-            },
-            {
-              type: 'collapsible',
-              label: 'Accommodations Profile',
-              admin: {
-                initCollapsed: true,
-                description: 'Structured accommodations fields synced from Location Manager',
-              },
-              fields: [
-                {
-                  type: 'tabs',
-                  tabs: [
-                    {
-                      label: 'Core',
-                      fields: [
-                        {
-                          name: 'core',
-                          type: 'group',
-                          admin: {
-                            description: 'Name, pricing, district, and subtype from Location Manager core section.',
-                          },
-                          fields: [
-                            { name: 'name', type: 'text' },
-                            {
-                              name: 'price',
-                              type: 'select',
-                              options: [
-                                { label: '$', value: '$' },
-                                { label: '$$', value: '$$' },
-                                { label: '$$$', value: '$$$' },
-                                { label: '$$$$', value: '$$$$' },
-                              ],
-                            },
-                            { name: 'district', type: 'text' },
-                            { name: 'type', type: 'text' },
-                          ],
-                        },
-                      ],
-                    },
-                    {
-                      label: 'The Stay',
-                      fields: [
-                        {
-                          name: 'theStay',
-                          type: 'group',
-                          admin: {
-                            description: 'Practical stay amenities and family/parking/breakfast signals.',
-                          },
-                          fields: [
-                            {
-                              name: 'perfectFor',
-                              type: 'select',
-                              hasMany: true,
-                              options: [
-                                { label: 'Solo', value: 'Solo' },
-                                { label: 'Couples', value: 'Couples' },
-                                { label: 'Groups', value: 'Groups' },
-                              ],
-                            },
-                            { name: 'kidFriendly', type: 'checkbox' },
-                            { name: 'ac', type: 'checkbox' },
-                            { name: 'wifi', type: 'checkbox' },
-                            { name: 'extraGuestFee', type: 'checkbox' },
-                            {
-                              name: 'parking',
-                              type: 'select',
-                              hasMany: true,
-                              options: [
-                                { label: 'Onsite', value: 'onsite' },
-                                { label: 'Valet', value: 'valet' },
-                                { label: 'Street', value: 'street' },
-                                { label: 'Garage', value: 'garage' },
-                              ],
-                            },
-                            { name: 'breakfastServed', type: 'checkbox' },
-                          ],
-                        },
-                      ],
-                    },
-                    {
-                      label: 'The Experience',
-                      fields: [
-                        {
-                          name: 'theExperience',
-                          type: 'group',
-                          admin: {
-                            description: 'Atmosphere and lifestyle amenities like vibe, workspace, pool, and gym.',
-                          },
-                          fields: [
-                            {
-                              name: 'vibe',
-                              type: 'select',
-                              hasMany: true,
-                              options: [
-                                { label: 'Luxury', value: 'Luxury' },
-                                { label: 'Social', value: 'Social' },
-                                { label: 'Quiet', value: 'Quiet' },
-                                { label: 'Boutique', value: 'Boutique' },
-                                { label: 'Family-Friendly', value: 'Family-Friendly' },
-                                { label: 'Business-Friendly', value: 'Business-Friendly' },
-                              ],
-                            },
-                            {
-                              name: 'workspace',
-                              type: 'select',
-                              options: [
-                                { label: 'None', value: 'None' },
-                                { label: 'Shared Lounge', value: 'Shared Lounge' },
-                                { label: 'Dedicated Desk', value: 'Dedicated Desk' },
-                                { label: 'Co-working Space', value: 'Co-working Space' },
-                              ],
-                            },
-                            { name: 'restaurant', type: 'checkbox' },
-                            {
-                              name: 'pool',
-                              type: 'select',
-                              hasMany: true,
-                              options: [
-                                { label: 'Indoor', value: 'indoor' },
-                                { label: 'Outdoor', value: 'outdoor' },
-                                { label: 'Rooftop', value: 'rooftop' },
-                                { label: 'Infinity', value: 'infinity' },
-                              ],
-                            },
-                            { name: 'rooftopLounge', type: 'checkbox' },
-                            {
-                              name: 'jacuzzi',
-                              type: 'select',
-                              hasMany: true,
-                              options: [
-                                { label: 'Private', value: 'private' },
-                                { label: 'Shared', value: 'shared' },
-                                { label: 'Rooftop', value: 'rooftop' },
-                              ],
-                            },
-                            {
-                              name: 'gym',
-                              type: 'select',
-                              options: [
-                                { label: 'None', value: 'None' },
-                                { label: 'Basic', value: 'Basic' },
-                                { label: 'Full', value: 'Full' },
-                                { label: '24/7', value: '24/7' },
-                              ],
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                    {
-                      label: 'The Details',
-                      fields: [
-                        {
-                          name: 'theDetails',
-                          type: 'group',
-                          admin: {
-                            description: 'Address and operational details like check-in/out, contact, and booking links.',
-                          },
-                          fields: [
-                            { name: 'address', type: 'text' },
-                            {
-                              name: 'walkability',
-                              type: 'select',
-                              options: [
-                                { label: 'Walkable Downtown', value: 'Walkable Downtown' },
-                                { label: 'Transit-Friendly', value: 'Transit-Friendly' },
-                                { label: 'Car Needed', value: 'Car Needed' },
-                                { label: 'Secluded', value: 'Secluded' },
-                              ],
-                            },
-                            { name: 'checkInTime', type: 'text' },
-                            { name: 'checkOutTime', type: 'text' },
-                            { name: 'phone', type: 'text' },
-                            { name: 'websiteUrl', type: 'text' },
-                            { name: 'bookingUrl', type: 'text' },
-                            { name: 'googleMapsUrl', type: 'text' },
-                          ],
-                        },
-                      ],
-                    },
-                  ],
                 },
               ],
             },

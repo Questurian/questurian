@@ -116,6 +116,30 @@ export const Dining: CollectionConfig = {
                 description: 'Price range indicator',
               },
             },
+          ],
+        },
+        {
+          label: 'Profile',
+          fields: [
+            {
+              name: 'cuisines',
+              type: 'json',
+              admin: {
+                description: 'String[] cuisines',
+              },
+            },
+            {
+              name: 'idealFor',
+              type: 'json',
+              admin: {
+                description: 'String[] ideal-for tags',
+              },
+            },
+          ],
+        },
+        {
+          label: 'Media',
+          fields: [
             {
               name: 'gallery',
               type: 'array',
@@ -191,26 +215,7 @@ export const Dining: CollectionConfig = {
           ],
         },
         {
-          label: 'Classification',
-          fields: [
-            {
-              name: 'cuisines',
-              type: 'json',
-              admin: {
-                description: 'String[] cuisines',
-              },
-            },
-            {
-              name: 'idealFor',
-              type: 'json',
-              admin: {
-                description: 'String[] ideal-for tags',
-              },
-            },
-          ],
-        },
-        {
-          label: 'Location & Contact',
+          label: 'Location',
           fields: [
             {
               name: 'location',
