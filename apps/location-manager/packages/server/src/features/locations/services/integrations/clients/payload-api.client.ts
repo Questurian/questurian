@@ -187,6 +187,7 @@ export interface PayloadMediaSetQueryResponse {
 export interface PayloadEntryData {
   title: string;
   type?: string | null;
+  keyLocationStatus?: string | null;
   priceLevel?: string | null;
   /**
    * IMPORTANT: Use locationRef only, never include a 'location' field.
@@ -202,9 +203,19 @@ export interface PayloadEntryData {
   phoneNumber?: string;
   website?: string;
   email?: string;
-  operationHours?: Record<string, unknown>;
+  countryCodeIso?: string;
+  sourceName?: string;
+  mealTypes?: string[];
   cuisines?: string[];
+  features?: string[];
   idealFor?: string[];
+  nightlifeDetails?: Record<string, unknown>;
+  core?: Record<string, unknown>;
+  theStay?: Record<string, unknown>;
+  theExperience?: Record<string, unknown>;
+  theDetails?: Record<string, unknown>;
+  attractionsDetails?: Record<string, unknown>;
+  keyLocationsDetails?: Record<string, unknown>;
   ianaTimeId?: string;
   latitude?: number;
   longitude?: number;
@@ -494,7 +505,7 @@ export class PayloadApiClient {
    * (Dining, Accommodations, Attractions, Nightlife)
    */
   async findEntryByTitle(
-    collection: "dining" | "accommodations" | "attractions" | "nightlife",
+    collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations",
     title: string
   ): Promise<string | null> {
     if (!this.isConfigured()) {
@@ -550,7 +561,7 @@ export class PayloadApiClient {
    * Used to fetch existing data before updating (for merging galleries)
    */
   async getEntryById(
-    collection: "dining" | "accommodations" | "attractions" | "nightlife",
+    collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations",
     docId: string
   ): Promise<PayloadEntryResponse | null> {
     if (!this.isConfigured()) {
@@ -662,7 +673,7 @@ export class PayloadApiClient {
    * Create an entry in a Payload collection
    */
   async createEntry(
-    collection: "dining" | "accommodations" | "attractions" | "nightlife",
+    collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations",
     data: PayloadEntryData
   ): Promise<PayloadEntryResponse> {
     if (!this.isConfigured()) {
@@ -723,7 +734,7 @@ export class PayloadApiClient {
    * Update an existing entry in a Payload collection
    */
   async updateEntry(
-    collection: "dining" | "accommodations" | "attractions" | "nightlife",
+    collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations",
     docId: string,
     data: PayloadEntryData
   ): Promise<PayloadEntryResponse> {
@@ -791,7 +802,7 @@ export class PayloadApiClient {
    * @returns The response from create or update operation
    */
   async upsertEntry(
-    collection: "dining" | "accommodations" | "attractions" | "nightlife",
+    collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations",
     data: PayloadEntryData
   ): Promise<PayloadEntryResponse> {
     if (!this.isConfigured()) {

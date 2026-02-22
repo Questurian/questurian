@@ -64,6 +64,19 @@ export const Attractions: CollectionConfig = {
               admin: { description: 'Type of attraction' },
             },
             {
+              name: 'priceLevel',
+              type: 'select',
+              options: [
+                { label: '$', value: '1' },
+                { label: '$$', value: '2' },
+                { label: '$$$', value: '3' },
+                { label: '$$$$', value: '4' },
+              ],
+              admin: {
+                description: 'Price range indicator',
+              },
+            },
+            {
               name: 'gallery',
               type: 'array',
               minRows: 1,
@@ -80,6 +93,20 @@ export const Attractions: CollectionConfig = {
                   admin: { description: 'Gallery media set' },
                 },
                 {
+                  name: 'altText',
+                  type: 'text',
+                  admin: {
+                    description: 'Optional per-image alt text from Location Manager',
+                  },
+                },
+                {
+                  name: 'caption',
+                  type: 'text',
+                  admin: {
+                    description: 'Optional per-image caption from Location Manager',
+                  },
+                },
+                {
                   name: 'preview',
                   type: 'ui',
                   admin: {
@@ -89,6 +116,20 @@ export const Attractions: CollectionConfig = {
                   },
                 },
               ],
+            },
+            {
+              name: 'idealFor',
+              type: 'json',
+              admin: {
+                description: 'String[] ideal-for tags',
+              },
+            },
+            {
+              name: 'attractionsDetails',
+              type: 'json',
+              admin: {
+                description: 'Structured attractions details JSON from Location Manager',
+              },
             },
             {
               name: 'instagramGallery',
@@ -179,6 +220,62 @@ export const Attractions: CollectionConfig = {
                   type: 'text',
                   admin: {
                     description: 'Website URL',
+                  },
+                },
+                {
+                  name: 'email',
+                  type: 'email',
+                  admin: {
+                    description: 'Contact email from Location Manager',
+                  },
+                },
+                {
+                  name: 'operationHours',
+                  type: 'json',
+                  admin: {
+                    description: 'Structured operation hours object from Location Manager',
+                  },
+                },
+                {
+                  name: 'ianaTimeId',
+                  type: 'text',
+                  admin: {
+                    description: 'IANA timezone (example: America/Bogota)',
+                  },
+                  validate: (value: unknown) => {
+                    if (!value) return true
+                    return typeof value === 'string' && value.includes('/')
+                      ? true
+                      : 'Use IANA timezone format, e.g. America/Bogota'
+                  },
+                },
+                {
+                  name: 'neighborhoodDescription',
+                  type: 'textarea',
+                  admin: {
+                    description: 'Neighborhood context from Location Manager',
+                    rows: 3,
+                  },
+                },
+                {
+                  name: 'tripadvisorUrl',
+                  type: 'text',
+                  admin: {
+                    description: 'TripAdvisor URL from Location Manager',
+                  },
+                },
+                {
+                  name: 'tripadvisorLocationId',
+                  type: 'text',
+                  admin: {
+                    description: 'TripAdvisor location ID from Location Manager',
+                  },
+                },
+                {
+                  name: 'placeId',
+                  type: 'text',
+                  admin: {
+                    description: 'Google Place ID from Location Manager',
                   },
                 },
               ],

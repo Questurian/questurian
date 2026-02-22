@@ -1,6 +1,6 @@
 import type { Category } from "./common.types";
 
-export type PayloadSyncCategory = Exclude<Category, "key_locations">;
+export type PayloadSyncCategory = Category;
 
 export interface SyncResult {
   locationId: number;

@@ -20,6 +20,7 @@ import { Accommodations } from './features/data/accommodations/collections/Accom
 import { Dining } from './features/data/dining/collections/Dining'
 import { Attractions } from './features/data/attractions/collections/Attractions'
 import { Nightlife } from './features/data/nightlife/collections/Nightlife'
+import { KeyLocations } from './features/data/key-locations/collections/KeyLocations'
 import { AffiliateProducts } from './features/data/affiliate/collections/AffiliateProducts'
 import { InstagramPosts } from './features/data/instagram/collections/InstagramPosts'
 import { PerfectForTags } from './features/shared/perfect-for/collections/PerfectForTags'
@@ -42,7 +43,7 @@ export default buildConfig({
   serverURL: APP_URLS.backendLocal,
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
-  collections: [Users, MediaAsset, MediaSet, Articles, Rankings, AffiliateArticles, Itineraries, Locations, SeoMetadata, Categories, Tags, Accommodations, Dining, Attractions, Nightlife, AffiliateProducts, InstagramPosts, PerfectForTags],
+  collections: [Users, MediaAsset, MediaSet, Articles, Rankings, AffiliateArticles, Itineraries, Locations, SeoMetadata, Categories, Tags, Accommodations, Dining, Attractions, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,
   typescript: {

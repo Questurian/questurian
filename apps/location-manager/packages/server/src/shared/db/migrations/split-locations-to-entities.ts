@@ -93,6 +93,54 @@ function ensureEntitiesTableAcceptsKeyLocations(db: Database): void {
   }
 }
 
+function ensurePayloadSyncStateAcceptsKeyLocations(db: Database): void {
+  if (!tableExists(db, "payload_sync_state")) return;
+
+  const schemaRow = db
+    .query("SELECT sql FROM sqlite_master WHERE type='table' AND name='payload_sync_state'")
+    .get() as { sql: string } | null;
+  const sql = schemaRow?.sql ?? "";
+  if (sql.includes("'key-locations'")) {
+    return;
+  }
+
+  db.run("PRAGMA foreign_keys = OFF");
+  db.run("BEGIN TRANSACTION");
+  try {
+    db.run(`
+      CREATE TABLE payload_sync_state_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_id INTEGER NOT NULL,
+        payload_collection TEXT NOT NULL CHECK(payload_collection IN ('dining', 'accommodations', 'attractions', 'nightlife', 'key-locations')),
+        payload_doc_id TEXT NOT NULL,
+        last_synced_at TEXT NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'success' CHECK(sync_status IN ('success', 'failed', 'pending')),
+        error_message TEXT,
+        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+        UNIQUE(entity_id, payload_collection)
+      )
+    `);
+
+    db.run(`
+      INSERT INTO payload_sync_state_new (
+        id, entity_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message
+      )
+      SELECT
+        id, entity_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message
+      FROM payload_sync_state
+    `);
+
+    db.run("DROP TABLE payload_sync_state");
+    db.run("ALTER TABLE payload_sync_state_new RENAME TO payload_sync_state");
+    db.run("COMMIT");
+  } catch (error) {
+    db.run("ROLLBACK");
+    throw error;
+  } finally {
+    db.run("PRAGMA foreign_keys = ON");
+  }
+}
+
 function ensureEntitySchema(db: Database): void {
   db.run(`
     CREATE TABLE IF NOT EXISTS entities (
@@ -209,7 +257,7 @@ function ensureEntitySchema(db: Database): void {
     CREATE TABLE IF NOT EXISTS payload_sync_state (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       entity_id INTEGER NOT NULL,
-      payload_collection TEXT NOT NULL CHECK(payload_collection IN ('dining', 'accommodations', 'attractions', 'nightlife')),
+      payload_collection TEXT NOT NULL CHECK(payload_collection IN ('dining', 'accommodations', 'attractions', 'nightlife', 'key-locations')),
       payload_doc_id TEXT NOT NULL,
       last_synced_at TEXT NOT NULL,
       sync_status TEXT NOT NULL DEFAULT 'success' CHECK(sync_status IN ('success', 'failed', 'pending')),
@@ -218,6 +266,7 @@ function ensureEntitySchema(db: Database): void {
       UNIQUE(entity_id, payload_collection)
     )
   `);
+  ensurePayloadSyncStateAcceptsKeyLocations(db);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS location_taxonomy (

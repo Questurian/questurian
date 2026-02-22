@@ -13,6 +13,7 @@ import { updateLocationById } from "../../repositories/core";
 // Import sub-modules
 import type { SyncResult, SyncStatusResponse } from "./types";
 import { uploadLocationImages } from "./handlers";
+import type { PayloadCollection } from "./mappers/location-payload.mapper";
 import { mapLocationToPayloadFormat, mapCategoryToCollection } from "./mappers";
 
 export class PayloadSyncService {
@@ -166,14 +167,8 @@ export class PayloadSyncService {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    if (category === "key_locations") {
-      throw new BadRequestError("Payload sync does not support key_locations category");
-    }
-
     // Get all locations
-    const locations = this.locationQuery
-      .listLocations(category)
-      .filter((location) => location.category !== "key_locations");
+    const locations = this.locationQuery.listLocations(category);
 
     const results: SyncResult[] = [];
 
@@ -196,17 +191,6 @@ export class PayloadSyncService {
       const location = this.locationQuery.getLocationById(locationId);
       if (!location) {
         throw new NotFoundError("Location", locationId);
-      }
-
-      if (location.category === "key_locations") {
-        return [{
-          locationId,
-          title: location.title || location.source.name,
-          category: location.category,
-          synced: false,
-          needsResync: false,
-          syncState: undefined,
-        }];
       }
 
       const collection = mapCategoryToCollection(location.category);
@@ -282,7 +266,7 @@ export class PayloadSyncService {
    * Helper: Create/update a Payload entry with type fallback handling.
    */
   private async upsertPayloadEntryWithTypeFallback(
-    collection: "dining" | "accommodations" | "attractions" | "nightlife",
+    collection: PayloadCollection,
     payloadData: PayloadEntryData,
     existingDocId?: string
   ): Promise<PayloadEntryResponse> {
@@ -295,17 +279,17 @@ export class PayloadSyncService {
         throw error;
       }
 
-      const camelCaseType = this.toCamelCaseType(payloadData.type);
-      if (camelCaseType !== payloadData.type) {
+      const normalizedType = this.toNormalizedType(payloadData.type);
+      if (normalizedType !== payloadData.type) {
         console.warn(
           `⚠️  Payload rejected type "${payloadData.type}" for ${collection}. ` +
-          `Retrying with "${camelCaseType}".`
+          `Retrying with "${normalizedType}".`
         );
 
         try {
           return await this.upsertPayloadEntry(
             collection,
-            { ...payloadData, type: camelCaseType },
+            { ...payloadData, type: normalizedType },
             existingDocId
           );
         } catch (fallbackError) {
@@ -326,7 +310,7 @@ export class PayloadSyncService {
   }
 
   private async upsertPayloadEntry(
-    collection: "dining" | "accommodations" | "attractions" | "nightlife",
+    collection: PayloadCollection,
     payloadData: PayloadEntryData,
     existingDocId?: string
   ): Promise<PayloadEntryResponse> {
@@ -341,21 +325,8 @@ export class PayloadSyncService {
     return errorMessage.includes("Details > Type") || errorMessage.includes("\"path\":\"type\"");
   }
 
-  private toCamelCaseType(value: string): string {
-    if (!/[-_\\s]/.test(value)) {
-      return value;
-    }
-
-    const parts = value.split(/[-_\\s]+/).filter(Boolean);
-    if (parts.length === 0) {
-      return value;
-    }
-
-    return parts[0]!.toLowerCase() +
-      parts
-        .slice(1)
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join("");
+  private toNormalizedType(value: string): string {
+    return value.trim().toLowerCase().replace(/[_\s]+/g, "-");
   }
 
   /**
@@ -363,14 +334,10 @@ export class PayloadSyncService {
    */
   private async getCollectionForLocation(
     locationId: number
-  ): Promise<"dining" | "accommodations" | "attractions" | "nightlife"> {
+  ): Promise<PayloadCollection> {
     const location = this.locationQuery.getLocationById(locationId);
     if (!location) {
       throw new NotFoundError("Location", locationId);
-    }
-
-    if (location.category === "key_locations") {
-      throw new BadRequestError("Payload sync does not support key_locations category");
     }
 
     return mapCategoryToCollection(location.category);

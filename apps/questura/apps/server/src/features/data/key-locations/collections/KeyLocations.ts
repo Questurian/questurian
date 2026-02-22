@@ -1,19 +1,17 @@
-/**
- * Dining Collection
- * Travel data collection for restaurants, cafes, bars, and other dining establishments
- */
-
 import { CollectionConfig } from 'payload'
 import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 
-export const Dining: CollectionConfig = {
-  slug: 'dining',
-  labels: { singular: 'Dining', plural: 'Dining' },
+export const KeyLocations: CollectionConfig = {
+  slug: 'key-locations',
+  labels: {
+    singular: 'Key Location',
+    plural: 'Key Locations',
+  },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'type', 'location', 'status'],
+    defaultColumns: ['title', 'type', 'keyLocationStatus', 'location', 'status'],
     group: 'Travel Data',
   },
   access: {
@@ -22,10 +20,7 @@ export const Dining: CollectionConfig = {
       return true
     },
     create: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
-    update: ({ req }) => {
-      // Editors and admins can update all dining items
-      return req.user?.role === 'admin' || req.user?.role === 'editor'
-    },
+    update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
     delete: ({ req }) => req.user?.role === 'admin',
   },
   fields: [
@@ -34,57 +29,40 @@ export const Dining: CollectionConfig = {
       type: 'text',
       required: true,
       unique: true,
-      admin: { description: 'Dining establishment name' },
+      admin: {
+        description: 'Key location name',
+      },
     },
     {
       type: 'tabs',
       tabs: [
         {
-          label: 'Basic Info',
+          label: 'Details',
           fields: [
             {
               name: 'type',
               type: 'select',
               options: [
-                { label: 'Restaurant', value: 'restaurant' },
-                { label: 'Fast Food', value: 'fast-food' },
-                { label: 'Food Truck', value: 'food-truck' },
-                { label: 'Cafe', value: 'cafe' },
-                { label: 'Bar', value: 'bar' },
-                { label: 'Pub', value: 'pub' },
-                { label: 'Rooftop Bar', value: 'rooftop-bar' },
-                { label: 'Street Food', value: 'street-food' },
-                { label: 'Brewery', value: 'brewery' },
-                { label: 'Winery', value: 'winery' },
-                { label: 'Seafood', value: 'seafood' },
-                { label: 'Italian', value: 'italian' },
-                { label: 'American', value: 'american' },
-                { label: 'Wine Bar', value: 'wine-bar' },
-                { label: 'Cocktail Bar', value: 'cocktail-bar' },
-                { label: 'Dive Bar', value: 'dive-bar' },
-                { label: 'Buffet', value: 'buffet' },
-                { label: 'Bakery', value: 'bakery' },
-                { label: 'Dessert', value: 'dessert' },
-                { label: 'Ice Cream', value: 'ice-cream' },
-                { label: 'Coffee Shop', value: 'coffee-shop' },
-                { label: 'Tea Shop', value: 'tea-shop' },
-                { label: 'Juice Bar', value: 'juice-bar' },
-                { label: 'Smoothie Bar', value: 'smoothie-bar' },
-                { label: 'Pizza', value: 'pizza' },
-              ],
-              admin: { description: 'Type of establishment' },
-            },
-            {
-              name: 'priceLevel',
-              type: 'select',
-              options: [
-                { label: '$', value: '1' },
-                { label: '$$', value: '2' },
-                { label: '$$$', value: '3' },
-                { label: '$$$$', value: '4' },
+                { label: 'Airport', value: 'airport' },
+                { label: 'Bus Stop', value: 'bus_stop' },
+                { label: 'Currency Exchange', value: 'currency_exchange' },
+                { label: 'Bus Terminal', value: 'bus_terminal' },
               ],
               admin: {
-                description: 'Price range indicator',
+                description: 'Type of key location',
+              },
+            },
+            {
+              name: 'keyLocationStatus',
+              type: 'select',
+              options: [
+                { label: 'Active', value: 'active' },
+                { label: 'Inactive', value: 'inactive' },
+                { label: 'Temporarily Closed', value: 'temporarily_closed' },
+                { label: 'Seasonal', value: 'seasonal' },
+              ],
+              admin: {
+                description: 'Operational status from Location Manager',
               },
             },
             {
@@ -93,7 +71,7 @@ export const Dining: CollectionConfig = {
               minRows: 0,
               maxRows: 20,
               admin: {
-                description: 'Image gallery for this dining establishment (first image is featured)',
+                description: 'Image gallery for this key location',
               },
               fields: [
                 {
@@ -135,7 +113,7 @@ export const Dining: CollectionConfig = {
               minRows: 0,
               maxRows: 20,
               admin: {
-                description: 'Instagram posts gallery for this entry',
+                description: 'Instagram posts gallery for this key location',
               },
               fields: [
                 {
@@ -159,55 +137,22 @@ export const Dining: CollectionConfig = {
                 },
               ],
             },
-          ],
-        },
-        {
-          label: 'Classification',
-          fields: [
             {
-              name: 'mealTypes',
+              name: 'keyLocationsDetails',
               type: 'json',
               admin: {
-                description: 'String[] meal types',
+                description: 'Structured key locations details JSON from Location Manager',
               },
-            },
-            {
-              name: 'cuisines',
-              type: 'json',
-              admin: {
-                description: 'String[] cuisines',
-              },
-            },
-            {
-              name: 'features',
-              type: 'json',
-              admin: {
-                description: 'String[] dining features',
-              },
-            },
-            {
-              name: 'idealFor',
-              type: 'json',
-              admin: {
-                description: 'String[] ideal-for tags',
-              },
-            },
-            {
-              type: 'collapsible',
-              label: 'Location Manager Enrichment',
-              admin: {
-                initCollapsed: true,
-              },
-              fields: [],
             },
           ],
         },
         {
-          label: 'Location & Contact',
+          label: 'Location',
           fields: [
             {
               name: 'location',
               type: 'text',
+              required: true,
               admin: {
                 description: 'Select the location',
                 components: {
@@ -267,14 +212,6 @@ export const Dining: CollectionConfig = {
                   },
                 },
                 {
-                  name: 'neighborhoodDescription',
-                  type: 'textarea',
-                  admin: {
-                    description: 'Neighborhood context from Location Manager',
-                    rows: 3,
-                  },
-                },
-                {
                   name: 'operationHours',
                   type: 'json',
                   admin: {
@@ -292,6 +229,14 @@ export const Dining: CollectionConfig = {
                     return typeof value === 'string' && value.includes('/')
                       ? true
                       : 'Use IANA timezone format, e.g. America/Bogota'
+                  },
+                },
+                {
+                  name: 'neighborhoodDescription',
+                  type: 'textarea',
+                  admin: {
+                    description: 'Neighborhood context from Location Manager',
+                    rows: 3,
                   },
                 },
                 {
@@ -367,7 +312,9 @@ export const Dining: CollectionConfig = {
         { label: 'Published', value: 'published' },
       ],
       defaultValue: 'draft',
-      admin: { position: 'sidebar' },
+      admin: {
+        position: 'sidebar',
+      },
     },
   ],
   hooks: {
