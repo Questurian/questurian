@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User } from '@/lib/user/types';
 import { isServiceUnavailableError } from '@/lib/api';
+import PasswordInput from '@/components/shared/ui/PasswordInput';
 import { useVerifyPasswordMutation, useRequestEmailChangeMutation, useConfirmEmailChangeMutation } from '../../hooks/useEmailChangeMutations';
 
 interface EmailChangeModalProps {
@@ -186,16 +187,15 @@ export function EmailChangeModal({ show, user, onClose, onSuccess }: EmailChange
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Current Password
-                </label>
-                <input
-                  type="password"
+                <PasswordInput
+                  label="Current Password"
+                  name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   placeholder="Enter your password"
                   required
+                  autoComplete="current-password"
+                  className="rounded-md py-2"
                   disabled={verifyPasswordMutation.isPending}
                   autoFocus
                 />

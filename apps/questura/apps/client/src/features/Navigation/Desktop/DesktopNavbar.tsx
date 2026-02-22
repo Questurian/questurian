@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, ArrowLeft, Star, Compass } from "lucide-react";
+import { ChevronDown, ChevronRight, ArrowLeft, Compass } from "lucide-react";
 import {
   MenuIcon,
   Logo,
@@ -55,10 +55,9 @@ interface LocationPillProps {
   countryCode?: string;
   currentCityId?: string;
   currentCountry?: string;
-  currentMode: string;
 }
 
-function LocationPill({ cityName, countryName, countryCode, currentCityId, currentCountry, currentMode }: LocationPillProps) {
+function LocationPill({ cityName, countryName, countryCode, currentCityId, currentCountry }: LocationPillProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<DropdownView>("main");
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
@@ -70,15 +69,8 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
   const router = useRouter();
   const locationLabel = `${cityName}, ${countryName}`;
 
-  const favoriteCity = useLocationStore((state) => state.favoriteCity);
-  const setFavoriteCity = useLocationStore((state) => state.setFavoriteCity);
   const getCityMode = useLocationStore((state) => state.getCityMode);
   const openIntentModal = useIntentModalStore((state) => state.openIntentModal);
-
-  const isCurrentCityFavorite =
-    favoriteCity !== null &&
-    favoriteCity.cityId === currentCityId &&
-    favoriteCity.country === currentCountry;
 
   // Cities in the current country (excluding current city)
   const sameCountryCities = useMemo(
@@ -157,11 +149,6 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
     setIsOpen((prev) => !prev);
   };
 
-  const handleSetAsHome = () => {
-    if (!currentCityId || !currentCountry) return;
-    setFavoriteCity({ cityId: currentCityId, country: currentCountry, mode: currentMode });
-  };
-
   const handleCityClick = (city: typeof cities[number]) => {
     setIsOpen(false);
     const savedMode = getCityMode(city.id, city.country);
@@ -191,7 +178,6 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
     <>
       {cityList.map((city) => {
         const isCurrent = city.id === currentCityId && city.country === currentCountry;
-        const isFavorite = favoriteCity?.cityId === city.id && favoriteCity?.country === city.country;
 
         return (
           <button
@@ -209,9 +195,6 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
               {renderFlagImg(city.countryCode, `${city.displayCountry} flag`)}
             </span>
             <span className="flex-1 truncate">{city.name}</span>
-            {isFavorite ? (
-              <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />
-            ) : null}
           </button>
         );
       })}
@@ -223,19 +206,6 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
       case "main":
         return (
           <>
-            {currentCityId && currentCountry && !isCurrentCityFavorite ? (
-              <div className="border-b border-white/10 p-1.5">
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-white/90 hover:bg-white/10"
-                  onClick={handleSetAsHome}
-                >
-                  <Star className="h-3.5 w-3.5 text-white/50" />
-                  Set as home city
-                </button>
-              </div>
-            ) : null}
-
             <div className="p-1.5">
               {sameCountryCities.length > 0 ? (
                 <button
@@ -374,9 +344,6 @@ function LocationPill({ cityName, countryName, countryCode, currentCityId, curre
           )}
         </span>
         <span className="text-[0.78rem] font-medium tracking-[0.02em]">{locationLabel}</span>
-        {isCurrentCityFavorite ? (
-          <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
-        ) : null}
         <ChevronDown
           className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
@@ -410,31 +377,34 @@ export default function DesktopNavbar() {
   const params = useParams();
   const pathname = usePathname() ?? "";
   const shouldShowSubscribe = !isAuthenticated || user?.subscriptionStatus !== "active";
-  const setFavoriteCity = useLocationStore((state) => state.setFavoriteCity);
   const setCityMode = useLocationStore((state) => state.setCityMode);
+  const lastVisited = useLocationStore((state) => state.lastVisited);
 
   const countrySlug = getParamValue(params?.country)?.toLowerCase();
   const citySlug = getParamValue(params?.city)?.toLowerCase();
   const modeSlugFromParams = getParamValue(params?.mode)?.toLowerCase();
+  const hasCityContext = Boolean(countrySlug && citySlug);
+  const fallbackLocation = !hasCityContext ? lastVisited : null;
+  const activeCountrySlug = countrySlug ?? fallbackLocation?.country;
+  const activeCitySlug = citySlug ?? fallbackLocation?.cityId;
 
   const pathnameSegments = pathname.split("/").filter(Boolean);
   const modeSlugFromPath = pathnameSegments[2]?.toLowerCase();
-  const rawMode = modeSlugFromParams || modeSlugFromPath;
+  const modeSlugFromFallback = !hasCityContext ? fallbackLocation?.mode?.toLowerCase() : undefined;
+  const rawMode = modeSlugFromParams || modeSlugFromPath || modeSlugFromFallback;
   const activeMode: CityMode = cityModes.includes(rawMode as CityMode) ? (rawMode as CityMode) : "explore";
 
-  const hasCityContext = Boolean(countrySlug && citySlug);
-  const selectedCity = countrySlug && citySlug ? getCityBySlug(countrySlug, citySlug) : undefined;
-  const cityName = selectedCity?.name || (citySlug ? formatSlugLabel(citySlug) : "Lima");
-  const countryName = selectedCity?.displayCountry || (countrySlug ? formatSlugLabel(countrySlug) : "Peru");
-  const fallbackCountryCode = countrySlug
-    ? cities.find((city) => city.country === countrySlug)?.countryCode
+  const selectedCity = activeCountrySlug && activeCitySlug ? getCityBySlug(activeCountrySlug, activeCitySlug) : undefined;
+  const cityName = selectedCity?.name || (activeCitySlug ? formatSlugLabel(activeCitySlug) : "Lima");
+  const countryName = selectedCity?.displayCountry || (activeCountrySlug ? formatSlugLabel(activeCountrySlug) : "Peru");
+  const fallbackCountryCode = activeCountrySlug
+    ? cities.find((city) => city.country === activeCountrySlug)?.countryCode
     : "pe";
   const countryCode = selectedCity?.countryCode || fallbackCountryCode;
 
   const handleModeChange = (mode: CityMode) => {
     if (hasCityContext && countrySlug && citySlug) {
       setCityMode(citySlug, countrySlug, mode);
-      setFavoriteCity({ cityId: citySlug, country: countrySlug, mode });
     }
   };
 
@@ -446,9 +416,8 @@ export default function DesktopNavbar() {
             cityName={cityName}
             countryName={countryName}
             countryCode={countryCode}
-            currentCityId={citySlug}
-            currentCountry={countrySlug}
-            currentMode={activeMode}
+            currentCityId={activeCitySlug}
+            currentCountry={activeCountrySlug}
           />
           <SubNav
             compact
