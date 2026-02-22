@@ -88,12 +88,50 @@ export const Attractions: CollectionConfig = {
                 description: 'String[] ideal-for tags',
               },
             },
+          ],
+        },
+        {
+          label: 'Details',
+          fields: [
             {
               name: 'attractionsDetails',
-              type: 'json',
+              type: 'group',
               admin: {
-                description: 'Structured attractions details JSON from Location Manager',
+                description: 'Structured attractions details from Location Manager',
               },
+              fields: [
+                {
+                  type: 'tabs',
+                  tabs: [
+                    {
+                      label: 'Core',
+                      fields: [
+                        {
+                          name: 'core',
+                          type: 'group',
+                          fields: [
+                            { name: 'attractionType', type: 'text' },
+                            { name: 'pricing', type: 'text' },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      label: 'Visit',
+                      fields: [
+                        {
+                          name: 'visit',
+                          type: 'group',
+                          fields: [
+                            { name: 'bookingRequired', type: 'checkbox' },
+                            { name: 'idealFor', type: 'text', hasMany: true },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
           ],
         },
@@ -247,6 +285,13 @@ export const Attractions: CollectionConfig = {
                   },
                 },
                 {
+                  name: 'countryCodeIso',
+                  type: 'text',
+                  admin: {
+                    description: 'ISO country code from Location Manager (for example: US)',
+                  },
+                },
+                {
                   name: 'ianaTimeId',
                   type: 'text',
                   admin: {
@@ -257,6 +302,13 @@ export const Attractions: CollectionConfig = {
                     return typeof value === 'string' && value.includes('/')
                       ? true
                       : 'Use IANA timezone format, e.g. America/Bogota'
+                  },
+                },
+                {
+                  name: 'sourceName',
+                  type: 'text',
+                  admin: {
+                    description: 'Original source name from Location Manager',
                   },
                 },
               ],
