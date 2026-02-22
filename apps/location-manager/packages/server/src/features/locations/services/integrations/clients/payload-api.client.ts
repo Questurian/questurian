@@ -203,11 +203,15 @@ export interface PayloadEntryData {
   phoneNumber?: string;
   website?: string;
   email?: string;
+  operationHours?: {
+    hours: Array<{
+      day: string;
+      hours: string;
+    }>;
+  };
   countryCodeIso?: string;
   sourceName?: string;
-  mealTypes?: string[];
   cuisines?: string[];
-  features?: string[];
   idealFor?: string[];
   nightlifeDetails?: Record<string, unknown>;
   core?: Record<string, unknown>;
@@ -690,7 +694,6 @@ export class PayloadApiClient {
       gallery: data.gallery,
       instagramGallery: data.instagramGallery,
       idealFor: data.idealFor,
-      mealTypes: data.mealTypes,
       cuisines: data.cuisines,
       ianaTimeId: data.ianaTimeId,
       status: data.status,
@@ -751,7 +754,6 @@ export class PayloadApiClient {
       type: data.type,
       locationRef: data.locationRef,
       idealFor: data.idealFor,
-      mealTypes: data.mealTypes,
       cuisines: data.cuisines,
       ianaTimeId: data.ianaTimeId,
       galleryCount: data.gallery?.length || 0,
