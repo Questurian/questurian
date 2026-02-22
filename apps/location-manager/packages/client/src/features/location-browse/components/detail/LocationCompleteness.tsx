@@ -81,6 +81,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
           label: "Club Type",
           present: Boolean(nightlifeDetails.clubType || locationDetail.type?.trim()),
         },
+        {
+          key: "idealFor",
+          label: "Ideal For",
+          present: hasIdealFor || nightlifeDetails.idealFor.length > 0,
+        },
         { key: "nightlife.music", label: "Music", present: nightlifeDetails.music.length > 0 },
         { key: "nightlife.venueType", label: "Venue Type", present: Boolean(nightlifeDetails.venueType) },
         { key: "nightlife.venueSize", label: "Venue Size", present: Boolean(nightlifeDetails.venueSize) },

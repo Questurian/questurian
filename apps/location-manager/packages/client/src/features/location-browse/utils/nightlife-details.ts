@@ -57,6 +57,7 @@ function getSectionValue(
 export interface ParsedNightlifeDetails {
   hasDetails: boolean;
   name: string | null;
+  idealFor: string[];
   priceTier: string | null;
   clubType: string | null;
   music: string[];
@@ -88,6 +89,7 @@ export function parseNightlifeDetails(details: unknown): ParsedNightlifeDetails 
   return {
     hasDetails: Boolean(root && Object.keys(root).length > 0),
     name: asString(getNestedValue(root, ["name"])),
+    idealFor: asStringArray(getNestedValue(root, ["core", "idealFor"])),
     priceTier: asString(getNestedValue(root, ["price_tier"])),
     clubType: asString(getNestedValue(root, ["club_type"])),
     music: asStringArray(getNestedValue(root, ["music"])),

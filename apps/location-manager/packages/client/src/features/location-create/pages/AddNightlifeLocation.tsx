@@ -6,11 +6,13 @@ import { CheckCircle2, ChevronLeft, Clock, Music2 } from 'lucide-react';
 import { Input } from '@client/components/ui/input';
 import { Label } from '@client/components/ui/label';
 import { Button } from '@client/components/ui/button';
+import { FormTagMultiSelect } from '@client/shared/components/forms';
 import { locationsApi } from '@client/shared/services/api';
 import { useCreateLocation } from '@client/shared/services/api/hooks';
 import { addNightlifeSchema, type AddNightlifeFormData } from '../validation/add-nightlife.schema';
 import { OperationHoursModal } from '../components/OperationHoursModal';
 import { buildOperationHoursSummary, isOperationHoursJson } from '../components/operation-hours-utils';
+import { getIdealForOptionGroups } from '../constants/ai-prompt-template';
 import {
   CLUB_TYPE_OPTIONS,
   CROWD_PROFILE_OPTIONS,
@@ -72,6 +74,7 @@ const NIGHTLIFE_SECTION_ORDER: NightlifeFormSection[] = [
 
 const NIGHTLIFE_FORM_DEFAULT_VALUES: AddNightlifeFormData = {
   name: '',
+  idealFor: [],
   priceTier: '$$$',
   clubType: 'Cocktail Bar',
   music: ['House', 'EDM'],
@@ -336,10 +339,14 @@ export function AddNightlifeLocation() {
   const isPrefillReady = prefillSignature !== null && prefillSignature === currentPrefillSignature;
   const prefillIsStale = prefillSignature !== null && !isPrefillReady;
   const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
+  const idealForOptionGroups = getIdealForOptionGroups('nightlife');
 
   const stepOneComplete = isPrefillReady;
   const entitiesComplete = isPrefillReady;
-  const coreComplete = Boolean(form.watch('clubType')) && (form.watch('music')?.length ?? 0) > 0;
+  const coreComplete =
+    Boolean(form.watch('clubType')) &&
+    (form.watch('music')?.length ?? 0) > 0 &&
+    (form.watch('idealFor')?.length ?? 0) > 0;
   const spaceComplete =
     Boolean(form.watch('priceTier')) &&
     Boolean(form.watch('venueType')) &&
@@ -534,6 +541,9 @@ export function AddNightlifeLocation() {
 
     const nightlifeDetails = {
       name: data.name,
+      core: {
+        idealFor: data.idealFor,
+      },
       price_tier: data.priceTier,
       club_type: data.clubType,
       music,
@@ -568,6 +578,7 @@ export function AddNightlifeLocation() {
         title: data.name,
         address: normalizedAddress,
         category: 'nightlife',
+        idealFor: data.idealFor,
         type: data.clubType,
         countryCode: data.countryCode,
         phoneNumber: data.phone || undefined,
@@ -807,6 +818,16 @@ export function AddNightlifeLocation() {
               values={form.watch('music')}
               onToggle={(value) => toggleMultiOption('music', value)}
               error={form.formState.errors.music?.message as string | undefined}
+            />
+
+            <FormTagMultiSelect
+              name="idealFor"
+              label="Ideal For"
+              control={form.control}
+              optionGroups={idealForOptionGroups}
+              maxSelections={4}
+              description="Choose 1 to 4 tags"
+              allowDirectTagArrayInput
             />
 
             <div className="flex justify-between border-t border-border/70 pt-4">

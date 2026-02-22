@@ -37,11 +37,26 @@ describe("maps create schema category rules", () => {
     expect(result.success).toBe(false);
   });
 
-  test("accepts nightlife payload with nightlifeDetails and no idealFor", () => {
+  test("rejects nightlife payload when idealFor is missing", () => {
     const result = createMapsSchema.safeParse({
       ...basePayload,
       category: "nightlife",
       type: "nightclub",
+      nightlifeDetails: {
+        vibe: "high-energy",
+        dressCode: "smart-casual",
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("accepts nightlife payload with nightlifeDetails and nightlife idealFor", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "nightlife",
+      type: "nightclub",
+      idealFor: ["Friends' Night Out"],
       nightlifeDetails: {
         vibe: "high-energy",
         dressCode: "smart-casual",

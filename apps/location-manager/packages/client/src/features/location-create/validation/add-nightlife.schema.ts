@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NIGHTLIFE_IDEAL_FOR_TAGS } from "@questurian/lm-shared";
 import {
   CLUB_TYPE_VALUES,
   CROWD_PROFILE_VALUES,
@@ -24,6 +25,13 @@ export const addNightlifeSchema = z.object({
     .string()
     .min(1, "Location name is required")
     .max(200, "Name must be less than 200 characters"),
+  idealFor: z
+    .array(z.enum(NIGHTLIFE_IDEAL_FOR_TAGS))
+    .min(1, "Select at least 1 Ideal For tag")
+    .max(4, "Select up to 4 Ideal For tags")
+    .refine((tags) => new Set(tags).size === tags.length, {
+      message: "Ideal For tags must be unique",
+    }),
   priceTier: z.enum(PRICE_TIER_VALUES),
   clubType: z.enum(CLUB_TYPE_VALUES),
   music: z.array(z.enum(MUSIC_VALUES)).min(1, "Select at least 1 music option"),

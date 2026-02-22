@@ -125,7 +125,7 @@ export const createMapsSchema = z.object({
   }
 
   if (
-    (data.category === "dining" || data.category === "attractions") &&
+    (data.category === "dining" || data.category === "attractions" || data.category === "nightlife") &&
     (!data.idealFor || data.idealFor.length === 0)
   ) {
     ctx.addIssue({
