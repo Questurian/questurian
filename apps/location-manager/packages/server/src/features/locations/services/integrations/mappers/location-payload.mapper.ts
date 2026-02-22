@@ -194,6 +194,29 @@ function getNightlifeDetailsPayload(location: LocationResponse): PayloadNightlif
   };
 }
 
+function getAttractionsDetailsPayload(location: LocationResponse): Record<string, unknown> {
+  const details = asRecord(location.attractionsDetails) ?? {};
+  const core = asRecord(details.core);
+  const visit = asRecord(details.visit);
+  const attractionType = asString(core?.attraction_type) ?? asString(location.type);
+  const pricing = asString(core?.pricing) ?? asString(location.priceLevel);
+  const bookingRequired = asBoolean(visit?.booking_required);
+  const idealFor = asStringArray(visit?.ideal_for ?? location.idealFor);
+  const payloadCore = {
+    ...(attractionType ? { attractionType } : {}),
+    ...(pricing ? { pricing } : {}),
+  };
+
+  const payloadVisit = {
+    ...(bookingRequired !== undefined ? { bookingRequired } : {}),
+    ...(idealFor ? { idealFor } : {}),
+  };
+  return {
+    ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
+    ...(Object.keys(payloadVisit).length > 0 ? { visit: payloadVisit } : {}),
+  };
+}
+
 function parseAccommodationsGroups(location: LocationResponse): Record<string, unknown> {
   const details = asRecord(location.accommodationsDetails);
   if (!details) return {};
@@ -339,11 +362,16 @@ function mapAttractionsPayload(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ): PayloadEntryData {
+  const operationHours = normalizeOperationHoursForPayload(location.operationHours);
+  const attractionsDetails = getAttractionsDetailsPayload(location);
+
   return {
     ...mapSharedPayloadFields(location, uploadedImages, locationRef),
     ...mapCategoryCommonPayloadFields(location),
+    ...(location.locationKey ? { location: location.locationKey } : {}),
+    ...(operationHours ? { operationHours } : {}),
     ...(location.idealFor ? { idealFor: location.idealFor } : {}),
-    ...(location.attractionsDetails ? { attractionsDetails: location.attractionsDetails } : {}),
+    ...(Object.keys(attractionsDetails).length > 0 ? { attractionsDetails } : {}),
   };
 }
 

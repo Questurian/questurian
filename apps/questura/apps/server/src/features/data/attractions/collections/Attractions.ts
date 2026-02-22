@@ -45,7 +45,7 @@ export const Attractions: CollectionConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Details',
+          label: 'Basic Info',
           fields: [
             {
               name: 'type',
@@ -76,6 +76,68 @@ export const Attractions: CollectionConfig = {
                 description: 'Price range indicator',
               },
             },
+          ],
+        },
+        {
+          label: 'Profile',
+          fields: [
+            {
+              name: 'idealFor',
+              type: 'json',
+              admin: {
+                description: 'String[] ideal-for tags',
+              },
+            },
+          ],
+        },
+        {
+          label: 'Details',
+          fields: [
+            {
+              name: 'attractionsDetails',
+              type: 'group',
+              admin: {
+                description: 'Structured attractions details from Location Manager',
+              },
+              fields: [
+                {
+                  type: 'tabs',
+                  tabs: [
+                    {
+                      label: 'Core',
+                      fields: [
+                        {
+                          name: 'core',
+                          type: 'group',
+                          fields: [
+                            { name: 'attractionType', type: 'text' },
+                            { name: 'pricing', type: 'text' },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      label: 'Visit',
+                      fields: [
+                        {
+                          name: 'visit',
+                          type: 'group',
+                          fields: [
+                            { name: 'bookingRequired', type: 'checkbox' },
+                            { name: 'idealFor', type: 'text', hasMany: true },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Media',
+          fields: [
             {
               name: 'gallery',
               type: 'array',
@@ -116,20 +178,6 @@ export const Attractions: CollectionConfig = {
                   },
                 },
               ],
-            },
-            {
-              name: 'idealFor',
-              type: 'json',
-              admin: {
-                description: 'String[] ideal-for tags',
-              },
-            },
-            {
-              name: 'attractionsDetails',
-              type: 'json',
-              admin: {
-                description: 'Structured attractions details JSON from Location Manager',
-              },
             },
             {
               name: 'instagramGallery',
@@ -237,6 +285,13 @@ export const Attractions: CollectionConfig = {
                   },
                 },
                 {
+                  name: 'countryCodeIso',
+                  type: 'text',
+                  admin: {
+                    description: 'ISO country code from Location Manager (for example: US)',
+                  },
+                },
+                {
                   name: 'ianaTimeId',
                   type: 'text',
                   admin: {
@@ -250,32 +305,10 @@ export const Attractions: CollectionConfig = {
                   },
                 },
                 {
-                  name: 'neighborhoodDescription',
-                  type: 'textarea',
-                  admin: {
-                    description: 'Neighborhood context from Location Manager',
-                    rows: 3,
-                  },
-                },
-                {
-                  name: 'tripadvisorUrl',
+                  name: 'sourceName',
                   type: 'text',
                   admin: {
-                    description: 'TripAdvisor URL from Location Manager',
-                  },
-                },
-                {
-                  name: 'tripadvisorLocationId',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor location ID from Location Manager',
-                  },
-                },
-                {
-                  name: 'placeId',
-                  type: 'text',
-                  admin: {
-                    description: 'Google Place ID from Location Manager',
+                    description: 'Original source name from Location Manager',
                   },
                 },
               ],
