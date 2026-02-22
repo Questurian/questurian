@@ -249,35 +249,6 @@ export const Attractions: CollectionConfig = {
                       : 'Use IANA timezone format, e.g. America/Bogota'
                   },
                 },
-                {
-                  name: 'neighborhoodDescription',
-                  type: 'textarea',
-                  admin: {
-                    description: 'Neighborhood context from Location Manager',
-                    rows: 3,
-                  },
-                },
-                {
-                  name: 'tripadvisorUrl',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor URL from Location Manager',
-                  },
-                },
-                {
-                  name: 'tripadvisorLocationId',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor location ID from Location Manager',
-                  },
-                },
-                {
-                  name: 'placeId',
-                  type: 'text',
-                  admin: {
-                    description: 'Google Place ID from Location Manager',
-                  },
-                },
               ],
             },
             {
