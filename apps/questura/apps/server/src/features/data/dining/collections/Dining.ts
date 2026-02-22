@@ -8,6 +8,35 @@ import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 
+const validateOperationHours = (value: unknown) => {
+  if (!value) return true
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return 'Operation hours must be an object with an hours array'
+  }
+
+  const hours = (value as { hours?: unknown }).hours
+  if (!Array.isArray(hours)) {
+    return 'Operation hours must include hours: [{ day, hours }]'
+  }
+
+  for (const row of hours) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      return 'Each operation hours row must be an object with day and hours'
+    }
+
+    const day = (row as { day?: unknown }).day
+    const rowHours = (row as { hours?: unknown }).hours
+    if (typeof day !== 'string' || day.trim().length === 0) {
+      return 'Each operation hours row requires a non-empty day'
+    }
+    if (typeof rowHours !== 'string' || rowHours.trim().length === 0) {
+      return 'Each operation hours row requires a non-empty hours value'
+    }
+  }
+
+  return true
+}
+
 export const Dining: CollectionConfig = {
   slug: 'dining',
   labels: { singular: 'Dining', plural: 'Dining' },
@@ -165,24 +194,10 @@ export const Dining: CollectionConfig = {
           label: 'Classification',
           fields: [
             {
-              name: 'mealTypes',
-              type: 'json',
-              admin: {
-                description: 'String[] meal types',
-              },
-            },
-            {
               name: 'cuisines',
               type: 'json',
               admin: {
                 description: 'String[] cuisines',
-              },
-            },
-            {
-              name: 'features',
-              type: 'json',
-              admin: {
-                description: 'String[] dining features',
               },
             },
             {
@@ -191,14 +206,6 @@ export const Dining: CollectionConfig = {
               admin: {
                 description: 'String[] ideal-for tags',
               },
-            },
-            {
-              type: 'collapsible',
-              label: 'Location Manager Enrichment',
-              admin: {
-                initCollapsed: true,
-              },
-              fields: [],
             },
           ],
         },
@@ -267,19 +274,12 @@ export const Dining: CollectionConfig = {
                   },
                 },
                 {
-                  name: 'neighborhoodDescription',
-                  type: 'textarea',
-                  admin: {
-                    description: 'Neighborhood context from Location Manager',
-                    rows: 3,
-                  },
-                },
-                {
                   name: 'operationHours',
                   type: 'json',
                   admin: {
-                    description: 'Structured operation hours object from Location Manager',
+                    description: 'Schema: { "hours": [{ "day": "Monday", "hours": "09:00 - 18:00" }] }',
                   },
+                  validate: validateOperationHours,
                 },
                 {
                   name: 'ianaTimeId',
@@ -292,27 +292,6 @@ export const Dining: CollectionConfig = {
                     return typeof value === 'string' && value.includes('/')
                       ? true
                       : 'Use IANA timezone format, e.g. America/Bogota'
-                  },
-                },
-                {
-                  name: 'tripadvisorUrl',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor URL from Location Manager',
-                  },
-                },
-                {
-                  name: 'tripadvisorLocationId',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor location ID from Location Manager',
-                  },
-                },
-                {
-                  name: 'placeId',
-                  type: 'text',
-                  admin: {
-                    description: 'Google Place ID from Location Manager',
                   },
                 },
               ],

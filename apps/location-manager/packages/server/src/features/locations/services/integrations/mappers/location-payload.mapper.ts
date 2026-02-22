@@ -6,6 +6,17 @@ import { extractPhoneNumber, convertIsoToPhoneCountryCode } from "../utils";
 
 export type PayloadCollection = "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations";
 
+const LEGACY_LM_ONLY_FIELDS = [
+  "neighborhoodDescription",
+  "tripadvisorUrl",
+  "tripadvisorLocationId",
+  "placeId",
+  "contactAddress",
+  "sourceAddress",
+  "locationKey",
+  "district",
+] as const;
+
 // App stores $, $$, $$$, $$$$ — Payload expects "1", "2", "3", "4"
 const PRICE_LEVEL_TO_PAYLOAD: Record<string, string> = {
   "$": "1",
@@ -13,6 +24,54 @@ const PRICE_LEVEL_TO_PAYLOAD: Record<string, string> = {
   "$$$": "3",
   "$$$$": "4",
 };
+
+const WEEKDAY_LABELS: Record<string, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
+
+function normalizeOperationHoursForPayload(
+  operationHours: Record<string, unknown> | null
+): { hours: Array<{ day: string; hours: string }> } | undefined {
+  if (!operationHours) return undefined;
+
+  const rawHours = operationHours.hours;
+  if (Array.isArray(rawHours)) {
+    const normalizedRows = rawHours
+      .map((row) => {
+        if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+        const day = typeof (row as { day?: unknown }).day === "string"
+          ? (row as { day: string }).day.trim()
+          : "";
+        const hours = typeof (row as { hours?: unknown }).hours === "string"
+          ? (row as { hours: string }).hours.trim()
+          : "";
+        if (!day || !hours) return null;
+        return { day, hours };
+      })
+      .filter((row): row is { day: string; hours: string } => row !== null);
+
+    return normalizedRows.length > 0 ? { hours: normalizedRows } : undefined;
+  }
+
+  // Backward compatibility: convert day-key maps into canonical array format.
+  const normalizedRows = Object.entries(operationHours)
+    .filter(([key]) => key !== "currently_open" && key !== "hours")
+    .map(([key, value]) => {
+      const dayLabel = WEEKDAY_LABELS[key.toLowerCase()] ?? key;
+      const hours = typeof value === "string" ? value.trim() : "";
+      if (!hours) return null;
+      return { day: dayLabel, hours };
+    })
+    .filter((row): row is { day: string; hours: string } => row !== null);
+
+  return normalizedRows.length > 0 ? { hours: normalizedRows } : undefined;
+}
 
 function parseKeyLocationStatus(location: LocationResponse): string | undefined {
   const details = location.keyLocationsDetails;
@@ -169,13 +228,16 @@ function mapDiningPayload(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ): PayloadEntryData {
+  const sharedFields = mapSharedPayloadFields(location, uploadedImages, locationRef);
+  const { countryCodeIso, sourceName, ...diningSharedFields } = sharedFields;
+  const operationHours = normalizeOperationHoursForPayload(location.operationHours);
+
   return {
-    ...mapSharedPayloadFields(location, uploadedImages, locationRef),
+    ...diningSharedFields,
     ...mapCategoryCommonPayloadFields(location),
+    ...(operationHours ? { operationHours } : {}),
     ...(location.idealFor ? { idealFor: location.idealFor } : {}),
-    ...(location.tripadvisorMealTypes ? { mealTypes: location.tripadvisorMealTypes } : {}),
     ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),
-    ...(location.tripadvisorFeatures ? { features: location.tripadvisorFeatures } : {}),
   };
 }
 
@@ -230,6 +292,14 @@ function mapKeyLocationsPayload(
   };
 }
 
+function stripLegacyLmFields(payload: PayloadEntryData): PayloadEntryData {
+  const mutable = payload as PayloadEntryData & Record<string, unknown>;
+  for (const field of LEGACY_LM_ONLY_FIELDS) {
+    delete mutable[field];
+  }
+  return mutable;
+}
+
 /**
  * Map url-util location to Payload format
  * @param locationRef - REQUIRED by Payload CMS, guaranteed to be present by caller
@@ -239,22 +309,29 @@ export function mapLocationToPayloadFormat(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ): PayloadEntryData {
+  let mapped: PayloadEntryData;
   switch (location.category) {
     case "dining":
-      return mapDiningPayload(location, uploadedImages, locationRef);
+      mapped = mapDiningPayload(location, uploadedImages, locationRef);
+      break;
     case "accommodations":
-      return mapAccommodationsPayload(location, uploadedImages, locationRef);
+      mapped = mapAccommodationsPayload(location, uploadedImages, locationRef);
+      break;
     case "attractions":
-      return mapAttractionsPayload(location, uploadedImages, locationRef);
+      mapped = mapAttractionsPayload(location, uploadedImages, locationRef);
+      break;
     case "nightlife":
-      return mapNightlifePayload(location, uploadedImages, locationRef);
+      mapped = mapNightlifePayload(location, uploadedImages, locationRef);
+      break;
     case "key_locations":
-      return mapKeyLocationsPayload(location, uploadedImages, locationRef);
+      mapped = mapKeyLocationsPayload(location, uploadedImages, locationRef);
+      break;
     default: {
       const exhaustiveCheck: never = location.category;
       throw new BadRequestError(`Unsupported payload category: ${String(exhaustiveCheck)}`);
     }
   }
+  return stripLegacyLmFields(mapped);
 }
 
 /**
