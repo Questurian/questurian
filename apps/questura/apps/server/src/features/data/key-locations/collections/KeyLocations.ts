@@ -37,7 +37,7 @@ export const KeyLocations: CollectionConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Details',
+          label: 'Basic Info',
           fields: [
             {
               name: 'type',
@@ -52,6 +52,11 @@ export const KeyLocations: CollectionConfig = {
                 description: 'Type of key location',
               },
             },
+          ],
+        },
+        {
+          label: 'Profile',
+          fields: [
             {
               name: 'keyLocationStatus',
               type: 'select',
@@ -65,6 +70,44 @@ export const KeyLocations: CollectionConfig = {
                 description: 'Operational status from Location Manager',
               },
             },
+          ],
+        },
+        {
+          label: 'Details',
+          fields: [
+            {
+              name: 'keyLocationsDetails',
+              type: 'group',
+              admin: {
+                description: 'Structured key locations details from Location Manager',
+              },
+              fields: [
+                {
+                  type: 'tabs',
+                  tabs: [
+                    {
+                      label: 'Core',
+                      fields: [
+                        {
+                          name: 'core',
+                          type: 'group',
+                          fields: [
+                            { name: 'locationType', type: 'text' },
+                            { name: 'status', type: 'text' },
+                            { name: 'neighborhood', type: 'text' },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Media',
+          fields: [
             {
               name: 'gallery',
               type: 'array',
@@ -136,13 +179,6 @@ export const KeyLocations: CollectionConfig = {
                   },
                 },
               ],
-            },
-            {
-              name: 'keyLocationsDetails',
-              type: 'json',
-              admin: {
-                description: 'Structured key locations details JSON from Location Manager',
-              },
             },
           ],
         },
@@ -219,6 +255,13 @@ export const KeyLocations: CollectionConfig = {
                   },
                 },
                 {
+                  name: 'countryCodeIso',
+                  type: 'text',
+                  admin: {
+                    description: 'ISO country code from Location Manager (for example: US)',
+                  },
+                },
+                {
                   name: 'ianaTimeId',
                   type: 'text',
                   admin: {
@@ -232,32 +275,10 @@ export const KeyLocations: CollectionConfig = {
                   },
                 },
                 {
-                  name: 'neighborhoodDescription',
-                  type: 'textarea',
-                  admin: {
-                    description: 'Neighborhood context from Location Manager',
-                    rows: 3,
-                  },
-                },
-                {
-                  name: 'tripadvisorUrl',
+                  name: 'sourceName',
                   type: 'text',
                   admin: {
-                    description: 'TripAdvisor URL from Location Manager',
-                  },
-                },
-                {
-                  name: 'tripadvisorLocationId',
-                  type: 'text',
-                  admin: {
-                    description: 'TripAdvisor location ID from Location Manager',
-                  },
-                },
-                {
-                  name: 'placeId',
-                  type: 'text',
-                  admin: {
-                    description: 'Google Place ID from Location Manager',
+                    description: 'Original source name from Location Manager',
                   },
                 },
               ],

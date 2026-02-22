@@ -81,7 +81,7 @@ export function DetailsFieldsSection({
           name="keyLocationsDetails"
           label="Key Locations Details JSON"
           control={form.control}
-          placeholder='{"location_type":"airport","status":"active","details":{"access":{},"info":{}}}'
+          placeholder='{"location_type":"airport","status":"active"}'
           description="Structured JSON profile for key locations."
           rows={10}
         />

@@ -13,7 +13,6 @@ type RawKeyLocation = {
   location_type?: unknown;
   type?: unknown;
   images?: unknown;
-  description?: unknown;
   neighborhood?: unknown;
   district?: unknown;
   hours?: unknown;
@@ -155,7 +154,6 @@ function normalizeEntry(rawEntry: RawKeyLocation, index: number): Location | nul
   const operationHours = normalizeOperationHours(rawEntry);
   const phoneNumber = asString(rawEntry.phoneNumber) || asString(rawEntry.phone);
   const website = asString(rawEntry.website);
-  const description = asString(rawEntry.description);
   const details = parseJsonRecord(rawEntry.details) || {};
   const tags = parseStringList(rawEntry.tags);
   const images = parseStringList(rawEntry.images);
@@ -174,7 +172,6 @@ function normalizeEntry(rawEntry: RawKeyLocation, index: number): Location | nul
 
   const keyLocationsDetails = compactRecord({
     location_type: locationType,
-    description,
     neighborhood: district,
     hours: operationHours,
     phone: phoneNumber,

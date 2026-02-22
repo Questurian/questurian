@@ -180,7 +180,6 @@ describe("maps create schema category rules", () => {
       type: "airport",
       keyLocationsDetails: {
         location_type: "airport",
-        description: "Main international airport",
         status: "active",
         details: {
           access: {

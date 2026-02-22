@@ -587,7 +587,7 @@ export function CompletenessFieldEditModal({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             rows={12}
-            placeholder='{"location_type":"airport","status":"active","details":{"access":{},"info":{}}}'
+            placeholder='{"location_type":"airport","status":"active"}'
             className="font-mono text-xs"
           />
         );

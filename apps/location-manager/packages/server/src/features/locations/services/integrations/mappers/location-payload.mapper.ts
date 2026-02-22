@@ -77,7 +77,11 @@ function parseKeyLocationStatus(location: LocationResponse): string | undefined 
   const details = location.keyLocationsDetails;
   if (!details || typeof details !== "object") return undefined;
 
-  const status = (details as Record<string, unknown>).status;
+  const detailsRecord = details as Record<string, unknown>;
+  const status =
+    detailsRecord.status
+    ?? asRecord(detailsRecord.core)?.status
+    ?? asRecord(detailsRecord.core)?.["status"];
   return typeof status === "string" && status.trim().length > 0 ? status.trim() : undefined;
 }
 
@@ -214,6 +218,29 @@ function getAttractionsDetailsPayload(location: LocationResponse): Record<string
   return {
     ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
     ...(Object.keys(payloadVisit).length > 0 ? { visit: payloadVisit } : {}),
+  };
+}
+
+function getKeyLocationsDetailsPayload(location: LocationResponse): Record<string, unknown> {
+  const details = asRecord(location.keyLocationsDetails) ?? {};
+  const core = asRecord(details.core);
+
+  const locationType =
+    asString(details.location_type)
+    ?? asString(core?.locationType)
+    ?? asString(core?.location_type)
+    ?? asString(location.type);
+  const status = asString(details.status) ?? asString(core?.status);
+  const neighborhood = asString(details.neighborhood) ?? asString(core?.neighborhood);
+
+  const payloadCore = {
+    ...(locationType ? { locationType } : {}),
+    ...(status ? { status } : {}),
+    ...(neighborhood ? { neighborhood } : {}),
+  };
+
+  return {
+    ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
   };
 }
 
@@ -395,11 +422,16 @@ function mapKeyLocationsPayload(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ): PayloadEntryData {
+  const operationHours = normalizeOperationHoursForPayload(location.operationHours);
+  const keyLocationsDetails = getKeyLocationsDetailsPayload(location);
   const keyLocationStatus = parseKeyLocationStatus(location);
+
   return {
     ...mapSharedPayloadFields(location, uploadedImages, locationRef),
     ...mapCategoryCommonPayloadFields(location),
-    ...(location.keyLocationsDetails ? { keyLocationsDetails: location.keyLocationsDetails } : {}),
+    ...(location.locationKey ? { location: location.locationKey } : {}),
+    ...(operationHours ? { operationHours } : {}),
+    ...(Object.keys(keyLocationsDetails).length > 0 ? { keyLocationsDetails } : {}),
     ...(keyLocationStatus ? { keyLocationStatus } : {}),
   };
 }

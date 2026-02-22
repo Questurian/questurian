@@ -68,10 +68,6 @@ export function LocationKeyLocationsDetails({
     return null;
   }
 
-  const detailsNode = asRecord(details.details);
-  const accessNode = asRecord(detailsNode?.access);
-  const infoNode = asRecord(detailsNode?.info);
-
   const typeValue = asString(details.location_type) || asString(locationDetail.type);
   const statusValue = asString(details.status);
   const districtValue = asString(details.neighborhood) || asString(locationDetail.district);
@@ -89,13 +85,6 @@ export function LocationKeyLocationsDetails({
     { label: "Website", value: websiteValue },
     { label: "Phone", value: phoneValue },
   ];
-
-  const accessFields: Array<{ label: string; value: string | null }> = accessNode
-    ? [{ label: "Access", value: JSON.stringify(accessNode, null, 2) }]
-    : [];
-  const infoFields: Array<{ label: string; value: string | null }> = infoNode
-    ? [{ label: "Info", value: JSON.stringify(infoNode, null, 2) }]
-    : [];
 
   const renderFields = (
     fields: Array<{ label: string; value: string | null }>,
@@ -115,7 +104,7 @@ export function LocationKeyLocationsDetails({
       );
     });
 
-  const hasAnyFields = [...profileFields, ...accessFields, ...infoFields].some((field) => Boolean(field.value));
+  const hasAnyFields = profileFields.some((field) => Boolean(field.value));
   if (!hasAnyFields) {
     return null;
   }
@@ -126,24 +115,6 @@ export function LocationKeyLocationsDetails({
         Profile
       </div>
       <div className="space-y-2">{renderFields(profileFields)}</div>
-
-      {accessFields.length > 0 && (
-        <>
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Access
-          </div>
-          <div className="space-y-2">{renderFields(accessFields, { mono: true })}</div>
-        </>
-      )}
-
-      {infoFields.length > 0 && (
-        <>
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Info
-          </div>
-          <div className="space-y-2">{renderFields(infoFields, { mono: true })}</div>
-        </>
-      )}
     </div>
   );
 }

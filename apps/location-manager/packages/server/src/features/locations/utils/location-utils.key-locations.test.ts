@@ -12,7 +12,6 @@ function buildKeyLocationsDetails(
 ): Record<string, unknown> {
   const details: Record<string, unknown> = {
     location_type: "airport",
-    description: "Primary international airport",
     neighborhood: "Callao",
     status: "active",
     tags: ["airport", "international", "transport"],
@@ -26,16 +25,6 @@ function buildKeyLocationsDetails(
     },
     phone: "+51 1 517-3100",
     website: "https://www.lima-airport.com",
-    details: {
-      access: {
-        taxi: { available: true },
-        rideshare: { available: true },
-      },
-      info: {
-        terminals: { count: 1 },
-        atm: { available: true },
-      },
-    },
   };
 
   if (!overrides) {
@@ -90,10 +79,6 @@ describe("key locations completeness", () => {
   test("marks key locations incomplete when representative required fields are missing", () => {
     const incompleteDetails = buildKeyLocationsDetails({
       status: "",
-      details: {
-        access: {},
-        info: {},
-      },
     });
 
     const location = buildKeyLocationsLocation({

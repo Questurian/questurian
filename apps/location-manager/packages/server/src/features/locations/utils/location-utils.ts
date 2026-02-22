@@ -547,19 +547,6 @@ export function transformLocationToBasicResponse(
     keyLocationsString(keyLocationsValue("location_type")) ||
     keyLocationsString(location.type);
   const keyLocationsStatus = keyLocationsString(keyLocationsValue("status"));
-  const keyLocationsDetailsNode = keyLocationsValue("details");
-  const keyLocationsAccess =
-    keyLocationsDetailsNode &&
-    typeof keyLocationsDetailsNode === "object" &&
-    !Array.isArray(keyLocationsDetailsNode)
-      ? (keyLocationsDetailsNode as Record<string, unknown>).access
-      : null;
-  const keyLocationsInfo =
-    keyLocationsDetailsNode &&
-    typeof keyLocationsDetailsNode === "object" &&
-    !Array.isArray(keyLocationsDetailsNode)
-      ? (keyLocationsDetailsNode as Record<string, unknown>).info
-      : null;
   const keyLocationsWebsite = keyLocationsString(keyLocationsValue("website")) || accommodationsString(location.website);
   const keyLocationsPhone = keyLocationsString(keyLocationsValue("phone")) || accommodationsString(location.phoneNumber);
   const keyLocationsHours = keyLocationsValue("hours");
@@ -660,18 +647,6 @@ export function transformLocationToBasicResponse(
   const hasKeyLocationsProfile = Boolean(keyLocationsDetails && Object.keys(keyLocationsDetails).length > 0);
   const hasKeyLocationsType = Boolean(keyLocationsType);
   const hasKeyLocationsStatus = Boolean(keyLocationsStatus);
-  const hasKeyLocationsAccess = Boolean(
-    keyLocationsAccess &&
-      typeof keyLocationsAccess === "object" &&
-      !Array.isArray(keyLocationsAccess) &&
-      Object.keys(keyLocationsAccess as Record<string, unknown>).length > 0
-  );
-  const hasKeyLocationsInfo = Boolean(
-    keyLocationsInfo &&
-      typeof keyLocationsInfo === "object" &&
-      !Array.isArray(keyLocationsInfo) &&
-      Object.keys(keyLocationsInfo as Record<string, unknown>).length > 0
-  );
   const hasKeyLocationsVisitHours = (() => {
     if (hasOperationHours) return true;
     if (!keyLocationsHours) return false;
@@ -792,8 +767,6 @@ export function transformLocationToBasicResponse(
         hasKeyLocationsProfile &&
         hasKeyLocationsType &&
         hasKeyLocationsStatus &&
-        hasKeyLocationsAccess &&
-        hasKeyLocationsInfo &&
         hasKeyLocationsVisitHours &&
         hasKeyLocationsDistrict &&
         (hasMedia || hasKeyLocationsImages) &&

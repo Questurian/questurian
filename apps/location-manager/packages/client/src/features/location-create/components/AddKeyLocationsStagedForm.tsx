@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
-import { Textarea } from "@client/components/ui/textarea";
 import { OperationHoursModal } from "./OperationHoursModal";
 import type { AddKeyLocationsFormData } from "../validation/add-key-locations.schema";
 
@@ -70,9 +69,7 @@ export function AddKeyLocationsStagedForm({
   const operationsComplete =
     hasValue(form.watch("website")) &&
     hasValue(form.watch("phone")) &&
-    hasValue(form.watch("hours")) &&
-    hasValue(form.watch("accessDetails")) &&
-    hasValue(form.watch("infoDetails"));
+    hasValue(form.watch("hours"));
 
   const flowSections: Array<{
     key: KeyLocationsFormSection;
@@ -420,17 +417,6 @@ export function AddKeyLocationsStagedForm({
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Image URLs (optional)</Label>
-                    <Textarea
-                      placeholder="One URL per line or comma-separated"
-                      {...form.register("images")}
-                      rows={4}
-                    />
-                    {form.formState.errors.images && (
-                      <p className="text-xs text-destructive">{form.formState.errors.images.message}</p>
-                    )}
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -448,32 +434,6 @@ export function AddKeyLocationsStagedForm({
                       <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
                     )}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Access JSON</Label>
-                  <Textarea
-                    placeholder='{"taxi":{"available":true},"rideshare":{"pickup":"Door 3"}}'
-                    {...form.register("accessDetails")}
-                    rows={6}
-                    className="font-mono text-xs"
-                  />
-                  {form.formState.errors.accessDetails && (
-                    <p className="text-xs text-destructive">{form.formState.errors.accessDetails.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Info JSON</Label>
-                  <Textarea
-                    placeholder='{"terminals":{"total":1},"airlines":{"count":28}}'
-                    {...form.register("infoDetails")}
-                    rows={6}
-                    className="font-mono text-xs"
-                  />
-                  {form.formState.errors.infoDetails && (
-                    <p className="text-xs text-destructive">{form.formState.errors.infoDetails.message}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">

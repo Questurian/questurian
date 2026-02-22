@@ -42,51 +42,12 @@ function parseOperationHoursJson(value: string): Record<string, unknown> | null 
   }
 }
 
-function parseRecordJson(value: string): Record<string, unknown> | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function parseDelimitedList(value: string): string[] {
-  return value
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function isValidUrl(value: string): boolean {
-  try {
-    new URL(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function normalizeKeyLocationsAddress(address: string) {
   return address.trim();
 }
 
 export function buildKeyLocationsPrefillSignature(name: string, address: string) {
   return `${name.trim().toLowerCase()}|${normalizeKeyLocationsAddress(address).toLowerCase()}`;
-}
-
-export function parseKeyLocationsImageUrls(value: string): string[] {
-  return parseDelimitedList(value).filter((item) => isValidUrl(item));
-}
-
-export function parseKeyLocationsRecordJson(value: string): Record<string, unknown> | null {
-  return parseRecordJson(value);
 }
 
 export const addKeyLocationsSchema = z.object({
@@ -104,27 +65,6 @@ export const addKeyLocationsSchema = z.object({
   status: z.enum(KEY_LOCATION_STATUS_VALUES, {
     errorMap: () => ({ message: "Status is required" }),
   }),
-  accessDetails: z
-    .string()
-    .trim()
-    .min(1, "Access details are required")
-    .refine((value) => parseRecordJson(value) !== null, "Access details must be a valid JSON object"),
-  infoDetails: z
-    .string()
-    .trim()
-    .min(1, "Info details are required")
-    .refine((value) => parseRecordJson(value) !== null, "Info details must be a valid JSON object"),
-  images: z
-    .string()
-    .trim()
-    .optional()
-    .or(z.literal(""))
-    .refine((value) => {
-      if (!value) return true;
-      const raw = parseDelimitedList(value);
-      if (raw.length === 0) return true;
-      return raw.every((url) => isValidUrl(url));
-    }, "Image URLs must be valid (comma or line separated)"),
   website: z.string().trim().url("Website URL must be valid"),
   phone: z
     .string()

@@ -43,9 +43,6 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       return null;
     };
     const keyLocationsDetails = asRecord(locationDetail.keyLocationsDetails);
-    const keyLocationsNestedDetails = asRecord(keyLocationsDetails?.details);
-    const keyLocationsAccess = asRecord(keyLocationsNestedDetails?.access);
-    const keyLocationsInfo = asRecord(keyLocationsNestedDetails?.info);
     const hasOperationHours = Boolean(
       locationDetail.operationHours &&
         Object.keys(locationDetail.operationHours).length > 0
@@ -287,16 +284,6 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
           key: "keyLocations.status",
           label: "Status",
           present: Boolean(asString(keyLocationsDetails?.status)),
-        },
-        {
-          key: "keyLocations.access",
-          label: "Access",
-          present: Boolean(keyLocationsAccess && Object.keys(keyLocationsAccess).length > 0),
-        },
-        {
-          key: "keyLocations.info",
-          label: "Info",
-          present: Boolean(keyLocationsInfo && Object.keys(keyLocationsInfo).length > 0),
         },
         {
           key: "operationHours",

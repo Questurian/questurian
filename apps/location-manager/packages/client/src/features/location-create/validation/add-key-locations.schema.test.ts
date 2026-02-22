@@ -15,17 +15,6 @@ const validBaseForm = {
   address: "Av. Elmer Faucett s/n, Callao",
   type: "airport",
   status: "active" as const,
-  accessDetails: JSON.stringify({
-    taxi: { available: true },
-    rideshare: { pickup: "Door 3" },
-    bus: { line: "Airport Express" },
-  }),
-  infoDetails: JSON.stringify({
-    terminals: { total: 1 },
-    airlines: ["LATAM", "Sky"],
-    atm: { available: true },
-  }),
-  images: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1200&q=80",
   website: "https://www.lima-airport.com",
   phone: "+51 1 517-3100",
   tripadvisorUrl: "",
@@ -75,11 +64,11 @@ describe("add key locations schema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("rejects invalid JSON detail fields", () => {
+  test("rejects missing required contact fields", () => {
     const result = addKeyLocationsSchema.safeParse({
       ...validBaseForm,
-      accessDetails: "not-json",
-      infoDetails: "{}[]",
+      website: "",
+      phone: "",
     });
 
     expect(result.success).toBe(false);
