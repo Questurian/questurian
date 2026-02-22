@@ -2,6 +2,15 @@ import { EnvConfig } from "@server/shared/config/env.config";
 import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
+export type PayloadMediaVariantType =
+  | "thumbnail"
+  | "square"
+  | "wide"
+  | "open_graph"
+  | "editorial"
+  | "portrait"
+  | "hero";
+
 export interface PayloadAuthResponse {
   message: string;
   user: {
@@ -144,6 +153,36 @@ export interface PayloadInstagramGalleryItem {
   post: string; // Instagram post ID
 }
 
+export interface PayloadNightlifeDetails {
+  core: {
+    name: string;
+    clubType: string;
+    priceTier: string;
+    music: string[];
+    idealFor: string[];
+  };
+  theSpace: {
+    venueType: string;
+    venueSize: string;
+    spaceLayout: string[];
+    vibe: string[];
+    peakHours: string;
+  };
+  theScene: {
+    musicFormat: string[];
+    touristPresence: string;
+    dressCode: string[];
+    energyLevel: string;
+    vipAndBottleService: string;
+    crowdProfile: string;
+  };
+  theDetails: {
+    operationHours: Record<string, unknown>;
+    reserveUrl: string;
+    daytimeRestaurant: boolean;
+  };
+}
+
 export interface PayloadMediaSetData {
   title: string;
   alt_text: string;
@@ -165,7 +204,7 @@ export interface PayloadMediaSetResponse {
     title: string;
     alt_text: string;
     status: "partial" | "complete";
-    variants: Partial<Record<ImageVariantType, PayloadMediaSetVariant | null>>;
+    variants: Partial<Record<PayloadMediaVariantType, PayloadMediaSetVariant | null>>;
     externalRef?: string;
     location?: string;
     tags?: string[];
@@ -189,12 +228,7 @@ export interface PayloadEntryData {
   type?: string | null;
   keyLocationStatus?: string | null;
   priceLevel?: string | null;
-  /**
-   * IMPORTANT: Use locationRef only, never include a 'location' field.
-   * The Payload sync hook gives location precedence - if it exists (even if null),
-   * it will null out both location and locationRef before processing.
-   * Always omit this field if null/undefined to avoid interfering with locationRef.
-   */
+  location?: string;
   locationRef?: string;
   gallery: PayloadGalleryItem[];
   instagramGallery?: PayloadInstagramGalleryItem[];
@@ -213,7 +247,7 @@ export interface PayloadEntryData {
   sourceName?: string;
   cuisines?: string[];
   idealFor?: string[];
-  nightlifeDetails?: Record<string, unknown>;
+  nightlifeDetails?: PayloadNightlifeDetails;
   core?: Record<string, unknown>;
   theStay?: Record<string, unknown>;
   theExperience?: Record<string, unknown>;
@@ -349,6 +383,11 @@ export class PayloadApiClient {
    * Upload an image to Payload (multipart/form-data)
    * Returns the MediaAsset ID to be used in gallery references
    */
+  private toPayloadMediaVariant(variant: ImageVariantType): PayloadMediaVariantType {
+    if (variant === "social") return "open_graph";
+    return variant;
+  }
+
   async uploadImage(
     fileBuffer: Buffer,
     filename: string,
@@ -357,7 +396,7 @@ export class PayloadApiClient {
       locationRef?: string;
       photographerCredit?: string | null;
       mediaSet?: string;              // Media-set ID to link this variant to
-      variant?: ImageVariantType;     // Variant type (thumbnail, square, wide, social, editorial, portrait, hero)
+      variant?: ImageVariantType;     // LM variant type (social is mapped to open_graph)
     }
   ): Promise<string> {
     if (!this.isConfigured()) {
@@ -406,7 +445,7 @@ export class PayloadApiClient {
 
     // Add variant if provided (for variant uploads)
     if (options?.variant) {
-      payload.variant = options.variant;
+      payload.variant = this.toPayloadMediaVariant(options.variant);
       console.log('✅ [PAYLOAD CLIENT] Added variant to payload:', payload.variant);
     }
 

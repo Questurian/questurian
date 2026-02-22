@@ -13,6 +13,7 @@
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "backfill:rankings": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/backfill-rankings-created-by.ts",
+    "migrate:nightlife-contract-v2": "bun scripts/migrate-nightlife-contract-v2.ts",
     "clear:test": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/clear-test-collections.ts",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int",
