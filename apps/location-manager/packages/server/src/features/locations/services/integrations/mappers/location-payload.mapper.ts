@@ -224,7 +224,6 @@ function getAttractionsDetailsPayload(location: LocationResponse): Record<string
 function getKeyLocationsDetailsPayload(location: LocationResponse): Record<string, unknown> {
   const details = asRecord(location.keyLocationsDetails) ?? {};
   const core = asRecord(details.core);
-  const nestedDetails = asRecord(details.details);
 
   const locationType =
     asString(details.location_type)
@@ -234,8 +233,6 @@ function getKeyLocationsDetailsPayload(location: LocationResponse): Record<strin
   const description = asString(details.description) ?? asString(core?.description);
   const status = asString(details.status) ?? asString(core?.status);
   const neighborhood = asString(details.neighborhood) ?? asString(core?.neighborhood);
-  const access = asRecord(nestedDetails?.access) ?? asRecord(details.access);
-  const info = asRecord(nestedDetails?.info) ?? asRecord(details.info);
 
   const payloadCore = {
     ...(locationType ? { locationType } : {}),
@@ -244,14 +241,8 @@ function getKeyLocationsDetailsPayload(location: LocationResponse): Record<strin
     ...(neighborhood ? { neighborhood } : {}),
   };
 
-  const payloadDetails = {
-    ...(access ? { access } : {}),
-    ...(info ? { info } : {}),
-  };
-
   return {
     ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
-    ...(Object.keys(payloadDetails).length > 0 ? { details: payloadDetails } : {}),
   };
 }
 

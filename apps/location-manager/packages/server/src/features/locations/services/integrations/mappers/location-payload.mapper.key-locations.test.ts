@@ -30,14 +30,6 @@ describe("mapLocationToPayloadFormat key_locations", () => {
         hours: {
           hours: [{ day: "Monday", hours: "00:00:00 - 23:59:59" }],
         },
-        details: {
-          access: {
-            taxi: { available: true },
-          },
-          info: {
-            terminals: 2,
-          },
-        },
       },
       operationHours: { monday: "00:00:00 - 23:59:59", currently_open: true },
       tripadvisorMealTypes: null,
@@ -83,14 +75,6 @@ describe("mapLocationToPayloadFormat key_locations", () => {
         description: "Main international airport",
         status: "active",
         neighborhood: "Callao",
-      },
-      details: {
-        access: {
-          taxi: { available: true },
-        },
-        info: {
-          terminals: 2,
-        },
       },
     });
 

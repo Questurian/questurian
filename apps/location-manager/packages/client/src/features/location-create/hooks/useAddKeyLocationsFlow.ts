@@ -17,8 +17,6 @@ import {
   buildKeyLocationsOperationHours,
   buildKeyLocationsPrefillSignature,
   normalizeKeyLocationsAddress,
-  parseKeyLocationsImageUrls,
-  parseKeyLocationsRecordJson,
   type AddKeyLocationsFormData,
 } from "../validation/add-key-locations.schema";
 
@@ -42,25 +40,6 @@ const KEY_LOCATIONS_FORM_DEFAULT_VALUES: AddKeyLocationsFormData = {
   address: "",
   type: "",
   status: "active",
-  accessDetails: JSON.stringify(
-    {
-      taxi: {},
-      rideshare: {},
-      bus: {},
-    },
-    null,
-    2
-  ),
-  infoDetails: JSON.stringify(
-    {
-      terminals: {},
-      airlines: {},
-      atm: {},
-    },
-    null,
-    2
-  ),
-  images: "",
   website: "",
   phone: "",
   tripadvisorUrl: "",
@@ -335,26 +314,12 @@ export function useAddKeyLocationsFlow() {
     const lat = Number(data.latitude);
     const lng = Number(data.longitude);
     const operationHours = buildKeyLocationsOperationHours(data);
-    const access = parseKeyLocationsRecordJson(data.accessDetails) || {};
-    const info = parseKeyLocationsRecordJson(data.infoDetails) || {};
-    const images = parseKeyLocationsImageUrls(data.images || "");
 
     const keyLocationsDetails: Record<string, unknown> = {
       location_type: data.type,
       neighborhood: data.district,
-      hours: operationHours,
-      phone: data.phone,
-      website: data.website,
       status: data.status,
-      details: {
-        access,
-        info,
-      },
     };
-
-    if (images.length > 0) {
-      keyLocationsDetails.images = images;
-    }
 
     createLocation(
       {

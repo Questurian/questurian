@@ -100,19 +100,6 @@ export const KeyLocations: CollectionConfig = {
                         },
                       ],
                     },
-                    {
-                      label: 'Details',
-                      fields: [
-                        {
-                          name: 'details',
-                          type: 'group',
-                          fields: [
-                            { name: 'access', type: 'json' },
-                            { name: 'info', type: 'json' },
-                          ],
-                        },
-                      ],
-                    },
                   ],
                 },
               ],
