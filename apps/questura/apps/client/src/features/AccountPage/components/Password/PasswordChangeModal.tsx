@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User } from '@/lib/user/types';
 import { isServiceUnavailableError } from '@/lib/api';
+import PasswordInput from '@/components/shared/ui/PasswordInput';
 import { useVerifyPasswordMutation, useRequestPasswordChangeMutation, useConfirmPasswordChangeMutation } from '../../hooks/usePasswordChangeMutations';
 
 interface PasswordChangeModalProps {
@@ -157,16 +158,15 @@ export function PasswordChangeModal({ show, user, onClose, onSuccess }: Password
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Current Password
-                </label>
-                <input
-                  type="password"
+                <PasswordInput
+                  label="Current Password"
+                  name="currentPassword"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   placeholder="Enter your current password"
                   required
+                  autoComplete="current-password"
+                  className="rounded-md py-2"
                   disabled={verifyPasswordMutation.isPending || requestPasswordChangeMutation.isPending}
                   autoFocus
                 />
@@ -218,31 +218,29 @@ export function PasswordChangeModal({ show, user, onClose, onSuccess }: Password
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  New Password
-                </label>
-                <input
-                  type="password"
+                <PasswordInput
+                  label="New Password"
+                  name="newPassword"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   placeholder="Enter new password"
                   required
+                  autoComplete="new-password"
+                  className="rounded-md py-2"
                   disabled={confirmPasswordChangeMutation.isPending}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Confirm New Password
-                </label>
-                <input
-                  type="password"
+                <PasswordInput
+                  label="Confirm New Password"
+                  name="confirmNewPassword"
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   placeholder="Confirm new password"
                   required
+                  autoComplete="new-password"
+                  className="rounded-md py-2"
                   disabled={confirmPasswordChangeMutation.isPending}
                 />
               </div>

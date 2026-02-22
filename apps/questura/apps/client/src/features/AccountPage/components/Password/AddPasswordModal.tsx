@@ -1,4 +1,5 @@
-import { PasswordData } from "../../types";
+import { PasswordData } from '../../types';
+import PasswordInput from '@/components/shared/ui/PasswordInput';
 
 interface AddPasswordModalProps {
   show: boolean;
@@ -24,30 +25,24 @@ export function AddPasswordModal({
           Set Password
         </h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              New Password
-            </label>
-            <input
-              type="password"
-              value={passwordData.password}
-              onChange={(e) => setPasswordData(prev => ({ ...prev, password: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              placeholder="Enter new password"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              value={passwordData.confirmPassword}
-              onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              placeholder="Confirm new password"
-            />
-          </div>
+          <PasswordInput
+            label="New Password"
+            name="password"
+            value={passwordData.password}
+            onChange={(e) => setPasswordData(prev => ({ ...prev, password: e.target.value }))}
+            placeholder="Enter new password"
+            autoComplete="new-password"
+            className="rounded-md py-2"
+          />
+          <PasswordInput
+            label="Confirm Password"
+            name="confirmPassword"
+            value={passwordData.confirmPassword}
+            onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+            placeholder="Confirm new password"
+            autoComplete="new-password"
+            className="rounded-md py-2"
+          />
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Password must be at least 8 characters long.
           </p>

@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConfirmPasswordChangeMutation } from '@/features/AccountPage/hooks/usePasswordChangeMutations';
+import PasswordInput from '@/components/shared/ui/PasswordInput';
 
 function ConfirmPasswordChangeContent() {
   const searchParams = useSearchParams() ?? new URLSearchParams();
@@ -121,59 +122,42 @@ function ConfirmPasswordChangeContent() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="currentPassword"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Current Password
-              </label>
-              <input
-                id="currentPassword"
-                name="currentPassword"
-                type="password"
-                required
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 640:text-sm"
-              />
-            </div>
+            <PasswordInput
+              id="currentPassword"
+              name="currentPassword"
+              label="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              className="mt-1 rounded-md py-2"
+              disabled={confirmPasswordChangeMutation.isPending}
+              autoFocus
+            />
 
-            <div>
-              <label
-                htmlFor="newPassword"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                New Password
-              </label>
-              <input
-                id="newPassword"
-                name="newPassword"
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 640:text-sm"
-              />
-            </div>
+            <PasswordInput
+              id="newPassword"
+              name="newPassword"
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              className="mt-1 rounded-md py-2"
+              disabled={confirmPasswordChangeMutation.isPending}
+            />
 
-            <div>
-              <label
-                htmlFor="confirmNewPassword"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Confirm New Password
-              </label>
-              <input
-                id="confirmNewPassword"
-                name="confirmNewPassword"
-                type="password"
-                required
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 640:text-sm"
-              />
-            </div>
+            <PasswordInput
+              id="confirmNewPassword"
+              name="confirmNewPassword"
+              label="Confirm New Password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              className="mt-1 rounded-md py-2"
+              disabled={confirmPasswordChangeMutation.isPending}
+            />
           </div>
 
           {error && (
