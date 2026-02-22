@@ -45,7 +45,7 @@ export const Attractions: CollectionConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Details',
+          label: 'Basic Info',
           fields: [
             {
               name: 'type',
@@ -76,6 +76,30 @@ export const Attractions: CollectionConfig = {
                 description: 'Price range indicator',
               },
             },
+          ],
+        },
+        {
+          label: 'Profile',
+          fields: [
+            {
+              name: 'idealFor',
+              type: 'json',
+              admin: {
+                description: 'String[] ideal-for tags',
+              },
+            },
+            {
+              name: 'attractionsDetails',
+              type: 'json',
+              admin: {
+                description: 'Structured attractions details JSON from Location Manager',
+              },
+            },
+          ],
+        },
+        {
+          label: 'Media',
+          fields: [
             {
               name: 'gallery',
               type: 'array',
@@ -116,20 +140,6 @@ export const Attractions: CollectionConfig = {
                   },
                 },
               ],
-            },
-            {
-              name: 'idealFor',
-              type: 'json',
-              admin: {
-                description: 'String[] ideal-for tags',
-              },
-            },
-            {
-              name: 'attractionsDetails',
-              type: 'json',
-              admin: {
-                description: 'Structured attractions details JSON from Location Manager',
-              },
             },
             {
               name: 'instagramGallery',
