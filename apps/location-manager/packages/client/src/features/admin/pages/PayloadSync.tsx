@@ -27,7 +27,11 @@ import type { Category, PayloadSyncCategory } from "@client/shared/services/api/
 import type { SyncStatusResponse } from "@client/shared/services/api/types/payload.types";
 
 function isPayloadSyncCategory(category: Category): category is PayloadSyncCategory {
-  return category !== "key_locations";
+  return category === "dining" ||
+    category === "accommodations" ||
+    category === "attractions" ||
+    category === "nightlife" ||
+    category === "key_locations";
 }
 
 export function PayloadSync() {
@@ -104,7 +108,7 @@ export function PayloadSync() {
 
   const handleSyncLocation = async (locationId: number, category: Category) => {
     if (!isPayloadSyncCategory(category)) {
-      showToast("Payload sync does not support Key Locations yet.", { x: window.innerWidth / 2, y: 100 });
+      showToast("Payload sync does not support this category.", { x: window.innerWidth / 2, y: 100 });
       return;
     }
 
@@ -119,7 +123,7 @@ export function PayloadSync() {
   const handleSyncAll = async () => {
     const category = categoryFilter !== "all" ? categoryFilter : undefined;
     if (category && !isPayloadSyncCategory(category)) {
-      showToast("Payload sync does not support Key Locations yet.", { x: window.innerWidth / 2, y: 100 });
+      showToast("Payload sync does not support this category.", { x: window.innerWidth / 2, y: 100 });
       return;
     }
     const syncCategory: PayloadSyncCategory | undefined =

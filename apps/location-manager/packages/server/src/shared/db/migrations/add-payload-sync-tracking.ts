@@ -29,22 +29,22 @@ export function addPayloadSyncTracking(db: Database): void {
     db.run(`
       CREATE TABLE payload_sync_state (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        location_id INTEGER NOT NULL,
-        payload_collection TEXT NOT NULL CHECK(payload_collection IN ('dining', 'accommodations', 'attractions', 'nightlife')),
+        entity_id INTEGER NOT NULL,
+        payload_collection TEXT NOT NULL CHECK(payload_collection IN ('dining', 'accommodations', 'attractions', 'nightlife', 'key-locations')),
         payload_doc_id TEXT NOT NULL,
         last_synced_at TEXT NOT NULL,
         sync_status TEXT NOT NULL DEFAULT 'success' CHECK(sync_status IN ('success', 'failed', 'pending')),
         error_message TEXT,
-        FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
-        UNIQUE(location_id, payload_collection)
+        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+        UNIQUE(entity_id, payload_collection)
       )
     `);
 
-    // Create index for efficient lookups by location_id
-    console.log("  🔍 Creating index on location_id...");
+    // Create index for efficient lookups by entity_id
+    console.log("  🔍 Creating index on entity_id...");
     db.run(`
       CREATE INDEX IF NOT EXISTS idx_payload_sync_location
-      ON payload_sync_state(location_id)
+      ON payload_sync_state(entity_id)
     `);
 
     // Create index for efficient filtering by sync status

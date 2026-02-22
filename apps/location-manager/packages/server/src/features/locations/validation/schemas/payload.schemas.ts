@@ -5,6 +5,7 @@ export const payloadSyncCategorySchema = z.enum([
   "accommodations",
   "attractions",
   "nightlife",
+  "key_locations",
 ]);
 
 /**

@@ -7,8 +7,8 @@ describe("payload sync category schema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("rejects key_locations category filter", () => {
+  test("accepts key_locations category filter", () => {
     const result = syncAllSchema.safeParse({ category: "key_locations" });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });

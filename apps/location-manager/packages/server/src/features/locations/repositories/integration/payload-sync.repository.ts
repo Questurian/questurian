@@ -3,7 +3,7 @@ import { getDb } from "@server/shared/db/client";
 export interface PayloadSyncState {
   id: number;
   location_id: number;
-  payload_collection: "dining" | "accommodations" | "attractions" | "nightlife";
+  payload_collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations";
   payload_doc_id: string;
   last_synced_at: string;
   sync_status: "success" | "failed" | "pending";
@@ -15,7 +15,7 @@ export interface PayloadSyncState {
  */
 export function getSyncState(
   locationId: number,
-  collection: "dining" | "accommodations" | "attractions" | "nightlife"
+  collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations"
 ): PayloadSyncState | null {
   try {
     const db = getDb();
@@ -41,7 +41,7 @@ export function getSyncState(
  * Get all synced locations, optionally filtered by collection
  */
 export function getAllSyncedLocations(
-  collection?: "dining" | "accommodations" | "attractions" | "nightlife"
+  collection?: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations"
 ): PayloadSyncState[] {
   try {
     const db = getDb();
@@ -75,7 +75,7 @@ export function getAllSyncedLocations(
  */
 export function saveSyncState(
   locationId: number,
-  collection: "dining" | "accommodations" | "attractions" | "nightlife",
+  collection: "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations",
   payloadDocId: string,
   status: "success" | "failed" | "pending",
   errorMessage?: string,
