@@ -1,0 +1,122 @@
+import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
+import type { ImageVariantType } from "@questurian/lm-shared";
+import { normalizeDocResponse } from "./payload-http.client";
+import type { PayloadMediaAssetResponse, PayloadMediaVariantType } from "./payload-api.types";
+import { PayloadAuthClient } from "./payload-auth.client";
+
+export class PayloadMediaClient {
+  constructor(private readonly authClient: PayloadAuthClient) {}
+
+  private toPayloadMediaVariant(variant: ImageVariantType): PayloadMediaVariantType {
+    if (variant === "social") return "open_graph";
+    return variant;
+  }
+
+  async uploadImage(
+    fileBuffer: Buffer,
+    filename: string,
+    altText: string,
+    options?: {
+      locationRef?: string;
+      photographerCredit?: string | null;
+      mediaSet?: string;
+      variant?: ImageVariantType;
+    }
+  ): Promise<string> {
+    if (!this.authClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const token = await this.authClient.ensureAuthenticated();
+
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer.buffer], { type: this.getMimeType(filename) });
+    formData.append("file", blob, filename);
+
+    const payload: Record<string, string | number> = {};
+
+    console.log("🔍 [PAYLOAD CLIENT] uploadImage called with:", {
+      filename,
+      altText,
+      options_locationRef: options?.locationRef,
+      options_locationRef_type: typeof options?.locationRef,
+      options_photographerCredit: options?.photographerCredit,
+    });
+
+    if (altText) {
+      payload.alt_text = altText;
+    }
+
+    payload.photographer_credit = options?.photographerCredit || "";
+
+    if (options?.locationRef) {
+      payload.locationRef = parseInt(options.locationRef, 10);
+      console.log("✅ [PAYLOAD CLIENT] Added locationRef to payload:", payload.locationRef);
+    } else {
+      console.warn("⚠️  [PAYLOAD CLIENT] No locationRef provided, skipping");
+    }
+
+    if (options?.mediaSet) {
+      payload.mediaSet = options.mediaSet;
+      console.log("✅ [PAYLOAD CLIENT] Added mediaSet to payload:", payload.mediaSet);
+    }
+
+    if (options?.variant) {
+      payload.variant = this.toPayloadMediaVariant(options.variant);
+      console.log("✅ [PAYLOAD CLIENT] Added variant to payload:", payload.variant);
+    }
+
+    formData.append("_payload", JSON.stringify(payload));
+
+    const apiUrl = this.authClient.getApiUrl();
+    console.log("🔍 [PAYLOAD REQUEST] URL:", `${apiUrl}/api/media-assets`);
+    console.log("🔍 [PAYLOAD REQUEST] filename:", filename);
+    console.log("🔍 [PAYLOAD REQUEST] _payload:", JSON.stringify(payload, null, 2));
+    console.log("🔍 [PAYLOAD REQUEST] locationRef:", options?.locationRef || "none");
+
+    const response = await fetch(`${apiUrl}/api/media-assets`, {
+      method: "POST",
+      headers: {
+        Authorization: `JWT ${token}`,
+      },
+      body: formData,
+    });
+
+    console.log("🔍 [PAYLOAD RESPONSE] Status:", response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ [PAYLOAD ERROR] Status:", response.status);
+      console.error("❌ [PAYLOAD ERROR] Response:", errorText);
+      throw new Error(`Payload image upload failed: ${response.status} - ${errorText}`);
+    }
+
+    const rawResult = await response.json();
+    const data = normalizeDocResponse<PayloadMediaAssetResponse["doc"]>(
+      rawResult,
+      "media asset upload"
+    );
+
+    console.log(`✓ Uploaded image to Payload: ${data.doc.filename} → ID: ${data.doc.id}`);
+    console.log("🔍 [PAYLOAD RESPONSE] Full doc object:", JSON.stringify(data.doc, null, 2));
+    console.log("🔍 [PAYLOAD RESPONSE] altText in response:", data.doc.altText);
+
+    return data.doc.id;
+  }
+
+  private getMimeType(filename: string): string {
+    const ext = filename.split(".").pop()?.toLowerCase();
+
+    switch (ext) {
+      case "jpg":
+      case "jpeg":
+        return "image/jpeg";
+      case "png":
+        return "image/png";
+      case "webp":
+        return "image/webp";
+      default:
+        return "image/jpeg";
+    }
+  }
+}
