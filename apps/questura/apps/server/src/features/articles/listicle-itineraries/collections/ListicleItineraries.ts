@@ -5,6 +5,7 @@ import {
   toMinutesFromMidnight,
 } from '../blocks/utils/timeField'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
+import { isLocationWithinScope } from '@/shared/location/server/locationScope'
 import {
   step1Complete,
   inUpdateMode,
@@ -263,7 +264,7 @@ export const ListicleItineraries: CollectionConfig = {
         const parentLocation = getValue<string>(merged, 'location')
         if (parentLocation) {
           for (const block of computed) {
-            if (block.location && block.location !== parentLocation) {
+            if (block.location && !isLocationWithinScope(block.location, parentLocation)) {
               throw new Error(
                 `Item ${block.index + 1} location does not match itinerary location (${parentLocation}).`,
               )
