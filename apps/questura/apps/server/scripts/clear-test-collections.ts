@@ -30,9 +30,6 @@ import path from 'path'
 const COLLECTIONS_TO_CLEAR = [
   // Clear content collections first (they reference media and locations)
   'articles',
-  'rankings',
-  'affiliate-articles',
-  'itineraries',
   'instagram-posts',
   'seo-metadata',
 

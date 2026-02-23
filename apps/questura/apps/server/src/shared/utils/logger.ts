@@ -37,7 +37,9 @@ class Logger {
 
       console.log(`${emoji} [${logData.level.toUpperCase()}] ${logData.message}`)
       if (Object.keys(logData).length > 3) {
-        const { level: _level, message: _message, timestamp: _timestamp, ...extraData } = logData
+        const extraData = Object.fromEntries(
+          Object.entries(logData).filter(([key]) => !['level', 'message', 'timestamp'].includes(key))
+        )
         console.log('  ', extraData)
       }
     } else {

@@ -1,0 +1,1 @@
+export { SingleTypeListicles } from './SingleTypeListicles'

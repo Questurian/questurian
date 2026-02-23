@@ -12,9 +12,6 @@ import { Users } from './features/auth/collections/Users'
 import { MediaAsset } from './features/media/collections/MediaAsset'
 import { MediaSet } from './features/media/collections/MediaSet'
 import { Articles } from './features/articles/articles/collections/Articles'
-import { Rankings } from './features/articles/rankings/collections/Rankings'
-import { AffiliateArticles } from './features/articles/affiliate/collections/AffiliateArticles'
-import { Itineraries } from './features/articles/itineraries/collections/Itineraries'
 import { Locations } from './features/location/collections/Locations'
 import { Accommodations } from './features/data/accommodations/collections/Accommodations'
 import { Dining } from './features/data/dining/collections/Dining'
@@ -26,6 +23,7 @@ import { InstagramPosts } from './features/data/instagram/collections/InstagramP
 import { PerfectForTags } from './features/shared/perfect-for/collections/PerfectForTags'
 import { Categories, Tags } from './features/shared/taxonomy/collections'
 import { SeoMetadata } from './features/seo/collections/SeoMetadata'
+import { SingleTypeListicles } from './features/articles/single-type-listicles/collections'
 import { APP_CONFIG, APP_URLS } from './shared/config'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -43,7 +41,7 @@ export default buildConfig({
   serverURL: APP_URLS.backendLocal,
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
-  collections: [Users, MediaAsset, MediaSet, Articles, Rankings, AffiliateArticles, Itineraries, Locations, SeoMetadata, Categories, Tags, Accommodations, Dining, Attractions, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags],
+  collections: [Users, MediaAsset, MediaSet, Articles, SingleTypeListicles, Locations, SeoMetadata, Categories, Tags, Accommodations, Dining, Attractions, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,
   typescript: {
