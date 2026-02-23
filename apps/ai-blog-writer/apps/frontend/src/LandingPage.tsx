@@ -75,6 +75,22 @@ export default function LandingPage() {
             </svg>
           </span>
         </Link>
+
+        <Link to="/single-type-listicles" className="landing-card landing-card--listicles">
+          <div className="landing-card-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h2>Single Type Listicles</h2>
+          <p>Build and stage Single Type Listicles directly with full Payload field and block control.</p>
+          <span className="landing-card-action">
+            Open Builder
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+        </Link>
       </main>
     </div>
   )

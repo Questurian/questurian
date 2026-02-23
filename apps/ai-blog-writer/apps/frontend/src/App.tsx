@@ -26,6 +26,10 @@ import {
   Url2BlogStagePage,
   Url2BlogStageArticlePage
 } from './features/url2blog'
+import {
+  SingleTypeListiclesPage,
+  SingleTypeListicleBuilderPage,
+} from './features/singleTypeListicles'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -66,6 +70,10 @@ export default function App() {
               <Route path="url2blog/articles" element={<Url2BlogArticlesPage />} />
               <Route path="url2blog/stage" element={<Url2BlogStagePage />} />
               <Route path="url2blog/stage-article" element={<Url2BlogStageArticlePage />} />
+
+              {/* Single Type Listicles */}
+              <Route path="single-type-listicles" element={<SingleTypeListiclesPage />} />
+              <Route path="single-type-listicles/builder" element={<SingleTypeListicleBuilderPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
