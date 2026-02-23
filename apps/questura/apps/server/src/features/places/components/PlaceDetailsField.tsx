@@ -56,7 +56,7 @@ const CATEGORY_CONFIG: Record<
   },
 }
 
-const PlaceDetailsField: React.FC<Props> = ({ path }) => {
+const PlaceDetailsField: React.FC<Props> = () => {
   const { id } = useDocumentInfo()
 
   // Watch the categories field - this updates when user selects categories

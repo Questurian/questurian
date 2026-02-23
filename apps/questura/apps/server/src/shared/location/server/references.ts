@@ -12,8 +12,6 @@ export const LOCATION_REFERENCE_TARGETS: LocationReferenceTarget[] = [
   { slug: 'accommodations', label: 'Accommodations' },
   { slug: 'nightlife', label: 'Nightlife' },
   { slug: 'attractions', label: 'Attractions' },
-  { slug: 'rankings', label: 'Rankings' },
-  { slug: 'itineraries', label: 'Itineraries' },
   { slug: 'articles', label: 'Articles' },
 ]
 
