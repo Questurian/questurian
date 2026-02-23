@@ -1,9 +1,12 @@
-import { PIPELINE_JOB_MESSAGES, PIPELINE_JOB_PROGRESS } from "../../constants/reviews-pipeline.constants";
-import { updateLocationReviewStats } from "../../repositories/content/reviews-pipeline.repository";
-import type { ReviewsPipelineJob } from "../../types/reviews-pipeline.types";
-import { createReviewsPipelineDependencies } from "./reviews-pipeline-dependencies.service";
-import { PipelineExecutionError } from "./reviews-pipeline.errors";
-import { executePipeline } from "./reviews-pipeline.service";
+import {
+  PIPELINE_JOB_MESSAGES,
+  PIPELINE_JOB_PROGRESS,
+} from "../../../../constants/reviews-pipeline.constants";
+import { updateLocationReviewStats } from "../../../../repositories/content/reviews-pipeline.repository";
+import type { ReviewsPipelineJob } from "../../../../types/reviews-pipeline.types";
+import { createReviewsPipelineDependencies } from "../dependencies/dependencies.service";
+import { PipelineExecutionError } from "../pipeline.errors";
+import { executePipeline } from "../orchestration/pipeline.service";
 
 type PipelineLocation = {
   placeId?: string | null;

@@ -4,9 +4,9 @@ import {
   DEFAULT_TRIPADVISOR_SORT,
   MAX_TRIPADVISOR_REVIEWS_PER_LANGUAGE,
   PIPELINE_FETCH_SUCCESS_MESSAGES,
-} from "../../constants/reviews-pipeline.constants";
-import type { PipelineDependencies } from "../../types/reviews-pipeline.types";
-import { TripAdvisorReviewsApiClient } from "../integrations/clients/tripadvisor-reviews-api.client";
+} from "../../../../constants/reviews-pipeline.constants";
+import type { PipelineDependencies } from "../../../../types/reviews-pipeline.types";
+import { TripAdvisorReviewsApiClient } from "../../../integrations/clients/tripadvisor-reviews-api.client";
 
 export interface TripadvisorPipelineSourceDependency {
   isConfigured: () => boolean;

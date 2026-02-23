@@ -1,10 +1,14 @@
 import {
   DEFAULT_GOOGLE_PARAMS,
   PIPELINE_FETCH_SUCCESS_MESSAGES,
-} from "../../constants/reviews-pipeline.constants";
-import type { PipelineDependencies } from "../../types/reviews-pipeline.types";
-import { hasMoreReviews, getReviewsArray, getTotalReviews } from "../../utils/reviews-pipeline.utils";
-import { ReviewsApiClient, type ReviewsQueryParams } from "../integrations/clients/reviews-api.client";
+} from "../../../../constants/reviews-pipeline.constants";
+import type { PipelineDependencies } from "../../../../types/reviews-pipeline.types";
+import {
+  hasMoreReviews,
+  getReviewsArray,
+  getTotalReviews,
+} from "../../../../utils/reviews-pipeline.utils";
+import { ReviewsApiClient, type ReviewsQueryParams } from "../../../integrations/clients/reviews-api.client";
 
 export interface GooglePipelineSourceDependency {
   isConfigured: () => boolean;

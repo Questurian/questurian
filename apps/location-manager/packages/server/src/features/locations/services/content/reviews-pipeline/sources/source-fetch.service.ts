@@ -1,13 +1,13 @@
-import type { ReviewSource } from "../../types/translate-merge-reviews.types";
+import type { ReviewSource } from "../../../../types/translate-merge-reviews.types";
 import type {
   PipelineDependencies,
   PipelineLocation,
   PipelineProgressUpdate,
   PipelineSourceFetchResult,
-} from "../../types/reviews-pipeline.types";
-import { selectRequestedSources } from "../../utils/reviews-pipeline-source-selection.utils";
-import { fetchGoogleSource } from "./reviews-pipeline-google-source-fetch.service";
-import { fetchTripadvisorSource } from "./reviews-pipeline-tripadvisor-source-fetch.service";
+} from "../../../../types/reviews-pipeline.types";
+import { selectRequestedSources } from "../../../../utils/reviews-pipeline-source-selection.utils";
+import { fetchGoogleSource } from "./google-source-fetch.service";
+import { fetchTripadvisorSource } from "./tripadvisor-source-fetch.service";
 
 export async function fetchSelectedSources(
   locationId: number,
