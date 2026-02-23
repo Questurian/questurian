@@ -1,6 +1,7 @@
 import { CollectionConfig } from 'payload'
 import { getBlocksForType } from '../blocks'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
+import { isLocationWithinScope } from '@/shared/location/server/locationScope'
 import {
   step1Complete,
   inUpdateMode,
@@ -167,7 +168,7 @@ export const SingleTypeListicles: CollectionConfig = {
             const item = data.items[i]
             if (item?.item && typeof item.item !== 'string') {
               const itemLocation = item.item.location
-              if (itemLocation && itemLocation !== parentLocation) {
+              if (itemLocation && !isLocationWithinScope(itemLocation, parentLocation)) {
                 throw new Error(
                   `Item ${i + 1} location does not match listicle location (${parentLocation}).`,
                 )
