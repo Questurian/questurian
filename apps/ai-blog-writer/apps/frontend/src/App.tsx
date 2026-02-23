@@ -30,6 +30,10 @@ import {
   SingleTypeListiclesPage,
   SingleTypeListicleBuilderPage,
 } from './features/singleTypeListicles'
+import {
+  ListicleItinerariesPage,
+  ListicleItineraryBuilderPage,
+} from './features/listicleItineraries'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -74,6 +78,10 @@ export default function App() {
               {/* Single Type Listicles */}
               <Route path="single-type-listicles" element={<SingleTypeListiclesPage />} />
               <Route path="single-type-listicles/builder" element={<SingleTypeListicleBuilderPage />} />
+
+              {/* Listicle Itineraries */}
+              <Route path="listicle-itineraries" element={<ListicleItinerariesPage />} />
+              <Route path="listicle-itineraries/builder" element={<ListicleItineraryBuilderPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
