@@ -1,13 +1,13 @@
 import { ServiceContainer } from "@server/features/locations/container/service-container";
-import type { ReviewSource } from "../../types/translate-merge-reviews.types";
-import type { ReviewsPipelineJob } from "../../types/reviews-pipeline.types";
+import type { ReviewSource } from "../../../../types/translate-merge-reviews.types";
+import type { ReviewsPipelineJob } from "../../../../types/reviews-pipeline.types";
 import {
   createPipelineJob,
   getPipelineJobForLocation,
   schedulePipelineJobCleanup,
   updatePipelineJob,
-} from "./reviews-pipeline-job-store.service";
-import { markPipelineJobUnexpectedFailure, runPipelineJob } from "./reviews-pipeline-job-runner.service";
+} from "./job-store.service";
+import { markPipelineJobUnexpectedFailure, runPipelineJob } from "./job-runner.service";
 
 const container = ServiceContainer.getInstance();
 
@@ -45,4 +45,3 @@ export function startReviewsPipelineJob(
 export function getReviewsPipelineJob(locationId: number, jobId: string): ReviewsPipelineJob | null {
   return getPipelineJobForLocation(locationId, jobId);
 }
-

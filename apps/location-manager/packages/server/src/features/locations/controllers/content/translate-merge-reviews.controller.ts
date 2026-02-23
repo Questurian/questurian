@@ -6,8 +6,8 @@ import {
   getMergedReviewsStatusPayload,
   getRejectsReportDownloadPayload,
   runTranslateAndMergeReviews,
-} from "../../services/content/translate-merge-reviews.service";
-import { TranslateMergeError } from "../../services/content/translate-merge.errors";
+} from "../../services/content/translate-merge/orchestration.service";
+import { TranslateMergeError } from "../../services/content/translate-merge/errors";
 import type { ReviewSource } from "../../types/translate-merge-reviews.types";
 import { parseTranslateMergeRequest } from "../../validation/schemas/translate-merge-reviews.schemas";
 

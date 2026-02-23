@@ -1,5 +1,5 @@
-import type { PipelineDependencies } from "../../types/reviews-pipeline.types";
-import { runTranslateAndMergeReviews } from "./translate-merge-reviews.service";
+import type { PipelineDependencies } from "../../../../types/reviews-pipeline.types";
+import { runTranslateAndMergeReviews } from "../../translate-merge/orchestration.service";
 
 export interface PipelineMergeDependency {
   merge: PipelineDependencies["merge"];

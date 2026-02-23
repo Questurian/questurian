@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { ReviewSource } from "../../types/translate-merge-reviews.types";
-import type { ReviewsPipelineJob } from "../../types/reviews-pipeline.types";
-import { JOB_TTL_MS } from "../../constants/reviews-pipeline.constants";
-import { nowIso } from "../../utils/reviews-pipeline.utils";
+import type { ReviewSource } from "../../../../types/translate-merge-reviews.types";
+import type { ReviewsPipelineJob } from "../../../../types/reviews-pipeline.types";
+import { JOB_TTL_MS } from "../../../../constants/reviews-pipeline.constants";
+import { nowIso } from "../../../../utils/reviews-pipeline.utils";
 
 const JOBS = new Map<string, ReviewsPipelineJob>();
 

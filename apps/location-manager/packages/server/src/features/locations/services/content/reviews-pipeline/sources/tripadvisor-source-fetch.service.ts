@@ -2,16 +2,16 @@ import {
   PIPELINE_FETCH_ERROR_MESSAGES,
   PIPELINE_PROGRESS,
   PIPELINE_PROGRESS_MESSAGES,
-} from "../../constants/reviews-pipeline.constants";
+} from "../../../../constants/reviews-pipeline.constants";
 import type {
   FetchReviewsPipelineWarning,
   FetchedTripadvisorReviewsResult,
   PipelineDependencies,
   PipelineLocation,
   PipelineProgressUpdate,
-} from "../../types/reviews-pipeline.types";
-import { resolvePipelineFetchErrorMessage } from "../../utils/reviews-pipeline-error.utils";
-import { validateTripadvisorSourceFetch } from "../../validation/reviews-pipeline-source-fetch.validators";
+} from "../../../../types/reviews-pipeline.types";
+import { resolvePipelineFetchErrorMessage } from "../../../../utils/reviews-pipeline-error.utils";
+import { validateTripadvisorSourceFetch } from "../../../../validation/reviews-pipeline-source-fetch.validators";
 
 export interface TripadvisorSourceFetchResult {
   warning?: FetchReviewsPipelineWarning;

@@ -1,7 +1,10 @@
 import type { Context } from "hono";
 import { successResponse, errorResponse } from "@shared/types/api-response";
-import { startReviewsPipelineJob, getReviewsPipelineJob } from "../../services/content/reviews-pipeline-job.service";
-import { executePipeline } from "../../services/content/reviews-pipeline.service";
+import {
+  startReviewsPipelineJob,
+  getReviewsPipelineJob,
+} from "../../services/content/reviews-pipeline/job/job.service";
+import { executePipeline } from "../../services/content/reviews-pipeline/orchestration/pipeline.service";
 import type { FetchReviewsPipelineDto } from "../../types/reviews-pipeline.types";
 import { parseFetchReviewsPipelineBody, parsePipelineStatusQuery } from "../../validation/schemas/reviews-pipeline.schemas";
 
@@ -62,4 +65,3 @@ export async function getReviewsPipelineStatus(c: Context) {
     })
   );
 }
-

@@ -1,19 +1,19 @@
-import type { ReviewSource } from "../../types/translate-merge-reviews.types";
+import type { ReviewSource } from "../../../../types/translate-merge-reviews.types";
 import type {
   PipelineDependencies,
   PipelineLocation,
   PipelineProgressUpdate,
   PipelineResult,
-} from "../../types/reviews-pipeline.types";
+} from "../../../../types/reviews-pipeline.types";
 import {
   PIPELINE_EXECUTION_FAILURE_MESSAGE,
   PIPELINE_PROGRESS,
   PIPELINE_PROGRESS_MESSAGES,
-} from "../../constants/reviews-pipeline.constants";
-import { resolvePipelineFailureStatus } from "../../utils/reviews-pipeline-error.utils";
-import { buildPipelineCompletionMessage } from "../../utils/reviews-pipeline-message.utils";
-import { PipelineExecutionError } from "./reviews-pipeline.errors";
-import { fetchSelectedSources } from "./reviews-pipeline-source-fetch.service";
+} from "../../../../constants/reviews-pipeline.constants";
+import { resolvePipelineFailureStatus } from "../../../../utils/reviews-pipeline-error.utils";
+import { buildPipelineCompletionMessage } from "../../../../utils/reviews-pipeline-message.utils";
+import { PipelineExecutionError } from "../pipeline.errors";
+import { fetchSelectedSources } from "../sources/source-fetch.service";
 
 export async function executePipeline(
   locationId: number,
@@ -53,4 +53,3 @@ export async function executePipeline(
     warnings: warnings.length > 0 ? warnings : null,
   };
 }
-
