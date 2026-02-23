@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../providers/AuthProvider'
+import { MarkdownBlockEditor } from '../../staging/features/markdown-editor'
 import {
   createListicle,
   createSeoMetadata,
@@ -201,6 +202,8 @@ export default function SingleTypeListicleBuilderPage() {
         }
 
         const fresh = createEmptyDraft()
+        // Persist immediately so the follow-up render can resolve this id from storage.
+        saveDraft(fresh)
         setDraft(fresh)
         setSearchParams((prev) => {
           const next = new URLSearchParams(prev)
@@ -655,6 +658,27 @@ export default function SingleTypeListicleBuilderPage() {
   const blockTypeOptions = draft.listicleType
     ? [getBlockTypeForListicleType(draft.listicleType)]
     : []
+  const stepIssues = validateStep1(draft)
+  const isSetupReady = stepIssues.length === 0
+  const hasTargetCount = draft.items.length === draft.targetItemCount
+  const completionPercent = Math.max(
+    8,
+    Math.min(
+      100,
+      Math.round(
+        ([
+          draft.step1_complete ? 1 : 0,
+          draft.header.featuredImage ? 1 : 0,
+          (draft.header.introMarkdown || draft.header.introJsonText || '').trim() ? 1 : 0,
+          draft.items.length > 0 ? 1 : 0,
+          hasTargetCount ? 1 : 0,
+          draft.seoSection.seo ? 1 : 0,
+        ].reduce((sum, value) => sum + value, 0) /
+          6) *
+          100
+      )
+    )
+  )
 
   return (
     <div className="stl-page">
@@ -676,12 +700,14 @@ export default function SingleTypeListicleBuilderPage() {
         </div>
       </header>
 
-      {error ? <p className="stl-error">{error}</p> : null}
-      {result ? <p className="stl-success">{result}</p> : null}
+      <div className="stl-builder-layout">
+        <main className="stl-builder-main">
+          {error ? <p className="stl-error">{error}</p> : null}
+          {result ? <p className="stl-success">{result}</p> : null}
 
-      <section className="stl-panel">
+          <section className="stl-panel">
         <div className="stl-panel-header">
-          <h2>Setup (Step 1)</h2>
+          <h2><span className="stl-kicker">Step 1</span> Setup</h2>
           <div className="stl-inline-actions">
             {!draft.step1_complete ? (
               <button type="button" className="stl-btn" onClick={handleContinue}>
@@ -764,7 +790,7 @@ export default function SingleTypeListicleBuilderPage() {
 
       <section className="stl-panel">
         <div className="stl-panel-header">
-          <h2>Header</h2>
+          <h2><span className="stl-kicker">Step 2</span> Header</h2>
         </div>
         <div className="stl-grid stl-grid-2">
           <label className="stl-field">
@@ -796,29 +822,33 @@ export default function SingleTypeListicleBuilderPage() {
         </div>
 
         <label className="stl-field">
-          <span>Intro (Markdown)</span>
-          <textarea
-            rows={6}
+          <span>Intro *</span>
+          <MarkdownBlockEditor
+            blockId={`${draft.draftId}_header_intro`}
             value={draft.header.introMarkdown}
-            onChange={(event) => updateHeader({ introMarkdown: event.target.value })}
-            placeholder="Write intro in markdown, or keep empty and use Lexical JSON below"
+            onChange={(nextValue) =>
+              updateHeader({
+                introMarkdown: nextValue,
+                introJsonText: '',
+              })
+            }
+            showToolbar
+            enforceHeadingStructure={false}
+            placeholder="Write the listicle intro..."
+            className="stl-markdown-textarea"
+            rows={6}
           />
         </label>
-
-        <label className="stl-field">
-          <span>Intro (Lexical JSON)</span>
-          <textarea
-            rows={8}
-            value={draft.header.introJsonText || ''}
-            onChange={(event) => updateHeader({ introJsonText: event.target.value })}
-            placeholder="Existing payload intro is shown here for direct editing"
-          />
-        </label>
+        {!draft.header.introMarkdown.trim() && draft.header.introJsonText?.trim() ? (
+          <p className="stl-legacy-note">
+            Existing intro is stored in Payload as Lexical JSON. Editing here will replace it with markdown-converted content.
+          </p>
+        ) : null}
       </section>
 
       <section className="stl-panel">
         <div className="stl-panel-header">
-          <h2>
+          <h2><span className="stl-kicker">Step 3</span>
             Items ({draft.items.length}/{draft.targetItemCount})
           </h2>
           <button
@@ -896,33 +926,29 @@ export default function SingleTypeListicleBuilderPage() {
               </div>
 
               <label className="stl-field">
-                <span>Blurb (Markdown)</span>
-                <textarea
-                  rows={5}
+                <span>Blurb *</span>
+                <MarkdownBlockEditor
+                  blockId={`${item.id}_blurb`}
                   value={item.blurbMarkdown}
-                  onChange={(event) =>
+                  onChange={(nextValue) =>
                     updateItem(item.id, (current) => ({
                       ...current,
-                      blurbMarkdown: event.target.value,
+                      blurbMarkdown: nextValue,
+                      blurbJsonText: '',
                     }))
                   }
-                  placeholder="Write blurb in markdown, or keep empty and use Lexical JSON below"
+                  showToolbar
+                  enforceHeadingStructure={false}
+                  placeholder="Write why this item made the list..."
+                  className="stl-markdown-textarea"
+                  rows={5}
                 />
               </label>
-
-              <label className="stl-field">
-                <span>Blurb (Lexical JSON)</span>
-                <textarea
-                  rows={7}
-                  value={item.blurbJsonText || ''}
-                  onChange={(event) =>
-                    updateItem(item.id, (current) => ({
-                      ...current,
-                      blurbJsonText: event.target.value,
-                    }))
-                  }
-                />
-              </label>
+              {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
+                <p className="stl-legacy-note">
+                  This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.
+                </p>
+              ) : null}
             </article>
           ))}
         </div>
@@ -930,7 +956,7 @@ export default function SingleTypeListicleBuilderPage() {
 
       <section className="stl-panel">
         <div className="stl-panel-header">
-          <h2>SEO & Metadata</h2>
+          <h2><span className="stl-kicker">Step 4</span> SEO & Metadata</h2>
           <div className="stl-inline-actions">
             <button type="button" className="stl-btn" onClick={openCreateSeoModal}>
               Create SEO
@@ -969,7 +995,7 @@ export default function SingleTypeListicleBuilderPage() {
 
       <section className="stl-panel">
         <div className="stl-panel-header">
-          <h2>Publish</h2>
+          <h2><span className="stl-kicker">Step 5</span> Publish</h2>
         </div>
 
         <div className="stl-grid stl-grid-2">
@@ -999,6 +1025,53 @@ export default function SingleTypeListicleBuilderPage() {
           </button>
         </div>
       </section>
+        </main>
+
+        <aside className="stl-builder-sidebar">
+          <section className="stl-summary-card">
+            <h3>Build Progress</h3>
+            <div className="stl-progress-track" aria-hidden="true">
+              <span className="stl-progress-bar" style={{ width: `${completionPercent}%` }} />
+            </div>
+            <p className="stl-summary-percent">{completionPercent}% ready</p>
+            <ul className="stl-summary-list">
+              <li className={draft.step1_complete ? 'done' : ''}>
+                Setup: {draft.step1_complete ? 'Locked' : isSetupReady ? 'Ready to continue' : 'Incomplete'}
+              </li>
+              <li className={draft.items.length > 0 ? 'done' : ''}>
+                Items: {draft.items.length} added
+              </li>
+              <li className={hasTargetCount ? 'done' : ''}>
+                Target match: {hasTargetCount ? 'Met' : `Need ${Math.max(0, draft.targetItemCount - draft.items.length)} more`}
+              </li>
+              <li className={draft.seoSection.seo ? 'done' : ''}>
+                SEO relation: {draft.seoSection.seo ? `#${draft.seoSection.seo}` : 'Not selected'}
+              </li>
+            </ul>
+          </section>
+
+          <section className="stl-summary-card">
+            <h3>Quick Actions</h3>
+            <div className="stl-summary-actions">
+              <button type="button" className="stl-btn" onClick={() => void submit('draft')} disabled={isSaving}>
+                Save Draft
+              </button>
+              <button type="button" className="stl-btn stl-btn-success" onClick={() => void submit('published')} disabled={isSaving}>
+                Publish
+              </button>
+            </div>
+            <p className="stl-summary-note">
+              Publishing requires exactly <strong>{draft.targetItemCount}</strong> items.
+            </p>
+            {stepIssues.length > 0 ? (
+              <div className="stl-summary-warning">
+                <strong>Setup needs attention:</strong>
+                <p>{stepIssues[0]}</p>
+              </div>
+            ) : null}
+          </section>
+        </aside>
+      </div>
 
       {seoModalOpen ? (
         <div className="stl-modal-overlay">
