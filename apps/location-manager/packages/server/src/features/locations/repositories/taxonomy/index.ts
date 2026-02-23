@@ -1,2 +1,2 @@
-export * from "./location-hierarchy.repository";
+export * from "./location-hierarchy";
 export * from "./taxonomy-correction.repository";
