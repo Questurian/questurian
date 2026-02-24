@@ -1,0 +1,168 @@
+import { useCallback, useMemo } from 'react'
+import type { Location, MediaAsset } from '../../../api'
+import type { StagedArticle } from '../../../types'
+import type { EditorialPublishAnalysis } from '../editorial-markdown.service'
+import { FEATURED_IMAGE_VARIANT } from '../constants'
+import { buildPayloadContentBlocks } from '../services/editorial-stage-publish.service'
+import type { MediaVariant } from '../types'
+import type { TimelineItem } from '../workflow.service'
+import type { EditorialStageUiEvent, PublishPhase } from '../state/editorialStageUiMachine'
+
+type DispatchUiEvent = (event: EditorialStageUiEvent) => void
+
+type UseEditorialStagePublishWorkflowParams = {
+  token: string | null | undefined
+  stagedArticle: StagedArticle | null
+  locations: Location[]
+  mediaAssets: MediaAsset[]
+  timelineItems: TimelineItem[]
+  editorialPublishAnalysis: EditorialPublishAnalysis
+  convertMarkdownToLexical: (markdown: string) => Promise<{
+    success: boolean
+    data?: object
+    error?: string
+  }>
+  createArticle: (
+    payload: {
+      title: string
+      location: string
+      locationRef: number
+      step1_complete: boolean
+      status: 'draft' | 'published'
+      headerSection: { featuredImage: number }
+      contentBlocks: object[]
+    },
+    token: string
+  ) => Promise<{ id: number; title: string; slug: string }>
+  markArticleSynced: (
+    runId: string,
+    payloadArticleId: number
+  ) => Promise<{ message: string; run_id: string; payload_article_id: number }>
+  findPreferredVariantAsset: (assetId: number, preferredVariant: MediaVariant) => MediaAsset | null
+  updateStagedArticle: (updates: Partial<StagedArticle>) => void
+  dispatchUi: DispatchUiEvent
+  publishPhase: PublishPhase
+  publishResult: { success: boolean; message: string } | null
+}
+
+export function useEditorialStagePublishWorkflow({
+  token,
+  stagedArticle,
+  locations,
+  mediaAssets,
+  timelineItems,
+  editorialPublishAnalysis,
+  convertMarkdownToLexical,
+  createArticle,
+  markArticleSynced,
+  findPreferredVariantAsset,
+  updateStagedArticle,
+  dispatchUi,
+  publishPhase,
+  publishResult,
+}: UseEditorialStagePublishWorkflowParams) {
+  const handlePublish = useCallback(async () => {
+    if (!token || !stagedArticle) return
+
+    dispatchUi({ type: 'PUBLISH_REQUEST' })
+
+    const trimmedTitle = stagedArticle.title.trim()
+    const location = locations.find((candidate) => candidate.id === stagedArticle.locationId)
+    const featuredImage = stagedArticle.featuredImageId
+      ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
+      : null
+
+    if (!trimmedTitle) {
+      dispatchUi({
+        type: 'PUBLISH_FAILURE',
+        message: 'Please enter an article title',
+      })
+      return
+    }
+
+    if (!location || !featuredImage) {
+      dispatchUi({
+        type: 'PUBLISH_FAILURE',
+        message: !location ? 'Please select a location' : 'Please select a featured image',
+      })
+      return
+    }
+
+    try {
+      dispatchUi({ type: 'PUBLISH_CONVERTING' })
+
+      const { contentBlocks, textBlocksAdded } = await buildPayloadContentBlocks({
+        stagedArticle,
+        timelineItems,
+        editorialPublishAnalysis,
+        mediaAssets,
+        convertMarkdownToLexical,
+      })
+
+      if (textBlocksAdded === 0) {
+        throw new Error('Add at least one text block with content before publishing')
+      }
+
+      dispatchUi({ type: 'PUBLISH_SUBMITTING' })
+
+      const result = await createArticle(
+        {
+          title: trimmedTitle,
+          location: location.locationKey,
+          locationRef: location.id,
+          step1_complete: true,
+          status: 'draft',
+          headerSection: {
+            featuredImage: featuredImage.id,
+          },
+          contentBlocks,
+        },
+        token
+      )
+
+      await markArticleSynced(stagedArticle.runId, result.id)
+
+      updateStagedArticle({
+        publishedToPayload: true,
+        payloadArticleId: result.id,
+        lexicalConverted: true,
+      })
+
+      dispatchUi({
+        type: 'PUBLISH_SUCCESS',
+        message: `Published! Article ID: ${result.id}`,
+      })
+    } catch (error) {
+      dispatchUi({
+        type: 'PUBLISH_FAILURE',
+        message: error instanceof Error ? error.message : 'Failed to publish',
+      })
+    }
+  }, [
+    token,
+    stagedArticle,
+    dispatchUi,
+    locations,
+    findPreferredVariantAsset,
+    mediaAssets,
+    convertMarkdownToLexical,
+    createArticle,
+    editorialPublishAnalysis,
+    markArticleSynced,
+    timelineItems,
+    updateStagedArticle,
+  ])
+
+  const isPublishing = useMemo(
+    () => publishPhase === 'validating' || publishPhase === 'converting' || publishPhase === 'publishing',
+    [publishPhase]
+  )
+  const isConverting = useMemo(() => publishPhase === 'converting', [publishPhase])
+
+  return {
+    handlePublish,
+    isPublishing,
+    isConverting,
+    publishResult,
+  }
+}
