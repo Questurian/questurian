@@ -1,0 +1,244 @@
+import type { Dispatch, SetStateAction } from 'react'
+import { useMemo, useState } from 'react'
+import type { SetURLSearchParams } from 'react-router-dom'
+import { createEmptyDraft, removeDraft } from '../../storage'
+import type { ItineraryItemBlock, ListicleItineraryDraft, LocationOption } from '../../types'
+import { autoChainItems, createNewItem, withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
+import { validateStep1 } from '../validators/setup.validators'
+
+type UseBuilderDraftActionsParams = {
+  draft: ListicleItineraryDraft | null
+  setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
+  locations: LocationOption[]
+  navigate: (to: string) => void
+  setSearchParams: SetURLSearchParams
+  onError: (message: string) => void
+  setResult: Dispatch<SetStateAction<string | null>>
+}
+
+type UseBuilderDraftActionsResult = {
+  selectedLocationRefId: number | null
+  updateDraft: (next: Partial<ListicleItineraryDraft>) => void
+  updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
+  endHereOnLastStop: () => void
+  updateItem: (
+    itemId: string,
+    updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
+    options?: { cascadeSchedule?: boolean },
+  ) => void
+  removeItem: (itemId: string) => void
+  moveItem: (itemId: string, direction: 'up' | 'down') => void
+  addItem: () => void
+  handleContinue: () => void
+  handleUpdateSetup: () => void
+  handleSaveSetup: () => void
+  cancelUpdateSetup: () => void
+  handleDiscardLocalDraft: () => void
+}
+
+export function useBuilderDraftActions({
+  draft,
+  setDraft,
+  locations,
+  navigate,
+  setSearchParams,
+  onError,
+  setResult,
+}: UseBuilderDraftActionsParams): UseBuilderDraftActionsResult {
+  const [setupBaseline, setSetupBaseline] = useState<{ location: string } | null>(null)
+
+  const selectedLocationRefId = useMemo(() => {
+    if (!draft?.location) return null
+    const selected = locations.find((location) => location.locationKey === draft.location)
+    return selected?.id || null
+  }, [draft?.location, locations])
+
+  function updateDraft(next: Partial<ListicleItineraryDraft>) {
+    setDraft((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        ...next,
+      }
+    })
+  }
+
+  function updateHeader(next: Partial<ListicleItineraryDraft['header']>) {
+    setDraft((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        header: {
+          ...current.header,
+          ...next,
+        },
+      }
+    })
+  }
+
+  function endHereOnLastStop() {
+    setDraft((current) => {
+      if (!current || current.items.length === 0) return current
+      return withEndAlignedToLastItem(current)
+    })
+  }
+
+  function updateItem(
+    itemId: string,
+    updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
+    options?: { cascadeSchedule?: boolean },
+  ) {
+    setDraft((current) => {
+      if (!current) return current
+      const index = current.items.findIndex((item) => item.id === itemId)
+      if (index < 0) return current
+
+      const next: ListicleItineraryDraft = {
+        ...current,
+        items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
+      }
+
+      if (options?.cascadeSchedule) {
+        return autoChainItems(next, index + 1)
+      }
+
+      return {
+        ...next,
+      }
+    })
+  }
+
+  function removeItem(itemId: string) {
+    setDraft((current) => {
+      if (!current) return current
+      const next: ListicleItineraryDraft = {
+        ...current,
+        items: current.items.filter((item) => item.id !== itemId),
+      }
+      return autoChainItems(next, 1)
+    })
+  }
+
+  function moveItem(itemId: string, direction: 'up' | 'down') {
+    setDraft((current) => {
+      if (!current) return current
+      const items = [...current.items]
+      const index = items.findIndex((item) => item.id === itemId)
+      if (index < 0) return current
+      const target = direction === 'up' ? index - 1 : index + 1
+      if (target < 0 || target >= items.length) return current
+      const [item] = items.splice(index, 1)
+      items.splice(target, 0, item)
+      const next: ListicleItineraryDraft = {
+        ...current,
+        items,
+      }
+      return autoChainItems(next, 1)
+    })
+  }
+
+  function addItem() {
+    setDraft((current) => {
+      if (!current) return current
+      const next: ListicleItineraryDraft = {
+        ...current,
+        items: [...current.items, createNewItem(current)],
+      }
+      return autoChainItems(next, next.items.length - 1)
+    })
+  }
+
+  function handleContinue() {
+    if (!draft) return
+    const issues = validateStep1(draft)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step1_complete: true,
+      in_update_mode: false,
+      locationRef: selectedLocationRefId,
+    })
+    onError('')
+  }
+
+  function handleUpdateSetup() {
+    if (!draft) return
+    setSetupBaseline({
+      location: draft.location,
+    })
+    updateDraft({ in_update_mode: true })
+    onError('')
+  }
+
+  function handleSaveSetup() {
+    if (!draft) return
+
+    const issues = validateStep1(draft)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    const locationChanged = setupBaseline?.location && setupBaseline.location !== draft.location
+
+    if (locationChanged && draft.items.length > 0) {
+      const confirmed = window.confirm('Changing location clears current itinerary items. Continue?')
+      if (!confirmed) return
+      updateDraft({
+        items: [],
+        in_update_mode: false,
+        step1_complete: true,
+        locationRef: selectedLocationRefId,
+      })
+      setSetupBaseline(null)
+      return
+    }
+
+    updateDraft({
+      in_update_mode: false,
+      step1_complete: true,
+      locationRef: selectedLocationRefId,
+    })
+    setSetupBaseline(null)
+    onError('')
+  }
+
+  function cancelUpdateSetup() {
+    if (!draft) return
+    updateDraft({ in_update_mode: false })
+    setSetupBaseline(null)
+    onError('')
+  }
+
+  function handleDiscardLocalDraft() {
+    if (!draft) return
+    removeDraft(draft.draftId)
+    if (draft.payloadId) {
+      navigate(`/listicle-itineraries/builder?id=${draft.payloadId}`)
+    } else {
+      const fresh = createEmptyDraft()
+      setDraft(fresh)
+      setSearchParams({ draftId: fresh.draftId }, { replace: true })
+    }
+    setResult('Local staged draft discarded')
+  }
+
+  return {
+    selectedLocationRefId,
+    updateDraft,
+    updateHeader,
+    endHereOnLastStop,
+    updateItem,
+    removeItem,
+    moveItem,
+    addItem,
+    handleContinue,
+    handleUpdateSetup,
+    handleSaveSetup,
+    cancelUpdateSetup,
+    handleDiscardLocalDraft,
+  }
+}
