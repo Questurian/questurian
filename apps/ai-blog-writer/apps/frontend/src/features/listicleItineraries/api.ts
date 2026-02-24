@@ -1,4 +1,6 @@
 import { convertMarkdownToLexical } from '../staging/api'
+import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
+import type { LocationScope } from '../locationScope/types'
 import type {
   ItineraryBlockType,
   LocationOption,
@@ -94,13 +96,16 @@ export async function fetchRelatedItems(
   blockType: ItineraryBlockType,
   locationKey: string,
   token: string,
+  scope?: LocationScope,
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForBlockType(blockType)
   const params = new URLSearchParams()
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
+
   if (locationKey) {
-    params.set('where[location][equals]', locationKey)
+    const resolvedScope = scope || (await getLocationScopeForKey(locationKey, token))
+    appendScopedLocationWhere(params, resolvedScope)
   }
 
   const response = await payloadRequest<PayloadListResponse<RelatedItemOption>>(

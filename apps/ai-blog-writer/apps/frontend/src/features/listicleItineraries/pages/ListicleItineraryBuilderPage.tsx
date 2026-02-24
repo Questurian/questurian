@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../providers/AuthProvider'
 import { MarkdownBlockEditor } from '../../staging/features/markdown-editor'
+import { getLocationScopeForKey, isLocationWithinScope } from '../../locationScope/scope'
 import {
   createItinerary,
   createSeoMetadata,
@@ -22,7 +23,7 @@ import {
   removeDraft,
   saveDraft,
 } from '../storage'
-import { computeItemWindows, formatMinutes, toMinutesFromMidnight } from '../time'
+import { computeItemWindows, durationToMinutes, formatMinutes, fromMinutesToClock, toMinutesFromMidnight } from '../time'
 import type {
   DayAudience,
   DurationMinute,
@@ -45,11 +46,11 @@ const DAY_AUDIENCE_OPTIONS: Array<{ label: string; value: DayAudience }> = [
 ]
 
 const BLOCK_TYPE_OPTIONS: Array<{ label: string; value: ItineraryBlockType }> = [
-  { label: 'Dining Stop', value: 'itinerary-dining' },
-  { label: 'Accommodation Stop', value: 'itinerary-accommodations' },
-  { label: 'Attraction Stop', value: 'itinerary-attractions' },
-  { label: 'Nightlife Stop', value: 'itinerary-nightlife' },
-  { label: 'Key Location Stop', value: 'itinerary-key-location' },
+  { label: 'Dining Stop (restaurants, cafes)', value: 'itinerary-dining' },
+  { label: 'Accommodation Stop (hotel check-in, stay)', value: 'itinerary-accommodations' },
+  { label: 'Attraction Stop (landmarks, activities)', value: 'itinerary-attractions' },
+  { label: 'Nightlife Stop (bars, clubs, evening)', value: 'itinerary-nightlife' },
+  { label: 'Key Location Stop (areas, transit hubs)', value: 'itinerary-key-location' },
 ]
 
 const QUARTER_MINUTE_OPTIONS: QuarterMinute[] = ['00', '15', '30', '45']
@@ -179,16 +180,9 @@ function validateStep1(current: ListicleItineraryDraft): string[] {
   if (!current.dayAudience) issues.push('Day type is required')
 
   try {
-    const start = toMinutesFromMidnight(current.itineraryStartHour, current.itineraryStartMinute, current.itineraryStartPeriod)
-    const end = toMinutesFromMidnight(current.itineraryEndHour, current.itineraryEndMinute, current.itineraryEndPeriod)
-    if (end <= start) {
-      issues.push('Itinerary end time must be later than itinerary start time within the same day')
-    }
-    if (end - start > 1440) {
-      issues.push('Itinerary window must be within 24 hours')
-    }
+    toMinutesFromMidnight(current.itineraryStartHour, current.itineraryStartMinute, current.itineraryStartPeriod)
   } catch (err) {
-    issues.push(err instanceof Error ? err.message : 'Invalid itinerary time values')
+    issues.push(err instanceof Error ? err.message : 'Invalid itinerary start time')
   }
 
   return issues
@@ -319,7 +313,11 @@ export default function ListicleItineraryBuilderPage() {
     let cancelled = false
     setIsLoadingRelated(true)
 
-    Promise.all(BLOCK_TYPE_OPTIONS.map((option) => fetchRelatedItems(option.value, draft.location, token)))
+    getLocationScopeForKey(draft.location, token)
+      .then((scope) => {
+        if (cancelled) return []
+        return Promise.all(BLOCK_TYPE_OPTIONS.map((option) => fetchRelatedItems(option.value, draft.location, token, scope)))
+      })
       .then((docsByType) => {
         if (cancelled) return
         setRelatedByBlockType({
@@ -373,12 +371,89 @@ export default function ListicleItineraryBuilderPage() {
     })
   }
 
-  function updateItem(itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) {
-    setDraft((current) => {
-      if (!current) return current
+  function getWindowBounds(current: ListicleItineraryDraft): { start: number; end: number } | null {
+    try {
+      return {
+        start: toMinutesFromMidnight(current.itineraryStartHour, current.itineraryStartMinute, current.itineraryStartPeriod),
+        end: toMinutesFromMidnight(current.itineraryEndHour, current.itineraryEndMinute, current.itineraryEndPeriod),
+      }
+    } catch {
+      return null
+    }
+  }
+
+  function withEndAlignedToLastItem(current: ListicleItineraryDraft): ListicleItineraryDraft {
+    if (!current.items.length) return current
+
+    try {
+      const windows = computeItemWindows(current.items)
+      if (!windows.length) return current
+      const lastEnd = windows[windows.length - 1].end
+      const clock = fromMinutesToClock(lastEnd)
+
       return {
         ...current,
+        itineraryEndHour: clock.hour,
+        itineraryEndMinute: clock.minute,
+        itineraryEndPeriod: clock.period,
+      }
+    } catch {
+      return current
+    }
+  }
+
+  function autoChainItems(current: ListicleItineraryDraft, startIndex = 1): ListicleItineraryDraft {
+    if (!current.items.length) return current
+
+    const items = current.items.map((item) => ({ ...item }))
+    const chainStart = Math.max(1, startIndex)
+
+    for (let i = chainStart; i < items.length; i += 1) {
+      const prev = items[i - 1]
+      const prevStart = toMinutesFromMidnight(prev.timeHour, prev.timeMinute, prev.timePeriod)
+      const prevDuration = durationToMinutes(prev.durationHours, prev.durationMinutes)
+      const nextStart = prevStart + prevDuration
+      const clock = fromMinutesToClock(nextStart)
+
+      items[i].timeHour = clock.hour
+      items[i].timeMinute = clock.minute
+      items[i].timePeriod = clock.period
+    }
+
+    return {
+      ...current,
+      items,
+    }
+  }
+
+  function endHereOnLastStop() {
+    setDraft((current) => {
+      if (!current || current.items.length === 0) return current
+      return withEndAlignedToLastItem(current)
+    })
+  }
+
+  function updateItem(
+    itemId: string,
+    updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
+    options?: { cascadeSchedule?: boolean },
+  ) {
+    setDraft((current) => {
+      if (!current) return current
+      const index = current.items.findIndex((item) => item.id === itemId)
+      if (index < 0) return current
+
+      const next: ListicleItineraryDraft = {
+        ...current,
         items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
+      }
+
+      if (options?.cascadeSchedule) {
+        return autoChainItems(next, index + 1)
+      }
+
+      return {
+        ...next,
       }
     })
   }
@@ -386,10 +461,11 @@ export default function ListicleItineraryBuilderPage() {
   function removeItem(itemId: string) {
     setDraft((current) => {
       if (!current) return current
-      return {
+      const next: ListicleItineraryDraft = {
         ...current,
         items: current.items.filter((item) => item.id !== itemId),
       }
+      return autoChainItems(next, 1)
     })
   }
 
@@ -403,60 +479,60 @@ export default function ListicleItineraryBuilderPage() {
       if (target < 0 || target >= items.length) return current
       const [item] = items.splice(index, 1)
       items.splice(target, 0, item)
-      return {
+      const next: ListicleItineraryDraft = {
         ...current,
         items,
       }
+      return autoChainItems(next, 1)
     })
   }
 
   function addItem() {
     setDraft((current) => {
       if (!current) return current
-      return {
-        ...current,
-        items: [
-          ...current.items,
-          {
-            id: `item_${Date.now()}`,
-            blockType: 'itinerary-dining',
-            item: null,
-            timeHour: 9,
-            timeMinute: '00',
-            timePeriod: 'AM',
-            durationHours: 1,
-            durationMinutes: '0',
-            blurbMarkdown: '',
-            blurbJsonText: '',
-          },
-        ],
+      const items = [...current.items]
+      let nextStart = 9 * 60
+      if (items.length > 0) {
+        const prev = items[items.length - 1]
+        const prevStart = toMinutesFromMidnight(prev.timeHour, prev.timeMinute, prev.timePeriod)
+        const prevDuration = durationToMinutes(prev.durationHours, prev.durationMinutes)
+        nextStart = prevStart + prevDuration
+      } else {
+        const bounds = getWindowBounds(current)
+        if (bounds) nextStart = bounds.start
       }
+
+      const clock = fromMinutesToClock(nextStart)
+      const next: ListicleItineraryDraft = {
+        ...current,
+        items: [...items, {
+          id: `item_${Date.now()}`,
+          blockType: 'itinerary-dining',
+          item: null,
+          timeHour: clock.hour,
+          timeMinute: clock.minute,
+          timePeriod: clock.period,
+          durationHours: 1,
+          durationMinutes: '0',
+          blurbMarkdown: '',
+          blurbJsonText: '',
+        }],
+      }
+      return autoChainItems(next, next.items.length - 1)
     })
   }
 
   function validateItemTimeline(current: ListicleItineraryDraft, targetStatus: 'draft' | 'published'): string[] {
     const issues: string[] = []
     let startWindow = 0
-    let endWindow = 0
-
     try {
       startWindow = toMinutesFromMidnight(
         current.itineraryStartHour,
         current.itineraryStartMinute,
         current.itineraryStartPeriod,
       )
-      endWindow = toMinutesFromMidnight(
-        current.itineraryEndHour,
-        current.itineraryEndMinute,
-        current.itineraryEndPeriod,
-      )
     } catch (err) {
       issues.push(err instanceof Error ? err.message : 'Invalid itinerary time values')
-      return issues
-    }
-
-    if (endWindow <= startWindow) {
-      issues.push('Itinerary end time must be later than itinerary start time within the same day')
       return issues
     }
 
@@ -466,15 +542,9 @@ export default function ListicleItineraryBuilderPage() {
       for (let i = 0; i < windows.length; i += 1) {
         const item = windows[i]
 
-        if (item.start < startWindow || item.start > endWindow) {
+        if (item.start < startWindow) {
           issues.push(
-            `Item ${item.index + 1} starts at ${formatMinutes(item.start)} outside itinerary window ${formatMinutes(startWindow)}-${formatMinutes(endWindow)}`,
-          )
-        }
-
-        if (item.end > endWindow) {
-          issues.push(
-            `Item ${item.index + 1} ends at ${formatMinutes(item.end)} outside itinerary window ${formatMinutes(startWindow)}-${formatMinutes(endWindow)}`,
+            `Item ${item.index + 1} starts at ${formatMinutes(item.start)} before itinerary start ${formatMinutes(startWindow)}`,
           )
         }
 
@@ -499,14 +569,9 @@ export default function ListicleItineraryBuilderPage() {
           issues.push('Publishing requires at least one itinerary item')
         } else {
           const first = windows[0]
-          const last = windows[windows.length - 1]
 
           if (first.start !== startWindow) {
             issues.push(`Published itineraries must start exactly at ${formatMinutes(startWindow)}`)
-          }
-
-          if (last.end !== endWindow) {
-            issues.push(`Published itineraries must end exactly at ${formatMinutes(endWindow)}`)
           }
 
           for (let i = 1; i < windows.length; i += 1) {
@@ -663,7 +728,9 @@ export default function ListicleItineraryBuilderPage() {
     setError(null)
     setResult(null)
 
-    const stepIssues = validateStep1(draft)
+    const submitDraft = withEndAlignedToLastItem(draft)
+
+    const stepIssues = validateStep1(submitDraft)
     if (stepIssues.length > 0) {
       setError(stepIssues.join('. '))
       return
@@ -674,7 +741,7 @@ export default function ListicleItineraryBuilderPage() {
       return
     }
 
-    const timelineIssues = validateItemTimeline(draft, targetStatus)
+    const timelineIssues = validateItemTimeline(submitDraft, targetStatus)
     if (timelineIssues.length > 0) {
       setError(timelineIssues[0])
       return
@@ -683,25 +750,29 @@ export default function ListicleItineraryBuilderPage() {
     try {
       setIsSaving(true)
 
-      const headerIntro = draft.header.introMarkdown.trim()
-        ? await markdownToLexical(draft.header.introMarkdown)
-        : readLexicalFromJsonText(draft.header.introJsonText || '', 'Header intro')
+      const headerIntro = submitDraft.header.introMarkdown.trim()
+        ? await markdownToLexical(submitDraft.header.introMarkdown)
+        : readLexicalFromJsonText(submitDraft.header.introJsonText || '', 'Header intro')
 
-      if (!draft.header.introMarkdown.trim() && !draft.header.introJsonText?.trim()) {
+      if (!submitDraft.header.introMarkdown.trim() && !submitDraft.header.introJsonText?.trim()) {
         throw new Error('Header intro is required (markdown or lexical JSON)')
       }
 
       const payloadItems = [] as Array<Record<string, unknown>>
-      for (let index = 0; index < draft.items.length; index += 1) {
-        const item = draft.items[index]
+      for (let index = 0; index < submitDraft.items.length; index += 1) {
+        const item = submitDraft.items[index]
         if (!item.item) {
           throw new Error(`Item ${index + 1} is missing related entry selection`)
         }
 
         const relatedOptions = relatedByBlockType[item.blockType] || []
         const selectedRelated = relatedOptions.find((entry) => entry.id === item.item)
-        if (selectedRelated?.location && draft.location && selectedRelated.location !== draft.location) {
-          throw new Error(`Item ${index + 1} location does not match itinerary location (${draft.location})`)
+        if (
+          selectedRelated?.location
+          && draft.location
+          && !isLocationWithinScope(selectedRelated.location, draft.location)
+        ) {
+          throw new Error(`Item ${index + 1} location does not match itinerary location (${submitDraft.location})`)
         }
 
         const blurb = item.blurbMarkdown.trim()
@@ -725,26 +796,26 @@ export default function ListicleItineraryBuilderPage() {
       }
 
       const body: Record<string, unknown> = {
-        title: draft.title.trim(),
-        location: draft.location,
+        title: submitDraft.title.trim(),
+        location: submitDraft.location,
         locationRef: selectedLocationRefId,
-        dayAudience: draft.dayAudience,
-        itineraryStartHour: draft.itineraryStartHour,
-        itineraryStartMinute: draft.itineraryStartMinute,
-        itineraryStartPeriod: draft.itineraryStartPeriod,
-        itineraryEndHour: draft.itineraryEndHour,
-        itineraryEndMinute: draft.itineraryEndMinute,
-        itineraryEndPeriod: draft.itineraryEndPeriod,
+        dayAudience: submitDraft.dayAudience,
+        itineraryStartHour: submitDraft.itineraryStartHour,
+        itineraryStartMinute: submitDraft.itineraryStartMinute,
+        itineraryStartPeriod: submitDraft.itineraryStartPeriod,
+        itineraryEndHour: submitDraft.itineraryEndHour,
+        itineraryEndMinute: submitDraft.itineraryEndMinute,
+        itineraryEndPeriod: submitDraft.itineraryEndPeriod,
         step1_complete: true,
         in_update_mode: false,
         header: {
-          customTitle: draft.header.customTitle.trim() || undefined,
+          customTitle: submitDraft.header.customTitle.trim() || undefined,
           intro: headerIntro,
-          featuredImage: draft.header.featuredImage || undefined,
+          featuredImage: submitDraft.header.featuredImage || undefined,
         },
         items: payloadItems,
         seoSection: {
-          seo: draft.seoSection.seo || undefined,
+          seo: submitDraft.seoSection.seo || undefined,
         },
         status: targetStatus,
         articleType: 'listicle-itinerary',
@@ -755,10 +826,10 @@ export default function ListicleItineraryBuilderPage() {
         : await createItinerary(body, token)
 
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
-      nextDraft.header.introMarkdown = draft.header.introMarkdown
+      nextDraft.header.introMarkdown = submitDraft.header.introMarkdown
       nextDraft.items = nextDraft.items.map((nextItem, index) => ({
         ...nextItem,
-        blurbMarkdown: draft.items[index]?.blurbMarkdown || '',
+        blurbMarkdown: submitDraft.items[index]?.blurbMarkdown || '',
       }))
       setDraft(nextDraft)
       saveDraft(nextDraft)
@@ -805,18 +876,17 @@ export default function ListicleItineraryBuilderPage() {
   const stepIssues = validateStep1(draft)
   const isSetupReady = stepIssues.length === 0
 
-  let hasFullCoverage = false
+  const derivedDraft = withEndAlignedToLastItem(draft)
+  let hasContinuousCoverage = false
   try {
-    const windows = computeItemWindows(draft.items)
-    const startWindow = toMinutesFromMidnight(draft.itineraryStartHour, draft.itineraryStartMinute, draft.itineraryStartPeriod)
-    const endWindow = toMinutesFromMidnight(draft.itineraryEndHour, draft.itineraryEndMinute, draft.itineraryEndPeriod)
-    hasFullCoverage =
+    const windows = computeItemWindows(derivedDraft.items)
+    const startWindow = toMinutesFromMidnight(derivedDraft.itineraryStartHour, derivedDraft.itineraryStartMinute, derivedDraft.itineraryStartPeriod)
+    hasContinuousCoverage =
       windows.length > 0 &&
       windows[0].start === startWindow &&
-      windows[windows.length - 1].end === endWindow &&
       windows.every((window, index) => (index === 0 ? true : window.start === windows[index - 1].end))
   } catch {
-    hasFullCoverage = false
+    hasContinuousCoverage = false
   }
 
   const completionPercent = Math.max(
@@ -829,7 +899,7 @@ export default function ListicleItineraryBuilderPage() {
           draft.header.featuredImage ? 1 : 0,
           (draft.header.introMarkdown || draft.header.introJsonText || '').trim() ? 1 : 0,
           draft.items.length > 0 ? 1 : 0,
-          hasFullCoverage ? 1 : 0,
+          hasContinuousCoverage ? 1 : 0,
           draft.seoSection.seo ? 1 : 0,
         ].reduce((sum, value) => sum + value, 0) /
           6) *
@@ -969,43 +1039,10 @@ export default function ListicleItineraryBuilderPage() {
                   </select>
                 </div>
               </div>
-
-              <div className="stl-field">
-                <span>Itinerary End *</span>
-                <div className="stl-grid stl-grid-3">
-                  <input
-                    type="number"
-                    min={1}
-                    max={12}
-                    value={draft.itineraryEndHour}
-                    disabled={draft.step1_complete && !draft.in_update_mode}
-                    onChange={(event) => updateDraft({ itineraryEndHour: Number(event.target.value) || 0 })}
-                  />
-                  <select
-                    value={draft.itineraryEndMinute}
-                    disabled={draft.step1_complete && !draft.in_update_mode}
-                    onChange={(event) => updateDraft({ itineraryEndMinute: event.target.value as QuarterMinute })}
-                  >
-                    {QUARTER_MINUTE_OPTIONS.map((minute) => (
-                      <option key={minute} value={minute}>
-                        {minute}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={draft.itineraryEndPeriod}
-                    disabled={draft.step1_complete && !draft.in_update_mode}
-                    onChange={(event) => updateDraft({ itineraryEndPeriod: event.target.value as Meridiem })}
-                  >
-                    {PERIOD_OPTIONS.map((period) => (
-                      <option key={period} value={period}>
-                        {period}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
             </div>
+            <p className="stl-summary-note">
+              Total itinerary end time is derived from your last stop. Use "End Here" on the last stop to lock it now.
+            </p>
           </section>
 
           <section className="stl-panel">
@@ -1068,12 +1105,15 @@ export default function ListicleItineraryBuilderPage() {
           <section className="stl-panel">
             <div className="stl-panel-header">
               <h2>
-                <span className="stl-kicker">Step 3</span> Items ({draft.items.length})
+                <span className="stl-kicker">Step 3</span> Stops & Timeline ({draft.items.length})
               </h2>
               <button type="button" className="stl-btn" onClick={addItem}>
-                Add Item
+                Add Stop
               </button>
             </div>
+            <p className="stl-summary-note">
+              Schedule assist: each stop chains from the previous stop.
+            </p>
 
             {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
 
@@ -1086,6 +1126,11 @@ export default function ListicleItineraryBuilderPage() {
                     <header className="stl-item-header">
                       <h3>Item {index + 1}</h3>
                       <div className="stl-inline-actions">
+                        {index === draft.items.length - 1 ? (
+                          <button type="button" className="stl-btn" onClick={endHereOnLastStop}>
+                            End Here
+                          </button>
+                        ) : null}
                         <button type="button" className="stl-btn stl-btn-secondary" onClick={() => moveItem(item.id, 'up')}>
                           Up
                         </button>
@@ -1146,7 +1191,7 @@ export default function ListicleItineraryBuilderPage() {
 
                     <div className="stl-grid stl-grid-2">
                       <div className="stl-field">
-                        <span>Start Time *</span>
+                        <span>Start Time * (auto-chained)</span>
                         <div className="stl-grid stl-grid-3">
                           <input
                             type="number"
@@ -1157,7 +1202,7 @@ export default function ListicleItineraryBuilderPage() {
                               updateItem(item.id, (current) => ({
                                 ...current,
                                 timeHour: Number(event.target.value) || 0,
-                              }))
+                              }), { cascadeSchedule: true })
                             }
                           />
                           <select
@@ -1166,7 +1211,7 @@ export default function ListicleItineraryBuilderPage() {
                               updateItem(item.id, (current) => ({
                                 ...current,
                                 timeMinute: event.target.value as QuarterMinute,
-                              }))
+                              }), { cascadeSchedule: true })
                             }
                           >
                             {QUARTER_MINUTE_OPTIONS.map((minute) => (
@@ -1181,7 +1226,7 @@ export default function ListicleItineraryBuilderPage() {
                               updateItem(item.id, (current) => ({
                                 ...current,
                                 timePeriod: event.target.value as Meridiem,
-                              }))
+                              }), { cascadeSchedule: true })
                             }
                           >
                             {PERIOD_OPTIONS.map((period) => (
@@ -1205,7 +1250,7 @@ export default function ListicleItineraryBuilderPage() {
                               updateItem(item.id, (current) => ({
                                 ...current,
                                 durationHours: Number(event.target.value) || 0,
-                              }))
+                              }), { cascadeSchedule: true })
                             }
                           />
                           <select
@@ -1214,7 +1259,7 @@ export default function ListicleItineraryBuilderPage() {
                               updateItem(item.id, (current) => ({
                                 ...current,
                                 durationMinutes: event.target.value as DurationMinute,
-                              }))
+                              }), { cascadeSchedule: true })
                             }
                           >
                             {DURATION_MINUTE_OPTIONS.map((minute) => (
@@ -1341,7 +1386,7 @@ export default function ListicleItineraryBuilderPage() {
                 Setup: {draft.step1_complete ? 'Locked' : isSetupReady ? 'Ready to continue' : 'Incomplete'}
               </li>
               <li className={draft.items.length > 0 ? 'done' : ''}>Items: {draft.items.length} added</li>
-              <li className={hasFullCoverage ? 'done' : ''}>Coverage: {hasFullCoverage ? 'Complete' : 'Incomplete'}</li>
+              <li className={hasContinuousCoverage ? 'done' : ''}>Coverage: {hasContinuousCoverage ? 'Continuous' : 'Has gaps'}</li>
               <li className={draft.seoSection.seo ? 'done' : ''}>
                 SEO relation: {draft.seoSection.seo ? `#${draft.seoSection.seo}` : 'Not selected'}
               </li>
@@ -1358,7 +1403,7 @@ export default function ListicleItineraryBuilderPage() {
                 Publish
               </button>
             </div>
-            <p className="stl-summary-note">Publishing requires full itinerary coverage from start to end time with no gaps.</p>
+            <p className="stl-summary-note">Publishing requires continuous coverage from itinerary start with no gaps.</p>
             {stepIssues.length > 0 ? (
               <div className="stl-summary-warning">
                 <strong>Setup needs attention:</strong>

@@ -73,3 +73,33 @@ export function computeItemWindows(
     }
   })
 }
+
+export function fromMinutesToClock(minutes: number): { hour: number; minute: QuarterMinute; period: Meridiem } {
+  const normalized = ((minutes % 1440) + 1440) % 1440
+  const hour24 = Math.floor(normalized / 60)
+  const minuteValue = normalized % 60
+  const roundedMinute = Math.floor(minuteValue / 15) * 15
+  const minute = String(roundedMinute).padStart(2, '0') as QuarterMinute
+
+  const period: Meridiem = hour24 >= 12 ? 'PM' : 'AM'
+  const hour = hour24 % 12 === 0 ? 12 : hour24 % 12
+
+  return {
+    hour,
+    minute,
+    period,
+  }
+}
+
+export function toDurationParts(minutes: number): { durationHours: number; durationMinutes: DurationMinute } {
+  const positiveMinutes = Math.max(15, minutes)
+  const rounded = Math.ceil(positiveMinutes / 15) * 15
+  const durationHours = Math.floor(rounded / 60)
+  const minuteValue = rounded % 60
+  const durationMinutes = minuteValue === 0 ? '0' : String(minuteValue) as DurationMinute
+
+  return {
+    durationHours,
+    durationMinutes,
+  }
+}

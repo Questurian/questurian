@@ -1,4 +1,5 @@
 import { convertMarkdownToLexical } from '../staging/api'
+import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
 import type {
   ListicleType,
   LocationOption,
@@ -109,7 +110,8 @@ export async function fetchRelatedItems(
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
   if (locationKey) {
-    params.set('where[location][equals]', locationKey)
+    const scope = await getLocationScopeForKey(locationKey, token)
+    appendScopedLocationWhere(params, scope)
   }
 
   const response = await payloadRequest<PayloadListResponse<RelatedItemOption>>(
