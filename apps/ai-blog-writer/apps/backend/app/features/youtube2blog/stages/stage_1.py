@@ -1,5 +1,5 @@
 """
-Stage 1: Extract transcript from CSV and clean with AI.
+Stage 1: Clean transcript text from the raw video record.
 """
 import logging
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def stage_1_clean_transcript(record: RawVideoRecord) -> Stage1Output:
     """
-    Stage 1: Extract transcript from CSV and clean it with AI.
+    Stage 1: Clean transcript text with AI.
 
     Removes:
     - Intros/outros

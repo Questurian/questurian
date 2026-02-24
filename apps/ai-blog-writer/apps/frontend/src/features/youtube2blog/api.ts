@@ -69,22 +69,6 @@ async function resolveErrorMessage(response: Response, fallback: string): Promis
   }
 }
 
-export async function uploadCsv(file: File): Promise<UploadResponse> {
-  const formData = new FormData()
-  formData.append('file', file)
-
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/upload`, {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!response.ok) {
-    throw new Error(await resolveErrorMessage(response, 'Upload failed'))
-  }
-
-  return response.json()
-}
-
 export async function startFromYoutubeUrl(url: string): Promise<UploadResponse> {
   const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/from-url`, {
     method: 'POST',

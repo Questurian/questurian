@@ -38,93 +38,6 @@
   box-shadow: 0 1px 4px rgba(197, 90, 59, 0.15);
 }
 
-/* File Input / Drop Zone */
-.file-input {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-5);
-  padding: var(--space-10) var(--space-6);
-  border-radius: var(--radius-xl);
-  border: 2px dashed var(--border-strong);
-  cursor: pointer;
-  background: linear-gradient(135deg, white, var(--cream));
-  min-height: 280px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  transition: all var(--transition-slow);
-}
-
-.file-input::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at center, var(--accent-softer), transparent 70%);
-  opacity: 0;
-  transition: opacity var(--transition-slow);
-  pointer-events: none;
-}
-
-.file-input input {
-  display: none;
-}
-
-.visually-hidden-input {
-  display: none;
-}
-
-.selected-file-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.file-input span {
-  color: var(--muted);
-  font-size: 1.0625rem;
-  font-weight: 500;
-  line-height: 1.5;
-  position: relative;
-  z-index: 1;
-  transition: color var(--transition-base);
-}
-
-.file-input:hover {
-  border-color: var(--accent);
-  background: linear-gradient(135deg, white, rgba(197, 90, 59, 0.03));
-}
-
-.file-input:hover::before {
-  opacity: 1;
-}
-
-.file-input:hover span {
-  color: var(--ink);
-}
-
-.file-input.drag-over {
-  background: linear-gradient(135deg, var(--accent-soft), rgba(197, 90, 59, 0.08));
-  border-color: var(--accent);
-  border-style: solid;
-  transform: scale(1.01);
-  box-shadow: 0 8px 32px rgba(197, 90, 59, 0.15);
-}
-
-.file-input.drag-over::before {
-  opacity: 1;
-}
-
-.file-input.drag-over span {
-  color: var(--accent);
-  font-weight: 600;
-}
-
 /* Button Row */
 .button-row {
   display: flex;
@@ -163,42 +76,6 @@
 .toggle-btn:hover {
   border-color: var(--border-strong);
   color: var(--ink);
-}
-
-/* Input mode toggle */
-.input-mode-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  background: var(--cream);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-}
-
-.mode-btn {
-  font-family: var(--font-body);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--muted);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.mode-btn:hover {
-  border-color: var(--border);
-  color: var(--ink);
-}
-
-.mode-btn.active {
-  background: white;
-  color: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 2px 8px rgba(197, 90, 59, 0.15);
 }
 
 /* Form Groups */

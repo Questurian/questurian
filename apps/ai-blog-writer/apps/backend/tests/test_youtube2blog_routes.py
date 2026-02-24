@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import io
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -180,21 +179,7 @@ def test_from_url_uses_fallback_title_when_oembed_fails(monkeypatch):
     assert record.title == "YouTube Video abc123DEF45"
 
 
-def test_upload_csv_flow_remains_available(monkeypatch):
+def test_upload_csv_route_removed():
     client = _build_client()
-    sample_record = _sample_record()
-
-    monkeypatch.setattr(youtube2blog_routes, "parse_csv", lambda _file_obj: [sample_record])
-    monkeypatch.setattr(youtube2blog_routes, "initialize_run", lambda *_args, **_kwargs: _sample_meta("videos.csv"))
-    monkeypatch.setattr(youtube2blog_routes, "process_run", lambda _record, _meta: "# done")
-
-    file_body = io.BytesIO(b"video_id,title\nabc123DEF45,Sample")
-    response = client.post(
-        "/youtube2blog/upload",
-        files={"file": ("videos.csv", file_body, "text/csv")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["run_id"] == "run-123"
-    assert payload["run_ids"] == ["run-123"]
+    response = client.post("/youtube2blog/upload")
+    assert response.status_code == 404

@@ -7,8 +7,13 @@
   - `POST /youtube2blog/from-url`
 
 ### Changed
-- `youtube2blog` now supports URL-first runs by extracting transcripts server-side.
-- Frontend `youtube2blog` flow defaults to YouTube URL input while retaining CSV as fallback.
+- `youtube2blog` now runs from YouTube URL input by extracting transcripts server-side.
+- Frontend `youtube2blog` flow is URL-only.
+
+### Removed
+- Legacy upload endpoint:
+  - `POST /youtube2blog/upload`
+- Legacy CSV input mode in the `youtube2blog` UI.
 
 ## 2026-02-07
 

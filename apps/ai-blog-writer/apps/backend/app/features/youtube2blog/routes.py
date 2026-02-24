@@ -4,17 +4,13 @@ YouTube2Blog API routes.
 All routes are prefixed with /youtube2blog in the main router.
 """
 from datetime import datetime, timezone
-import io
-from typing import List
-from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 from shared import RawVideoRecord
 from app.core import read_stage_result, read_status, read_output, clear_all_runs
-from utils import parse_csv
 
 from .orchestrator import initialize_run, process_run
 from .storage import (
@@ -68,48 +64,6 @@ And check out CloudProvider in the description below. See you next time!""",
 
 class YouTubeUrlRequest(BaseModel):
     url: str = Field(..., min_length=1)
-
-
-@router.post("/upload")
-async def upload_csv(
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-) -> JSONResponse:
-    """Upload a CSV file with YouTube video data to process."""
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Please upload a CSV file.")
-
-    content = await file.read()
-    text = content.decode("utf-8-sig")
-    try:
-        records = parse_csv(io.StringIO(text))
-    except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
-
-    if not records:
-        raise HTTPException(status_code=400, detail="CSV file has no rows.")
-
-    batch_id = str(uuid4())
-    run_ids: List[str] = []
-
-    for record in records:
-        meta = initialize_run(
-            record,
-            source=file.filename,
-            notes=f"batch:{batch_id}",
-        )
-        run_ids.append(meta.run_id)
-        background_tasks.add_task(process_run, record, meta)
-
-    response_payload = {
-        "batch_id": batch_id,
-        "run_ids": run_ids,
-        "message": f"Queued {len(run_ids)} pipeline runs.",
-    }
-    if len(run_ids) == 1:
-        response_payload["run_id"] = run_ids[0]
-
-    return JSONResponse(response_payload)
 
 
 @router.post("/from-url")

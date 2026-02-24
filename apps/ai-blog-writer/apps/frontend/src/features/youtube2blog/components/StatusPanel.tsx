@@ -4,14 +4,17 @@ import { getStageItemState, getStageLabel, getStagePhase } from '../utils/pipeli
 
 type StatusPanelProps = {
   status: StatusResponse
+  runInputType?: 'url' | null
 }
 
-export function StatusPanel({ status }: StatusPanelProps) {
+export function StatusPanel({ status, runInputType = null }: StatusPanelProps) {
   const stageLabel = getStageLabel(status)
   const stageOneState = getStageItemState(status, 1)
   const stageTwoState = getStageItemState(status, 2)
   const stageThreeState = getStageItemState(status, 3)
   const stageFourState = getStageItemState(status, 4)
+  const transcriptCaptured =
+    runInputType === 'url' && status.stage !== 'stage_0' && status.state !== 'failed'
 
   return (
     <div className="panel">
@@ -24,6 +27,11 @@ export function StatusPanel({ status }: StatusPanelProps) {
       </div>
       <div className="panel-body">
         {status.error ? <p className="error">{status.error}</p> : null}
+        {transcriptCaptured ? (
+          <p className="transcript-success-banner">
+            Transcript captured from YouTube. Stage 1 started successfully.
+          </p>
+        ) : null}
         <div className="stage-checklist">
           <div className={`stage-item ${stageOneState}`}>
             <span className="stage-dot" />

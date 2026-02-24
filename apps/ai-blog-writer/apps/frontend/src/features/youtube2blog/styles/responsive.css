@@ -55,18 +55,6 @@
     gap: 1rem;
   }
 
-  /* File input improvements for mobile */
-  .file-input {
-    padding: 2.5rem 1.5rem;
-    min-height: 220px;
-    gap: 1.25rem;
-  }
-
-  .file-input span {
-    font-size: 1rem;
-  }
-
-
   /* Button improvements for mobile */
   .button-row {
     flex-direction: column;
