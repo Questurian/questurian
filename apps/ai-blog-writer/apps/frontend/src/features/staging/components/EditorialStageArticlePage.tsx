@@ -3,7 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Masonry from 'react-masonry-css'
-import { useAuth } from '../../../providers/AuthProvider'
+import { useAuth } from '../../../providers/useAuth'
 import { ImageUpload, type UploadImageResponse } from '../../../features/images'
 import { MultiVariantCropper } from '../../../features/images/components/MultiVariantCropper'
 import {

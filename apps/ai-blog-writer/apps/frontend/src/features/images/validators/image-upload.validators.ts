@@ -1,0 +1,11 @@
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+export function validateImageFile(file: File): string | null {
+  if (!file.type.startsWith('image/')) {
+    return 'Please select an image file';
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return 'File too large (max 10MB)';
+  }
+  return null;
+}

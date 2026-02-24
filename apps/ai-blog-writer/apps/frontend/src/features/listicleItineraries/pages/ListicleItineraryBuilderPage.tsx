@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../../providers/AuthProvider'
+import { useAuth } from '../../../providers/useAuth'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
 import { BuilderHero } from '../builder/components/BuilderHero'
 import { BuilderPublishPanel } from '../builder/components/BuilderPublishPanel'

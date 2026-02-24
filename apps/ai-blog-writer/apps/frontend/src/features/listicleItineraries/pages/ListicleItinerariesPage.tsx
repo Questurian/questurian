@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../providers/AuthProvider'
+import { useAuth } from '../../../providers/useAuth'
 import { fetchItineraries } from '../api'
 import { formatMinutes, toMinutesFromMidnight } from '../time'
 import type { PayloadItineraryDoc } from '../types'

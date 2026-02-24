@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '../providers/useAuth';
 
 export default function Login() {
   const { isAuthenticated, login, isConnected, connectionError } = useAuth();
