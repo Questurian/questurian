@@ -18,29 +18,34 @@ import type {
   PexelsOrientationOption,
 } from '../../features/editorial-stage-article/types'
 
-type FeaturedImageModalProps = {
+type FeaturedImageModalBaseProps = {
   show: boolean
   publishedToPayload: boolean
   onClose: () => void
-  featuredImageSource: ImageSourceOption
-  setFeaturedImageSource: (source: ImageSourceOption) => void
   featuredImageRequirementLabel: string
+}
+
+type FeaturedImageModalPayloadProps = {
+  featuredImageSource: ImageSourceOption
   imageSearch: string
   setImageSearch: (value: string) => void
   filteredFeaturedImageAssets: MediaAsset[]
   selectedFeaturedImage: MediaAsset | null
-  findPreferredVariantAsset: (assetId: number, preferredVariant: MediaVariant) => MediaAsset | null
-  updateStagedArticle: (updates: Partial<StagedArticle>) => void
-  getImageUrl: (img: MediaAsset) => string
-  selectedLocation?: Location
+}
+
+type FeaturedImageModalUploadProps = {
   stagedArticleId: string
   featuredImageFileNamePrefix: string
+  selectedLocation?: Location
   token?: string
   imageAltText: string
   imagePhotographerCredit: string
   setImageAltText: (value: string) => void
   setImagePhotographerCredit: (value: string) => void
   handleUploadComplete: (result: UploadImageResponse) => void
+}
+
+type FeaturedImageModalExternalProps = {
   externalImageCropDraft: ExternalImageCropDraft | null
   renderExternalCropEditor: (context: 'featured') => ReactNode
   unsplashFeaturedQuery: string
@@ -70,54 +75,80 @@ type FeaturedImageModalProps = {
   pexelsFeaturedResults: PexelsPhoto[]
 }
 
+type FeaturedImageModalActionsProps = {
+  setFeaturedImageSource: (source: ImageSourceOption) => void
+  findPreferredVariantAsset: (assetId: number, preferredVariant: MediaVariant) => MediaAsset | null
+  updateStagedArticle: (updates: Partial<StagedArticle>) => void
+  getImageUrl: (img: MediaAsset) => string
+}
+
+type FeaturedImageModalProps = {
+  base: FeaturedImageModalBaseProps
+  payload: FeaturedImageModalPayloadProps
+  upload: FeaturedImageModalUploadProps
+  external: FeaturedImageModalExternalProps
+  actions: FeaturedImageModalActionsProps
+}
+
 export function FeaturedImageModal({
-  show,
-  publishedToPayload,
-  onClose,
-  featuredImageSource,
-  setFeaturedImageSource,
-  featuredImageRequirementLabel,
-  imageSearch,
-  setImageSearch,
-  filteredFeaturedImageAssets,
-  selectedFeaturedImage,
-  findPreferredVariantAsset,
-  updateStagedArticle,
-  getImageUrl,
-  selectedLocation,
-  stagedArticleId,
-  featuredImageFileNamePrefix,
-  token,
-  imageAltText,
-  imagePhotographerCredit,
-  setImageAltText,
-  setImagePhotographerCredit,
-  handleUploadComplete,
-  externalImageCropDraft,
-  renderExternalCropEditor,
-  unsplashFeaturedQuery,
-  setUnsplashFeaturedQuery,
-  unsplashFeaturedOrientation,
-  setUnsplashFeaturedOrientation,
-  unsplashFeaturedPerPage,
-  setUnsplashFeaturedPerPage,
-  runFeaturedUnsplashSearch,
-  isSearchingUnsplashFeatured,
-  unsplashFeaturedError,
-  unsplashFeaturedResults,
-  isImportingFeaturedExternalImage,
-  handleImportFeaturedExternalImage,
-  pexelsFeaturedQuery,
-  setPexelsFeaturedQuery,
-  pexelsFeaturedOrientation,
-  setPexelsFeaturedOrientation,
-  pexelsFeaturedPerPage,
-  setPexelsFeaturedPerPage,
-  runFeaturedPexelsSearch,
-  isSearchingPexelsFeatured,
-  pexelsFeaturedError,
-  pexelsFeaturedResults,
+  base,
+  payload,
+  upload,
+  external,
+  actions,
 }: FeaturedImageModalProps) {
+  const { show, publishedToPayload, onClose, featuredImageRequirementLabel } = base
+  const {
+    featuredImageSource,
+    imageSearch,
+    setImageSearch,
+    filteredFeaturedImageAssets,
+    selectedFeaturedImage,
+  } = payload
+  const {
+    stagedArticleId,
+    featuredImageFileNamePrefix,
+    selectedLocation,
+    token,
+    imageAltText,
+    imagePhotographerCredit,
+    setImageAltText,
+    setImagePhotographerCredit,
+    handleUploadComplete,
+  } = upload
+  const {
+    externalImageCropDraft,
+    renderExternalCropEditor,
+    unsplashFeaturedQuery,
+    setUnsplashFeaturedQuery,
+    unsplashFeaturedOrientation,
+    setUnsplashFeaturedOrientation,
+    unsplashFeaturedPerPage,
+    setUnsplashFeaturedPerPage,
+    runFeaturedUnsplashSearch,
+    isSearchingUnsplashFeatured,
+    unsplashFeaturedError,
+    unsplashFeaturedResults,
+    isImportingFeaturedExternalImage,
+    handleImportFeaturedExternalImage,
+    pexelsFeaturedQuery,
+    setPexelsFeaturedQuery,
+    pexelsFeaturedOrientation,
+    setPexelsFeaturedOrientation,
+    pexelsFeaturedPerPage,
+    setPexelsFeaturedPerPage,
+    runFeaturedPexelsSearch,
+    isSearchingPexelsFeatured,
+    pexelsFeaturedError,
+    pexelsFeaturedResults,
+  } = external
+  const {
+    setFeaturedImageSource,
+    findPreferredVariantAsset,
+    updateStagedArticle,
+    getImageUrl,
+  } = actions
+
   if (!show || publishedToPayload) return null
 
   return (

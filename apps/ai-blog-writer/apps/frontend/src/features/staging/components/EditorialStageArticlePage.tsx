@@ -530,6 +530,62 @@ export default function EditorialStageArticlePage({
     mergeMediaAssetsIntoState,
     getImageUrl,
   }
+  const featuredImageModalBase = {
+    show: showImageModal,
+    publishedToPayload: stagedArticle.publishedToPayload,
+    onClose: () => setShowImageModal(false),
+    featuredImageRequirementLabel,
+  }
+  const featuredImageModalPayload = {
+    featuredImageSource,
+    imageSearch,
+    setImageSearch,
+    filteredFeaturedImageAssets,
+    selectedFeaturedImage,
+  }
+  const featuredImageModalUpload = {
+    selectedLocation,
+    stagedArticleId: stagedArticle.id,
+    featuredImageFileNamePrefix,
+    token: token || undefined,
+    imageAltText,
+    imagePhotographerCredit,
+    setImageAltText,
+    setImagePhotographerCredit,
+    handleUploadComplete,
+  }
+  const featuredImageModalExternal = {
+    externalImageCropDraft,
+    renderExternalCropEditor,
+    unsplashFeaturedQuery,
+    setUnsplashFeaturedQuery,
+    unsplashFeaturedOrientation,
+    setUnsplashFeaturedOrientation,
+    unsplashFeaturedPerPage,
+    setUnsplashFeaturedPerPage,
+    runFeaturedUnsplashSearch,
+    isSearchingUnsplashFeatured,
+    unsplashFeaturedError,
+    unsplashFeaturedResults,
+    isImportingFeaturedExternalImage,
+    handleImportFeaturedExternalImage,
+    pexelsFeaturedQuery,
+    setPexelsFeaturedQuery,
+    pexelsFeaturedOrientation,
+    setPexelsFeaturedOrientation,
+    pexelsFeaturedPerPage,
+    setPexelsFeaturedPerPage,
+    runFeaturedPexelsSearch,
+    isSearchingPexelsFeatured,
+    pexelsFeaturedError,
+    pexelsFeaturedResults,
+  }
+  const featuredImageModalActions = {
+    setFeaturedImageSource,
+    findPreferredVariantAsset,
+    updateStagedArticle,
+    getImageUrl,
+  }
 
   return (
     <>
@@ -607,52 +663,11 @@ export default function EditorialStageArticlePage({
       />
 
       <FeaturedImageModal
-        show={showImageModal}
-        publishedToPayload={stagedArticle.publishedToPayload}
-        onClose={() => setShowImageModal(false)}
-        featuredImageSource={featuredImageSource}
-        setFeaturedImageSource={setFeaturedImageSource}
-        featuredImageRequirementLabel={featuredImageRequirementLabel}
-        imageSearch={imageSearch}
-        setImageSearch={setImageSearch}
-        filteredFeaturedImageAssets={filteredFeaturedImageAssets}
-        selectedFeaturedImage={selectedFeaturedImage}
-        findPreferredVariantAsset={findPreferredVariantAsset}
-        updateStagedArticle={updateStagedArticle}
-        getImageUrl={getImageUrl}
-        selectedLocation={selectedLocation}
-        stagedArticleId={stagedArticle.id}
-        featuredImageFileNamePrefix={featuredImageFileNamePrefix}
-        token={token || undefined}
-        imageAltText={imageAltText}
-        imagePhotographerCredit={imagePhotographerCredit}
-        setImageAltText={setImageAltText}
-        setImagePhotographerCredit={setImagePhotographerCredit}
-        handleUploadComplete={handleUploadComplete}
-        externalImageCropDraft={externalImageCropDraft}
-        renderExternalCropEditor={renderExternalCropEditor}
-        unsplashFeaturedQuery={unsplashFeaturedQuery}
-        setUnsplashFeaturedQuery={setUnsplashFeaturedQuery}
-        unsplashFeaturedOrientation={unsplashFeaturedOrientation}
-        setUnsplashFeaturedOrientation={setUnsplashFeaturedOrientation}
-        unsplashFeaturedPerPage={unsplashFeaturedPerPage}
-        setUnsplashFeaturedPerPage={setUnsplashFeaturedPerPage}
-        runFeaturedUnsplashSearch={runFeaturedUnsplashSearch}
-        isSearchingUnsplashFeatured={isSearchingUnsplashFeatured}
-        unsplashFeaturedError={unsplashFeaturedError}
-        unsplashFeaturedResults={unsplashFeaturedResults}
-        isImportingFeaturedExternalImage={isImportingFeaturedExternalImage}
-        handleImportFeaturedExternalImage={handleImportFeaturedExternalImage}
-        pexelsFeaturedQuery={pexelsFeaturedQuery}
-        setPexelsFeaturedQuery={setPexelsFeaturedQuery}
-        pexelsFeaturedOrientation={pexelsFeaturedOrientation}
-        setPexelsFeaturedOrientation={setPexelsFeaturedOrientation}
-        pexelsFeaturedPerPage={pexelsFeaturedPerPage}
-        setPexelsFeaturedPerPage={setPexelsFeaturedPerPage}
-        runFeaturedPexelsSearch={runFeaturedPexelsSearch}
-        isSearchingPexelsFeatured={isSearchingPexelsFeatured}
-        pexelsFeaturedError={pexelsFeaturedError}
-        pexelsFeaturedResults={pexelsFeaturedResults}
+        base={featuredImageModalBase}
+        payload={featuredImageModalPayload}
+        upload={featuredImageModalUpload}
+        external={featuredImageModalExternal}
+        actions={featuredImageModalActions}
       />
 
       <BlockImageModal
