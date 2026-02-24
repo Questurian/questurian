@@ -5,7 +5,8 @@ from features.approval.schema.models import (
     ApprovalRequest, BatchApprovalRequest,
     PendingContentItem, PendingContentResponse
 )
-from datetime import datetime
+from datetime import datetime, timezone
+import re
 
 router = APIRouter(prefix="/approval", tags=["approval"])
 
@@ -17,6 +18,51 @@ def auto_approve_reddit_posts() -> None:
            WHERE approval_status IS NULL OR approval_status = 'pending'""",
         ()
     )
+
+
+_DD_MM_YYYY_RE = re.compile(r"^\s*(\d{2})/(\d{2})/(\d{4})\s*$")
+
+
+def _parse_sort_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+
+    raw = value.strip()
+    if not raw:
+        return None
+
+    dmy_match = _DD_MM_YYYY_RE.match(raw)
+    if dmy_match:
+        day = int(dmy_match.group(1))
+        month = int(dmy_match.group(2))
+        year = int(dmy_match.group(3))
+        try:
+            return datetime(year, month, day)
+        except ValueError:
+            return None
+
+    normalized = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        try:
+            parsed = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return None
+
+    if parsed.tzinfo:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
+def _pending_item_sort_key(item: dict) -> datetime:
+    published_at = _parse_sort_datetime(item.get("published_at"))
+    if published_at:
+        return published_at
+    collected_at = _parse_sort_datetime(item.get("collected_at"))
+    if collected_at:
+        return collected_at
+    return datetime.min
 
 @router.get("/pending", response_model=PendingContentResponse)
 async def get_pending_content(
@@ -44,11 +90,11 @@ async def get_pending_content(
                       COALESCE(NULLIF(l.summary_translated, ''), l.summary) AS summary,
                       l.detected_language,
                       l.translation_status,
-                      l.link, l.collected_at, l.image_url, f.source_name
+                      l.link, l.published AS published_at, l.collected_at, l.image_url, f.source_name
                FROM leads l
                JOIN feeds f ON l.feed_id = f.id
                WHERE l.approval_status = 'pending'
-               ORDER BY l.collected_at DESC
+               ORDER BY COALESCE(l.published, l.collected_at) DESC
                LIMIT ? OFFSET ?""",
             (limit, offset)
         )
@@ -58,6 +104,7 @@ async def get_pending_content(
             'title': lead['title'],
             'summary': lead['summary'],
             'source_name': lead['source_name'],
+            'published_at': lead['published_at'],
             'collected_at': lead['collected_at'],
             'image_url': lead['image_url'],
             'link': lead['link'],
@@ -73,11 +120,11 @@ async def get_pending_content(
                       ip.detected_language,
                       ip.translation_status,
                       COALESCE(NULLIF(ip.thumbnail_url, ''), NULLIF(ip.media_url, '')) AS image_url,
-                      ip.permalink, ip.collected_at, if.username
+                      ip.permalink, ip.posted_at AS published_at, ip.collected_at, if.username
                FROM instagram_posts ip
                JOIN instagram_feeds if ON ip.instagram_feed_id = if.id
                WHERE ip.approval_status = 'pending'
-               ORDER BY ip.collected_at DESC
+               ORDER BY COALESCE(ip.posted_at, ip.collected_at) DESC
                LIMIT ? OFFSET ?""",
             (limit, offset)
         )
@@ -87,6 +134,7 @@ async def get_pending_content(
             'title': post['caption'][:100] if post['caption'] else 'No caption',
             'summary': post['caption'],
             'source_name': f"@{post['username']}",
+            'published_at': post['published_at'],
             'collected_at': post['collected_at'],
             'image_url': post['image_url'],
             'link': post['permalink'],
@@ -102,7 +150,7 @@ async def get_pending_content(
                       COALESCE(NULLIF(rp.selftext_translated, ''), rp.selftext) AS selftext,
                       rp.detected_language,
                       rp.translation_status,
-                      rp.permalink, rp.collected_at, rp.subreddit
+                      rp.permalink, NULL AS published_at, rp.collected_at, rp.subreddit
                FROM reddit_posts rp
                WHERE rp.approval_status = 'pending'
                ORDER BY rp.collected_at DESC
@@ -115,6 +163,7 @@ async def get_pending_content(
             'title': post['title'],
             'summary': post['selftext'][:200] if post['selftext'] else None,
             'source_name': f"r/{post['subreddit']}",
+            'published_at': post['published_at'],
             'collected_at': post['collected_at'],
             'image_url': None,
             'link': post['permalink'],
@@ -130,11 +179,11 @@ async def get_pending_content(
                       COALESCE(NULLIF(ecp.excerpt_translated, ''), ecp.excerpt) AS excerpt,
                       ecp.detected_language,
                       ecp.translation_status,
-                      ecp.url, ecp.collected_at, ecp.image_url, ecf.display_name
+                      ecp.url, ecp.published_at, ecp.collected_at, ecp.image_url, ecf.display_name
                FROM el_comercio_posts ecp
                JOIN el_comercio_feeds ecf ON ecp.el_comercio_feed_id = ecf.id
                WHERE ecp.approval_status = 'pending'
-               ORDER BY ecp.collected_at DESC
+               ORDER BY COALESCE(ecp.published_at, ecp.collected_at) DESC
                LIMIT ? OFFSET ?""",
             (limit, offset)
         )
@@ -144,6 +193,7 @@ async def get_pending_content(
             'title': post['title'],
             'summary': post['excerpt'],
             'source_name': post['display_name'],
+            'published_at': post['published_at'],
             'collected_at': post['collected_at'],
             'image_url': post['image_url'],
             'link': post['url'],
@@ -159,11 +209,11 @@ async def get_pending_content(
                       COALESCE(NULLIF(dcp.excerpt_translated, ''), dcp.excerpt) AS excerpt,
                       dcp.detected_language,
                       dcp.translation_status,
-                      dcp.url, dcp.collected_at, dcp.image_url, dcf.display_name
+                      dcp.url, dcp.published_at, dcp.collected_at, dcp.image_url, dcf.display_name
                FROM diario_correo_posts dcp
                JOIN diario_correo_feeds dcf ON dcp.diario_correo_feed_id = dcf.id
                WHERE dcp.approval_status = 'pending'
-               ORDER BY dcp.collected_at DESC
+               ORDER BY COALESCE(dcp.published_at, dcp.collected_at) DESC
                LIMIT ? OFFSET ?""",
             (limit, offset)
         )
@@ -173,6 +223,7 @@ async def get_pending_content(
             'title': post['title'],
             'summary': post['excerpt'],
             'source_name': post['display_name'],
+            'published_at': post['published_at'],
             'collected_at': post['collected_at'],
             'image_url': post['image_url'],
             'link': post['url'],
@@ -180,8 +231,8 @@ async def get_pending_content(
             'translation_status': post['translation_status'],
         } for post in diario_correo])
 
-    # Sort all items by collected_at descending
-    items.sort(key=lambda x: x['collected_at'], reverse=True)
+    # Sort all items by published_at (fallback: collected_at) descending.
+    items.sort(key=_pending_item_sort_key, reverse=True)
 
     return {
         'total_count': len(items),

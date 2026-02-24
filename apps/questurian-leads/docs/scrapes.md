@@ -24,8 +24,8 @@ one feed row per source, one fetch endpoint, and hard-coded parsing logic.
 
 1. `POST /<site>-feeds/fetch` triggers the fetcher.
 2. Fetcher runs a spider (Scrapy or HTML fallback).
-3. Existing posts for the feed are deleted.
-4. New posts are inserted with translations and `approval_status='pending'`.
+3. Existing posts are preserved.
+4. Only new article URLs are inserted with translations and `approval_status='pending'`.
 5. Fetch log row is written; approvals happen in `/approval`.
 
 ## Template: Add a New Site
@@ -68,7 +68,7 @@ app.include_router(<site>_feeds_router)
 ### 4) Implement fetcher and spider
 In `service/fetcher.py`:
 - `ensure_feed()` auto-creates a single feed row (category "Peru")
-- `fetch_<site>_feed()` runs the spider, deletes existing posts, inserts new ones,
+- `fetch_<site>_feed()` runs the spider, skips existing URLs, inserts only new ones,
   translates title/excerpt, and writes a fetch log.
 
 In `service/spider.py`:
@@ -115,7 +115,7 @@ Scrapes <site> <section> and stores articles in SQLite.
 ## Scraping Flow
 1. Spider requests <site_url>.
 2. Parses HTML/JSON to extract story data.
-3. Fetcher replaces posts and writes a fetch log.
+3. Fetcher keeps existing posts, inserts only new URLs, and writes a fetch log.
 4. Items are translated and queued for approval.
 
 ## Notes

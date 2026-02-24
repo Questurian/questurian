@@ -56,6 +56,7 @@ def build_el_comercio_queries(
             COALESCE(NULLIF(ecp.title_translated, ''), ecp.title) AS title,
             COALESCE(NULLIF(ecp.excerpt_translated, ''), ecp.excerpt) AS summary,
             ecf.display_name AS source_name,
+            ecp.published_at AS published_at,
             ecp.collected_at AS collected_at,
             ecp.country AS country,
             ecp.image_url AS image_url,
@@ -88,6 +89,7 @@ def build_diario_correo_queries(
             COALESCE(NULLIF(dcp.title_translated, ''), dcp.title) AS title,
             COALESCE(NULLIF(dcp.excerpt_translated, ''), dcp.excerpt) AS summary,
             dcf.display_name AS source_name,
+            dcp.published_at AS published_at,
             dcp.collected_at AS collected_at,
             dcp.country AS country,
             dcp.image_url AS image_url,
@@ -151,7 +153,7 @@ def get_scrapes(
     final_sql = f"""
         SELECT *
         FROM ({union_sql})
-        ORDER BY collected_at DESC
+        ORDER BY COALESCE(published_at, collected_at) DESC, collected_at DESC
         LIMIT ? OFFSET ?
     """
     params.extend([limit, offset])

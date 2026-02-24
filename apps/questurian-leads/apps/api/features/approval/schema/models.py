@@ -25,6 +25,7 @@ class PendingContentItem(BaseModel):
     title: Optional[str] = None  # Main text/title
     summary: Optional[str] = None  # Summary or caption
     source_name: str  # Feed name, username, subreddit, etc.
+    published_at: Optional[str] = None
     collected_at: str
     image_url: Optional[str] = None
     link: Optional[str] = None

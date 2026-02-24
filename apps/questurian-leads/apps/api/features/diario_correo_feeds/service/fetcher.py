@@ -16,6 +16,7 @@ import urllib.parse
 import requests
 
 from features.translation.service.translator import get_translator
+from lib.dates import normalize_published_at
 
 DEFAULT_COUNTRY = "Peru"
 
@@ -243,11 +244,11 @@ def fetch_diario_correo_feed(feed_id: int) -> Dict:
     """
     Scrape Diario Correo articles and save to database.
 
-    Strategy: DELETE all existing posts, INSERT fresh 15 articles.
+    Strategy: keep history and only INSERT new URLs (no destructive delete).
     Blocks for 10-30 seconds while scraping.
 
     Returns:
-        Dict with log_id, status, post_count, error_message
+        Dict with log_id, status, post_count, new/existing/invalid counters, error_message
     """
     feed = fetch_one("SELECT * FROM diario_correo_feeds WHERE id = ?", (feed_id,))
     if not feed:
@@ -258,23 +259,31 @@ def fetch_diario_correo_feed(feed_id: int) -> Dict:
         if not scraped_items:
             scraped_items = fetch_items_via_html(feed["url"], feed.get("section") or "gastronomia")
 
-        post_count = 0
+        new_post_count = 0
+        existing_post_count = 0
+        invalid_post_count = 0
         errors = []
         translator = get_translator()
 
         if not scraped_items:
             errors.append("No items scraped; check the source HTML or scraper settings.")
 
-        execute_query(
-            "DELETE FROM diario_correo_posts WHERE diario_correo_feed_id = ?",
-            (feed_id,)
-        )
-
         for article in scraped_items[:15]:
             try:
                 if not article.get("url") or not article.get("title"):
                     errors.append("Skipping article - missing URL or title")
+                    invalid_post_count += 1
                     continue
+
+                existing = fetch_one(
+                    "SELECT id FROM diario_correo_posts WHERE url = ?",
+                    (article["url"],)
+                )
+                if existing:
+                    existing_post_count += 1
+                    continue
+
+                published_at = normalize_published_at(article.get("published_at"))
 
                 title_translated = None
                 excerpt_translated = None
@@ -306,7 +315,7 @@ def fetch_diario_correo_feed(feed_id: int) -> Dict:
                         feed_id,
                         article["url"],
                         article["title"],
-                        article.get("published_at"),
+                        published_at,
                         article.get("section") or feed.get("section"),
                         DEFAULT_COUNTRY,
                         article.get("image_url"),
@@ -320,29 +329,39 @@ def fetch_diario_correo_feed(feed_id: int) -> Dict:
                         translated_at,
                     )
                 )
-                post_count += 1
+                new_post_count += 1
             except Exception as e:
                 errors.append(f"Article {article.get('url', 'unknown')}: {str(e)}")
+                invalid_post_count += 1
 
         execute_query(
             "UPDATE diario_correo_feeds SET last_fetched = ? WHERE id = ?",
             (datetime.utcnow().isoformat(), feed_id)
         )
 
-        status = "SUCCESS" if post_count == 15 else "PARTIAL" if post_count > 0 else "FAILED"
+        valid_count = new_post_count + existing_post_count
+        if valid_count == 0:
+            status = "FAILED"
+        elif errors:
+            status = "PARTIAL"
+        else:
+            status = "SUCCESS"
         error_message = "; ".join(errors) if errors else None
 
         log_id = execute_query(
             """INSERT INTO diario_correo_fetch_logs
                (diario_correo_feed_id, status, post_count, error_message)
                VALUES (?, ?, ?, ?)""",
-            (feed_id, status, post_count, error_message)
+            (feed_id, status, new_post_count, error_message)
         )
 
         return {
             "log_id": log_id,
             "status": status,
-            "post_count": post_count,
+            "post_count": new_post_count,
+            "new_post_count": new_post_count,
+            "existing_post_count": existing_post_count,
+            "invalid_post_count": invalid_post_count,
             "error_message": error_message
         }
 
@@ -359,6 +378,9 @@ def fetch_diario_correo_feed(feed_id: int) -> Dict:
             "log_id": log_id,
             "status": "FAILED",
             "post_count": 0,
+            "new_post_count": 0,
+            "existing_post_count": 0,
+            "invalid_post_count": 0,
             "error_message": error_message
         }
 
@@ -388,6 +410,9 @@ def fetch_all_active_diario_correo_feeds() -> List[Dict]:
                 "display_name": feed["display_name"],
                 "status": "FAILED",
                 "post_count": 0,
+                "new_post_count": 0,
+                "existing_post_count": 0,
+                "invalid_post_count": 0,
                 "error_message": str(e)
             })
 

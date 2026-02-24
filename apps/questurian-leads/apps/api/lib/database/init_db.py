@@ -1,5 +1,13 @@
 import sqlite3
 from pathlib import Path
+import sys
+
+try:
+    from lib.dates import normalize_published_at
+except ModuleNotFoundError:
+    # Allow direct script execution from repository root.
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+    from lib.dates import normalize_published_at
 
 DATABASE_PATH = Path(__file__).parent.parent.parent / "leads.db"
 
@@ -178,6 +186,37 @@ def add_reddit_auto_approval():
     conn.commit()
     conn.close()
     print("✅ Reddit posts set to auto-approve")
+
+
+def backfill_el_comercio_published_at_iso():
+    """Normalize El Comercio published_at values (DD/MM/YYYY -> ISO 8601 UTC)."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """SELECT id, published_at
+           FROM el_comercio_posts
+           WHERE published_at IS NOT NULL AND TRIM(published_at) <> ''"""
+    )
+    rows = cursor.fetchall()
+
+    updates = []
+    for row in rows:
+        raw_value = row["published_at"]
+        normalized = normalize_published_at(raw_value)
+        if normalized and normalized != raw_value:
+            updates.append((normalized, row["id"]))
+
+    if updates:
+        cursor.executemany(
+            "UPDATE el_comercio_posts SET published_at = ? WHERE id = ?",
+            updates
+        )
+
+    conn.commit()
+    conn.close()
+    print(f"✅ El Comercio published_at normalized ({len(updates)} rows)")
 
 
 def init_database():
@@ -709,6 +748,7 @@ def run_migrations():
     add_youtube_transcript_columns()
     add_youtube_shorts_column()
     add_batch_fetch_tables()
+    backfill_el_comercio_published_at_iso()
 
 
 if __name__ == "__main__":

@@ -11,9 +11,9 @@ import sqlite3
 import subprocess
 import json
 import sys
-import os
 
 from features.translation.service.translator import get_translator
+from lib.dates import normalize_published_at
 
 DEFAULT_COUNTRY = "Peru"
 
@@ -101,11 +101,11 @@ def fetch_el_comercio_feed(feed_id: int) -> Dict:
     """
     Scrape El Comercio articles and save to database.
 
-    Strategy: DELETE all existing posts, INSERT fresh 15 articles.
+    Strategy: keep history and only INSERT new URLs (no destructive delete).
     Blocks for 10-30 seconds while scraping.
 
     Returns:
-        Dict with log_id, status, post_count, error_message
+        Dict with log_id, status, post_count, new/existing/invalid counters, error_message
     """
     feed = fetch_one("SELECT * FROM el_comercio_feeds WHERE id = ?", (feed_id,))
     if not feed:
@@ -115,23 +115,33 @@ def fetch_el_comercio_feed(feed_id: int) -> Dict:
         # Run spider to scrape articles
         scraped_items = run_spider()
 
-        post_count = 0
+        new_post_count = 0
+        existing_post_count = 0
+        invalid_post_count = 0
         errors = []
         translator = get_translator()
 
-        # DELETE all existing posts for this feed
-        execute_query(
-            "DELETE FROM el_comercio_posts WHERE el_comercio_feed_id = ?",
-            (feed_id,)
-        )
+        if not scraped_items:
+            errors.append("No items scraped; check the source HTML or scraper settings.")
 
-        # INSERT fresh articles (limit to 15)
+        # INSERT only new articles (limit to 15 scraped items)
         for article in scraped_items[:15]:
             try:
                 # Skip if missing required fields
                 if not article.get('url') or not article.get('title'):
                     errors.append(f"Skipping article - missing URL or title")
+                    invalid_post_count += 1
                     continue
+
+                existing = fetch_one(
+                    "SELECT id FROM el_comercio_posts WHERE url = ?",
+                    (article["url"],)
+                )
+                if existing:
+                    existing_post_count += 1
+                    continue
+
+                published_at = normalize_published_at(article.get("published_at"))
 
                 # Auto-translate title and excerpt
                 title_translated = None
@@ -161,17 +171,18 @@ def fetch_el_comercio_feed(feed_id: int) -> Dict:
                         title_translated, excerpt_translated, detected_language,
                         translation_status, translated_at)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)""",
-                    (feed_id, article['url'], article['title'],
-                     article.get('published_at'), 'gastronomia',
+                    (feed_id, article['url'], article['title'], published_at,
+                     article.get('section') or feed.get('section') or 'gastronomia',
                      DEFAULT_COUNTRY, article.get('image_url'), article.get('excerpt'),
                      'es', 'elcomercio',
                      title_translated, excerpt_translated, detected_language,
                      translation_status, translated_at)
                 )
-                post_count += 1
+                new_post_count += 1
 
             except Exception as e:
                 errors.append(f"Article {article.get('url', 'unknown')}: {str(e)}")
+                invalid_post_count += 1
 
         # Update feed metadata
         execute_query(
@@ -180,20 +191,29 @@ def fetch_el_comercio_feed(feed_id: int) -> Dict:
         )
 
         # Create fetch log
-        status = "SUCCESS" if post_count == 15 else "PARTIAL" if post_count > 0 else "FAILED"
+        valid_count = new_post_count + existing_post_count
+        if valid_count == 0:
+            status = "FAILED"
+        elif errors:
+            status = "PARTIAL"
+        else:
+            status = "SUCCESS"
         error_message = "; ".join(errors) if errors else None
 
         log_id = execute_query(
             """INSERT INTO el_comercio_fetch_logs
                (el_comercio_feed_id, status, post_count, error_message)
                VALUES (?, ?, ?, ?)""",
-            (feed_id, status, post_count, error_message)
+            (feed_id, status, new_post_count, error_message)
         )
 
         return {
             "log_id": log_id,
             "status": status,
-            "post_count": post_count,
+            "post_count": new_post_count,
+            "new_post_count": new_post_count,
+            "existing_post_count": existing_post_count,
+            "invalid_post_count": invalid_post_count,
             "error_message": error_message
         }
 
@@ -211,6 +231,9 @@ def fetch_el_comercio_feed(feed_id: int) -> Dict:
             "log_id": log_id,
             "status": "FAILED",
             "post_count": 0,
+            "new_post_count": 0,
+            "existing_post_count": 0,
+            "invalid_post_count": 0,
             "error_message": error_message
         }
 
@@ -240,6 +263,9 @@ def fetch_all_active_el_comercio_feeds() -> List[Dict]:
                 "display_name": feed["display_name"],
                 "status": "FAILED",
                 "post_count": 0,
+                "new_post_count": 0,
+                "existing_post_count": 0,
+                "invalid_post_count": 0,
                 "error_message": str(e)
             })
 

@@ -81,6 +81,13 @@ function getLanguageName(code) {
   return LANGUAGE_NAMES[code] || code?.toUpperCase() || '';
 }
 
+function formatDateTime(value) {
+  if (!value) return 'Unknown';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+}
+
 export default function ApprovalQueue() {
   const [filter, setFilter] = useState('all'); // 'all' or content_type
   const [approvedBy, setApprovedBy] = useState('admin'); // Default user
@@ -187,6 +194,8 @@ export default function ApprovalQueue() {
             const imageUrl = item.content_type === 'instagram_post' && item.image_url
               ? instagramPostImageUrl(item.content_id)
               : item.image_url;
+            const displayDate = item.published_at || item.collected_at;
+            const displayDateLabel = item.published_at ? 'Published' : 'Collected';
 
             return (
               <div key={`${item.content_type}-${item.content_id}`} className="approval-card">
@@ -216,7 +225,10 @@ export default function ApprovalQueue() {
                 {item.summary && <p className="summary">{item.summary}</p>}
 
                 <div className="approval-meta">
-                  <small>Collected: {new Date(item.collected_at).toLocaleString()}</small>
+                  <small>{displayDateLabel}: {formatDateTime(displayDate)}</small>
+                  {item.published_at && item.collected_at && (
+                    <small>Collected: {formatDateTime(item.collected_at)}</small>
+                  )}
                   {item.link && (
                     <a href={item.link} target="_blank" rel="noopener noreferrer">
                       View Original →

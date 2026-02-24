@@ -183,7 +183,7 @@ function getItemDate(item) {
       dateFields.push(data.published_at, data.collected_at);
       break;
     case 'scrape':
-      dateFields.push(data.collected_at);
+      dateFields.push(data.published_at, data.collected_at);
       break;
     default:
       dateFields.push(data.published, data.published_at, data.posted_at, data.collected_at);
@@ -1017,6 +1017,7 @@ export default function Dashboard() {
     const displayTitle = scrape.title || 'Untitled';
     const displaySummary = scrape.summary;
     const topBarLabel = label || 'Scrape';
+    const itemDate = scrape.published_at || scrape.collected_at;
 
     return (
       <article
@@ -1061,7 +1062,7 @@ export default function Dashboard() {
         )}
 
         <div className="lead-meta">
-          <span className="published-date">{formatRelativeDate(scrape.collected_at)}</span>
+          <span className="published-date">{formatRelativeDate(itemDate)}</span>
         </div>
       </article>
     );

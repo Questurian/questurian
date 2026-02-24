@@ -149,7 +149,7 @@ def trigger_fetch():
     Manually trigger scrape for the default feed.
 
     IMPORTANT: This endpoint BLOCKS for 10-30 seconds while scraping.
-    The scraper will delete all existing posts and insert fresh 15 articles.
+    The scraper preserves existing rows and inserts only new article URLs.
     If no feed row exists yet, one is created with category "Peru".
     """
     existing = ensure_feed()
