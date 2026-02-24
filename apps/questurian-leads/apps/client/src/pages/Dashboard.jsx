@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { instagramPostImageUrl, youtubePostsApi } from '../api';
+import { instagramPostImageUrl } from '../api';
 import {
   useCategories,
   useFeeds,
@@ -13,7 +13,6 @@ import {
   useInfiniteElComercioPostsList,
   useYouTubeFeeds,
   useInfiniteYouTubePostsList,
-  useExtractYouTubeTranscript,
   useInfiniteScrapes,
   useSubreddits,
 } from '../hooks';
@@ -245,7 +244,6 @@ export default function Dashboard() {
   const [searchFilter, setSearchFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showTranslated, setShowTranslated] = useState(true);
-  const [transcriptStates, setTranscriptStates] = useState({});
   const [subredditSpotlightExpanded, setSubredditSpotlightExpanded] = useState(false);
 
   const {
@@ -295,7 +293,6 @@ export default function Dashboard() {
     },
     DASHBOARD_PAGE_SIZE,
   );
-  const extractTranscript = useExtractYouTubeTranscript();
 
   const {
     data: scrapesData,
@@ -588,31 +585,6 @@ export default function Dashboard() {
   }, [canObserve, hasMoreItems, isLoadingMore, loadMoreItems, visibleCount, sortedItems.length]);
 
   const visibleItems = sortedItems.slice(0, visibleCount);
-
-  async function handleExtractTranscript(postId) {
-    setTranscriptStates((prev) => ({ ...prev, [postId]: { loading: true } }));
-    try {
-      const result = await extractTranscript.mutateAsync(postId);
-      setTranscriptStates((prev) => ({
-        ...prev,
-        [postId]: {
-          loading: false,
-          status: result.transcript_status,
-          error: result.transcript_error,
-          hasTranscript: !!result.transcript,
-        },
-      }));
-    } catch (err) {
-      setTranscriptStates((prev) => ({
-        ...prev,
-        [postId]: { loading: false, error: err.message },
-      }));
-    }
-  }
-
-  function handleDownloadTranscript(postId) {
-    window.open(youtubePostsApi.downloadTranscriptUrl(postId), '_blank');
-  }
 
   function renderLeadCard(lead) {
     const displayTitle = showTranslated && lead.title_translated
@@ -950,53 +922,18 @@ export default function Dashboard() {
         </div>
 
         <div className="transcript-actions">
-          {(() => {
-            const state = transcriptStates[post.id];
-            const hasExistingTranscript = post.transcript_status === 'completed';
-            const isUnavailable = post.transcript_status === 'unavailable' || state?.status === 'unavailable';
-
-            if (state?.loading) {
-              return <span className="badge">Extracting transcript...</span>;
-            }
-
-            if (hasExistingTranscript || state?.hasTranscript) {
-              return (
-                <button
-                  className="button button-sm"
-                  onClick={() => handleDownloadTranscript(post.id)}
-                >
-                  Download CSV
-                </button>
-              );
-            }
-
-            if (isUnavailable) {
-              return <span className="badge">No transcript available</span>;
-            }
-
-            if (state?.error && state?.status === 'failed') {
-              return (
-                <>
-                  <span className="badge danger">Failed</span>
-                  <button
-                    className="button secondary button-sm"
-                    onClick={() => handleExtractTranscript(post.id)}
-                  >
-                    Retry
-                  </button>
-                </>
-              );
-            }
-
-            return (
-              <button
-                className="button secondary button-sm"
-                onClick={() => handleExtractTranscript(post.id)}
-              >
-                Get Transcript
-              </button>
-            );
-          })()}
+          {post.video_url ? (
+            <a
+              className="button secondary button-sm"
+              href={post.video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open in YouTube
+            </a>
+          ) : (
+            <span className="badge">No YouTube URL</span>
+          )}
         </div>
       </article>
     );
