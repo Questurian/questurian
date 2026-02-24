@@ -1,25 +1,35 @@
 import { Link } from 'react-router-dom'
-import {
-  useEditorialStageBlockModalProps,
-  useEditorialStageFeaturedModalProps,
-  useEditorialStageLayoutView,
-  useEditorialStageSidebarProps,
-  useEditorialStageStatus,
-  useEditorialStageTimelineListProps,
-} from '../../features/editorial-stage-article/context/useEditorialStageArticleContext'
+import type { EditorialStageArticlePageProps } from '../../features/editorial-stage-article/types'
+import { useEditorialStageArticleScreenViewModel } from '../../features/editorial-stage-article/hooks/useEditorialStageArticleScreenViewModel'
 import { BlockImageModal } from './BlockImageModal'
 import { EditorialSidebar } from './EditorialSidebar'
 import { EditorialStageLayout } from './EditorialStageLayout'
 import { EditorialTimelineList } from './EditorialTimelineList'
 import { FeaturedImageModal } from './FeaturedImageModal'
 
-export function EditorialStageArticleScreen() {
-  const status = useEditorialStageStatus()
-  const layout = useEditorialStageLayoutView()
-  const timelineListProps = useEditorialStageTimelineListProps()
-  const sidebarProps = useEditorialStageSidebarProps()
-  const featuredModalProps = useEditorialStageFeaturedModalProps()
-  const blockModalProps = useEditorialStageBlockModalProps()
+type EditorialStageArticleScreenProps = EditorialStageArticlePageProps & {
+  token: string | null | undefined
+}
+
+export function EditorialStageArticleScreen({
+  storageKey,
+  routes,
+  api,
+  token,
+}: EditorialStageArticleScreenProps) {
+  const {
+    status,
+    layout,
+    timelineListProps,
+    sidebarProps,
+    featuredModalProps,
+    blockModalProps,
+  } = useEditorialStageArticleScreenViewModel({
+    storageKey,
+    routes,
+    api,
+    token,
+  })
 
   if (status.isLoading || !status.stagedArticle) {
     return (
