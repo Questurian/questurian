@@ -73,7 +73,7 @@ describe('MembershipSection', () => {
 
       const badge = screen.getByText('Inactive Member');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-gray-100');
+      expect(badge).toHaveClass('bg-[#e8e6e1]');
     });
 
     it('shows upgrade button for inactive member', () => {
@@ -104,7 +104,7 @@ describe('MembershipSection', () => {
 
       const badge = screen.getByText('Premium Member');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('from-yellow-400');
+      expect(badge).toHaveClass('bg-[#1A1A1A]');
     });
 
     it('shows cancel button for active member', () => {
@@ -142,7 +142,7 @@ describe('MembershipSection', () => {
 
       const badge = screen.getByText('Premium - Expiring');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-yellow-100');
+      expect(badge).toHaveClass('bg-[#fff3e0]');
     });
 
     it('shows reactivate button for expiring member', () => {
@@ -165,7 +165,7 @@ describe('MembershipSection', () => {
 
       const badge = screen.getByText('Membership Cancelled');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-orange-100');
+      expect(badge).toHaveClass('bg-[#fff3e0]');
     });
 
     it('shows reactivate button for cancelled member not yet expired', () => {
@@ -180,7 +180,7 @@ describe('MembershipSection', () => {
 
       const badge = screen.getByText('Membership Expired');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-red-100');
+      expect(badge).toHaveClass('bg-[#fce4ec]');
     });
 
     it('shows upgrade button for expired member', () => {
