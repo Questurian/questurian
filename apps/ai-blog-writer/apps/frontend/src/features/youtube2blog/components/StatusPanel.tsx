@@ -13,6 +13,7 @@ export function StatusPanel({ status, runInputType = null }: StatusPanelProps) {
   const stageTwoState = getStageItemState(status, 2)
   const stageThreeState = getStageItemState(status, 3)
   const stageFourState = getStageItemState(status, 4)
+  const stageFiveState = getStageItemState(status, 5)
   const transcriptCaptured =
     runInputType === 'url' && status.stage !== 'stage_0' && status.state !== 'failed'
 
@@ -47,7 +48,11 @@ export function StatusPanel({ status, runInputType = null }: StatusPanelProps) {
           </div>
           <div className={`stage-item ${stageFourState}`}>
             <span className="stage-dot" />
-            <span>Stage 4 - ({getStagePhase(status, 4)})</span>
+            <span>Stage 4 (Editorial) - ({getStagePhase(status, 4)})</span>
+          </div>
+          <div className={`stage-item ${stageFiveState}`}>
+            <span className="stage-dot" />
+            <span>Stage 5 - ({getStagePhase(status, 5)})</span>
           </div>
         </div>
         {status.evaluation_metrics ? (

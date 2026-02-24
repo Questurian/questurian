@@ -1,5 +1,11 @@
 import type { DebugResponse } from '../api'
-import { getStage0Data, getStage2Data, getStage3Data, getStage4Data } from '../services/stage-data.selectors'
+import {
+  getStage0Data,
+  getStage2Data,
+  getStage3Data,
+  getStage4Data,
+  getStageEditorialAugmentationData,
+} from '../services/stage-data.selectors'
 
 type DebugPanelProps = {
   showDebug: boolean
@@ -11,6 +17,7 @@ export function DebugPanel({ showDebug, onToggleDebug, debugData }: DebugPanelPr
   const stage0 = getStage0Data(debugData)
   const stage2 = getStage2Data(debugData)
   const stage3 = getStage3Data(debugData)
+  const stageEditorial = getStageEditorialAugmentationData(debugData)
   const stage4 = getStage4Data(debugData)
 
   return (
@@ -105,18 +112,48 @@ export function DebugPanel({ showDebug, onToggleDebug, debugData }: DebugPanelPr
             </>
           ) : null}
 
+          {stageEditorial ? (
+            <>
+              <div className="stage-box">
+                <h3>Stage 4 (Editorial): Augmentation Request</h3>
+                <pre>{stageEditorial.debug_prompt ?? 'No prompt captured'}</pre>
+              </div>
+              <div className="stage-box">
+                <h3>Stage 4 (Editorial): Augmentation Response</h3>
+                <pre>{stageEditorial.debug_raw_response ?? 'No response captured'}</pre>
+              </div>
+              <div className="stage-box">
+                <h3>Stage 4 (Editorial): Parsed Result</h3>
+                <pre>
+                  {JSON.stringify(
+                    {
+                      augmentation_applied: stageEditorial.augmentation_applied,
+                      augmentation_summary: stageEditorial.augmentation_summary,
+                      components_added: stageEditorial.components_added ?? [],
+                      diagnostic: stageEditorial.diagnostic ?? {},
+                      augmented_content_length: stageEditorial.augmented_content?.length ?? 0,
+                      error: stageEditorial.error,
+                    },
+                    null,
+                    2
+                  )}
+                </pre>
+              </div>
+            </>
+          ) : null}
+
           {stage4 ? (
             <>
               <div className="stage-box">
-                <h3>Stage 4: Title Generation Request</h3>
+                <h3>Stage 5: Title Generation Request</h3>
                 <pre>{stage4.debug_prompt ?? 'No prompt captured'}</pre>
               </div>
               <div className="stage-box">
-                <h3>Stage 4: Title Generation Response</h3>
+                <h3>Stage 5: Title Generation Response</h3>
                 <pre>{stage4.debug_raw_response ?? 'No response captured'}</pre>
               </div>
               <div className="stage-box">
-                <h3>Stage 4: Parsed Result</h3>
+                <h3>Stage 5: Parsed Result</h3>
                 <pre>
                   {JSON.stringify(
                     {

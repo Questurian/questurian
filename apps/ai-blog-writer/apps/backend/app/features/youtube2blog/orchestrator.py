@@ -5,11 +5,13 @@ Runs:
 - Stage 1: Extract transcript + clean with AI
 - Stage 2: Classify article type
 - Stage 3: Compose article with coverage analysis
-- Stage 4: Generate article title
+- Stage 4: Editorial augmentation
+- Stage 5: Generate article title
 """
 from __future__ import annotations
 
 from datetime import datetime
+import re
 from typing import Dict, Optional
 from uuid import uuid4
 
@@ -32,6 +34,7 @@ from .stages import (
     stage_1_clean_transcript,
     stage_2_classify_article_type,
     stage_3_compose_article,
+    stage_editorial_augmentation,
     stage_4_generate_title,
 )
 from .storage import read_article_type_names
@@ -45,6 +48,27 @@ def _now() -> datetime:
 
 def _stage_ref(run_id: str, stage: str) -> str:
     return f"data/runs/{run_id}/{stage}.json"
+
+
+def _clean_title(title: str) -> str:
+    cleaned = title.strip().strip("\"'")
+    cleaned = cleaned.lstrip("#").strip()
+    return cleaned
+
+
+def _normalize_markdown_body(content: str) -> str:
+    cleaned = content.strip()
+    if not cleaned:
+        return ""
+    return re.sub(r"(?m)^\s*#\s+", "## ", cleaned).strip()
+
+
+def _build_final_markdown(title: str, content: str) -> str:
+    body = _normalize_markdown_body(content)
+    cleaned_title = _clean_title(title)
+    if cleaned_title:
+        return f"# {cleaned_title}\n\n{body}".strip()
+    return body
 
 
 def initialize_run(
@@ -91,7 +115,8 @@ def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
     Stage 1: Extract transcript and clean with AI
     Stage 2: Classify article type
     Stage 3: Compose article
-    Stage 4: Generate title
+    Stage 4: Editorial augmentation
+    Stage 5: Generate title
     """
     run_id = meta.run_id
     stage_results: Dict[str, StageResult] = {}
@@ -180,7 +205,37 @@ def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
         stage_results["stage_3"] = result3
 
         # ========================================
-        # STAGE 4: Title Generation
+        # STAGE 4: Editorial Augmentation
+        # ========================================
+        write_status(
+            run_id,
+            {
+                "run_id": run_id,
+                "stage": "stage_editorial_augmentation",
+                "state": "running",
+                "updated_at": _now().isoformat(),
+                "error": None,
+            },
+            feature=FEATURE_NAME,
+        )
+
+        stage_editorial = stage_editorial_augmentation(stage3)
+        result_editorial = StageResult(
+            run_id=run_id,
+            stage="stage_editorial_augmentation",
+            created_at=_now(),
+            input_refs={"stage_3": _stage_ref(run_id, "stage_3")},
+            data=stage_editorial.model_dump(),
+        )
+        write_stage_result(
+            run_id,
+            "stage_editorial_augmentation",
+            result_editorial.model_dump(),
+        )
+        stage_results["stage_editorial_augmentation"] = result_editorial
+
+        # ========================================
+        # STAGE 5: Title Generation
         # ========================================
         write_status(
             run_id,
@@ -194,12 +249,21 @@ def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
             feature=FEATURE_NAME,
         )
 
-        stage4 = stage_4_generate_title(stage3)
+        stage3_for_title = stage3.model_copy(
+            update={"final_article": stage_editorial.augmented_content}
+        )
+        stage4 = stage_4_generate_title(stage3_for_title)
         result4 = StageResult(
             run_id=run_id,
             stage="stage_4",
             created_at=_now(),
-            input_refs={"stage_3": _stage_ref(run_id, "stage_3")},
+            input_refs={
+                "stage_3": _stage_ref(run_id, "stage_3"),
+                "stage_editorial_augmentation": _stage_ref(
+                    run_id,
+                    "stage_editorial_augmentation",
+                ),
+            },
             data=stage4.model_dump(),
         )
         write_stage_result(run_id, "stage_4", result4.model_dump())
@@ -208,7 +272,7 @@ def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
         # ========================================
         # Output: Save to SQLite
         # ========================================
-        markdown = stage4.content
+        markdown = _build_final_markdown(stage4.title, stage3_for_title.final_article)
 
         stage_results["stage_0"] = StageResult(
             **read_stage_result(run_id, "stage_0")

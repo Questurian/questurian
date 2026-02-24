@@ -179,7 +179,7 @@ This starts all services:
 
 1. Open http://localhost:3003
 2. Paste a YouTube video URL in `youtube2blog`
-3. Monitor the 4-stage processing pipeline in real-time
+3. Monitor the 5-stage processing pipeline in real-time
 4. Download the generated articles when complete
 
 ### API Usage
@@ -207,7 +207,7 @@ curl http://localhost:4003/youtube2blog/result/<run_id>?format=md
 
 ## Pipeline Stages
 
-The AI processing pipeline consists of 4 sequential stages:
+The AI processing pipeline consists of 5 sequential stages:
 
 ### Stage 1: Transcript Cleaning
 - Removes ads, sponsorships, and promotional content
@@ -227,7 +227,12 @@ The AI processing pipeline consists of 4 sequential stages:
 - Generates supplemental content for missing sections
 - Composes final structured article following professional standards
 
-### Stage 4: Title Generation
+### Stage 4: Editorial Augmentation
+- Applies optional editorial blocks to improve readability and skimmability
+- Preserves factual integrity and existing article structure
+- Uses parse-friendly editorial block markers compatible with staging tools
+
+### Stage 5: Title Generation
 - Creates compelling, SEO-friendly headlines
 - Follows title guidelines specific to each article type
 - Maintains consistency with original video content

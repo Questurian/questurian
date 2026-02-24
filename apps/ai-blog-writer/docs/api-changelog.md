@@ -9,6 +9,10 @@
 ### Changed
 - `youtube2blog` now runs from YouTube URL input by extracting transcripts server-side.
 - Frontend `youtube2blog` flow is URL-only.
+- `youtube2blog` now applies an always-on editorial augmentation step between compose and title.
+- `GET /youtube2blog/status/{run_id}` can report `stage_editorial_augmentation`.
+- `GET /youtube2blog/debug/{run_id}` now includes `stage_editorial_augmentation` when present.
+- `GET /youtube2blog/result/{run_id}` now returns markdown built from generated title + editorially augmented content.
 
 ### Removed
 - Legacy upload endpoint:

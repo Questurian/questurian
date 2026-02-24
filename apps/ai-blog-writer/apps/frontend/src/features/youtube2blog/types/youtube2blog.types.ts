@@ -43,11 +43,32 @@ export type Stage4Data = {
   title_guideline_used?: string
 }
 
+export type StageEditorialAugmentationData = {
+  augmented_content?: string
+  components_added?: Array<{
+    component?: string
+    justification?: string
+    placement?: string
+  }>
+  diagnostic?: {
+    cognitive_load?: 'strong' | 'weak'
+    narrative_density?: 'strong' | 'weak'
+    emphasis_clarity?: 'strong' | 'weak'
+    reading_behavior_risk?: 'strong' | 'weak'
+  }
+  augmentation_summary?: string
+  augmentation_applied?: boolean
+  debug_prompt?: string
+  debug_raw_response?: string
+  error?: string | null
+}
+
 export type TypedDebugStages = {
   stage_0?: { data?: Stage0Data }
   stage_1?: { data?: Stage1Data }
   stage_2?: { data?: Stage2Data }
   stage_3?: { data?: Stage3Data }
+  stage_editorial_augmentation?: { data?: StageEditorialAugmentationData }
   stage_4?: { data?: Stage4Data }
 }
 

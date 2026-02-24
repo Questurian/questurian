@@ -155,7 +155,14 @@ async def debug_run(run_id: str) -> JSONResponse:
         raise HTTPException(status_code=404, detail="Run not found.")
 
     stages = {}
-    for stage_name in ["stage_0", "stage_1", "stage_2", "stage_3", "stage_4"]:
+    for stage_name in [
+        "stage_0",
+        "stage_1",
+        "stage_2",
+        "stage_3",
+        "stage_editorial_augmentation",
+        "stage_4",
+    ]:
         stage_data = read_stage_result(run_id, stage_name)
         if stage_data:
             stages[stage_name] = stage_data

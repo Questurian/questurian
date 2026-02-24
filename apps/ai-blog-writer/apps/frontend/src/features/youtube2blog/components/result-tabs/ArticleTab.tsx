@@ -2,7 +2,10 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import type { DebugResponse } from '../../api'
-import { getStage3Data } from '../../services/stage-data.selectors'
+import {
+  getStage3Data,
+  getStageEditorialAugmentationData,
+} from '../../services/stage-data.selectors'
 import { removeTitleFromArticle } from '../../utils/article.utils'
 
 type ArticleTabProps = {
@@ -11,7 +14,10 @@ type ArticleTabProps = {
 
 export function ArticleTab({ debugData }: ArticleTabProps) {
   const stage3Data = getStage3Data(debugData)
-  if (!stage3Data) {
+  const stageEditorialData = getStageEditorialAugmentationData(debugData)
+  const articleContent = stageEditorialData?.augmented_content ?? stage3Data?.final_article
+
+  if (!articleContent) {
     return <p className="placeholder">No article yet. Finish Stage 3 to see results.</p>
   }
 
@@ -19,7 +25,7 @@ export function ArticleTab({ debugData }: ArticleTabProps) {
     <div className="article-result">
       <div className="article-content">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {removeTitleFromArticle(stage3Data.final_article ?? '')}
+          {removeTitleFromArticle(articleContent)}
         </ReactMarkdown>
       </div>
     </div>

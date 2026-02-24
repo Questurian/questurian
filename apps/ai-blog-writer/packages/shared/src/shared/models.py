@@ -79,6 +79,21 @@ class Stage3Output(BaseModel):
     debug_composition_response: Optional[str] = None
 
 
+class StageEditorialAugmentationOutput(BaseModel):
+    """Editorial augmentation output applied after stage 3 composition."""
+    video_id: str
+    title: str
+    article_type: str
+    augmented_content: str
+    components_added: list[Dict[str, str]]
+    diagnostic: Dict[str, Literal["strong", "weak"]]
+    augmentation_summary: str
+    augmentation_applied: bool
+    debug_prompt: Optional[str] = None
+    debug_raw_response: Optional[str] = None
+    error: Optional[str] = None
+
+
 class Stage4Output(BaseModel):
     """Stage 4: Article title generation."""
     video_id: str

@@ -3,7 +3,11 @@ import remarkGfm from 'remark-gfm'
 
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 import type { DebugResponse } from '../../api'
-import { getStage3Data, getStage4Data } from '../../services/stage-data.selectors'
+import {
+  getStage3Data,
+  getStage4Data,
+  getStageEditorialAugmentationData,
+} from '../../services/stage-data.selectors'
 import type { LexicalCopyStatus } from '../../types/youtube2blog.types'
 import { removeTitleFromArticle } from '../../utils/article.utils'
 
@@ -15,8 +19,9 @@ type FinalResultsTabProps = {
 
 export function FinalResultsTab({ debugData, lexicalCopyStatus, onCopyLexical }: FinalResultsTabProps) {
   const stage3Data = getStage3Data(debugData)
+  const stageEditorialData = getStageEditorialAugmentationData(debugData)
   const stage4Data = getStage4Data(debugData)
-  const markdown = stage3Data?.final_article
+  const articleContent = stageEditorialData?.augmented_content ?? stage3Data?.final_article
 
   return (
     <>
@@ -24,8 +29,8 @@ export function FinalResultsTab({ debugData, lexicalCopyStatus, onCopyLexical }:
         <button
           type="button"
           className={`payload-btn payload-btn-${lexicalCopyStatus}`}
-          disabled={!markdown || lexicalCopyStatus === 'loading'}
-          onClick={() => markdown && onCopyLexical(markdown)}
+          disabled={!articleContent || lexicalCopyStatus === 'loading'}
+          onClick={() => articleContent && onCopyLexical(articleContent)}
         >
           <img
             src={payloadLogoUrl}
@@ -48,16 +53,16 @@ export function FinalResultsTab({ debugData, lexicalCopyStatus, onCopyLexical }:
             <h2 className="title-display">{stage4Data.title}</h2>
           </div>
         ) : null}
-        {stage3Data?.final_article ? (
+        {articleContent ? (
           <div className="article-result">
             <div className="article-content">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {removeTitleFromArticle(stage3Data.final_article)}
+                {removeTitleFromArticle(articleContent)}
               </ReactMarkdown>
             </div>
           </div>
         ) : null}
-        {!stage4Data?.title && !stage3Data?.final_article ? (
+        {!stage4Data?.title && !articleContent ? (
           <p className="placeholder">Final results are being prepared...</p>
         ) : null}
       </div>

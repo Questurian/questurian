@@ -183,3 +183,38 @@ def test_upload_csv_route_removed():
     client = _build_client()
     response = client.post("/youtube2blog/upload")
     assert response.status_code == 404
+
+
+def test_debug_includes_editorial_augmentation_stage(monkeypatch):
+    client = _build_client()
+
+    monkeypatch.setattr(
+        youtube2blog_routes,
+        "read_status",
+        lambda run_id: {
+            "run_id": run_id,
+            "stage": "stage_editorial_augmentation",
+            "state": "running",
+            "error": None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    def fake_read_stage_result(_run_id: str, stage: str):
+        if stage == "stage_editorial_augmentation":
+            return {
+                "data": {
+                    "augmentation_applied": True,
+                    "augmentation_summary": "Added editorial blocks.",
+                }
+            }
+        return None
+
+    monkeypatch.setattr(youtube2blog_routes, "read_stage_result", fake_read_stage_result)
+    monkeypatch.setattr(youtube2blog_routes, "read_output", lambda _run_id: None)
+
+    response = client.get("/youtube2blog/debug/run-123")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "stage_editorial_augmentation" in payload["stages"]

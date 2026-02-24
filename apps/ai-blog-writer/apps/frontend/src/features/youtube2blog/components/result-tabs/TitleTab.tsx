@@ -8,7 +8,7 @@ type TitleTabProps = {
 export function TitleTab({ debugData }: TitleTabProps) {
   const stage4Data = getStage4Data(debugData)
   if (!stage4Data) {
-    return <p className="placeholder">No title yet. Finish Stage 4 to see results.</p>
+    return <p className="placeholder">No title yet. Finish Stage 5 to see results.</p>
   }
 
   return (
