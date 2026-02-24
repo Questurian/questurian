@@ -1,0 +1,159 @@
+import type { UploadImageResponse } from '../../../images'
+import type {
+  CreateArticlePayload,
+  ExternalImageProvider,
+  Location,
+  MediaAsset,
+  PexelsOrientation,
+  PexelsPhoto,
+  UnsplashPhoto,
+} from '../../api'
+
+export type MediaVariant =
+  | 'thumbnail'
+  | 'square'
+  | 'wide'
+  | 'portrait'
+  | 'hero'
+  | 'open_graph'
+  | 'editorial'
+
+export type BlockImageModalMode = 'default' | 'img' | 'img-trio'
+export type ImgTrioFormat = 'square' | 'landscape'
+export type PexelsOrientationOption = PexelsOrientation | ''
+export type ImageSourceOption = 'payload' | 'upload' | 'unsplash' | 'pexels'
+export type EditorModelName = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash'
+
+export type EditorialStageArticleApi = {
+  fetchLocations: (
+    token?: string,
+    params?: { limit?: number; page?: number }
+  ) => Promise<{ docs: Location[]; totalDocs: number; totalPages: number }>
+  fetchMediaAssets: (
+    token?: string,
+    params?: {
+      limit?: number
+      mimeType?: string
+      minWidth?: number
+      minHeight?: number
+      width?: number
+      height?: number
+    }
+  ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
+  createArticle: (
+    payload: CreateArticlePayload,
+    token: string
+  ) => Promise<{ id: number; title: string; slug: string }>
+  convertMarkdownToLexical: (markdown: string) => Promise<{
+    success: boolean
+    data?: object
+    error?: string
+  }>
+  fetchResult: (runId: string) => Promise<{ markdown: string }>
+  markArticleSynced: (
+    runId: string,
+    payloadArticleId: number
+  ) => Promise<{ message: string; run_id: string; payload_article_id: number }>
+  searchPexelsImages: (
+    query: string,
+    params?: {
+      perPage?: number
+      page?: number
+      orientation?: PexelsOrientation
+    }
+  ) => Promise<{
+    photos: PexelsPhoto[]
+  }>
+  searchUnsplashImages: (
+    query: string,
+    params?: {
+      perPage?: number
+      page?: number
+      orientation?: PexelsOrientation
+    }
+  ) => Promise<{
+    photos: UnsplashPhoto[]
+  }>
+  importExternalImage: (
+    input: {
+      sourceUrl: string
+      provider: ExternalImageProvider
+      externalRef: string
+      altText: string
+      photographerCredit: string
+      locationRef: number
+      photoId?: string | number
+    },
+    token: string
+  ) => Promise<UploadImageResponse>
+  fetchExternalImageSource: (
+    input: {
+      sourceUrl: string
+      provider: ExternalImageProvider
+      photoId?: string | number
+    },
+    token: string
+  ) => Promise<{
+    blob: Blob
+    fileName: string
+    contentType: string
+  }>
+  rewriteBlockWithAi: (
+    input: {
+      prompt: string
+      blockContent: string
+      modelName?: EditorModelName
+      articleTitle?: string
+      articleContext?: string
+    }
+  ) => Promise<{ rewritten_content: string }>
+}
+
+export type EditorialStageRoutes = {
+  stagePath: string
+  stageArticlePath: string
+  articlesPath: string
+}
+
+export type EditorialStageArticlePageProps = {
+  storageKey: string
+  routes: EditorialStageRoutes
+  api: EditorialStageArticleApi
+}
+
+export type BlockImageModalState = {
+  blockId: string
+  show: boolean
+  mode: BlockImageModalMode
+  replaceExistingBlock?: boolean
+}
+
+export type OpenBlockImageModalOptions = {
+  caption?: string
+  trioFormat?: ImgTrioFormat
+  selectedAssetIds?: number[]
+  replaceExistingBlock?: boolean
+}
+
+export type ExternalImageCropContext = 'featured' | 'block'
+
+export type ExternalImageCropDraft = {
+  context: ExternalImageCropContext
+  provider: ExternalImageProvider
+  sourceUrl: string
+  photoId?: string | number
+  file: File
+  externalRef: string
+  fileNamePrefix: string
+  altText: string
+  photographerCredit: string
+  blockId?: string
+  replaceExistingBlock?: boolean
+  blockMode?: BlockImageModalMode
+  trioFormat?: ImgTrioFormat
+}
+
+export type SupportedEditorialComponent =
+  | 'key_takeaways_box'
+  | 'pull_quote'
+  | 'in_the_know_box'

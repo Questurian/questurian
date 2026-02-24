@@ -1,34 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AuthContext, type AuthState } from './auth-context';
 
 const AUTH_STORAGE_KEY = 'payload_auth';
 const DEFAULT_PAYLOAD_URL = 'http://localhost:4000';
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || DEFAULT_PAYLOAD_URL;
 const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
-
-interface User {
-  id: string;
-  email: string;
-  role?: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-interface AuthState {
-  token: string;
-  expiresAt: number;
-  user: User;
-}
-
-interface AuthContextValue {
-  token: string | null;
-  expiresAt: number | null;
-  user: User | null;
-  isAuthenticated: boolean;
-  isConnected: boolean;
-  connectionError: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-}
 
 function isTokenValid(token: string | null | undefined, expiresAt: number | null | undefined): boolean {
   if (!token || !expiresAt) {
@@ -54,8 +30,6 @@ function readStoredAuth(): AuthState | null {
     return null;
   }
 }
-
-const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthState | null>(() => readStoredAuth());
@@ -229,12 +203,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [authState, isConnected, connectionError, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }
