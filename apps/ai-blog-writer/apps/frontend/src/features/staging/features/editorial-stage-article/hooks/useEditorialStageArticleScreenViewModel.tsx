@@ -1,86 +1,52 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useReducer,
   type Dispatch,
-  type ReactNode,
   type SetStateAction,
 } from 'react'
+import { ExternalImageCropEditor } from '../../../components/editorial-stage/ExternalImageCropEditor'
 import type { StagedArticle } from '../../../types'
+import {
+  createInitialEditorialStageUiState,
+  editorialStageUiReducer,
+} from '../state/editorialStageUiMachine'
 import type {
   ExternalImageCropContext,
   EditorialStageArticlePageProps,
   SupportedEditorialComponent,
 } from '../types'
-import {
-  buildImageFileNamePrefix,
-} from '../media-utils'
-import {
-  buildEditorialPublishAnalysis,
-} from '../editorial-markdown.service'
-import {
-  getImageTimelineItemId,
-} from '../workflow.service'
-import { useEditorialStageDerivedState } from '../hooks/useEditorialStageDerivedState'
-import { useEditorialStageTimeline } from '../hooks/useEditorialStageTimeline'
-import { useEditorialStageBlocks } from '../hooks/useEditorialStageBlocks'
-import { useEditorialStagePageData } from '../hooks/useEditorialStagePageData'
-import { useEditorialStageMedia } from '../hooks/useEditorialStageMedia'
-import { useEditorialStageImageBlockAction } from '../hooks/useEditorialStageImageBlockAction'
-import { useEditorialStagePublishWorkflow } from '../hooks/useEditorialStagePublishWorkflow'
-import { getMediaAssetUrl } from '../utils/editorial-stage-view.utils'
-import { ExternalImageCropEditor } from '../../../components/editorial-stage/ExternalImageCropEditor'
-import {
-  buildBlockModalView,
-  buildFeaturedModalView,
-  buildSidebarView,
-  buildTimelineListView,
-  type BlockModalViewProps,
-  type FeaturedModalViewProps,
-  type SidebarViewProps,
-  type TimelineListViewProps,
-} from '../selectors'
-import {
-  createInitialEditorialStageUiState,
-  editorialStageUiReducer,
-  type PublishResult,
-} from '../state/editorialStageUiMachine'
+import { buildEditorialPublishAnalysis } from '../editorial-markdown.service'
+import { getImageTimelineItemId } from '../workflow.service'
+import { useEditorialStageBlocks } from './useEditorialStageBlocks'
+import { useEditorialStageMedia } from './useEditorialStageMedia'
+import { useEditorialStagePageData } from './useEditorialStagePageData'
+import { useEditorialStagePublishWorkflow } from './useEditorialStagePublishWorkflow'
+import { useEditorialStageTimeline } from './useEditorialStageTimeline'
+import { useEditorialStageLoadedArticleViews } from './useEditorialStageLoadedArticleViews'
+import type { EditorialStageArticleScreenViewModel, EditorialStageStatusView } from '../view-model/types'
+import type { PublishResult } from '../selectors'
 
-type EditorialStageArticleProviderProps = EditorialStageArticlePageProps & {
+type UseEditorialStageArticleScreenViewModelParams = EditorialStageArticlePageProps & {
   token: string | null | undefined
-  children: ReactNode
 }
 
-type EditorialStageLayoutView = {
-  stagedArticle: StagedArticle
-  stagePath: string
-  hasMissingFeaturedImage: boolean
-  isConverting: boolean
-  onResetToOriginalBlocks: () => void
-  onDelete: () => void
-  onUpdateTitle: (title: string) => void
+const EMPTY_STAGED_ARTICLE: StagedArticle = {
+  id: '',
+  runId: '',
+  originalTitle: '',
+  originalContent: '',
+  originalType: '',
+  title: '',
+  content: '',
+  blocks: [],
+  editorialBlocks: [],
+  lexicalConverted: false,
+  publishedToPayload: false,
+  createdAt: '',
+  updatedAt: '',
 }
-
-type EditorialStageStatusView = {
-  isLoading: boolean
-  error: string | null
-  stagedArticle: StagedArticle | null
-  articlesPath: string
-}
-
-type EditorialStageArticleContextValue = {
-  status: EditorialStageStatusView
-  layout: EditorialStageLayoutView | null
-  timelineListProps: TimelineListViewProps | null
-  sidebarProps: SidebarViewProps | null
-  featuredModalProps: FeaturedModalViewProps | null
-  blockModalProps: BlockModalViewProps | null
-}
-
-const EditorialStageArticleContext = createContext<EditorialStageArticleContextValue | null>(null)
 
 function useSetPublishResult(
   currentResult: PublishResult,
@@ -94,13 +60,12 @@ function useSetPublishResult(
   }, [currentResult, dispatchUi])
 }
 
-export function EditorialStageArticleProvider({
+export function useEditorialStageArticleScreenViewModel({
   storageKey,
   routes,
   api,
   token,
-  children,
-}: EditorialStageArticleProviderProps) {
+}: UseEditorialStageArticleScreenViewModelParams): EditorialStageArticleScreenViewModel {
   const {
     fetchLocations,
     fetchMediaAssets,
@@ -411,123 +376,17 @@ export function EditorialStageArticleProvider({
     articlesPath: routes.articlesPath,
   }), [isLoading, error, stagedArticle, routes.articlesPath])
 
-  if (isLoading || !stagedArticle) {
-    return (
-      <EditorialStageArticleContext.Provider
-        value={{
-          status,
-          layout: null,
-          timelineListProps: null,
-          sidebarProps: null,
-          featuredModalProps: null,
-          blockModalProps: null,
-        }}
-      >
-        {children}
-      </EditorialStageArticleContext.Provider>
-    )
-  }
+  const resolvedStagedArticle = stagedArticle ?? EMPTY_STAGED_ARTICLE
 
-  if (error) {
-    return (
-      <EditorialStageArticleContext.Provider
-        value={{
-          status,
-          layout: null,
-          timelineListProps: null,
-          sidebarProps: null,
-          featuredModalProps: null,
-          blockModalProps: null,
-        }}
-      >
-        {children}
-      </EditorialStageArticleContext.Provider>
-    )
-  }
-
-  const getImageUrl = getMediaAssetUrl
-
-  const {
-    selectedLocation,
-    selectedFeaturedImage,
-    lastContentBlock,
-    contentBlockById,
-    editorialBlockById,
-    contentBlockIndexMap,
-    timelineIndexMap,
-    contentTimelineNumberMap,
-    editorialTimelineNumberMap,
-    imageTimelineNumberMap,
-    totalTechnicalBlockCount,
-    allFieldsFilled,
-    hasMissingFeaturedImage,
-    isImgBlockModal,
-    isImgTrioModal,
-    isMultiImageModal,
-    featuredImageRequirementLabel,
-    singleImageRequirementLabel,
-    imgPairRequirementLabel,
-    imgTrioRequirementLabel,
-    activeBlockImageRequirementLabel,
-    filteredFeaturedImageAssets,
-    filteredBlockImageAssets,
-    imgTrioDimensions,
-    requiredImageCount,
-    selectedImgBlockAssets,
-  } = useEditorialStageDerivedState({
-    stagedArticle,
+  const loadedViews = useEditorialStageLoadedArticleViews({
+    stagedArticle: resolvedStagedArticle,
+    stagePath: routes.stagePath,
+    token,
     locations,
     mediaAssets,
     timelineItems,
-    imageSearch,
-    blockImageModal,
-    blockImageSearch,
-    imgBlockAssets,
-    selectedImgBlockAssetIds,
-    imgTrioFormat,
-    findPreferredVariantAsset,
-  })
-
-  const featuredImageFileNamePrefix = buildImageFileNamePrefix(
-    stagedArticle.title,
-    stagedArticle.id
-  )
-  const blockImageExternalRef = blockImageModal
-    ? `${stagedArticle.id}_block_${blockImageModal.blockId}`
-    : ''
-  const blockImageFileNamePrefix = blockImageExternalRef
-    ? buildImageFileNamePrefix(stagedArticle.title, blockImageExternalRef)
-    : undefined
-
-  const selectedImgBlockAssetsCount = selectedImgBlockAssets.length
-
-  const handleAddSelectedImgBlock = useEditorialStageImageBlockAction({
-    blockImageModal,
-    selectedImgBlockAssets,
-    requiredImageCount,
-    findPreferredVariantAsset,
-    imgTrioFormat,
-    imgBlockCaption,
-    addImgPairAfterBlock,
-    addImgTrioAfterBlock,
-    mergeMediaAssetsIntoState,
-    closeBlockImageModal: closeBlockImageModalTracked,
-    setPublishResult,
-  })
-
-  const timelineListProps = buildTimelineListView({
-    stagedArticle,
     activeEditingTimelineItemId,
-    totalTechnicalBlockCount,
-    timelineItems,
-    timelineIndexMap,
-    editorialBlockById,
-    contentBlockById,
-    contentBlockIndexMap,
-    contentTimelineNumberMap,
-    editorialTimelineNumberMap,
-    imageTimelineNumberMap,
-    lastContentBlock,
+    setActiveEditingTimelineItemId,
     draggedTimelineItemId,
     dragOverTimelineItemId,
     handleDragStart,
@@ -536,219 +395,138 @@ export function EditorialStageArticleProvider({
     handleDragLeave,
     handleDrop,
     moveTimelineItem,
+    toggleTimelineItemEdit,
     editorialPublishAnalysis,
     fixEditorialBlock,
     updateEditorialBlockMarkdown,
     removeEditorialBlock,
+    updateBlockContent,
+    rewriteTextBlockWithAi,
+    addImageAfterBlock,
+    addImgPairAfterBlock,
+    addImgTrioAfterBlock,
+    updateMediaGroupCaption,
+    removeImageAfterBlock,
+    removeImgPairAfterBlock,
+    removeImgTrioAfterBlock,
+    mergeWithNextBlock,
+    resetToOriginalBlocks,
+    findHeaderSplitPoints,
+    splitBlockAtHeader,
+    addNewBlock,
+    addNewEditorialBlock: addEditorialFromPicker,
+    deleteBlock,
+    updateStagedArticle,
+    handleDelete,
+    isConverting,
+    isPublishing,
+    publishResult,
+    setPublishResult,
     openImagePickerTarget: uiState.pickers.openImageTarget,
     openEditorialPickerTarget: uiState.pickers.openEditorialTarget,
     toggleImagePicker,
     toggleEditorialPicker,
-    openBlockImageModal: openBlockImageModalTracked,
-    addEditorialFromPicker,
-    addNewBlock,
-    mergeWithNextBlock,
-    toggleTimelineItemEdit,
-    deleteBlock,
-    updateBlockContent,
-    rewriteTextBlockWithAi,
-    findHeaderSplitPoints,
-    splitBlockAtHeader,
-    mediaAssets,
-    getImageUrl,
-    updateMediaGroupCaption,
-    removeImgTrioAfterBlock,
-    removeImgPairAfterBlock,
-    removeImageAfterBlock,
-  })
-
-  const sidebarProps = buildSidebarView({
-    stagedArticle,
-    isPublishing,
-    allFieldsFilled,
-    publishResult,
-    featuredImageRequirementLabel,
-    selectedFeaturedImage,
-    getImageUrl,
-    setShowImageModal: setShowImageModalTracked,
-    locations,
-    updateStagedArticle,
-    onPublish: handlePublish,
-  })
-
-  const featuredModalProps = buildFeaturedModalView({
     showImageModal,
-    stagedArticle,
-    featuredImageRequirementLabel,
+    setShowImageModalTracked,
     featuredImageSource,
     setFeaturedImageSource,
     imageSearch,
     setImageSearch,
-    filteredFeaturedImageAssets,
-    selectedFeaturedImage,
-    selectedLocation,
-    featuredImageFileNamePrefix,
-    token: token || undefined,
     imageAltText,
-    imagePhotographerCredit,
     setImageAltText,
+    imagePhotographerCredit,
     setImagePhotographerCredit,
-    handleUploadComplete,
-    externalImageCropDraft,
-    renderExternalCropEditor,
     unsplashFeaturedQuery,
     setUnsplashFeaturedQuery,
+    unsplashFeaturedResults,
+    isSearchingUnsplashFeatured,
+    unsplashFeaturedError,
     unsplashFeaturedOrientation,
     setUnsplashFeaturedOrientation,
     unsplashFeaturedPerPage,
     setUnsplashFeaturedPerPage,
-    runFeaturedUnsplashSearch,
-    isSearchingUnsplashFeatured,
-    unsplashFeaturedError,
-    unsplashFeaturedResults,
-    isImportingFeaturedExternalImage,
-    handleImportFeaturedExternalImage,
     pexelsFeaturedQuery,
     setPexelsFeaturedQuery,
+    pexelsFeaturedResults,
+    isSearchingPexelsFeatured,
+    pexelsFeaturedError,
     pexelsFeaturedOrientation,
     setPexelsFeaturedOrientation,
     pexelsFeaturedPerPage,
     setPexelsFeaturedPerPage,
+    isImportingFeaturedExternalImage,
+    handleImportFeaturedExternalImage,
+    handleUploadComplete,
+    runFeaturedUnsplashSearch,
     runFeaturedPexelsSearch,
-    isSearchingPexelsFeatured,
-    pexelsFeaturedError,
-    pexelsFeaturedResults,
-    findPreferredVariantAsset,
-    updateStagedArticle,
-    getImageUrl,
-    setShowImageModal: setShowImageModalTracked,
-  })
-
-  const blockModalProps = buildBlockModalView({
-    stagedPublishedToPayload: stagedArticle.publishedToPayload,
     blockImageModal,
-    closeBlockImageModal: closeBlockImageModalTracked,
     blockImageSource,
     setBlockImageSource,
-    isImgBlockModal,
-    isImgTrioModal,
-    isMultiImageModal,
-    singleImageRequirementLabel,
-    imgPairRequirementLabel,
-    imgTrioRequirementLabel,
-    activeBlockImageRequirementLabel,
-    imgTrioFormat,
-    setImgTrioFormat,
-    imgBlockCaption,
-    setImgBlockCaption,
     blockImageSearch,
     setBlockImageSearch,
+    blockImageAltText,
+    setBlockImageAltText,
+    blockImagePhotographerCredit,
+    setBlockImagePhotographerCredit,
+    imgBlockAssets,
     isLoadingImgBlockAssets,
     imgBlockAssetsError,
-    filteredBlockImageAssets,
     selectedImgBlockAssetIds,
     toggleImgBlockAssetSelection,
-    requiredImageCount,
-    selectedImgBlockAssetsCount,
-    handleAddSelectedImgBlock,
-    imgTrioDimensions,
-    selectedLocation,
-    blockImageExternalRef,
-    blockImageFileNamePrefix,
-    token: token || undefined,
-    blockImageAltText,
-    blockImagePhotographerCredit,
-    setBlockImageAltText,
-    setBlockImagePhotographerCredit,
-    handleBlockImageUploadComplete,
-    externalImageCropDraft,
-    renderExternalCropEditor,
+    imgBlockCaption,
+    setImgBlockCaption,
+    imgTrioFormat,
+    setImgTrioFormat,
     unsplashBlockQuery,
     setUnsplashBlockQuery,
+    unsplashBlockResults,
+    isSearchingUnsplashBlock,
+    unsplashBlockError,
     unsplashBlockOrientation,
     setUnsplashBlockOrientation,
     unsplashBlockPerPage,
     setUnsplashBlockPerPage,
-    runBlockUnsplashSearch,
-    isSearchingUnsplashBlock,
-    unsplashBlockError,
-    unsplashBlockResults,
-    isImportingBlockExternalImage,
-    handleImportBlockExternalImage,
     pexelsBlockQuery,
     setPexelsBlockQuery,
+    pexelsBlockResults,
+    isSearchingPexelsBlock,
+    pexelsBlockError,
     pexelsBlockOrientation,
     setPexelsBlockOrientation,
     pexelsBlockPerPage,
     setPexelsBlockPerPage,
+    openBlockImageModalTracked,
+    closeBlockImageModalTracked,
+    isImportingBlockExternalImage,
+    handleImportBlockExternalImage,
+    handleBlockImageUploadComplete,
+    runBlockUnsplashSearch,
     runBlockPexelsSearch,
-    isSearchingPexelsBlock,
-    pexelsBlockError,
-    pexelsBlockResults,
+    externalImageCropDraft,
+    renderExternalCropEditor,
     isUploadingExternalImageVariants,
-    findPreferredVariantAsset,
-    addImageAfterBlock,
-    setPublishResult,
-    setActiveEditingTimelineItemId,
-    getImageTimelineItemId,
     mergeMediaAssetsIntoState,
-    getImageUrl,
+    findPreferredVariantAsset,
+    handlePublish,
   })
 
-  const layout: EditorialStageLayoutView = {
-    stagedArticle,
-    stagePath: routes.stagePath,
-    hasMissingFeaturedImage,
-    isConverting,
-    onResetToOriginalBlocks: resetToOriginalBlocks,
-    onDelete: handleDelete,
-    onUpdateTitle: (title: string) => updateStagedArticle({ title }),
+  if (isLoading || !stagedArticle || error) {
+    return {
+      status,
+      layout: null,
+      timelineListProps: null,
+      sidebarProps: null,
+      featuredModalProps: null,
+      blockModalProps: null,
+    }
   }
 
-  return (
-    <EditorialStageArticleContext.Provider
-      value={{
-        status,
-        layout,
-        timelineListProps,
-        sidebarProps,
-        featuredModalProps,
-        blockModalProps,
-      }}
-    >
-      {children}
-    </EditorialStageArticleContext.Provider>
-  )
-}
-
-export function useEditorialStageArticleContext() {
-  const context = useContext(EditorialStageArticleContext)
-  if (!context) {
-    throw new Error('useEditorialStageArticleContext must be used within EditorialStageArticleProvider')
+  return {
+    status,
+    layout: loadedViews.layout,
+    timelineListProps: loadedViews.timelineListProps,
+    sidebarProps: loadedViews.sidebarProps,
+    featuredModalProps: loadedViews.featuredModalProps,
+    blockModalProps: loadedViews.blockModalProps,
   }
-  return context
-}
-
-export function useEditorialStageStatus() {
-  return useEditorialStageArticleContext().status
-}
-
-export function useEditorialStageLayoutView() {
-  return useEditorialStageArticleContext().layout
-}
-
-export function useEditorialStageTimelineListProps() {
-  return useEditorialStageArticleContext().timelineListProps
-}
-
-export function useEditorialStageSidebarProps() {
-  return useEditorialStageArticleContext().sidebarProps
-}
-
-export function useEditorialStageFeaturedModalProps() {
-  return useEditorialStageArticleContext().featuredModalProps
-}
-
-export function useEditorialStageBlockModalProps() {
-  return useEditorialStageArticleContext().blockModalProps
 }
