@@ -4,7 +4,6 @@ import { useAuth } from '../../../providers/useAuth'
 import '../../youtube2blog/styles/stage-article.css'
 import type {
   EditorialStageArticlePageProps,
-  ExternalImageCropContext,
   SupportedEditorialComponent,
 } from '../features/editorial-stage-article/types'
 import {
@@ -25,10 +24,10 @@ import { useEditorialStageBlocks } from '../features/editorial-stage-article/hoo
 import { useEditorialStagePageData } from '../features/editorial-stage-article/hooks/useEditorialStagePageData'
 import { useEditorialStageMedia } from '../features/editorial-stage-article/hooks/useEditorialStageMedia'
 import { useEditorialStageImageBlockAction } from '../features/editorial-stage-article/hooks/useEditorialStageImageBlockAction'
+import { useEditorialStagePageViewModel } from '../features/editorial-stage-article/hooks/useEditorialStagePageViewModel'
 import { getMediaAssetUrl } from '../features/editorial-stage-article/utils/editorial-stage-view.utils'
 import { buildPayloadContentBlocks } from '../features/editorial-stage-article/services/editorial-stage-publish.service'
 import { FeaturedImageModal } from './editorial-stage/FeaturedImageModal'
-import { ExternalImageCropEditor } from './editorial-stage/ExternalImageCropEditor'
 import { BlockImageModal } from './editorial-stage/BlockImageModal'
 import { EditorialSidebar } from './editorial-stage/EditorialSidebar'
 import { EditorialTimelineList } from './editorial-stage/EditorialTimelineList'
@@ -158,93 +157,101 @@ export default function EditorialStageArticlePage({
   }, [addNewEditorialBlock])
 
   const {
-    showImageModal,
-    setShowImageModal,
-    featuredImageSource,
-    setFeaturedImageSource,
-    imageSearch,
-    setImageSearch,
-    imageAltText,
-    setImageAltText,
-    imagePhotographerCredit,
-    setImagePhotographerCredit,
-    unsplashFeaturedQuery,
-    setUnsplashFeaturedQuery,
-    unsplashFeaturedResults,
-    isSearchingUnsplashFeatured,
-    unsplashFeaturedError,
-    unsplashFeaturedOrientation,
-    setUnsplashFeaturedOrientation,
-    unsplashFeaturedPerPage,
-    setUnsplashFeaturedPerPage,
-    pexelsFeaturedQuery,
-    setPexelsFeaturedQuery,
-    pexelsFeaturedResults,
-    isSearchingPexelsFeatured,
-    pexelsFeaturedError,
-    pexelsFeaturedOrientation,
-    setPexelsFeaturedOrientation,
-    pexelsFeaturedPerPage,
-    setPexelsFeaturedPerPage,
-    isImportingFeaturedExternalImage,
-    externalImageCropDraft,
-    setExternalImageCropDraft,
-    externalImageCropError,
-    setExternalImageCropError,
-    externalImageUploadProgress,
-    setExternalImageUploadProgress,
-    isUploadingExternalImageVariants,
-    setIsUploadingExternalImageVariants,
-    isImportingBlockExternalImage,
-    blockImageModal,
-    blockImageSource,
-    setBlockImageSource,
-    blockImageSearch,
-    setBlockImageSearch,
-    blockImageAltText,
-    setBlockImageAltText,
-    blockImagePhotographerCredit,
-    setBlockImagePhotographerCredit,
-    imgBlockAssets,
-    isLoadingImgBlockAssets,
-    imgBlockAssetsError,
-    selectedImgBlockAssetIds,
-    toggleImgBlockAssetSelection,
-    imgBlockCaption,
-    setImgBlockCaption,
-    imgTrioFormat,
-    setImgTrioFormat,
-    unsplashBlockQuery,
-    setUnsplashBlockQuery,
-    unsplashBlockResults,
-    isSearchingUnsplashBlock,
-    unsplashBlockError,
-    unsplashBlockOrientation,
-    setUnsplashBlockOrientation,
-    unsplashBlockPerPage,
-    setUnsplashBlockPerPage,
-    pexelsBlockQuery,
-    setPexelsBlockQuery,
-    pexelsBlockResults,
-    isSearchingPexelsBlock,
-    pexelsBlockError,
-    pexelsBlockOrientation,
-    setPexelsBlockOrientation,
-    pexelsBlockPerPage,
-    setPexelsBlockPerPage,
-    openBlockImageModal,
-    closeBlockImageModal,
-    findPreferredVariantAsset,
-    handleUploadExternalCroppedVariants,
-    handleSkipCropExternalImport,
-    handleImportFeaturedExternalImage,
-    handleImportBlockExternalImage,
-    handleUploadComplete,
-    handleBlockImageUploadComplete,
-    runFeaturedUnsplashSearch,
-    runFeaturedPexelsSearch,
-    runBlockUnsplashSearch,
-    runBlockPexelsSearch,
+    featured: {
+      showImageModal,
+      setShowImageModal,
+      featuredImageSource,
+      setFeaturedImageSource,
+      imageSearch,
+      setImageSearch,
+      imageAltText,
+      setImageAltText,
+      imagePhotographerCredit,
+      setImagePhotographerCredit,
+      unsplashFeaturedQuery,
+      setUnsplashFeaturedQuery,
+      unsplashFeaturedResults,
+      isSearchingUnsplashFeatured,
+      unsplashFeaturedError,
+      unsplashFeaturedOrientation,
+      setUnsplashFeaturedOrientation,
+      unsplashFeaturedPerPage,
+      setUnsplashFeaturedPerPage,
+      pexelsFeaturedQuery,
+      setPexelsFeaturedQuery,
+      pexelsFeaturedResults,
+      isSearchingPexelsFeatured,
+      pexelsFeaturedError,
+      pexelsFeaturedOrientation,
+      setPexelsFeaturedOrientation,
+      pexelsFeaturedPerPage,
+      setPexelsFeaturedPerPage,
+      isImportingFeaturedExternalImage,
+      handleImportFeaturedExternalImage,
+      handleUploadComplete,
+      runFeaturedUnsplashSearch,
+      runFeaturedPexelsSearch,
+    },
+    block: {
+      blockImageModal,
+      blockImageSource,
+      setBlockImageSource,
+      blockImageSearch,
+      setBlockImageSearch,
+      blockImageAltText,
+      setBlockImageAltText,
+      blockImagePhotographerCredit,
+      setBlockImagePhotographerCredit,
+      imgBlockAssets,
+      isLoadingImgBlockAssets,
+      imgBlockAssetsError,
+      selectedImgBlockAssetIds,
+      toggleImgBlockAssetSelection,
+      imgBlockCaption,
+      setImgBlockCaption,
+      imgTrioFormat,
+      setImgTrioFormat,
+      unsplashBlockQuery,
+      setUnsplashBlockQuery,
+      unsplashBlockResults,
+      isSearchingUnsplashBlock,
+      unsplashBlockError,
+      unsplashBlockOrientation,
+      setUnsplashBlockOrientation,
+      unsplashBlockPerPage,
+      setUnsplashBlockPerPage,
+      pexelsBlockQuery,
+      setPexelsBlockQuery,
+      pexelsBlockResults,
+      isSearchingPexelsBlock,
+      pexelsBlockError,
+      pexelsBlockOrientation,
+      setPexelsBlockOrientation,
+      pexelsBlockPerPage,
+      setPexelsBlockPerPage,
+      openBlockImageModal,
+      closeBlockImageModal,
+      isImportingBlockExternalImage,
+      handleImportBlockExternalImage,
+      handleBlockImageUploadComplete,
+      runBlockUnsplashSearch,
+      runBlockPexelsSearch,
+    },
+    externalImport: {
+      externalImageCropDraft,
+      setExternalImageCropDraft,
+      externalImageCropError,
+      setExternalImageCropError,
+      externalImageUploadProgress,
+      setExternalImageUploadProgress,
+      isUploadingExternalImageVariants,
+      setIsUploadingExternalImageVariants,
+      handleUploadExternalCroppedVariants,
+      handleSkipCropExternalImport,
+    },
+    shared: {
+      findPreferredVariantAsset,
+    },
   } = useEditorialStageMedia({
     token,
     stagedArticle,
@@ -345,24 +352,6 @@ export default function EditorialStageArticlePage({
     }
   }
 
-  const renderExternalCropEditor = (context: ExternalImageCropContext) => (
-    <ExternalImageCropEditor
-      context={context}
-      externalImageCropDraft={externalImageCropDraft}
-      setExternalImageCropDraft={setExternalImageCropDraft}
-      externalImageCropError={externalImageCropError}
-      setExternalImageCropError={setExternalImageCropError}
-      externalImageUploadProgress={externalImageUploadProgress}
-      setExternalImageUploadProgress={setExternalImageUploadProgress}
-      isUploadingExternalImageVariants={isUploadingExternalImageVariants}
-      setIsUploadingExternalImageVariants={setIsUploadingExternalImageVariants}
-      isImportingFeaturedExternalImage={isImportingFeaturedExternalImage}
-      isImportingBlockExternalImage={isImportingBlockExternalImage}
-      handleSkipCropExternalImport={handleSkipCropExternalImport}
-      handleUploadExternalCroppedVariants={handleUploadExternalCroppedVariants}
-    />
-  )
-
   if (isLoading || !stagedArticle) {
     return (
       <div className="stage-article-page">
@@ -451,112 +440,72 @@ export default function EditorialStageArticlePage({
     closeBlockImageModal,
     setPublishResult,
   })
-  const blockImageModalBase = {
-    show: Boolean(blockImageModal?.show),
-    publishedToPayload: stagedArticle.publishedToPayload,
-    onClose: closeBlockImageModal,
-    blockImageModal,
-    isImgBlockModal,
-    isImgTrioModal,
-    isMultiImageModal,
-    singleImageRequirementLabel,
-    imgPairRequirementLabel,
-    imgTrioRequirementLabel,
-    activeBlockImageRequirementLabel,
-  }
-  const blockImageModalPayload = {
-    blockImageSource,
-    imgTrioFormat,
-    setImgTrioFormat,
-    imgBlockCaption,
-    setImgBlockCaption,
-    blockImageSearch,
-    setBlockImageSearch,
-    isLoadingImgBlockAssets,
-    imgBlockAssetsError,
-    filteredBlockImageAssets,
-    selectedImgBlockAssetIds,
-    toggleImgBlockAssetSelection,
-    requiredImageCount,
-    selectedImgBlockAssetsCount: selectedImgBlockAssets.length,
-    handleAddSelectedImgBlock,
-    imgTrioDimensions,
-  }
-  const blockImageModalUpload = {
+  const vm = useEditorialStagePageViewModel({
+    stagedArticle,
+    locations,
     selectedLocation,
-    blockImageExternalRef,
-    blockImageFileNamePrefix,
-    token: token || undefined,
-    blockImageAltText,
-    blockImagePhotographerCredit,
-    setBlockImageAltText,
-    setBlockImagePhotographerCredit,
-    handleBlockImageUploadComplete,
-  }
-  const blockImageModalExternal = {
-    externalImageCropDraft,
-    renderExternalCropEditor,
-    unsplashBlockQuery,
-    setUnsplashBlockQuery,
-    unsplashBlockOrientation,
-    setUnsplashBlockOrientation,
-    unsplashBlockPerPage,
-    setUnsplashBlockPerPage,
-    runBlockUnsplashSearch,
-    isSearchingUnsplashBlock,
-    unsplashBlockError,
-    unsplashBlockResults,
-    isImportingBlockExternalImage,
-    handleImportBlockExternalImage,
-    pexelsBlockQuery,
-    setPexelsBlockQuery,
-    pexelsBlockOrientation,
-    setPexelsBlockOrientation,
-    pexelsBlockPerPage,
-    setPexelsBlockPerPage,
-    runBlockPexelsSearch,
-    isSearchingPexelsBlock,
-    pexelsBlockError,
-    pexelsBlockResults,
-    isUploadingExternalImageVariants,
-  }
-  const blockImageModalActions = {
-    setBlockImageSource,
-    findPreferredVariantAsset,
-    addImageAfterBlock,
-    setPublishResult,
-    setActiveEditingTimelineItemId,
-    getImageTimelineItemId,
-    mergeMediaAssetsIntoState,
+    selectedFeaturedImage,
+    allFieldsFilled,
+    hasMissingFeaturedImage,
+    isPublishing,
+    publishResult,
+    updateStagedArticle,
+    totalTechnicalBlockCount,
+    activeEditingTimelineItemId,
+    timelineItems,
+    timelineIndexMap,
+    editorialBlockById,
+    contentBlockById,
+    contentBlockIndexMap,
+    contentTimelineNumberMap,
+    editorialTimelineNumberMap,
+    imageTimelineNumberMap,
+    lastContentBlock,
+    draggedTimelineItemId,
+    dragOverTimelineItemId,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    moveTimelineItem,
+    editorialPublishAnalysis,
+    fixEditorialBlock,
+    updateEditorialBlockMarkdown,
+    removeEditorialBlock,
+    openImagePickerTarget,
+    openEditorialPickerTarget,
+    toggleImagePicker,
+    toggleEditorialPicker,
+    openBlockImageModal,
+    addEditorialFromPicker,
+    addNewBlock,
+    mergeWithNextBlock,
+    toggleTimelineItemEdit,
+    deleteBlock,
+    updateBlockContent,
+    rewriteTextBlockWithAi,
+    findHeaderSplitPoints,
+    splitBlockAtHeader,
+    mediaAssets,
     getImageUrl,
-  }
-  const featuredImageModalBase = {
-    show: showImageModal,
-    publishedToPayload: stagedArticle.publishedToPayload,
-    onClose: () => setShowImageModal(false),
+    updateMediaGroupCaption,
+    removeImgTrioAfterBlock,
+    removeImgPairAfterBlock,
+    removeImageAfterBlock,
+    showImageModal,
+    setShowImageModal,
     featuredImageRequirementLabel,
-  }
-  const featuredImageModalPayload = {
     featuredImageSource,
+    setFeaturedImageSource,
     imageSearch,
     setImageSearch,
     filteredFeaturedImageAssets,
-    selectedFeaturedImage,
-  }
-  const featuredImageModalUpload = {
-    selectedLocation,
-    stagedArticleId: stagedArticle.id,
-    featuredImageFileNamePrefix,
-    token: token || undefined,
     imageAltText,
     imagePhotographerCredit,
     setImageAltText,
     setImagePhotographerCredit,
     handleUploadComplete,
-  }
-  const featuredImageModalExternal = {
-    externalImageCropDraft,
-    renderExternalCropEditor,
     unsplashFeaturedQuery,
     setUnsplashFeaturedQuery,
     unsplashFeaturedOrientation,
@@ -579,13 +528,80 @@ export default function EditorialStageArticlePage({
     isSearchingPexelsFeatured,
     pexelsFeaturedError,
     pexelsFeaturedResults,
-  }
-  const featuredImageModalActions = {
-    setFeaturedImageSource,
+    blockImageModal,
+    closeBlockImageModal,
+    blockImageSource,
+    setBlockImageSource,
+    isImgBlockModal,
+    isImgTrioModal,
+    isMultiImageModal,
+    singleImageRequirementLabel,
+    imgPairRequirementLabel,
+    imgTrioRequirementLabel,
+    activeBlockImageRequirementLabel,
+    imgTrioFormat,
+    setImgTrioFormat,
+    imgBlockCaption,
+    setImgBlockCaption,
+    blockImageSearch,
+    setBlockImageSearch,
+    isLoadingImgBlockAssets,
+    imgBlockAssetsError,
+    filteredBlockImageAssets,
+    selectedImgBlockAssetIds,
+    toggleImgBlockAssetSelection,
+    requiredImageCount,
+    selectedImgBlockAssetsCount: selectedImgBlockAssets.length,
+    handleAddSelectedImgBlock,
+    imgTrioDimensions,
+    blockImageExternalRef,
+    blockImageFileNamePrefix,
+    token: token || undefined,
+    blockImageAltText,
+    blockImagePhotographerCredit,
+    setBlockImageAltText,
+    setBlockImagePhotographerCredit,
+    handleBlockImageUploadComplete,
+    unsplashBlockQuery,
+    setUnsplashBlockQuery,
+    unsplashBlockOrientation,
+    setUnsplashBlockOrientation,
+    unsplashBlockPerPage,
+    setUnsplashBlockPerPage,
+    runBlockUnsplashSearch,
+    isSearchingUnsplashBlock,
+    unsplashBlockError,
+    unsplashBlockResults,
+    isImportingBlockExternalImage,
+    handleImportBlockExternalImage,
+    pexelsBlockQuery,
+    setPexelsBlockQuery,
+    pexelsBlockOrientation,
+    setPexelsBlockOrientation,
+    pexelsBlockPerPage,
+    setPexelsBlockPerPage,
+    runBlockPexelsSearch,
+    isSearchingPexelsBlock,
+    pexelsBlockError,
+    pexelsBlockResults,
+    externalImageCropDraft,
+    setExternalImageCropDraft,
+    externalImageCropError,
+    setExternalImageCropError,
+    externalImageUploadProgress,
+    setExternalImageUploadProgress,
+    isUploadingExternalImageVariants,
+    setIsUploadingExternalImageVariants,
+    handleSkipCropExternalImport,
+    handleUploadExternalCroppedVariants,
     findPreferredVariantAsset,
-    updateStagedArticle,
-    getImageUrl,
-  }
+    addImageAfterBlock,
+    setPublishResult,
+    setActiveEditingTimelineItemId,
+    getImageTimelineItemId,
+    mergeMediaAssetsIntoState,
+    featuredImageFileNamePrefix,
+  })
 
   return (
     <>
@@ -598,85 +614,19 @@ export default function EditorialStageArticlePage({
         onDelete={handleDelete}
         onUpdateTitle={(title) => updateStagedArticle({ title })}
         mainContent={(
-          <EditorialTimelineList
-            stagedArticle={stagedArticle}
-            activeEditingTimelineItemId={activeEditingTimelineItemId}
-            totalTechnicalBlockCount={totalTechnicalBlockCount}
-            timelineItems={timelineItems}
-            timelineIndexMap={timelineIndexMap}
-            editorialBlockById={editorialBlockById}
-            contentBlockById={contentBlockById}
-            contentBlockIndexMap={contentBlockIndexMap}
-            contentTimelineNumberMap={contentTimelineNumberMap}
-            editorialTimelineNumberMap={editorialTimelineNumberMap}
-            imageTimelineNumberMap={imageTimelineNumberMap}
-            draggedTimelineItemId={draggedTimelineItemId}
-            dragOverTimelineItemId={dragOverTimelineItemId}
-            handleDragStart={handleDragStart}
-            handleDragEnd={handleDragEnd}
-            handleDragOver={handleDragOver}
-            handleDragLeave={handleDragLeave}
-            handleDrop={handleDrop}
-            editorialPublishAnalysis={editorialPublishAnalysis}
-            fixEditorialBlock={fixEditorialBlock}
-            toggleTimelineItemEdit={toggleTimelineItemEdit}
-            updateEditorialBlockMarkdown={updateEditorialBlockMarkdown}
-            removeEditorialBlock={removeEditorialBlock}
-            moveTimelineItem={moveTimelineItem}
-            openImagePickerTarget={openImagePickerTarget}
-            openEditorialPickerTarget={openEditorialPickerTarget}
-            toggleImagePicker={toggleImagePicker}
-            toggleEditorialPicker={toggleEditorialPicker}
-            openBlockImageModal={openBlockImageModal}
-            addEditorialFromPicker={addEditorialFromPicker}
-            addNewBlock={addNewBlock}
-            mergeWithNextBlock={mergeWithNextBlock}
-            mediaAssets={mediaAssets}
-            getImageUrl={getImageUrl}
-            updateMediaGroupCaption={updateMediaGroupCaption}
-            removeImgTrioAfterBlock={removeImgTrioAfterBlock}
-            removeImgPairAfterBlock={removeImgPairAfterBlock}
-            removeImageAfterBlock={removeImageAfterBlock}
-            deleteBlock={deleteBlock}
-            updateBlockContent={updateBlockContent}
-            rewriteTextBlockWithAi={rewriteTextBlockWithAi}
-            findHeaderSplitPoints={findHeaderSplitPoints}
-            splitBlockAtHeader={splitBlockAtHeader}
-            lastContentBlock={lastContentBlock}
-          />
+          <EditorialTimelineList {...vm.timelineList} />
         )}
         sidebarContent={(
           <EditorialSidebar
-            stagedArticle={stagedArticle}
-            isPublishing={isPublishing}
-            allFieldsFilled={allFieldsFilled}
-            publishResult={publishResult}
-            featuredImageRequirementLabel={featuredImageRequirementLabel}
-            selectedFeaturedImage={selectedFeaturedImage}
-            getImageUrl={getImageUrl}
-            onOpenFeaturedImageModal={() => setShowImageModal(true)}
-            locations={locations}
-            onUpdateStagedArticle={updateStagedArticle}
+            {...vm.sidebar}
             onPublish={handlePublish}
           />
         )}
       />
 
-      <FeaturedImageModal
-        base={featuredImageModalBase}
-        payload={featuredImageModalPayload}
-        upload={featuredImageModalUpload}
-        external={featuredImageModalExternal}
-        actions={featuredImageModalActions}
-      />
+      <FeaturedImageModal {...vm.featuredModal} />
 
-      <BlockImageModal
-        base={blockImageModalBase}
-        payload={blockImageModalPayload}
-        upload={blockImageModalUpload}
-        external={blockImageModalExternal}
-        actions={blockImageModalActions}
-      />
+      <BlockImageModal {...vm.blockModal} />
     </>
   )
 }

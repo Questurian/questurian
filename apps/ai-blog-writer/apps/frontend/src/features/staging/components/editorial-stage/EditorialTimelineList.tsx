@@ -11,113 +11,144 @@ import { BlockActionZone } from './BlockActionZone'
 import { renderEditorialBlockCard } from './renderEditorialBlockCard'
 
 type EditorialTimelineListProps = {
-  stagedArticle: StagedArticle
-  activeEditingTimelineItemId: string | null
-  totalTechnicalBlockCount: number
-  timelineItems: TimelineItem[]
-  timelineIndexMap: Map<string, number>
-  editorialBlockById: Map<string, EditorialBlock>
-  contentBlockById: Map<string, ContentBlock>
-  contentBlockIndexMap: Map<string, number>
-  contentTimelineNumberMap: Map<string, number>
-  editorialTimelineNumberMap: Map<string, number>
-  imageTimelineNumberMap: Map<string, number>
-  draggedTimelineItemId: string | null
-  dragOverTimelineItemId: string | null
-  handleDragStart: (e: React.DragEvent, timelineItemId: string) => void
-  handleDragEnd: () => void
-  handleDragOver: (e: React.DragEvent, timelineItemId: string) => void
-  handleDragLeave: () => void
-  handleDrop: (e: React.DragEvent, targetTimelineItemId: string) => void
-  editorialPublishAnalysis: {
-    byId: Record<string, EditorialPublishValidation>
+  timeline: {
+    stagedArticle: StagedArticle
+    activeEditingTimelineItemId: string | null
+    totalTechnicalBlockCount: number
+    timelineItems: TimelineItem[]
+    timelineIndexMap: Map<string, number>
+    editorialBlockById: Map<string, EditorialBlock>
+    contentBlockById: Map<string, ContentBlock>
+    contentBlockIndexMap: Map<string, number>
+    contentTimelineNumberMap: Map<string, number>
+    editorialTimelineNumberMap: Map<string, number>
+    imageTimelineNumberMap: Map<string, number>
+    lastContentBlock: ContentBlock | null
   }
-  fixEditorialBlock: (blockId: string) => void
-  toggleTimelineItemEdit: (timelineItemId: string) => void
-  updateEditorialBlockMarkdown: (blockId: string, nextMarkdown: string) => void
-  removeEditorialBlock: (blockId: string) => void
-  moveTimelineItem: (timelineItemId: string, direction: 'up' | 'down') => void
-  openImagePickerTarget: string | null
-  openEditorialPickerTarget: string | null
-  toggleImagePicker: (target: string) => void
-  toggleEditorialPicker: (target: string) => void
-  openBlockImageModal: (
-    blockId: string,
-    mode: BlockImageModalMode,
-    options?: OpenBlockImageModalOptions
-  ) => void
-  addEditorialFromPicker: (
-    component: SupportedEditorialComponent,
-    afterBlockId?: string,
-    placeAfterImage?: boolean
-  ) => void
-  addNewBlock: (afterBlockId?: string) => void
-  mergeWithNextBlock: (blockId: string) => void
-  mediaAssets: MediaAsset[]
-  getImageUrl: (asset: MediaAsset) => string
-  updateMediaGroupCaption: (blockId: string, caption: string) => void
-  removeImgTrioAfterBlock: (blockId: string) => void
-  removeImgPairAfterBlock: (blockId: string) => void
-  removeImageAfterBlock: (blockId: string) => void
-  deleteBlock: (blockId: string) => void
-  updateBlockContent: (blockId: string, newContent: string) => void
-  rewriteTextBlockWithAi: (
-    blockId: string,
-    currentContent: string,
-    prompt: string,
-    includeWholeArticleContext: boolean
-  ) => Promise<string>
-  findHeaderSplitPoints: (content: string) => { lineIndex: number; headerText: string }[]
-  splitBlockAtHeader: (blockId: string, lineIndex: number) => void
-  lastContentBlock: ContentBlock | null
+  drag: {
+    draggedTimelineItemId: string | null
+    dragOverTimelineItemId: string | null
+    handleDragStart: (e: React.DragEvent, timelineItemId: string) => void
+    handleDragEnd: () => void
+    handleDragOver: (e: React.DragEvent, timelineItemId: string) => void
+    handleDragLeave: () => void
+    handleDrop: (e: React.DragEvent, targetTimelineItemId: string) => void
+    moveTimelineItem: (timelineItemId: string, direction: 'up' | 'down') => void
+  }
+  editorial: {
+    editorialPublishAnalysis: {
+      byId: Record<string, EditorialPublishValidation>
+    }
+    fixEditorialBlock: (blockId: string) => void
+    updateEditorialBlockMarkdown: (blockId: string, nextMarkdown: string) => void
+    removeEditorialBlock: (blockId: string) => void
+  }
+  picker: {
+    openImagePickerTarget: string | null
+    openEditorialPickerTarget: string | null
+    toggleImagePicker: (target: string) => void
+    toggleEditorialPicker: (target: string) => void
+    openBlockImageModal: (
+      blockId: string,
+      mode: BlockImageModalMode,
+      options?: OpenBlockImageModalOptions
+    ) => void
+    addEditorialFromPicker: (
+      component: SupportedEditorialComponent,
+      afterBlockId?: string,
+      placeAfterImage?: boolean
+    ) => void
+    addNewBlock: (afterBlockId?: string) => void
+    mergeWithNextBlock: (blockId: string) => void
+  }
+  content: {
+    toggleTimelineItemEdit: (timelineItemId: string) => void
+    deleteBlock: (blockId: string) => void
+    updateBlockContent: (blockId: string, newContent: string) => void
+    rewriteTextBlockWithAi: (
+      blockId: string,
+      currentContent: string,
+      prompt: string,
+      includeWholeArticleContext: boolean
+    ) => Promise<string>
+    findHeaderSplitPoints: (content: string) => { lineIndex: number; headerText: string }[]
+    splitBlockAtHeader: (blockId: string, lineIndex: number) => void
+  }
+  media: {
+    mediaAssets: MediaAsset[]
+    getImageUrl: (asset: MediaAsset) => string
+    updateMediaGroupCaption: (blockId: string, caption: string) => void
+    removeImgTrioAfterBlock: (blockId: string) => void
+    removeImgPairAfterBlock: (blockId: string) => void
+    removeImageAfterBlock: (blockId: string) => void
+  }
 }
 
 export function EditorialTimelineList({
-  stagedArticle,
-  activeEditingTimelineItemId,
-  totalTechnicalBlockCount,
-  timelineItems,
-  timelineIndexMap,
-  editorialBlockById,
-  contentBlockById,
-  contentBlockIndexMap,
-  contentTimelineNumberMap,
-  editorialTimelineNumberMap,
-  imageTimelineNumberMap,
-  draggedTimelineItemId,
-  dragOverTimelineItemId,
-  handleDragStart,
-  handleDragEnd,
-  handleDragOver,
-  handleDragLeave,
-  handleDrop,
-  editorialPublishAnalysis,
-  fixEditorialBlock,
-  toggleTimelineItemEdit,
-  updateEditorialBlockMarkdown,
-  removeEditorialBlock,
-  moveTimelineItem,
-  openImagePickerTarget,
-  openEditorialPickerTarget,
-  toggleImagePicker,
-  toggleEditorialPicker,
-  openBlockImageModal,
-  addEditorialFromPicker,
-  addNewBlock,
-  mergeWithNextBlock,
-  mediaAssets,
-  getImageUrl,
-  updateMediaGroupCaption,
-  removeImgTrioAfterBlock,
-  removeImgPairAfterBlock,
-  removeImageAfterBlock,
-  deleteBlock,
-  updateBlockContent,
-  rewriteTextBlockWithAi,
-  findHeaderSplitPoints,
-  splitBlockAtHeader,
-  lastContentBlock,
+  timeline,
+  drag,
+  editorial,
+  picker,
+  content,
+  media,
 }: EditorialTimelineListProps) {
+  const {
+    stagedArticle,
+    activeEditingTimelineItemId,
+    totalTechnicalBlockCount,
+    timelineItems,
+    timelineIndexMap,
+    editorialBlockById,
+    contentBlockById,
+    contentBlockIndexMap,
+    contentTimelineNumberMap,
+    editorialTimelineNumberMap,
+    imageTimelineNumberMap,
+    lastContentBlock,
+  } = timeline
+  const {
+    draggedTimelineItemId,
+    dragOverTimelineItemId,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    moveTimelineItem,
+  } = drag
+  const {
+    editorialPublishAnalysis,
+    fixEditorialBlock,
+    updateEditorialBlockMarkdown,
+    removeEditorialBlock,
+  } = editorial
+  const {
+    openImagePickerTarget,
+    openEditorialPickerTarget,
+    toggleImagePicker,
+    toggleEditorialPicker,
+    openBlockImageModal,
+    addEditorialFromPicker,
+    addNewBlock,
+    mergeWithNextBlock,
+  } = picker
+  const {
+    toggleTimelineItemEdit,
+    deleteBlock,
+    updateBlockContent,
+    rewriteTextBlockWithAi,
+    findHeaderSplitPoints,
+    splitBlockAtHeader,
+  } = content
+  const {
+    mediaAssets,
+    getImageUrl,
+    updateMediaGroupCaption,
+    removeImgTrioAfterBlock,
+    removeImgPairAfterBlock,
+    removeImageAfterBlock,
+  } = media
+
   return (
     <div className="stage-article-section">
       <div className="block-editor-header">
