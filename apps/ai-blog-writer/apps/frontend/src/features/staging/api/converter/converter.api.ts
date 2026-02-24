@@ -1,0 +1,22 @@
+import { CONVERTER_URL } from '../client/config'
+import type { LexicalConvertResponse } from './converter.types'
+
+export async function convertMarkdownToLexical(markdown: string): Promise<LexicalConvertResponse> {
+  const response = await fetch(`${CONVERTER_URL}/convert/markdown`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ markdown }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ error: 'Conversion failed' }))
+
+    return { success: false, error: errorData.error || 'Conversion failed' }
+  }
+
+  return response.json()
+}
