@@ -1,10 +1,11 @@
 import { convertMarkdownToLexical } from '../staging/api'
 import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
+import type { LocationScope } from '../locationScope/types'
 import type {
-  ListicleType,
+  ItineraryBlockType,
   LocationOption,
   MediaAssetOption,
-  PayloadListicleDoc,
+  PayloadItineraryDoc,
   PayloadListResponse,
   RelatedItemOption,
   SeoMetadataForm,
@@ -32,55 +33,46 @@ async function payloadRequest<T>(endpoint: string, token: string, init?: Request
   return response.json()
 }
 
-function relatedCollectionForType(type: ListicleType): 'dining' | 'accommodations' | 'attractions' | 'nightlife' {
-  switch (type) {
-    case 'dining':
+function relatedCollectionForBlockType(
+  blockType: ItineraryBlockType,
+): 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key-locations' {
+  switch (blockType) {
+    case 'itinerary-dining':
       return 'dining'
-    case 'accommodations':
+    case 'itinerary-accommodations':
       return 'accommodations'
-    case 'attractions':
+    case 'itinerary-attractions':
       return 'attractions'
-    case 'nightlife':
+    case 'itinerary-nightlife':
       return 'nightlife'
+    case 'itinerary-key-location':
+      return 'key-locations'
   }
 }
 
-export function getBlockTypeForListicleType(type: ListicleType) {
-  switch (type) {
-    case 'dining':
-      return 'data-dining' as const
-    case 'accommodations':
-      return 'data-accommodations' as const
-    case 'attractions':
-      return 'data-attractions' as const
-    case 'nightlife':
-      return 'data-nightlife' as const
-  }
+export async function fetchItineraries(token: string): Promise<PayloadListResponse<PayloadItineraryDoc>> {
+  return payloadRequest(`/api/listicle-itineraries?limit=100&sort=-updatedAt`, token)
 }
 
-export async function fetchListicles(token: string): Promise<PayloadListResponse<PayloadListicleDoc>> {
-  return payloadRequest(`/api/single-type-listicles?limit=100&sort=-updatedAt`, token)
-}
-
-export async function fetchListicleById(id: number, token: string): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles/${id}`, token)
+export async function fetchItineraryById(id: number, token: string): Promise<PayloadItineraryDoc> {
+  const response = await payloadRequest<{ doc: PayloadItineraryDoc }>(`/api/listicle-itineraries/${id}`, token)
   return response.doc
 }
 
-export async function createListicle(body: Record<string, unknown>, token: string): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles`, token, {
+export async function createItinerary(body: Record<string, unknown>, token: string): Promise<PayloadItineraryDoc> {
+  const response = await payloadRequest<{ doc: PayloadItineraryDoc }>(`/api/listicle-itineraries`, token, {
     method: 'POST',
     body: JSON.stringify(body),
   })
   return response.doc
 }
 
-export async function updateListicle(
+export async function updateItinerary(
   id: number,
   body: Record<string, unknown>,
   token: string,
-): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles/${id}`, token, {
+): Promise<PayloadItineraryDoc> {
+  const response = await payloadRequest<{ doc: PayloadItineraryDoc }>(`/api/listicle-itineraries/${id}`, token, {
     method: 'PATCH',
     body: JSON.stringify(body),
   })
@@ -101,17 +93,19 @@ export async function fetchMediaAssets(token: string): Promise<MediaAssetOption[
 }
 
 export async function fetchRelatedItems(
-  listicleType: ListicleType,
+  blockType: ItineraryBlockType,
   locationKey: string,
   token: string,
+  scope?: LocationScope,
 ): Promise<RelatedItemOption[]> {
-  const collection = relatedCollectionForType(listicleType)
+  const collection = relatedCollectionForBlockType(blockType)
   const params = new URLSearchParams()
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
+
   if (locationKey) {
-    const scope = await getLocationScopeForKey(locationKey, token)
-    appendScopedLocationWhere(params, scope)
+    const resolvedScope = scope || (await getLocationScopeForKey(locationKey, token))
+    appendScopedLocationWhere(params, resolvedScope)
   }
 
   const response = await payloadRequest<PayloadListResponse<RelatedItemOption>>(

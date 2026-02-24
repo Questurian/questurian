@@ -91,6 +91,22 @@ export default function LandingPage() {
             </svg>
           </span>
         </Link>
+
+        <Link to="/listicle-itineraries" className="landing-card landing-card--listicles">
+          <div className="landing-card-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 4h6v6H4V4zM14 4h6v6h-6V4zM4 14h6v6H4v-6zM14 14h6v6h-6v-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h2>Listicle Itineraries</h2>
+          <p>Build and stage timeline-based itineraries with block-level scheduling and Payload sync.</p>
+          <span className="landing-card-action">
+            Open Builder
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+        </Link>
       </main>
     </div>
   )
