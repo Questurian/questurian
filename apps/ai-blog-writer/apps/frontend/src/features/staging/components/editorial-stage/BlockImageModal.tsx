@@ -31,19 +31,22 @@ import type {
 
 type PublishResult = { success: boolean; message: string } | null
 
-type BlockImageModalProps = {
+type BlockImageModalBaseProps = {
   show: boolean
   publishedToPayload: boolean
   onClose: () => void
   blockImageModal: BlockImageModalState | null
-  blockImageSource: ImageSourceOption
-  setBlockImageSource: Dispatch<SetStateAction<ImageSourceOption>>
   isImgBlockModal: boolean
   isImgTrioModal: boolean
   isMultiImageModal: boolean
   singleImageRequirementLabel: string
   imgPairRequirementLabel: string
   imgTrioRequirementLabel: string
+  activeBlockImageRequirementLabel: string
+}
+
+type BlockImageModalPayloadProps = {
+  blockImageSource: ImageSourceOption
   imgTrioFormat: ImgTrioFormat
   setImgTrioFormat: Dispatch<SetStateAction<ImgTrioFormat>>
   imgBlockCaption: string
@@ -56,21 +59,12 @@ type BlockImageModalProps = {
   selectedImgBlockAssetIds: number[]
   toggleImgBlockAssetSelection: (assetId: number, requiredCount: number) => void
   requiredImageCount: number
-  findPreferredVariantAsset: (assetId: number, preferredVariant: MediaVariant) => MediaAsset | null
-  addImageAfterBlock: (
-    blockId: string,
-    imageId: number,
-    imageAfterAltText?: string,
-    replaceExisting?: boolean
-  ) => string | null
-  setPublishResult: Dispatch<SetStateAction<PublishResult>>
-  setActiveEditingTimelineItemId: Dispatch<SetStateAction<string | null>>
-  getImageTimelineItemId: (blockId: string) => string
-  mergeMediaAssetsIntoState: (newAssets: MediaAsset[]) => void
-  getImageUrl: (img: MediaAsset) => string
   selectedImgBlockAssetsCount: number
   handleAddSelectedImgBlock: () => void
   imgTrioDimensions: { width: number; height: number }
+}
+
+type BlockImageModalUploadProps = {
   selectedLocation?: Location
   blockImageExternalRef: string
   blockImageFileNamePrefix?: string
@@ -80,9 +74,11 @@ type BlockImageModalProps = {
   setBlockImageAltText: Dispatch<SetStateAction<string>>
   setBlockImagePhotographerCredit: Dispatch<SetStateAction<string>>
   handleBlockImageUploadComplete: (result: UploadImageResponse) => void
+}
+
+type BlockImageModalExternalProps = {
   externalImageCropDraft: ExternalImageCropDraft | null
   renderExternalCropEditor: (context: 'block') => ReactNode
-  activeBlockImageRequirementLabel: string
   unsplashBlockQuery: string
   setUnsplashBlockQuery: Dispatch<SetStateAction<string>>
   unsplashBlockOrientation: PexelsOrientationOption
@@ -111,77 +107,117 @@ type BlockImageModalProps = {
   isUploadingExternalImageVariants: boolean
 }
 
+type BlockImageModalActionsProps = {
+  setBlockImageSource: Dispatch<SetStateAction<ImageSourceOption>>
+  findPreferredVariantAsset: (assetId: number, preferredVariant: MediaVariant) => MediaAsset | null
+  addImageAfterBlock: (
+    blockId: string,
+    imageId: number,
+    imageAfterAltText?: string,
+    replaceExisting?: boolean
+  ) => string | null
+  setPublishResult: Dispatch<SetStateAction<PublishResult>>
+  setActiveEditingTimelineItemId: Dispatch<SetStateAction<string | null>>
+  getImageTimelineItemId: (blockId: string) => string
+  mergeMediaAssetsIntoState: (newAssets: MediaAsset[]) => void
+  getImageUrl: (img: MediaAsset) => string
+}
+
+type BlockImageModalProps = {
+  base: BlockImageModalBaseProps
+  payload: BlockImageModalPayloadProps
+  upload: BlockImageModalUploadProps
+  external: BlockImageModalExternalProps
+  actions: BlockImageModalActionsProps
+}
+
 export function BlockImageModal({
-  show,
-  publishedToPayload,
-  onClose,
-  blockImageModal,
-  blockImageSource,
-  setBlockImageSource,
-  isImgBlockModal,
-  isImgTrioModal,
-  isMultiImageModal,
-  singleImageRequirementLabel,
-  imgPairRequirementLabel,
-  imgTrioRequirementLabel,
-  imgTrioFormat,
-  setImgTrioFormat,
-  imgBlockCaption,
-  setImgBlockCaption,
-  blockImageSearch,
-  setBlockImageSearch,
-  isLoadingImgBlockAssets,
-  imgBlockAssetsError,
-  filteredBlockImageAssets,
-  selectedImgBlockAssetIds,
-  toggleImgBlockAssetSelection,
-  requiredImageCount,
-  findPreferredVariantAsset,
-  addImageAfterBlock,
-  setPublishResult,
-  setActiveEditingTimelineItemId,
-  getImageTimelineItemId,
-  mergeMediaAssetsIntoState,
-  getImageUrl,
-  selectedImgBlockAssetsCount,
-  handleAddSelectedImgBlock,
-  imgTrioDimensions,
-  selectedLocation,
-  blockImageExternalRef,
-  blockImageFileNamePrefix,
-  token,
-  blockImageAltText,
-  blockImagePhotographerCredit,
-  setBlockImageAltText,
-  setBlockImagePhotographerCredit,
-  handleBlockImageUploadComplete,
-  externalImageCropDraft,
-  renderExternalCropEditor,
-  activeBlockImageRequirementLabel,
-  unsplashBlockQuery,
-  setUnsplashBlockQuery,
-  unsplashBlockOrientation,
-  setUnsplashBlockOrientation,
-  unsplashBlockPerPage,
-  setUnsplashBlockPerPage,
-  runBlockUnsplashSearch,
-  isSearchingUnsplashBlock,
-  unsplashBlockError,
-  unsplashBlockResults,
-  isImportingBlockExternalImage,
-  handleImportBlockExternalImage,
-  pexelsBlockQuery,
-  setPexelsBlockQuery,
-  pexelsBlockOrientation,
-  setPexelsBlockOrientation,
-  pexelsBlockPerPage,
-  setPexelsBlockPerPage,
-  runBlockPexelsSearch,
-  isSearchingPexelsBlock,
-  pexelsBlockError,
-  pexelsBlockResults,
-  isUploadingExternalImageVariants,
+  base,
+  payload,
+  upload,
+  external,
+  actions,
 }: BlockImageModalProps) {
+  const {
+    show,
+    publishedToPayload,
+    onClose,
+    blockImageModal,
+    isImgBlockModal,
+    isImgTrioModal,
+    isMultiImageModal,
+    singleImageRequirementLabel,
+    imgPairRequirementLabel,
+    imgTrioRequirementLabel,
+    activeBlockImageRequirementLabel,
+  } = base
+  const {
+    blockImageSource,
+    imgTrioFormat,
+    setImgTrioFormat,
+    imgBlockCaption,
+    setImgBlockCaption,
+    blockImageSearch,
+    setBlockImageSearch,
+    isLoadingImgBlockAssets,
+    imgBlockAssetsError,
+    filteredBlockImageAssets,
+    selectedImgBlockAssetIds,
+    toggleImgBlockAssetSelection,
+    requiredImageCount,
+    selectedImgBlockAssetsCount,
+    handleAddSelectedImgBlock,
+    imgTrioDimensions,
+  } = payload
+  const {
+    selectedLocation,
+    blockImageExternalRef,
+    blockImageFileNamePrefix,
+    token,
+    blockImageAltText,
+    blockImagePhotographerCredit,
+    setBlockImageAltText,
+    setBlockImagePhotographerCredit,
+    handleBlockImageUploadComplete,
+  } = upload
+  const {
+    externalImageCropDraft,
+    renderExternalCropEditor,
+    unsplashBlockQuery,
+    setUnsplashBlockQuery,
+    unsplashBlockOrientation,
+    setUnsplashBlockOrientation,
+    unsplashBlockPerPage,
+    setUnsplashBlockPerPage,
+    runBlockUnsplashSearch,
+    isSearchingUnsplashBlock,
+    unsplashBlockError,
+    unsplashBlockResults,
+    isImportingBlockExternalImage,
+    handleImportBlockExternalImage,
+    pexelsBlockQuery,
+    setPexelsBlockQuery,
+    pexelsBlockOrientation,
+    setPexelsBlockOrientation,
+    pexelsBlockPerPage,
+    setPexelsBlockPerPage,
+    runBlockPexelsSearch,
+    isSearchingPexelsBlock,
+    pexelsBlockError,
+    pexelsBlockResults,
+    isUploadingExternalImageVariants,
+  } = external
+  const {
+    setBlockImageSource,
+    findPreferredVariantAsset,
+    addImageAfterBlock,
+    setPublishResult,
+    setActiveEditingTimelineItemId,
+    getImageTimelineItemId,
+    mergeMediaAssetsIntoState,
+    getImageUrl,
+  } = actions
+
   if (!show || publishedToPayload || !blockImageModal) return null
 
   return (

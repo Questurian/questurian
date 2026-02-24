@@ -451,6 +451,85 @@ export default function EditorialStageArticlePage({
     closeBlockImageModal,
     setPublishResult,
   })
+  const blockImageModalBase = {
+    show: Boolean(blockImageModal?.show),
+    publishedToPayload: stagedArticle.publishedToPayload,
+    onClose: closeBlockImageModal,
+    blockImageModal,
+    isImgBlockModal,
+    isImgTrioModal,
+    isMultiImageModal,
+    singleImageRequirementLabel,
+    imgPairRequirementLabel,
+    imgTrioRequirementLabel,
+    activeBlockImageRequirementLabel,
+  }
+  const blockImageModalPayload = {
+    blockImageSource,
+    imgTrioFormat,
+    setImgTrioFormat,
+    imgBlockCaption,
+    setImgBlockCaption,
+    blockImageSearch,
+    setBlockImageSearch,
+    isLoadingImgBlockAssets,
+    imgBlockAssetsError,
+    filteredBlockImageAssets,
+    selectedImgBlockAssetIds,
+    toggleImgBlockAssetSelection,
+    requiredImageCount,
+    selectedImgBlockAssetsCount: selectedImgBlockAssets.length,
+    handleAddSelectedImgBlock,
+    imgTrioDimensions,
+  }
+  const blockImageModalUpload = {
+    selectedLocation,
+    blockImageExternalRef,
+    blockImageFileNamePrefix,
+    token: token || undefined,
+    blockImageAltText,
+    blockImagePhotographerCredit,
+    setBlockImageAltText,
+    setBlockImagePhotographerCredit,
+    handleBlockImageUploadComplete,
+  }
+  const blockImageModalExternal = {
+    externalImageCropDraft,
+    renderExternalCropEditor,
+    unsplashBlockQuery,
+    setUnsplashBlockQuery,
+    unsplashBlockOrientation,
+    setUnsplashBlockOrientation,
+    unsplashBlockPerPage,
+    setUnsplashBlockPerPage,
+    runBlockUnsplashSearch,
+    isSearchingUnsplashBlock,
+    unsplashBlockError,
+    unsplashBlockResults,
+    isImportingBlockExternalImage,
+    handleImportBlockExternalImage,
+    pexelsBlockQuery,
+    setPexelsBlockQuery,
+    pexelsBlockOrientation,
+    setPexelsBlockOrientation,
+    pexelsBlockPerPage,
+    setPexelsBlockPerPage,
+    runBlockPexelsSearch,
+    isSearchingPexelsBlock,
+    pexelsBlockError,
+    pexelsBlockResults,
+    isUploadingExternalImageVariants,
+  }
+  const blockImageModalActions = {
+    setBlockImageSource,
+    findPreferredVariantAsset,
+    addImageAfterBlock,
+    setPublishResult,
+    setActiveEditingTimelineItemId,
+    getImageTimelineItemId,
+    mergeMediaAssetsIntoState,
+    getImageUrl,
+  }
 
   return (
     <>
@@ -577,75 +656,11 @@ export default function EditorialStageArticlePage({
       />
 
       <BlockImageModal
-        show={Boolean(blockImageModal?.show)}
-        publishedToPayload={stagedArticle.publishedToPayload}
-        onClose={closeBlockImageModal}
-        blockImageModal={blockImageModal}
-        blockImageSource={blockImageSource}
-        setBlockImageSource={setBlockImageSource}
-        isImgBlockModal={isImgBlockModal}
-        isImgTrioModal={isImgTrioModal}
-        isMultiImageModal={isMultiImageModal}
-        singleImageRequirementLabel={singleImageRequirementLabel}
-        imgPairRequirementLabel={imgPairRequirementLabel}
-        imgTrioRequirementLabel={imgTrioRequirementLabel}
-        imgTrioFormat={imgTrioFormat}
-        setImgTrioFormat={setImgTrioFormat}
-        imgBlockCaption={imgBlockCaption}
-        setImgBlockCaption={setImgBlockCaption}
-        blockImageSearch={blockImageSearch}
-        setBlockImageSearch={setBlockImageSearch}
-        isLoadingImgBlockAssets={isLoadingImgBlockAssets}
-        imgBlockAssetsError={imgBlockAssetsError}
-        filteredBlockImageAssets={filteredBlockImageAssets}
-        selectedImgBlockAssetIds={selectedImgBlockAssetIds}
-        toggleImgBlockAssetSelection={toggleImgBlockAssetSelection}
-        requiredImageCount={requiredImageCount}
-        findPreferredVariantAsset={findPreferredVariantAsset}
-        addImageAfterBlock={addImageAfterBlock}
-        setPublishResult={setPublishResult}
-        setActiveEditingTimelineItemId={setActiveEditingTimelineItemId}
-        getImageTimelineItemId={getImageTimelineItemId}
-        mergeMediaAssetsIntoState={mergeMediaAssetsIntoState}
-        getImageUrl={getImageUrl}
-        selectedImgBlockAssetsCount={selectedImgBlockAssets.length}
-        handleAddSelectedImgBlock={handleAddSelectedImgBlock}
-        imgTrioDimensions={imgTrioDimensions}
-        selectedLocation={selectedLocation}
-        blockImageExternalRef={blockImageExternalRef}
-        blockImageFileNamePrefix={blockImageFileNamePrefix}
-        token={token || undefined}
-        blockImageAltText={blockImageAltText}
-        blockImagePhotographerCredit={blockImagePhotographerCredit}
-        setBlockImageAltText={setBlockImageAltText}
-        setBlockImagePhotographerCredit={setBlockImagePhotographerCredit}
-        handleBlockImageUploadComplete={handleBlockImageUploadComplete}
-        externalImageCropDraft={externalImageCropDraft}
-        renderExternalCropEditor={renderExternalCropEditor}
-        activeBlockImageRequirementLabel={activeBlockImageRequirementLabel}
-        unsplashBlockQuery={unsplashBlockQuery}
-        setUnsplashBlockQuery={setUnsplashBlockQuery}
-        unsplashBlockOrientation={unsplashBlockOrientation}
-        setUnsplashBlockOrientation={setUnsplashBlockOrientation}
-        unsplashBlockPerPage={unsplashBlockPerPage}
-        setUnsplashBlockPerPage={setUnsplashBlockPerPage}
-        runBlockUnsplashSearch={runBlockUnsplashSearch}
-        isSearchingUnsplashBlock={isSearchingUnsplashBlock}
-        unsplashBlockError={unsplashBlockError}
-        unsplashBlockResults={unsplashBlockResults}
-        isImportingBlockExternalImage={isImportingBlockExternalImage}
-        handleImportBlockExternalImage={handleImportBlockExternalImage}
-        pexelsBlockQuery={pexelsBlockQuery}
-        setPexelsBlockQuery={setPexelsBlockQuery}
-        pexelsBlockOrientation={pexelsBlockOrientation}
-        setPexelsBlockOrientation={setPexelsBlockOrientation}
-        pexelsBlockPerPage={pexelsBlockPerPage}
-        setPexelsBlockPerPage={setPexelsBlockPerPage}
-        runBlockPexelsSearch={runBlockPexelsSearch}
-        isSearchingPexelsBlock={isSearchingPexelsBlock}
-        pexelsBlockError={pexelsBlockError}
-        pexelsBlockResults={pexelsBlockResults}
-        isUploadingExternalImageVariants={isUploadingExternalImageVariants}
+        base={blockImageModalBase}
+        payload={blockImageModalPayload}
+        upload={blockImageModalUpload}
+        external={blockImageModalExternal}
+        actions={blockImageModalActions}
       />
     </>
   )
