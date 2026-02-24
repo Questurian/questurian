@@ -18,6 +18,7 @@ Comprehensive route list for this workspace.
 
 | Method | Path | Description |
 |---|---|---|
+| POST | `/youtube2blog/from-url` | Start pipeline from a YouTube video URL (extract transcript server-side) |
 | POST | `/youtube2blog/upload` | Upload CSV with video rows and queue runs |
 | GET | `/youtube2blog/status/{run_id}` | Get pipeline run status |
 | GET | `/youtube2blog/result/{run_id}` | Get run output (`json` or `?format=md`) |

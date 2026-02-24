@@ -14,11 +14,12 @@ export function HeroHeader({ activeBadge }: HeroHeaderProps) {
       <div>
         <p className="eyebrow">Questurian Studio</p>
         <h1>
-          Turn YouTube transcripts into <span className="underline-text">clean articles</span>
+          Turn YouTube videos into <span className="underline-text">clean articles</span>
           <span className="orange-dot">.</span>
         </h1>
         <p className="lede">
-          Transform raw transcripts into polished articles with AI-powered precision.
+          Paste a YouTube URL, extract transcript automatically, and generate polished articles
+          with AI-powered precision.
         </p>
       </div>
       <div className="badge-row">

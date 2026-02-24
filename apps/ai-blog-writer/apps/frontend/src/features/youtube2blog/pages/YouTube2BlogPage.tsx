@@ -19,13 +19,17 @@ export default function YouTube2BlogPage() {
       <main className="layout">
         {!run.activeRunId ? (
           <UploadPanel
+            inputMode={run.inputMode}
+            youtubeUrl={run.youtubeUrl}
             selectedFile={run.selectedFile}
             isDragOver={dropzone.isDragOver}
             runIds={run.runIds}
             activeRunId={run.activeRunId}
-            uploadPending={run.uploadPending}
+            startPending={run.startPending}
             clearPending={run.clearPending}
-            uploadError={run.uploadError}
+            startError={run.startError}
+            onInputModeChange={run.setInputMode}
+            onYoutubeUrlChange={run.setYoutubeUrl}
             onSubmit={run.handleSubmit}
             onClear={run.clear}
             onSelectRun={run.setActiveRunId}

@@ -1,5 +1,15 @@
 # API Changelog
 
+## 2026-02-24
+
+### Added
+- New direct YouTube URL pipeline endpoint:
+  - `POST /youtube2blog/from-url`
+
+### Changed
+- `youtube2blog` now supports URL-first runs by extracting transcripts server-side.
+- Frontend `youtube2blog` flow defaults to YouTube URL input while retaining CSV as fallback.
+
 ## 2026-02-07
 
 ### Added

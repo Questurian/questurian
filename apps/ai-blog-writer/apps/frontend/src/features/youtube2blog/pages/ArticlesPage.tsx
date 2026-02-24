@@ -105,7 +105,7 @@ export default function ArticlesPage() {
             ) : articles.length === 0 ? (
               <div className="empty-state">
                 <p>No articles yet.</p>
-                <p className="muted">Upload a CSV to generate your first article.</p>
+                <p className="muted">Paste a YouTube URL to generate your first article.</p>
               </div>
             ) : (
               <div className="articles-list">

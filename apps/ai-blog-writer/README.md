@@ -8,7 +8,7 @@ https://github.com/user-attachments/assets/6daf0aa8-c69b-4153-8be1-08ca9479eeb1
 
 ## What It Does
 
-AI Blog Writer automates the conversion of raw video transcripts into structured, engaging blog posts. Upload a CSV file containing video metadata and transcripts, and the system will:
+AI Blog Writer automates the conversion of YouTube videos into structured, engaging blog posts. Paste a YouTube video URL (or use CSV fallback), and the system will:
 
 1. **Clean & Process Transcripts** - Remove ads, intros, and filler content using AI
 2. **Classify Content Type** - Automatically determine the best article format (reviews, guides, tutorials, etc.)
@@ -19,7 +19,8 @@ The result is professional-quality articles ready for publication, with full pro
 
 ## Key Features
 
-- **Batch Processing** - Process multiple videos simultaneously via CSV upload
+- **URL-First YouTube Flow** - Start runs directly from a YouTube video URL
+- **CSV Fallback** - Process multiple videos simultaneously via legacy CSV upload
 - **AI-Powered Pipeline** - 4-stage intelligent processing with Google Vertex AI (Gemini)
 - **Web Interface** - Clean, modern React frontend for monitoring and managing processing
 - **REST API** - Full FastAPI backend for programmatic access
@@ -178,32 +179,39 @@ This starts all services:
 ### Web Interface
 
 1. Open http://localhost:3003
-2. Upload a CSV file containing video metadata and transcripts
+2. Paste a YouTube video URL in `youtube2blog` (or switch to CSV mode)
 3. Monitor the 4-stage processing pipeline in real-time
 4. Download the generated articles when complete
 
 ### API Usage
 
-#### Upload CSV for Processing
+#### Start From YouTube URL
 ```bash
-curl -F "file=@videos.csv" http://localhost:4003/upload
+curl -X POST http://localhost:4003/youtube2blog/from-url \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
+```
+
+#### Upload CSV for Processing (Fallback)
+```bash
+curl -F "file=@videos.csv" http://localhost:4003/youtube2blog/upload
 ```
 
 #### Check Processing Status
 ```bash
-curl http://localhost:4003/status/<run_id>
+curl http://localhost:4003/youtube2blog/status/<run_id>
 ```
 
 #### Get Results
 ```bash
 # Get JSON response with article and metadata
-curl http://localhost:4003/result/<run_id>
+curl http://localhost:4003/youtube2blog/result/<run_id>
 
 # Get just the markdown article
-curl http://localhost:4003/result/<run_id>?format=md
+curl http://localhost:4003/youtube2blog/result/<run_id>?format=md
 ```
 
-### CSV Format
+### Legacy CSV Format (Optional)
 
 Your CSV should contain these columns:
 - `video_id` - Unique video identifier
@@ -266,13 +274,13 @@ pnpm nx build backend      # Python bytecode compilation
 
 ```bash
 # Test individual pipeline stages
-curl -X POST http://localhost:4003/test-stage1
+curl -X POST http://localhost:4003/youtube2blog/test-stage1
 
 # Test full pipeline with sample data
-curl -X POST http://localhost:4003/test
+curl -X POST http://localhost:4003/youtube2blog/test
 
 # Clear database between tests
-curl -X POST http://localhost:4003/clear
+curl -X POST http://localhost:4003/youtube2blog/clear
 ```
 
 ## Output Formats

@@ -3,13 +3,14 @@ YouTube2Blog API routes.
 
 All routes are prefixed with /youtube2blog in the main router.
 """
+from datetime import datetime, timezone
 import io
 from typing import List
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from shared import RawVideoRecord
 from app.core import read_stage_result, read_status, read_output, clear_all_runs
@@ -22,6 +23,11 @@ from .storage import (
     get_article_sync_status,
 )
 from .stages import stage_1_clean_transcript
+from .transcript_extractor import extract_transcript_sync
+from .youtube_source import (
+    fetch_oembed_title,
+    parse_youtube_video_url,
+)
 
 router = APIRouter(prefix="/youtube2blog", tags=["youtube2blog"])
 
@@ -58,6 +64,10 @@ And check out CloudProvider in the description below. See you next time!""",
     transcript_status="completed",
     transcript_extracted_at="2024-01-15T10:30:00Z",
 )
+
+
+class YouTubeUrlRequest(BaseModel):
+    url: str = Field(..., min_length=1)
 
 
 @router.post("/upload")
@@ -100,6 +110,57 @@ async def upload_csv(
         response_payload["run_id"] = run_ids[0]
 
     return JSONResponse(response_payload)
+
+
+@router.post("/from-url")
+async def start_from_youtube_url(
+    request: YouTubeUrlRequest,
+    background_tasks: BackgroundTasks,
+) -> JSONResponse:
+    """Queue a YouTube2Blog run directly from a YouTube video URL."""
+    try:
+        source = parse_youtube_video_url(request.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    transcript_result = extract_transcript_sync(source.video_id)
+    if transcript_result.get("status") != "completed":
+        detail = transcript_result.get("error") or "Transcript extraction failed."
+        raise HTTPException(status_code=422, detail=detail)
+
+    transcript = transcript_result.get("transcript", "")
+    if not isinstance(transcript, str) or not transcript.strip():
+        raise HTTPException(status_code=422, detail="Transcript extraction failed.")
+
+    title = (
+        fetch_oembed_title(source.canonical_url)
+        or f"YouTube Video {source.video_id}"
+    )
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    record = RawVideoRecord(
+        video_id=source.video_id,
+        title=title,
+        description="",
+        video_url=source.canonical_url,
+        published_at=now_iso,
+        transcript=transcript,
+        transcript_status="completed",
+        transcript_extracted_at=now_iso,
+    )
+
+    meta = initialize_run(
+        record,
+        source="youtube-url",
+        notes=f"url:{source.canonical_url}",
+    )
+    background_tasks.add_task(process_run, record, meta)
+
+    return JSONResponse({
+        "run_id": meta.run_id,
+        "run_ids": [meta.run_id],
+        "message": "Queued 1 pipeline run.",
+    })
 
 
 @router.get("/status/{run_id}")

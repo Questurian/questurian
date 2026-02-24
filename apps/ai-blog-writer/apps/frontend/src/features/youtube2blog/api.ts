@@ -36,6 +36,39 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003
 const FEATURE_PREFIX = '/youtube2blog'
 const ARTICLE_TYPES_PREFIX = '/article-types'
 
+function formatDetail(detail: unknown): string | null {
+  if (typeof detail === 'string') {
+    return detail
+  }
+
+  if (Array.isArray(detail)) {
+    const items = detail
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item
+        }
+        if (item && typeof item === 'object' && 'msg' in item && typeof item.msg === 'string') {
+          return item.msg
+        }
+        return null
+      })
+      .filter((item): item is string => Boolean(item))
+    return items.length > 0 ? items.join('; ') : null
+  }
+
+  return null
+}
+
+async function resolveErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = await response.json()
+    const detail = formatDetail(payload?.detail)
+    return detail || fallback
+  } catch {
+    return fallback
+  }
+}
+
 export async function uploadCsv(file: File): Promise<UploadResponse> {
   const formData = new FormData()
   formData.append('file', file)
@@ -46,7 +79,23 @@ export async function uploadCsv(file: File): Promise<UploadResponse> {
   })
 
   if (!response.ok) {
-    throw new Error('Upload failed')
+    throw new Error(await resolveErrorMessage(response, 'Upload failed'))
+  }
+
+  return response.json()
+}
+
+export async function startFromYoutubeUrl(url: string): Promise<UploadResponse> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/from-url`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url }),
+  })
+
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'Failed to start YouTube URL run'))
   }
 
   return response.json()
