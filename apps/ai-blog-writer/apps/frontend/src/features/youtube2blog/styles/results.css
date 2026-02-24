@@ -191,6 +191,56 @@
   outline-offset: 2px;
 }
 
+.payload-copy-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+
+.payload-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 2px solid #000;
+  background: #000;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.payload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.payload-btn:not(:disabled):hover {
+  background: #333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.payload-btn-success {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+.payload-btn-error {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.payload-btn-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  filter: invert(1);
+}
+
 /* Classification Display */
 .classification-result {
   display: flex;
@@ -231,19 +281,32 @@
   text-align: center;
 }
 
-.confidence-bar {
+.confidence-progress {
   height: 10px;
-  background: var(--cream-dark);
+  width: 100%;
   border-radius: var(--radius-full);
   overflow: hidden;
   border: 1px solid var(--border);
+  background: var(--cream-dark);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-.confidence-fill {
-  height: 100%;
+.confidence-progress::-webkit-progress-bar {
+  background: var(--cream-dark);
+  border-radius: var(--radius-full);
+}
+
+.confidence-progress::-webkit-progress-value {
   background: linear-gradient(90deg, var(--accent), var(--accent-hover));
   border-radius: var(--radius-full);
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.confidence-progress::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: var(--radius-full);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reasoning {
