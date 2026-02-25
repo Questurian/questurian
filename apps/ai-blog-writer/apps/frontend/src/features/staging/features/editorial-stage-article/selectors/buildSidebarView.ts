@@ -7,6 +7,8 @@ type BuildSidebarViewInput = {
   stagedArticle: StagedArticle
   isPublishing: boolean
   allFieldsFilled: boolean
+  missingPublishFields: string[]
+  editorialBlockingMessages: string[]
   publishResult: PublishResult
   featuredImageRequirementLabel: string
   selectedFeaturedImage: MediaAsset | null
@@ -22,6 +24,8 @@ export function buildSidebarView(input: BuildSidebarViewInput): SidebarViewProps
     stagedArticle: input.stagedArticle,
     isPublishing: input.isPublishing,
     allFieldsFilled: input.allFieldsFilled,
+    missingPublishFields: input.missingPublishFields,
+    editorialBlockingMessages: input.editorialBlockingMessages,
     publishResult: input.publishResult,
     featuredImageRequirementLabel: input.featuredImageRequirementLabel,
     selectedFeaturedImage: input.selectedFeaturedImage,

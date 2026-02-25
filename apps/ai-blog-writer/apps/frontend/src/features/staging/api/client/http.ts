@@ -12,6 +12,7 @@ export async function payloadRequest(endpoint: string, token?: string) {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     method: 'GET',
     mode: 'cors',
+    cache: 'no-store',
     credentials: 'omit',
     headers,
   })

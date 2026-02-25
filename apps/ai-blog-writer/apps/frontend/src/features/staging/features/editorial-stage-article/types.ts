@@ -38,6 +38,7 @@ export type EditorialStageArticleApi = {
       minHeight?: number
       width?: number
       height?: number
+      id?: number
     }
   ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
   createArticle: (

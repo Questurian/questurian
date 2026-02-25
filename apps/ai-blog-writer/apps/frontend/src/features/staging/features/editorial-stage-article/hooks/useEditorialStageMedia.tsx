@@ -1,4 +1,4 @@
-import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { type UploadImageResponse } from '../../../../../features/images'
 import {
   type UploadProgress,
@@ -60,6 +60,7 @@ type UseEditorialStageMediaParams = {
       minHeight?: number
       width?: number
       height?: number
+      id?: number
     }
   ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
   fetchExternalImageSource: (
@@ -159,6 +160,35 @@ export function useEditorialStageMedia({
     const response = await fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
     block.mergeMediaAssetsIntoState(response.docs || [])
   }, [token, fetchMediaAssets, block])
+
+  useEffect(() => {
+    if (!token || !stagedArticle?.featuredImageId) return
+
+    const featuredAssetId = Number(stagedArticle.featuredImageId)
+    if (!Number.isFinite(featuredAssetId) || featuredAssetId <= 0) return
+    if (mediaAssets.some((asset) => asset.id === featuredAssetId)) return
+
+    let isCancelled = false
+
+    const hydrateFeaturedAsset = async () => {
+      try {
+        const response = await fetchMediaAssets(token, {
+          limit: 1,
+          id: featuredAssetId,
+        })
+        if (isCancelled) return
+        block.mergeMediaAssetsIntoState(response.docs || [])
+      } catch {
+        // Keep UI fallback in place if this targeted hydration fails.
+      }
+    }
+
+    void hydrateFeaturedAsset()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [token, stagedArticle?.featuredImageId, mediaAssets, fetchMediaAssets, block])
 
   const featured = useEditorialStageFeaturedMedia({
     searchPexelsImages,
