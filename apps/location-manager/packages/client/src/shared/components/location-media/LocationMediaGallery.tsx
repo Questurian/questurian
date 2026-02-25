@@ -2,6 +2,16 @@ import { useState } from "react";
 import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed } from "@client/shared/services/api/types";
 import type { ImageVariant } from "@questurian/lm-shared";
 import { Button } from "@client/components/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@client/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
@@ -33,6 +43,12 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
   const instagramEmbedsWithPreview = (locationDetail.instagram_embeds || []).filter((embed) =>
     Boolean(embed.images?.[0]?.trim())
   );
+
+  const [deleteConfirm, setDeleteConfirm] = useState<
+    | { type: "upload"; id: number }
+    | { type: "instagram"; id: number }
+    | null
+  >(null);
 
   const [lightboxState, setLightboxState] = useState({
     isOpen: false,
@@ -123,15 +139,21 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
   }
 
   function handleDeleteUpload(uploadId: number) {
-    if (confirm("Are you sure you want to delete this upload?")) {
-      deleteMutation.mutate(uploadId);
-    }
+    setDeleteConfirm({ type: "upload", id: uploadId });
   }
 
   function handleDeleteInstagramEmbed(embedId: number) {
-    if (confirm("Are you sure you want to delete this Instagram embed?")) {
-      deleteInstagramMutation.mutate(embedId);
+    setDeleteConfirm({ type: "instagram", id: embedId });
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === "upload") {
+      deleteMutation.mutate(deleteConfirm.id);
+    } else {
+      deleteInstagramMutation.mutate(deleteConfirm.id);
     }
+    setDeleteConfirm(null);
   }
 
   return (
@@ -238,6 +260,24 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
           <AddUploadFilesForm category={locationDetail.category} locationId={locationDetail.id} />
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={deleteConfirm !== null} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteConfirm?.type === "instagram" ? "Instagram embed" : "upload"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The {deleteConfirm?.type === "instagram" ? "Instagram embed" : "uploaded image set"} will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Image Lightbox */}
       {lightboxState.isOpen && (
