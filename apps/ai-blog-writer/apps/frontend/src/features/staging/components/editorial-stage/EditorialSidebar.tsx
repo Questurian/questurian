@@ -10,6 +10,8 @@ type EditorialSidebarProps = {
   stagedArticle: StagedArticle
   isPublishing: boolean
   allFieldsFilled: boolean
+  missingPublishFields: string[]
+  editorialBlockingMessages: string[]
   publishResult: PublishResult
   featuredImageRequirementLabel: string
   selectedFeaturedImage: MediaAsset | null
@@ -24,6 +26,8 @@ export function EditorialSidebar({
   stagedArticle,
   isPublishing,
   allFieldsFilled,
+  missingPublishFields,
+  editorialBlockingMessages,
   publishResult,
   featuredImageRequirementLabel,
   selectedFeaturedImage,
@@ -33,6 +37,9 @@ export function EditorialSidebar({
   onUpdateStagedArticle,
   onPublish,
 }: EditorialSidebarProps) {
+  const hasBlockingEditorial = editorialBlockingMessages.length > 0
+  const canPublish = allFieldsFilled && !hasBlockingEditorial
+
   return (
     <aside className="stage-article-sidebar">
       <div className="stage-article-sidebar-inner">
@@ -40,11 +47,12 @@ export function EditorialSidebar({
           {!stagedArticle.publishedToPayload ? (
             <button
               onClick={onPublish}
-              disabled={isPublishing || !allFieldsFilled}
+              disabled={isPublishing || !canPublish}
               className="stage-article-publish-btn"
             >
               {isPublishing ? 'Publishing...' :
                !allFieldsFilled ? 'Complete fields below' :
+               hasBlockingEditorial ? 'Fix editorial blocks' :
                'Publish to Payload'}
             </button>
           ) : (
@@ -52,6 +60,36 @@ export function EditorialSidebar({
               Published to Payload
               {stagedArticle.payloadArticleId && (
                 <span> &middot; ID {stagedArticle.payloadArticleId}</span>
+              )}
+            </div>
+          )}
+
+          {!stagedArticle.publishedToPayload && !canPublish && (
+            <div className="stage-article-publish-checklist">
+              {missingPublishFields.length > 0 && (
+                <>
+                  <p className="stage-article-publish-checklist-title">Missing required fields:</p>
+                  <ul className="stage-article-publish-checklist-list">
+                    {missingPublishFields.map((field) => (
+                      <li key={field}>{field}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {hasBlockingEditorial && (
+                <>
+                  <p className="stage-article-publish-checklist-title">Fix editorial blocks before publish:</p>
+                  <ul className="stage-article-publish-checklist-list">
+                    {editorialBlockingMessages.slice(0, 3).map((message, index) => (
+                      <li key={`${message}-${index}`}>{message}</li>
+                    ))}
+                  </ul>
+                  {editorialBlockingMessages.length > 3 && (
+                    <p className="stage-article-publish-checklist-more">
+                      +{editorialBlockingMessages.length - 3} more block issues
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -82,6 +120,19 @@ export function EditorialSidebar({
                   type="button"
                   onClick={onOpenFeaturedImageModal}
                   className="stage-article-change-btn"
+                >
+                  Change
+                </button>
+              )}
+            </div>
+          ) : stagedArticle.featuredImageId ? (
+            <div className="stage-article-featured-image-pending">
+              <p>Featured image selected (ID {stagedArticle.featuredImageId}). Preview will load shortly.</p>
+              {!stagedArticle.publishedToPayload && (
+                <button
+                  type="button"
+                  onClick={onOpenFeaturedImageModal}
+                  className="stage-article-change-btn-inline"
                 >
                   Change
                 </button>

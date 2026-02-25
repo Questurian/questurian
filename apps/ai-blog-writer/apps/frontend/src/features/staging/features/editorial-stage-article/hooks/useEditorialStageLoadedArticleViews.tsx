@@ -1,9 +1,5 @@
 import { useMemo, type Dispatch, type SetStateAction } from 'react'
 import type { StagedArticle } from '../../../types'
-import type {
-  ContentBlock,
-  EditorialBlock,
-} from '../../../types'
 import type { Location, MediaAsset } from '../../../api'
 import type { TimelineItem } from '../workflow.service'
 import { getMediaAssetUrl } from '../utils/editorial-stage-view.utils'
@@ -37,7 +33,7 @@ import type {
 } from '../types'
 import type { UploadImageResponse } from '../../../../../features/images'
 import type { PexelsPhoto, UnsplashPhoto } from '../../../api'
-import type { EditorialPublishValidation } from '../editorial-markdown.service'
+import type { EditorialPublishAnalysis } from '../editorial-markdown.service'
 
 type UseEditorialStageLoadedArticleViewsParams = {
   stagedArticle: StagedArticle
@@ -57,7 +53,7 @@ type UseEditorialStageLoadedArticleViewsParams = {
   handleDrop: (e: React.DragEvent, targetTimelineItemId: string) => void
   moveTimelineItem: (timelineItemId: string, direction: 'up' | 'down') => void
   toggleTimelineItemEdit: (timelineItemId: string) => void
-  editorialPublishAnalysis: { byId: Record<string, EditorialPublishValidation> }
+  editorialPublishAnalysis: EditorialPublishAnalysis
   fixEditorialBlock: (blockId: string) => void
   updateEditorialBlockMarkdown: (blockId: string, nextMarkdown: string) => void
   removeEditorialBlock: (blockId: string) => void
@@ -229,6 +225,8 @@ export function useEditorialStageLoadedArticleViews(
     imageTimelineNumberMap,
     totalTechnicalBlockCount,
     allFieldsFilled,
+    missingPublishFields,
+    editorialBlockingMessages,
     hasMissingFeaturedImage,
     isImgBlockModal,
     isImgTrioModal,
@@ -248,6 +246,7 @@ export function useEditorialStageLoadedArticleViews(
     locations: params.locations,
     mediaAssets: params.mediaAssets,
     timelineItems: params.timelineItems,
+    editorialPublishAnalysis: params.editorialPublishAnalysis,
     imageSearch: params.imageSearch,
     blockImageModal: params.blockImageModal,
     blockImageSearch: params.blockImageSearch,
@@ -341,6 +340,8 @@ export function useEditorialStageLoadedArticleViews(
     stagedArticle: params.stagedArticle,
     isPublishing: params.isPublishing,
     allFieldsFilled,
+    missingPublishFields,
+    editorialBlockingMessages,
     publishResult: params.publishResult,
     featuredImageRequirementLabel,
     selectedFeaturedImage,

@@ -272,10 +272,16 @@ export function useEditorialStagePageData({
   ])
 
   useEffect(() => {
-    if (!token) return
+    if (!token) {
+      setIsLoading(false)
+      setError('Authentication required to load locations and media assets. Please sign in again.')
+      return
+    }
 
     const loadData = async () => {
       try {
+        setIsLoading(true)
+        setError(null)
         const [locationsRes, mediaRes] = await Promise.all([
           fetchLocations(token, { limit: 200 }),
           fetchMediaAssets(token, { limit: 50, mimeType: 'image/' }),

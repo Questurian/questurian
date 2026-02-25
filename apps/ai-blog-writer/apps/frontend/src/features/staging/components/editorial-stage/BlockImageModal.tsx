@@ -1,4 +1,4 @@
-import type { Dispatch, ReactNode, SetStateAction } from 'react'
+import { useEffect, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import Masonry from 'react-masonry-css'
 import { ImageUpload, type UploadImageResponse } from '../../../../features/images'
 import type {
@@ -217,14 +217,34 @@ export function BlockImageModal({
     mergeMediaAssetsIntoState,
     getImageUrl,
   } = actions
+  const modalTitleId = 'block-image-modal-title'
+
+  useEffect(() => {
+    if (!show || publishedToPayload || !blockImageModal) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      onClose()
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [show, publishedToPayload, blockImageModal, onClose])
 
   if (!show || publishedToPayload || !blockImageModal) return null
 
   return (
-    <div className="stage-article-modal-overlay" onClick={onClose}>
-      <div className="stage-article-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="stage-article-modal-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="stage-article-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={modalTitleId}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="stage-article-modal-header">
-          <h3>
+          <h3 id={modalTitleId}>
             {blockImageSource === 'upload'
               ? isImgBlockModal
                 ? 'Upload Is Unavailable for Img Pair'
@@ -245,6 +265,7 @@ export function BlockImageModal({
             type="button"
             className="stage-article-modal-close"
             onClick={onClose}
+            aria-label="Close block image modal"
           >
             ×
           </button>

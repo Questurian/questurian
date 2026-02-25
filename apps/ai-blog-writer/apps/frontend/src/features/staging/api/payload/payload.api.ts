@@ -52,6 +52,7 @@ export async function fetchMediaAssets(
     minHeight?: number
     width?: number
     height?: number
+    id?: number
   },
 ): Promise<{ docs: MediaAsset[]; totalDocs: number }> {
   const queryParams = new URLSearchParams()
@@ -68,6 +69,9 @@ export async function fetchMediaAssets(
   }
   if (params?.height) {
     queryParams.append('where[height][equals]', String(params.height))
+  }
+  if (params?.id) {
+    queryParams.append('where[id][equals]', String(params.id))
   }
 
   return payloadRequest(`/api/media-assets?${queryParams.toString()}`, token)

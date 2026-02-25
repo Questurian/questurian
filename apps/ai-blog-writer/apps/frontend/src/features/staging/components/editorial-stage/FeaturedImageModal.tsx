@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import Masonry from 'react-masonry-css'
 import { ImageUpload, type UploadImageResponse } from '../../../../features/images'
 import type {
@@ -148,14 +148,34 @@ export function FeaturedImageModal({
     updateStagedArticle,
     getImageUrl,
   } = actions
+  const modalTitleId = 'featured-image-modal-title'
+
+  useEffect(() => {
+    if (!show || publishedToPayload) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      onClose()
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [show, publishedToPayload, onClose])
 
   if (!show || publishedToPayload) return null
 
   return (
-    <div className="stage-article-modal-overlay" onClick={onClose}>
-      <div className="stage-article-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="stage-article-modal-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="stage-article-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={modalTitleId}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="stage-article-modal-header">
-          <h3>
+          <h3 id={modalTitleId}>
             {featuredImageSource === 'upload'
               ? 'Upload Featured Image'
               : featuredImageSource === 'payload'
@@ -168,6 +188,7 @@ export function FeaturedImageModal({
             type="button"
             className="stage-article-modal-close"
             onClick={onClose}
+            aria-label="Close featured image modal"
           >
             ×
           </button>

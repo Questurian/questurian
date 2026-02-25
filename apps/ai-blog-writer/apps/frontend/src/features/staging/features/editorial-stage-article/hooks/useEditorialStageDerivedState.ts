@@ -5,6 +5,7 @@ import type {
   ImgTrioFormat,
   MediaVariant,
 } from '../types'
+import type { EditorialPublishAnalysis } from '../editorial-markdown.service'
 import {
   CONTENT_BLOCK_HEIGHT,
   CONTENT_BLOCK_VARIANT,
@@ -34,6 +35,7 @@ type UseEditorialStageDerivedStateParams = {
   locations: Location[]
   mediaAssets: MediaAsset[]
   timelineItems: TimelineItem[]
+  editorialPublishAnalysis: EditorialPublishAnalysis
   imageSearch: string
   blockImageModal: BlockImageModalState | null
   blockImageSearch: string
@@ -48,6 +50,7 @@ export function useEditorialStageDerivedState({
   locations,
   mediaAssets,
   timelineItems,
+  editorialPublishAnalysis,
   imageSearch,
   blockImageModal,
   blockImageSearch,
@@ -69,6 +72,7 @@ export function useEditorialStageDerivedState({
     ),
     [stagedArticle.featuredImageId, findPreferredVariantAsset]
   )
+  const hasFeaturedImageSelection = Boolean(stagedArticle.featuredImageId)
 
   const lastContentBlock = useMemo(
     () => (stagedArticle.blocks.length > 0 ? stagedArticle.blocks[stagedArticle.blocks.length - 1] : null),
@@ -127,8 +131,15 @@ export function useEditorialStageDerivedState({
   }, [timelineItems])
 
   const hasTitle = Boolean(stagedArticle.title.trim())
-  const allFieldsFilled = Boolean(selectedLocation && selectedFeaturedImage && hasTitle)
-  const hasMissingFeaturedImage = !selectedFeaturedImage
+  const allFieldsFilled = Boolean(selectedLocation && hasFeaturedImageSelection && hasTitle)
+  const missingPublishFields: string[] = []
+  if (!hasTitle) missingPublishFields.push('Article title')
+  if (!selectedLocation) missingPublishFields.push('Location')
+  if (!hasFeaturedImageSelection) missingPublishFields.push('Featured image')
+  const editorialBlockingMessages = editorialPublishAnalysis.blockingBlocks.map(
+    (blockingBlock) => blockingBlock.message
+  )
+  const hasMissingFeaturedImage = !hasFeaturedImageSelection
 
   const isImgBlockModal = blockImageModal?.mode === 'img'
   const isImgTrioModal = blockImageModal?.mode === 'img-trio'
@@ -192,6 +203,8 @@ export function useEditorialStageDerivedState({
     totalTechnicalBlockCount,
     hasTitle,
     allFieldsFilled,
+    missingPublishFields,
+    editorialBlockingMessages,
     hasMissingFeaturedImage,
     isImgBlockModal,
     isImgTrioModal,

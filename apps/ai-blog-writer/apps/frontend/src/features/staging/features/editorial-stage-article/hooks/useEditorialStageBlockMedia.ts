@@ -39,6 +39,7 @@ type UseEditorialStageBlockMediaParams = {
       minHeight?: number
       width?: number
       height?: number
+      id?: number
     }
   ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
   searchPexelsImages: (

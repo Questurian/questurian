@@ -68,9 +68,14 @@ export function useEditorialStagePublishWorkflow({
 
     const trimmedTitle = stagedArticle.title.trim()
     const location = locations.find((candidate) => candidate.id === stagedArticle.locationId)
-    const featuredImage = stagedArticle.featuredImageId
+    const resolvedFeaturedAsset = stagedArticle.featuredImageId
       ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
       : null
+    const fallbackFeaturedImageId = Number(stagedArticle.featuredImageId)
+    const featuredImageId = resolvedFeaturedAsset?.id
+      ?? (Number.isFinite(fallbackFeaturedImageId) && fallbackFeaturedImageId > 0
+        ? fallbackFeaturedImageId
+        : null)
 
     if (!trimmedTitle) {
       dispatchUi({
@@ -80,10 +85,26 @@ export function useEditorialStagePublishWorkflow({
       return
     }
 
-    if (!location || !featuredImage) {
+    if (!location || !featuredImageId) {
       dispatchUi({
         type: 'PUBLISH_FAILURE',
         message: !location ? 'Please select a location' : 'Please select a featured image',
+      })
+      return
+    }
+
+    if (editorialPublishAnalysis.hasBlockingBlocks) {
+      const previewMessage = editorialPublishAnalysis.blockingBlocks
+        .slice(0, 2)
+        .map((block) => block.message)
+        .join(' · ')
+      const remainingCount = editorialPublishAnalysis.blockingBlocks.length - 2
+      const remainingSuffix = remainingCount > 0 ? ` (+${remainingCount} more)` : ''
+      dispatchUi({
+        type: 'PUBLISH_FAILURE',
+        message: previewMessage
+          ? `Fix editorial blocks before publishing: ${previewMessage}${remainingSuffix}`
+          : 'Fix editorial blocks before publishing',
       })
       return
     }
@@ -113,7 +134,7 @@ export function useEditorialStagePublishWorkflow({
           step1_complete: true,
           status: 'draft',
           headerSection: {
-            featuredImage: featuredImage.id,
+            featuredImage: featuredImageId,
           },
           contentBlocks,
         },
