@@ -1,5 +1,6 @@
 import { Block } from 'payload'
 import { createLocationFilter } from './utils/locationFilter'
+import { createItemMediaFields } from './utils/itemMedia'
 
 export const DataAttractionsBlock: Block = {
   slug: 'data-attractions',
@@ -18,6 +19,7 @@ export const DataAttractionsBlock: Block = {
         description: 'Select an attraction listing for this ranked item',
       },
     },
+    ...createItemMediaFields('attractions'),
     {
       name: 'blurb',
       type: 'richText',
