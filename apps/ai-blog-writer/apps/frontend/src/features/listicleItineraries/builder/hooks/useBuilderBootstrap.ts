@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
+import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
 import { fetchItineraryById, fetchLocations, fetchMediaAssets, fetchSeoMetadata } from '../../api'
 import { createEmptyDraft, findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../../storage'
 import type { ListicleItineraryDraft, LocationOption, MediaAssetOption, SeoMetadataOption } from '../../types'
@@ -22,6 +23,15 @@ type UseBuilderBootstrapResult = {
   mediaAssets: MediaAssetOption[]
   seoOptions: SeoMetadataOption[]
   setSeoOptions: Dispatch<SetStateAction<SeoMetadataOption[]>>
+}
+
+function normalizeDraftModelName(draft: ListicleItineraryDraft): ListicleItineraryDraft {
+  const normalizedModelName = resolveEditorAssistModelName(draft.editorModelName)
+  if (normalizedModelName === draft.editorModelName) return draft
+  return {
+    ...draft,
+    editorModelName: normalizedModelName,
+  }
 }
 
 export function useBuilderBootstrap({
@@ -62,11 +72,16 @@ export function useBuilderBootstrap({
         if (payloadId && Number.isFinite(payloadId)) {
           const localDraft = findDraftByPayloadId(payloadId)
           if (localDraft) {
-            setDraft(localDraft)
+            const normalizedLocalDraft = normalizeDraftModelName(localDraft)
+            setDraft(normalizedLocalDraft)
+            if (normalizedLocalDraft !== localDraft) {
+              saveDraft(normalizedLocalDraft)
+            }
           } else {
             const doc = await fetchItineraryById(payloadId, token)
             if (cancelled) return
-            setDraft(payloadDocToDraft(doc))
+            const normalizedPayloadDraft = normalizeDraftModelName(payloadDocToDraft(doc))
+            setDraft(normalizedPayloadDraft)
           }
           return
         }
@@ -74,7 +89,11 @@ export function useBuilderBootstrap({
         if (draftIdParam) {
           const byDraftId = findDraftByDraftId(draftIdParam)
           if (byDraftId) {
-            setDraft(byDraftId)
+            const normalizedDraftById = normalizeDraftModelName(byDraftId)
+            setDraft(normalizedDraftById)
+            if (normalizedDraftById !== byDraftId) {
+              saveDraft(normalizedDraftById)
+            }
             return
           }
         }

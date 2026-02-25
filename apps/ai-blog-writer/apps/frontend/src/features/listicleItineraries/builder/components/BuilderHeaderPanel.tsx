@@ -1,13 +1,26 @@
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import type { ListicleItineraryDraft } from '../../types'
 
+type AiRewriteInput = {
+  blockId: string
+  currentContent: string
+  prompt: string
+  includeWholeArticleContext: boolean
+}
+
 type BuilderHeaderPanelProps = {
   draft: ListicleItineraryDraft
   mediaAssets: Array<{ id: number; filename: string }>
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
+  onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
 }
 
-export function BuilderHeaderPanel({ draft, mediaAssets, updateHeader }: BuilderHeaderPanelProps) {
+export function BuilderHeaderPanel({
+  draft,
+  mediaAssets,
+  updateHeader,
+  onIntroAiRewrite,
+}: BuilderHeaderPanelProps) {
   return (
     <section className="stl-panel">
       <div className="stl-panel-header">
@@ -54,6 +67,7 @@ export function BuilderHeaderPanel({ draft, mediaAssets, updateHeader }: Builder
           }
           showToolbar
           enforceHeadingStructure={false}
+          onAiRewrite={onIntroAiRewrite}
           placeholder="Write the itinerary intro..."
           className="stl-markdown-textarea"
           rows={6}

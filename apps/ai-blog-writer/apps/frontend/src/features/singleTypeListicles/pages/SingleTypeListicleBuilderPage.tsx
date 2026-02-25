@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
 import { BuilderHero } from '../builder/components/BuilderHero'
@@ -15,8 +16,17 @@ import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
 import { useListicleSubmit } from '../builder/hooks/useListicleSubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
+import { buildListicleAiArticleContext, getListicleAiArticleTitle } from '../builder/services/ai-rewrite.service'
 import { useSeoManager } from '../builder/hooks/useSeoManager'
+import { rewriteBlockWithAi } from '../api'
 import '../styles.css'
+
+type AiRewriteInput = {
+  blockId: string
+  currentContent: string
+  prompt: string
+  includeWholeArticleContext: boolean
+}
 
 export default function SingleTypeListicleBuilderPage() {
   const { token } = useAuth()
@@ -83,6 +93,32 @@ export default function SingleTypeListicleBuilderPage() {
 
   const progress = useBuilderProgress(draft)
 
+  const rewriteDraftBlockWithAi = useCallback(async (input: AiRewriteInput): Promise<string> => {
+    if (!draft) {
+      throw new Error('Draft is not loaded yet.')
+    }
+
+    const currentContent = input.currentContent.trim()
+    if (!currentContent) {
+      throw new Error('Add starter text before using AI rewrite.')
+    }
+
+    const response = await rewriteBlockWithAi({
+      prompt: input.prompt.trim(),
+      blockContent: currentContent,
+      modelName: resolveEditorAssistModelName(draft.editorModelName),
+      articleTitle: getListicleAiArticleTitle(draft),
+      articleContext: input.includeWholeArticleContext ? buildListicleAiArticleContext(draft) : undefined,
+    })
+
+    const rewrittenContent = response.rewritten_content?.trim()
+    if (!rewrittenContent) {
+      throw new Error('AI returned empty block content.')
+    }
+
+    return rewrittenContent
+  }, [draft])
+
   if (isLoading || !draft) {
     return (
       <div className="stl-page">
@@ -110,7 +146,12 @@ export default function SingleTypeListicleBuilderPage() {
             updateDraft={actions.updateDraft}
           />
 
-          <BuilderHeaderPanel draft={draft} mediaAssets={mediaAssets} updateHeader={actions.updateHeader} />
+          <BuilderHeaderPanel
+            draft={draft}
+            mediaAssets={mediaAssets}
+            updateHeader={actions.updateHeader}
+            onIntroAiRewrite={rewriteDraftBlockWithAi}
+          />
 
           <BuilderItemsPanel
             draft={draft}
@@ -120,6 +161,7 @@ export default function SingleTypeListicleBuilderPage() {
             moveItem={actions.moveItem}
             removeItem={actions.removeItem}
             updateItem={actions.updateItem}
+            onItemBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
           />
 
           <BuilderSeoPanel
@@ -145,6 +187,8 @@ export default function SingleTypeListicleBuilderPage() {
           isSetupReady={progress.isSetupReady}
           hasTargetCount={progress.hasTargetCount}
           stepIssues={progress.stepIssues}
+          editorModelName={draft.editorModelName}
+          onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
           onSaveDraft={() => submit('draft')}
           onPublish={() => submit('published')}

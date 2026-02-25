@@ -15,6 +15,13 @@ import type {
   RelatedItemOption,
 } from '../../types'
 
+type AiRewriteInput = {
+  blockId: string
+  currentContent: string
+  prompt: string
+  includeWholeArticleContext: boolean
+}
+
 type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
   isLoadingRelated: boolean
@@ -28,6 +35,7 @@ type BuilderStopsPanelProps = {
     updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
     options?: { cascadeSchedule?: boolean },
   ) => void
+  onStopBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
 }
 
 export function BuilderStopsPanel({
@@ -39,6 +47,7 @@ export function BuilderStopsPanel({
   onMoveItem,
   onRemoveItem,
   onUpdateItem,
+  onStopBlurbAiRewrite,
 }: BuilderStopsPanelProps) {
   return (
     <section className="stl-panel">
@@ -223,6 +232,7 @@ export function BuilderStopsPanel({
                   }
                   showToolbar
                   enforceHeadingStructure={false}
+                  onAiRewrite={(input) => onStopBlurbAiRewrite(item.id, input)}
                   placeholder="Write editorial context for this stop..."
                   className="stl-markdown-textarea"
                   rows={5}

@@ -1,4 +1,4 @@
-import { convertMarkdownToLexical } from '../staging/api'
+import { convertMarkdownToLexical, rewriteBlockWithAi } from '../staging/api'
 import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
 import type { LocationScope } from '../locationScope/types'
 import type {
@@ -156,3 +156,5 @@ export async function markdownToLexical(markdown: string): Promise<Record<string
   }
   return result.data as Record<string, unknown>
 }
+
+export { rewriteBlockWithAi }

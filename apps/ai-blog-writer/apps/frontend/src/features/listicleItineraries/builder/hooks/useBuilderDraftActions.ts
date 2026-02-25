@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useMemo, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
+import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
 import { createEmptyDraft, removeDraft } from '../../storage'
 import type { ItineraryItemBlock, ListicleItineraryDraft, LocationOption } from '../../types'
 import { autoChainItems, createNewItem, withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
@@ -33,6 +34,7 @@ type UseBuilderDraftActionsResult = {
   handleUpdateSetup: () => void
   handleSaveSetup: () => void
   cancelUpdateSetup: () => void
+  setEditorModelName: (modelName: string) => void
   handleDiscardLocalDraft: () => void
 }
 
@@ -213,6 +215,11 @@ export function useBuilderDraftActions({
     onError('')
   }
 
+  function setEditorModelName(modelName: string) {
+    const normalizedModelName = resolveEditorAssistModelName(modelName)
+    updateDraft({ editorModelName: normalizedModelName })
+  }
+
   function handleDiscardLocalDraft() {
     if (!draft) return
     removeDraft(draft.draftId)
@@ -239,6 +246,7 @@ export function useBuilderDraftActions({
     handleUpdateSetup,
     handleSaveSetup,
     cancelUpdateSetup,
+    setEditorModelName,
     handleDiscardLocalDraft,
   }
 }

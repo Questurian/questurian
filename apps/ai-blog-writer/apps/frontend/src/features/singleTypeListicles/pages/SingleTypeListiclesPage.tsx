@@ -69,7 +69,7 @@ export default function SingleTypeListiclesPage() {
           <p className="stl-eyebrow">Questurian Studio</p>
           <h1>Single Type Listicles</h1>
           <p className="stl-lede">
-            Build and maintain Payload single-type-listicle articles without AI generation.
+            Build and maintain Payload single-type-listicle articles with AI-assisted block editing.
           </p>
         </div>
         <div className="stl-hero-actions">

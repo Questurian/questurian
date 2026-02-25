@@ -559,6 +559,46 @@
   margin-bottom: 0.4rem;
 }
 
+.stl-page .block-markdown-ai-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.stl-page .block-markdown-ai-row .block-markdown-ai-input {
+  flex: 1;
+  min-width: 180px;
+  margin-bottom: 0;
+}
+
+.stl-page .block-markdown-ai-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stl-page .block-markdown-ai-btn.subtle {
+  border-color: var(--stl-border);
+  color: var(--stl-muted);
+}
+
+.stl-page .block-markdown-ai-btn.subtle:hover:not(:disabled) {
+  border-color: var(--stl-accent);
+  color: var(--stl-accent);
+}
+
+.stl-page .block-markdown-ai-context-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--stl-muted);
+}
+
+.stl-page .block-markdown-ai-context-toggle input {
+  accent-color: var(--stl-accent);
+}
+
 @media (max-width: 1100px) {
   .stl-builder-layout {
     grid-template-columns: 1fr;

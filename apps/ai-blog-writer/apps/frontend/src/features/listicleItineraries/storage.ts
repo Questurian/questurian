@@ -1,3 +1,4 @@
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import type { ListicleItineraryDraft } from './types'
 
 const STORAGE_KEY = 'listicle_itineraries_staged'
@@ -50,6 +51,7 @@ export function findDraftByDraftId(draftId: string): ListicleItineraryDraft | nu
 export function createEmptyDraft(): ListicleItineraryDraft {
   return {
     draftId: `lit_${Date.now()}`,
+    editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: '',
     location: '',
     locationRef: null,

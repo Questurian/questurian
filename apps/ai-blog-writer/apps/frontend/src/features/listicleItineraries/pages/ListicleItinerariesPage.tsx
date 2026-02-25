@@ -91,7 +91,7 @@ export default function ListicleItinerariesPage() {
           <p className="stl-eyebrow">Questurian Studio</p>
           <h1>Listicle Itineraries</h1>
           <p className="stl-lede">
-            Build and maintain Payload listicle-itinerary articles with full field and block control.
+            Build and maintain Payload listicle-itinerary articles with AI-assisted block editing.
           </p>
         </div>
         <div className="stl-hero-actions">

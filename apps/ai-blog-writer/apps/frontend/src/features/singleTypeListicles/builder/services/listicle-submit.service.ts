@@ -82,6 +82,7 @@ export async function submitListicle({
     : await createListicle(body, token)
 
   const nextDraft = payloadDocToDraft(doc, draft.draftId)
+  nextDraft.editorModelName = draft.editorModelName
   nextDraft.header.introMarkdown = draft.header.introMarkdown
   nextDraft.items = nextDraft.items.map((nextItem, index) => ({
     ...nextItem,

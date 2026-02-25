@@ -1,3 +1,5 @@
+import type { EditorAssistModelName } from '../staging/api'
+
 export type DayAudience = 'anyday' | 'weekday' | 'weekend'
 
 export type ItineraryBlockType =
@@ -46,6 +48,7 @@ export type SeoMetadataForm = {
 export type ListicleItineraryDraft = {
   draftId: string
   payloadId?: number
+  editorModelName: EditorAssistModelName
   title: string
   location: string
   locationRef: number | null

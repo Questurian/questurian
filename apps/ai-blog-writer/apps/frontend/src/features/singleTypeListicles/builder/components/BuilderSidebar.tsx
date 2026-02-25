@@ -1,3 +1,5 @@
+import { EDITOR_ASSIST_MODEL_OPTIONS } from '../../../staging/api'
+import type { EditorAssistModelName } from '../../../staging/api'
 import type { SingleTypeListicleDraft } from '../../types'
 
 type BuilderSidebarProps = {
@@ -6,6 +8,8 @@ type BuilderSidebarProps = {
   isSetupReady: boolean
   hasTargetCount: boolean
   stepIssues: string[]
+  editorModelName: EditorAssistModelName
+  onEditorModelChange: (modelName: string) => void
   isSaving: boolean
   onSaveDraft: () => Promise<void>
   onPublish: () => Promise<void>
@@ -17,6 +21,8 @@ export function BuilderSidebar({
   isSetupReady,
   hasTargetCount,
   stepIssues,
+  editorModelName,
+  onEditorModelChange,
   isSaving,
   onSaveDraft,
   onPublish,
@@ -45,6 +51,16 @@ export function BuilderSidebar({
 
       <section className="stl-summary-card">
         <h3>Quick Actions</h3>
+        <label className="stl-field">
+          <span>AI Model</span>
+          <select value={editorModelName} onChange={(event) => onEditorModelChange(event.target.value)}>
+            {EDITOR_ASSIST_MODEL_OPTIONS.map((modelOption) => (
+              <option key={modelOption.value} value={modelOption.value}>
+                {modelOption.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="stl-summary-actions">
           <button type="button" className="stl-btn" onClick={() => void onSaveDraft()} disabled={isSaving}>
             Save Draft

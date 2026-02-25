@@ -1,3 +1,4 @@
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
 import type { ItineraryItemBlock, ListicleItineraryDraft, PayloadItineraryDoc } from '../../types'
 import { getRelationshipId, normalizeDurationMinute, normalizePeriod, normalizeQuarterMinute } from '../utils/field-normalizers.utils'
 
@@ -19,6 +20,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
   return {
     draftId: existingDraftId || `lit_payload_${doc.id}`,
     payloadId: doc.id,
+    editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: doc.title || '',
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),

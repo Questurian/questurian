@@ -1,3 +1,5 @@
+import type { EditorAssistModelName } from '../staging/api'
+
 export type ListicleType = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
 
 export type ListicleBlockType =
@@ -34,6 +36,7 @@ export type SeoMetadataForm = {
 export type SingleTypeListicleDraft = {
   draftId: string
   payloadId?: number
+  editorModelName: EditorAssistModelName
   title: string
   location: string
   locationRef: number | null

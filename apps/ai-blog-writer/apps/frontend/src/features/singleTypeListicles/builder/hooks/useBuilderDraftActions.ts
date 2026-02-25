@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useMemo, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
+import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
 import { getBlockTypeForListicleType } from '../../api'
 import { createEmptyDraft, removeDraft } from '../../storage'
 import type { ListicleItemBlock, ListicleType, SingleTypeListicleDraft } from '../../types'
@@ -29,6 +30,7 @@ type UseBuilderDraftActionsResult = {
   handleSaveSetup: () => void
   cancelUpdateSetup: () => void
   setSeoId: (value: number | null) => void
+  setEditorModelName: (modelName: string) => void
   handleDiscardLocalDraft: () => void
 }
 
@@ -216,6 +218,11 @@ export function useBuilderDraftActions({
     })
   }
 
+  function setEditorModelName(modelName: string) {
+    const normalizedModelName = resolveEditorAssistModelName(modelName)
+    updateDraft({ editorModelName: normalizedModelName })
+  }
+
   function handleDiscardLocalDraft() {
     if (!draft) return
     removeDraft(draft.draftId)
@@ -242,6 +249,7 @@ export function useBuilderDraftActions({
     handleSaveSetup,
     cancelUpdateSetup,
     setSeoId,
+    setEditorModelName,
     handleDiscardLocalDraft,
   }
 }

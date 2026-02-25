@@ -143,6 +143,7 @@ export function useItinerarySubmit({
         : await createItinerary(body, token)
 
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
+      nextDraft.editorModelName = draft.editorModelName
       nextDraft.header.introMarkdown = submitDraft.header.introMarkdown
       nextDraft.items = nextDraft.items.map((nextItem, index) => ({
         ...nextItem,

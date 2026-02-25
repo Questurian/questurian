@@ -1,3 +1,4 @@
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import type { SingleTypeListicleDraft } from './types'
 
 const STORAGE_KEY = 'single_type_listicles_staged'
@@ -50,6 +51,7 @@ export function findDraftByDraftId(draftId: string): SingleTypeListicleDraft | n
 export function createEmptyDraft(): SingleTypeListicleDraft {
   return {
     draftId: `stl_${Date.now()}`,
+    editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: '',
     location: '',
     locationRef: null,

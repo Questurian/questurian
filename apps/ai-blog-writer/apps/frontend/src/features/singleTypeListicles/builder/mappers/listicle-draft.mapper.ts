@@ -1,3 +1,4 @@
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
 
 function getRelationshipId(value: unknown): number | null {
@@ -22,6 +23,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
   return {
     draftId: existingDraftId || `stl_payload_${doc.id}`,
     payloadId: doc.id,
+    editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: doc.title || '',
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),

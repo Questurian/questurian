@@ -1,3 +1,5 @@
+import type { EditorAssistModelName } from './models'
+
 export type RewriteBlockWithAiResponse = {
   rewritten_content: string
   model_used: string
@@ -6,7 +8,7 @@ export type RewriteBlockWithAiResponse = {
 export type RewriteBlockWithAiRequest = {
   prompt: string
   blockContent: string
-  modelName?: string
+  modelName?: EditorAssistModelName
   articleTitle?: string
   articleContext?: string
 }

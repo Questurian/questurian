@@ -3,6 +3,7 @@ export * from './converter/converter.types'
 
 export * from './ai/rewrite.api'
 export * from './ai/rewrite.types'
+export * from './ai/models'
 
 export * from './external-images/external-images.api'
 export * from './external-images/external-images.types'

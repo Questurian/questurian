@@ -1,6 +1,13 @@
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import type { ListicleItemBlock, SingleTypeListicleDraft } from '../../types'
 
+type AiRewriteInput = {
+  blockId: string
+  currentContent: string
+  prompt: string
+  includeWholeArticleContext: boolean
+}
+
 type BuilderItemsPanelProps = {
   draft: SingleTypeListicleDraft
   relatedItems: Array<{ id: number; title: string }>
@@ -9,6 +16,7 @@ type BuilderItemsPanelProps = {
   moveItem: (itemId: string, direction: 'up' | 'down') => void
   removeItem: (itemId: string) => void
   updateItem: (itemId: string, updater: (item: ListicleItemBlock) => ListicleItemBlock) => void
+  onItemBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
 }
 
 export function BuilderItemsPanel({
@@ -19,6 +27,7 @@ export function BuilderItemsPanel({
   moveItem,
   removeItem,
   updateItem,
+  onItemBlurbAiRewrite,
 }: BuilderItemsPanelProps) {
   const blockTypeOptions = draft.listicleType ? [`data-${draft.listicleType}` as ListicleItemBlock['blockType']] : []
 
@@ -112,6 +121,7 @@ export function BuilderItemsPanel({
                 }
                 showToolbar
                 enforceHeadingStructure={false}
+                onAiRewrite={(input) => onItemBlurbAiRewrite(item.id, input)}
                 placeholder="Write why this item made the list..."
                 className="stl-markdown-textarea"
                 rows={5}
