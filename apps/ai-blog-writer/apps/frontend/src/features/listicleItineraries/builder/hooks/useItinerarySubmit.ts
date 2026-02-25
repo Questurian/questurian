@@ -7,7 +7,9 @@ import { saveDraft } from '../../storage'
 import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
 import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
 import { withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
+import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
+import { validateItemMediaSelections } from '../validators/media.validators'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateItemTimeline } from '../validators/timeline.validators'
 
@@ -64,6 +66,12 @@ export function useItinerarySubmit({
       return
     }
 
+    const mediaIssues = validateItemMediaSelections(submitDraft, relatedByBlockType)
+    if (mediaIssues.length > 0) {
+      onError(mediaIssues[0])
+      return
+    }
+
     try {
       setIsSaving(true)
 
@@ -108,6 +116,9 @@ export function useItinerarySubmit({
           durationHours: item.durationHours,
           durationMinutes: item.durationMinutes,
           item: item.item,
+          mediaMode: item.mediaMode,
+          selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
+          selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,
           blurb,
         })
       }

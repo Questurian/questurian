@@ -1,7 +1,7 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import type { SingleTypeListicleDraft } from './types'
 
-const STORAGE_KEY = 'single_type_listicles_staged'
+const STORAGE_KEY = 'single_type_listicles_staged_v2_media'
 
 export function listDrafts(): SingleTypeListicleDraft[] {
   try {

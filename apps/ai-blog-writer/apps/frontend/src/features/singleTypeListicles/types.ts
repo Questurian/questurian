@@ -8,12 +8,17 @@ export type ListicleBlockType =
   | 'data-attractions'
   | 'data-nightlife'
 
+export type MediaMode = 'photos' | 'instagram' | 'both'
+
 export type PayloadRichText = Record<string, unknown>
 
 export type ListicleItemBlock = {
   id: string
   blockType: ListicleBlockType
   item: number | null
+  mediaMode: MediaMode
+  selectedPhotos: number[]
+  selectedInstagramPost: number | null
   blurbMarkdown: string
   blurbLexical?: PayloadRichText
   blurbJsonText?: string
@@ -78,6 +83,9 @@ export type PayloadListicleDoc = {
     id?: string
     blockType?: ListicleBlockType
     item?: number | { id?: number }
+    mediaMode?: MediaMode
+    selectedPhotos?: Array<number | { id?: number }>
+    selectedInstagramPost?: number | { id?: number } | null
     blurb?: PayloadRichText
   }>
   seoSection?: {
@@ -118,6 +126,12 @@ export type RelatedItemOption = {
   title: string
   location?: string
   status?: string
+  gallery?: Array<{
+    image?: number | { id?: number }
+  }>
+  instagramGallery?: Array<{
+    post?: number | { id?: number }
+  }>
 }
 
 export type SeoMetadataOption = {

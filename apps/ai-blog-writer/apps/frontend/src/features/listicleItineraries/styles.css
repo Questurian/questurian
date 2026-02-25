@@ -256,6 +256,10 @@
   min-height: 96px;
 }
 
+.stl-multi-select {
+  min-height: 132px;
+}
+
 .stl-markdown-textarea {
   min-height: 220px;
 }

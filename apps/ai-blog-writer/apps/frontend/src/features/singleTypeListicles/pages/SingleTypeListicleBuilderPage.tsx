@@ -76,6 +76,7 @@ export default function SingleTypeListicleBuilderPage() {
   const { isSaving, submit } = useListicleSubmit({
     token,
     draft,
+    relatedItems,
     selectedLocationRefId: actions.selectedLocationRefId,
     setDraft,
     setSearchParams,

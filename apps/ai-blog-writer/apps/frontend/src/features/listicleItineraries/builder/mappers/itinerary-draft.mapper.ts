@@ -1,12 +1,16 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
 import type { ItineraryItemBlock, ListicleItineraryDraft, PayloadItineraryDoc } from '../../types'
 import { getRelationshipId, normalizeDurationMinute, normalizePeriod, normalizeQuarterMinute } from '../utils/field-normalizers.utils'
+import { getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 
 export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: string): ListicleItineraryDraft {
   const items: ItineraryItemBlock[] = (doc.items || []).map((item, index) => ({
     id: item.id || `item_${Date.now()}_${index}`,
     blockType: item.blockType || 'itinerary-dining',
     item: getRelationshipId(item.item),
+    mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
+    selectedPhotos: getRelationshipIds(item.selectedPhotos),
+    selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
     timeHour: typeof item.timeHour === 'number' ? item.timeHour : 9,
     timeMinute: normalizeQuarterMinute(item.timeMinute),
     timePeriod: normalizePeriod(item.timePeriod),
