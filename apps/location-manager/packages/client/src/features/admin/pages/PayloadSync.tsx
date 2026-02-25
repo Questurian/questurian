@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection } from "@client/shared/services/api/hooks/usePayloadSync";
 import { useClearDatabase, useLocationsBasic } from "@client/shared/services/api/hooks";
 import { useToast } from "@client/shared/hooks/useToast";
@@ -46,6 +46,30 @@ export function PayloadSync() {
   const [syncingId, setSyncingId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "synced" | "ready" | "incomplete">("all");
+
+  const [showLoadError, setShowLoadError] = useState(false);
+  const [showSyncErrors, setShowSyncErrors] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      setShowLoadError(true);
+      const t = setTimeout(() => setShowLoadError(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
+  const hasSyncErrors = useMemo(
+    () => filteredData.some((item) => item.syncState?.error_message),
+    [filteredData]
+  );
+
+  useEffect(() => {
+    if (hasSyncErrors) {
+      setShowSyncErrors(true);
+      const t = setTimeout(() => setShowSyncErrors(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [hasSyncErrors]);
 
   // Create a map of sync status by locationId for quick lookup
   const syncStatusMap = useMemo(() => {
@@ -337,7 +361,7 @@ export function PayloadSync() {
 
         {/* Error message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+          <div className={`bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4 transition-opacity duration-500 ${showLoadError ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <p className="font-medium">Error loading sync status</p>
             <p className="text-sm">Please try again later.</p>
           </div>
@@ -440,8 +464,8 @@ export function PayloadSync() {
         )}
 
         {/* Error messages for failed syncs */}
-        {filteredData.some(item => item.syncState?.error_message) && (
-          <div className="mt-6">
+        {hasSyncErrors && (
+          <div className={`mt-6 transition-opacity duration-500 ${showSyncErrors ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <h3 className="text-lg font-semibold mb-3">Error Details</h3>
             <div className="space-y-2">
               {filteredData
