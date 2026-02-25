@@ -230,6 +230,81 @@
   color: #4f5767;
 }
 
+.stl-field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stl-ai-title-trigger {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.6rem;
+}
+
+.stl-ai-title-modal {
+  width: min(560px, 100%);
+}
+
+.stl-ai-title-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.stl-ai-title-modal-header h3 {
+  margin: 0;
+}
+
+.stl-ai-title-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #6b7280;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.stl-ai-title-modal-close:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.stl-ai-title-error {
+  margin: 0.6rem 0 0;
+}
+
+.stl-ai-title-preview {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: #f6f8fb;
+  border: 1px solid var(--stl-border);
+  border-radius: 10px;
+}
+
+.stl-ai-title-preview-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.stl-ai-title-preview-text {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  color: var(--stl-ink);
+  line-height: 1.4;
+}
+
+.stl-ai-title-actions {
+  margin-top: 1.1rem;
+}
+
 .stl-field input,
 .stl-field select,
 .stl-field textarea {

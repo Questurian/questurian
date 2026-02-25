@@ -1,4 +1,5 @@
-import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
+import { AiTitleInput, MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
+import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import type { ListicleItineraryDraft } from '../../types'
 
 type AiRewriteInput = {
@@ -13,6 +14,13 @@ type BuilderHeaderPanelProps = {
   mediaAssets: Array<{ id: number; filename: string }>
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
+  onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
+}
+
+function getAiTitleDisabledReason(draft: ListicleItineraryDraft): string | undefined {
+  if (!draft.location) return 'Set a location in Step 1 first'
+  if (!draft.header.customTitle.trim()) return 'Write a title first, then AI can improve it'
+  return undefined
 }
 
 export function BuilderHeaderPanel({
@@ -20,7 +28,10 @@ export function BuilderHeaderPanel({
   mediaAssets,
   updateHeader,
   onIntroAiRewrite,
+  onTitleAiGenerate,
 }: BuilderHeaderPanelProps) {
+  const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
+
   return (
     <section className="stl-panel">
       <div className="stl-panel-header">
@@ -29,10 +40,20 @@ export function BuilderHeaderPanel({
         </h2>
       </div>
       <div className="stl-grid stl-grid-2">
-        <label className="stl-field">
-          <span>Custom Title</span>
+        <div className="stl-field">
+          <div className="stl-field-label-row">
+            <span>Custom Title</span>
+            {onTitleAiGenerate && (
+              <AiTitleInput
+                currentTitle={draft.header.customTitle}
+                onGenerate={onTitleAiGenerate}
+                onApply={(title) => updateHeader({ customTitle: title })}
+                disabledReason={aiTitleDisabledReason}
+              />
+            )}
+          </div>
           <input value={draft.header.customTitle} onChange={(event) => updateHeader({ customTitle: event.target.value })} />
-        </label>
+        </div>
 
         <label className="stl-field">
           <span>Featured Image</span>

@@ -20,6 +20,7 @@ MAX_PROMPT_CHARS = 1600
 MAX_BLOCK_CHARS = 24000
 MAX_ARTICLE_TITLE_CHARS = 300
 MAX_ARTICLE_CONTEXT_CHARS = 120000
+MAX_TITLE_CHARS = 200
 
 BLOCK_REWRITE_PROMPT = """You are an expert editorial rewriting assistant.
 
@@ -93,6 +94,78 @@ def _extract_rewritten_block(raw_response: str) -> str:
 
     # Fallback in case the model ignores envelope instructions.
     return _strip_markdown_fence(raw_response)
+
+
+TITLE_IMPROVE_PROMPT = """You are a headline editor for a travel and lifestyle listicle publication.
+
+You will receive an existing article title and an editor instruction for how to improve it.
+
+Rules:
+- Return only the final improved title text.
+- No quotes, no markdown, no explanation, no commentary.
+- Output exactly one line."""
+
+
+class GenerateTitleRequest(BaseModel):
+    current_title: str = Field(min_length=1, max_length=MAX_TITLE_CHARS)
+    prompt: str = Field(min_length=1, max_length=MAX_PROMPT_CHARS)
+    model_name: str | None = Field(default=None, max_length=120)
+
+
+class GenerateTitleResponse(BaseModel):
+    title: str
+
+
+def _extract_generated_title(raw_response: str) -> str:
+    # Strip any stray envelope tags the model may have included
+    cleaned = re.sub(r"<<<[A-Z_]+>>>", "", raw_response, flags=re.I).strip()
+    # Take the first non-empty line (titles should be one line)
+    for line in cleaned.splitlines():
+        line = line.strip()
+        if line:
+            return line
+    return cleaned
+
+
+@router.post("/generate-title", response_model=GenerateTitleResponse)
+async def generate_title(request: GenerateTitleRequest) -> GenerateTitleResponse:
+    current_title = request.current_title.strip()
+    prompt = request.prompt.strip()
+
+    if not current_title:
+        raise HTTPException(status_code=400, detail="current_title is required")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+
+    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    llm_prompt = (
+        f"{TITLE_IMPROVE_PROMPT}\n\n"
+        f"Current title: {current_title}\n\n"
+        f"Editor instruction: {prompt}"
+    )
+
+    try:
+        llm = get_vertex_llm(
+            temperature=0.4,
+            model_name=model_used,
+        )
+        raw_result = llm.invoke(llm_prompt)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Editor assist generate-title failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI title generation request failed",
+        ) from exc
+
+    raw_text = _safe_text(raw_result)
+    if not raw_text:
+        raise HTTPException(status_code=502, detail="AI title generation returned empty output")
+
+    title = _extract_generated_title(raw_text)
+    if not title:
+        raise HTTPException(status_code=502, detail="AI title generation returned empty title")
+
+    return GenerateTitleResponse(title=title)
 
 
 @router.post("/rewrite-block", response_model=RewriteBlockResponse)

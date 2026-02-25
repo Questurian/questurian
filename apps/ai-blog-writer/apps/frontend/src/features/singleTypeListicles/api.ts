@@ -1,4 +1,4 @@
-import { convertMarkdownToLexical, rewriteBlockWithAi } from '../staging/api'
+import { convertMarkdownToLexical, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
 import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
 import type {
   ListicleType,
@@ -164,4 +164,4 @@ export async function markdownToLexical(markdown: string): Promise<Record<string
   return result.data as Record<string, unknown>
 }
 
-export { rewriteBlockWithAi }
+export { generateTitleWithAi, rewriteBlockWithAi }

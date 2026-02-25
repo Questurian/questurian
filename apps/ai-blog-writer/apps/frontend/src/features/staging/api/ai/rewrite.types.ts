@@ -12,3 +12,13 @@ export type RewriteBlockWithAiRequest = {
   articleTitle?: string
   articleContext?: string
 }
+
+export type GenerateTitleWithAiRequest = {
+  currentTitle: string
+  prompt: string
+  modelName?: EditorAssistModelName
+}
+
+export type GenerateTitleWithAiResponse = {
+  title: string
+}
