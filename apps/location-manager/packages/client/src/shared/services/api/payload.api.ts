@@ -2,7 +2,7 @@
  * Payload CMS sync API
  */
 
-import { apiPost, apiGet } from "./client";
+import { apiPost, apiGet, apiDelete } from "./client";
 import { API_ENDPOINTS } from "./config";
 import type {
   PayloadSyncCategory,
@@ -54,5 +54,12 @@ export const payloadApi = {
    */
   async testConnection(): Promise<ConnectionStatusResponse> {
     return apiGet<ConnectionStatusResponse>(API_ENDPOINTS.PAYLOAD_TEST_CONNECTION);
+  },
+
+  /**
+   * Reset sync state for a specific location or all locations
+   */
+  async resetSyncState(locationId?: number): Promise<void> {
+    await apiDelete(API_ENDPOINTS.PAYLOAD_RESET_SYNC_STATE, { locationId });
   },
 };

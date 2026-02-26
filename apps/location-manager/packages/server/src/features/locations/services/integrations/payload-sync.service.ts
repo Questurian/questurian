@@ -32,6 +32,12 @@ export class PayloadSyncService {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
+    // Diagnostic context — populated as we go, available in catch block
+    let locationRefSource = "unknown";
+    let locationRef: string | null = null;
+    let galleryIds: string[] = [];
+    let instagramIds: string[] = [];
+
     try {
       // Mark sync as pending
       const collection = await this.getCollectionForLocation(locationId);
@@ -44,10 +50,12 @@ export class PayloadSyncService {
       }
 
       // Use stored locationRef (or auto-resolve if missing)
-      let locationRef = location.payload_location_ref;
+      locationRef = location.payload_location_ref;
+      locationRefSource = locationRef ? "stored" : "pending-resolve";
 
       // If missing, auto-resolve (graceful handling for legacy locations)
       if (!locationRef) {
+        locationRefSource = "auto-resolved (was null)";
         console.warn(`⚠️  Location ${locationId} missing payload_location_ref, auto-resolving...`);
 
         // Dynamic import to avoid circular dependencies
@@ -74,6 +82,8 @@ export class PayloadSyncService {
 
       // Upload images and create Instagram posts
       const uploadedImages = await uploadLocationImages(location, this.payloadClient, this.imageStorage);
+      galleryIds = uploadedImages.galleryImageIds;
+      instagramIds = uploadedImages.instagramPostIds;
 
       // Map location data to Payload format (locationRef is guaranteed at this point)
       const payloadData = mapLocationToPayloadFormat(location, uploadedImages, locationRef);
@@ -92,6 +102,18 @@ export class PayloadSyncService {
         // Create new document (first time sync)
         console.log(`✓ Creating new Payload document`);
       }
+
+      // Pre-send diagnostics — log everything that will be sent to Payload
+      console.log(`🔍 [SYNC DIAGNOSTICS] location ${locationId} → ${collection}`, {
+        operation: existingDocId ? `PATCH ${existingDocId}` : "POST (new)",
+        locationRef: payloadData.locationRef,
+        locationRefSource,
+        locationKey: location.locationKey,
+        galleryIds: uploadedImages.galleryImageIds,
+        instagramIds: uploadedImages.instagramPostIds,
+        galleryCount: uploadedImages.galleryImageIds.length,
+        instagramCount: uploadedImages.instagramPostIds.length,
+      });
 
       const response = await this.upsertPayloadEntryWithTypeFallback(
         collection,
@@ -140,12 +162,13 @@ export class PayloadSyncService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error(`❌ Failed to sync location ${locationId}:`, errorMessage);
+      const diagnostics = `[locationRef=${locationRef ?? "null"} source=${locationRefSource} gallery=[${galleryIds.join(",")}] instagram=[${instagramIds.join(",")}]]`;
+      console.error(`❌ Failed to sync location ${locationId}: ${errorMessage} ${diagnostics}`);
 
       // Save failed state
       try {
         const collection = await this.getCollectionForLocation(locationId);
-        PayloadSyncRepo.saveSyncState(locationId, collection, "", "failed", errorMessage);
+        PayloadSyncRepo.saveSyncState(locationId, collection, "", "failed", `${errorMessage} ${diagnostics}`);
       } catch {
         // Ignore error if we can't save sync state
       }
@@ -154,7 +177,7 @@ export class PayloadSyncService {
         locationId,
         payloadDocId: "",
         status: "failed",
-        error: errorMessage,
+        error: `${errorMessage} ${diagnostics}`,
       };
     }
   }

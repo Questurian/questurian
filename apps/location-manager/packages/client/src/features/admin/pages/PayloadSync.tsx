@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection } from "@client/shared/services/api/hooks/usePayloadSync";
+import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection, useResetSyncState } from "@client/shared/services/api/hooks/usePayloadSync";
 import { useClearDatabase, useLocationsBasic } from "@client/shared/services/api/hooks";
 import { useToast } from "@client/shared/hooks/useToast";
 import { Button } from "@client/components/ui/button";
@@ -41,6 +41,7 @@ export function PayloadSync() {
   const syncAllMutation = useSyncAll();
   const { data: connectionStatus, isLoading: isConnecting, refetch: testConnection } = usePayloadConnection();
   const clearDatabaseMutation = useClearDatabase();
+  const resetSyncMutation = useResetSyncState();
   const { showToast } = useToast();
 
   const [syncingId, setSyncingId] = useState<number | null>(null);
@@ -57,19 +58,6 @@ export function PayloadSync() {
       return () => clearTimeout(t);
     }
   }, [error]);
-
-  const hasSyncErrors = useMemo(
-    () => filteredData.some((item) => item.syncState?.error_message),
-    [filteredData]
-  );
-
-  useEffect(() => {
-    if (hasSyncErrors) {
-      setShowSyncErrors(true);
-      const t = setTimeout(() => setShowSyncErrors(false), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [hasSyncErrors]);
 
   // Create a map of sync status by locationId for quick lookup
   const syncStatusMap = useMemo(() => {
@@ -116,6 +104,19 @@ export function PayloadSync() {
 
     return filtered;
   }, [allLocationsWithStatus, categoryFilter, statusFilter]);
+
+  const hasSyncErrors = useMemo(
+    () => filteredData.some((item) => item.syncState?.error_message),
+    [filteredData]
+  );
+
+  useEffect(() => {
+    if (hasSyncErrors) {
+      setShowSyncErrors(true);
+      const t = setTimeout(() => setShowSyncErrors(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [hasSyncErrors]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -221,33 +222,69 @@ export function PayloadSync() {
             </p>
           </div>
 
-          {/* Clear Database Button with Confirmation Modal */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                Clear Database
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action will permanently delete all locations, Instagram embeds, uploads, and taxonomy data from the database.
-                  This cannot be undone. All cached data will also be cleared.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleClearDatabase}
-                  className="bg-red-600 hover:bg-red-700"
-                  disabled={clearDatabaseMutation.isPending}
-                >
-                  {clearDatabaseMutation.isPending ? "Clearing..." : "Yes, clear database"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* Header action buttons */}
+          <div className="flex gap-2">
+            {/* Reset Sync State Button */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Reset Sync State
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset all sync state?</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p className="font-semibold text-destructive">Only use this after wiping the Payload CMS database.</p>
+                      <p>This deletes all stored Payload document IDs and clears all location references locally. On next sync, every location will be created as a new document in Payload.</p>
+                      <p>If synced documents still exist in Payload, this will create duplicates — there is no undo.</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      await resetSyncMutation.mutateAsync(undefined);
+                      showToast("Sync state reset successfully", { x: window.innerWidth / 2, y: 100 });
+                    }}
+                    disabled={resetSyncMutation.isPending}
+                  >
+                    {resetSyncMutation.isPending ? "Resetting..." : "Yes, reset sync state"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Clear Database Button with Confirmation Modal */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  Clear Database
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will permanently delete all locations, Instagram embeds, uploads, and taxonomy data from the database.
+                    This cannot be undone. All cached data will also be cleared.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClearDatabase}
+                    className="bg-red-600 hover:bg-red-700"
+                    disabled={clearDatabaseMutation.isPending}
+                  >
+                    {clearDatabaseMutation.isPending ? "Clearing..." : "Yes, clear database"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         {/* Connection Status */}
@@ -434,27 +471,39 @@ export function PayloadSync() {
                       {item.syncState?.payload_doc_id || "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <Button
-                        onClick={() => handleSyncLocation(item.locationId, item.category)}
-                        disabled={
-                          !isPayloadSyncCategory(item.category) ||
-                          syncingId === item.locationId ||
-                          (item.synced && !item.needsResync)
-                        }
-                        variant="outline"
-                        size="sm"
-                      >
-                        {!isPayloadSyncCategory(item.category)
-                          ? "Unsupported"
-                          : syncingId === item.locationId
-                          ? "Syncing..."
-                          : !item.synced
-                            ? "Sync"
-                            : item.needsResync
-                              ? "Resync"
-                              : "Synced"
-                        }
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {item.syncState && (
+                          <Button
+                            onClick={() => resetSyncMutation.mutate(item.locationId)}
+                            disabled={resetSyncMutation.isPending}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            Reset
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleSyncLocation(item.locationId, item.category)}
+                          disabled={
+                            !isPayloadSyncCategory(item.category) ||
+                            syncingId === item.locationId ||
+                            (item.synced && !item.needsResync)
+                          }
+                          variant="outline"
+                          size="sm"
+                        >
+                          {!isPayloadSyncCategory(item.category)
+                            ? "Unsupported"
+                            : syncingId === item.locationId
+                            ? "Syncing..."
+                            : !item.synced
+                              ? "Sync"
+                              : item.needsResync
+                                ? "Resync"
+                                : "Synced"
+                          }
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

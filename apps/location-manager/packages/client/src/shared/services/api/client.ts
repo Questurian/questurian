@@ -137,11 +137,14 @@ export async function apiPostFormData<T>(
 }
 
 export async function apiDelete<T>(
-  path: string
+  path: string,
+  body?: unknown
 ): Promise<T> {
   const url = API_BASE_URL ? new URL(path, API_BASE_URL).toString() : path;
   const response = await fetch(url, {
     method: "DELETE",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
   });
   return handleResponse<T>(response);
 }
