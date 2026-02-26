@@ -23,6 +23,7 @@ const PRICE_LEVEL_TO_PAYLOAD: Record<string, string> = {
   "$$": "2",
   "$$$": "3",
   "$$$$": "4",
+  "free": "1",
   "budget": "1",
   "inexpensive": "1",
   "mid-range": "2",
