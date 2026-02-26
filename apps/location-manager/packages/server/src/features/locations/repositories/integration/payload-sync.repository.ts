@@ -110,3 +110,27 @@ export function saveSyncState(
     return false;
   }
 }
+
+/**
+ * Delete sync state for a specific location or all locations.
+ * Also clears payload_location_ref so the next sync re-resolves a fresh
+ * location hierarchy ref (needed when Payload CMS is wiped/rebuilt).
+ */
+export function deleteSyncState(locationId?: number): boolean {
+  try {
+    const db = getDb();
+    if (locationId !== undefined) {
+      db.query("DELETE FROM payload_sync_state WHERE entity_id = $locationId")
+        .run({ $locationId: locationId });
+      db.query("UPDATE entities SET payload_location_ref = NULL WHERE id = $locationId")
+        .run({ $locationId: locationId });
+    } else {
+      db.query("DELETE FROM payload_sync_state").run();
+      db.query("UPDATE entities SET payload_location_ref = NULL").run();
+    }
+    return true;
+  } catch (error) {
+    console.error("Error deleting sync state:", error);
+    return false;
+  }
+}

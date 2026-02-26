@@ -153,12 +153,23 @@ export class PayloadEntriesClient {
 
     if (!response.ok) {
       const errorText = await response.text();
+      const sentRefs = {
+        locationRef: data.locationRef ?? "(none)",
+        galleryIds: data.gallery?.map(g => g.image) ?? [],
+        instagramIds: data.instagramGallery?.map(i => i.post) ?? [],
+      };
       console.error("[Payload] Entry creation failed", {
         collection,
         status: response.status,
         errorText,
+        sentRefs,
       });
-      throw new Error(`Payload entry creation failed: ${response.status} - ${errorText}`);
+      throw new Error(
+        `Payload entry creation failed: ${response.status} - ${errorText} ` +
+        `| locationRef=${sentRefs.locationRef} ` +
+        `| gallery=[${sentRefs.galleryIds.join(",")}] ` +
+        `| instagram=[${sentRefs.instagramIds.join(",")}]`
+      );
     }
 
     const rawResult = await response.json();
@@ -212,13 +223,24 @@ export class PayloadEntriesClient {
 
     if (!response.ok) {
       const errorText = await response.text();
+      const sentRefs = {
+        locationRef: data.locationRef ?? "(none)",
+        galleryIds: data.gallery?.map(g => g.image) ?? [],
+        instagramIds: data.instagramGallery?.map(i => i.post) ?? [],
+      };
       console.error("[Payload] Entry update failed", {
         collection,
         docId,
         status: response.status,
         errorText,
+        sentRefs,
       });
-      throw new Error(`Payload entry update failed: ${response.status} - ${errorText}`);
+      throw new Error(
+        `Payload entry update failed: ${response.status} - ${errorText} ` +
+        `| locationRef=${sentRefs.locationRef} ` +
+        `| gallery=[${sentRefs.galleryIds.join(",")}] ` +
+        `| instagram=[${sentRefs.instagramIds.join(",")}]`
+      );
     }
 
     const rawResult = await response.json();

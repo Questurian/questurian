@@ -18,7 +18,7 @@ import { useListicleSubmit } from '../builder/hooks/useListicleSubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
 import { buildListicleAiArticleContext, getListicleAiArticleTitle } from '../builder/services/ai-rewrite.service'
 import { useSeoManager } from '../builder/hooks/useSeoManager'
-import { rewriteBlockWithAi } from '../api'
+import { generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import '../styles.css'
 
 type AiRewriteInput = {
@@ -76,6 +76,7 @@ export default function SingleTypeListicleBuilderPage() {
   const { isSaving, submit } = useListicleSubmit({
     token,
     draft,
+    relatedItems,
     selectedLocationRefId: actions.selectedLocationRefId,
     setDraft,
     setSearchParams,
@@ -92,6 +93,25 @@ export default function SingleTypeListicleBuilderPage() {
   })
 
   const progress = useBuilderProgress(draft)
+
+  const generateDraftTitleWithAi = useCallback(async ({ prompt }: { prompt: string }): Promise<string> => {
+    if (!draft) {
+      throw new Error('Draft is not loaded yet.')
+    }
+
+    const response = await generateTitleWithAi({
+      currentTitle: draft.header.customTitle.trim(),
+      prompt: prompt.trim(),
+      modelName: resolveEditorAssistModelName(draft.editorModelName),
+    })
+
+    const title = response.title?.trim()
+    if (!title) {
+      throw new Error('AI returned an empty title.')
+    }
+
+    return title
+  }, [draft])
 
   const rewriteDraftBlockWithAi = useCallback(async (input: AiRewriteInput): Promise<string> => {
     if (!draft) {
@@ -151,6 +171,7 @@ export default function SingleTypeListicleBuilderPage() {
             mediaAssets={mediaAssets}
             updateHeader={actions.updateHeader}
             onIntroAiRewrite={rewriteDraftBlockWithAi}
+            onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
           <BuilderItemsPanel

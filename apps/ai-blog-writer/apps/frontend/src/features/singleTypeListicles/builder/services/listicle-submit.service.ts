@@ -1,6 +1,7 @@
 import { createListicle, getBlockTypeForListicleType, markdownToLexical, updateListicle } from '../../api'
-import type { PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
+import type { PayloadListicleDoc, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
+import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
 import { validateSubmit } from '../validators/submit.validators'
 
@@ -8,6 +9,7 @@ export type SubmitListicleParams = {
   draft: SingleTypeListicleDraft
   selectedLocationRefId: number | null
   targetStatus: 'draft' | 'published'
+  relatedItems: RelatedItemOption[]
   token: string
 }
 
@@ -15,9 +17,10 @@ export async function submitListicle({
   draft,
   selectedLocationRefId,
   targetStatus,
+  relatedItems,
   token,
 }: SubmitListicleParams): Promise<{ doc: PayloadListicleDoc; nextDraft: SingleTypeListicleDraft; resultMessage: string }> {
-  const submitIssue = validateSubmit(draft, selectedLocationRefId, targetStatus)
+  const submitIssue = validateSubmit(draft, selectedLocationRefId, targetStatus, relatedItems)
   if (submitIssue) throw new Error(submitIssue)
 
   const headerIntro = draft.header.introMarkdown.trim()
@@ -46,6 +49,9 @@ export async function submitListicle({
     payloadItems.push({
       blockType: item.blockType,
       item: item.item,
+      mediaMode: item.mediaMode,
+      selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
+      selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,
       blurb,
     })
   }

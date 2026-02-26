@@ -4,10 +4,6 @@ import { LocationCompleteness } from "./LocationCompleteness";
 import { LocationReviewsSection } from "./LocationReviewsSection";
 import { LocationIdealForEditor } from "./LocationIdealForEditor";
 import { LocationMediaGallery } from "./LocationMediaGallery";
-import { LocationNightlifeDetails } from "./LocationNightlifeDetails";
-import { LocationAccommodationsDetails } from "./LocationAccommodationsDetails";
-import { LocationAttractionsDetails } from "./LocationAttractionsDetails";
-import { LocationKeyLocationsDetails } from "./LocationKeyLocationsDetails";
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -53,26 +49,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         <LocationReviewsSection locationDetail={locationDetail} />
 
         <LocationIdealForEditor locationDetail={locationDetail} />
-
-        <LocationNightlifeDetails
-          locationDetail={locationDetail}
-          onCopyField={onCopyField}
-        />
-
-        <LocationAccommodationsDetails
-          locationDetail={locationDetail}
-          onCopyField={onCopyField}
-        />
-
-        <LocationAttractionsDetails
-          locationDetail={locationDetail}
-          onCopyField={onCopyField}
-        />
-
-        <LocationKeyLocationsDetails
-          locationDetail={locationDetail}
-          onCopyField={onCopyField}
-        />
 
         {/* Title field - only show if different from source name */}
         {locationDetail.title && locationDetail.title !== locationDetail.source?.name && (

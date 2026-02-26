@@ -1,5 +1,6 @@
 import { Block } from 'payload'
 import { createLocationFilter } from './utils/locationFilter'
+import { createItineraryItemMediaFields } from './utils/itemMedia'
 import { itineraryDurationRow, itineraryTimeRow } from './utils/timeField'
 
 export const ItineraryAccommodationsBlock: Block = {
@@ -21,6 +22,7 @@ export const ItineraryAccommodationsBlock: Block = {
         description: 'Select an accommodations listing for this itinerary timeslot',
       },
     },
+    ...createItineraryItemMediaFields('accommodations'),
     {
       name: 'blurb',
       type: 'richText',

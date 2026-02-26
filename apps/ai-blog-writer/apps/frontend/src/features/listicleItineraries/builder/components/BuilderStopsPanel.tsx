@@ -10,10 +10,17 @@ import type {
   ItineraryBlockType,
   ItineraryItemBlock,
   ListicleItineraryDraft,
+  MediaMode,
   Meridiem,
   QuarterMinute,
   RelatedItemOption,
 } from '../../types'
+import {
+  getRelatedInstagramPostIds,
+  getRelatedPhotoIds,
+  requiresInstagram,
+  requiresPhotos,
+} from '../utils/item-media.utils'
 
 type AiRewriteInput = {
   blockId: string
@@ -37,6 +44,12 @@ type BuilderStopsPanelProps = {
   ) => void
   onStopBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
 }
+
+const MEDIA_MODE_OPTIONS: Array<{ value: MediaMode; label: string }> = [
+  { value: 'photos', label: 'Photos' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'both', label: 'Photos + Instagram' },
+]
 
 export function BuilderStopsPanel({
   draft,
@@ -66,6 +79,12 @@ export function BuilderStopsPanel({
       <div className="stl-list">
         {draft.items.map((item, index) => {
           const relatedOptions = relatedByBlockType[item.blockType] || []
+          const selectedRelatedItem = relatedOptions.find((entry) => entry.id === item.item) || null
+          const availablePhotoIds = getRelatedPhotoIds(selectedRelatedItem)
+          const availableInstagramPostIds = getRelatedInstagramPostIds(selectedRelatedItem)
+          const photoSelection = item.selectedPhotos.map((value) => String(value))
+          const modeNeedsPhotos = requiresPhotos(item.mediaMode)
+          const modeNeedsInstagram = requiresInstagram(item.mediaMode)
 
           return (
             <article key={item.id} className="stl-item-card">
@@ -103,6 +122,8 @@ export function BuilderStopsPanel({
                         ...current,
                         blockType: event.target.value as ItineraryBlockType,
                         item: null,
+                        selectedPhotos: [],
+                        selectedInstagramPost: null,
                       }))
                     }
                   >
@@ -122,6 +143,8 @@ export function BuilderStopsPanel({
                       onUpdateItem(item.id, (current) => ({
                         ...current,
                         item: event.target.value ? Number(event.target.value) : null,
+                        selectedPhotos: [],
+                        selectedInstagramPost: null,
                       }))
                     }
                   >
@@ -134,6 +157,93 @@ export function BuilderStopsPanel({
                   </select>
                 </label>
               </div>
+
+              <div className="stl-grid stl-grid-2">
+                <label className="stl-field">
+                  <span>Media Mode *</span>
+                  <select
+                    value={item.mediaMode}
+                    onChange={(event) =>
+                      onUpdateItem(item.id, (current) => {
+                        const nextMode = event.target.value as MediaMode
+                        if (nextMode === 'photos') {
+                          return { ...current, mediaMode: nextMode, selectedInstagramPost: null }
+                        }
+                        if (nextMode === 'instagram') {
+                          return { ...current, mediaMode: nextMode, selectedPhotos: [] }
+                        }
+                        return { ...current, mediaMode: nextMode }
+                      })
+                    }
+                  >
+                    {MEDIA_MODE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {modeNeedsPhotos ? (
+                <label className="stl-field">
+                  <span>Selected Photos * (1-6)</span>
+                  <select
+                    multiple
+                    className="stl-multi-select"
+                    value={photoSelection}
+                    onChange={(event) => {
+                      const nextPhotos = Array.from(event.target.selectedOptions)
+                        .map((option) => Number(option.value))
+                        .filter((value) => Number.isFinite(value))
+                        .slice(0, 6)
+
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        selectedPhotos: nextPhotos,
+                      }))
+                    }}
+                  >
+                    {availablePhotoIds.map((photoId) => (
+                      <option key={photoId} value={photoId}>
+                        Media #{photoId}
+                      </option>
+                    ))}
+                  </select>
+                  {!selectedRelatedItem ? <p className="stl-legacy-note">Select a related item to choose photos.</p> : null}
+                  {selectedRelatedItem && availablePhotoIds.length === 0 ? (
+                    <p className="stl-legacy-note">The selected related item has no gallery photos available.</p>
+                  ) : null}
+                </label>
+              ) : null}
+
+              {modeNeedsInstagram ? (
+                <label className="stl-field">
+                  <span>Selected Instagram Post *</span>
+                  <select
+                    value={item.selectedInstagramPost || ''}
+                    onChange={(event) =>
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        selectedInstagramPost: event.target.value ? Number(event.target.value) : null,
+                      }))
+                    }
+                  >
+                    <option value="">Select Instagram post</option>
+                    {availableInstagramPostIds.map((postId) => (
+                      <option key={postId} value={postId}>
+                        Post #{postId}
+                      </option>
+                    ))}
+                  </select>
+                  {!selectedRelatedItem ? (
+                    <p className="stl-legacy-note">Select a related item to choose an Instagram post.</p>
+                  ) : null}
+                  {selectedRelatedItem && availableInstagramPostIds.length === 0 ? (
+                    <p className="stl-legacy-note">The selected related item has no Instagram posts available.</p>
+                  ) : null}
+                </label>
+              ) : null}
 
               <div className="stl-grid stl-grid-2">
                 <div className="stl-field">

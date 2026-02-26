@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import type { SyncLocationIdDto, SyncAllDto } from "../../validation/schemas/payload.schemas";
+import * as PayloadSyncRepo from "../../repositories/integration/payload-sync.repository";
 
 const container = ServiceContainer.getInstance();
 
@@ -35,6 +36,20 @@ export async function getSyncStatus(c: Context) {
 
   const status = container.payloadSyncService.getSyncStatus(locationId);
   return c.json(successResponse({ status }));
+}
+
+/**
+ * DELETE /api/payload/sync-state
+ * Delete sync state for a specific location or all locations
+ */
+export async function deletePayloadSyncState(c: Context) {
+  const body = await c.req.json().catch(() => ({}));
+  const locationId: number | undefined =
+    typeof body?.locationId === "number" ? body.locationId : undefined;
+
+  PayloadSyncRepo.deleteSyncState(locationId);
+
+  return c.json(successResponse({ reset: true, locationId: locationId ?? "all" }));
 }
 
 /**

@@ -47,6 +47,19 @@ export function useSyncAll() {
 }
 
 /**
+ * Mutation hook for resetting sync state for a location or all locations
+ */
+export function useResetSyncState() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (locationId?: number) => payloadApi.resetSyncState(locationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PAYLOAD_SYNC_STATUS_QUERY_KEY });
+    },
+  });
+}
+
+/**
  * Query hook for testing Payload CMS connection
  */
 export function usePayloadConnection() {

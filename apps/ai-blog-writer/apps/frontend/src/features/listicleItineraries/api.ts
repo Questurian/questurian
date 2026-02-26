@@ -1,4 +1,4 @@
-import { convertMarkdownToLexical, rewriteBlockWithAi } from '../staging/api'
+import { convertMarkdownToLexical, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
 import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
 import type { LocationScope } from '../locationScope/types'
 import type {
@@ -100,6 +100,7 @@ export async function fetchRelatedItems(
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForBlockType(blockType)
   const params = new URLSearchParams()
+  params.set('depth', '0')
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
 
@@ -157,4 +158,4 @@ export async function markdownToLexical(markdown: string): Promise<Record<string
   return result.data as Record<string, unknown>
 }
 
-export { rewriteBlockWithAi }
+export { generateTitleWithAi, rewriteBlockWithAi }

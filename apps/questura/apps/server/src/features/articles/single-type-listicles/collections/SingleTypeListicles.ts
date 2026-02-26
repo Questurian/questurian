@@ -1,5 +1,16 @@
 import { CollectionConfig } from 'payload'
 import { getBlocksForType } from '../blocks'
+import {
+  extractSourceItemMediaIds,
+  fetchListicleSourceItem,
+  getMediaMode,
+  getSourceCollectionForBlockType,
+  normalizeRelationshipId,
+  normalizeRelationshipIds,
+  relationshipIdToKey,
+  requiresInstagram,
+  requiresPhotos,
+} from '../blocks/utils/itemMedia'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { isLocationWithinScope } from '@/shared/location/server/locationScope'
 import {
@@ -124,7 +135,7 @@ export const SingleTypeListicles: CollectionConfig = {
     ],
     beforeValidate: [
       syncLocationFields(),
-      async ({ data, operation }) => {
+      async ({ data, operation, req }) => {
         if ((operation === 'create' || operation === 'update') && !data?.step1_complete) {
           throw new Error(
             'Please complete setup: title, location, listicle type, and target list size',
@@ -161,14 +172,91 @@ export const SingleTypeListicles: CollectionConfig = {
           )
         }
 
-        if (data?.location && data?.items && Array.isArray(data.items)) {
-          const parentLocation = data.location
+        if (data?.items && Array.isArray(data.items)) {
+          const parentLocation = data?.location
+          const sourceItemCache = new Map<string, Record<string, unknown> | null>()
 
           for (let i = 0; i < data.items.length; i++) {
             const item = data.items[i]
-            if (item?.item && typeof item.item !== 'string') {
-              const itemLocation = item.item.location
-              if (itemLocation && !isLocationWithinScope(itemLocation, parentLocation)) {
+            if (!item || typeof item !== 'object') {
+              continue
+            }
+
+            const sourceCollection = getSourceCollectionForBlockType(item.blockType)
+            if (!sourceCollection) {
+              continue
+            }
+
+            const sourceItemId = normalizeRelationshipId(item.item)
+            if (sourceItemId === null) {
+              throw new Error(`Item ${i + 1} must reference a ${sourceCollection} entry.`)
+            }
+
+            const cacheKey = `${sourceCollection}:${relationshipIdToKey(sourceItemId)}`
+            if (!sourceItemCache.has(cacheKey)) {
+              const sourceItem = await fetchListicleSourceItem(req, sourceCollection, sourceItemId)
+              sourceItemCache.set(cacheKey, sourceItem)
+            }
+
+            const sourceItem = sourceItemCache.get(cacheKey)
+            if (!sourceItem) {
+              throw new Error(
+                `Item ${i + 1} references a ${sourceCollection} entry that could not be loaded.`,
+              )
+            }
+
+            const mediaMode = getMediaMode(item.mediaMode)
+            if (!mediaMode) {
+              throw new Error(
+                `Item ${i + 1} must select a media mode (photos, instagram, or both).`,
+              )
+            }
+
+            if (mediaMode === 'photos') {
+              item.selectedInstagramPost = null
+            }
+
+            if (mediaMode === 'instagram') {
+              item.selectedPhotos = []
+            }
+
+            const selectedPhotoIds = normalizeRelationshipIds(item.selectedPhotos)
+            const selectedInstagramPostId = normalizeRelationshipId(item.selectedInstagramPost)
+
+            const { photoIds, instagramPostIds } = extractSourceItemMediaIds(sourceItem)
+            const availablePhotoKeys = new Set(photoIds.map(relationshipIdToKey))
+            const availableInstagramKeys = new Set(instagramPostIds.map(relationshipIdToKey))
+
+            if (requiresPhotos(mediaMode)) {
+              if (selectedPhotoIds.length < 1 || selectedPhotoIds.length > 6) {
+                throw new Error(`Item ${i + 1} must select between 1 and 6 photos.`)
+              }
+
+              const invalidPhotoId = selectedPhotoIds.find(
+                (photoId) => !availablePhotoKeys.has(relationshipIdToKey(photoId)),
+              )
+
+              if (invalidPhotoId !== undefined) {
+                throw new Error(
+                  `Item ${i + 1} selected photo ${invalidPhotoId} is not in the source gallery.`,
+                )
+              }
+            }
+
+            if (requiresInstagram(mediaMode)) {
+              if (selectedInstagramPostId === null) {
+                throw new Error(`Item ${i + 1} must select one Instagram embed.`)
+              }
+
+              if (!availableInstagramKeys.has(relationshipIdToKey(selectedInstagramPostId))) {
+                throw new Error(
+                  `Item ${i + 1} selected Instagram embed is not in the source gallery.`,
+                )
+              }
+            }
+
+            if (parentLocation && typeof sourceItem.location === 'string') {
+              if (!isLocationWithinScope(sourceItem.location, parentLocation)) {
                 throw new Error(
                   `Item ${i + 1} location does not match listicle location (${parentLocation}).`,
                 )

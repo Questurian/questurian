@@ -1,7 +1,7 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import type { ListicleItineraryDraft } from './types'
 
-const STORAGE_KEY = 'listicle_itineraries_staged'
+const STORAGE_KEY = 'listicle_itineraries_staged_v2_media'
 
 export function listDrafts(): ListicleItineraryDraft[] {
   try {

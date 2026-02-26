@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
   PAYLOAD_SYNC_STATUS: "/api/payload/sync-status",
   PAYLOAD_SYNC_STATUS_BY_ID: (locationId: number) => `/api/payload/sync-status/${locationId}`,
   PAYLOAD_TEST_CONNECTION: "/api/payload/test-connection",
+  PAYLOAD_RESET_SYNC_STATE: "/api/payload/sync-state",
 
   // Files
   OPEN_FOLDER: "/api/open-folder",

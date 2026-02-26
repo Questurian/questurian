@@ -1,20 +1,15 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
-
-function getRelationshipId(value: unknown): number | null {
-  if (typeof value === 'number') return value
-  if (typeof value === 'object' && value !== null && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    if (typeof id === 'number') return id
-  }
-  return null
-}
+import { getRelationshipId, getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 
 export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: string): SingleTypeListicleDraft {
   const items: ListicleItemBlock[] = (doc.items || []).map((item, index) => ({
     id: item.id || `item_${Date.now()}_${index}`,
     blockType: item.blockType || 'data-dining',
     item: getRelationshipId(item.item),
+    mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
+    selectedPhotos: getRelationshipIds(item.selectedPhotos),
+    selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
     blurbMarkdown: '',
     blurbLexical: item.blurb,
     blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',

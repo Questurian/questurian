@@ -15,12 +15,17 @@ export type QuarterMinute = '00' | '15' | '30' | '45'
 
 export type DurationMinute = '0' | '15' | '30' | '45'
 
+export type MediaMode = 'photos' | 'instagram' | 'both'
+
 export type PayloadRichText = Record<string, unknown>
 
 export type ItineraryItemBlock = {
   id: string
   blockType: ItineraryBlockType
   item: number | null
+  mediaMode: MediaMode
+  selectedPhotos: number[]
+  selectedInstagramPost: number | null
   timeHour: number
   timeMinute: QuarterMinute
   timePeriod: Meridiem
@@ -105,6 +110,9 @@ export type PayloadItineraryDoc = {
     durationHours?: number
     durationMinutes?: DurationMinute
     item?: number | { id?: number }
+    mediaMode?: MediaMode
+    selectedPhotos?: Array<number | { id?: number }>
+    selectedInstagramPost?: number | { id?: number } | null
     blurb?: PayloadRichText
   }>
   seoSection?: {
@@ -145,6 +153,12 @@ export type RelatedItemOption = {
   title: string
   location?: string
   status?: string
+  gallery?: Array<{
+    image?: number | { id?: number }
+  }>
+  instagramGallery?: Array<{
+    post?: number | { id?: number }
+  }>
 }
 
 export type SeoMetadataOption = {

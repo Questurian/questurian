@@ -1,6 +1,36 @@
 import { API_BASE_URL } from '../client/config'
 import { parseErrorResponse } from '../client/error-parser'
-import type { RewriteBlockWithAiRequest, RewriteBlockWithAiResponse } from './rewrite.types'
+import type {
+  GenerateTitleWithAiRequest,
+  GenerateTitleWithAiResponse,
+  RewriteBlockWithAiRequest,
+  RewriteBlockWithAiResponse,
+} from './rewrite.types'
+
+export async function generateTitleWithAi(
+  input: GenerateTitleWithAiRequest,
+): Promise<GenerateTitleWithAiResponse> {
+  const { currentTitle, prompt, modelName } = input
+
+  const response = await fetch(`${API_BASE_URL}/editor-assist/generate-title`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      current_title: currentTitle,
+      prompt,
+      model_name: modelName,
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, 'AI title generation failed', { detail: 'AI title generation failed' })
+    throw new Error(message)
+  }
+
+  return response.json()
+}
 
 export async function rewriteBlockWithAi(
   input: RewriteBlockWithAiRequest,

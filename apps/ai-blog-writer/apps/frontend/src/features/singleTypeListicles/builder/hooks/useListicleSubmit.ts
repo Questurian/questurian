@@ -2,12 +2,13 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { saveDraft } from '../../storage'
-import type { SingleTypeListicleDraft } from '../../types'
+import type { RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import { submitListicle } from '../services/listicle-submit.service'
 
 type UseListicleSubmitParams = {
   token?: string
   draft: SingleTypeListicleDraft | null
+  relatedItems: RelatedItemOption[]
   selectedLocationRefId: number | null
   setDraft: Dispatch<SetStateAction<SingleTypeListicleDraft | null>>
   setSearchParams: SetURLSearchParams
@@ -23,6 +24,7 @@ type UseListicleSubmitResult = {
 export function useListicleSubmit({
   token,
   draft,
+  relatedItems,
   selectedLocationRefId,
   setDraft,
   setSearchParams,
@@ -43,6 +45,7 @@ export function useListicleSubmit({
         draft,
         selectedLocationRefId,
         targetStatus,
+        relatedItems,
         token,
       })
 

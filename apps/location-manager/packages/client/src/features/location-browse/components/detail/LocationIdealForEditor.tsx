@@ -119,7 +119,8 @@ export function LocationIdealForEditor({ locationDetail }: LocationIdealForEdito
     tags: group.tags.filter((tag) => !idealForDraft.includes(tag)),
   })).filter((group) => group.tags.length > 0);
 
-  if (hasIdealFor) return null;
+  const categoriesWithIdealFor = ["dining", "nightlife", "attractions"];
+  if (hasIdealFor || !categoriesWithIdealFor.includes(locationDetail.category)) return null;
 
   return (
     <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2">

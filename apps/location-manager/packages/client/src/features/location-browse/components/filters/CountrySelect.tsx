@@ -1,4 +1,6 @@
+import { Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@client/components/ui/select";
+import { cn } from "@client/shared/lib/utils";
 import type { Country } from "@client/shared/services/api/types";
 
 interface CountrySelectProps {
@@ -6,23 +8,25 @@ interface CountrySelectProps {
   onChange: (value: string) => void;
   countries: Country[];
   isLoading?: boolean;
+  triggerClassName?: string;
 }
 
-export function CountrySelect({ value, onChange, countries, isLoading }: CountrySelectProps) {
+export function CountrySelect({ value, onChange, countries, isLoading, triggerClassName }: CountrySelectProps) {
+  const hasValue = !!value;
+
   return (
-    <div>
-      <Select value={value ?? ""} onValueChange={onChange} disabled={isLoading}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder={isLoading ? "Loading..." : "Select country"} />
-        </SelectTrigger>
-        <SelectContent>
-          {countries.map(country => (
-            <SelectItem key={country.code} value={country.code}>
-              {country.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Select value={value ?? ""} onValueChange={onChange} disabled={isLoading}>
+      <SelectTrigger className={cn(triggerClassName, "w-auto")} data-has-value={hasValue || undefined}>
+        <Globe className="h-3.5 w-3.5 shrink-0" />
+        <SelectValue placeholder={isLoading ? "Loading..." : "Country"} />
+      </SelectTrigger>
+      <SelectContent>
+        {countries.map(country => (
+          <SelectItem key={country.code} value={country.code}>
+            {country.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

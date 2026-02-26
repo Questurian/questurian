@@ -37,7 +37,7 @@ import {
   checkLeadsApiHealth,
 
   // Integration
-  postSyncLocation, postSyncAll, getSyncStatus, getTestConnection,
+  postSyncLocation, postSyncAll, getSyncStatus, getTestConnection, deletePayloadSyncState,
 } from "../controllers";
 
 const CATEGORY_ROUTES: readonly LocationCategory[] = [
@@ -217,6 +217,7 @@ app.post(
 app.get("/api/payload/sync-status", getSyncStatus);
 app.get("/api/payload/sync-status/:id", getSyncStatus);
 app.get("/api/payload/test-connection", getTestConnection);
+app.delete("/api/payload/sync-state", deletePayloadSyncState);
 
 // Serve uploaded images
 app.get("/api/images/*", serveImage);
