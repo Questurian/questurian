@@ -38,7 +38,6 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     step1_complete: Boolean(doc.step1_complete),
     in_update_mode: Boolean(doc.in_update_mode),
     header: {
-      customTitle: doc.header?.customTitle || '',
       introMarkdown: '',
       introLexical: doc.header?.intro,
       introJsonText: doc.header?.intro ? JSON.stringify(doc.header.intro, null, 2) : '',

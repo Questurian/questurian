@@ -28,10 +28,13 @@ import path from 'path'
 // Collections to clear - order matters! (delete dependents before dependencies)
 // Users collection is intentionally excluded to preserve user accounts
 const COLLECTIONS_TO_CLEAR = [
-  // Clear content collections first (they reference media and locations)
+  // Clear article collections first (they reference many related records)
+  'listicle-itineraries',
+  'single-type-listicles',
   'articles',
   'instagram-posts',
   'seo-metadata',
+  'key-locations',
 
   // Clear data collections (they also reference media and locations)
   'accommodations',
@@ -48,7 +51,8 @@ const COLLECTIONS_TO_CLEAR = [
   // Clear locations (after everything that references them)
   'locations',
 
-  // Finally clear media assets (after everything that references them)
+  // Finally clear media (after everything that references them)
+  'media-sets',
   'media-assets',
 ] as const
 

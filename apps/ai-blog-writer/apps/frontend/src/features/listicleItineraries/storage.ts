@@ -65,7 +65,6 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     step1_complete: false,
     in_update_mode: false,
     header: {
-      customTitle: '',
       introMarkdown: '',
       introJsonText: '',
       featuredImage: null,

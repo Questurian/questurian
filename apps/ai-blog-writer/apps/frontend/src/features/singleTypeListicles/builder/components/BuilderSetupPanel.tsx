@@ -1,4 +1,6 @@
 import type { ListicleType, SingleTypeListicleDraft } from '../../types'
+import { AiTitleInput } from '../../../staging/features/markdown-editor'
+import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import { LISTICLE_TYPE_OPTIONS } from '../constants/builder-options.constants'
 
 type BuilderSetupPanelProps = {
@@ -9,6 +11,16 @@ type BuilderSetupPanelProps = {
   onSaveSetup: () => void
   onCancelUpdateSetup: () => void
   updateDraft: (next: Partial<SingleTypeListicleDraft>) => void
+  onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
+}
+
+function getAiTitleDisabledReason(draft: SingleTypeListicleDraft): string | undefined {
+  if (draft.step1_complete && !draft.in_update_mode) return 'Click "Update Setup" to edit title'
+  if (!draft.location && !draft.listicleType) return 'Set a location and data type in Step 1 first'
+  if (!draft.location) return 'Set a location in Step 1 first'
+  if (!draft.listicleType) return 'Set a data type in Step 1 first'
+  if (!draft.title.trim()) return 'Write a title first, then AI can improve it'
+  return undefined
 }
 
 export function BuilderSetupPanel({
@@ -19,7 +31,10 @@ export function BuilderSetupPanel({
   onSaveSetup,
   onCancelUpdateSetup,
   updateDraft,
+  onTitleAiGenerate,
 }: BuilderSetupPanelProps) {
+  const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
+
   return (
     <section className="stl-panel">
       <div className="stl-panel-header">
@@ -52,7 +67,17 @@ export function BuilderSetupPanel({
 
       <div className="stl-grid stl-grid-2">
         <label className="stl-field">
-          <span>Title *</span>
+          <div className="stl-field-label-row">
+            <span>Title *</span>
+            {onTitleAiGenerate ? (
+              <AiTitleInput
+                currentTitle={draft.title}
+                onGenerate={onTitleAiGenerate}
+                onApply={(title) => updateDraft({ title })}
+                disabledReason={aiTitleDisabledReason}
+              />
+            ) : null}
+          </div>
           <input
             value={draft.title}
             disabled={draft.step1_complete && !draft.in_update_mode}

@@ -32,7 +32,7 @@ function buildStopTimeLabel(item: ItineraryItemBlock): string {
 }
 
 export function getItineraryAiArticleTitle(draft: ListicleItineraryDraft): string {
-  return draft.header.customTitle.trim() || draft.title.trim() || 'Untitled itinerary'
+  return draft.title.trim() || 'Untitled itinerary'
 }
 
 export function buildItineraryAiArticleContext(draft: ListicleItineraryDraft): string {

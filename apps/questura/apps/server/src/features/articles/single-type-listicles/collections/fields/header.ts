@@ -9,13 +9,6 @@ export const headerSection: Field = {
   },
   fields: [
     {
-      name: 'customTitle',
-      type: 'text',
-      admin: {
-        description: 'Optional custom header title (falls back to main title on frontend)',
-      },
-    },
-    {
       name: 'intro',
       type: 'richText',
       required: true,

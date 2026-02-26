@@ -50,7 +50,6 @@ export type SingleTypeListicleDraft = {
   step1_complete: boolean
   in_update_mode: boolean
   header: {
-    customTitle: string
     introMarkdown: string
     introLexical?: PayloadRichText
     introJsonText?: string
@@ -75,7 +74,6 @@ export type PayloadListicleDoc = {
   step1_complete?: boolean
   in_update_mode?: boolean
   header?: {
-    customTitle?: string
     intro?: PayloadRichText
     featuredImage?: number | { id?: number }
   }

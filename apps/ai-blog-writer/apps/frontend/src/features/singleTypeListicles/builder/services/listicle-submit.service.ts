@@ -71,7 +71,6 @@ export async function submitListicle({
     step1_complete: true,
     in_update_mode: false,
     header: {
-      customTitle: draft.header.customTitle.trim() || undefined,
       intro: headerIntro,
       featuredImage: draft.header.featuredImage || undefined,
     },

@@ -137,7 +137,6 @@ export function useItinerarySubmit({
         step1_complete: true,
         in_update_mode: false,
         header: {
-          customTitle: submitDraft.header.customTitle.trim() || undefined,
           intro: headerIntro,
           featuredImage: submitDraft.header.featuredImage || undefined,
         },

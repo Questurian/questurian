@@ -100,7 +100,7 @@ export default function SingleTypeListicleBuilderPage() {
     }
 
     const response = await generateTitleWithAi({
-      currentTitle: draft.header.customTitle.trim(),
+      currentTitle: draft.title.trim(),
       prompt: prompt.trim(),
       modelName: resolveEditorAssistModelName(draft.editorModelName),
     })
@@ -164,6 +164,7 @@ export default function SingleTypeListicleBuilderPage() {
             onSaveSetup={actions.handleSaveSetup}
             onCancelUpdateSetup={actions.cancelUpdateSetup}
             updateDraft={actions.updateDraft}
+            onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
           <BuilderHeaderPanel
@@ -173,7 +174,6 @@ export default function SingleTypeListicleBuilderPage() {
             mediaAssets={mediaAssets}
             updateHeader={actions.updateHeader}
             onIntroAiRewrite={rewriteDraftBlockWithAi}
-            onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
           <BuilderItemsPanel

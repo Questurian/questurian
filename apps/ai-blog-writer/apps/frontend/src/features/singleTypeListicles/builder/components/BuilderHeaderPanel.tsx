@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
-import { AiTitleInput, MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
-import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
+import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
 import type { MediaAssetOption, SingleTypeListicleDraft } from '../../types'
 import { resolveImageUrl } from '../utils/item-media.utils'
@@ -20,15 +19,6 @@ type BuilderHeaderPanelProps = {
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
-  onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
-}
-
-function getAiTitleDisabledReason(draft: SingleTypeListicleDraft): string | undefined {
-  if (!draft.location && !draft.listicleType) return 'Set a location and data type in Step 1 first'
-  if (!draft.location) return 'Set a location in Step 1 first'
-  if (!draft.listicleType) return 'Set a data type in Step 1 first'
-  if (!draft.header.customTitle.trim()) return 'Write a title first, then AI can improve it'
-  return undefined
 }
 
 export function BuilderHeaderPanel({
@@ -38,12 +28,10 @@ export function BuilderHeaderPanel({
   mediaAssets,
   updateHeader,
   onIntroAiRewrite,
-  onTitleAiGenerate,
 }: BuilderHeaderPanelProps) {
   const resolvedToken = token ?? ''
   const [pickerOpen, setPickerOpen] = useState(false)
   const [fetchedFeaturedAsset, setFetchedFeaturedAsset] = useState<MediaAssetOption | null>(null)
-  const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
 
   const featuredImageId = draft.header.featuredImage
   const selectedFeaturedAsset = useMemo(
@@ -105,52 +93,35 @@ export function BuilderHeaderPanel({
           <span className="stl-kicker">Step 2</span> Header
         </h2>
       </div>
-      <div className="stl-grid stl-grid-2">
-        <div className="stl-field">
-          <div className="stl-field-label-row">
-            <span>Custom Title</span>
-            {onTitleAiGenerate && (
-              <AiTitleInput
-                currentTitle={draft.header.customTitle}
-                onGenerate={onTitleAiGenerate}
-                onApply={(title) => updateHeader({ customTitle: title })}
-                disabledReason={aiTitleDisabledReason}
-              />
+      <div className="stl-field">
+        <span>Featured Image</span>
+        <button
+          type="button"
+          className="stl-picker-trigger"
+          onClick={() => setPickerOpen(true)}
+        >
+          <span className="stl-picker-trigger__preview">
+            {featuredImageId && (
+              featuredImagePreviewUrl
+                ? <img src={featuredImagePreviewUrl} alt="" />
+                : <span className="stl-picker-trigger__thumb-empty" />
             )}
-          </div>
-          <input value={draft.header.customTitle} onChange={(event) => updateHeader({ customTitle: event.target.value })} />
-        </div>
-
-        <div className="stl-field">
-          <span>Featured Image</span>
+            <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
+              {triggerLabel}
+            </span>
+          </span>
+          <span className="stl-picker-trigger__caret">▼</span>
+        </button>
+        {featuredImageId && (
           <button
             type="button"
-            className="stl-picker-trigger"
-            onClick={() => setPickerOpen(true)}
+            className="stl-btn stl-btn-secondary"
+            style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', marginTop: '0.25rem', alignSelf: 'flex-start' }}
+            onClick={() => updateHeader({ featuredImage: null })}
           >
-            <span className="stl-picker-trigger__preview">
-              {featuredImageId && (
-                featuredImagePreviewUrl
-                  ? <img src={featuredImagePreviewUrl} alt="" />
-                  : <span className="stl-picker-trigger__thumb-empty" />
-              )}
-              <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
-                {triggerLabel}
-              </span>
-            </span>
-            <span className="stl-picker-trigger__caret">▼</span>
+            Clear
           </button>
-          {featuredImageId && (
-            <button
-              type="button"
-              className="stl-btn stl-btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', marginTop: '0.25rem', alignSelf: 'flex-start' }}
-              onClick={() => updateHeader({ featuredImage: null })}
-            >
-              Clear
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       <label className="stl-field">

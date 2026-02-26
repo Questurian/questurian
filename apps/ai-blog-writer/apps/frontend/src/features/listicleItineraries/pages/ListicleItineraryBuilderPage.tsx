@@ -106,7 +106,7 @@ export default function ListicleItineraryBuilderPage() {
     }
 
     const response = await generateTitleWithAi({
-      currentTitle: draft.header.customTitle.trim(),
+      currentTitle: draft.title.trim(),
       prompt: prompt.trim(),
       modelName: resolveEditorAssistModelName(draft.editorModelName),
     })
@@ -170,6 +170,7 @@ export default function ListicleItineraryBuilderPage() {
             onSaveSetup={actions.handleSaveSetup}
             onCancelUpdateSetup={actions.cancelUpdateSetup}
             updateDraft={actions.updateDraft}
+            onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
           <BuilderHeaderPanel
@@ -177,7 +178,6 @@ export default function ListicleItineraryBuilderPage() {
             mediaAssets={mediaAssets}
             updateHeader={actions.updateHeader}
             onIntroAiRewrite={rewriteDraftBlockWithAi}
-            onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
           <BuilderStopsPanel

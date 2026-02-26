@@ -14,7 +14,7 @@ function buildSection(label: string, content: string): string | null {
 }
 
 export function getListicleAiArticleTitle(draft: SingleTypeListicleDraft): string {
-  return draft.header.customTitle.trim() || draft.title.trim() || 'Untitled listicle'
+  return draft.title.trim() || 'Untitled listicle'
 }
 
 export function buildListicleAiArticleContext(draft: SingleTypeListicleDraft): string {
