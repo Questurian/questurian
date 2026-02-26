@@ -121,16 +121,58 @@ export type MediaAssetOption = {
   variant?: string
 }
 
+/** A single media-asset variant, returned when depth >= 2 expands media-sets.variants.* */
+export type GalleryMediaAsset = {
+  id: number
+  filename?: string | null
+  url?: string | null
+  alt_text?: string | null
+}
+
+/**
+ * A `media-set` object as returned by Payload with depth=2.
+ * The gallery field in dining/accommodations/etc. relates to media-sets,
+ * each of which holds per-crop variant assets (thumbnail, square, wide, …).
+ */
+export type GalleryImageObject = {
+  id: number
+  title?: string | null
+  alt_text?: string | null
+  variants?: {
+    thumbnail?: number | GalleryMediaAsset | null
+    square?: number | GalleryMediaAsset | null
+    wide?: number | GalleryMediaAsset | null
+    portrait?: number | GalleryMediaAsset | null
+    editorial?: number | GalleryMediaAsset | null
+  } | null
+}
+
+/** A `media-asset` returned when depth=2 expands InstagramPost.previewImage */
+export type InstagramPreviewAsset = {
+  id: number
+  filename?: string | null
+  url?: string | null
+  alt_text?: string | null
+}
+
+/** An `instagram-posts` document as returned at depth=1/2 */
+export type InstagramPostOption = {
+  id: number
+  title: string
+  status?: string | null
+  previewImage?: number | InstagramPreviewAsset | null
+}
+
 export type RelatedItemOption = {
   id: number
   title: string
   location?: string
   status?: string
   gallery?: Array<{
-    image?: number | { id?: number }
+    image?: number | GalleryImageObject
   }>
   instagramGallery?: Array<{
-    post?: number | { id?: number }
+    post?: number | InstagramPostOption
   }>
 }
 

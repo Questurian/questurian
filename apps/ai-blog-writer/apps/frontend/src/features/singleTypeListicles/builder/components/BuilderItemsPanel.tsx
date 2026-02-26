@@ -1,11 +1,17 @@
+import { useState } from 'react'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import type { ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import {
-  getRelatedInstagramPostIds,
-  getRelatedPhotoIds,
+  getRelatedInstagramPostObjects,
+  getRelatedPhotoObjects,
   requiresInstagram,
   requiresPhotos,
+  resolveImageUrl,
+  resolveInstagramPreviewUrl,
 } from '../utils/item-media.utils'
+import { InstagramPickerModal } from './InstagramPickerModal'
+import { PhotoPickerModal } from './PhotoPickerModal'
+import { RelatedItemPickerModal } from './RelatedItemPickerModal'
 
 type AiRewriteInput = {
   blockId: string
@@ -31,6 +37,12 @@ const MEDIA_MODE_OPTIONS: Array<{ value: MediaMode; label: string }> = [
   { value: 'both', label: 'Photos + Instagram' },
 ]
 
+type ActivePicker =
+  | { type: 'item'; itemId: string }
+  | { type: 'photos'; itemId: string }
+  | { type: 'instagram'; itemId: string }
+  | null
+
 export function BuilderItemsPanel({
   draft,
   relatedItems,
@@ -42,6 +54,11 @@ export function BuilderItemsPanel({
   onItemBlurbAiRewrite,
 }: BuilderItemsPanelProps) {
   const blockTypeOptions = draft.listicleType ? [`data-${draft.listicleType}` as ListicleItemBlock['blockType']] : []
+  const [activePicker, setActivePicker] = useState<ActivePicker>(null)
+
+  const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
+  const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
+  const activeInstagramPicker = activePicker?.type === 'instagram' ? activePicker : null
 
   return (
     <section className="stl-panel">
@@ -63,11 +80,16 @@ export function BuilderItemsPanel({
       <div className="stl-list">
         {draft.items.map((item, index) => {
           const selectedRelatedItem = relatedItems.find((entry) => entry.id === item.item) || null
-          const availablePhotoIds = getRelatedPhotoIds(selectedRelatedItem)
-          const availableInstagramPostIds = getRelatedInstagramPostIds(selectedRelatedItem)
-          const photoSelection = item.selectedPhotos.map((value) => String(value))
+          const photoObjects = getRelatedPhotoObjects(selectedRelatedItem)
+          const instagramPostObjects = getRelatedInstagramPostObjects(selectedRelatedItem)
           const modeNeedsPhotos = requiresPhotos(item.mediaMode)
           const modeNeedsInstagram = requiresInstagram(item.mediaMode)
+          const selectedInstagramPost = instagramPostObjects.find(
+            (p) => p.id === item.selectedInstagramPost,
+          ) || null
+
+          const firstItemPhoto = photoObjects[0]
+          const firstItemPhotoUrl = firstItemPhoto ? resolveImageUrl(firstItemPhoto) : undefined
 
           return (
             <article key={item.id} className="stl-item-card">
@@ -106,27 +128,30 @@ export function BuilderItemsPanel({
                   </select>
                 </label>
 
-                <label className="stl-field">
+                <div className="stl-field">
                   <span>Related Item *</span>
-                  <select
-                    value={item.item || ''}
-                    onChange={(event) =>
-                      updateItem(item.id, (current) => ({
-                        ...current,
-                        item: event.target.value ? Number(event.target.value) : null,
-                        selectedPhotos: [],
-                        selectedInstagramPost: null,
-                      }))
-                    }
+                  <button
+                    type="button"
+                    className="stl-picker-trigger"
+                    onClick={() => setActivePicker({ type: 'item', itemId: item.id })}
                   >
-                    <option value="">Select item</option>
-                    {relatedItems.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        #{entry.id} {entry.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <span className="stl-picker-trigger__preview">
+                      {selectedRelatedItem ? (
+                        <>
+                          {firstItemPhotoUrl && (
+                            <img src={firstItemPhotoUrl} alt="" />
+                          )}
+                          <span className="stl-picker-trigger__label">{selectedRelatedItem.title}</span>
+                        </>
+                      ) : (
+                        <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                          Select item...
+                        </span>
+                      )}
+                    </span>
+                    <span className="stl-picker-trigger__caret">▼</span>
+                  </button>
+                </div>
               </div>
 
               <div className="stl-grid stl-grid-2">
@@ -157,63 +182,68 @@ export function BuilderItemsPanel({
               </div>
 
               {modeNeedsPhotos ? (
-                <label className="stl-field">
+                <div className="stl-field">
                   <span>Selected Photos * (1-6)</span>
-                  <select
-                    multiple
-                    className="stl-multi-select"
-                    value={photoSelection}
-                    onChange={(event) => {
-                      const nextPhotos = Array.from(event.target.selectedOptions)
-                        .map((option) => Number(option.value))
-                        .filter((value) => Number.isFinite(value))
-                        .slice(0, 6)
-
-                      updateItem(item.id, (current) => ({
-                        ...current,
-                        selectedPhotos: nextPhotos,
-                      }))
-                    }}
+                  <button
+                    type="button"
+                    className="stl-picker-trigger"
+                    disabled={!selectedRelatedItem}
+                    onClick={() => setActivePicker({ type: 'photos', itemId: item.id })}
                   >
-                    {availablePhotoIds.map((photoId) => (
-                      <option key={photoId} value={photoId}>
-                        Media #{photoId}
-                      </option>
-                    ))}
-                  </select>
-                  {!selectedRelatedItem ? <p className="stl-legacy-note">Select a related item to choose photos.</p> : null}
-                  {selectedRelatedItem && availablePhotoIds.length === 0 ? (
+                    <span className="stl-picker-trigger__preview">
+                      <span
+                        className={`stl-picker-trigger__label${item.selectedPhotos.length === 0 ? ' stl-picker-trigger__label--placeholder' : ''}`}
+                      >
+                        {item.selectedPhotos.length > 0
+                          ? `${item.selectedPhotos.length} photo${item.selectedPhotos.length !== 1 ? 's' : ''} selected`
+                          : 'Select photos...'}
+                      </span>
+                    </span>
+                    <span className="stl-picker-trigger__caret">▼</span>
+                  </button>
+                  {!selectedRelatedItem ? (
+                    <p className="stl-legacy-note">Select a related item to choose photos.</p>
+                  ) : null}
+                  {selectedRelatedItem && photoObjects.length === 0 ? (
                     <p className="stl-legacy-note">The selected related item has no gallery photos available.</p>
                   ) : null}
-                </label>
+                </div>
               ) : null}
 
               {modeNeedsInstagram ? (
-                <label className="stl-field">
+                <div className="stl-field">
                   <span>Selected Instagram Post *</span>
-                  <select
-                    value={item.selectedInstagramPost || ''}
-                    onChange={(event) =>
-                      updateItem(item.id, (current) => ({
-                        ...current,
-                        selectedInstagramPost: event.target.value ? Number(event.target.value) : null,
-                      }))
-                    }
+                  <button
+                    type="button"
+                    className="stl-picker-trigger"
+                    disabled={!selectedRelatedItem}
+                    onClick={() => setActivePicker({ type: 'instagram', itemId: item.id })}
                   >
-                    <option value="">Select Instagram post</option>
-                    {availableInstagramPostIds.map((postId) => (
-                      <option key={postId} value={postId}>
-                        Post #{postId}
-                      </option>
-                    ))}
-                  </select>
+                    <span className="stl-picker-trigger__preview">
+                      {selectedInstagramPost ? (
+                        <>
+                          {resolveInstagramPreviewUrl(selectedInstagramPost) && (
+                            <img src={resolveInstagramPreviewUrl(selectedInstagramPost)} alt="" />
+                          )}
+                          <span className="stl-picker-trigger__label">
+                            {selectedInstagramPost.title}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                          Select Instagram post...
+                        </span>
+                      )}
+                    </span>
+                    <span className="stl-picker-trigger__caret">▼</span>
+                  </button>
                   {!selectedRelatedItem ? (
                     <p className="stl-legacy-note">Select a related item to choose an Instagram post.</p>
                   ) : null}
-                  {selectedRelatedItem && availableInstagramPostIds.length === 0 ? (
+                  {selectedRelatedItem && instagramPostObjects.length === 0 ? (
                     <p className="stl-legacy-note">The selected related item has no Instagram posts available.</p>
                   ) : null}
-                </label>
+                </div>
               ) : null}
 
               <label className="stl-field">
@@ -241,6 +271,50 @@ export function BuilderItemsPanel({
                   This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.
                 </p>
               ) : null}
+
+              {/* Related item picker modal */}
+              <RelatedItemPickerModal
+                isOpen={activeItemPicker?.itemId === item.id}
+                items={relatedItems}
+                selectedItemId={item.item}
+                onSelect={(nextId) =>
+                  updateItem(item.id, (current) => ({
+                    ...current,
+                    item: nextId,
+                    selectedPhotos: [],
+                    selectedInstagramPost: null,
+                  }))
+                }
+                onClose={() => setActivePicker(null)}
+              />
+
+              {/* Photo picker modal */}
+              <PhotoPickerModal
+                isOpen={activePhotoPicker?.itemId === item.id}
+                photoObjects={photoObjects}
+                selectedPhotoIds={item.selectedPhotos}
+                onConfirm={(ids) =>
+                  updateItem(item.id, (current) => ({
+                    ...current,
+                    selectedPhotos: ids,
+                  }))
+                }
+                onClose={() => setActivePicker(null)}
+              />
+
+              {/* Instagram picker modal */}
+              <InstagramPickerModal
+                isOpen={activeInstagramPicker?.itemId === item.id}
+                posts={instagramPostObjects}
+                selectedPostId={item.selectedInstagramPost}
+                onSelect={(nextId) =>
+                  updateItem(item.id, (current) => ({
+                    ...current,
+                    selectedInstagramPost: nextId,
+                  }))
+                }
+                onClose={() => setActivePicker(null)}
+              />
             </article>
           )
         })}
