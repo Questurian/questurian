@@ -1,0 +1,551 @@
+import { type MouseEvent, useEffect, useRef, useState } from 'react'
+import { ImageUpload } from '../../features/images'
+import type { UploadImageResponse } from '../../features/images'
+import { PAYLOAD_API_URL } from '../../features/staging/api/client/config'
+import {
+  importExternalImage,
+  searchPexelsImages,
+  searchUnsplashImages,
+} from '../../features/staging/api/external-images/external-images.api'
+import type {
+  PexelsOrientation,
+  PexelsPhoto,
+  UnsplashPhoto,
+} from '../../features/staging/api/external-images/external-images.types'
+import { fetchMediaAssets } from '../../features/staging/api/payload/payload.api'
+import type { MediaAsset } from '../../features/staging/api/payload/payload.types'
+import {
+  buildExternalPhotographerCredit,
+  getPexelsPhotoImportUrl,
+  getUnsplashPhotoImportUrl,
+  pickVariantAssetId,
+} from '../../features/staging/features/editorial-stage-article/media-utils'
+import './FeaturedImagePicker.css'
+
+type ActiveTab = 'payload' | 'upload' | 'unsplash' | 'pexels'
+
+type FeaturedImagePickerProps = {
+  isOpen: boolean
+  selectedId: number | null
+  token: string
+  locationRef: number | null
+  onSelect: (mediaAssetId: number) => void
+  onClose: () => void
+}
+
+function resolveAssetUrl(asset: MediaAsset): string {
+  if (asset.url) return asset.url
+  return `${PAYLOAD_API_URL}/api/media-assets/file/${asset.filename}`
+}
+
+export function FeaturedImagePicker({
+  isOpen,
+  selectedId,
+  token,
+  locationRef,
+  onSelect,
+  onClose,
+}: FeaturedImagePickerProps) {
+  const [activeTab, setActiveTab] = useState<ActiveTab>('payload')
+
+  // Payload tab
+  const [payloadAssets, setPayloadAssets] = useState<MediaAsset[]>([])
+  const [isLoadingPayload, setIsLoadingPayload] = useState(false)
+  const [payloadSearch, setPayloadSearch] = useState('')
+  const [payloadError, setPayloadError] = useState<string | null>(null)
+
+  // Upload tab
+  const [uploadAltText, setUploadAltText] = useState('')
+  const [uploadPhotographerCredit, setUploadPhotographerCredit] = useState('')
+
+  // Unsplash tab
+  const [unsplashQuery, setUnsplashQuery] = useState('')
+  const [unsplashOrientation, setUnsplashOrientation] = useState<PexelsOrientation | ''>('')
+  const [unsplashResults, setUnsplashResults] = useState<UnsplashPhoto[]>([])
+  const [isSearchingUnsplash, setIsSearchingUnsplash] = useState(false)
+  const [unsplashError, setUnsplashError] = useState<string | null>(null)
+
+  // Pexels tab
+  const [pexelsQuery, setPexelsQuery] = useState('')
+  const [pexelsOrientation, setPexelsOrientation] = useState<PexelsOrientation | ''>('')
+  const [pexelsResults, setPexelsResults] = useState<PexelsPhoto[]>([])
+  const [isSearchingPexels, setIsSearchingPexels] = useState(false)
+  const [pexelsError, setPexelsError] = useState<string | null>(null)
+
+  // Shared external import tracking
+  const [importingId, setImportingId] = useState<string | number | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+
+  const overlayRef = useRef<HTMLDivElement>(null)
+
+  // Fetch Payload assets when modal opens
+  useEffect(() => {
+    if (!isOpen) return
+
+    setIsLoadingPayload(true)
+    setPayloadError(null)
+
+    fetchMediaAssets(token, { limit: 200, mimeType: 'image/' })
+      .then((res) => setPayloadAssets(res.docs))
+      .catch((err: unknown) =>
+        setPayloadError(err instanceof Error ? err.message : 'Failed to load images'),
+      )
+      .finally(() => setIsLoadingPayload(false))
+  }, [isOpen, token])
+
+  // Escape key to close
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  const filteredAssets = payloadSearch.trim()
+    ? payloadAssets.filter((a) => {
+        const q = payloadSearch.toLowerCase()
+        const altText = (a.alt_text ?? a.altText ?? a.alt ?? '').toLowerCase()
+        return a.filename.toLowerCase().includes(q) || altText.includes(q)
+      })
+    : payloadAssets
+
+  const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === overlayRef.current) onClose()
+  }
+
+  const handlePayloadSelect = (asset: MediaAsset) => {
+    onSelect(asset.id)
+    onClose()
+  }
+
+  const handleUploadComplete = (result: UploadImageResponse) => {
+    const id = pickVariantAssetId(result.variantAssetIds, 'editorial')
+    if (id) {
+      onSelect(id)
+      onClose()
+    }
+  }
+
+  const handleUnsplashSearch = async () => {
+    if (!unsplashQuery.trim()) return
+    setIsSearchingUnsplash(true)
+    setUnsplashError(null)
+    setImportError(null)
+    try {
+      const res = await searchUnsplashImages(unsplashQuery, {
+        perPage: 18,
+        orientation: unsplashOrientation || undefined,
+      })
+      setUnsplashResults(res.photos)
+    } catch (err) {
+      setUnsplashError(err instanceof Error ? err.message : 'Unsplash search failed')
+    } finally {
+      setIsSearchingUnsplash(false)
+    }
+  }
+
+  const handleUnsplashImport = async (photo: UnsplashPhoto) => {
+    if (!locationRef) return
+    setImportingId(photo.id)
+    setImportError(null)
+    try {
+      const result = await importExternalImage(
+        {
+          sourceUrl: getUnsplashPhotoImportUrl(photo),
+          provider: 'unsplash',
+          externalRef: String(photo.id),
+          altText: photo.alt ?? '',
+          photographerCredit: buildExternalPhotographerCredit(photo.photographer, 'unsplash'),
+          locationRef,
+          photoId: photo.id,
+        },
+        token,
+      )
+      const id = pickVariantAssetId(result.variantAssetIds, 'editorial')
+      if (id) {
+        onSelect(id)
+        onClose()
+      }
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setImportingId(null)
+    }
+  }
+
+  const handlePexelsSearch = async () => {
+    if (!pexelsQuery.trim()) return
+    setIsSearchingPexels(true)
+    setPexelsError(null)
+    setImportError(null)
+    try {
+      const res = await searchPexelsImages(pexelsQuery, {
+        perPage: 18,
+        orientation: pexelsOrientation || undefined,
+      })
+      setPexelsResults(res.photos)
+    } catch (err) {
+      setPexelsError(err instanceof Error ? err.message : 'Pexels search failed')
+    } finally {
+      setIsSearchingPexels(false)
+    }
+  }
+
+  const handlePexelsImport = async (photo: PexelsPhoto) => {
+    if (!locationRef) return
+    setImportingId(photo.id)
+    setImportError(null)
+    try {
+      const result = await importExternalImage(
+        {
+          sourceUrl: getPexelsPhotoImportUrl(photo),
+          provider: 'pexels',
+          externalRef: String(photo.id),
+          altText: photo.alt ?? '',
+          photographerCredit: buildExternalPhotographerCredit(photo.photographer, 'pexels'),
+          locationRef,
+          photoId: photo.id,
+        },
+        token,
+      )
+      const id = pickVariantAssetId(result.variantAssetIds, 'editorial')
+      if (id) {
+        onSelect(id)
+        onClose()
+      }
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setImportingId(null)
+    }
+  }
+
+  const tabTitle =
+    activeTab === 'payload'
+      ? 'Select from Payload Library'
+      : activeTab === 'upload'
+        ? 'Upload Image'
+        : activeTab === 'unsplash'
+          ? 'Search Unsplash'
+          : 'Search Pexels'
+
+  return (
+    <div className="fip-overlay" ref={overlayRef} onClick={handleOverlayClick} role="presentation">
+      <div
+        className="fip-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Select featured image"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="fip-modal__header">
+          <h3>{tabTitle}</h3>
+          <button type="button" className="fip-modal__close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
+
+        <div className="fip-tabs">
+          <button
+            type="button"
+            className={`fip-tab${activeTab === 'payload' ? ' fip-tab--active' : ''}`}
+            onClick={() => setActiveTab('payload')}
+          >
+            Payload Library
+          </button>
+          <button
+            type="button"
+            className={`fip-tab${activeTab === 'upload' ? ' fip-tab--active' : ''}`}
+            onClick={() => setActiveTab('upload')}
+            disabled={locationRef === null}
+            title={locationRef === null ? 'Set a location in Step 1 to enable uploads' : undefined}
+          >
+            Upload
+          </button>
+          <button
+            type="button"
+            className={`fip-tab${activeTab === 'unsplash' ? ' fip-tab--active' : ''}`}
+            onClick={() => setActiveTab('unsplash')}
+          >
+            Unsplash
+          </button>
+          <button
+            type="button"
+            className={`fip-tab${activeTab === 'pexels' ? ' fip-tab--active' : ''}`}
+            onClick={() => setActiveTab('pexels')}
+          >
+            Pexels
+          </button>
+        </div>
+
+        <div className="fip-body">
+          {/* Payload tab */}
+          {activeTab === 'payload' && (
+            <>
+              <div className="fip-search-row">
+                <input
+                  type="text"
+                  className="fip-search-input"
+                  placeholder="Search by filename or alt text..."
+                  value={payloadSearch}
+                  onChange={(e) => setPayloadSearch(e.target.value)}
+                />
+              </div>
+
+              {payloadError && <p className="fip-error">{payloadError}</p>}
+
+              {isLoadingPayload ? (
+                <p className="fip-empty">Loading images...</p>
+              ) : (
+                <div className="fip-grid">
+                  {filteredAssets.length === 0 ? (
+                    <p className="fip-empty">
+                      {payloadSearch ? 'No images match your search.' : 'No images found.'}
+                    </p>
+                  ) : (
+                    filteredAssets.map((asset) => (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        className={`fip-card${selectedId === asset.id ? ' fip-card--selected' : ''}`}
+                        onClick={() => handlePayloadSelect(asset)}
+                      >
+                        <img
+                          className="fip-card__thumb"
+                          src={resolveAssetUrl(asset)}
+                          alt={asset.alt_text ?? asset.altText ?? asset.alt ?? asset.filename}
+                          loading="lazy"
+                        />
+                        <div className="fip-card__info">
+                          <span className="fip-card__name">{asset.filename}</span>
+                        </div>
+                        {selectedId === asset.id && (
+                          <div className="fip-card__badge" aria-label="Selected">
+                            ✓
+                          </div>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Upload tab */}
+          {activeTab === 'upload' && (
+            <>
+              {locationRef === null ? (
+                <p className="fip-location-notice">
+                  A location must be set in Step 1 before you can upload images.
+                </p>
+              ) : (
+                <ImageUpload
+                  externalRef="featured-image-picker"
+                  fileNamePrefix="featured"
+                  locationRef={locationRef}
+                  token={token}
+                  altText={uploadAltText}
+                  photographerCredit={uploadPhotographerCredit}
+                  onUploadComplete={handleUploadComplete}
+                  onAltTextGenerated={setUploadAltText}
+                  onPhotographerCreditChange={setUploadPhotographerCredit}
+                  onCancel={() => setActiveTab('payload')}
+                />
+              )}
+            </>
+          )}
+
+          {/* Unsplash tab */}
+          {activeTab === 'unsplash' && (
+            <>
+              <div className="fip-search-row">
+                <input
+                  type="text"
+                  className="fip-search-input"
+                  placeholder="Search Unsplash..."
+                  value={unsplashQuery}
+                  onChange={(e) => setUnsplashQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      void handleUnsplashSearch()
+                    }
+                  }}
+                />
+                <select
+                  className="fip-search-select"
+                  value={unsplashOrientation}
+                  onChange={(e) => setUnsplashOrientation(e.target.value as PexelsOrientation | '')}
+                >
+                  <option value="">Any orientation</option>
+                  <option value="landscape">Landscape</option>
+                  <option value="portrait">Portrait</option>
+                  <option value="square">Square</option>
+                </select>
+                <button
+                  type="button"
+                  className="fip-search-btn"
+                  onClick={() => void handleUnsplashSearch()}
+                  disabled={isSearchingUnsplash || !unsplashQuery.trim()}
+                >
+                  {isSearchingUnsplash ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+
+              {unsplashError && <p className="fip-error">{unsplashError}</p>}
+              {importError && activeTab === 'unsplash' && (
+                <p className="fip-error">{importError}</p>
+              )}
+              {locationRef === null && unsplashResults.length > 0 && (
+                <p className="fip-location-notice">
+                  Set a location in Step 1 to import images into Payload.
+                </p>
+              )}
+
+              {unsplashResults.length > 0 ? (
+                <>
+                  <p className="fip-masonry-header">
+                    Click an image to import it into Payload as the featured image.
+                  </p>
+                  <div className="fip-masonry">
+                    {unsplashResults.map((photo) => {
+                      const isImporting = importingId === photo.id
+                      return (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          className={`fip-card fip-masonry-item${isImporting ? ' fip-card--importing' : ''}`}
+                          onClick={() => void handleUnsplashImport(photo)}
+                          disabled={importingId !== null || locationRef === null}
+                          title={photo.photographer ?? 'Import from Unsplash'}
+                        >
+                          <img
+                            className="fip-card__thumb fip-card__thumb--natural"
+                            src={getUnsplashPhotoImportUrl(photo)}
+                            alt={photo.alt ?? 'Unsplash photo'}
+                            loading="lazy"
+                            width={photo.width}
+                            height={photo.height}
+                          />
+                          {isImporting && (
+                            <div className="fip-card__spinner">
+                              <span className="fip-spinner" />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                !isSearchingUnsplash &&
+                !unsplashError && (
+                  <p className="fip-empty">Enter a query and click Search to find Unsplash photos.</p>
+                )
+              )}
+            </>
+          )}
+
+          {/* Pexels tab */}
+          {activeTab === 'pexels' && (
+            <>
+              <div className="fip-search-row">
+                <input
+                  type="text"
+                  className="fip-search-input"
+                  placeholder="Search Pexels..."
+                  value={pexelsQuery}
+                  onChange={(e) => setPexelsQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      void handlePexelsSearch()
+                    }
+                  }}
+                />
+                <select
+                  className="fip-search-select"
+                  value={pexelsOrientation}
+                  onChange={(e) => setPexelsOrientation(e.target.value as PexelsOrientation | '')}
+                >
+                  <option value="">Any orientation</option>
+                  <option value="landscape">Landscape</option>
+                  <option value="portrait">Portrait</option>
+                  <option value="square">Square</option>
+                </select>
+                <button
+                  type="button"
+                  className="fip-search-btn"
+                  onClick={() => void handlePexelsSearch()}
+                  disabled={isSearchingPexels || !pexelsQuery.trim()}
+                >
+                  {isSearchingPexels ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+
+              {pexelsError && <p className="fip-error">{pexelsError}</p>}
+              {importError && activeTab === 'pexels' && <p className="fip-error">{importError}</p>}
+              {locationRef === null && pexelsResults.length > 0 && (
+                <p className="fip-location-notice">
+                  Set a location in Step 1 to import images into Payload.
+                </p>
+              )}
+
+              {pexelsResults.length > 0 ? (
+                <>
+                  <p className="fip-masonry-header">
+                    Click an image to import it into Payload as the featured image.
+                  </p>
+                  <div className="fip-masonry">
+                    {pexelsResults.map((photo) => {
+                      const isImporting = importingId === photo.id
+                      return (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          className={`fip-card fip-masonry-item${isImporting ? ' fip-card--importing' : ''}`}
+                          onClick={() => void handlePexelsImport(photo)}
+                          disabled={importingId !== null || locationRef === null}
+                          title={photo.photographer ?? 'Import from Pexels'}
+                        >
+                          <img
+                            className="fip-card__thumb fip-card__thumb--natural"
+                            src={getPexelsPhotoImportUrl(photo)}
+                            alt={photo.alt ?? 'Pexels photo'}
+                            loading="lazy"
+                            width={photo.width}
+                            height={photo.height}
+                          />
+                          {isImporting && (
+                            <div className="fip-card__spinner">
+                              <span className="fip-spinner" />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                !isSearchingPexels &&
+                !pexelsError && (
+                  <p className="fip-empty">Enter a query and click Search to find Pexels photos.</p>
+                )
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

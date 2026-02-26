@@ -1,0 +1,1 @@
+export { FeaturedImagePicker } from './FeaturedImagePicker'

@@ -191,13 +191,28 @@ export function BuilderItemsPanel({
                     onClick={() => setActivePicker({ type: 'photos', itemId: item.id })}
                   >
                     <span className="stl-picker-trigger__preview">
-                      <span
-                        className={`stl-picker-trigger__label${item.selectedPhotos.length === 0 ? ' stl-picker-trigger__label--placeholder' : ''}`}
-                      >
-                        {item.selectedPhotos.length > 0
-                          ? `${item.selectedPhotos.length} photo${item.selectedPhotos.length !== 1 ? 's' : ''} selected`
-                          : 'Select photos...'}
-                      </span>
+                      {item.selectedPhotos.length > 0 ? (
+                        <>
+                          <span className="stl-picker-trigger__thumbs">
+                            {item.selectedPhotos.map((photoId) => {
+                              const photo = photoObjects.find((p) => p.id === photoId)
+                              const url = photo ? resolveImageUrl(photo) : undefined
+                              return url ? (
+                                <img key={photoId} src={url} alt="" />
+                              ) : (
+                                <span key={photoId} className="stl-picker-trigger__thumb-empty" />
+                              )
+                            })}
+                          </span>
+                          <span className="stl-picker-trigger__label">
+                            {item.selectedPhotos.length} photo{item.selectedPhotos.length !== 1 ? 's' : ''} selected
+                          </span>
+                        </>
+                      ) : (
+                        <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                          Select photos...
+                        </span>
+                      )}
                     </span>
                     <span className="stl-picker-trigger__caret">▼</span>
                   </button>

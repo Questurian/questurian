@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { AiTitleInput, MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import type { SingleTypeListicleDraft } from '../../types'
@@ -11,7 +13,8 @@ type AiRewriteInput = {
 
 type BuilderHeaderPanelProps = {
   draft: SingleTypeListicleDraft
-  mediaAssets: Array<{ id: number; filename: string }>
+  token: string | null
+  locationRef: number | null
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
   onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
@@ -27,12 +30,19 @@ function getAiTitleDisabledReason(draft: SingleTypeListicleDraft): string | unde
 
 export function BuilderHeaderPanel({
   draft,
-  mediaAssets,
+  token,
+  locationRef,
   updateHeader,
   onIntroAiRewrite,
   onTitleAiGenerate,
 }: BuilderHeaderPanelProps) {
+  const resolvedToken = token ?? ''
+  const [pickerOpen, setPickerOpen] = useState(false)
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
+
+  const featuredImageId = draft.header.featuredImage
+  const triggerLabel = featuredImageId ? `Image #${featuredImageId} selected` : 'Select Featured Image...'
+  const isPlaceholder = !featuredImageId
 
   return (
     <section className="stl-panel">
@@ -57,24 +67,31 @@ export function BuilderHeaderPanel({
           <input value={draft.header.customTitle} onChange={(event) => updateHeader({ customTitle: event.target.value })} />
         </div>
 
-        <label className="stl-field">
+        <div className="stl-field">
           <span>Featured Image</span>
-          <select
-            value={draft.header.featuredImage || ''}
-            onChange={(event) =>
-              updateHeader({
-                featuredImage: event.target.value ? Number(event.target.value) : null,
-              })
-            }
+          <button
+            type="button"
+            className="stl-picker-trigger"
+            onClick={() => setPickerOpen(true)}
           >
-            <option value="">None</option>
-            {mediaAssets.map((asset) => (
-              <option key={asset.id} value={asset.id}>
-                #{asset.id} {asset.filename}
-              </option>
-            ))}
-          </select>
-        </label>
+            <span className="stl-picker-trigger__preview">
+              <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
+                {triggerLabel}
+              </span>
+            </span>
+            <span className="stl-picker-trigger__caret">▼</span>
+          </button>
+          {featuredImageId && (
+            <button
+              type="button"
+              className="stl-btn stl-btn-secondary"
+              style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', marginTop: '0.25rem', alignSelf: 'flex-start' }}
+              onClick={() => updateHeader({ featuredImage: null })}
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       <label className="stl-field">
@@ -101,6 +118,15 @@ export function BuilderHeaderPanel({
           Existing intro is stored in Payload as Lexical JSON. Editing here will replace it with markdown-converted content.
         </p>
       ) : null}
+
+      <FeaturedImagePicker
+        isOpen={pickerOpen}
+        selectedId={featuredImageId}
+        token={resolvedToken}
+        locationRef={locationRef}
+        onSelect={(id) => updateHeader({ featuredImage: id })}
+        onClose={() => setPickerOpen(false)}
+      />
     </section>
   )
 }
