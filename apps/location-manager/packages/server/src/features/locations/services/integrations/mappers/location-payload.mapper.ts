@@ -23,6 +23,13 @@ const PRICE_LEVEL_TO_PAYLOAD: Record<string, string> = {
   "$$": "2",
   "$$$": "3",
   "$$$$": "4",
+  "budget": "1",
+  "inexpensive": "1",
+  "mid-range": "2",
+  "moderate": "2",
+  "expensive": "3",
+  "very expensive": "4",
+  "luxury": "4",
 };
 
 const WEEKDAY_LABELS: Record<string, string> = {
@@ -347,8 +354,8 @@ function mapSharedPayloadFields(
 function mapCategoryCommonPayloadFields(location: LocationResponse) {
   return {
     ...(location.type ? { type: location.type } : {}),
-    ...(location.priceLevel && PRICE_LEVEL_TO_PAYLOAD[location.priceLevel]
-      ? { priceLevel: PRICE_LEVEL_TO_PAYLOAD[location.priceLevel] }
+    ...(location.priceLevel && PRICE_LEVEL_TO_PAYLOAD[location.priceLevel.toLowerCase()]
+      ? { priceLevel: PRICE_LEVEL_TO_PAYLOAD[location.priceLevel.toLowerCase()] }
       : {}),
     ...(location.ianaTimeId ? { ianaTimeId: location.ianaTimeId } : {}),
   };
