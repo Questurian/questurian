@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { AiTitleInput, MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
-import type { SingleTypeListicleDraft } from '../../types'
+import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
+import type { MediaAssetOption, SingleTypeListicleDraft } from '../../types'
+import { resolveImageUrl } from '../utils/item-media.utils'
 
 type AiRewriteInput = {
   blockId: string
@@ -15,6 +17,7 @@ type BuilderHeaderPanelProps = {
   draft: SingleTypeListicleDraft
   token: string | null
   locationRef: number | null
+  mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
   onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
@@ -32,16 +35,67 @@ export function BuilderHeaderPanel({
   draft,
   token,
   locationRef,
+  mediaAssets,
   updateHeader,
   onIntroAiRewrite,
   onTitleAiGenerate,
 }: BuilderHeaderPanelProps) {
   const resolvedToken = token ?? ''
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [fetchedFeaturedAsset, setFetchedFeaturedAsset] = useState<MediaAssetOption | null>(null)
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
 
   const featuredImageId = draft.header.featuredImage
-  const triggerLabel = featuredImageId ? `Image #${featuredImageId} selected` : 'Select Featured Image...'
+  const selectedFeaturedAsset = useMemo(
+    () => mediaAssets.find((asset) => asset.id === featuredImageId) || null,
+    [featuredImageId, mediaAssets],
+  )
+  useEffect(() => {
+    if (!featuredImageId || selectedFeaturedAsset || !resolvedToken) {
+      setFetchedFeaturedAsset(null)
+      return
+    }
+
+    let cancelled = false
+
+    const loadSelectedAsset = async () => {
+      try {
+        const response = await fetchPayloadMediaAssets(resolvedToken, {
+          id: featuredImageId,
+          limit: 1,
+        })
+        if (cancelled) return
+        const asset = response.docs?.[0]
+        if (!asset) {
+          setFetchedFeaturedAsset(null)
+          return
+        }
+        setFetchedFeaturedAsset({
+          id: asset.id,
+          filename: asset.filename,
+          url: asset.url,
+          alt: asset.alt,
+          alt_text: asset.alt_text,
+          altText: asset.altText,
+          variant: asset.variant,
+        })
+      } catch {
+        if (!cancelled) setFetchedFeaturedAsset(null)
+      }
+    }
+
+    void loadSelectedAsset()
+
+    return () => {
+      cancelled = true
+    }
+  }, [featuredImageId, selectedFeaturedAsset, resolvedToken])
+
+  const featuredAsset = selectedFeaturedAsset || fetchedFeaturedAsset
+  const featuredImagePreviewUrl = featuredAsset ? resolveImageUrl(featuredAsset) : undefined
+  const triggerLabel = featuredImageId
+    ? featuredAsset?.filename || `Image #${featuredImageId} selected`
+    : 'Select Featured Image...'
   const isPlaceholder = !featuredImageId
 
   return (
@@ -75,6 +129,11 @@ export function BuilderHeaderPanel({
             onClick={() => setPickerOpen(true)}
           >
             <span className="stl-picker-trigger__preview">
+              {featuredImageId && (
+                featuredImagePreviewUrl
+                  ? <img src={featuredImagePreviewUrl} alt="" />
+                  : <span className="stl-picker-trigger__thumb-empty" />
+              )}
               <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
                 {triggerLabel}
               </span>

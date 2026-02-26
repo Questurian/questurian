@@ -88,8 +88,21 @@ export async function updateListicle(
 }
 
 export async function fetchLocations(token: string): Promise<LocationOption[]> {
-  const response = await payloadRequest<PayloadListResponse<LocationOption>>(`/api/locations?limit=200`, token)
-  return response.docs || []
+  const allDocs: LocationOption[] = []
+  let page = 1
+  let totalPages = 1
+
+  while (page <= totalPages) {
+    const response = await payloadRequest<PayloadListResponse<LocationOption>>(
+      `/api/locations?limit=200&page=${page}&depth=0`,
+      token,
+    )
+    allDocs.push(...(response.docs || []))
+    totalPages = response.totalPages || 1
+    page += 1
+  }
+
+  return allDocs
 }
 
 export async function fetchMediaAssets(token: string): Promise<MediaAssetOption[]> {

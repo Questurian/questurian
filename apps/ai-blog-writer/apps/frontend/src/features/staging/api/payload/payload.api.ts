@@ -8,11 +8,41 @@ export async function fetchLocations(
     page?: number
   },
 ): Promise<{ docs: Location[]; totalDocs: number; totalPages: number }> {
-  const queryParams = new URLSearchParams()
-  queryParams.append('limit', String(params?.limit || 100))
-  if (params?.page) queryParams.append('page', String(params.page))
+  const limit = params?.limit || 100
 
-  return payloadRequest(`/api/locations?${queryParams.toString()}`, token)
+  if (params?.page) {
+    const queryParams = new URLSearchParams()
+    queryParams.append('limit', String(limit))
+    queryParams.append('page', String(params.page))
+    return payloadRequest(`/api/locations?${queryParams.toString()}`, token)
+  }
+
+  const allDocs: Location[] = []
+  let page = 1
+  let totalPages = 1
+  let totalDocs = 0
+
+  while (page <= totalPages) {
+    const queryParams = new URLSearchParams()
+    queryParams.append('limit', String(limit))
+    queryParams.append('page', String(page))
+
+    const response = await payloadRequest(
+      `/api/locations?${queryParams.toString()}`,
+      token,
+    ) as { docs: Location[]; totalDocs: number; totalPages: number }
+
+    allDocs.push(...(response.docs || []))
+    totalDocs = response.totalDocs || allDocs.length
+    totalPages = response.totalPages || 1
+    page += 1
+  }
+
+  return {
+    docs: allDocs,
+    totalDocs,
+    totalPages,
+  }
 }
 
 export async function fetchArticleCategories(

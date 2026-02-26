@@ -169,7 +169,8 @@ export default function SingleTypeListicleBuilderPage() {
           <BuilderHeaderPanel
             draft={draft}
             token={token}
-            locationRef={draft.locationRef}
+            locationRef={actions.selectedLocationRefId ?? draft.locationRef}
+            mediaAssets={mediaAssets}
             updateHeader={actions.updateHeader}
             onIntroAiRewrite={rewriteDraftBlockWithAi}
             onTitleAiGenerate={generateDraftTitleWithAi}

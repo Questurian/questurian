@@ -45,11 +45,30 @@ export function useBuilderDraftActions({
 }: UseBuilderDraftActionsParams): UseBuilderDraftActionsResult {
   const [setupBaseline, setSetupBaseline] = useState<{ location: string; listicleType: ListicleType | '' } | null>(null)
 
+  const normalizeLocationKey = (value: string): string =>
+    value.trim().toLowerCase().replace(/\s*\|\s*/g, '|')
+
   const selectedLocationRefId = useMemo(() => {
-    if (!draft?.location) return null
-    const selected = locations.find((location) => location.locationKey === draft.location)
-    return selected?.id || null
-  }, [draft?.location, locations])
+    const fallbackLocationRef = (
+      typeof draft?.locationRef === 'number'
+      && Number.isFinite(draft.locationRef)
+      && draft.locationRef > 0
+    )
+      ? draft.locationRef
+      : null
+
+    const locationKey = draft?.location?.trim() || ''
+    if (!locationKey) {
+      return fallbackLocationRef
+    }
+
+    const normalizedLocationKey = normalizeLocationKey(locationKey)
+    const selected = locations.find((location) => (
+      normalizeLocationKey(location.locationKey) === normalizedLocationKey
+    ))
+
+    return selected?.id || fallbackLocationRef
+  }, [draft?.location, draft?.locationRef, locations])
 
   function updateDraft(next: Partial<SingleTypeListicleDraft>) {
     setDraft((current) => {
