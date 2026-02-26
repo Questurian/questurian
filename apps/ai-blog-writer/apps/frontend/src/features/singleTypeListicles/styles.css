@@ -751,6 +751,30 @@
   border: 1px solid var(--stl-border);
 }
 
+.stl-picker-trigger__thumbs {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.stl-picker-trigger__thumbs img {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  object-fit: cover;
+  border: 1px solid var(--stl-border);
+}
+
+.stl-picker-trigger__thumb-empty {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: #eef0f5;
+  border: 1px solid var(--stl-border);
+  flex-shrink: 0;
+}
+
 .stl-picker-trigger__label {
   overflow: hidden;
   text-overflow: ellipsis;
