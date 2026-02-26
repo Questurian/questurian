@@ -74,7 +74,6 @@ export function useEditorialStageArticleScreenViewModel({
     fetchResult,
     markArticleSynced,
     fetchExternalImageSource,
-    importExternalImage,
     searchPexelsImages,
     searchUnsplashImages,
     rewriteBlockWithAi,
@@ -265,7 +264,6 @@ export function useEditorialStageArticleScreenViewModel({
       isUploadingExternalImageVariants,
       setIsUploadingExternalImageVariants,
       handleUploadExternalCroppedVariants,
-      handleSkipCropExternalImport,
     },
     shared: {
       findPreferredVariantAsset,
@@ -277,7 +275,6 @@ export function useEditorialStageArticleScreenViewModel({
     mediaAssets,
     fetchMediaAssets,
     fetchExternalImageSource,
-    importExternalImage,
     searchPexelsImages,
     searchUnsplashImages,
     updateStagedArticle,
@@ -327,9 +324,6 @@ export function useEditorialStageArticleScreenViewModel({
       setExternalImageUploadProgress={setExternalImageUploadProgress}
       isUploadingExternalImageVariants={isUploadingExternalImageVariants}
       setIsUploadingExternalImageVariants={setIsUploadingExternalImageVariants}
-      isImportingFeaturedExternalImage={isImportingFeaturedExternalImage}
-      isImportingBlockExternalImage={isImportingBlockExternalImage}
-      handleSkipCropExternalImport={handleSkipCropExternalImport}
       handleUploadExternalCroppedVariants={handleUploadExternalCroppedVariants}
     />
   ), [
@@ -341,9 +335,6 @@ export function useEditorialStageArticleScreenViewModel({
     setExternalImageUploadProgress,
     isUploadingExternalImageVariants,
     setIsUploadingExternalImageVariants,
-    isImportingFeaturedExternalImage,
-    isImportingBlockExternalImage,
-    handleSkipCropExternalImport,
     handleUploadExternalCroppedVariants,
   ])
 

@@ -15,9 +15,6 @@ type ExternalImageCropEditorProps = {
   setExternalImageUploadProgress: Dispatch<SetStateAction<UploadProgress | null>>
   isUploadingExternalImageVariants: boolean
   setIsUploadingExternalImageVariants: Dispatch<SetStateAction<boolean>>
-  isImportingFeaturedExternalImage: boolean
-  isImportingBlockExternalImage: boolean
-  handleSkipCropExternalImport: () => Promise<void>
   handleUploadExternalCroppedVariants: (
     variantFiles: Array<{ type: ImageVariantType; file: File }>
   ) => Promise<void>
@@ -33,9 +30,6 @@ export function ExternalImageCropEditor({
   setExternalImageUploadProgress,
   isUploadingExternalImageVariants,
   setIsUploadingExternalImageVariants,
-  isImportingFeaturedExternalImage,
-  isImportingBlockExternalImage,
-  handleSkipCropExternalImport,
   handleUploadExternalCroppedVariants,
 }: ExternalImageCropEditorProps) {
   if (!externalImageCropDraft || externalImageCropDraft.context !== context) {
@@ -101,16 +95,6 @@ export function ExternalImageCropEditor({
         )}
 
         <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="stage-article-modal-done"
-            onClick={() => {
-              void handleSkipCropExternalImport()
-            }}
-            disabled={isUploadingExternalImageVariants || isImportingFeaturedExternalImage || isImportingBlockExternalImage}
-          >
-            Skip Crop (Auto)
-          </button>
           <button
             type="button"
             className="stage-article-modal-done"

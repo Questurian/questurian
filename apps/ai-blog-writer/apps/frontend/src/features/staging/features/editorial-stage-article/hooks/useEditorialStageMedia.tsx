@@ -75,18 +75,6 @@ type UseEditorialStageMediaParams = {
     fileName: string
     contentType: string
   }>
-  importExternalImage: (
-    input: {
-      sourceUrl: string
-      provider: ExternalImageProvider
-      externalRef: string
-      altText: string
-      photographerCredit: string
-      locationRef: number
-      photoId?: string | number
-    },
-    token: string
-  ) => Promise<UploadImageResponse>
   searchPexelsImages: (
     query: string,
     params?: {
@@ -123,7 +111,6 @@ export function useEditorialStageMedia({
   mediaAssets,
   fetchMediaAssets,
   fetchExternalImageSource,
-  importExternalImage,
   searchPexelsImages,
   searchUnsplashImages,
   updateStagedArticle,
@@ -408,63 +395,6 @@ export function useEditorialStageMedia({
     token,
   ])
 
-  const handleSkipCropExternalImport = useCallback(async () => {
-    if (!externalImageCropDraft || !token) return
-    const location = locations.find((loc) => loc.id === stagedArticle?.locationId)
-    if (!location) {
-      setExternalImageCropError(UPLOAD_LOCATION_REQUIREMENT_MESSAGE)
-      return
-    }
-
-    if (!externalImageCropDraft.photographerCredit.trim()) {
-      setExternalImageCropError('Photographer credit is required before importing.')
-      return
-    }
-
-    setExternalImageCropError(null)
-    setIsUploadingExternalImageVariants(true)
-    setExternalImageUploadProgress({
-      status: 'processing',
-      progress: 40,
-      message: 'Importing original image (auto-crop)...',
-    })
-
-    try {
-      const result = await importExternalImage(
-        {
-          sourceUrl: externalImageCropDraft.sourceUrl,
-          provider: externalImageCropDraft.provider,
-          externalRef: externalImageCropDraft.externalRef,
-          altText: externalImageCropDraft.altText,
-          photographerCredit: externalImageCropDraft.photographerCredit,
-          locationRef: location.id,
-          photoId: externalImageCropDraft.photoId,
-        },
-        token
-      )
-      await applyExternalUploadResult(result, externalImageCropDraft)
-      resetExternalImportState()
-    } catch (err) {
-      setExternalImageCropError(
-        err instanceof Error ? err.message : 'Failed to import image'
-      )
-    } finally {
-      setIsUploadingExternalImageVariants(false)
-      featured.setIsImportingFeaturedExternalImage(false)
-      block.setIsImportingBlockExternalImage(false)
-    }
-  }, [
-    applyExternalUploadResult,
-    block,
-    externalImageCropDraft,
-    featured,
-    importExternalImage,
-    locations,
-    resetExternalImportState,
-    stagedArticle?.locationId,
-    token,
-  ])
-
   const prepareExternalImageCropDraft = useCallback(async (
     photo: UnsplashPhoto | PexelsPhoto,
     provider: ExternalImageProvider,
@@ -631,7 +561,6 @@ export function useEditorialStageMedia({
       isUploadingExternalImageVariants,
       setIsUploadingExternalImageVariants,
       handleUploadExternalCroppedVariants,
-      handleSkipCropExternalImport,
       resetExternalImportState,
     },
     shared: {
