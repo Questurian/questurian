@@ -28,6 +28,7 @@ import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import { Plus, Trash2, X } from "lucide-react";
 import { isValidLocationKey } from "@client/shared/lib/taxonomy-location";
 import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
+import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy";
 
 interface FieldDef {
   key: string;
@@ -631,14 +632,36 @@ export function CompletenessFieldEditModal({
         return (
           <Select value={value || undefined} onValueChange={setValue} disabled={isLoadingTypes}>
             <SelectTrigger>
-              <SelectValue placeholder={isLoadingTypes ? "Loading types..." : "Select a type"} />
+              <SelectValue
+                placeholder={
+                  isLoadingTypes
+                    ? "Loading types..."
+                    : locationDetail.category === "dining"
+                      ? "Select establishment type"
+                      : "Select a type"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
-              {locationTypes.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
+              {locationDetail.category === "dining"
+                ? DINING_ESTABLISHMENT_TYPE_GROUPS.map((group, groupIndex) => (
+                    <SelectGroup key={group.label}>
+                      <SelectLabel className="pl-2 pr-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {group.label}
+                      </SelectLabel>
+                      {group.options.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                      {groupIndex < DINING_ESTABLISHMENT_TYPE_GROUPS.length - 1 && <SelectSeparator />}
+                    </SelectGroup>
+                  ))
+                : locationTypes.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
             </SelectContent>
           </Select>
         );
@@ -958,6 +981,10 @@ export function CompletenessFieldEditModal({
       ? "Edit below in the Images/Instagram section."
       : field.key === "contactUrl"
         ? "Google URL is generated from Name + Source Address. Click Save to regenerate."
+        : field.key === "type" && locationDetail.category === "dining"
+          ? "Venue format only. Use cuisines for food identity and dishes."
+          : field.key === "cuisines"
+            ? "Food identity only. Choose cuisine, dish, or food style tags."
         : field.key === "locationKey" || field.key === "district"
           ? "Use the builder to set country, city, and barrio/district. New taxonomy keys save as approved."
         : field.key === "operationHours"

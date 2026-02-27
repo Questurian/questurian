@@ -325,7 +325,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
       { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
       { key: "sourceAddress", label: "Source Address", present: Boolean(source.address?.trim()) },
       { key: "category", label: "Category", present: Boolean(locationDetail.category) },
-      { key: "type", label: "Type", present: Boolean(locationDetail.type?.trim()) },
+      {
+        key: "type",
+        label: locationDetail.category === "dining" ? "Type of Establishment" : "Type",
+        present: Boolean(locationDetail.type?.trim()),
+      },
       { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
       { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
       { key: "slug", label: "Slug", present: Boolean(locationDetail.slug?.trim()) },

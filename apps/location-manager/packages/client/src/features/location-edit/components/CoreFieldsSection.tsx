@@ -1,9 +1,10 @@
 import type { UseFormReturn } from "react-hook-form";
 import { FormInput, FormSelect, FormTagMultiSelect } from "@client/shared/components/forms";
-import { SelectItem } from "@client/components/ui";
+import { SelectGroup, SelectItem, SelectLabel, SelectSeparator } from "@client/components/ui";
 import type { EditLocationFormData } from "../validation/edit-location.schema";
 import type { LocationCategory } from "@shared/types/location-category";
 import { getIdealForGroups } from "@shared/types/location-ideal-for";
+import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy";
 
 interface CoreFieldsSectionProps {
   form: UseFormReturn<EditLocationFormData>;
@@ -17,6 +18,11 @@ export function CoreFieldsSection({ form, locationTypes, isLoadingTypes, categor
     label: group.label,
     options: group.tags.map((tag) => ({ value: tag, label: tag })),
   }));
+  const typeLabel = category === "dining" ? "Type of Establishment" : "Type";
+  const typeDescription =
+    category === "dining"
+      ? "Venue format only (for example Restaurant, Cafe, Food Truck, Bar)."
+      : undefined;
 
   return (
     <div className="space-y-4">
@@ -47,16 +53,33 @@ export function CoreFieldsSection({ form, locationTypes, isLoadingTypes, categor
 
       <FormSelect
         name="type"
-        label="Type"
+        label={typeLabel}
         control={form.control}
         placeholder={isLoadingTypes ? "Loading types..." : "Select a type"}
+        description={typeDescription}
         disabled={isLoadingTypes}
       >
-        {locationTypes.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
+        {category === "dining"
+          ? DINING_ESTABLISHMENT_TYPE_GROUPS.map((group, groupIndex) => (
+              <SelectGroup key={group.label}>
+                <SelectLabel className="pl-2 pr-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </SelectLabel>
+                {group.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+                {groupIndex < DINING_ESTABLISHMENT_TYPE_GROUPS.length - 1 && (
+                  <SelectSeparator />
+                )}
+              </SelectGroup>
+            ))
+          : locationTypes.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
       </FormSelect>
 
       <FormSelect

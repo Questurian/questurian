@@ -9,6 +9,7 @@ import {
   normalizeTripadvisorStringList,
   parseTripadvisorStringListJson,
 } from "../../utils/tripadvisor-utils";
+import { matchTripAdvisorMealTypesToDiningFields } from "./tripadvisor-meal-type-matcher";
 
 export class TripAdvisorPlaceService {
   private readonly serpApiClient: SerpApiTripAdvisorClient;
@@ -20,6 +21,26 @@ export class TripAdvisorPlaceService {
   private hasStoredTripadvisorList(value?: string | null): boolean {
     const parsed = parseTripadvisorStringListJson(value ?? null);
     return Array.isArray(parsed) && parsed.length > 0;
+  }
+
+  private parseStoredStringArray(value?: string | null): string[] {
+    if (!value) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    } catch {
+      return [];
+    }
   }
 
   isConfigured(): boolean {
@@ -85,6 +106,31 @@ export class TripAdvisorPlaceService {
     if (!this.hasStoredTripadvisorList(current.tripadvisorCuisinesJson) && cuisines) {
       updates.tripadvisorCuisinesJson = JSON.stringify(cuisines);
     }
+
+    if (mealTypes && current.category) {
+      const currentCuisinesForMatch = parseTripadvisorStringListJson(
+        updates.tripadvisorCuisinesJson ?? current.tripadvisorCuisinesJson ?? null
+      ) ?? [];
+      const currentIdealForForMatch = this.parseStoredStringArray(current.idealForJson);
+      const mealTypeMatches = matchTripAdvisorMealTypesToDiningFields({
+        category: current.category,
+        mealTypes,
+        currentType: current.type,
+        currentCuisines: currentCuisinesForMatch,
+        currentIdealFor: currentIdealForForMatch,
+      });
+
+      if (mealTypeMatches.nextType) {
+        updates.type = mealTypeMatches.nextType;
+      }
+      if (mealTypeMatches.nextCuisines) {
+        updates.tripadvisorCuisinesJson = JSON.stringify(mealTypeMatches.nextCuisines);
+      }
+      if (mealTypeMatches.nextIdealFor) {
+        updates.idealForJson = JSON.stringify(mealTypeMatches.nextIdealFor);
+      }
+    }
+
     if (hasIncomingFeatureCandidates) {
       const nextFeaturesJson = features ? JSON.stringify(features) : null;
       if (current.tripadvisorFeaturesJson !== nextFeaturesJson) {

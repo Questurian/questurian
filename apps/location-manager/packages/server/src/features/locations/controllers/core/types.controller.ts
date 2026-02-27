@@ -1,55 +1,10 @@
 import type { Context } from "hono";
+import { DINING_ESTABLISHMENT_TYPES } from "@shared/types/dining-taxonomy";
 
 interface TypeOption {
   label: string;
   value: string;
 }
-
-// Static type data - in production these would come from Payload CMS
-const DINING_TYPES: TypeOption[] = [
-  { label: "Restaurant", value: "restaurant" },
-  { label: "Café", value: "cafe" },
-  { label: "Coffee Shop", value: "coffee-shop" },
-  { label: "Bakery", value: "bakery" },
-  { label: "Bistro", value: "bistro" },
-  { label: "Brasserie", value: "brasserie" },
-  { label: "Diner", value: "diner" },
-  { label: "Family Restaurant", value: "family-restaurant" },
-  { label: "Casual Dining Restaurant", value: "casual-dining-restaurant" },
-  { label: "Fine Dining Restaurant", value: "fine-dining-restaurant" },
-  { label: "Buffet Restaurant", value: "buffet-restaurant" },
-  { label: "Food Hall", value: "food-hall" },
-  { label: "Food Court Stall", value: "food-court-stall" },
-  { label: "Food Truck", value: "food-truck" },
-  { label: "Bar", value: "bar" },
-  { label: "Bar & Grill", value: "bar-and-grill" },
-  { label: "Gastropub", value: "gastropub" },
-  { label: "Fast Food Restaurant", value: "fast-food-restaurant" },
-  { label: "Steakhouse", value: "steakhouse" },
-  { label: "Seafood Restaurant", value: "seafood-restaurant" },
-  { label: "Grill House", value: "grill-house" },
-  { label: "BBQ Restaurant", value: "bbq-restaurant" },
-  { label: "Pizzeria", value: "pizzeria" },
-  { label: "Sushi Bar", value: "sushi-bar" },
-  { label: "Ramen Shop", value: "ramen-shop" },
-  { label: "Noodle House", value: "noodle-house" },
-  { label: "Burger Joint", value: "burger-joint" },
-  { label: "Sandwich Shop", value: "sandwich-shop" },
-  { label: "Dessert Shop", value: "dessert-shop" },
-  { label: "Ice Cream Shop", value: "ice-cream-shop" },
-  { label: "Juice Bar", value: "juice-bar" },
-  { label: "Tea House", value: "tea-house" },
-  { label: "Brunch Spot", value: "brunch-spot" },
-  { label: "Breakfast Restaurant", value: "breakfast-restaurant" },
-  { label: "Peruvian Restaurant", value: "peruvian-restaurant" },
-  { label: "Colombian Restaurant", value: "colombian-restaurant" },
-  { label: "Brazilian Restaurant", value: "brazilian-restaurant" },
-  { label: "Mexican Restaurant", value: "mexican-restaurant" },
-  { label: "Nikkei Restaurant", value: "nikkei-restaurant" },
-  { label: "Chifa Restaurant", value: "chifa-restaurant" },
-  { label: "Pollería", value: "polleria" },
-  { label: "Cevichería", value: "cevicheria" },
-];
 
 const ACCOMMODATIONS_TYPES: TypeOption[] = [
   { label: "Hotel", value: "hotel" },
@@ -97,7 +52,7 @@ const KEY_LOCATIONS_TYPES: TypeOption[] = [
 ];
 
 export function getDiningTypes(c: Context) {
-  return c.json({ options: DINING_TYPES });
+  return c.json({ options: DINING_ESTABLISHMENT_TYPES });
 }
 
 export function getAccommodationsTypes(c: Context) {
