@@ -149,7 +149,16 @@ export const patchMapsSchema = z.object({
   title: z.string().trim().min(1).optional(),
   category: z.never().optional(),
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
-  locationKey: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  locationKey: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .transform(val => val === "" ? null : val)
+    .refine(
+      (val) => val === undefined || val === null || /^[a-z0-9-]+(\|[a-z0-9-]+){0,2}$/.test(val),
+      "Invalid locationKey format. Expected: country or country|city or country|city|neighborhood"
+    ),
   district: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   contactAddress: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   countryCode: z.union([z.string().length(2), z.literal("")]).optional().transform(val => val === "" ? null : val),
@@ -180,6 +189,7 @@ export const patchMapsSchema = z.object({
     z.string().trim(),
   ]).optional().or(z.literal("")).transform(val => val === "" ? null : val),
   reviewsEnabled: z.boolean().optional(),
+  autoApproveTaxonomy: z.boolean().optional(),
 
   // Reject immutable fields - these should not be present in request body
   id: z.never().optional(),

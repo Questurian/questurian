@@ -102,6 +102,15 @@ export function useEditLocationForm() {
     const updateData = Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined)
     );
+    const taxonomyDirty = Boolean(
+      form.formState.dirtyFields.locationKey ||
+      form.formState.dirtyFields.district
+    );
+    const hasLocationKey = typeof data.locationKey === "string" && data.locationKey.trim().length > 0;
+
+    if (taxonomyDirty && hasLocationKey) {
+      updateData.autoApproveTaxonomy = true;
+    }
 
     const categoryForUpdate = routeCategory || location?.category || null;
     if (!categoryForUpdate) return;

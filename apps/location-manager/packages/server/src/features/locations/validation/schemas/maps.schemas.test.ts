@@ -249,4 +249,25 @@ describe("maps patch schema reviews toggle", () => {
 
     expect(result.success).toBe(true);
   });
+
+  test("accepts valid locationKey with autoApproveTaxonomy flag", () => {
+    const result = patchMapsSchema.safeParse({
+      locationKey: "peru|lima|miraflores",
+      autoApproveTaxonomy: true,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.locationKey).toBe("peru|lima|miraflores");
+    expect(result.data.autoApproveTaxonomy).toBe(true);
+  });
+
+  test("rejects invalid locationKey format on patch", () => {
+    const result = patchMapsSchema.safeParse({
+      locationKey: "Peru|Lima|Miraflores",
+    });
+
+    expect(result.success).toBe(false);
+  });
 });

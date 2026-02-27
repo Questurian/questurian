@@ -69,14 +69,18 @@ export class PayloadApiClient {
     fileBuffer: Buffer,
     filename: string,
     altText: string,
-    options?: {
+    options: {
       locationRef?: string;
-      photographerCredit?: string | null;
+      photographerCredit: string;
       mediaSet?: string;
       variant?: ImageVariantType;
     }
   ): Promise<string> {
     return await this.mediaClient.uploadImage(fileBuffer, filename, altText, options);
+  }
+
+  async updateMediaAssetLocationRef(mediaAssetId: string, locationRef: string): Promise<void> {
+    return await this.mediaClient.updateImageLocationRef(mediaAssetId, locationRef);
   }
 
   async getLocationRefByKey(locationKey: string): Promise<string | null> {
@@ -140,6 +144,14 @@ export class PayloadApiClient {
 
   async createMediaSet(data: PayloadMediaSetData): Promise<string> {
     return await this.mediaSetsClient.createMediaSet(data);
+  }
+
+  async setMediaSetLocationRef(mediaSetId: string, locationRef: string): Promise<void> {
+    return await this.mediaSetsClient.setMediaSetLocationRef(mediaSetId, locationRef);
+  }
+
+  async getMediaSetVariantAssetIds(mediaSetId: string): Promise<string[]> {
+    return await this.mediaSetsClient.getMediaSetVariantAssetIds(mediaSetId);
   }
 
   async findOrCreateMediaSet(data: PayloadMediaSetData): Promise<string> {

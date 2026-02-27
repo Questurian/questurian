@@ -29,6 +29,16 @@ pnpm lint                   # Run ESLint
 pnpm test                   # Run integration tests (Vitest)
 pnpm generate:types         # Generate TypeScript types from Payload collections
 pnpm generate:importmap     # Generate Payload import map
+pnpm clear:payload:except-users # Delete all Payload data except users
+```
+
+### Payload Reset (Keep Users)
+```bash
+# Deletes all Payload collections except "users"
+pnpm clear:payload:except-users
+
+# Preview only (no deletions)
+pnpm clear:payload:except-users -- --dry-run
 ```
 
 ### Running Tests

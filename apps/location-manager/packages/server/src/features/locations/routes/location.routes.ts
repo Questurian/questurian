@@ -3,7 +3,11 @@ import { validateBody, validateParams, validateQuery } from "@server/shared/core
 import { errorResponse } from "@shared/types/api-response";
 import { createMapsSchema, googlePrefillSchema, patchMapsSchema } from "../validation/schemas/maps.schemas";
 import { addInstagramSchema, addInstagramParamsSchema, deleteInstagramEmbedParamsSchema } from "../validation/schemas/instagram.schemas";
-import { addUploadParamsSchema, deleteUploadParamsSchema } from "../validation/schemas/uploads.schemas";
+import {
+  addUploadParamsSchema,
+  deleteUploadParamsSchema,
+  updateUploadPhotographerCreditBodySchema,
+} from "../validation/schemas/uploads.schemas";
 import { listLocationsQuerySchema, deleteLocationIdSchema } from "../validation/schemas/locations.schemas";
 import { taxonomyLocationKeyParamsSchema } from "../validation/schemas/taxonomy.schemas";
 import { createCorrectionSchema, deleteCorrectionParamsSchema } from "../validation/schemas/taxonomy-correction.schemas";
@@ -22,7 +26,7 @@ import {
 
   // Content
   postAddInstagram, deleteInstagramEmbed,
-  postAddUpload, postAddUploadImageSet, postGenerateAltText, deleteUpload,
+  postAddUpload, postAddUploadImageSet, postGenerateAltText, deleteUpload, patchUploadPhotographerCredit,
   serveImage,
   fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
   fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
@@ -140,6 +144,12 @@ app.delete(
   "/api/uploads/:id",
   validateParams(deleteUploadParamsSchema),
   deleteUpload
+);
+app.patch(
+  "/api/uploads/:id/photographer-credit",
+  validateParams(deleteUploadParamsSchema),
+  validateBody(updateUploadPhotographerCreditBodySchema),
+  patchUploadPhotographerCredit
 );
 app.delete(
   "/api/instagram-embeds/:id",

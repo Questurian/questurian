@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@client/components/ui/dialog";
 import { Button, Input, Textarea, Label } from "@client/components/ui";
+import { TaxonomyLocationEditor } from "@client/shared/components/forms";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,8 @@ import { useToast } from "@client/shared/hooks/useToast";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
 import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import { Plus, Trash2, X } from "lucide-react";
+import { isValidLocationKey } from "@client/shared/lib/taxonomy-location";
+import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
 
 interface FieldDef {
   key: string;
@@ -318,6 +321,15 @@ export function CompletenessFieldEditModal({
   const [idealForDraft, setIdealForDraft] = useState<string[]>(
     Array.isArray(locationDetail.idealFor) ? locationDetail.idealFor : []
   );
+  const [cuisinesDraft, setCuisinesDraft] = useState<string[]>(
+    Array.isArray(locationDetail.tripadvisorCuisines) ? locationDetail.tripadvisorCuisines : []
+  );
+  const [taxonomyLocationKey, setTaxonomyLocationKey] = useState(
+    locationDetail.locationKey?.trim() ?? ""
+  );
+  const [taxonomyDistrict, setTaxonomyDistrict] = useState(
+    locationDetail.district?.trim() ?? ""
+  );
   const [dayEntries, setDayEntries] = useState<DayEntry[]>(() =>
     DAYS.map((day) => ({ day, closed: true, slots: [] }))
   );
@@ -335,10 +347,27 @@ export function CompletenessFieldEditModal({
   }, [open, field, locationDetail]);
 
   useEffect(() => {
+    if (open && field.key === "cuisines") {
+      setCuisinesDraft(
+        Array.isArray(locationDetail.tripadvisorCuisines)
+          ? locationDetail.tripadvisorCuisines
+          : []
+      );
+    }
+  }, [open, field, locationDetail]);
+
+  useEffect(() => {
     if (open && field.key === "operationHours") {
       const initial = getInitialValue(field, locationDetail);
       const { dayEntries: parsedEntries } = parseOperationHoursJson(initial);
       setDayEntries(parsedEntries);
+    }
+  }, [open, field, locationDetail]);
+
+  useEffect(() => {
+    if (open && (field.key === "locationKey" || field.key === "district")) {
+      setTaxonomyLocationKey(locationDetail.locationKey?.trim() ?? "");
+      setTaxonomyDistrict(locationDetail.district?.trim() ?? "");
     }
   }, [open, field, locationDetail]);
 
@@ -465,6 +494,61 @@ export function CompletenessFieldEditModal({
       return;
     }
 
+    if (field.key === "locationKey" || field.key === "district") {
+      const normalizedLocationKey = taxonomyLocationKey.trim();
+      if (normalizedLocationKey && !isValidLocationKey(normalizedLocationKey)) {
+        const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        showToast("Location Key must be lowercase kebab-case (country|city|neighborhood)", centerPosition);
+        return;
+      }
+
+      updateLocation(
+        {
+          category: locationDetail.category,
+          id: locationDetail.id,
+          data: {
+            locationKey: normalizedLocationKey || undefined,
+            district: taxonomyDistrict.trim() || null,
+            autoApproveTaxonomy: true,
+          },
+        },
+        {
+          onSuccess: () => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast("Location taxonomy saved", centerPosition);
+            onOpenChange(false);
+          },
+          onError: (err) => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast(err.message || "Failed to save location taxonomy", centerPosition);
+          },
+        }
+      );
+      return;
+    }
+
+    if (field.key === "cuisines") {
+      updateLocation(
+        {
+          category: locationDetail.category,
+          id: locationDetail.id,
+          data: { tripadvisorCuisines: cuisinesDraft.length > 0 ? cuisinesDraft : null },
+        },
+        {
+          onSuccess: () => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast("Cuisines saved", centerPosition);
+            onOpenChange(false);
+          },
+          onError: (err) => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast(err.message || "Failed to save cuisines", centerPosition);
+          },
+        }
+      );
+      return;
+    }
+
     const payload = buildUpdatePayload(field.key, value);
     if (payload === null) return;
 
@@ -503,6 +587,13 @@ export function CompletenessFieldEditModal({
     ...group,
     tags: group.tags.filter((tag) => !idealForDraft.includes(tag)),
   })).filter((group) => group.tags.length > 0);
+  const availableCuisineOptions = CUISINE_OPTIONS.filter(
+    (option) => !cuisinesDraft.includes(option)
+  );
+  const availableCuisineGroups = CUISINE_OPTION_GROUPS.map((group) => ({
+    ...group,
+    options: group.options.filter((option) => !cuisinesDraft.includes(option)),
+  })).filter((group) => group.options.length > 0);
 
   const renderInput = () => {
     switch (field.key) {
@@ -550,6 +641,22 @@ export function CompletenessFieldEditModal({
               ))}
             </SelectContent>
           </Select>
+        );
+      case "locationKey":
+      case "district":
+        return (
+          <TaxonomyLocationEditor
+            locationKey={taxonomyLocationKey}
+            district={taxonomyDistrict}
+            onLocationKeyChange={setTaxonomyLocationKey}
+            onDistrictChange={setTaxonomyDistrict}
+            locationKeyError={
+              taxonomyLocationKey.trim().length > 0 && !isValidLocationKey(taxonomyLocationKey.trim())
+                ? "Location Key must be lowercase kebab-case (country|city|neighborhood)."
+                : undefined
+            }
+            disabled={isPending}
+          />
         );
       case "nightlifeDetails":
         return (
@@ -675,12 +782,72 @@ export function CompletenessFieldEditModal({
         );
       case "cuisines":
         return (
-          <Input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="Italian, Seafood, Steakhouse"
-            type="text"
-          />
+          <div className="space-y-3">
+            <Select
+              key={`cuisines-${cuisinesDraft.join("|") || "empty"}`}
+              value={undefined}
+              onValueChange={(selectedCuisine) =>
+                setCuisinesDraft((prev) => {
+                  if (prev.includes(selectedCuisine)) return prev;
+                  return [...prev, selectedCuisine];
+                })
+              }
+              disabled={availableCuisineOptions.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose cuisines" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCuisineGroups.map((group, groupIndex) => (
+                  <SelectGroup key={group.label}>
+                    <SelectLabel className="pl-2 pr-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                      {group.label}
+                    </SelectLabel>
+                    {group.options.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                    {groupIndex < availableCuisineGroups.length - 1 && <SelectSeparator />}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {cuisinesDraft.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {cuisinesDraft.map((cuisine) => (
+                    <span
+                      key={cuisine}
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground"
+                    >
+                      {cuisine}
+                      <button
+                        type="button"
+                        className="rounded-sm text-muted-foreground hover:text-foreground"
+                        onClick={() =>
+                          setCuisinesDraft((prev) => prev.filter((item) => item !== cuisine))
+                        }
+                        aria-label={`Remove ${cuisine}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setCuisinesDraft([])}
+                >
+                  Clear cuisines
+                </Button>
+              </div>
+            )}
+          </div>
         );
       case "operationHours":
         return (
@@ -776,6 +943,10 @@ export function CompletenessFieldEditModal({
       ? true
       : field.key === "contactUrl"
         ? Boolean(locationDetail.source?.name?.trim() && locationDetail.source?.address?.trim())
+        : field.key === "locationKey" || field.key === "district"
+          ? taxonomyLocationKey.trim().length === 0 || isValidLocationKey(taxonomyLocationKey.trim())
+        : field.key === "cuisines"
+          ? true
         : field.key === "idealFor"
           ? idealForDraft.length > 0
         : field.key === "operationHours"
@@ -787,11 +958,15 @@ export function CompletenessFieldEditModal({
       ? "Edit below in the Images/Instagram section."
       : field.key === "contactUrl"
         ? "Google URL is generated from Name + Source Address. Click Save to regenerate."
+        : field.key === "locationKey" || field.key === "district"
+          ? "Use the builder to set country, city, and barrio/district. New taxonomy keys save as approved."
         : field.key === "operationHours"
           ? "Set opening hours for each day. Use Closed or add one or more time ranges."
         : field.key === "slug"
           ? "Slug is system-managed in this flow. Update related core fields to generate it."
-          : `Add or update the missing ${field.label.toLowerCase()} for this location.`;
+          : field.present
+            ? `Update the current ${field.label.toLowerCase()} for this location.`
+            : `Add or update the missing ${field.label.toLowerCase()} for this location.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -809,7 +984,7 @@ export function CompletenessFieldEditModal({
             <p>Source Name: {locationDetail.source?.name || "Missing"}</p>
             <p>Source Address: {locationDetail.source?.address || "Missing"}</p>
           </div>
-        ) : field.key === "operationHours" ? (
+        ) : field.key === "operationHours" || field.key === "locationKey" || field.key === "district" ? (
           <div className="space-y-4 py-2">
             {renderInput()}
           </div>

@@ -28,7 +28,7 @@ export function useAddUploadImageSet(
     }: {
       sourceFile: File;
       variantFiles: { type: ImageVariantType; file: File }[];
-      photographerCredit?: string;
+      photographerCredit: string;
       altText?: string;
     }) => {
       if (!category) {

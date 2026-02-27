@@ -80,8 +80,16 @@ export class PayloadSyncService {
         console.log(`✓ Using stored locationRef for location ${locationId}: ${locationRef}`);
       }
 
+      // Keep the in-memory location aligned so downstream upload logic sees the resolved ref.
+      location.payload_location_ref = locationRef;
+
       // Upload images and create Instagram posts
-      const uploadedImages = await uploadLocationImages(location, this.payloadClient, this.imageStorage);
+      const uploadedImages = await uploadLocationImages(
+        location,
+        this.payloadClient,
+        this.imageStorage,
+        locationRef
+      );
       galleryIds = uploadedImages.galleryImageIds;
       instagramIds = uploadedImages.instagramPostIds;
 

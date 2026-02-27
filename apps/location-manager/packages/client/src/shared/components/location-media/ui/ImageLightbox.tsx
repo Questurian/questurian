@@ -14,6 +14,8 @@ interface ImageLightboxProps {
   imageMetadata?: ImageMetadata[];
   instagramUrl?: string;
   embedCode?: string;
+  showEditPhotographerCredit?: boolean;
+  onEditPhotographerCredit?: () => void;
   onCopySuccess?: (message: string, position?: { x: number; y: number }) => void;
 }
 
@@ -44,6 +46,8 @@ export function ImageLightbox({
   imageMetadata,
   instagramUrl,
   embedCode,
+  showEditPhotographerCredit = false,
+  onEditPhotographerCredit,
   onCopySuccess,
 }: ImageLightboxProps) {
   const currentImage = images[currentIndex];
@@ -130,6 +134,19 @@ export function ImageLightbox({
                 <p className="text-xs text-white/60 text-center">
                   Photo by {photographerCredit}
                 </p>
+              )}
+
+              {showEditPhotographerCredit && onEditPhotographerCredit && (
+                <div className="flex justify-center mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 text-xs"
+                    onClick={onEditPhotographerCredit}
+                  >
+                    Edit Photographer Credit
+                  </Button>
+                </div>
               )}
 
               {/* Instagram buttons */}

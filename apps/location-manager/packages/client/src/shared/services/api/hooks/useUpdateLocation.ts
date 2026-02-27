@@ -3,6 +3,8 @@ import { locationsApi } from "../locations.api";
 import { LOCATIONS_QUERY_KEY } from "./useLocations";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 import { LOCATION_BY_ID_QUERY_KEY } from "./useLocationById";
+import { APPROVED_TAXONOMY_QUERY_KEY } from "./useApprovedTaxonomy";
+import { PENDING_TAXONOMY_QUERY_KEY } from "./usePendingTaxonomy";
 import type { Category, UpdateMapsRequest } from "../types";
 
 export function useUpdateLocation() {
@@ -29,6 +31,18 @@ export function useUpdateLocation() {
         }),
         queryClient.invalidateQueries({
           queryKey: ["location-detail", category, id],
+          refetchType: "all",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["countries"],
+          refetchType: "all",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: APPROVED_TAXONOMY_QUERY_KEY,
+          refetchType: "all",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: PENDING_TAXONOMY_QUERY_KEY,
           refetchType: "all",
         }),
       ]);

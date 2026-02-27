@@ -73,6 +73,8 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "name", label: "Name", present: Boolean(source.name?.trim() || nightlifeDetails.name) },
         { key: "sourceAddress", label: "Location", present: Boolean(source.address?.trim() || nightlifeDetails.location) },
         { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
+        { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
         {
           key: "nightlife.clubType",
           label: "Club Type",
@@ -122,6 +124,8 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "name", label: "Name", present: Boolean(source.name?.trim() || accommodationsDetails.coreName) },
         { key: "sourceAddress", label: "Address", present: Boolean(source.address?.trim() || accommodationsDetails.address) },
         { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
+        { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
         {
           key: "accommodations.type",
           label: "Type",
@@ -236,6 +240,8 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
         { key: "sourceAddress", label: "Address", present: Boolean(source.address?.trim()) },
         { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
+        { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
         {
           key: "attractions.type",
           label: "Type",
@@ -275,6 +281,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "name", label: "Name", present: Boolean(source.name?.trim()) },
         { key: "sourceAddress", label: "Address", present: Boolean(source.address?.trim()) },
         { key: "category", label: "Category", present: Boolean(locationDetail.category) },
+        {
+          key: "locationKey",
+          label: "Location Key",
+          present: Boolean(locationDetail.locationKey?.trim() || asString(keyLocationsDetails?.location_key)),
+        },
         {
           key: "keyLocations.type",
           label: "Type",
@@ -492,12 +503,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
               <button
                 key={field.key}
                 type="button"
-                onClick={() => !field.present && setEditField(getEditField(field))}
-                disabled={field.present}
-                title={field.present ? undefined : `Click to edit ${field.label}`}
+                onClick={() => setEditField(getEditField(field))}
+                title={`Click to edit ${field.label}`}
                 className={`flex items-center gap-2 rounded border px-2 py-1 text-xs text-left w-full ${
                   field.present
-                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 cursor-default"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
                     : "border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
                 }`}
               >

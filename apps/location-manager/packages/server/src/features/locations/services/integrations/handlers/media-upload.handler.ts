@@ -2,7 +2,6 @@ import type { LocationResponse } from "../../../models/location";
 import type { PayloadApiClient } from "../clients/payload-api.client";
 import { ImageStorageService } from "../../storage/image-storage.service";
 import type { UploadedImagesResult } from "../types";
-import { mapLocationKeyToPayloadLocation } from "../mappers";
 import type { ImageVariantType } from "@questurian/lm-shared";
 import { sanitizeLocationName, getFileExtension } from "../../../utils/location-utils";
 
@@ -13,10 +12,12 @@ import { sanitizeLocationName, getFileExtension } from "../../../utils/location-
 export async function uploadLocationImages(
   location: LocationResponse,
   payloadClient: PayloadApiClient,
-  imageStorage: ImageStorageService
+  imageStorage: ImageStorageService,
+  resolvedLocationRef?: string | null
 ): Promise<UploadedImagesResult> {
   const galleryImageIds: string[] = [];
   const instagramPostIds: string[] = [];
+  const mediaLocationRef = resolvedLocationRef ?? location.payload_location_ref ?? null;
 
   try {
     // Upload images using ImageSet format (multi-variant system)
@@ -25,6 +26,12 @@ export async function uploadLocationImages(
       if (upload.format === 'imageset' && upload.imageSet) {
         // ImageSet format: upload ONLY variants (skip source image)
         const imageSet = upload.imageSet;
+        const photographerCredit = normalizePhotographerCredit(imageSet.photographerCredit);
+        if (!photographerCredit) {
+          throw new Error(
+            `Missing photographer credit for location ${location.id}, upload ${upload.id ?? "unknown"}, imageSet ${imageSet.id}`
+          );
+        }
         // Validate variants exist
         if (!imageSet.variants || imageSet.variants.length === 0) {
           console.warn(`⚠️  ImageSet ${imageSet.id} has no variants, skipping`);
@@ -54,6 +61,37 @@ export async function uploadLocationImages(
             console.log(`✅ [MEDIA-SET] Found existing media-set: ${existingMediaSetId} (skipping variant uploads)`);
             mediaSetId = existingMediaSetId;
             shouldUploadVariants = false; // Don't re-upload variants
+
+            // Backfill locationRef on existing media-set and variant assets
+            if (mediaLocationRef) {
+              try {
+                await payloadClient.setMediaSetLocationRef(mediaSetId, mediaLocationRef);
+
+                const variantAssetIds = await payloadClient.getMediaSetVariantAssetIds(mediaSetId);
+                let updatedVariantCount = 0;
+
+                for (const variantAssetId of variantAssetIds) {
+                  try {
+                    await payloadClient.updateMediaAssetLocationRef(variantAssetId, mediaLocationRef);
+                    updatedVariantCount++;
+                  } catch (error) {
+                    console.warn(
+                      `⚠️  Failed to backfill locationRef on media asset ${variantAssetId} for media-set ${mediaSetId}:`,
+                      error
+                    );
+                  }
+                }
+
+                console.log(
+                  `✅ [MEDIA-SET] Backfilled locationRef for media-set ${mediaSetId} and ${updatedVariantCount}/${variantAssetIds.length} variants`
+                );
+              } catch (error) {
+                console.warn(
+                  `⚠️  Failed to backfill locationRef for existing media-set ${mediaSetId}:`,
+                  error
+                );
+              }
+            }
           } else {
             // Media-set doesn't exist, create it
             console.log(`📦 [MEDIA-SET] Creating new media-set`);
@@ -101,7 +139,7 @@ export async function uploadLocationImages(
                 console.log(`🖼️  [VARIANT] Uploading ${variantType} for media-set ${mediaSetId}`);
 
                 // Warn if locationRef is missing (helps catch issues early)
-                if (!location.payload_location_ref) {
+                if (!mediaLocationRef) {
                   console.warn(
                     `⚠️  Location ${location.id} (${location.source.name}) has no payload_location_ref. ` +
                     `Media assets will be uploaded without location hierarchy link.`
@@ -113,8 +151,8 @@ export async function uploadLocationImages(
                   filename,
                   altText,
                   {
-                    locationRef: location.payload_location_ref || undefined,
-                    photographerCredit: imageSet.photographerCredit,
+                    locationRef: mediaLocationRef || undefined,
+                    photographerCredit,
                     mediaSet: mediaSetId,        // ⭐ NEW: Link to media-set
                     variant: variantType,         // ⭐ NEW: Specify variant type
                   }
@@ -179,11 +217,12 @@ export async function uploadLocationImages(
             locationName: location.source.name,
             payload_location_ref: location.payload_location_ref,
             payload_location_ref_type: typeof location.payload_location_ref,
-            will_send_locationRef: location.payload_location_ref || undefined,
+            resolved_location_ref: mediaLocationRef,
+            will_send_locationRef: mediaLocationRef || undefined,
           });
 
           // Warn if locationRef is missing
-          if (!location.payload_location_ref) {
+          if (!mediaLocationRef) {
             console.warn(
               `⚠️  Instagram embed for location ${location.id} (${location.source.name}) has no payload_location_ref.`
             );
@@ -194,7 +233,8 @@ export async function uploadLocationImages(
             filename,
             altText,
             {
-              locationRef: location.payload_location_ref || undefined
+              locationRef: mediaLocationRef || undefined,
+              photographerCredit: normalizeInstagramPhotographerCredit(embed.username),
             }
           );
 
@@ -224,10 +264,30 @@ export async function uploadLocationImages(
     }
   } catch (error) {
     console.error("Error uploading images:", error);
-    // Return whatever we successfully processed
+    throw error;
   }
 
   return { galleryImageIds, instagramPostIds };
+}
+
+function normalizePhotographerCredit(value: string | null | undefined): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
+}
+
+function normalizeInstagramPhotographerCredit(username: string | undefined): string {
+  if (!username) {
+    return "Unknown";
+  }
+
+  const normalized = username.trim();
+  if (!normalized) {
+    return "Unknown";
+  }
+
+  return normalized.startsWith("@") ? normalized : `@${normalized}`;
 }
 
 /**

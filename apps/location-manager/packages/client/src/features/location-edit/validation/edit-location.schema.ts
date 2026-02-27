@@ -25,7 +25,18 @@ export const editLocationSchema = z.object({
     .optional(),
   idealFor: idealForSchema,
   type: z.string().optional().or(z.literal("")),
-  locationKey: z.string().optional().or(z.literal("")),
+  locationKey: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (value) =>
+        value == null ||
+        value === "" ||
+        /^[a-z0-9-]+(\|[a-z0-9-]+){0,2}$/.test(value),
+      "Location Key must be lowercase kebab-case (country|city|neighborhood)"
+    ),
   district: z.string().optional().or(z.literal("")),
   countryCode: z.string().length(2, "Country code must be 2 letters").optional().or(z.literal("")),
   ianaTimeId: z.string().optional().or(z.literal("")),

@@ -1,5 +1,5 @@
 import type { UseFormReturn } from "react-hook-form";
-import { FormInput } from "@client/shared/components/forms";
+import { FormInput, TaxonomyLocationEditor } from "@client/shared/components/forms";
 import type { EditLocationFormData } from "../validation/edit-location.schema";
 
 interface TaxonomyFieldsSectionProps {
@@ -7,24 +7,33 @@ interface TaxonomyFieldsSectionProps {
 }
 
 export function TaxonomyFieldsSection({ form }: TaxonomyFieldsSectionProps) {
+  const locationKey = form.watch("locationKey") || "";
+  const district = form.watch("district") || "";
+
   return (
     <div className="space-y-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Taxonomy
       </p>
 
-      <FormInput
-        name="locationKey"
-        label="Location Key"
-        control={form.control}
-        placeholder="country|city|district"
-      />
-
-      <FormInput
-        name="district"
-        label="District"
-        control={form.control}
-        placeholder="District or neighborhood"
+      <TaxonomyLocationEditor
+        locationKey={locationKey}
+        district={district}
+        onLocationKeyChange={(next) =>
+          form.setValue("locationKey", next, {
+            shouldDirty: true,
+            shouldValidate: true,
+            shouldTouch: true,
+          })
+        }
+        onDistrictChange={(next) =>
+          form.setValue("district", next, {
+            shouldDirty: true,
+            shouldValidate: true,
+            shouldTouch: true,
+          })
+        }
+        locationKeyError={form.formState.errors.locationKey?.message}
       />
 
       <FormInput

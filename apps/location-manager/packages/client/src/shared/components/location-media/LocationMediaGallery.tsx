@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed } from "@client/shared/services/api/types";
 import type { ImageVariant } from "@questurian/lm-shared";
 import { Button } from "@client/components/ui";
+import { Input } from "@client/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,10 +13,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@client/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@client/components/ui/dialog";
 import { X } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
+import { useUpdateUploadPhotographerCredit } from "@client/shared/services/api/hooks/useUpdateUploadPhotographerCredit";
 import { AddInstagramEmbedForm } from "./forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "./forms/AddUploadFilesForm";
 import { ImageLightbox } from "./ui/ImageLightbox";
@@ -34,6 +44,23 @@ function toImageApiPath(path: string): string {
   return `/api/images/${stripped}`;
 }
 
+function hasMissingPhotographerCredit(credit: string | null | undefined): boolean {
+  return typeof credit !== "string" || credit.trim().length === 0;
+}
+
+function normalizeInstagramHandle(username: string | undefined): string | undefined {
+  if (!username) {
+    return undefined;
+  }
+
+  const normalized = username.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized.startsWith("@") ? normalized : `@${normalized}`;
+}
+
 export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryProps) {
   const { showToast } = useToast();
   const uploadsWithPreview = (locationDetail.uploads || []).filter((upload) => {
@@ -49,6 +76,11 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
     | { type: "instagram"; id: number }
     | null
   >(null);
+  const [editCreditState, setEditCreditState] = useState<{
+    uploadId: number;
+    value: string;
+    error: string | null;
+  } | null>(null);
 
   const [lightboxState, setLightboxState] = useState({
     isOpen: false,
@@ -58,6 +90,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
     imageMetadata: undefined as ImageMetadata[] | undefined,
     instagramUrl: undefined as string | undefined,
     embedCode: undefined as string | undefined,
+    editableUploadId: undefined as number | undefined,
   });
 
   const deleteMutation = useDeleteUpload({
@@ -86,6 +119,24 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
     },
   });
 
+  const updatePhotographerCreditMutation = useUpdateUploadPhotographerCredit({
+    category: locationDetail.category,
+    locationId: locationDetail.id,
+    onSuccess: () => {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast("Photographer credit updated", centerPosition);
+      setEditCreditState(null);
+    },
+    onError: (error) => {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(error.message || "Failed to update photographer credit", centerPosition);
+    },
+  });
+
+  const missingCreditCount = uploadsWithPreview.filter((upload) =>
+    hasMissingPhotographerCredit(upload.imageSet?.photographerCredit)
+  ).length;
+
   function handleImageSetClick(upload: Upload) {
     if ('imageSet' in upload && upload.imageSet) {
       const imageSet = upload.imageSet;
@@ -93,12 +144,13 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
         const variantPaths = imageSet.variants.map((v: ImageVariant) => v.path);
         const squareVariantIndex = imageSet.variants.findIndex(v => v.type === 'square');
         const startIndex = squareVariantIndex >= 0 ? squareVariantIndex : 0;
+        const normalizedPhotographerCredit = imageSet.photographerCredit?.trim() || undefined;
 
         setLightboxState({
           isOpen: true,
           images: variantPaths,
           currentIndex: startIndex,
-          photographerCredit: imageSet.photographerCredit || undefined,
+          photographerCredit: normalizedPhotographerCredit,
           imageMetadata: imageSet.variants.map(variant => ({
             width: variant.dimensions.width,
             height: variant.dimensions.height,
@@ -107,6 +159,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
           })),
           instagramUrl: undefined,
           embedCode: undefined,
+          editableUploadId: upload.id,
         });
       }
     }
@@ -117,10 +170,11 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       isOpen: true,
       images: embed.images || [],
       currentIndex: imageIndex,
-      photographerCredit: embed.username ? `@${embed.username}` : undefined,
+      photographerCredit: normalizeInstagramHandle(embed.username),
       imageMetadata: undefined,
       instagramUrl: embed.url,
       embedCode: embed.embed_code,
+      editableUploadId: undefined,
     });
   }
 
@@ -156,6 +210,48 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
     setDeleteConfirm(null);
   }
 
+  function handleSavePhotographerCredit() {
+    if (!editCreditState) {
+      return;
+    }
+
+    const normalizedValue = editCreditState.value.trim();
+    if (!normalizedValue) {
+      setEditCreditState((prev) =>
+        prev
+          ? {
+              ...prev,
+              error: "Photographer credit is required",
+            }
+          : prev
+      );
+      return;
+    }
+
+    updatePhotographerCreditMutation.mutate({
+      uploadId: editCreditState.uploadId,
+      photographerCredit: normalizedValue,
+    });
+  }
+
+  function handleEditCreditFromLightbox() {
+    if (!lightboxState.editableUploadId) {
+      return;
+    }
+
+    setLightboxState((prev) => ({
+      ...prev,
+      isOpen: false,
+      editableUploadId: undefined,
+    }));
+
+    setEditCreditState({
+      uploadId: lightboxState.editableUploadId,
+      value: lightboxState.photographerCredit || "",
+      error: null,
+    });
+  }
+
   return (
     <>
       {/* Existing Uploads Gallery */}
@@ -164,17 +260,27 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Uploaded Images:
           </span>
+          {missingCreditCount > 0 && (
+            <p className="ml-4 text-xs font-medium text-amber-600">
+              {missingCreditCount} image set{missingCreditCount === 1 ? "" : "s"} missing photographer credit
+            </p>
+          )}
           <ul className="flex gap-2 ml-4 flex-wrap">
             {uploadsWithPreview.map((upload) => {
               if (upload.imageSet) {
                 const imageSet = upload.imageSet;
                 const squareVariant = imageSet.variants?.find(v => v.type === 'square');
                 if (!squareVariant) return null;
+                const hasMissingCredit = hasMissingPhotographerCredit(imageSet.photographerCredit);
 
                 const imageUrl = `${toImageApiPath(squareVariant.path)}?v=${upload.id ?? "upload"}`;
                 return (
                   <li key={`${upload.id}-imageset`} className="relative group">
-                    <div className="shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-muted hover:ring-2 ring-primary transition-all">
+                    <div className={`shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-muted transition-all ${
+                      hasMissingCredit
+                        ? "ring-2 ring-amber-500/70"
+                        : "hover:ring-2 ring-primary"
+                    }`}>
                       <img
                         src={imageUrl}
                         alt={imageSet.altText || imageSet.photographerCredit || "Uploaded image"}
@@ -187,6 +293,11 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
                       <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
                         {imageSet.variants?.length || 0} variants
                       </div>
+                      {hasMissingCredit && (
+                        <div className="absolute top-1 left-1 bg-amber-600/90 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                          Missing Credit
+                        </div>
+                      )}
                       <Button
                         variant="destructive"
                         size="icon"
@@ -279,19 +390,81 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog
+        open={editCreditState !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditCreditState(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Photographer Credit</DialogTitle>
+            <DialogDescription>
+              Photographer credit is required for all uploaded image sets.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={editCreditState?.value || ""}
+              onChange={(event) =>
+                setEditCreditState((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        value: event.target.value,
+                        error: null,
+                      }
+                    : prev
+                )
+              }
+              placeholder="Name, studio, or publication"
+              autoFocus
+            />
+            {editCreditState?.error && (
+              <p className="text-xs text-destructive">{editCreditState.error}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditCreditState(null)}
+              disabled={updatePhotographerCreditMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSavePhotographerCredit}
+              disabled={updatePhotographerCreditMutation.isPending}
+            >
+              {updatePhotographerCreditMutation.isPending ? "Saving..." : "Save Credit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Image Lightbox */}
       {lightboxState.isOpen && (
         <ImageLightbox
           images={lightboxState.images}
           currentIndex={lightboxState.currentIndex}
           isOpen={lightboxState.isOpen}
-          onClose={() => setLightboxState({ ...lightboxState, isOpen: false })}
+          onClose={() => setLightboxState({
+            ...lightboxState,
+            isOpen: false,
+            editableUploadId: undefined,
+          })}
           onNext={handleLightboxNext}
           onPrevious={handleLightboxPrevious}
           photographerCredit={lightboxState.photographerCredit}
           imageMetadata={lightboxState.imageMetadata}
           instagramUrl={lightboxState.instagramUrl}
           embedCode={lightboxState.embedCode}
+          showEditPhotographerCredit={!!lightboxState.editableUploadId}
+          onEditPhotographerCredit={handleEditCreditFromLightbox}
           onCopySuccess={(message, position) => {
             showToast(message, position || { x: window.innerWidth / 2, y: window.innerHeight / 2 });
           }}

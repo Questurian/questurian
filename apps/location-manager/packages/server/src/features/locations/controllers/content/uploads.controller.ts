@@ -2,59 +2,38 @@ import type { Context } from "hono";
 import type { ImageVariantType } from "@questurian/lm-shared";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
-import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
-import { MAX_FILE_SIZE, MAX_FILES, MAX_TOTAL_SIZE, type AddUploadParamsDto, type DeleteUploadParamsDto } from "../../validation/schemas/uploads.schemas";
+import { BadRequestError } from "@shared/errors/http-error";
+import {
+  MAX_FILE_SIZE,
+  MAX_TOTAL_SIZE,
+  type AddUploadParamsDto,
+  type DeleteUploadParamsDto,
+  type UploadIdParamsDto,
+  type UpdateUploadPhotographerCreditBodyDto,
+} from "../../validation/schemas/uploads.schemas";
 
 const container = ServiceContainer.getInstance();
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-export async function postAddUpload(c: Context) {
-  const formData = await c.req.formData();
-
-  // Extract validated URL parameter
-  const params = c.get("validatedParams") as AddUploadParamsDto;
-  const locationId = params.id;
-
-  // Parse photographer credit
+function parseRequiredPhotographerCredit(formData: FormData): string {
   const photographerCredit = formData.get("photographerCredit");
-  const photographerCreditValue = typeof photographerCredit === "string"
-    ? (photographerCredit.trim() || null)
-    : null;
-
-  // Parse files
-  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-
-  // Validate files
-  if (!files || files.length === 0) {
-    throw new BadRequestError("At least one file required");
+  if (typeof photographerCredit !== "string") {
+    throw new BadRequestError("Photographer credit is required");
   }
 
-  if (files.length > MAX_FILES) {
-    throw new BadRequestError(`Maximum ${MAX_FILES} files allowed per upload`);
+  const normalizedCredit = photographerCredit.trim();
+  if (!normalizedCredit) {
+    throw new BadRequestError("Photographer credit is required");
   }
 
-  let totalSize = 0;
-  for (const file of files) {
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      throw new BadRequestError(
-        `Invalid file type for "${file.name}". Only JPEG, PNG, WebP, and GIF images are allowed.`
-      );
-    }
+  return normalizedCredit;
+}
 
-    if (file.size > MAX_FILE_SIZE) {
-      throw new BadRequestError(`File "${file.name}" exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
-    }
-
-    totalSize += file.size;
-  }
-
-  if (totalSize > MAX_TOTAL_SIZE) {
-    throw new BadRequestError(`Total upload size exceeds ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit`);
-  }
-
-  const entry = await container.uploadsService.addUploadFiles(locationId, files, photographerCreditValue);
-  return c.json(successResponse({ entry }));
+export async function postAddUpload(c: Context) {
+  throw new BadRequestError(
+    "Legacy upload endpoint is disabled. Use /api/:category/:id/uploads/imageset with photographerCredit."
+  );
 }
 
 export async function deleteUpload(c: Context) {
@@ -73,6 +52,27 @@ export async function deleteUpload(c: Context) {
 }
 
 /**
+ * PATCH /api/uploads/:id/photographer-credit
+ * Update photographer credit for an existing image-set upload
+ */
+export async function patchUploadPhotographerCredit(c: Context) {
+  const params = c.get("validatedParams") as UploadIdParamsDto;
+  const body = c.get("validatedBody") as UpdateUploadPhotographerCreditBodyDto;
+  const uploadId = parseInt(params.id, 10);
+
+  if (isNaN(uploadId)) {
+    throw new BadRequestError("Upload ID must be a number");
+  }
+
+  const entry = await container.uploadsService.updateUploadPhotographerCredit(
+    uploadId,
+    body.photographerCredit
+  );
+
+  return c.json(successResponse({ entry }));
+}
+
+/**
  * POST /api/add-upload-imageset/:id
  * Upload a multi-variant image set (source + all configured variants)
  */
@@ -84,10 +84,7 @@ export async function postAddUploadImageSet(c: Context) {
   const locationId = params.id;
 
   // Parse photographer credit
-  const photographerCredit = formData.get("photographerCredit");
-  const photographerCreditValue = typeof photographerCredit === "string"
-    ? (photographerCredit.trim() || null)
-    : null;
+  const photographerCreditValue = parseRequiredPhotographerCredit(formData);
 
   // Parse alt text (optional - will generate if not provided)
   const altText = formData.get("altText");

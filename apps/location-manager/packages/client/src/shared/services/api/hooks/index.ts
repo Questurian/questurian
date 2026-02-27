@@ -19,3 +19,4 @@ export { useClearDatabase } from "./useClearDatabase";
 export { useLocationTypes } from "./useLocationTypes";
 export { useLeadsApiHealth } from "./useLeadsApiHealth";
 export { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
+export { useUpdateUploadPhotographerCredit } from "./useUpdateUploadPhotographerCredit";

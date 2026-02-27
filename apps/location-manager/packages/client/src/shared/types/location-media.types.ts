@@ -29,7 +29,7 @@ export interface ImageVariantUploadFile {
 export interface QueuedImageSetPayload {
   sourceFile: File;
   variantFiles: ImageVariantUploadFile[];
-  photographerCredit?: string;
+  photographerCredit: string;
   altText?: string;
 }
 

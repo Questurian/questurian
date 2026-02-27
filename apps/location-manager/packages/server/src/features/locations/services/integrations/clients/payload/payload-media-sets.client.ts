@@ -10,6 +10,18 @@ import type {
 export class PayloadMediaSetsClient {
   constructor(private readonly authClient: PayloadAuthClient) {}
 
+  private extractRelationshipId(value: unknown): string | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "string" || typeof value === "number") return String(value);
+    if (typeof value === "object" && value !== null && "id" in value) {
+      const idValue = (value as { id?: unknown }).id;
+      if (typeof idValue === "string" || typeof idValue === "number") {
+        return String(idValue);
+      }
+    }
+    return null;
+  }
+
   async findMediaSetByExternalRef(externalRef: string): Promise<string | null> {
     if (!this.authClient.isConfigured()) {
       throw new ServiceUnavailableError("Payload CMS");
@@ -109,6 +121,82 @@ export class PayloadMediaSetsClient {
     );
 
     return result.doc.id;
+  }
+
+  async setMediaSetLocationRef(mediaSetId: string, locationRef: string): Promise<void> {
+    if (!this.authClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const parsedLocationRef = parseInt(locationRef, 10);
+    if (Number.isNaN(parsedLocationRef)) {
+      throw new Error(`Invalid locationRef for media-set update: ${locationRef}`);
+    }
+
+    const token = await this.authClient.ensureAuthenticated();
+    const apiUrl = this.authClient.getApiUrl();
+
+    const response = await fetch(`${apiUrl}/api/media-sets/${mediaSetId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `JWT ${token}`,
+      },
+      body: JSON.stringify({
+        locationRef: parsedLocationRef,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Payload media-set update failed (${mediaSetId}): ${response.status} - ${errorText}`
+      );
+    }
+
+    console.log(
+      `✓ Updated media-set ${mediaSetId} with locationRef ${parsedLocationRef}`
+    );
+  }
+
+  async getMediaSetVariantAssetIds(mediaSetId: string): Promise<string[]> {
+    if (!this.authClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const token = await this.authClient.ensureAuthenticated();
+    const apiUrl = this.authClient.getApiUrl();
+
+    const response = await fetch(`${apiUrl}/api/media-sets/${mediaSetId}?depth=0`, {
+      method: "GET",
+      headers: {
+        Authorization: `JWT ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Payload media-set fetch failed (${mediaSetId}): ${response.status} - ${errorText}`
+      );
+    }
+
+    const rawResult = await response.json();
+    const normalized = normalizeDocResponse<{ variants?: Record<string, unknown> }>(
+      rawResult,
+      "media-set fetch"
+    );
+    const variants = normalized.doc.variants;
+
+    if (!variants || typeof variants !== "object") {
+      return [];
+    }
+
+    const assetIds = Object.values(variants)
+      .map((value) => this.extractRelationshipId(value))
+      .filter((id): id is string => !!id);
+
+    return Array.from(new Set(assetIds));
   }
 
   async findOrCreateMediaSet(data: PayloadMediaSetData): Promise<string> {

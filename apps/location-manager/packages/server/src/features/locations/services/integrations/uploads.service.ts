@@ -1,5 +1,5 @@
 import type { Upload, ImageMetadata, ImageSetUpload } from "../../models/location";
-import type { ImageVariantType, ImageSet, ImageVariant, VARIANT_SPECS } from "@questurian/lm-shared";
+import type { ImageVariantType, ImageSet, ImageVariant } from "@questurian/lm-shared";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { ImageStorageService } from "../storage/image-storage.service";
 import { AltTextApiClient } from "./clients/alt-text-api.client";
@@ -97,7 +97,7 @@ export class UploadsService {
     locationId: number,
     sourceFile: File,
     variantFiles: { type: ImageVariantType; file: File }[],
-    photographerCredit?: string | null,
+    photographerCredit: string,
     altText?: string | null
   ): Promise<ImageSetUpload> {
     // 1. Validate inputs
@@ -118,6 +118,11 @@ export class UploadsService {
       throw new BadRequestError(
         "Exactly 7 variant files required (thumbnail, square, wide, social, editorial, portrait, hero)"
       );
+    }
+
+    const normalizedPhotographerCredit = photographerCredit.trim();
+    if (!normalizedPhotographerCredit) {
+      throw new BadRequestError("Photographer credit is required");
     }
 
     // Validate all variant types are present
@@ -245,7 +250,7 @@ export class UploadsService {
         format: sourceMeta.format,
       },
       variants,
-      photographerCredit: photographerCredit || null,
+      photographerCredit: normalizedPhotographerCredit,
       altText: finalAltText || undefined,
       created_at: new Date().toISOString(),
     };
@@ -255,6 +260,35 @@ export class UploadsService {
     saveUpload(entry);
 
     return entry;
+  }
+
+  async updateUploadPhotographerCredit(uploadId: number, photographerCredit: string): Promise<Upload> {
+    const normalizedCredit = photographerCredit.trim();
+    if (!normalizedCredit) {
+      throw new BadRequestError("Photographer credit is required");
+    }
+
+    const upload = getUploadById(uploadId);
+    if (!upload) {
+      throw new NotFoundError("Upload", uploadId);
+    }
+
+    if (upload.format !== "imageset" || !upload.imageSet) {
+      throw new BadRequestError("Only image-set uploads support photographer credit updates");
+    }
+
+    upload.imageSet.photographerCredit = normalizedCredit;
+    const saved = saveUpload(upload);
+    if (!saved) {
+      throw new Error("Failed to save upload photographer credit");
+    }
+
+    const updatedUpload = getUploadById(uploadId);
+    if (!updatedUpload) {
+      throw new NotFoundError("Upload", uploadId);
+    }
+
+    return updatedUpload;
   }
 
   /**

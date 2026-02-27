@@ -7,12 +7,25 @@ export const addUploadParamsSchema = z.object({
 
 export type AddUploadParamsDto = z.infer<typeof addUploadParamsSchema>;
 
-// URL parameter schema for DELETE /api/uploads/:id
-export const deleteUploadParamsSchema = z.object({
+// URL parameter schema for upload-specific routes like DELETE/PATCH /api/uploads/:id
+export const uploadIdParamsSchema = z.object({
   id: z.string().regex(/^\d+$/, "Upload ID must be a number"),
 });
 
-export type DeleteUploadParamsDto = z.infer<typeof deleteUploadParamsSchema>;
+export type UploadIdParamsDto = z.infer<typeof uploadIdParamsSchema>;
+export type DeleteUploadParamsDto = UploadIdParamsDto;
+export const deleteUploadParamsSchema = uploadIdParamsSchema;
+
+export const updateUploadPhotographerCreditBodySchema = z.object({
+  photographerCredit: z
+    .string()
+    .trim()
+    .min(1, "Photographer credit is required"),
+});
+
+export type UpdateUploadPhotographerCreditBodyDto = z.infer<
+  typeof updateUploadPhotographerCreditBodySchema
+>;
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -40,7 +53,7 @@ const uploadFileSchema = z.custom<File>(
 
 const uploadFormDataSchema = z.object({
   // locationId removed - now comes from URL parameter (:id)
-  photographerCredit: z.string().trim().optional().nullable(),
+  photographerCredit: z.string().trim().min(1, "Photographer credit is required"),
   files: z.array(uploadFileSchema)
     .min(1, "At least one file required")
     .max(MAX_FILES, `Maximum ${MAX_FILES} files allowed`)

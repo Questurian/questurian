@@ -78,6 +78,7 @@ export interface UpdateMapsRequest {
   priceLevel?: string | null;
   placeId?: string | null;
   reviewsEnabled?: boolean;
+  autoApproveTaxonomy?: boolean;
 }
 
 export interface AddInstagramRequest {

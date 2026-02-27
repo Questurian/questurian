@@ -16,9 +16,9 @@ export class PayloadMediaClient {
     fileBuffer: Buffer,
     filename: string,
     altText: string,
-    options?: {
+    options: {
       locationRef?: string;
-      photographerCredit?: string | null;
+      photographerCredit: string;
       mediaSet?: string;
       variant?: ImageVariantType;
     }
@@ -38,30 +38,34 @@ export class PayloadMediaClient {
     console.log("🔍 [PAYLOAD CLIENT] uploadImage called with:", {
       filename,
       altText,
-      options_locationRef: options?.locationRef,
-      options_locationRef_type: typeof options?.locationRef,
-      options_photographerCredit: options?.photographerCredit,
+      options_locationRef: options.locationRef,
+      options_locationRef_type: typeof options.locationRef,
+      options_photographerCredit: options.photographerCredit,
     });
 
     if (altText) {
       payload.alt_text = altText;
     }
 
-    payload.photographer_credit = options?.photographerCredit || "";
+    const normalizedPhotographerCredit = options.photographerCredit.trim();
+    if (!normalizedPhotographerCredit) {
+      throw new Error("photographerCredit is required for Payload media upload");
+    }
+    payload.photographer_credit = normalizedPhotographerCredit;
 
-    if (options?.locationRef) {
+    if (options.locationRef) {
       payload.locationRef = parseInt(options.locationRef, 10);
       console.log("✅ [PAYLOAD CLIENT] Added locationRef to payload:", payload.locationRef);
     } else {
       console.warn("⚠️  [PAYLOAD CLIENT] No locationRef provided, skipping");
     }
 
-    if (options?.mediaSet) {
+    if (options.mediaSet) {
       payload.mediaSet = options.mediaSet;
       console.log("✅ [PAYLOAD CLIENT] Added mediaSet to payload:", payload.mediaSet);
     }
 
-    if (options?.variant) {
+    if (options.variant) {
       payload.variant = this.toPayloadMediaVariant(options.variant);
       console.log("✅ [PAYLOAD CLIENT] Added variant to payload:", payload.variant);
     }
@@ -72,7 +76,7 @@ export class PayloadMediaClient {
     console.log("🔍 [PAYLOAD REQUEST] URL:", `${apiUrl}/api/media-assets`);
     console.log("🔍 [PAYLOAD REQUEST] filename:", filename);
     console.log("🔍 [PAYLOAD REQUEST] _payload:", JSON.stringify(payload, null, 2));
-    console.log("🔍 [PAYLOAD REQUEST] locationRef:", options?.locationRef || "none");
+    console.log("🔍 [PAYLOAD REQUEST] locationRef:", options.locationRef || "none");
 
     const response = await fetch(`${apiUrl}/api/media-assets`, {
       method: "POST",
@@ -102,6 +106,42 @@ export class PayloadMediaClient {
     console.log("🔍 [PAYLOAD RESPONSE] altText in response:", data.doc.altText);
 
     return data.doc.id;
+  }
+
+  async updateImageLocationRef(mediaAssetId: string, locationRef: string): Promise<void> {
+    if (!this.authClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const parsedLocationRef = parseInt(locationRef, 10);
+    if (Number.isNaN(parsedLocationRef)) {
+      throw new Error(`Invalid locationRef for media asset update: ${locationRef}`);
+    }
+
+    const token = await this.authClient.ensureAuthenticated();
+    const apiUrl = this.authClient.getApiUrl();
+
+    const response = await fetch(`${apiUrl}/api/media-assets/${mediaAssetId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `JWT ${token}`,
+      },
+      body: JSON.stringify({
+        locationRef: parsedLocationRef,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Payload media asset update failed (${mediaAssetId}): ${response.status} - ${errorText}`
+      );
+    }
+
+    console.log(
+      `✓ Updated media asset ${mediaAssetId} with locationRef ${parsedLocationRef}`
+    );
   }
 
   private getMimeType(filename: string): string {

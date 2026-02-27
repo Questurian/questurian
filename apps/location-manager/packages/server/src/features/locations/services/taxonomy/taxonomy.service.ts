@@ -1,5 +1,4 @@
 import {
-  taxonomyEntryExists,
   getTaxonomyEntry,
   insertPendingTaxonomyEntry,
   approveTaxonomyEntry,
@@ -15,16 +14,28 @@ export interface PendingTaxonomyEntryWithCount extends LocationHierarchy {
   locationCount: number;
 }
 
+interface EnsureTaxonomyEntryOptions {
+  autoApprove?: boolean;
+}
+
 export class TaxonomyService {
   /**
    * Ensure a locationKey exists in taxonomy, creating it as pending if needed
    * Returns true if entry already exists (approved or pending)
    */
-  ensureTaxonomyEntry(locationKey: string): boolean {
+  ensureTaxonomyEntry(
+    locationKey: string,
+    options: EnsureTaxonomyEntryOptions = {}
+  ): boolean {
     if (!locationKey) return false;
+    const shouldAutoApprove = options.autoApprove === true;
 
     // Check if already exists
-    if (taxonomyEntryExists(locationKey)) {
+    const existingEntry = getTaxonomyEntry(locationKey);
+    if (existingEntry) {
+      if (shouldAutoApprove && existingEntry.status === "pending") {
+        return approveTaxonomyEntry(locationKey);
+      }
       return true;
     }
 
@@ -36,12 +47,27 @@ export class TaxonomyService {
     }
 
     // Insert as pending
-    return insertPendingTaxonomyEntry(
+    const inserted = insertPendingTaxonomyEntry(
       parsed.country,
       parsed.city,
       parsed.neighborhood,
       locationKey
     );
+
+    if (!inserted) {
+      const latestEntry = getTaxonomyEntry(locationKey);
+      if (!latestEntry) return false;
+      if (shouldAutoApprove && latestEntry.status === "pending") {
+        return approveTaxonomyEntry(locationKey);
+      }
+      return true;
+    }
+
+    if (shouldAutoApprove) {
+      return approveTaxonomyEntry(locationKey);
+    }
+
+    return true;
   }
 
   /**

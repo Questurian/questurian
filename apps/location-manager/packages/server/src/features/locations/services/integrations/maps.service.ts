@@ -704,11 +704,15 @@ export class MapsService {
     const nextAddress = updates.address ?? currentLocation.address;
     const shouldUpdateUrl = updates.name !== undefined || updates.address !== undefined;
 
+    const shouldAutoApproveTaxonomy = updates.autoApproveTaxonomy === true;
+
     // If updating locationKey, apply corrections and ensure taxonomy entry exists
     if (updates.locationKey !== undefined && updates.locationKey) {
       // Apply corrections BEFORE ensuring taxonomy
       updates.locationKey = this.taxonomyCorrectionService.applyCorrections(updates.locationKey);
-      this.taxonomyService.ensureTaxonomyEntry(updates.locationKey);
+      this.taxonomyService.ensureTaxonomyEntry(updates.locationKey, {
+        autoApprove: shouldAutoApproveTaxonomy,
+      });
     }
 
     // Perform partial update - only update provided fields

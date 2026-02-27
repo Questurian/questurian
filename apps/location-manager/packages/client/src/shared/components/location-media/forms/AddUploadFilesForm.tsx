@@ -104,6 +104,8 @@ export function AddUploadFilesForm({
   });
 
   const isUploadMode = typeof locationId === 'number' && !!category;
+  const photographerCreditValue = form.watch('photographerCredit') || '';
+  const hasValidPhotographerCredit = photographerCreditValue.trim().length > 0;
 
   function handleFileSelect(files: FileList | null) {
     if (!files) return;
@@ -162,6 +164,8 @@ export function AddUploadFilesForm({
 
   function handleSubmit(data: AddUploadFilesFormData) {
     if (!areAllFilesCropped()) return;
+    const normalizedPhotographerCredit = data.photographerCredit.trim();
+    if (!normalizedPhotographerCredit) return;
 
     const imageSet = processedImageSets[0];
     if (!imageSet) return;
@@ -170,7 +174,7 @@ export function AddUploadFilesForm({
     const payload: QueuedImageSetPayload = {
       sourceFile: imageSet.sourceFile,
       variantFiles: imageSet.variantFiles,
-      photographerCredit: data.photographerCredit || undefined,
+      photographerCredit: normalizedPhotographerCredit,
       altText,
     };
 
@@ -353,7 +357,7 @@ export function AddUploadFilesForm({
         <div className="flex gap-2">
           <Button
             type="submit"
-            disabled={(isUploadMode && isPending) || !areAllFilesCropped()}
+            disabled={(isUploadMode && isPending) || !areAllFilesCropped() || !hasValidPhotographerCredit}
             size="sm"
           >
             {isUploadMode && isPending
