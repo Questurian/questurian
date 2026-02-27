@@ -76,6 +76,8 @@ describe("attractions completeness", () => {
     const basic = transformLocationToBasicResponse(location);
 
     expect(basic.category).toBe("attractions");
+    expect(basic.country).toBe("peru");
+    expect(basic.type).toBe("museum");
     expect(basic.isComplete).toBe(true);
   });
 

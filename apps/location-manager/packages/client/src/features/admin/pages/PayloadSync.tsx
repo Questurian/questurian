@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection, useResetSyncState } from "@client/shared/services/api/hooks/usePayloadSync";
-import { useClearDatabase, useLocationsBasic } from "@client/shared/services/api/hooks";
+import { useLocationsBasic } from "@client/shared/services/api/hooks";
 import { useToast } from "@client/shared/hooks/useToast";
 import { Button } from "@client/components/ui/button";
 import { Breadcrumbs } from "@client/shared/components/layout";
@@ -23,8 +23,36 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@client/components/ui/alert-dialog";
+import {
+  AlertTriangle,
+  Ban,
+  CheckCircle2,
+  ListFilter,
+  RefreshCw,
+  Rocket,
+  XCircle,
+} from "lucide-react";
 import type { Category, PayloadSyncCategory } from "@client/shared/services/api/types";
 import type { SyncStatusResponse } from "@client/shared/services/api/types/payload.types";
+
+type StatusFilter = "all" | "synced" | "ready" | "incomplete" | "needs_resync" | "failed" | "unsupported";
+
+const UNSPECIFIED_COUNTRY_FILTER = "__unspecified_country__";
+const UNSPECIFIED_TYPE_FILTER = "__unspecified__";
+type CountryFilter = "all" | typeof UNSPECIFIED_COUNTRY_FILTER | string;
+type LocationTypeFilter = "all" | typeof UNSPECIFIED_TYPE_FILTER | string;
+
+interface LocationWithSyncStatus {
+  locationId: number;
+  title: string;
+  country: string | null;
+  category: Category;
+  type: string | null;
+  isComplete: boolean;
+  synced: boolean;
+  needsResync: boolean;
+  syncState?: SyncStatusResponse["syncState"];
+}
 
 function isPayloadSyncCategory(category: Category): category is PayloadSyncCategory {
   return category === "dining" ||
@@ -34,22 +62,90 @@ function isPayloadSyncCategory(category: Category): category is PayloadSyncCateg
     category === "key_locations";
 }
 
+function matchesStatusFilter(item: LocationWithSyncStatus, filter: StatusFilter): boolean {
+  const supported = isPayloadSyncCategory(item.category);
+
+  switch (filter) {
+    case "all":
+      return true;
+    case "synced":
+      return supported && item.synced && !item.needsResync;
+    case "ready":
+      return supported &&
+        item.isComplete &&
+        !item.synced &&
+        item.syncState?.sync_status !== "failed" &&
+        item.syncState?.sync_status !== "pending";
+    case "incomplete":
+      return !item.isComplete;
+    case "needs_resync":
+      return supported && item.needsResync;
+    case "failed":
+      return item.syncState?.sync_status === "failed";
+    case "unsupported":
+      return !supported;
+    default:
+      return true;
+  }
+}
+
+function formatLabel(value: string): string {
+  return value
+    .split(/[_-]+/g)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+function matchesCountryFilter(country: string | null, filter: CountryFilter): boolean {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === UNSPECIFIED_COUNTRY_FILTER) {
+    return !country;
+  }
+
+  return country === filter;
+}
+
+function getEmptyStateMessage(statusFilter: StatusFilter): string {
+  switch (statusFilter) {
+    case "ready":
+      return "No locations ready for sync. Complete missing fields to prepare locations.";
+    case "incomplete":
+      return "No incomplete locations found.";
+    case "synced":
+      return "No synced locations found.";
+    case "needs_resync":
+      return "No locations need resync.";
+    case "failed":
+      return "No failed syncs found.";
+    case "unsupported":
+      return "No unsupported categories found.";
+    default:
+      return "No locations found for the selected filters.";
+  }
+}
+
 export function PayloadSync() {
-  const { data: statusData, isLoading, error, refetch: refetchSyncStatus } = useSyncStatus();
+  const { data: statusData, isLoading, error } = useSyncStatus();
   const { data: locationsBasicData, isLoading: isLoadingLocationsBasic } = useLocationsBasic();
   const syncLocationMutation = useSyncLocation();
   const syncAllMutation = useSyncAll();
   const { data: connectionStatus, isLoading: isConnecting, refetch: testConnection } = usePayloadConnection();
-  const clearDatabaseMutation = useClearDatabase();
   const resetSyncMutation = useResetSyncState();
   const { showToast } = useToast();
 
   const [syncingId, setSyncingId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "synced" | "ready" | "incomplete">("all");
+  const [countryFilter, setCountryFilter] = useState<CountryFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [locationTypeFilter, setLocationTypeFilter] = useState<LocationTypeFilter>("all");
 
   const [showLoadError, setShowLoadError] = useState(false);
   const [showSyncErrors, setShowSyncErrors] = useState(false);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (error) {
@@ -69,13 +165,16 @@ export function PayloadSync() {
   }, [statusData]);
 
   // Show ALL locations with their sync status and completion status
-  const allLocationsWithStatus = useMemo(() => {
+  const allLocationsWithStatus = useMemo<LocationWithSyncStatus[]>(() => {
     return (locationsBasicData?.locations ?? []).map((location) => {
       const syncStatus = syncStatusMap.get(location.id);
+      const fallbackCountry = location.location?.split(" > ")[0]?.trim() || null;
       return {
         locationId: location.id,
         title: location.title || location.name,
+        country: location.country?.trim() || fallbackCountry,
         category: location.category,
+        type: location.type?.trim() || null,
         isComplete: location.isComplete,
         synced: !!syncStatus && syncStatus.synced,
         needsResync: !!syncStatus && syncStatus.needsResync,
@@ -84,26 +183,130 @@ export function PayloadSync() {
     });
   }, [locationsBasicData, syncStatusMap]);
 
-  // Filter by status and category
-  const filteredData = useMemo(() => {
-    let filtered = allLocationsWithStatus;
+  const countryOptions = useMemo(() => {
+    const countryCountMap = new Map<string, number>();
+    let unspecifiedCount = 0;
 
-    // Filter by status
-    if (statusFilter === "synced") {
-      filtered = filtered.filter(item => isPayloadSyncCategory(item.category) && item.synced && !item.needsResync);
-    } else if (statusFilter === "ready") {
-      filtered = filtered.filter(item => isPayloadSyncCategory(item.category) && !item.synced && item.isComplete);
-    } else if (statusFilter === "incomplete") {
-      filtered = filtered.filter(item => !item.isComplete);
+    const categoryScoped = categoryFilter === "all"
+      ? allLocationsWithStatus
+      : allLocationsWithStatus.filter((item) => item.category === categoryFilter);
+
+    categoryScoped.forEach((item) => {
+      const normalizedCountry = item.country?.trim();
+      if (!normalizedCountry) {
+        unspecifiedCount += 1;
+        return;
+      }
+      const current = countryCountMap.get(normalizedCountry) ?? 0;
+      countryCountMap.set(normalizedCountry, current + 1);
+    });
+
+    const options = Array.from(countryCountMap.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([value, count]) => ({
+        value,
+        label: formatLabel(value),
+        count,
+      }));
+
+    return {
+      options,
+      unspecifiedCount,
+    };
+  }, [allLocationsWithStatus, categoryFilter]);
+
+  useEffect(() => {
+    if (countryFilter === "all") {
+      return;
     }
+
+    if (countryFilter === UNSPECIFIED_COUNTRY_FILTER) {
+      if (countryOptions.unspecifiedCount === 0) {
+        setCountryFilter("all");
+      }
+      return;
+    }
+
+    const stillExists = countryOptions.options.some((option) => option.value === countryFilter);
+    if (!stillExists) {
+      setCountryFilter("all");
+    }
+  }, [countryFilter, countryOptions]);
+
+  const locationTypeOptions = useMemo(() => {
+    const typeCountMap = new Map<string, number>();
+    let unspecifiedCount = 0;
+
+    const countryScoped = (categoryFilter === "all"
+      ? allLocationsWithStatus
+      : allLocationsWithStatus.filter((item) => item.category === categoryFilter))
+      .filter((item) => matchesCountryFilter(item.country, countryFilter));
+
+    countryScoped.forEach((item) => {
+      const normalizedType = item.type?.trim();
+      if (!normalizedType) {
+        unspecifiedCount += 1;
+        return;
+      }
+      const current = typeCountMap.get(normalizedType) ?? 0;
+      typeCountMap.set(normalizedType, current + 1);
+    });
+
+    const options = Array.from(typeCountMap.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([value, count]) => ({
+        value,
+        label: formatLabel(value),
+        count,
+      }));
+
+    return {
+      options,
+      unspecifiedCount,
+    };
+  }, [allLocationsWithStatus, categoryFilter, countryFilter]);
+
+  useEffect(() => {
+    if (locationTypeFilter === "all") {
+      return;
+    }
+
+    if (locationTypeFilter === UNSPECIFIED_TYPE_FILTER) {
+      if (locationTypeOptions.unspecifiedCount === 0) {
+        setLocationTypeFilter("all");
+      }
+      return;
+    }
+
+    const stillExists = locationTypeOptions.options.some((option) => option.value === locationTypeFilter);
+    if (!stillExists) {
+      setLocationTypeFilter("all");
+    }
+  }, [locationTypeFilter, locationTypeOptions]);
+
+  // Filter by status, category, country, and location type
+  const filteredData = useMemo(() => {
+    let filtered = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, statusFilter));
 
     // Filter by category
     if (categoryFilter !== "all") {
       filtered = filtered.filter(item => item.category === categoryFilter);
     }
 
+    // Filter by country
+    filtered = filtered.filter((item) => matchesCountryFilter(item.country, countryFilter));
+
+    // Filter by location type
+    if (locationTypeFilter !== "all") {
+      if (locationTypeFilter === UNSPECIFIED_TYPE_FILTER) {
+        filtered = filtered.filter((item) => !item.type);
+      } else {
+        filtered = filtered.filter((item) => item.type === locationTypeFilter);
+      }
+    }
+
     return filtered;
-  }, [allLocationsWithStatus, categoryFilter, statusFilter]);
+  }, [allLocationsWithStatus, categoryFilter, countryFilter, locationTypeFilter, statusFilter]);
 
   const hasSyncErrors = useMemo(
     () => filteredData.some((item) => item.syncState?.error_message),
@@ -118,18 +321,49 @@ export function PayloadSync() {
     }
   }, [hasSyncErrors]);
 
+  useEffect(() => {
+    if (isLoading || isLoadingLocationsBasic || filteredData.length === 0) {
+      return;
+    }
+
+    const scrollContainer = tableScrollRef.current;
+    if (!scrollContainer) {
+      return;
+    }
+
+    const rafId = window.requestAnimationFrame(() => {
+      scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+    });
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [filteredData, isLoading, isLoadingLocationsBasic]);
+
   // Calculate statistics
   const stats = useMemo(() => {
-    const total = (locationsBasicData?.locations ?? []).length;
-    const synced = allLocationsWithStatus.filter(item => isPayloadSyncCategory(item.category) && item.synced && !item.needsResync).length;
-    const ready = allLocationsWithStatus.filter(item => isPayloadSyncCategory(item.category) && !item.synced && item.isComplete).length;
-    const incomplete = allLocationsWithStatus.filter(item => !item.isComplete).length;
-    const needsResync = allLocationsWithStatus.filter(item => item.needsResync).length;
-    const failed = allLocationsWithStatus.filter(item => item.syncState?.sync_status === "failed").length;
-    const unsupported = allLocationsWithStatus.filter(item => !isPayloadSyncCategory(item.category)).length;
+    const total = allLocationsWithStatus.length;
+    const synced = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, "synced")).length;
+    const ready = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, "ready")).length;
+    const incomplete = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, "incomplete")).length;
+    const needsResync = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, "needs_resync")).length;
+    const failed = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, "failed")).length;
+    const unsupported = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, "unsupported")).length;
 
     return { total, synced, ready, incomplete, needsResync, failed, unsupported };
-  }, [locationsBasicData, allLocationsWithStatus]);
+  }, [allLocationsWithStatus]);
+
+  const hasActiveFilters =
+    statusFilter !== "all" ||
+    categoryFilter !== "all" ||
+    countryFilter !== "all" ||
+    locationTypeFilter !== "all";
+
+  const toggleStatusFilter = (nextFilter: StatusFilter) => {
+    if (nextFilter === "all") {
+      setStatusFilter("all");
+      return;
+    }
+    setStatusFilter((current) => (current === nextFilter ? "all" : nextFilter));
+  };
 
   const handleSyncLocation = async (locationId: number, category: Category) => {
     if (!isPayloadSyncCategory(category)) {
@@ -156,18 +390,7 @@ export function PayloadSync() {
     await syncAllMutation.mutateAsync(syncCategory);
   };
 
-  const handleClearDatabase = async () => {
-    try {
-      await clearDatabaseMutation.mutateAsync();
-      // Refetch sync status to show updated (empty) data
-      await refetchSyncStatus();
-      showToast("Database cleared successfully", { x: window.innerWidth / 2, y: 100 });
-    } catch (error) {
-      showToast("Failed to clear database. Please try again.", { x: window.innerWidth / 2, y: 100 });
-    }
-  };
-
-  const getSyncStatusBadge = (item: typeof allLocationsWithStatus[number]) => {
+  const getSyncStatusBadge = (item: LocationWithSyncStatus) => {
     if (!isPayloadSyncCategory(item.category)) {
       return <span className="px-2 py-1 text-xs rounded bg-muted text-muted-foreground">Unsupported</span>;
     }
@@ -199,7 +422,11 @@ export function PayloadSync() {
   };
 
   const syncableFilteredCount = useMemo(
-    () => filteredData.filter((item) => isPayloadSyncCategory(item.category)).length,
+    () => filteredData.filter(
+      (item) =>
+        isPayloadSyncCategory(item.category) &&
+        (!item.synced || item.needsResync)
+    ).length,
     [filteredData]
   );
 
@@ -224,6 +451,15 @@ export function PayloadSync() {
 
           {/* Header action buttons */}
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncAll}
+              disabled={syncAllMutation.isPending || syncableFilteredCount === 0}
+            >
+              {syncAllMutation.isPending ? "Syncing..." : "Sync All"}
+            </Button>
+
             {/* Reset Sync State Button */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -257,33 +493,6 @@ export function PayloadSync() {
               </AlertDialogContent>
             </AlertDialog>
 
-            {/* Clear Database Button with Confirmation Modal */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  Clear Database
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action will permanently delete all locations, Instagram embeds, uploads, and taxonomy data from the database.
-                    This cannot be undone. All cached data will also be cleared.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleClearDatabase}
-                    className="bg-red-600 hover:bg-red-700"
-                    disabled={clearDatabaseMutation.isPending}
-                  >
-                    {clearDatabaseMutation.isPending ? "Clearing..." : "Yes, clear database"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         </div>
 
@@ -300,8 +509,15 @@ export function PayloadSync() {
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400">🟢 Connected to Payload CMS</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => testConnection()}>
-                Test Again
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => testConnection()}
+                aria-label="Test Payload connection again"
+                title="Test Payload connection again"
+                className="h-8 w-8 text-emerald-300 hover:text-emerald-200"
+              >
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
           ) : (
@@ -320,55 +536,128 @@ export function PayloadSync() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-7 gap-4 mb-6">
-          <div className="bg-muted/50 border border-border p-4 rounded">
+        <div className="grid grid-cols-2 xl:grid-cols-7 gap-4 mb-6">
+          <button
+            type="button"
+            onClick={() => toggleStatusFilter("all")}
+            className={`bg-muted/50 border border-border p-4 rounded text-left transition hover:cursor-pointer ${statusFilter === "all" ? "ring-2 ring-foreground/25" : "hover:bg-muted"}`}
+            aria-pressed={statusFilter === "all"}
+          >
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
             <div className="text-sm text-muted-foreground">Total</div>
-          </div>
-          <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded">
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleStatusFilter("synced")}
+            className={`bg-emerald-500/10 border border-emerald-500/20 p-4 rounded text-left transition hover:cursor-pointer ${statusFilter === "synced" ? "ring-2 ring-emerald-400/60" : "hover:bg-emerald-500/20"}`}
+            aria-pressed={statusFilter === "synced"}
+          >
             <div className="text-2xl font-bold text-emerald-400">{stats.synced}</div>
             <div className="text-sm text-emerald-400/80">Synced</div>
-          </div>
-          <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded">
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleStatusFilter("ready")}
+            className={`bg-blue-500/10 border border-blue-500/20 p-4 rounded text-left transition hover:cursor-pointer ${statusFilter === "ready" ? "ring-2 ring-blue-400/60" : "hover:bg-blue-500/20"}`}
+            aria-pressed={statusFilter === "ready"}
+          >
             <div className="text-2xl font-bold text-blue-400">{stats.ready}</div>
             <div className="text-sm text-blue-400/80">Ready to Sync</div>
-          </div>
-          <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded">
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleStatusFilter("incomplete")}
+            className={`bg-amber-500/10 border border-amber-500/20 p-4 rounded text-left transition hover:cursor-pointer ${statusFilter === "incomplete" ? "ring-2 ring-amber-400/60" : "hover:bg-amber-500/20"}`}
+            aria-pressed={statusFilter === "incomplete"}
+          >
             <div className="text-2xl font-bold text-amber-400">{stats.incomplete}</div>
             <div className="text-sm text-amber-400/80">Incomplete</div>
-          </div>
-          <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded">
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleStatusFilter("needs_resync")}
+            className={`bg-orange-500/10 border border-orange-500/20 p-4 rounded text-left transition hover:cursor-pointer ${statusFilter === "needs_resync" ? "ring-2 ring-orange-400/60" : "hover:bg-orange-500/20"}`}
+            aria-pressed={statusFilter === "needs_resync"}
+          >
             <div className="text-2xl font-bold text-orange-400">{stats.needsResync}</div>
             <div className="text-sm text-orange-400/80">Needs Resync</div>
-          </div>
-          <div className="bg-red-500/10 border border-red-500/20 p-4 rounded">
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleStatusFilter("failed")}
+            className={`bg-red-500/10 border border-red-500/20 p-4 rounded text-left transition hover:cursor-pointer ${statusFilter === "failed" ? "ring-2 ring-red-400/60" : "hover:bg-red-500/20"}`}
+            aria-pressed={statusFilter === "failed"}
+          >
             <div className="text-2xl font-bold text-red-400">{stats.failed}</div>
             <div className="text-sm text-red-400/80">Failed</div>
-          </div>
-          <div className="bg-muted/50 border border-border p-4 rounded">
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleStatusFilter("unsupported")}
+            className={`bg-muted/50 border border-border p-4 rounded text-left transition hover:cursor-pointer ${statusFilter === "unsupported" ? "ring-2 ring-foreground/25" : "hover:bg-muted"}`}
+            aria-pressed={statusFilter === "unsupported"}
+          >
             <div className="text-2xl font-bold text-muted-foreground">{stats.unsupported}</div>
             <div className="text-sm text-muted-foreground">Unsupported</div>
-          </div>
+          </button>
         </div>
 
         {/* Controls */}
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1">
+        <div className="flex gap-4 mb-6 flex-wrap">
+          <div className="flex-1 min-w-[220px]">
             <label className="block text-sm font-medium mb-1">Status</label>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "synced" | "ready" | "incomplete")}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="synced">✅ Synced</SelectItem>
-                <SelectItem value="ready">🚀 Ready for Sync (Complete Fields)</SelectItem>
-                <SelectItem value="incomplete">⚠️ Incomplete (Missing Fields)</SelectItem>
+                <SelectItem value="all">
+                  <span className="inline-flex items-center gap-2">
+                    <ListFilter className="h-4 w-4" />
+                    All Statuses
+                  </span>
+                </SelectItem>
+                <SelectItem value="synced">
+                  <span className="inline-flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Synced
+                  </span>
+                </SelectItem>
+                <SelectItem value="ready">
+                  <span className="inline-flex items-center gap-2">
+                    <Rocket className="h-4 w-4 text-blue-500" />
+                    Ready for Sync (Complete Fields)
+                  </span>
+                </SelectItem>
+                <SelectItem value="incomplete">
+                  <span className="inline-flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    Incomplete (Missing Fields)
+                  </span>
+                </SelectItem>
+                <SelectItem value="needs_resync">
+                  <span className="inline-flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 text-orange-500" />
+                    Needs Resync
+                  </span>
+                </SelectItem>
+                <SelectItem value="failed">
+                  <span className="inline-flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-500" />
+                    Failed
+                  </span>
+                </SelectItem>
+                <SelectItem value="unsupported">
+                  <span className="inline-flex items-center gap-2">
+                    <Ban className="h-4 w-4 text-muted-foreground" />
+                    Unsupported Category
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-[220px]">
             <label className="block text-sm font-medium mb-1">Category</label>
             <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as Category | "all")}>
               <SelectTrigger>
@@ -385,14 +674,64 @@ export function PayloadSync() {
             </Select>
           </div>
 
-          <div className="flex items-end">
-            <Button
-              onClick={handleSyncAll}
-              disabled={syncAllMutation.isPending || syncableFilteredCount === 0}
-              className="w-full"
-            >
-              {syncAllMutation.isPending ? "Syncing..." : "Sync All"}
-            </Button>
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-sm font-medium mb-1">Country</label>
+            <Select value={countryFilter} onValueChange={(value) => setCountryFilter(value as CountryFilter)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Countries</SelectItem>
+                {countryOptions.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label} ({option.count})
+                  </SelectItem>
+                ))}
+                {countryOptions.unspecifiedCount > 0 && (
+                  <SelectItem value={UNSPECIFIED_COUNTRY_FILTER}>
+                    Unspecified ({countryOptions.unspecifiedCount})
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-sm font-medium mb-1">Location Type</label>
+            <Select value={locationTypeFilter} onValueChange={(value) => setLocationTypeFilter(value as LocationTypeFilter)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by location type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {locationTypeOptions.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label} ({option.count})
+                  </SelectItem>
+                ))}
+                {locationTypeOptions.unspecifiedCount > 0 && (
+                  <SelectItem value={UNSPECIFIED_TYPE_FILTER}>
+                    Unspecified ({locationTypeOptions.unspecifiedCount})
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-end ml-auto">
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setCategoryFilter("all");
+                  setCountryFilter("all");
+                  setLocationTypeFilter("all");
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </div>
 
@@ -406,21 +745,15 @@ export function PayloadSync() {
 
         {/* Loading state */}
         {isLoading || isLoadingLocationsBasic ? (
-          <SkeletonTable rows={8} cols={7} />
+          <SkeletonTable rows={8} cols={8} />
         ) : filteredData.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              {statusFilter === "ready"
-                ? "No locations ready for sync. Complete missing fields to prepare locations."
-                : statusFilter === "incomplete"
-                  ? "No incomplete locations found."
-                  : statusFilter === "synced"
-                    ? "No synced locations found."
-                    : "No locations found for the selected filters."}
+              {getEmptyStateMessage(statusFilter)}
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div ref={tableScrollRef} className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
@@ -432,6 +765,9 @@ export function PayloadSync() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Type
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Status
@@ -456,8 +792,11 @@ export function PayloadSync() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                       {item.title}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground capitalize">
-                      {item.category}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {formatLabel(item.category)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {item.type ? formatLabel(item.type) : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {getSyncStatusBadge(item)}

@@ -333,6 +333,7 @@ export function transformLocationToBasicResponse(
   location: import('../models/location').Location & { uploadsCount: number; instagramEmbedsCount: number }
 ): import('../models/location').LocationBasic {
   const category = assertCategory(location.category);
+  const country = location.locationKey?.split("|")[0]?.trim() || null;
   const isNightlife = category === "nightlife";
   const isAccommodations = category === "accommodations";
   const isAttractions = category === "attractions";
@@ -788,7 +789,9 @@ export function transformLocationToBasicResponse(
     name: location.name,
     title: location.title ?? null,
     location: location.locationKey ? formatLocationForDisplay(location.locationKey) : null,
+    country,
     category,
+    type: location.type || null,
     isComplete,
     // Reviews tracking fields
     reviewsFetchedAt: location.reviewsFetchedAt || null,

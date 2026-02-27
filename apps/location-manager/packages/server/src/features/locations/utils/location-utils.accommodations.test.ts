@@ -89,6 +89,8 @@ describe("accommodations completeness", () => {
     const basic = transformLocationToBasicResponse(location);
 
     expect(basic.category).toBe("accommodations");
+    expect(basic.country).toBe("united-states");
+    expect(basic.type).toBe("Hotel");
     expect(basic.isComplete).toBe(true);
   });
 
