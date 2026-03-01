@@ -56,7 +56,7 @@ export function createEmptyDraft(): SingleTypeListicleDraft {
     location: '',
     locationRef: null,
     listicleType: '',
-    targetItemCount: 6,
+    targetItemCount: 0,
     step1_complete: false,
     in_update_mode: false,
     header: {

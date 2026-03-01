@@ -4,8 +4,9 @@ import type { SetURLSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
 import { fetchListicleById, fetchLocations, fetchMediaAssets, fetchSeoMetadata } from '../../api'
 import { createEmptyDraft, findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../../storage'
-import type { MediaAssetOption, SeoMetadataOption, SingleTypeListicleDraft } from '../../types'
+import type { LocationOption, MediaAssetOption, SeoMetadataOption, SingleTypeListicleDraft } from '../../types'
 import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
+import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
 
 type UseBuilderBootstrapParams = {
   token?: string
@@ -19,18 +20,23 @@ type UseBuilderBootstrapResult = {
   draft: SingleTypeListicleDraft | null
   setDraft: Dispatch<SetStateAction<SingleTypeListicleDraft | null>>
   isLoading: boolean
-  locations: Array<{ id: number; locationKey: string }>
+  locations: LocationOption[]
   mediaAssets: MediaAssetOption[]
   seoOptions: SeoMetadataOption[]
   setSeoOptions: Dispatch<SetStateAction<SeoMetadataOption[]>>
 }
 
 function normalizeDraftModelName(draft: SingleTypeListicleDraft): SingleTypeListicleDraft {
+  const normalizedTargetItemCount = normalizeTargetItemCount(draft.targetItemCount, draft.items)
   const normalizedModelName = resolveEditorAssistModelName(draft.editorModelName)
-  if (normalizedModelName === draft.editorModelName) return draft
+  if (
+    normalizedModelName === draft.editorModelName
+    && normalizedTargetItemCount === draft.targetItemCount
+  ) return draft
   return {
     ...draft,
     editorModelName: normalizedModelName,
+    targetItemCount: normalizedTargetItemCount,
   }
 }
 
@@ -43,7 +49,7 @@ export function useBuilderBootstrap({
 }: UseBuilderBootstrapParams): UseBuilderBootstrapResult {
   const [draft, setDraft] = useState<SingleTypeListicleDraft | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [locations, setLocations] = useState<Array<{ id: number; locationKey: string }>>([])
+  const [locations, setLocations] = useState<LocationOption[]>([])
   const [mediaAssets, setMediaAssets] = useState<MediaAssetOption[]>([])
   const [seoOptions, setSeoOptions] = useState<SeoMetadataOption[]>([])
 

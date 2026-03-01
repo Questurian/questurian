@@ -24,7 +24,6 @@ type BuilderItemsPanelProps = {
   draft: SingleTypeListicleDraft
   relatedItems: RelatedItemOption[]
   isLoadingRelated: boolean
-  addItem: () => void
   moveItem: (itemId: string, direction: 'up' | 'down') => void
   removeItem: (itemId: string) => void
   updateItem: (itemId: string, updater: (item: ListicleItemBlock) => ListicleItemBlock) => void
@@ -47,7 +46,6 @@ export function BuilderItemsPanel({
   draft,
   relatedItems,
   isLoadingRelated,
-  addItem,
   moveItem,
   removeItem,
   updateItem,
@@ -90,9 +88,6 @@ export function BuilderItemsPanel({
           <span className="stl-kicker">Step 3</span>
           Items ({draft.items.length}/{draft.targetItemCount})
         </h2>
-        <button type="button" className="stl-btn" onClick={addItem} disabled={!draft.listicleType}>
-          Add Item
-        </button>
       </div>
 
       {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}

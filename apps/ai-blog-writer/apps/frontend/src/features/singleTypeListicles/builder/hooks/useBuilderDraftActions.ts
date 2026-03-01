@@ -2,15 +2,15 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useMemo, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
-import { getBlockTypeForListicleType } from '../../api'
 import { createEmptyDraft, removeDraft } from '../../storage'
-import type { ListicleItemBlock, ListicleType, SingleTypeListicleDraft } from '../../types'
+import type { ListicleItemBlock, ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
+import { hasAnyWrittenItemData, isValidTargetItemCount, resizeItemsToTargetCount } from '../utils/item-target-count.utils'
 import { validateStep1 } from '../validators/setup.validators'
 
 type UseBuilderDraftActionsParams = {
   draft: SingleTypeListicleDraft | null
   setDraft: Dispatch<SetStateAction<SingleTypeListicleDraft | null>>
-  locations: Array<{ id: number; locationKey: string }>
+  locations: LocationOption[]
   navigate: (to: string) => void
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
@@ -20,11 +20,11 @@ type UseBuilderDraftActionsParams = {
 type UseBuilderDraftActionsResult = {
   selectedLocationRefId: number | null
   updateDraft: (next: Partial<SingleTypeListicleDraft>) => void
+  setTargetItemCount: (nextCount: number) => void
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
   updateItem: (itemId: string, updater: (item: ListicleItemBlock) => ListicleItemBlock) => void
   removeItem: (itemId: string) => void
   moveItem: (itemId: string, direction: 'up' | 'down') => void
-  addItem: () => void
   handleContinue: () => void
   handleUpdateSetup: () => void
   handleSaveSetup: () => void
@@ -44,6 +44,16 @@ export function useBuilderDraftActions({
   setResult,
 }: UseBuilderDraftActionsParams): UseBuilderDraftActionsResult {
   const [setupBaseline, setSetupBaseline] = useState<{ location: string; listicleType: ListicleType | '' } | null>(null)
+
+  const hasResettableContent = (current: SingleTypeListicleDraft): boolean => (
+    current.title.trim().length > 0
+    || current.targetItemCount > 0
+    || current.items.length > 0
+    || current.header.featuredImage !== null
+    || current.header.introMarkdown.trim().length > 0
+    || (current.header.introJsonText || '').trim().length > 0
+    || current.seoSection.seo !== null
+  )
 
   const normalizeLocationKey = (value: string): string =>
     value.trim().toLowerCase().replace(/\s*\|\s*/g, '|')
@@ -73,9 +83,50 @@ export function useBuilderDraftActions({
   function updateDraft(next: Partial<SingleTypeListicleDraft>) {
     setDraft((current) => {
       if (!current) return current
+
+      const shouldLockTargetCountEdit = (
+        typeof next.targetItemCount === 'number'
+        && next.targetItemCount !== current.targetItemCount
+        && hasAnyWrittenItemData(current.items)
+      )
+
+      if (!shouldLockTargetCountEdit) {
+        return {
+          ...current,
+          ...next,
+        }
+      }
+
+      const safeNext = { ...next }
+      delete safeNext.targetItemCount
       return {
         ...current,
-        ...next,
+        ...safeNext,
+      }
+    })
+  }
+
+  function setTargetItemCount(nextCount: number) {
+    setDraft((current) => {
+      if (!current) return current
+
+      if (!isValidTargetItemCount(nextCount)) {
+        return current
+      }
+
+      if (!current.listicleType) {
+        return current
+      }
+
+      if (hasAnyWrittenItemData(current.items) && nextCount !== current.targetItemCount) {
+        return current
+      }
+
+      const nextItems = resizeItemsToTargetCount(current.items, nextCount, current.listicleType)
+      return {
+        ...current,
+        targetItemCount: nextCount,
+        items: nextItems,
       }
     })
   }
@@ -106,9 +157,11 @@ export function useBuilderDraftActions({
   function removeItem(itemId: string) {
     setDraft((current) => {
       if (!current) return current
+      const items = current.items.filter((item) => item.id !== itemId)
       return {
         ...current,
-        items: current.items.filter((item) => item.id !== itemId),
+        items,
+        targetItemCount: items.length,
       }
     })
   }
@@ -126,34 +179,6 @@ export function useBuilderDraftActions({
       return {
         ...current,
         items,
-      }
-    })
-  }
-
-  function addItem() {
-    if (!draft?.listicleType) {
-      onError('Select a listicle type before adding items')
-      return
-    }
-
-    const blockType = getBlockTypeForListicleType(draft.listicleType)
-    setDraft((current) => {
-      if (!current) return current
-      return {
-        ...current,
-        items: [
-          ...current.items,
-          {
-            id: `item_${Date.now()}`,
-            blockType,
-            item: null,
-            mediaMode: 'photos',
-            selectedPhotos: [],
-            selectedInstagramPost: null,
-            blurbMarkdown: '',
-            blurbJsonText: '',
-          },
-        ],
       }
     })
   }
@@ -194,21 +219,40 @@ export function useBuilderDraftActions({
     }
 
     const prevType = setupBaseline?.listicleType
-    const prevLocation = setupBaseline?.location
 
     const typeChanged = prevType && prevType !== draft.listicleType
-    const locationChanged = prevLocation && prevLocation !== draft.location
 
-    if ((typeChanged || locationChanged) && draft.items.length > 0) {
-      const confirmed = window.confirm('Changing listicle type or location clears current list items. Continue?')
-      if (!confirmed) return
-      updateDraft({
-        items: [],
-        in_update_mode: false,
-        step1_complete: true,
-        locationRef: selectedLocationRefId,
+    if (typeChanged) {
+      if (hasResettableContent(draft)) {
+        const confirmed = window.confirm(
+          'Changing listicle type resets this builder and clears title, target size, header, items, and SEO. Continue?',
+        )
+        if (!confirmed) return
+      }
+
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          title: '',
+          targetItemCount: 0,
+          step1_complete: false,
+          in_update_mode: false,
+          header: {
+            introMarkdown: '',
+            introJsonText: '',
+            featuredImage: null,
+          },
+          items: [],
+          seoSection: {
+            seo: null,
+          },
+          status: 'draft',
+          locationRef: selectedLocationRefId,
+        }
       })
       setSetupBaseline(null)
+      onError('')
       return
     }
 
@@ -261,11 +305,11 @@ export function useBuilderDraftActions({
   return {
     selectedLocationRefId,
     updateDraft,
+    setTargetItemCount,
     updateHeader,
     updateItem,
     removeItem,
     moveItem,
-    addItem,
     handleContinue,
     handleUpdateSetup,
     handleSaveSetup,

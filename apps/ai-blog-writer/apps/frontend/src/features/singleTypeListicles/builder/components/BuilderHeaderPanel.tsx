@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
+import type { MediaAsset } from '../../../staging/api/payload/payload.types'
 import type { MediaAssetOption, SingleTypeListicleDraft } from '../../types'
 import { resolveImageUrl } from '../utils/item-media.utils'
 
@@ -37,6 +38,18 @@ export function BuilderHeaderPanel({
   const selectedFeaturedAsset = useMemo(
     () => mediaAssets.find((asset) => asset.id === featuredImageId) || null,
     [featuredImageId, mediaAssets],
+  )
+  const prefetchedPayloadAssets = useMemo<MediaAsset[]>(
+    () => mediaAssets.map((asset) => ({
+      id: asset.id,
+      filename: asset.filename,
+      url: asset.url,
+      alt: asset.alt,
+      alt_text: asset.alt_text,
+      altText: asset.altText,
+      variant: asset.variant as MediaAsset['variant'],
+    })),
+    [mediaAssets],
   )
   useEffect(() => {
     if (!featuredImageId || selectedFeaturedAsset || !resolvedToken) {
@@ -155,6 +168,7 @@ export function BuilderHeaderPanel({
         token={resolvedToken}
         locationRef={locationRef}
         payloadVariant="wide"
+        prefetchedPayloadAssets={prefetchedPayloadAssets}
         onSelect={(id) => updateHeader({ featuredImage: id })}
         onClose={() => setPickerOpen(false)}
       />

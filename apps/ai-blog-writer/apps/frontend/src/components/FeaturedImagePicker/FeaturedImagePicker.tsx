@@ -51,6 +51,7 @@ type FeaturedImagePickerProps = {
   token: string
   locationRef: number | null
   payloadVariant?: MediaAsset['variant']
+  prefetchedPayloadAssets?: MediaAsset[]
   onSelect: (mediaAssetId: number) => void
   onClose: () => void
 }
@@ -75,14 +76,16 @@ export function FeaturedImagePicker({
   token,
   locationRef,
   payloadVariant,
+  prefetchedPayloadAssets = [],
   onSelect,
   onClose,
 }: FeaturedImagePickerProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('payload')
 
   // Payload tab
-  const [payloadAssets, setPayloadAssets] = useState<MediaAsset[]>([])
+  const [payloadAssets, setPayloadAssets] = useState<MediaAsset[]>(prefetchedPayloadAssets)
   const [isLoadingPayload, setIsLoadingPayload] = useState(false)
+  const [isBootstrappingPayload, setIsBootstrappingPayload] = useState(false)
   const [payloadSearch, setPayloadSearch] = useState('')
   const [payloadError, setPayloadError] = useState<string | null>(null)
 
@@ -113,6 +116,12 @@ export function FeaturedImagePicker({
 
   const overlayRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    if (prefetchedPayloadAssets.length > 0) {
+      setPayloadAssets(prefetchedPayloadAssets)
+    }
+  }, [prefetchedPayloadAssets])
+
   const resetExternalCropState = () => {
     setExternalCropDraft(null)
     setExternalUploadProgress(null)
@@ -120,24 +129,49 @@ export function FeaturedImagePicker({
     setIsUploadingExternalVariants(false)
   }
 
-  // Fetch Payload assets when modal opens
+  // Fetch Payload assets when modal opens.
+  // Keep the modal shell stable while first payload data loads to avoid jumpy open animation.
   useEffect(() => {
     if (!isOpen) return
 
-    setIsLoadingPayload(true)
-    setPayloadError(null)
+    let cancelled = false
 
-    fetchMediaAssets(token, {
-      limit: 200,
-      mimeType: 'image/',
-      variant: payloadVariant,
-    })
-      .then((res) => setPayloadAssets(res.docs))
-      .catch((err: unknown) =>
-        setPayloadError(err instanceof Error ? err.message : 'Failed to load images'),
-      )
-      .finally(() => setIsLoadingPayload(false))
-  }, [isOpen, payloadVariant, token])
+    const loadPayloadAssets = async () => {
+      const hasPrefetchedPayload = prefetchedPayloadAssets.length > 0
+      setPayloadError(null)
+
+      if (hasPrefetchedPayload) {
+        setPayloadAssets(prefetchedPayloadAssets)
+      } else {
+        setIsBootstrappingPayload(true)
+        setIsLoadingPayload(true)
+      }
+
+      try {
+        const response = await fetchMediaAssets(token, {
+          limit: 200,
+          mimeType: 'image/',
+          variant: payloadVariant,
+        })
+        if (cancelled) return
+        setPayloadAssets(response.docs)
+      } catch (err) {
+        if (cancelled) return
+        setPayloadError(err instanceof Error ? err.message : 'Failed to load images')
+      } finally {
+        if (!cancelled) {
+          setIsLoadingPayload(false)
+          setIsBootstrappingPayload(false)
+        }
+      }
+    }
+
+    void loadPayloadAssets()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, payloadVariant, prefetchedPayloadAssets, token])
 
   useEffect(() => {
     if (isOpen) return
@@ -345,6 +379,8 @@ export function FeaturedImagePicker({
           ? 'Search Unsplash'
           : 'Search Pexels'
 
+  const shouldHoldPayloadTab = activeTab === 'payload' && isBootstrappingPayload && payloadAssets.length === 0
+
   const renderExternalCropEditor = () => {
     if (!externalCropDraft) return null
 
@@ -468,8 +504,14 @@ export function FeaturedImagePicker({
         </div>
 
         <div className="fip-body">
+          {shouldHoldPayloadTab ? (
+            <div className="fip-loading-shell" aria-live="polite">
+              <p className="fip-empty">Loading image library...</p>
+            </div>
+          ) : null}
+
           {/* Payload tab */}
-          {activeTab === 'payload' && (
+          {activeTab === 'payload' && !shouldHoldPayloadTab && (
             <>
               <div className="fip-search-row">
                 <input
@@ -527,13 +569,14 @@ export function FeaturedImagePicker({
 
           {/* Upload tab */}
           {activeTab === 'upload' && (
-            <>
+            <div className="fip-upload-pane">
               {locationRef === null ? (
                 <p className="fip-location-notice">
                   A location must be set in Step 1 before you can upload images.
                 </p>
               ) : (
                 <ImageUpload
+                  className="fip-upload-flow"
                   externalRef="featured-image-picker"
                   fileNamePrefix="featured"
                   locationRef={locationRef}
@@ -546,7 +589,7 @@ export function FeaturedImagePicker({
                   onCancel={() => handleTabChange('payload')}
                 />
               )}
-            </>
+            </div>
           )}
 
           {/* Unsplash tab */}

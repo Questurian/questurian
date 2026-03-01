@@ -1,6 +1,7 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
+import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
 
 export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: string): SingleTypeListicleDraft {
   const items: ListicleItemBlock[] = (doc.items || []).map((item, index) => ({
@@ -15,6 +16,8 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
   }))
 
+  const fallbackTargetItemCount = typeof doc.targetItemCount === 'number' ? doc.targetItemCount : 0
+
   return {
     draftId: existingDraftId || `stl_payload_${doc.id}`,
     payloadId: doc.id,
@@ -23,7 +26,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),
     listicleType: doc.listicleType || '',
-    targetItemCount: doc.targetItemCount || 6,
+    targetItemCount: normalizeTargetItemCount(fallbackTargetItemCount, items),
     step1_complete: Boolean(doc.step1_complete),
     in_update_mode: Boolean(doc.in_update_mode),
     header: {

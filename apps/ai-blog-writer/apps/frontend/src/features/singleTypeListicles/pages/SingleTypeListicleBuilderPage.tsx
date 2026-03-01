@@ -147,6 +147,8 @@ export default function SingleTypeListicleBuilderPage() {
     )
   }
 
+  const isCoreSetupChosen = Boolean(draft.location.trim() && draft.listicleType)
+
   return (
     <div className="stl-page">
       <BuilderHero draft={draft} onDiscardLocalDraft={actions.handleDiscardLocalDraft} />
@@ -164,44 +166,48 @@ export default function SingleTypeListicleBuilderPage() {
             onSaveSetup={actions.handleSaveSetup}
             onCancelUpdateSetup={actions.cancelUpdateSetup}
             updateDraft={actions.updateDraft}
+            setTargetItemCount={actions.setTargetItemCount}
             onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
-          <BuilderHeaderPanel
-            draft={draft}
-            token={token}
-            locationRef={actions.selectedLocationRefId ?? draft.locationRef}
-            mediaAssets={mediaAssets}
-            updateHeader={actions.updateHeader}
-            onIntroAiRewrite={rewriteDraftBlockWithAi}
-          />
+          {isCoreSetupChosen ? (
+            <>
+              <BuilderHeaderPanel
+                draft={draft}
+                token={token}
+                locationRef={actions.selectedLocationRefId ?? draft.locationRef}
+                mediaAssets={mediaAssets}
+                updateHeader={actions.updateHeader}
+                onIntroAiRewrite={rewriteDraftBlockWithAi}
+              />
 
-          <BuilderItemsPanel
-            draft={draft}
-            relatedItems={relatedItems}
-            isLoadingRelated={isLoadingRelated}
-            addItem={actions.addItem}
-            moveItem={actions.moveItem}
-            removeItem={actions.removeItem}
-            updateItem={actions.updateItem}
-            onItemBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
-          />
+              <BuilderItemsPanel
+                draft={draft}
+                relatedItems={relatedItems}
+                isLoadingRelated={isLoadingRelated}
+                moveItem={actions.moveItem}
+                removeItem={actions.removeItem}
+                updateItem={actions.updateItem}
+                onItemBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
+              />
 
-          <BuilderSeoPanel
-            seoId={draft.seoSection.seo}
-            seoOptions={seoOptions}
-            onSelectSeoId={actions.setSeoId}
-            onOpenCreateSeoModal={() => void seoManager.openCreateSeoModal()}
-            onOpenEditSeoModal={() => void seoManager.openEditSeoModal()}
-          />
+              <BuilderSeoPanel
+                seoId={draft.seoSection.seo}
+                seoOptions={seoOptions}
+                onSelectSeoId={actions.setSeoId}
+                onOpenCreateSeoModal={() => void seoManager.openCreateSeoModal()}
+                onOpenEditSeoModal={() => void seoManager.openEditSeoModal()}
+              />
 
-          <BuilderPublishPanel
-            draft={draft}
-            isSaving={isSaving}
-            updateDraft={actions.updateDraft}
-            onSaveDraft={() => submit('draft')}
-            onPublish={() => submit('published')}
-          />
+              <BuilderPublishPanel
+                draft={draft}
+                isSaving={isSaving}
+                updateDraft={actions.updateDraft}
+                onSaveDraft={() => submit('draft')}
+                onPublish={() => submit('published')}
+              />
+            </>
+          ) : null}
         </main>
 
         <BuilderSidebar

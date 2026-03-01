@@ -46,6 +46,7 @@ export type SingleTypeListicleDraft = {
   location: string
   locationRef: number | null
   listicleType: ListicleType | ''
+  /** 0 means "unset"; valid configured range is 1..50 */
   targetItemCount: number
   step1_complete: boolean
   in_update_mode: boolean

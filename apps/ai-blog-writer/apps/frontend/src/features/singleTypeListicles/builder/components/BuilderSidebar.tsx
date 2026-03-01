@@ -27,6 +27,9 @@ export function BuilderSidebar({
   onSaveDraft,
   onPublish,
 }: BuilderSidebarProps) {
+  const hasTargetSelected = draft.targetItemCount > 0
+  const targetDelta = draft.targetItemCount - draft.items.length
+
   return (
     <aside className="stl-builder-sidebar">
       <section className="stl-summary-card">
@@ -41,7 +44,13 @@ export function BuilderSidebar({
           </li>
           <li className={draft.items.length > 0 ? 'done' : ''}>Items: {draft.items.length} added</li>
           <li className={hasTargetCount ? 'done' : ''}>
-            Target match: {hasTargetCount ? 'Met' : `Need ${Math.max(0, draft.targetItemCount - draft.items.length)} more`}
+            Target match: {hasTargetCount
+              ? 'Met'
+              : !hasTargetSelected
+                ? 'Not set'
+                : targetDelta > 0
+                  ? `Need ${targetDelta} more`
+                  : 'Above target'}
           </li>
           <li className={draft.seoSection.seo ? 'done' : ''}>
             SEO relation: {draft.seoSection.seo ? `#${draft.seoSection.seo}` : 'Not selected'}
@@ -70,7 +79,9 @@ export function BuilderSidebar({
           </button>
         </div>
         <p className="stl-summary-note">
-          Publishing requires exactly <strong>{draft.targetItemCount}</strong> items.
+          {hasTargetSelected
+            ? <>Publishing requires exactly <strong>{draft.targetItemCount}</strong> items.</>
+            : 'Choose a target list size in Step 1 before publishing.'}
         </p>
         {stepIssues.length > 0 ? (
           <div className="stl-summary-warning">

@@ -22,7 +22,7 @@ export function useBuilderProgress(draft: SingleTypeListicleDraft | null): UseBu
 
     const stepIssues = validateStep1(draft)
     const isSetupReady = stepIssues.length === 0
-    const hasTargetCount = draft.items.length === draft.targetItemCount
+    const hasTargetCount = draft.targetItemCount > 0 && draft.items.length === draft.targetItemCount
     const completionPercent = Math.max(
       8,
       Math.min(

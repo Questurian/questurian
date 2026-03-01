@@ -41,11 +41,11 @@ export function ImageUploadSelectView({
         <div className="icon-container">
           <UploadIcon />
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#d4d4d8' }}>
+        <div className="stage-article-drop-zone__copy">
+          <p className="stage-article-drop-zone__title">
             {isDragging ? 'Drop image here' : 'Click or drag image here'}
           </p>
-          <p style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '0.25rem' }}>
+          <p className="stage-article-drop-zone__hint">
             Supports JPG, PNG, WebP up to 10MB
           </p>
         </div>
