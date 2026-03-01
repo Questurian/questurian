@@ -296,20 +296,6 @@ export const Accommodations: CollectionConfig = {
                   },
                 },
                 {
-                  name: 'altText',
-                  type: 'text',
-                  admin: {
-                    description: 'Optional per-image alt text from Location Manager',
-                  },
-                },
-                {
-                  name: 'caption',
-                  type: 'text',
-                  admin: {
-                    description: 'Optional per-image caption from Location Manager',
-                  },
-                },
-                {
                   name: 'preview',
                   type: 'ui',
                   admin: {

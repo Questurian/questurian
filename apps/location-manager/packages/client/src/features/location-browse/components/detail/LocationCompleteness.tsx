@@ -389,7 +389,7 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
   );
   const isComplete = missingFields.length === 0;
   const hasTripadvisorUrl = Boolean(locationDetail.tripadvisorUrl?.trim());
-  const shouldShowTripAdvisorButton = hasTripadvisorUrl && !isComplete;
+  const shouldShowTripAdvisorButton = hasTripadvisorUrl;
 
   const [completenessExpanded, setCompletenessExpanded] = useState<boolean | undefined>(undefined);
   const isCompletenessExpanded = completenessExpanded ?? !isComplete;

@@ -133,6 +133,44 @@ describe("TripAdvisorPlaceService meal-type enrichment", () => {
     );
   });
 
+  test("operation hours from TripAdvisor overwrite existing manual hours", () => {
+    getLocationByIdForUpdateMock.mockReturnValue({
+      id: 14,
+      category: "dining",
+      type: "restaurant",
+      email: null,
+      neighborhoodDescription: null,
+      hoursJson: JSON.stringify({ monday: "09:00:00 - 17:00:00", currently_open: false }),
+      phoneNumber: null,
+      website: null,
+      tripadvisorMealTypesJson: null,
+      tripadvisorCuisinesJson: null,
+      tripadvisorFeaturesJson: null,
+      priceLevel: null,
+      district: null,
+      idealForJson: null,
+    });
+
+    const service = new TripAdvisorPlaceService({ SERPAPI_KEY: "test-key" } as any);
+    service.mergePlaceDataIntoLocation(14, {
+      operation_hours: {
+        monday: "10:00:00 - 23:00:00",
+        currently_open: true,
+      },
+    });
+
+    expect(updateLocationByIdMock).toHaveBeenCalledTimes(1);
+    expect(updateLocationByIdMock).toHaveBeenCalledWith(
+      14,
+      expect.objectContaining({
+        hoursJson: JSON.stringify({
+          monday: "10:00:00 - 23:00:00",
+          currently_open: true,
+        }),
+      })
+    );
+  });
+
   test("auto-fetch path applies meal-type enrichment through merge", async () => {
     getLocationByIdForUpdateMock.mockReturnValue({
       id: 20,

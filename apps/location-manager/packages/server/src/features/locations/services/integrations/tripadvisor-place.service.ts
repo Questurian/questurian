@@ -49,7 +49,8 @@ export class TripAdvisorPlaceService {
 
   /**
    * Merge TripAdvisor place data into a location record.
-   * Only fills empty fields (does not overwrite existing data).
+   * Fills empty fields for most attributes.
+   * Trusted attributes (operation hours and price level) overwrite existing data when present.
    * Includes district fallback from TripAdvisor neighborhood.
    */
   mergePlaceDataIntoLocation(locationId: number, placeResult: TripAdvisorPlaceResult): void {
@@ -84,15 +85,19 @@ export class TripAdvisorPlaceService {
       normalizeTripadvisorStringList(placeResult.dining_options);
     const features = filterTripadvisorFeatures(rawFeatures);
 
-    // Fill empty fields only
+    // Fill empty fields for most attributes
     if (!current.email && email) {
       updates.email = email;
     }
     if (!current.neighborhoodDescription && neighborhoodDescription) {
       updates.neighborhoodDescription = neighborhoodDescription;
     }
-    if (!current.hoursJson && operationHours) {
-      updates.hoursJson = JSON.stringify(operationHours);
+    // Hours are trusted from TripAdvisor: always overwrite when provided.
+    if (operationHours) {
+      const operationHoursJson = JSON.stringify(operationHours);
+      if (current.hoursJson !== operationHoursJson) {
+        updates.hoursJson = operationHoursJson;
+      }
     }
     if (!current.phoneNumber && phone) {
       updates.phoneNumber = phone;
