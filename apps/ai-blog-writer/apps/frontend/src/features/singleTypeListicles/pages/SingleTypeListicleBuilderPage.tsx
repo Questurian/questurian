@@ -5,7 +5,6 @@ import { useAuth } from '../../../providers/useAuth'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
 import { BuilderHero } from '../builder/components/BuilderHero'
 import { BuilderItemsPanel } from '../builder/components/BuilderItemsPanel'
-import { BuilderPublishPanel } from '../builder/components/BuilderPublishPanel'
 import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
@@ -205,13 +204,6 @@ export default function SingleTypeListicleBuilderPage() {
                 onSelectSeoId={actions.setSeoId}
                 onOpenCreateSeoModal={() => void seoManager.openCreateSeoModal()}
                 onOpenEditSeoModal={() => void seoManager.openEditSeoModal()}
-              />
-
-              <BuilderPublishPanel
-                draft={draft}
-                isSaving={isSaving}
-                onSaveLocalDraft={saveLocalDraft}
-                onSyncToPayload={() => submit('draft')}
               />
             </>
           ) : null}
