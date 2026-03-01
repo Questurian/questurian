@@ -159,6 +159,11 @@ export type InstagramPostOption = {
   id: number
   title: string
   status?: string | null
+  embedCode?: string | null
+  permalink?: string | null
+  url?: string | null
+  instagramUrl?: string | null
+  shortcode?: string | null
   previewImage?: number | InstagramPreviewAsset | null
 }
 

@@ -95,7 +95,7 @@ export function MarkdownBlockEditor({
   }
 
   return (
-    <>
+    <div className="block-markdown-editor-shell">
       <EditorToolbar blockId={blockId} actions={toolbar.toolbarActions} onAction={toolbar.handleToolbarAction} />
 
       {heading.headingStructureHint ? <p className="block-markdown-hint">{heading.headingStructureHint}</p> : null}
@@ -139,6 +139,6 @@ export function MarkdownBlockEditor({
         onInput={toolbar.syncEditorToMarkdown}
         onKeyDown={toolbar.handleEditorKeyDown}
       />
-    </>
+    </div>
   )
 }

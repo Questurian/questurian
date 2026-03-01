@@ -144,3 +144,68 @@ export function resolveInstagramPreviewUrl(post: InstagramPostOption): string | 
   if (img.filename) return `${PAYLOAD_API_URL}/api/media-assets/file/${img.filename}`
   return undefined
 }
+
+function normalizeInstagramPermalink(value: string | null | undefined): string | undefined {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+
+  const withProtocol = trimmed.startsWith('//') ? `https:${trimmed}` : trimmed
+  if (!/^https?:\/\//i.test(withProtocol)) return undefined
+
+  try {
+    const url = new URL(withProtocol)
+    if (!/instagram\.com$/i.test(url.hostname) && !/instagram\.com$/i.test(url.hostname.replace(/^www\./i, ''))) {
+      return undefined
+    }
+
+    const cleanedPath = url.pathname.replace(/\/+$/, '')
+    if (!cleanedPath) return undefined
+    return `${url.origin}${cleanedPath}/`
+  } catch {
+    return undefined
+  }
+}
+
+function extractPermalinkFromEmbedCode(embedCode: string | null | undefined): string | undefined {
+  if (!embedCode || typeof embedCode !== 'string') return undefined
+
+  const permalinkMatch = embedCode.match(/data-instgrm-permalink="([^"]+)"/i)
+  if (permalinkMatch?.[1]) {
+    const normalized = normalizeInstagramPermalink(permalinkMatch[1])
+    if (normalized) return normalized
+  }
+
+  const hrefMatch = embedCode.match(/href="(https?:\/\/(?:www\.)?instagram\.com\/[^"]+)"/i)
+  if (hrefMatch?.[1]) {
+    const normalized = normalizeInstagramPermalink(hrefMatch[1])
+    if (normalized) return normalized
+  }
+
+  return undefined
+}
+
+export function resolveInstagramPermalink(post: InstagramPostOption): string | undefined {
+  const directCandidates = [
+    post.permalink,
+    post.url,
+    post.instagramUrl,
+  ]
+
+  for (const candidate of directCandidates) {
+    const normalized = normalizeInstagramPermalink(candidate)
+    if (normalized) return normalized
+  }
+
+  if (post.shortcode && post.shortcode.trim()) {
+    return `https://www.instagram.com/p/${post.shortcode.trim()}/`
+  }
+
+  return extractPermalinkFromEmbedCode(post.embedCode)
+}
+
+export function resolveInstagramEmbedUrl(post: InstagramPostOption): string | undefined {
+  const permalink = resolveInstagramPermalink(post)
+  if (!permalink) return undefined
+  return `${permalink}embed/`
+}

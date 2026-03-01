@@ -97,6 +97,7 @@ export function BuilderHeaderPanel({
   const triggerLabel = featuredImageId
     ? featuredAsset?.filename || `Image #${featuredImageId} selected`
     : 'Select Featured Image...'
+  const headerPreviewTitle = draft.title.trim() || 'Your article headline will appear here'
   const isPlaceholder = !featuredImageId
 
   return (
@@ -108,32 +109,36 @@ export function BuilderHeaderPanel({
       </div>
       <div className="stl-field">
         <span>Featured Image</span>
-        <button
-          type="button"
-          className="stl-picker-trigger"
-          onClick={() => setPickerOpen(true)}
-        >
-          <span className="stl-picker-trigger__preview">
-            {featuredImageId && (
-              featuredImagePreviewUrl
-                ? <img src={featuredImagePreviewUrl} alt="" />
-                : <span className="stl-picker-trigger__thumb-empty" />
-            )}
-            <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
-              {triggerLabel}
-            </span>
-          </span>
-          <span className="stl-picker-trigger__caret">▼</span>
-        </button>
-        {featuredImageId && (
+        {!featuredImageId ? (
           <button
             type="button"
-            className="stl-btn stl-btn-secondary"
-            style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', marginTop: '0.25rem', alignSelf: 'flex-start' }}
-            onClick={() => updateHeader({ featuredImage: null })}
+            className="stl-picker-trigger"
+            onClick={() => setPickerOpen(true)}
           >
-            Clear
+            <span className="stl-picker-trigger__preview">
+              <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
+                {triggerLabel}
+              </span>
+            </span>
+            <span className="stl-picker-trigger__caret">▼</span>
           </button>
+        ) : (
+          <div className="stl-featured-header-preview">
+            <button
+              type="button"
+              className="stl-featured-header-preview__media"
+              onClick={() => setPickerOpen(true)}
+            >
+              {featuredImagePreviewUrl ? (
+                <img src={featuredImagePreviewUrl} alt="" />
+              ) : (
+                <div className="stl-featured-header-preview__fallback">Image selected</div>
+              )}
+              <div className="stl-featured-header-preview__overlay">
+                <p className="stl-featured-header-preview__title">{headerPreviewTitle}</p>
+              </div>
+            </button>
+          </div>
         )}
       </div>
 

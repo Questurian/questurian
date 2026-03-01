@@ -16,6 +16,22 @@ export function RichContentEditable({
   onInput,
   onKeyDown,
 }: RichContentEditableProps) {
+  const normalizeInlineTypingState = () => {
+    const selection = window.getSelection()
+    if (!selection || !selection.isCollapsed) return
+
+    try {
+      if (document.queryCommandState('bold')) {
+        document.execCommand('bold')
+      }
+      if (document.queryCommandState('italic')) {
+        document.execCommand('italic')
+      }
+    } catch {
+      // Some browsers can throw for queryCommandState; ignore safely.
+    }
+  }
+
   return (
     <div
       ref={editorRef}
@@ -23,10 +39,18 @@ export function RichContentEditable({
       contentEditable
       role="textbox"
       aria-multiline="true"
+      spellCheck={false}
+      autoCorrect="off"
+      autoCapitalize="off"
       suppressContentEditableWarning
       data-placeholder={placeholder || 'Write your content...'}
+      data-gramm="false"
+      data-gramm_editor="false"
+      data-enable-grammarly="false"
       onInput={onInput}
       onKeyDown={onKeyDown}
+      onFocus={normalizeInlineTypingState}
+      onMouseUp={normalizeInlineTypingState}
     />
   )
 }
