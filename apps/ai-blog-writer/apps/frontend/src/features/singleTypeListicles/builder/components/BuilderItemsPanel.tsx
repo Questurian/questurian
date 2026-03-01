@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import type { ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import {
@@ -55,10 +55,33 @@ export function BuilderItemsPanel({
 }: BuilderItemsPanelProps) {
   const blockTypeOptions = draft.listicleType ? [`data-${draft.listicleType}` as ListicleItemBlock['blockType']] : []
   const [activePicker, setActivePicker] = useState<ActivePicker>(null)
+  const [copiedItemId, setCopiedItemId] = useState<string | null>(null)
+  const [copyErrorItemId, setCopyErrorItemId] = useState<string | null>(null)
 
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
   const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
   const activeInstagramPicker = activePicker?.type === 'instagram' ? activePicker : null
+
+  useEffect(() => {
+    if (!copiedItemId) return
+    const timer = window.setTimeout(() => setCopiedItemId(null), 1800)
+    return () => window.clearTimeout(timer)
+  }, [copiedItemId])
+
+  const handleCopyRelatedItemTitle = async (itemId: string, title: string) => {
+    if (!title.trim()) return
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(title)
+      setCopiedItemId(itemId)
+      setCopyErrorItemId(null)
+    } catch {
+      setCopiedItemId(null)
+      setCopyErrorItemId(itemId)
+    }
+  }
 
   return (
     <section className="stl-panel">
@@ -151,6 +174,31 @@ export function BuilderItemsPanel({
                     </span>
                     <span className="stl-picker-trigger__caret">▼</span>
                   </button>
+                  {selectedRelatedItem ? (
+                    <>
+                      <div className="stl-copyable-item-row">
+                        <input
+                          type="text"
+                          className="stl-copyable-item-input"
+                          value={selectedRelatedItem.title}
+                          readOnly
+                          onFocus={(event) => event.currentTarget.select()}
+                          onClick={(event) => event.currentTarget.select()}
+                          aria-label="Selected related item title"
+                        />
+                        <button
+                          type="button"
+                          className={`stl-btn ${copiedItemId === item.id ? 'stl-btn-success' : 'stl-btn-secondary'} stl-copyable-item-btn`}
+                          onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItem.title)}
+                        >
+                          {copiedItemId === item.id ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      {copyErrorItemId === item.id ? (
+                        <p className="stl-legacy-note">Clipboard blocked. Select the text field and press Cmd/Ctrl+C.</p>
+                      ) : null}
+                    </>
+                  ) : null}
                 </div>
               </div>
 

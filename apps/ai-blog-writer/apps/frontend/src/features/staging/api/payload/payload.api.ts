@@ -78,6 +78,7 @@ export async function fetchMediaAssets(
   params?: {
     limit?: number
     mimeType?: string
+    variant?: MediaAsset['variant']
     minWidth?: number
     minHeight?: number
     width?: number
@@ -88,6 +89,7 @@ export async function fetchMediaAssets(
   const queryParams = new URLSearchParams()
   queryParams.append('limit', String(params?.limit || 50))
   if (params?.mimeType) queryParams.append('where[mimeType][like]', params.mimeType)
+  if (params?.variant) queryParams.append('where[variant][equals]', params.variant)
   if (params?.minWidth) {
     queryParams.append('where[width][greater_than_equal]', String(params.minWidth))
   }

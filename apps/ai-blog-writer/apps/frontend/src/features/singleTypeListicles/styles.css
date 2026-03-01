@@ -232,6 +232,25 @@
   justify-content: space-between;
 }
 
+.stl-copyable-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.stl-copyable-item-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.84rem;
+  color: #3f4654;
+}
+
+.stl-copyable-item-btn {
+  flex-shrink: 0;
+  min-width: 82px;
+}
+
 .stl-ai-title-trigger {
   font-size: 0.72rem;
   padding: 0.2rem 0.6rem;
@@ -695,6 +714,11 @@
 
   .stl-panel {
     padding: 1rem;
+  }
+
+  .stl-copyable-item-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

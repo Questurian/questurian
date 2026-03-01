@@ -50,6 +50,7 @@ type FeaturedImagePickerProps = {
   selectedId: number | null
   token: string
   locationRef: number | null
+  payloadVariant?: MediaAsset['variant']
   onSelect: (mediaAssetId: number) => void
   onClose: () => void
 }
@@ -73,6 +74,7 @@ export function FeaturedImagePicker({
   selectedId,
   token,
   locationRef,
+  payloadVariant,
   onSelect,
   onClose,
 }: FeaturedImagePickerProps) {
@@ -125,13 +127,17 @@ export function FeaturedImagePicker({
     setIsLoadingPayload(true)
     setPayloadError(null)
 
-    fetchMediaAssets(token, { limit: 200, mimeType: 'image/' })
+    fetchMediaAssets(token, {
+      limit: 200,
+      mimeType: 'image/',
+      variant: payloadVariant,
+    })
       .then((res) => setPayloadAssets(res.docs))
       .catch((err: unknown) =>
         setPayloadError(err instanceof Error ? err.message : 'Failed to load images'),
       )
       .finally(() => setIsLoadingPayload(false))
-  }, [isOpen, token])
+  }, [isOpen, payloadVariant, token])
 
   useEffect(() => {
     if (isOpen) return
@@ -156,13 +162,17 @@ export function FeaturedImagePicker({
 
   if (!isOpen) return null
 
+  const searchablePayloadAssets = payloadVariant
+    ? payloadAssets.filter((asset) => asset.variant === payloadVariant)
+    : payloadAssets
+
   const filteredAssets = payloadSearch.trim()
-    ? payloadAssets.filter((a) => {
+    ? searchablePayloadAssets.filter((a) => {
         const q = payloadSearch.toLowerCase()
         const altText = (a.alt_text ?? a.altText ?? a.alt ?? '').toLowerCase()
         return a.filename.toLowerCase().includes(q) || altText.includes(q)
       })
-    : payloadAssets
+    : searchablePayloadAssets
 
   const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === overlayRef.current) onClose()
@@ -479,7 +489,11 @@ export function FeaturedImagePicker({
                 <div className="fip-grid">
                   {filteredAssets.length === 0 ? (
                     <p className="fip-empty">
-                      {payloadSearch ? 'No images match your search.' : 'No images found.'}
+                      {payloadSearch
+                        ? 'No images match your search.'
+                        : payloadVariant
+                          ? `No ${payloadVariant} images found.`
+                          : 'No images found.'}
                     </p>
                   ) : (
                     filteredAssets.map((asset) => (

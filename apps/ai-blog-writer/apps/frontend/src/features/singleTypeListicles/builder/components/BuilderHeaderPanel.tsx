@@ -154,6 +154,7 @@ export function BuilderHeaderPanel({
         selectedId={featuredImageId}
         token={resolvedToken}
         locationRef={locationRef}
+        payloadVariant="wide"
         onSelect={(id) => updateHeader({ featuredImage: id })}
         onClose={() => setPickerOpen(false)}
       />
