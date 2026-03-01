@@ -208,19 +208,9 @@ export function BuilderSetupPanel({
             </label>
           </div>
 
-          {selectedTargetCount ? (
-            <p className="stl-summary-note stl-setup-note">
-              Target size controls item cards. Changing this count auto-creates blank items.
-            </p>
-          ) : (
+          {selectedTargetCount ? null : (
             <p className="stl-summary-note stl-setup-note">Pick a target size to generate blank item cards.</p>
           )}
-
-          {hasLockedItemData ? (
-            <p className="stl-summary-note stl-setup-note">
-              Target size locks after item data is entered. Remove items (or clear item content) to change it.
-            </p>
-          ) : null}
         </>
       )}
     </section>

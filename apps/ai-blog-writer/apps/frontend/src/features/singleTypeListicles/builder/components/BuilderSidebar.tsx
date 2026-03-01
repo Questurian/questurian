@@ -11,8 +11,8 @@ type BuilderSidebarProps = {
   editorModelName: EditorAssistModelName
   onEditorModelChange: (modelName: string) => void
   isSaving: boolean
-  onSaveDraft: () => Promise<void>
-  onPublish: () => Promise<void>
+  onSaveLocalDraft: () => Promise<void>
+  onSyncToPayload: () => Promise<void>
 }
 
 export function BuilderSidebar({
@@ -24,8 +24,8 @@ export function BuilderSidebar({
   editorModelName,
   onEditorModelChange,
   isSaving,
-  onSaveDraft,
-  onPublish,
+  onSaveLocalDraft,
+  onSyncToPayload,
 }: BuilderSidebarProps) {
   const hasTargetSelected = draft.targetItemCount > 0
   const targetDelta = draft.targetItemCount - draft.items.length
@@ -58,7 +58,7 @@ export function BuilderSidebar({
         </ul>
       </section>
 
-      <section className="stl-summary-card">
+      <section className="stl-summary-card stl-summary-card--quick-actions">
         <h3>Quick Actions</h3>
         <label className="stl-field">
           <span>AI Model</span>
@@ -71,18 +71,13 @@ export function BuilderSidebar({
           </select>
         </label>
         <div className="stl-summary-actions">
-          <button type="button" className="stl-btn" onClick={() => void onSaveDraft()} disabled={isSaving}>
-            Save Draft
+          <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={isSaving}>
+            Save Local Draft
           </button>
-          <button type="button" className="stl-btn stl-btn-success" onClick={() => void onPublish()} disabled={isSaving}>
-            Publish
+          <button type="button" className="stl-btn stl-btn-success" onClick={() => void onSyncToPayload()} disabled={isSaving}>
+            {isSaving ? 'Syncing...' : 'Sync to Payload'}
           </button>
         </div>
-        <p className="stl-summary-note">
-          {hasTargetSelected
-            ? <>Publishing requires exactly <strong>{draft.targetItemCount}</strong> items.</>
-            : 'Choose a target list size in Step 1 before publishing.'}
-        </p>
         {stepIssues.length > 0 ? (
           <div className="stl-summary-warning">
             <strong>Setup needs attention:</strong>

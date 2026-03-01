@@ -19,6 +19,7 @@ import { useRelatedItems } from '../builder/hooks/useRelatedItems'
 import { buildListicleAiArticleContext, getListicleAiArticleTitle } from '../builder/services/ai-rewrite.service'
 import { useSeoManager } from '../builder/hooks/useSeoManager'
 import { generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { saveDraft } from '../storage'
 import '../styles.css'
 
 type AiRewriteInput = {
@@ -139,6 +140,13 @@ export default function SingleTypeListicleBuilderPage() {
     return rewrittenContent
   }, [draft])
 
+  const saveLocalDraft = useCallback(async (): Promise<void> => {
+    if (!draft) return
+    saveDraft(draft)
+    setError(null)
+    setResult('Saved local draft')
+  }, [draft])
+
   if (isLoading || !draft) {
     return (
       <div className="stl-page">
@@ -147,7 +155,7 @@ export default function SingleTypeListicleBuilderPage() {
     )
   }
 
-  const isCoreSetupChosen = Boolean(draft.location.trim() && draft.listicleType)
+  const isStep1Submitted = draft.step1_complete
 
   return (
     <div className="stl-page">
@@ -170,7 +178,7 @@ export default function SingleTypeListicleBuilderPage() {
             onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
-          {isCoreSetupChosen ? (
+          {isStep1Submitted ? (
             <>
               <BuilderHeaderPanel
                 draft={draft}
@@ -202,9 +210,8 @@ export default function SingleTypeListicleBuilderPage() {
               <BuilderPublishPanel
                 draft={draft}
                 isSaving={isSaving}
-                updateDraft={actions.updateDraft}
-                onSaveDraft={() => submit('draft')}
-                onPublish={() => submit('published')}
+                onSaveLocalDraft={saveLocalDraft}
+                onSyncToPayload={() => submit('draft')}
               />
             </>
           ) : null}
@@ -219,8 +226,8 @@ export default function SingleTypeListicleBuilderPage() {
           editorModelName={draft.editorModelName}
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
-          onSaveDraft={() => submit('draft')}
-          onPublish={() => submit('published')}
+          onSaveLocalDraft={saveLocalDraft}
+          onSyncToPayload={() => submit('draft')}
         />
       </div>
 

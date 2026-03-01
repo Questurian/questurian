@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
+import { getBlockTypeForListicleType } from '../../api'
 import type { ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import {
   getRelatedInstagramPostObjects,
@@ -59,7 +60,6 @@ export function BuilderItemsPanel({
   updateItem,
   onItemBlurbAiRewrite,
 }: BuilderItemsPanelProps) {
-  const blockTypeOptions = draft.listicleType ? [`data-${draft.listicleType}` as ListicleItemBlock['blockType']] : []
   const [activePicker, setActivePicker] = useState<ActivePicker>(null)
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null)
   const [copyErrorItemId, setCopyErrorItemId] = useState<string | null>(null)
@@ -98,6 +98,16 @@ export function BuilderItemsPanel({
       documentElement.style.overflow = previousHtmlOverflow
     }
   }, [activeInstagramEmbedPreviewItemId])
+
+  useEffect(() => {
+    if (!draft.listicleType) return
+    const expectedBlockType = getBlockTypeForListicleType(draft.listicleType)
+
+    draft.items.forEach((item) => {
+      if (item.blockType === expectedBlockType) return
+      updateItem(item.id, (current) => ({ ...current, blockType: expectedBlockType }))
+    })
+  }, [draft.items, draft.listicleType, updateItem])
 
   useEffect(() => {
     draft.items.forEach((item) => {
@@ -236,25 +246,6 @@ export function BuilderItemsPanel({
               </header>
 
               <div className="stl-item-setup-fields">
-                <label className="stl-field">
-                  <span>Block Type *</span>
-                  <select
-                    value={item.blockType}
-                    onChange={(event) =>
-                      updateItem(item.id, (current) => ({
-                        ...current,
-                        blockType: event.target.value as ListicleItemBlock['blockType'],
-                      }))
-                    }
-                  >
-                    {blockTypeOptions.map((blockType) => (
-                      <option key={blockType} value={blockType}>
-                        {blockType}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
                 <div className="stl-field">
                   <span>Related Item *</span>
                   <button
@@ -304,36 +295,40 @@ export function BuilderItemsPanel({
                     </>
                   ) : null}
                 </div>
-                <label className="stl-field">
-                  <span>Media Mode *</span>
-                  {availableMediaModeOptions.length > 0 ? (
-                    <select
-                      value={effectiveMediaMode ?? ''}
-                      onChange={(event) =>
-                        updateItem(item.id, (current) => {
-                          const nextMode = event.target.value as MediaMode
-                          if (nextMode === 'photos') {
-                            return { ...current, mediaMode: nextMode, selectedInstagramPost: null }
-                          }
-                          if (nextMode === 'instagram') {
-                            return { ...current, mediaMode: nextMode, selectedPhotos: [] }
-                          }
-                          return { ...current, mediaMode: nextMode }
-                        })
-                      }
-                    >
-                      {availableMediaModeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <p className="stl-media-mode-empty">
-                      No photos or Instagram posts are available for this related item.
-                    </p>
-                  )}
-                </label>
+                {selectedRelatedItem ? (
+                  <label className="stl-field">
+                    <span>Media Mode *</span>
+                    {availableMediaModeOptions.length > 0 ? (
+                      <select
+                        value={effectiveMediaMode ?? ''}
+                        onChange={(event) =>
+                          updateItem(item.id, (current) => {
+                            const nextMode = event.target.value as MediaMode
+                            if (nextMode === 'photos') {
+                              return { ...current, mediaMode: nextMode, selectedInstagramPost: null }
+                            }
+                            if (nextMode === 'instagram') {
+                              return { ...current, mediaMode: nextMode, selectedPhotos: [] }
+                            }
+                            return { ...current, mediaMode: nextMode }
+                          })
+                        }
+                      >
+                        {availableMediaModeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="stl-media-mode-empty">
+                        No photos or Instagram posts are available for this related item.
+                      </p>
+                    )}
+                  </label>
+                ) : (
+                  <p className="stl-legacy-note">Select a related item to unlock media options and blurb.</p>
+                )}
               </div>
 
               {modeNeedsPhotos ? (
@@ -387,9 +382,6 @@ export function BuilderItemsPanel({
                           </button>
                         </>
                       ) : null}
-                      <p className="stl-item-photo-preview__note">
-                        {photoPreviewCount} photo{photoPreviewCount !== 1 ? 's' : ''} selected. Click image to edit.
-                      </p>
                     </div>
                   ) : (
                     <button
@@ -435,7 +427,6 @@ export function BuilderItemsPanel({
                         </span>
                         <span className="stl-picker-trigger__caret">Preview</span>
                       </button>
-                      <p className="stl-legacy-note">Click to preview full embed.</p>
                     </>
                   ) : (
                     <button
@@ -461,30 +452,34 @@ export function BuilderItemsPanel({
                 </div>
               ) : null}
 
-              <label className="stl-field">
-                <span>Blurb *</span>
-                <MarkdownBlockEditor
-                  blockId={`${item.id}_blurb`}
-                  value={item.blurbMarkdown}
-                  onChange={(nextValue) =>
-                    updateItem(item.id, (current) => ({
-                      ...current,
-                      blurbMarkdown: nextValue,
-                      blurbJsonText: '',
-                    }))
-                  }
-                  showToolbar
-                  enforceHeadingStructure={false}
-                  onAiRewrite={(input) => onItemBlurbAiRewrite(item.id, input)}
-                  placeholder="Write why this item made the list..."
-                  className="stl-markdown-textarea"
-                  rows={5}
-                />
-              </label>
-              {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
-                <p className="stl-legacy-note">
-                  This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.
-                </p>
+              {selectedRelatedItem ? (
+                <>
+                  <label className="stl-field">
+                    <span>Blurb *</span>
+                    <MarkdownBlockEditor
+                      blockId={`${item.id}_blurb`}
+                      value={item.blurbMarkdown}
+                      onChange={(nextValue) =>
+                        updateItem(item.id, (current) => ({
+                          ...current,
+                          blurbMarkdown: nextValue,
+                          blurbJsonText: '',
+                        }))
+                      }
+                      showToolbar
+                      enforceHeadingStructure={false}
+                      onAiRewrite={(input) => onItemBlurbAiRewrite(item.id, input)}
+                      placeholder="Write why this item made the list..."
+                      className="stl-markdown-textarea"
+                      rows={5}
+                    />
+                  </label>
+                  {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
+                    <p className="stl-legacy-note">
+                      This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.
+                    </p>
+                  ) : null}
+                </>
               ) : null}
 
               {/* Related item picker modal */}

@@ -94,7 +94,9 @@ export async function submitListicle({
     blurbMarkdown: draft.items[index]?.blurbMarkdown || '',
   }))
 
-  const resultMessage = targetStatus === 'published' ? `Published listicle #${doc.id}` : `Saved draft listicle #${doc.id}`
+  const resultMessage = targetStatus === 'published'
+    ? `Published listicle #${doc.id}`
+    : `Synced draft listicle #${doc.id} to Payload`
 
   return { doc, nextDraft, resultMessage }
 }
