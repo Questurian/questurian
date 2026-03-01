@@ -149,7 +149,7 @@ export default function SingleTypeListicleBuilderPage() {
 
   if (isLoading || !draft) {
     return (
-      <div className="stl-page">
+      <div className="stl-page stl-single-type-page">
         <p className="stl-placeholder">Loading builder...</p>
       </div>
     )
@@ -158,7 +158,7 @@ export default function SingleTypeListicleBuilderPage() {
   const isStep1Submitted = draft.step1_complete
 
   return (
-    <div className="stl-page">
+    <div className="stl-page stl-single-type-page">
       <BuilderHero draft={draft} onDiscardLocalDraft={actions.handleDiscardLocalDraft} />
 
       <div className="stl-builder-layout">

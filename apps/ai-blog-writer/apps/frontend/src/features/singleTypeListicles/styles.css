@@ -17,7 +17,15 @@
   padding: 1.75rem 1.25rem 2.5rem;
   color: var(--stl-ink);
   font-family: 'IBM Plex Sans', sans-serif;
-  background: var(--stl-bg);
+  background: transparent;
+}
+
+.stl-page.stl-single-type-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1.75rem 0 2.5rem;
+  background: transparent;
 }
 
 .stl-hero {

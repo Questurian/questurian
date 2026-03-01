@@ -63,7 +63,7 @@ export default function SingleTypeListiclesPage() {
   }, [listicles])
 
   return (
-    <div className="stl-page">
+    <div className="stl-page stl-single-type-page">
       <header className="stl-hero">
         <div>
           <p className="stl-eyebrow">Questurian Studio</p>
