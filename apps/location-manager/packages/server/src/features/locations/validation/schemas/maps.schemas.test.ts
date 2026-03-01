@@ -250,6 +250,28 @@ describe("maps patch schema reviews toggle", () => {
     expect(result.success).toBe(true);
   });
 
+  test("accepts coordinates as patch fields", () => {
+    const result = patchMapsSchema.safeParse({
+      lat: -12.0464,
+      lng: -77.0428,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.lat).toBe(-12.0464);
+    expect(result.data.lng).toBe(-77.0428);
+  });
+
+  test("rejects out-of-range coordinates on patch", () => {
+    const result = patchMapsSchema.safeParse({
+      lat: 120,
+      lng: -77.0428,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   test("accepts valid locationKey with autoApproveTaxonomy flag", () => {
     const result = patchMapsSchema.safeParse({
       locationKey: "peru|lima|miraflores",

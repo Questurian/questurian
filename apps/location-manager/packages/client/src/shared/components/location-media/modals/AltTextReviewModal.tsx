@@ -17,6 +17,7 @@ interface AltTextReviewModalProps {
   onConfirm: (altText: string) => void;
   imageFile: File;
   aiGeneratedAltText?: string;
+  generationError?: string;
   isLoading?: boolean;
 }
 
@@ -26,6 +27,7 @@ export function AltTextReviewModal({
   onConfirm,
   imageFile,
   aiGeneratedAltText = "",
+  generationError,
   isLoading = false,
 }: AltTextReviewModalProps) {
   const [altText, setAltText] = useState(aiGeneratedAltText);
@@ -86,6 +88,11 @@ export function AltTextReviewModal({
               <Edit className="w-4 h-4" />
               Alt Text (for accessibility and SEO)
             </Label>
+            {generationError && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                {generationError}
+              </div>
+            )}
             <div className="relative">
               <Textarea
                 id="alt-text"

@@ -28,6 +28,12 @@ const MediaSetPreview: React.FC<Props> = ({ path }) => {
   const [imageAlt, setImageAlt] = React.useState<string>('Media set preview')
   const [loading, setLoading] = React.useState(false)
 
+  const addCacheBuster = React.useCallback((url: string, token: string | number | null) => {
+    if (!token) return url
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}v=${encodeURIComponent(String(token))}`
+  }, [])
+
   React.useEffect(() => {
     if (!mediaSetId) {
       setImageUrl(null)
@@ -41,7 +47,12 @@ const MediaSetPreview: React.FC<Props> = ({ path }) => {
         if (response.ok) {
           const doc = await response.json()
           const previewAsset = getMediaSetPreviewAsset(doc)
-          setImageUrl(previewAsset?.url ?? null)
+          const cacheToken =
+            (typeof previewAsset?.updatedAt === 'string' && previewAsset.updatedAt) ||
+            previewAsset?.id ||
+            (typeof doc.updatedAt === 'string' ? doc.updatedAt : null)
+
+          setImageUrl(previewAsset?.url ? addCacheBuster(previewAsset.url, cacheToken) : null)
           setImageAlt(previewAsset?.alt_text ?? doc.alt_text ?? doc.title ?? 'Media set preview')
         }
       } catch (error) {
@@ -51,7 +62,7 @@ const MediaSetPreview: React.FC<Props> = ({ path }) => {
     }
 
     fetchPreview()
-  }, [mediaSetId])
+  }, [addCacheBuster, mediaSetId])
 
   if (!mediaSetId) return null
 

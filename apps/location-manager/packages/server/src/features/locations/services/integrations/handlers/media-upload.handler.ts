@@ -55,22 +55,32 @@ export async function uploadLocationImages(
 
           let mediaSetId: string;
           let shouldUploadVariants = false;
+          let existingVariantAssetIds: string[] = [];
 
           if (existingMediaSetId) {
             // Media-set already exists from previous sync
-            console.log(`✅ [MEDIA-SET] Found existing media-set: ${existingMediaSetId} (skipping variant uploads)`);
+            console.log(
+              `✅ [MEDIA-SET] Found existing media-set: ${existingMediaSetId} (refreshing variant uploads)`
+            );
             mediaSetId = existingMediaSetId;
-            shouldUploadVariants = false; // Don't re-upload variants
+            shouldUploadVariants = true;
+
+            try {
+              existingVariantAssetIds = await payloadClient.getMediaSetVariantAssetIds(mediaSetId);
+            } catch (error) {
+              console.warn(
+                `⚠️  Failed to fetch existing variants for media-set ${mediaSetId}; proceeding with best effort refresh:`,
+                error
+              );
+            }
 
             // Backfill locationRef on existing media-set and variant assets
             if (mediaLocationRef) {
               try {
                 await payloadClient.setMediaSetLocationRef(mediaSetId, mediaLocationRef);
-
-                const variantAssetIds = await payloadClient.getMediaSetVariantAssetIds(mediaSetId);
                 let updatedVariantCount = 0;
 
-                for (const variantAssetId of variantAssetIds) {
+                for (const variantAssetId of existingVariantAssetIds) {
                   try {
                     await payloadClient.updateMediaAssetLocationRef(variantAssetId, mediaLocationRef);
                     updatedVariantCount++;
@@ -83,7 +93,7 @@ export async function uploadLocationImages(
                 }
 
                 console.log(
-                  `✅ [MEDIA-SET] Backfilled locationRef for media-set ${mediaSetId} and ${updatedVariantCount}/${variantAssetIds.length} variants`
+                  `✅ [MEDIA-SET] Backfilled locationRef for media-set ${mediaSetId} and ${updatedVariantCount}/${existingVariantAssetIds.length} variants`
                 );
               } catch (error) {
                 console.warn(
@@ -91,6 +101,26 @@ export async function uploadLocationImages(
                   error
                 );
               }
+            }
+
+            if (existingVariantAssetIds.length > 0) {
+              let detachedVariantsCount = 0;
+
+              for (const variantAssetId of existingVariantAssetIds) {
+                try {
+                  await payloadClient.detachMediaAssetFromMediaSet(variantAssetId);
+                  detachedVariantsCount++;
+                } catch (error) {
+                  console.warn(
+                    `⚠️  Failed to detach existing variant media asset ${variantAssetId} from media-set ${mediaSetId}:`,
+                    error
+                  );
+                }
+              }
+
+              console.log(
+                `✅ [MEDIA-SET] Detached ${detachedVariantsCount}/${existingVariantAssetIds.length} existing variants from media-set ${mediaSetId}`
+              );
             }
           } else {
             // Media-set doesn't exist, create it
@@ -107,7 +137,7 @@ export async function uploadLocationImages(
 
           console.log(`✅ [MEDIA-SET] Media-set ready: ${mediaSetId}`);
 
-          // ⭐ STEP 2: Upload variants ONLY if this is a new media-set
+          // ⭐ STEP 2: Upload variants for new media-sets and refreshed existing media-sets
           const variantOrder: ImageVariantType[] = [
             'thumbnail',
             'square',
@@ -131,10 +161,11 @@ export async function uploadLocationImages(
               try {
                 const imageBuffer = await imageStorage.readImage(variant.path);
 
-                // Generate filename: {sanitized-source-name}_{variantType}.{extension}
+                // Generate filename: {sanitized-source-name}_{imageset-id}_{variantType}.{extension}
                 const sanitizedName = sanitizeLocationName(location.source.name);
                 const extension = getFileExtension(variant.path);
-                const filename = `${sanitizedName}_${variantType}.${extension}`;
+                const imageSetToken = toSafeFileToken(imageSet.id, "imageset");
+                const filename = `${sanitizedName}_${imageSetToken}_${variantType}.${extension}`;
 
                 console.log(`🖼️  [VARIANT] Uploading ${variantType} for media-set ${mediaSetId}`);
 
@@ -165,19 +196,18 @@ export async function uploadLocationImages(
                 // Continue with remaining variants (graceful degradation)
               }
             }
-          } else {
-            // Media-set already exists, variants already uploaded in previous sync
-            console.log(`⏭️  [MEDIA-SET] Skipping variant uploads (already synced previously)`);
           }
 
           // ⭐ STEP 3: Add media-set ID to gallery
           if (shouldUploadVariants && uploadedVariantsCount === 0) {
-            // New media-set but no variants uploaded (error case)
-            console.warn(`⚠️  No variants were uploaded for new ImageSet ${imageSet.id}, skipping media-set`);
+            console.warn(`⚠️  No variants were uploaded for ImageSet ${imageSet.id}, skipping media-set`);
           } else {
-            // Add to gallery: either new media-set with variants, or existing media-set (re-sync)
             galleryImageIds.push(mediaSetId);
-            if (shouldUploadVariants) {
+            if (existingMediaSetId) {
+              console.log(
+                `✅ [MEDIA-SET] Added refreshed media-set ${mediaSetId} to gallery (${uploadedVariantsCount}/${variantOrder.length} variants uploaded)`
+              );
+            } else if (shouldUploadVariants) {
               console.log(
                 `✅ [MEDIA-SET] Added new media-set ${mediaSetId} to gallery (${uploadedVariantsCount}/${variantOrder.length} variants uploaded)`
               );
@@ -204,10 +234,12 @@ export async function uploadLocationImages(
           // Step 1: Upload ONLY first image as preview
           const imageBuffer = await imageStorage.readImage(previewImagePath);
 
-          // Generate filename: {sanitized-source-name}_instagram.{extension}
+          // Generate filename: {sanitized-source-name}_instagram_{post-token}.{extension}
           const sanitizedName = sanitizeLocationName(location.source.name);
           const extension = getFileExtension(previewImagePath);
-          const filename = `${sanitizedName}_instagram.${extension}`;
+          const instagramPostToken =
+            extractInstagramShortcode(embed.url) ?? toSafeFileToken(embed.id, "post");
+          const filename = `${sanitizedName}_instagram_${instagramPostToken}.${extension}`;
 
           const altText = `Instagram post by ${embed.username} at ${location.title || location.source.name}`;
 
@@ -297,4 +329,31 @@ function createInstagramPostTitle(username: string, location: LocationResponse):
   const locationName = location.title || location.source.name;
   const cleanUsername = username.replace(/^@/, "");
   return `@${cleanUsername} at ${locationName}`;
+}
+
+function toSafeFileToken(value: string | number | null | undefined, fallback: string): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  const normalized = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || fallback;
+}
+
+function extractInstagramShortcode(url: string | null | undefined): string | null {
+  if (!url) {
+    return null;
+  }
+
+  const match = url.match(/\/p\/([^/?#]+)/i);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  return toSafeFileToken(match[1], "post");
 }

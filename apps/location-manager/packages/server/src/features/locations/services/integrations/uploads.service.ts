@@ -80,7 +80,11 @@ export class UploadsService {
       const altText = await this.altTextApi.generateAltText(imageBuffer, filename, format);
       return altText;
     } catch (error) {
-      console.warn(`Failed to generate alt text for image ${filename}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `[AltText][Vertex] Failed to generate preview alt text`,
+        { filename, format, error: errorMessage }
+      );
       throw error;
     }
   }
@@ -187,15 +191,14 @@ export class UploadsService {
       finalAltText = altText;
     } else {
       // Generate alt text automatically
-      try {
-        const sourceImageBuffer = await Bun.file(sourceFilePath).arrayBuffer();
-        // Extract format from filename for content-type detection
-        const fileExtension = this.getFileExtension(sourceFileName).toLowerCase();
-        finalAltText = await this.altTextApi.generateAltText(Buffer.from(sourceImageBuffer), sourceFileName, fileExtension);
-      } catch (error) {
-        console.warn(`Failed to generate alt text for source image ${sourceFileName}:`, error);
-        // Continue without alt text
-      }
+      const sourceImageBuffer = await Bun.file(sourceFilePath).arrayBuffer();
+      // Extract format from filename for content-type detection
+      const fileExtension = this.getFileExtension(sourceFileName).toLowerCase();
+      finalAltText = await this.generateAltTextOptional(
+        Buffer.from(sourceImageBuffer),
+        sourceFileName,
+        fileExtension
+      );
     }
 
     // 5. Extract source metadata
@@ -297,6 +300,23 @@ export class UploadsService {
   private getFileExtension(filename: string): string {
     const parts = filename.split('.');
     return parts[parts.length - 1] || 'jpg';
+  }
+
+  private async generateAltTextOptional(
+    imageBuffer: Buffer,
+    filename: string,
+    format?: string
+  ): Promise<string> {
+    try {
+      return await this.altTextApi.generateAltText(imageBuffer, filename, format);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `[AltText][Vertex] Failed to generate source alt text during upload; continuing without alt text`,
+        { filename, format, error: errorMessage }
+      );
+      return "";
+    }
   }
 
   /**

@@ -16,15 +16,15 @@ try {
   console.error('   Error:', error.message);
 
   if (error.message.includes('Connection refused')) {
-    console.error('   💡 Make sure to run: pnpm run dev:python');
+    console.error('   💡 Make sure to run: pnpm run dev');
   } else if (error.message.includes('Empty response')) {
     console.error('   💡 Server responded but with empty data');
   }
 
   console.error('\n🔧 Troubleshooting:');
-  console.error('   1. Start Python service: pnpm run dev:python');
+  console.error('   1. Start Python service: pnpm run dev');
   console.error('   2. Check if port 8642 is available: lsof -i :8642');
-  console.error('   3. Verify dependencies: pnpm run install-deps');
+  console.error('   3. Verify dependencies: pnpm run py:install');
 
   process.exit(1);
 }

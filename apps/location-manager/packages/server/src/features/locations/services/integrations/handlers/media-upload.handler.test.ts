@@ -4,18 +4,23 @@ import { uploadLocationImages } from "./media-upload.handler";
 
 describe("uploadLocationImages", () => {
   test("uses resolved locationRef for uploads and instagram previews", async () => {
-    const uploadCalls: Array<{ locationRef?: string; photographerCredit?: string }> = [];
+    const uploadCalls: Array<{
+      filename: string;
+      locationRef?: string;
+      photographerCredit?: string;
+    }> = [];
 
     const payloadClient = {
       findMediaSetByExternalRef: async () => null,
       createMediaSet: async () => "media-set-1",
       uploadImage: async (
         _buffer: Buffer,
-        _filename: string,
+        filename: string,
         _altText: string,
         options?: { locationRef?: string; photographerCredit?: string }
       ) => {
         uploadCalls.push({
+          filename,
           locationRef: options?.locationRef,
           photographerCredit: options?.photographerCredit,
         });
@@ -91,14 +96,21 @@ describe("uploadLocationImages", () => {
     expect(uploadCalls).toHaveLength(2);
     expect(uploadCalls[0]?.locationRef).toBe("987");
     expect(uploadCalls[0]?.photographerCredit).toBe("Test Credit");
+    expect(uploadCalls[0]?.filename).toContain("imgset-1_thumbnail.webp");
     expect(uploadCalls[1]?.locationRef).toBe("987");
     expect(uploadCalls[1]?.photographerCredit).toBe("@testuser");
+    expect(uploadCalls[1]?.filename).toContain("instagram_test.webp");
   });
 
-  test("backfills locationRef for existing media-set variants", async () => {
-    const uploadedVariantCalls: Array<{ locationRef?: string; photographerCredit?: string }> = [];
+  test("refreshes existing media-set variants and backfills locationRef", async () => {
+    const uploadedVariantCalls: Array<{
+      filename: string;
+      locationRef?: string;
+      photographerCredit?: string;
+    }> = [];
     const mediaSetLocationRefCalls: Array<{ mediaSetId: string; locationRef: string }> = [];
     const mediaAssetLocationRefCalls: Array<{ mediaAssetId: string; locationRef: string }> = [];
+    const detachedVariantCalls: string[] = [];
 
     const payloadClient = {
       findMediaSetByExternalRef: async () => "media-set-existing",
@@ -110,13 +122,17 @@ describe("uploadLocationImages", () => {
       updateMediaAssetLocationRef: async (mediaAssetId: string, locationRef: string) => {
         mediaAssetLocationRefCalls.push({ mediaAssetId, locationRef });
       },
+      detachMediaAssetFromMediaSet: async (mediaAssetId: string) => {
+        detachedVariantCalls.push(mediaAssetId);
+      },
       uploadImage: async (
         _buffer: Buffer,
-        _filename: string,
+        filename: string,
         _altText: string,
         options?: { locationRef?: string; photographerCredit?: string }
       ) => {
         uploadedVariantCalls.push({
+          filename,
           locationRef: options?.locationRef,
           photographerCredit: options?.photographerCredit,
         });
@@ -179,7 +195,12 @@ describe("uploadLocationImages", () => {
 
     expect(result.galleryImageIds).toEqual(["media-set-existing"]);
     expect(result.instagramPostIds).toEqual([]);
-    expect(uploadedVariantCalls).toHaveLength(0);
+    expect(uploadedVariantCalls).toHaveLength(1);
+    expect(uploadedVariantCalls[0]).toEqual({
+      filename: "existing-sync-location_imgset-existing_thumbnail.webp",
+      locationRef: "654",
+      photographerCredit: "Existing Credit",
+    });
     expect(mediaSetLocationRefCalls).toEqual([
       { mediaSetId: "media-set-existing", locationRef: "654" },
     ]);
@@ -187,6 +208,7 @@ describe("uploadLocationImages", () => {
       { mediaAssetId: "asset-a", locationRef: "654" },
       { mediaAssetId: "asset-b", locationRef: "654" },
     ]);
+    expect(detachedVariantCalls).toEqual(["asset-a", "asset-b"]);
   });
 
   test("fails sync when an image set is missing photographer credit", async () => {

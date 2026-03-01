@@ -55,6 +55,8 @@ export interface UpdateMapsRequest {
   name?: string;
   address?: string;
   title?: string;
+  lat?: number | null;
+  lng?: number | null;
   type?: string;
   locationKey?: string;
   district?: string | null;

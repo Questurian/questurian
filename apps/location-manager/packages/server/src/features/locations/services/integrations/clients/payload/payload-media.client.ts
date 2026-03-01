@@ -30,7 +30,7 @@ export class PayloadMediaClient {
     const token = await this.authClient.ensureAuthenticated();
 
     const formData = new FormData();
-    const blob = new Blob([fileBuffer.buffer], { type: this.getMimeType(filename) });
+    const blob = new Blob([fileBuffer], { type: this.getMimeType(filename) });
     formData.append("file", blob, filename);
 
     const payload: Record<string, string | number> = {};
@@ -142,6 +142,36 @@ export class PayloadMediaClient {
     console.log(
       `✓ Updated media asset ${mediaAssetId} with locationRef ${parsedLocationRef}`
     );
+  }
+
+  async detachImageFromMediaSet(mediaAssetId: string): Promise<void> {
+    if (!this.authClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const token = await this.authClient.ensureAuthenticated();
+    const apiUrl = this.authClient.getApiUrl();
+
+    const response = await fetch(`${apiUrl}/api/media-assets/${mediaAssetId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `JWT ${token}`,
+      },
+      body: JSON.stringify({
+        mediaSet: null,
+        variant: null,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Payload media asset detach failed (${mediaAssetId}): ${response.status} - ${errorText}`
+      );
+    }
+
+    console.log(`✓ Detached media asset ${mediaAssetId} from media-set`);
   }
 
   private getMimeType(filename: string): string {

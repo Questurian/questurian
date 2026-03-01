@@ -51,6 +51,7 @@ export function AddUploadFilesForm({
     fileIndex: number | null;
     aiGeneratedText: string;
   }>({ isOpen: false, fileIndex: null, aiGeneratedText: '' });
+  const [altTextGenerationError, setAltTextGenerationError] = useState<string | null>(null);
   const [confirmedAltTexts, setConfirmedAltTexts] = useState<(string | undefined)[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +74,7 @@ export function AddUploadFilesForm({
 
   const { mutate: generateAltText, isPending: isGeneratingAltText } = useGenerateAltText({
     onSuccess: (data) => {
+      setAltTextGenerationError(null);
       if (altTextModalState.fileIndex !== null) {
         setAltTextModalState((prev) => ({
           ...prev,
@@ -82,6 +84,9 @@ export function AddUploadFilesForm({
     },
     onError: (error) => {
       console.warn('Failed to generate alt text:', error);
+      setAltTextGenerationError('AI alt text unavailable. Enter alt text manually.');
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast('AI alt text unavailable. Enter alt text manually.', centerPosition);
       if (altTextModalState.fileIndex !== null) {
         setAltTextModalState((prev) => ({
           ...prev,
@@ -121,6 +126,7 @@ export function AddUploadFilesForm({
       fileIndex: startIndex,
       aiGeneratedText: '',
     });
+    setAltTextGenerationError(null);
 
     if (fileArray.length > 0) {
       generateAltText(fileArray[0]);
@@ -150,6 +156,7 @@ export function AddUploadFilesForm({
     setConfirmedAltTexts([]);
     setCropModalState({ isOpen: false, fileIndex: null });
     setAltTextModalState({ isOpen: false, fileIndex: null, aiGeneratedText: '' });
+    setAltTextGenerationError(null);
     form.reset();
 
     const preferredCredit = location?.title || defaultPhotographerCredit || '';
@@ -236,6 +243,7 @@ export function AddUploadFilesForm({
     });
 
     setAltTextModalState({ isOpen: false, fileIndex: null, aiGeneratedText: '' });
+    setAltTextGenerationError(null);
     setCropModalState({ isOpen: true, fileIndex: altTextModalState.fileIndex });
   }
 
@@ -244,6 +252,7 @@ export function AddUploadFilesForm({
       handleRemoveFile(altTextModalState.fileIndex);
     }
     setAltTextModalState({ isOpen: false, fileIndex: null, aiGeneratedText: '' });
+    setAltTextGenerationError(null);
   }
 
   function areAllFilesCropped(): boolean {
@@ -387,6 +396,7 @@ export function AddUploadFilesForm({
           onConfirm={handleAltTextConfirm}
           imageFile={selectedFiles[altTextModalState.fileIndex]}
           aiGeneratedAltText={altTextModalState.aiGeneratedText}
+          generationError={altTextGenerationError || undefined}
           isLoading={isGeneratingAltText}
         />
       )}

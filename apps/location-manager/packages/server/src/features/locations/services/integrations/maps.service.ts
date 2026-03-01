@@ -732,6 +732,8 @@ export class MapsService {
       ...(updates.name !== undefined && { name: updates.name }),
       ...(updates.address !== undefined && { address: updates.address }),
       ...(updates.title !== undefined && { title: updates.title }),
+      ...(updates.lat !== undefined && { lat: updates.lat }),
+      ...(updates.lng !== undefined && { lng: updates.lng }),
       ...(updates.type !== undefined && { type: updates.type }),
       ...(updates.locationKey !== undefined && { locationKey: updates.locationKey }),
       ...(updates.district !== undefined && { district: updates.district }),

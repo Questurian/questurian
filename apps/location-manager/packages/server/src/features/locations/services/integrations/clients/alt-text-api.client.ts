@@ -41,7 +41,9 @@ export class AltTextApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Alt text generation failed: ${response.statusText}`);
+      const errorDetail = (await response.text().catch(() => '')).trim();
+      const errorMessage = errorDetail || response.statusText;
+      throw new Error(`Alt text generation failed (${response.status}): ${errorMessage}`);
     }
 
     const result = await response.json() as { alt: string };

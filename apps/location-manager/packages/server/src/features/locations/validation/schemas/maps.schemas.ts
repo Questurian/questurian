@@ -147,6 +147,8 @@ export const patchMapsSchema = z.object({
   name: z.string().trim().min(1).optional(),
   address: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
   category: z.never().optional(),
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   locationKey: z
@@ -194,8 +196,6 @@ export const patchMapsSchema = z.object({
   // Reject immutable fields - these should not be present in request body
   id: z.never().optional(),
   url: z.never().optional(),
-  lat: z.never().optional(),
-  lng: z.never().optional(),
   created_at: z.never().optional(),
   instagram_embeds: z.never().optional(),
   uploads: z.never().optional(),
@@ -209,6 +209,8 @@ export const patchMapsSchema = z.object({
   return data.title !== undefined ||
          data.name !== undefined ||
          data.address !== undefined ||
+         data.lat !== undefined ||
+         data.lng !== undefined ||
          data.type !== undefined ||
          data.locationKey !== undefined ||
          data.district !== undefined ||

@@ -76,6 +76,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
         { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
         {
+          key: "coordinates",
+          label: "Coordinates",
+          present: locationDetail.coordinates?.lat != null && locationDetail.coordinates?.lng != null,
+        },
+        {
           key: "nightlife.clubType",
           label: "Club Type",
           present: Boolean(nightlifeDetails.clubType || locationDetail.type?.trim()),
@@ -126,6 +131,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "category", label: "Category", present: Boolean(locationDetail.category) },
         { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
         { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
+        {
+          key: "coordinates",
+          label: "Coordinates",
+          present: locationDetail.coordinates?.lat != null && locationDetail.coordinates?.lng != null,
+        },
         {
           key: "accommodations.type",
           label: "Type",
@@ -243,6 +253,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "locationKey", label: "Location Key", present: Boolean(locationDetail.locationKey?.trim()) },
         { key: "district", label: "District", present: Boolean(locationDetail.district?.trim()) },
         {
+          key: "coordinates",
+          label: "Coordinates",
+          present: locationDetail.coordinates?.lat != null && locationDetail.coordinates?.lng != null,
+        },
+        {
           key: "attractions.type",
           label: "Type",
           present: Boolean(locationDetail.type?.trim() || attractionsDetails.attractionType),
@@ -305,6 +320,11 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
           key: "district",
           label: "District",
           present: Boolean(locationDetail.district?.trim() || asString(keyLocationsDetails?.neighborhood)),
+        },
+        {
+          key: "coordinates",
+          label: "Coordinates",
+          present: locationDetail.coordinates?.lat != null && locationDetail.coordinates?.lng != null,
         },
         {
           key: "phone",

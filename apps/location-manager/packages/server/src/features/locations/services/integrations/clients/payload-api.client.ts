@@ -83,6 +83,10 @@ export class PayloadApiClient {
     return await this.mediaClient.updateImageLocationRef(mediaAssetId, locationRef);
   }
 
+  async detachMediaAssetFromMediaSet(mediaAssetId: string): Promise<void> {
+    return await this.mediaClient.detachImageFromMediaSet(mediaAssetId);
+  }
+
   async getLocationRefByKey(locationKey: string): Promise<string | null> {
     return await this.locationsClient.getLocationRefByKey(locationKey);
   }

@@ -73,35 +73,11 @@ export const Dining: CollectionConfig = {
           fields: [
             {
               name: 'type',
-              type: 'select',
-              options: [
-                { label: 'Restaurant', value: 'restaurant' },
-                { label: 'Fast Food', value: 'fast-food' },
-                { label: 'Food Truck', value: 'food-truck' },
-                { label: 'Cafe', value: 'cafe' },
-                { label: 'Bar', value: 'bar' },
-                { label: 'Pub', value: 'pub' },
-                { label: 'Rooftop Bar', value: 'rooftop-bar' },
-                { label: 'Street Food', value: 'street-food' },
-                { label: 'Brewery', value: 'brewery' },
-                { label: 'Winery', value: 'winery' },
-                { label: 'Seafood', value: 'seafood' },
-                { label: 'Italian', value: 'italian' },
-                { label: 'American', value: 'american' },
-                { label: 'Wine Bar', value: 'wine-bar' },
-                { label: 'Cocktail Bar', value: 'cocktail-bar' },
-                { label: 'Dive Bar', value: 'dive-bar' },
-                { label: 'Buffet', value: 'buffet' },
-                { label: 'Bakery', value: 'bakery' },
-                { label: 'Dessert', value: 'dessert' },
-                { label: 'Ice Cream', value: 'ice-cream' },
-                { label: 'Coffee Shop', value: 'coffee-shop' },
-                { label: 'Tea Shop', value: 'tea-shop' },
-                { label: 'Juice Bar', value: 'juice-bar' },
-                { label: 'Smoothie Bar', value: 'smoothie-bar' },
-                { label: 'Pizza', value: 'pizza' },
-              ],
-              admin: { description: 'Type of establishment' },
+              type: 'text',
+              admin: {
+                description:
+                  'Type of establishment. Free text to mirror values coming from Location Manager.',
+              },
             },
             {
               name: 'priceLevel',
@@ -125,7 +101,8 @@ export const Dining: CollectionConfig = {
               name: 'cuisines',
               type: 'json',
               admin: {
-                description: 'String[] cuisines',
+                description:
+                  'Cuisine tags from Location Manager (stored as String[] JSON, accepts new values without enum restrictions).',
               },
             },
             {

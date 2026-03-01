@@ -1,8 +1,10 @@
 import { MEDIA_VARIANT_KEYS } from '@/features/media/constants'
 
 type MediaAssetLike = {
+  id?: string | number
   url?: string
   alt_text?: string
+  updatedAt?: string
 }
 
 type MediaSetLike = {

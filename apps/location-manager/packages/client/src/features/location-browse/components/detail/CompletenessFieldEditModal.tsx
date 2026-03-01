@@ -25,7 +25,7 @@ import { useUpdateLocation } from "@client/shared/services/api/hooks/useUpdateLo
 import { useToast } from "@client/shared/hooks/useToast";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
 import { getIdealForGroups } from "@shared/types/location-ideal-for";
-import { Plus, Trash2, X } from "lucide-react";
+import { Copy, Plus, Trash2, X } from "lucide-react";
 import { isValidLocationKey } from "@client/shared/lib/taxonomy-location";
 import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
 import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy";
@@ -174,6 +174,13 @@ function buildOperationHoursJson(dayEntries: DayEntry[]): string {
   return JSON.stringify(data, null, 2);
 }
 
+function parseCoordinateInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function getInitialValue(field: FieldDef, locationDetail: LocationResponse): string {
   const contact = locationDetail.contact || {};
   const source = locationDetail.source || {};
@@ -194,7 +201,7 @@ function getInitialValue(field: FieldDef, locationDetail: LocationResponse): str
     case "district":
       return locationDetail.district?.trim() ?? "";
     case "coordinates":
-      return locationDetail.placeId?.trim() ?? "";
+      return "";
     case "ianaTimeId":
       return locationDetail.ianaTimeId?.trim() ?? "";
     case "countryCode":
@@ -263,7 +270,7 @@ function buildUpdatePayload(
     case "district":
       return { district: trimmed || null };
     case "coordinates":
-      return { placeId: trimmed || null };
+      return null;
     case "ianaTimeId":
       return { ianaTimeId: trimmed || null };
     case "countryCode":
@@ -331,6 +338,10 @@ export function CompletenessFieldEditModal({
   const [taxonomyDistrict, setTaxonomyDistrict] = useState(
     locationDetail.district?.trim() ?? ""
   );
+  const [coordinateDraft, setCoordinateDraft] = useState({
+    lat: locationDetail.coordinates?.lat != null ? String(locationDetail.coordinates.lat) : "",
+    lng: locationDetail.coordinates?.lng != null ? String(locationDetail.coordinates.lng) : "",
+  });
   const [dayEntries, setDayEntries] = useState<DayEntry[]>(() =>
     DAYS.map((day) => ({ day, closed: true, slots: [] }))
   );
@@ -410,6 +421,23 @@ export function CompletenessFieldEditModal({
     });
   };
 
+  const copyText = async (text: string, label: string) => {
+    const trimmed = text.trim();
+    const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+    if (!trimmed) {
+      showToast(`${label} is empty`, centerPosition);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(trimmed);
+      showToast(`${label} copied`, centerPosition);
+    } catch {
+      showToast("Failed to copy value", centerPosition);
+    }
+  };
+
   const handleSave = () => {
     if (field.key === "media") {
       onOpenChange(false);
@@ -432,6 +460,49 @@ export function CompletenessFieldEditModal({
           onError: (err) => {
             const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
             showToast(err.message || "Failed to save hours", centerPosition);
+          },
+        }
+      );
+      return;
+    }
+
+    if (field.key === "coordinates") {
+      const lat = parseCoordinateInput(coordinateDraft.lat);
+      const lng = parseCoordinateInput(coordinateDraft.lng);
+
+      if (lat == null || lng == null) {
+        const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        showToast("Latitude and longitude are required", centerPosition);
+        return;
+      }
+
+      if (lat < -90 || lat > 90) {
+        const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        showToast("Latitude must be between -90 and 90", centerPosition);
+        return;
+      }
+
+      if (lng < -180 || lng > 180) {
+        const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        showToast("Longitude must be between -180 and 180", centerPosition);
+        return;
+      }
+
+      updateLocation(
+        {
+          category: locationDetail.category,
+          id: locationDetail.id,
+          data: { lat, lng },
+        },
+        {
+          onSuccess: () => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast("Coordinates saved", centerPosition);
+            onOpenChange(false);
+          },
+          onError: (err) => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast(err.message || "Failed to save coordinates", centerPosition);
           },
         }
       );
@@ -721,6 +792,80 @@ export function CompletenessFieldEditModal({
             className="font-mono text-xs"
           />
         );
+      case "coordinates":
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-coordinates-lat">Latitude</Label>
+                <Input
+                  id="edit-coordinates-lat"
+                  type="number"
+                  step="any"
+                  value={coordinateDraft.lat}
+                  onChange={(e) =>
+                    setCoordinateDraft((prev) => ({ ...prev, lat: e.target.value }))
+                  }
+                  placeholder="-12.0464"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-coordinates-lng">Longitude</Label>
+                <Input
+                  id="edit-coordinates-lng"
+                  type="number"
+                  step="any"
+                  value={coordinateDraft.lng}
+                  onChange={(e) =>
+                    setCoordinateDraft((prev) => ({ ...prev, lng: e.target.value }))
+                  }
+                  placeholder="-77.0428"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() => copyText(coordinateDraft.lat, "Latitude")}
+                disabled={!coordinateDraft.lat.trim()}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Lat
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() => copyText(coordinateDraft.lng, "Longitude")}
+                disabled={!coordinateDraft.lng.trim()}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Lng
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() =>
+                  copyText(
+                    `${coordinateDraft.lat.trim()}, ${coordinateDraft.lng.trim()}`,
+                    "Coordinates"
+                  )
+                }
+                disabled={!coordinateDraft.lat.trim() || !coordinateDraft.lng.trim()}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Both
+              </Button>
+            </div>
+          </div>
+        );
       case "ianaTimeId":
         return (
           <Select value={value || undefined} onValueChange={setValue}>
@@ -961,11 +1106,22 @@ export function CompletenessFieldEditModal({
   };
 
   const payload = buildUpdatePayload(field.key, value);
+  const parsedLat = parseCoordinateInput(coordinateDraft.lat);
+  const parsedLng = parseCoordinateInput(coordinateDraft.lng);
+  const hasValidCoordinates =
+    parsedLat != null &&
+    parsedLng != null &&
+    parsedLat >= -90 &&
+    parsedLat <= 90 &&
+    parsedLng >= -180 &&
+    parsedLng <= 180;
   const canSave =
     field.key === "media"
       ? true
       : field.key === "contactUrl"
         ? Boolean(locationDetail.source?.name?.trim() && locationDetail.source?.address?.trim())
+        : field.key === "coordinates"
+          ? hasValidCoordinates
         : field.key === "locationKey" || field.key === "district"
           ? taxonomyLocationKey.trim().length === 0 || isValidLocationKey(taxonomyLocationKey.trim())
         : field.key === "cuisines"
@@ -989,6 +1145,8 @@ export function CompletenessFieldEditModal({
           ? "Use the builder to set country, city, and barrio/district. New taxonomy keys save as approved."
         : field.key === "operationHours"
           ? "Set opening hours for each day. Use Closed or add one or more time ranges."
+        : field.key === "coordinates"
+          ? "Use decimal latitude/longitude values. Latitude: -90 to 90, longitude: -180 to 180."
         : field.key === "slug"
           ? "Slug is system-managed in this flow. Update related core fields to generate it."
           : field.present
@@ -1011,7 +1169,7 @@ export function CompletenessFieldEditModal({
             <p>Source Name: {locationDetail.source?.name || "Missing"}</p>
             <p>Source Address: {locationDetail.source?.address || "Missing"}</p>
           </div>
-        ) : field.key === "operationHours" || field.key === "locationKey" || field.key === "district" ? (
+        ) : field.key === "operationHours" || field.key === "locationKey" || field.key === "district" || field.key === "coordinates" ? (
           <div className="space-y-4 py-2">
             {renderInput()}
           </div>

@@ -200,7 +200,11 @@ export async function postGenerateAltText(c: Context) {
 
     return c.json(successResponse({ altText }));
   } catch (error) {
-    console.error("Failed to generate alt text:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[AltText][Vertex] Failed to generate preview alt text", {
+      filename: imageFile.name,
+      error: errorMessage,
+    });
     throw new BadRequestError("Failed to generate alt text");
   }
 }
