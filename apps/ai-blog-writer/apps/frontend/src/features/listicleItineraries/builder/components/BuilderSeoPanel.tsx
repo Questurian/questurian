@@ -183,7 +183,6 @@ export function BuilderSeoPanel({
             <div className="stl-seo-input-wrap">
               <input
                 className="stl-seo-input-with-ai"
-                placeholder="https://example.com/article"
                 value={draft.seoSection.openGraph.url}
                 onChange={(event) =>
                   updateSeo((current) => ({
