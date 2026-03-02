@@ -294,7 +294,12 @@ export function BuilderSeoPanel({
           <div className="stl-seo-group-header">
             <div className="stl-seo-group-copy">
               <h3>Structured Data</h3>
-              <p>Optional JSON-LD object to help search engines classify this page.</p>
+              <p>JSON-LD object to help search engines classify this page.</p>
+              {!draft.seoSection.openGraph.url.trim() ? (
+                <p className="stl-legacy-note">
+                  Slug-based URL generation is pending; schema URL fields are intentionally omitted for now.
+                </p>
+              ) : null}
             </div>
             {renderAiButton('structuredData')}
           </div>

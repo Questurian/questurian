@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
@@ -27,6 +27,10 @@ import {
   parseSeoAiPatch,
 } from '../builder/services/seo-ai.service'
 import type { SeoAiTarget } from '../builder/services/seo-ai.service'
+import {
+  buildSingleTypeListicleStructuredDataTemplate,
+  serializeStructuredDataTemplate,
+} from '../builder/services/structured-data-template.service'
 import { generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { saveDraft } from '../storage'
 import '../styles.css'
@@ -50,6 +54,7 @@ export default function SingleTypeListicleBuilderPage() {
   const [result, setResult] = useState<string | null>(null)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
+  const lastAutoStructuredDataRef = useRef<string>('')
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -96,6 +101,51 @@ export default function SingleTypeListicleBuilderPage() {
   })
 
   const progress = useBuilderProgress(draft)
+  const isStep1Locked = Boolean(draft?.step1_complete && !draft?.in_update_mode)
+  const isStep2Locked = Boolean(draft?.step2_complete && !draft?.step2_in_update_mode)
+  const isStep3Locked = Boolean(draft?.step3_complete && !draft?.step3_in_update_mode)
+  const isStep4Ready = isStep1Locked && isStep2Locked && isStep3Locked
+
+  useEffect(() => {
+    if (!draft || !isStep4Ready) return
+
+    const nextStructuredData = serializeStructuredDataTemplate(
+      buildSingleTypeListicleStructuredDataTemplate({
+        draft,
+        relatedItems,
+      }),
+    )
+
+    setDraft((current) => {
+      if (!current) return current
+
+      const existingStructuredData = current.seoSection.structuredData.trim()
+      const lastAutoStructuredData = lastAutoStructuredDataRef.current.trim()
+      const isAutoManaged = (
+        !existingStructuredData
+        || existingStructuredData === lastAutoStructuredData
+        || existingStructuredData === nextStructuredData
+      )
+
+      if (!isAutoManaged) {
+        return current
+      }
+
+      if (existingStructuredData === nextStructuredData) {
+        lastAutoStructuredDataRef.current = nextStructuredData
+        return current
+      }
+
+      lastAutoStructuredDataRef.current = nextStructuredData
+      return {
+        ...current,
+        seoSection: {
+          ...current.seoSection,
+          structuredData: nextStructuredData,
+        },
+      }
+    })
+  }, [draft, isStep4Ready, relatedItems, setDraft])
 
   const generateDraftTitleWithAi = useCallback(async ({ prompt }: { prompt: string }): Promise<string> => {
     if (!draft) {
@@ -131,7 +181,9 @@ export default function SingleTypeListicleBuilderPage() {
       blockContent: currentContent,
       modelName: resolveEditorAssistModelName(draft.editorModelName),
       articleTitle: getListicleAiArticleTitle(draft),
-      articleContext: input.includeWholeArticleContext ? buildListicleAiArticleContext(draft) : undefined,
+      articleContext: input.includeWholeArticleContext
+        ? buildListicleAiArticleContext(draft, relatedItems)
+        : undefined,
     })
 
     const rewrittenContent = response.rewritten_content?.trim()
@@ -140,7 +192,7 @@ export default function SingleTypeListicleBuilderPage() {
     }
 
     return rewrittenContent
-  }, [draft])
+  }, [draft, relatedItems])
 
   const saveLocalDraft = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -152,8 +204,14 @@ export default function SingleTypeListicleBuilderPage() {
   const generateSeoWithAi = useCallback(async (target: SeoAiTarget = 'all'): Promise<void> => {
     if (!draft) return
 
-    const articleContext = buildListicleAiArticleContext(draft).trim()
+    const articleContext = buildListicleAiArticleContext(draft, relatedItems).trim()
     const articleTitle = getListicleAiArticleTitle(draft).trim()
+    const structuredDataTemplate = serializeStructuredDataTemplate(
+      buildSingleTypeListicleStructuredDataTemplate({
+        draft,
+        relatedItems,
+      }),
+    )
     const hasSourceContent = Boolean(draft.title.trim() || articleContext)
     if (!hasSourceContent) {
       onError('Add article content before generating SEO with AI.')
@@ -172,6 +230,9 @@ export default function SingleTypeListicleBuilderPage() {
             : 'single-type-listicle',
           location: draft.location,
           target,
+          structuredDataTemplate: target === 'structuredData' || target === 'all'
+            ? structuredDataTemplate
+            : undefined,
         }),
         blockContent: buildSeoAiSeed(draft.seoSection),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
@@ -203,7 +264,7 @@ export default function SingleTypeListicleBuilderPage() {
     } finally {
       setIsGeneratingSeoTarget(null)
     }
-  }, [draft, onError, setDraft])
+  }, [draft, onError, relatedItems, setDraft])
 
   const generateSeoImageFromFeatured = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -263,10 +324,6 @@ export default function SingleTypeListicleBuilderPage() {
       </div>
     )
   }
-
-  const isStep1Locked = draft.step1_complete && !draft.in_update_mode
-  const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
-  const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
 
   return (
     <div className="stl-page stl-single-type-page">

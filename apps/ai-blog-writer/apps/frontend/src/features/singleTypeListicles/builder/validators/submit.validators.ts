@@ -7,6 +7,7 @@ import {
   requiresInstagram,
   requiresPhotos,
 } from '../utils/item-media.utils'
+import { validateSingleTypeListicleStructuredDataShape } from '../services/structured-data-template.service'
 import { validateStep1 } from './setup.validators'
 
 const isValidAbsoluteUrl = (value: string): boolean => {
@@ -107,7 +108,10 @@ export function isSeoCoreComplete(draft: SingleTypeListicleDraft): boolean {
   )
 }
 
-export function validateSeoSection(draft: SingleTypeListicleDraft): string[] {
+export function validateSeoSection(
+  draft: SingleTypeListicleDraft,
+  targetStatus: 'draft' | 'published' = 'draft',
+): string[] {
   const issues: string[] = []
   const { openGraph, twitterCard, structuredData } = draft.seoSection
 
@@ -123,15 +127,32 @@ export function validateSeoSection(draft: SingleTypeListicleDraft): string[] {
     issues.push('Twitter image URL must be a valid absolute URL.')
   }
 
-  if (structuredData.trim()) {
-    try {
-      const parsed = JSON.parse(structuredData)
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        issues.push('Structured Data must be a valid JSON object.')
-      }
-    } catch {
-      issues.push('Structured Data must be valid JSON.')
+  const structuredDataInput = structuredData.trim()
+  if (!structuredDataInput && targetStatus === 'published') {
+    issues.push('Structured Data is required before publishing.')
+    return issues
+  }
+
+  if (!structuredDataInput) return issues
+
+  let parsedStructuredData: Record<string, unknown> | null = null
+  try {
+    const parsed = JSON.parse(structuredDataInput)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      issues.push('Structured Data must be a valid JSON object.')
+      return issues
     }
+    parsedStructuredData = parsed as Record<string, unknown>
+  } catch {
+    issues.push('Structured Data must be valid JSON.')
+    return issues
+  }
+
+  if (targetStatus === 'published' && parsedStructuredData) {
+    issues.push(...validateSingleTypeListicleStructuredDataShape({
+      structuredData: parsedStructuredData,
+      draft,
+    }))
   }
 
   return issues
@@ -140,7 +161,7 @@ export function validateSeoSection(draft: SingleTypeListicleDraft): string[] {
 export function validateSubmit(
   draft: SingleTypeListicleDraft,
   selectedLocationRefId: number | null,
-  _targetStatus: 'draft' | 'published',
+  targetStatus: 'draft' | 'published',
   relatedItems: RelatedItemOption[],
 ): string | null {
   const stepIssues = validateStep1(draft)
@@ -162,7 +183,7 @@ export function validateSubmit(
 
   if (!selectedLocationRefId) return 'Select a valid location'
 
-  const seoIssues = validateSeoSection(draft)
+  const seoIssues = validateSeoSection(draft, targetStatus)
   if (seoIssues.length > 0) return seoIssues[0]
 
   return null

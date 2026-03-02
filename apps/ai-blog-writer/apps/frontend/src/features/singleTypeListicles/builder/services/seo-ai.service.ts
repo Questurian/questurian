@@ -219,6 +219,55 @@ function normalizeStructuredData(value: unknown): string | undefined {
   }
 }
 
+function parseStructuredDataTemplate(template: string | undefined): Record<string, unknown> | undefined {
+  const trimmed = template?.trim()
+  if (!trimmed) return undefined
+
+  try {
+    const parsed = JSON.parse(trimmed)
+    return asRecord(parsed) || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function summarizeStructuredDataTemplate(template: string | undefined): {
+  itemCount?: number
+  itemType?: string
+} {
+  const parsedTemplate = parseStructuredDataTemplate(template)
+  if (!parsedTemplate) return {}
+
+  const graph = Array.isArray(parsedTemplate['@graph']) ? parsedTemplate['@graph'] : null
+  if (!graph) return {}
+
+  const itemListNode = graph.find((node) => {
+    const record = asRecord(node)
+    if (!record) return false
+    const type = record['@type']
+    if (typeof type === 'string') return type === 'ItemList'
+    if (Array.isArray(type)) return type.includes('ItemList')
+    return false
+  })
+
+  const itemListRecord = asRecord(itemListNode)
+  if (!itemListRecord) return {}
+
+  const itemListElement = Array.isArray(itemListRecord.itemListElement)
+    ? itemListRecord.itemListElement
+    : []
+  const firstListItem = asRecord(itemListElement[0])
+  const firstItemEntity = firstListItem ? asRecord(firstListItem.item) : null
+  const itemType = firstItemEntity && typeof firstItemEntity['@type'] === 'string'
+    ? firstItemEntity['@type']
+    : undefined
+
+  return {
+    itemCount: itemListElement.length,
+    itemType,
+  }
+}
+
 function buildTargetShape(target: SeoAiTarget): string {
   switch (target) {
     case 'seoTitle':
@@ -242,7 +291,7 @@ function buildTargetShape(target: SeoAiTarget): string {
     case 'twitterCardDescription':
       return '{"twitterCard":{"description":"string"}}'
     case 'structuredData':
-      return '{"structuredData":{"@context":"https://schema.org","@type":"Article"}}'
+      return '{"structuredData":{"@context":"https://schema.org","@graph":[{"@type":"BlogPosting"},{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"Place","name":"string"}}]}]}}'
     case 'robots':
       return '{"robots":{"index":"index|noindex","follow":"follow|nofollow"}}'
     case 'robotsIndex':
@@ -251,30 +300,40 @@ function buildTargetShape(target: SeoAiTarget): string {
       return '{"robots":{"follow":"follow|nofollow"}}'
     case 'all':
     default:
-      return [
-        '{',
-        '  "seoTitle": "string",',
-        '  "metaDescription": "string",',
-        '  "openGraph": {',
-        '    "title": "string",',
-        '    "description": "string",',
-        '    "url": "https://example.com/path"',
-        '  },',
-        '  "twitterCard": {',
-        '    "card": "summary or summary_large_image",',
-        '    "title": "string",',
-        '    "description": "string"',
-        '  },',
-        '  "structuredData": {',
-        '    "@context": "https://schema.org",',
-        '    "@type": "Article"',
-        '  },',
-        '  "robots": {',
-        '    "index": "index or noindex",',
-        '    "follow": "follow or nofollow"',
-        '  }',
-        '}',
-      ].join('\n')
+      return JSON.stringify({
+        seoTitle: 'string',
+        metaDescription: 'string',
+        openGraph: {
+          title: 'string',
+          description: 'string',
+          url: 'https://example.com/path',
+        },
+        twitterCard: {
+          card: 'summary or summary_large_image',
+          title: 'string',
+          description: 'string',
+        },
+        structuredData: {
+          '@context': 'https://schema.org',
+          '@graph': [
+            { '@type': 'BlogPosting' },
+            {
+              '@type': 'ItemList',
+              itemListElement: [
+                {
+                  '@type': 'ListItem',
+                  position: 1,
+                  item: { '@type': 'Place', name: 'string' },
+                },
+              ],
+            },
+          ],
+        },
+        robots: {
+          index: 'index or noindex',
+          follow: 'follow or nofollow',
+        },
+      }, null, 2)
   }
 }
 
@@ -286,11 +345,18 @@ export function buildSeoAiPrompt(input: {
   articleType: string
   location?: string
   target?: SeoAiTarget
+  structuredDataTemplate?: string
 }): string {
   const locationText = input.location?.trim() ? input.location.trim() : 'Unknown location'
   const target = input.target || 'all'
-
-  return [
+  const shouldIncludeStructuredTemplate = (
+    (target === 'all' || target === 'structuredData')
+    && Boolean(input.structuredDataTemplate?.trim())
+  )
+  const templateSummary = shouldIncludeStructuredTemplate
+    ? summarizeStructuredDataTemplate(input.structuredDataTemplate)
+    : {}
+  const lines = [
     'Generate SEO metadata for the provided article context.',
     '',
     'Rules:',
@@ -302,15 +368,61 @@ export function buildSeoAiPrompt(input: {
     '- metaDescription should be compelling and around 150-160 characters.',
     '- openGraph and twitter should align with the article and be share-ready.',
     '- structuredData must be a JSON object (JSON-LD style).',
+    '- If structuredData is requested, preserve the existing structuredData shape from input block content.',
+    '- If structuredData is requested, only refine values and optional fields; do not remove required nodes.',
     '- robots should usually be index/follow unless context suggests otherwise.',
     '',
     `Article type: ${input.articleType}`,
     `Location: ${locationText}`,
     `Target: ${getSeoAiTargetLabel(target)}`,
+  ]
+
+  if (shouldIncludeStructuredTemplate) {
+    if (typeof templateSummary.itemCount === 'number') {
+      lines.push(`Structured data item count to preserve: ${templateSummary.itemCount}`)
+    }
+    if (templateSummary.itemType) {
+      lines.push(`Structured data item @type to preserve: ${templateSummary.itemType}`)
+    }
+    lines.push('Keep @graph with BlogPosting + ItemList.')
+  }
+
+  if (shouldIncludeStructuredTemplate && lines.join('\n').length > 1400) {
+    return [
+      'Generate SEO metadata for the provided article context.',
+      '',
+      'Rules:',
+      '- Return ONLY valid JSON (no markdown, no commentary).',
+      '- Only generate the requested target. Omit unrelated keys.',
+      '- If structuredData is requested, preserve existing structuredData shape from input block content.',
+      '- Keep @graph with BlogPosting + ItemList and preserve ordered list positions.',
+      '',
+      `Article type: ${input.articleType}`,
+      `Location: ${locationText}`,
+      `Target: ${getSeoAiTargetLabel(target)}`,
+      typeof templateSummary.itemCount === 'number'
+        ? `Structured data item count to preserve: ${templateSummary.itemCount}`
+        : '',
+      templateSummary.itemType ? `Structured data item @type to preserve: ${templateSummary.itemType}` : '',
+      '',
+      'Return this exact shape:',
+      buildTargetShape(target),
+    ].filter(Boolean).join('\n')
+  }
+
+  if (shouldIncludeStructuredTemplate) {
+    lines.push(
+      'Do not change list length unless source context requires it.',
+    )
+  }
+
+  lines.push(
     '',
     'Return this exact shape:',
     buildTargetShape(target),
-  ].join('\n')
+  )
+
+  return lines.join('\n')
 }
 
 export function buildSeoAiSeed(current: SeoSection): string {
