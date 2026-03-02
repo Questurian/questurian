@@ -12,6 +12,30 @@ export type MediaMode = 'photos' | 'instagram' | 'both'
 
 export type PayloadRichText = Record<string, unknown>
 
+export type SeoTwitterCardType = 'summary' | 'summary_large_image'
+
+export type SeoSection = {
+  seoTitle: string
+  metaDescription: string
+  openGraph: {
+    title: string
+    description: string
+    imageUrl: string
+    url: string
+  }
+  twitterCard: {
+    card: SeoTwitterCardType
+    title: string
+    description: string
+    imageUrl: string
+  }
+  structuredData: string
+  robots: {
+    index: 'index' | 'noindex'
+    follow: 'follow' | 'nofollow'
+  }
+}
+
 export type ListicleItemBlock = {
   id: string
   blockType: ListicleBlockType
@@ -22,20 +46,6 @@ export type ListicleItemBlock = {
   blurbMarkdown: string
   blurbLexical?: PayloadRichText
   blurbJsonText?: string
-}
-
-export type SeoMetadataForm = {
-  id?: number
-  metaTitle: string
-  metaDescription: string
-  keywords: string
-  ogTitle: string
-  ogDescription: string
-  ogImage: number | null
-  canonicalUrl: string
-  noIndex: boolean
-  noFollow: boolean
-  status: 'draft' | 'published'
 }
 
 export type SingleTypeListicleDraft = {
@@ -50,6 +60,10 @@ export type SingleTypeListicleDraft = {
   targetItemCount: number
   step1_complete: boolean
   in_update_mode: boolean
+  step2_complete: boolean
+  step2_in_update_mode: boolean
+  step3_complete: boolean
+  step3_in_update_mode: boolean
   header: {
     introMarkdown: string
     introLexical?: PayloadRichText
@@ -57,9 +71,7 @@ export type SingleTypeListicleDraft = {
     featuredImage: number | null
   }
   items: ListicleItemBlock[]
-  seoSection: {
-    seo: number | null
-  }
+  seoSection: SeoSection
   status: 'draft' | 'published'
   articleType: 'single-type-listicle'
   updatedAt: string
@@ -74,6 +86,10 @@ export type PayloadListicleDoc = {
   targetItemCount?: number
   step1_complete?: boolean
   in_update_mode?: boolean
+  step2_complete?: boolean
+  step2_in_update_mode?: boolean
+  step3_complete?: boolean
+  step3_in_update_mode?: boolean
   header?: {
     intro?: PayloadRichText
     featuredImage?: number | { id?: number }
@@ -88,8 +104,26 @@ export type PayloadListicleDoc = {
     blurb?: PayloadRichText
   }>
   seoSection?: {
-    seo?: number | { id?: number }
-  }
+    seoTitle?: string | null
+    metaDescription?: string | null
+    openGraph?: {
+      title?: string | null
+      description?: string | null
+      imageUrl?: string | null
+      url?: string | null
+    } | null
+    twitterCard?: {
+      card?: SeoTwitterCardType | null
+      title?: string | null
+      description?: string | null
+      imageUrl?: string | null
+    } | null
+    structuredData?: Record<string, unknown> | string | null
+    robots?: {
+      index?: 'index' | 'noindex' | null
+      follow?: 'follow' | 'nofollow' | null
+    } | null
+  } | null
   status?: 'draft' | 'published'
   articleType?: 'single-type-listicle'
   updatedAt?: string
@@ -178,11 +212,4 @@ export type RelatedItemOption = {
   instagramGallery?: Array<{
     post?: number | InstagramPostOption
   }>
-}
-
-export type SeoMetadataOption = {
-  id: number
-  metaTitle?: string
-  metaDescription?: string
-  status?: 'draft' | 'published'
 }

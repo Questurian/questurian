@@ -1,6 +1,7 @@
 import { EDITOR_ASSIST_MODEL_OPTIONS } from '../../../staging/api'
 import type { EditorAssistModelName } from '../../../staging/api'
 import type { ListicleItineraryDraft } from '../../types'
+import { isSeoCoreComplete } from '../validators/step.validators'
 
 type BuilderSidebarProps = {
   completionPercent: number
@@ -25,6 +26,11 @@ export function BuilderSidebar({
   stepIssues,
   onSubmit,
 }: BuilderSidebarProps) {
+  const seoCoreComplete = isSeoCoreComplete(draft)
+  const isStep1Locked = draft.step1_complete && !draft.in_update_mode
+  const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
+  const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
+
   return (
     <aside className="stl-builder-sidebar">
       <section className="stl-summary-card">
@@ -34,13 +40,18 @@ export function BuilderSidebar({
         </div>
         <p className="stl-summary-percent">{completionPercent}% ready</p>
         <ul className="stl-summary-list">
-          <li className={draft.step1_complete ? 'done' : ''}>
-            Setup: {draft.step1_complete ? 'Locked' : isSetupReady ? 'Ready to continue' : 'Incomplete'}
+          <li className={isStep1Locked ? 'done' : ''}>
+            Setup: {isStep1Locked ? 'Locked' : draft.in_update_mode ? 'Editing' : isSetupReady ? 'Ready to continue' : 'Incomplete'}
           </li>
-          <li className={draft.items.length > 0 ? 'done' : ''}>Items: {draft.items.length} added</li>
+          <li className={isStep2Locked ? 'done' : ''}>
+            Step 2: {isStep2Locked ? 'Locked' : draft.step2_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
+          </li>
+          <li className={isStep3Locked ? 'done' : ''}>
+            Step 3: {isStep3Locked ? 'Locked' : draft.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
+          </li>
           <li className={hasContinuousCoverage ? 'done' : ''}>Coverage: {hasContinuousCoverage ? 'Continuous' : 'Has gaps'}</li>
-          <li className={draft.seoSection.seo ? 'done' : ''}>
-            SEO relation: {draft.seoSection.seo ? `#${draft.seoSection.seo}` : 'Not selected'}
+          <li className={seoCoreComplete ? 'done' : ''}>
+            SEO core: {seoCoreComplete ? 'Complete' : 'Missing SEO title or meta description'}
           </li>
         </ul>
       </section>

@@ -1,7 +1,8 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
+import { createEmptySeoSection } from './builder/services/seo-section.service'
 import type { ListicleItineraryDraft } from './types'
 
-const STORAGE_KEY = 'listicle_itineraries_staged_v2_media'
+const STORAGE_KEY = 'listicle_itineraries_staged_v3_inline_seo'
 
 export function listDrafts(): ListicleItineraryDraft[] {
   try {
@@ -64,15 +65,17 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     itineraryEndPeriod: 'PM',
     step1_complete: false,
     in_update_mode: false,
+    step2_complete: false,
+    step2_in_update_mode: false,
+    step3_complete: false,
+    step3_in_update_mode: false,
     header: {
       introMarkdown: '',
       introJsonText: '',
       featuredImage: null,
     },
     items: [],
-    seoSection: {
-      seo: null,
-    },
+    seoSection: createEmptySeoSection(),
     status: 'draft',
     articleType: 'listicle-itinerary',
     updatedAt: new Date().toISOString(),

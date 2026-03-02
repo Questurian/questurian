@@ -43,6 +43,11 @@ type BuilderStopsPanelProps = {
     options?: { cascadeSchedule?: boolean },
   ) => void
   onStopBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
+  isLocked: boolean
+  onContinueStep3: () => void
+  onUpdateStep3: () => void
+  onSaveStep3: () => void
+  onCancelStep3Update: () => void
 }
 
 const MEDIA_MODE_OPTIONS: Array<{ value: MediaMode; label: string }> = [
@@ -61,6 +66,11 @@ export function BuilderStopsPanel({
   onRemoveItem,
   onUpdateItem,
   onStopBlurbAiRewrite,
+  isLocked,
+  onContinueStep3,
+  onUpdateStep3,
+  onSaveStep3,
+  onCancelStep3Update,
 }: BuilderStopsPanelProps) {
   return (
     <section className="stl-panel">
@@ -68,16 +78,39 @@ export function BuilderStopsPanel({
         <h2>
           <span className="stl-kicker">Step 3</span> Stops & Timeline ({draft.items.length})
         </h2>
-        <button type="button" className="stl-btn" onClick={onAddItem}>
-          Add Stop
-        </button>
+        <div className="stl-inline-actions">
+          <button type="button" className="stl-btn" onClick={onAddItem} disabled={isLocked}>
+            Add Stop
+          </button>
+          {!draft.step3_complete ? (
+            <button type="button" className="stl-btn" onClick={onContinueStep3}>
+              Continue
+            </button>
+          ) : null}
+          {draft.step3_complete && !draft.step3_in_update_mode ? (
+            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep3}>
+              Update Stops
+            </button>
+          ) : null}
+          {draft.step3_in_update_mode ? (
+            <>
+              <button type="button" className="stl-btn" onClick={onSaveStep3}>
+                Save Stops
+              </button>
+              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep3Update}>
+                Cancel
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
       <p className="stl-summary-note">Schedule assist: each stop chains from the previous stop.</p>
 
-      {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
+      <fieldset className="stl-panel-fieldset" disabled={isLocked}>
+        {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
 
-      <div className="stl-list">
-        {draft.items.map((item, index) => {
+        <div className="stl-list">
+          {draft.items.map((item, index) => {
           const relatedOptions = relatedByBlockType[item.blockType] || []
           const selectedRelatedItem = relatedOptions.find((entry) => entry.id === item.item) || null
           const availablePhotoIds = getRelatedPhotoIds(selectedRelatedItem)
@@ -353,8 +386,9 @@ export function BuilderStopsPanel({
               ) : null}
             </article>
           )
-        })}
-      </div>
+          })}
+        </div>
+      </fieldset>
     </section>
   )
 }

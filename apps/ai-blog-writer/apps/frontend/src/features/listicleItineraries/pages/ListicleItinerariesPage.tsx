@@ -19,6 +19,11 @@ function formatDate(value?: string): string {
   })
 }
 
+function isGenericPayloadError(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  return normalized === 'something went wrong.' || normalized === 'something went wrong'
+}
+
 function formatWindow(doc: PayloadItineraryDoc): string {
   if (
     typeof doc.itineraryStartHour !== 'number' ||
@@ -84,6 +89,14 @@ export default function ListicleItinerariesPage() {
     }))
   }, [itineraries])
 
+  const hasBlockingError = Boolean(
+    error
+    && !(
+      rows.length === 0
+      && isGenericPayloadError(error)
+    ),
+  )
+
   return (
     <div className="stl-page">
       <header className="stl-hero">
@@ -110,9 +123,9 @@ export default function ListicleItinerariesPage() {
         </div>
 
         {isLoading ? <p className="stl-placeholder">Loading itineraries...</p> : null}
-        {error ? <p className="stl-error">{error}</p> : null}
+        {hasBlockingError ? <p className="stl-error">{error}</p> : null}
 
-        {!isLoading && !error ? (
+        {!isLoading && !hasBlockingError ? (
           rows.length === 0 ? (
             <div className="stl-empty">
               <p>No listicle-itineraries found.</p>

@@ -2,15 +2,28 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useMemo, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
+import { createEmptySeoSection } from '../services/seo-section.service'
 import { createEmptyDraft, removeDraft } from '../../storage'
-import type { ListicleItemBlock, ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
-import { hasAnyWrittenItemData, isValidTargetItemCount, resizeItemsToTargetCount } from '../utils/item-target-count.utils'
+import type {
+  ListicleItemBlock,
+  ListicleType,
+  LocationOption,
+  RelatedItemOption,
+  SingleTypeListicleDraft,
+} from '../../types'
+import {
+  hasAnyWrittenItemData,
+  isValidTargetItemCount,
+  resizeItemsToTargetCount,
+} from '../utils/item-target-count.utils'
 import { validateStep1 } from '../validators/setup.validators'
+import { validateStep2, validateStep3 } from '../validators/submit.validators'
 
 type UseBuilderDraftActionsParams = {
   draft: SingleTypeListicleDraft | null
   setDraft: Dispatch<SetStateAction<SingleTypeListicleDraft | null>>
   locations: LocationOption[]
+  relatedItems: RelatedItemOption[]
   navigate: (to: string) => void
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
@@ -29,21 +42,48 @@ type UseBuilderDraftActionsResult = {
   handleUpdateSetup: () => void
   handleSaveSetup: () => void
   cancelUpdateSetup: () => void
-  setSeoId: (value: number | null) => void
+  handleContinueStep2: () => void
+  handleUpdateStep2: () => void
+  handleSaveStep2: () => void
+  cancelUpdateStep2: () => void
+  handleContinueStep3: () => void
+  handleUpdateStep3: () => void
+  handleSaveStep3: () => void
+  cancelUpdateStep3: () => void
   setEditorModelName: (modelName: string) => void
   handleDiscardLocalDraft: () => void
+}
+
+const hasSeoContent = (draft: SingleTypeListicleDraft): boolean => {
+  const { seoSection } = draft
+  return Boolean(
+    seoSection.seoTitle.trim()
+    || seoSection.metaDescription.trim()
+    || seoSection.openGraph.title.trim()
+    || seoSection.openGraph.description.trim()
+    || seoSection.openGraph.imageUrl.trim()
+    || seoSection.openGraph.url.trim()
+    || seoSection.twitterCard.title.trim()
+    || seoSection.twitterCard.description.trim()
+    || seoSection.twitterCard.imageUrl.trim()
+    || seoSection.structuredData.trim(),
+  )
 }
 
 export function useBuilderDraftActions({
   draft,
   setDraft,
   locations,
+  relatedItems,
   navigate,
   setSearchParams,
   onError,
   setResult,
 }: UseBuilderDraftActionsParams): UseBuilderDraftActionsResult {
-  const [setupBaseline, setSetupBaseline] = useState<{ location: string; listicleType: ListicleType | '' } | null>(null)
+  const [setupBaseline, setSetupBaseline] = useState<{
+    location: string
+    listicleType: ListicleType | ''
+  } | null>(null)
 
   const hasResettableContent = (current: SingleTypeListicleDraft): boolean => (
     current.title.trim().length > 0
@@ -52,7 +92,7 @@ export function useBuilderDraftActions({
     || current.header.featuredImage !== null
     || current.header.introMarkdown.trim().length > 0
     || (current.header.introJsonText || '').trim().length > 0
-    || current.seoSection.seo !== null
+    || hasSeoContent(current)
   )
 
   const normalizeLocationKey = (value: string): string =>
@@ -195,6 +235,10 @@ export function useBuilderDraftActions({
       step1_complete: true,
       in_update_mode: false,
       locationRef: selectedLocationRefId,
+      step2_complete: false,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
     })
     onError('')
   }
@@ -219,7 +263,6 @@ export function useBuilderDraftActions({
     }
 
     const prevType = setupBaseline?.listicleType
-
     const typeChanged = prevType && prevType !== draft.listicleType
 
     if (typeChanged) {
@@ -238,15 +281,17 @@ export function useBuilderDraftActions({
           targetItemCount: 0,
           step1_complete: false,
           in_update_mode: false,
+          step2_complete: false,
+          step2_in_update_mode: false,
+          step3_complete: false,
+          step3_in_update_mode: false,
           header: {
             introMarkdown: '',
             introJsonText: '',
             featuredImage: null,
           },
           items: [],
-          seoSection: {
-            seo: null,
-          },
+          seoSection: createEmptySeoSection(),
           status: 'draft',
           locationRef: selectedLocationRefId,
         }
@@ -260,6 +305,10 @@ export function useBuilderDraftActions({
       in_update_mode: false,
       step1_complete: true,
       locationRef: selectedLocationRefId,
+      step2_complete: false,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
     })
     setSetupBaseline(null)
     onError('')
@@ -272,16 +321,96 @@ export function useBuilderDraftActions({
     onError('')
   }
 
-  function setSeoId(value: number | null) {
-    setDraft((current) => {
-      if (!current) return current
-      return {
-        ...current,
-        seoSection: {
-          seo: value,
-        },
-      }
+  function handleContinueStep2() {
+    if (!draft) return
+
+    const issues = validateStep2(draft)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step2_complete: true,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
     })
+    onError('')
+  }
+
+  function handleUpdateStep2() {
+    if (!draft) return
+    updateDraft({ step2_in_update_mode: true })
+    onError('')
+  }
+
+  function handleSaveStep2() {
+    if (!draft) return
+
+    const issues = validateStep2(draft)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step2_complete: true,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
+    })
+    onError('')
+  }
+
+  function cancelUpdateStep2() {
+    if (!draft) return
+    updateDraft({ step2_in_update_mode: false })
+    onError('')
+  }
+
+  function handleContinueStep3() {
+    if (!draft) return
+
+    const issues = validateStep3(draft, relatedItems)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step3_complete: true,
+      step3_in_update_mode: false,
+    })
+    onError('')
+  }
+
+  function handleUpdateStep3() {
+    if (!draft) return
+    updateDraft({ step3_in_update_mode: true })
+    onError('')
+  }
+
+  function handleSaveStep3() {
+    if (!draft) return
+
+    const issues = validateStep3(draft, relatedItems)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step3_complete: true,
+      step3_in_update_mode: false,
+    })
+    onError('')
+  }
+
+  function cancelUpdateStep3() {
+    if (!draft) return
+    updateDraft({ step3_in_update_mode: false })
+    onError('')
   }
 
   function setEditorModelName(modelName: string) {
@@ -314,7 +443,14 @@ export function useBuilderDraftActions({
     handleUpdateSetup,
     handleSaveSetup,
     cancelUpdateSetup,
-    setSeoId,
+    handleContinueStep2,
+    handleUpdateStep2,
+    handleSaveStep2,
+    cancelUpdateStep2,
+    handleContinueStep3,
+    handleUpdateStep3,
+    handleSaveStep3,
+    cancelUpdateStep3,
     setEditorModelName,
     handleDiscardLocalDraft,
   }

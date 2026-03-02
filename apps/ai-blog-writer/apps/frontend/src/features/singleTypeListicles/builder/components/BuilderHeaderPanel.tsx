@@ -20,6 +20,11 @@ type BuilderHeaderPanelProps = {
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
+  isLocked: boolean
+  onContinueStep2: () => void
+  onUpdateStep2: () => void
+  onSaveStep2: () => void
+  onCancelStep2Update: () => void
 }
 
 export function BuilderHeaderPanel({
@@ -29,6 +34,11 @@ export function BuilderHeaderPanel({
   mediaAssets,
   updateHeader,
   onIntroAiRewrite,
+  isLocked,
+  onContinueStep2,
+  onUpdateStep2,
+  onSaveStep2,
+  onCancelStep2Update,
 }: BuilderHeaderPanelProps) {
   const resolvedToken = token ?? ''
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -106,66 +116,91 @@ export function BuilderHeaderPanel({
         <h2>
           <span className="stl-kicker">Step 2</span> Header
         </h2>
-      </div>
-      <div className="stl-field">
-        <span>Featured Image</span>
-        {!featuredImageId ? (
-          <button
-            type="button"
-            className="stl-picker-trigger"
-            onClick={() => setPickerOpen(true)}
-          >
-            <span className="stl-picker-trigger__preview">
-              <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
-                {triggerLabel}
-              </span>
-            </span>
-            <span className="stl-picker-trigger__caret">▼</span>
-          </button>
-        ) : (
-          <div className="stl-featured-header-preview">
-            <button
-              type="button"
-              className="stl-featured-header-preview__media"
-              onClick={() => setPickerOpen(true)}
-            >
-              {featuredImagePreviewUrl ? (
-                <img src={featuredImagePreviewUrl} alt="" />
-              ) : (
-                <div className="stl-featured-header-preview__fallback">Image selected</div>
-              )}
-              <div className="stl-featured-header-preview__overlay">
-                <p className="stl-featured-header-preview__title">{headerPreviewTitle}</p>
-              </div>
+        <div className="stl-inline-actions">
+          {!draft.step2_complete ? (
+            <button type="button" className="stl-btn" onClick={onContinueStep2}>
+              Continue
             </button>
-          </div>
-        )}
+          ) : null}
+          {draft.step2_complete && !draft.step2_in_update_mode ? (
+            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep2}>
+              Update Header
+            </button>
+          ) : null}
+          {draft.step2_in_update_mode ? (
+            <>
+              <button type="button" className="stl-btn" onClick={onSaveStep2}>
+                Save Header
+              </button>
+              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep2Update}>
+                Cancel
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
-      <label className="stl-field">
-        <span>Intro *</span>
-        <MarkdownBlockEditor
-          blockId={`${draft.draftId}_header_intro`}
-          value={draft.header.introMarkdown}
-          onChange={(nextValue) =>
-            updateHeader({
-              introMarkdown: nextValue,
-              introJsonText: '',
-            })
-          }
-          showToolbar
-          enforceHeadingStructure={false}
-          onAiRewrite={onIntroAiRewrite}
-          placeholder="Write the listicle intro..."
-          className="stl-markdown-textarea"
-          rows={6}
-        />
-      </label>
-      {!draft.header.introMarkdown.trim() && draft.header.introJsonText?.trim() ? (
-        <p className="stl-legacy-note">
-          Existing intro is stored in Payload as Lexical JSON. Editing here will replace it with markdown-converted content.
-        </p>
-      ) : null}
+      <fieldset className="stl-panel-fieldset" disabled={isLocked}>
+        <div className="stl-field">
+          <span>Featured Image</span>
+          {!featuredImageId ? (
+            <button
+              type="button"
+              className="stl-picker-trigger"
+              onClick={() => setPickerOpen(true)}
+            >
+              <span className="stl-picker-trigger__preview">
+                <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
+                  {triggerLabel}
+                </span>
+              </span>
+              <span className="stl-picker-trigger__caret">▼</span>
+            </button>
+          ) : (
+            <div className="stl-featured-header-preview">
+              <button
+                type="button"
+                className="stl-featured-header-preview__media"
+                onClick={() => setPickerOpen(true)}
+              >
+                {featuredImagePreviewUrl ? (
+                  <img src={featuredImagePreviewUrl} alt="" />
+                ) : (
+                  <div className="stl-featured-header-preview__fallback">Image selected</div>
+                )}
+                <div className="stl-featured-header-preview__overlay">
+                  <p className="stl-featured-header-preview__title">{headerPreviewTitle}</p>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <label className="stl-field">
+          <span>Intro *</span>
+          <MarkdownBlockEditor
+            blockId={`${draft.draftId}_header_intro`}
+            value={draft.header.introMarkdown}
+            onChange={(nextValue) =>
+              updateHeader({
+                introMarkdown: nextValue,
+                introJsonText: '',
+              })
+            }
+            showToolbar
+            enforceHeadingStructure={false}
+            onAiRewrite={onIntroAiRewrite}
+            placeholder="Write the listicle intro..."
+            className="stl-markdown-textarea"
+            rows={6}
+          />
+        </label>
+        {!draft.header.introMarkdown.trim() && draft.header.introJsonText?.trim() ? (
+          <p className="stl-legacy-note">
+            Existing intro is stored in Payload as Lexical JSON. Editing here will replace it with markdown-converted content.
+          </p>
+        ) : null}
+      </fieldset>
 
       <FeaturedImagePicker
         isOpen={pickerOpen}

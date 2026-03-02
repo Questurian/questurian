@@ -9,15 +9,22 @@ import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
 import { BuilderStopsPanel } from '../builder/components/BuilderStopsPanel'
-import { SeoMetadataModal } from '../builder/components/SeoMetadataModal'
 import { useBuilderAutosave } from '../builder/hooks/useBuilderAutosave'
 import { useBuilderBootstrap } from '../builder/hooks/useBuilderBootstrap'
 import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
 import { useItinerarySubmit } from '../builder/hooks/useItinerarySubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
-import { buildItineraryAiArticleContext, getItineraryAiArticleTitle } from '../builder/services/ai-rewrite.service'
-import { useSeoManager } from '../builder/hooks/useSeoManager'
+import {
+  buildItineraryAiArticleContext,
+  getItineraryAiArticleTitle,
+} from '../builder/services/ai-rewrite.service'
+import {
+  applySeoAiPatch,
+  buildSeoAiPrompt,
+  buildSeoAiSeed,
+  parseSeoAiPatch,
+} from '../builder/services/seo-ai.service'
 import { generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import '../styles.css'
 
@@ -38,6 +45,7 @@ export default function ListicleItineraryBuilderPage() {
 
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
+  const [isGeneratingSeo, setIsGeneratingSeo] = useState(false)
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -49,8 +57,6 @@ export default function ListicleItineraryBuilderPage() {
     isLoading,
     locations,
     mediaAssets,
-    seoOptions,
-    setSeoOptions,
   } = useBuilderBootstrap({
     token,
     payloadIdParam,
@@ -71,6 +77,7 @@ export default function ListicleItineraryBuilderPage() {
     draft,
     setDraft,
     locations,
+    relatedByBlockType,
     navigate,
     setSearchParams,
     onError,
@@ -86,16 +93,6 @@ export default function ListicleItineraryBuilderPage() {
     setSearchParams,
     onError,
     setResult,
-  })
-
-  const seoManager = useSeoManager({
-    token,
-    draft,
-    setDraft,
-    seoOptions,
-    setSeoOptions,
-    onError,
-    mediaAssets,
   })
 
   const progress = useBuilderProgress({ draft })
@@ -145,6 +142,58 @@ export default function ListicleItineraryBuilderPage() {
     return rewrittenContent
   }, [draft])
 
+  const generateSeoWithAi = useCallback(async (): Promise<void> => {
+    if (!draft) return
+
+    const articleContext = buildItineraryAiArticleContext(draft).trim()
+    const articleTitle = getItineraryAiArticleTitle(draft).trim()
+    const hasSourceContent = Boolean(draft.title.trim() || articleContext)
+    if (!hasSourceContent) {
+      onError('Add article content before generating SEO with AI.')
+      return
+    }
+
+    onError('')
+    setResult(null)
+    setIsGeneratingSeo(true)
+
+    try {
+      const itineraryWindow = `${draft.itineraryStartHour}:${draft.itineraryStartMinute} ${draft.itineraryStartPeriod} - ${draft.itineraryEndHour}:${draft.itineraryEndMinute} ${draft.itineraryEndPeriod}`
+      const response = await rewriteBlockWithAi({
+        prompt: buildSeoAiPrompt({
+          articleType: 'listicle-itinerary',
+          location: draft.location,
+          dayAudience: draft.dayAudience || undefined,
+          itineraryWindow,
+        }),
+        blockContent: buildSeoAiSeed(draft.seoSection),
+        modelName: resolveEditorAssistModelName(draft.editorModelName),
+        articleTitle,
+        articleContext: articleContext || undefined,
+      })
+
+      const aiText = response.rewritten_content?.trim()
+      if (!aiText) {
+        throw new Error('AI returned empty SEO content.')
+      }
+
+      const seoPatch = parseSeoAiPatch(aiText)
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          seoSection: applySeoAiPatch(current.seoSection, seoPatch),
+        }
+      })
+
+      setResult('SEO fields generated with AI (images unchanged).')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to generate SEO with AI.')
+    } finally {
+      setIsGeneratingSeo(false)
+    }
+  }, [draft, onError, setDraft])
+
   if (isLoading || !draft) {
     return (
       <div className="stl-page">
@@ -152,6 +201,10 @@ export default function ListicleItineraryBuilderPage() {
       </div>
     )
   }
+
+  const isStep1Locked = draft.step1_complete && !draft.in_update_mode
+  const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
+  const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
 
   return (
     <div className="stl-page">
@@ -173,39 +226,56 @@ export default function ListicleItineraryBuilderPage() {
             onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
-          <BuilderHeaderPanel
-            draft={draft}
-            mediaAssets={mediaAssets}
-            updateHeader={actions.updateHeader}
-            onIntroAiRewrite={rewriteDraftBlockWithAi}
-          />
+          {isStep1Locked ? (
+            <BuilderHeaderPanel
+              draft={draft}
+              mediaAssets={mediaAssets}
+              updateHeader={actions.updateHeader}
+              onIntroAiRewrite={rewriteDraftBlockWithAi}
+              isLocked={isStep2Locked}
+              onContinueStep2={actions.handleContinueStep2}
+              onUpdateStep2={actions.handleUpdateStep2}
+              onSaveStep2={actions.handleSaveStep2}
+              onCancelStep2Update={actions.cancelUpdateStep2}
+            />
+          ) : null}
 
-          <BuilderStopsPanel
-            draft={draft}
-            isLoadingRelated={isLoadingRelated}
-            relatedByBlockType={relatedByBlockType}
-            onAddItem={actions.addItem}
-            onEndHereOnLastStop={actions.endHereOnLastStop}
-            onMoveItem={actions.moveItem}
-            onRemoveItem={actions.removeItem}
-            onUpdateItem={actions.updateItem}
-            onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
-          />
+          {isStep1Locked && isStep2Locked ? (
+            <BuilderStopsPanel
+              draft={draft}
+              isLoadingRelated={isLoadingRelated}
+              relatedByBlockType={relatedByBlockType}
+              onAddItem={actions.addItem}
+              onEndHereOnLastStop={actions.endHereOnLastStop}
+              onMoveItem={actions.moveItem}
+              onRemoveItem={actions.removeItem}
+              onUpdateItem={actions.updateItem}
+              onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
+              isLocked={isStep3Locked}
+              onContinueStep3={actions.handleContinueStep3}
+              onUpdateStep3={actions.handleUpdateStep3}
+              onSaveStep3={actions.handleSaveStep3}
+              onCancelStep3Update={actions.cancelUpdateStep3}
+            />
+          ) : null}
 
-          <BuilderSeoPanel
-            draft={draft}
-            seoOptions={seoManager.seoOptions}
-            onOpenCreateSeoModal={() => void seoManager.openCreateSeoModal()}
-            onOpenEditSeoModal={() => void seoManager.openEditSeoModal()}
-            setDraft={setDraft}
-          />
+          {isStep1Locked && isStep2Locked && isStep3Locked ? (
+            <BuilderSeoPanel
+              draft={draft}
+              setDraft={setDraft}
+              onGenerateSeoWithAi={generateSeoWithAi}
+              isGeneratingSeo={isGeneratingSeo}
+            />
+          ) : null}
 
-          <BuilderPublishPanel
-            draft={draft}
-            isSaving={isSaving}
-            updateDraft={actions.updateDraft}
-            onSubmit={submit}
-          />
+          {isStep1Locked && isStep2Locked && isStep3Locked ? (
+            <BuilderPublishPanel
+              draft={draft}
+              isSaving={isSaving}
+              updateDraft={actions.updateDraft}
+              onSubmit={submit}
+            />
+          ) : null}
         </main>
 
         <BuilderSidebar
@@ -220,17 +290,6 @@ export default function ListicleItineraryBuilderPage() {
           onSubmit={submit}
         />
       </div>
-
-      <SeoMetadataModal
-        isOpen={seoManager.seoModalOpen}
-        mode={seoManager.seoModalMode}
-        form={seoManager.seoForm}
-        isSaving={seoManager.isSeoSaving}
-        mediaAssets={seoManager.mediaAssets}
-        setForm={seoManager.setSeoForm}
-        onSave={seoManager.handleSaveSeo}
-        onClose={seoManager.closeSeoModal}
-      />
     </div>
   )
 }

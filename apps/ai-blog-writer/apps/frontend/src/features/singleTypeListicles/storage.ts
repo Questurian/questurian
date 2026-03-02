@@ -1,18 +1,94 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
+import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { SingleTypeListicleDraft } from './types'
 
-const STORAGE_KEY = 'single_type_listicles_staged_v2_media'
+const STORAGE_KEY = 'single_type_listicles_staged_v3_inline_seo'
+const LEGACY_STORAGE_KEYS = ['single_type_listicles_staged_v2_media', 'single_type_listicles_staged'] as const
 
-export function listDrafts(): SingleTypeListicleDraft[] {
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+)
+
+function parseDraftArray(storageKey: string): unknown[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
+}
+
+function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicleDraft | null {
+  if (!isRecord(value)) return null
+
+  const nowIso = new Date().toISOString()
+  const fallbackDraftId = `stl_migrated_${Date.now()}_${index}`
+  const header = isRecord(value.header) ? value.header : {}
+
+  return {
+    draftId: typeof value.draftId === 'string' && value.draftId.trim() ? value.draftId : fallbackDraftId,
+    payloadId: typeof value.payloadId === 'number' ? value.payloadId : undefined,
+    editorModelName: typeof value.editorModelName === 'string'
+      ? value.editorModelName as SingleTypeListicleDraft['editorModelName']
+      : DEFAULT_EDITOR_ASSIST_MODEL,
+    title: typeof value.title === 'string' ? value.title : '',
+    location: typeof value.location === 'string' ? value.location : '',
+    locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,
+    listicleType:
+      value.listicleType === 'dining'
+      || value.listicleType === 'accommodations'
+      || value.listicleType === 'attractions'
+      || value.listicleType === 'nightlife'
+        ? value.listicleType
+        : '',
+    targetItemCount: typeof value.targetItemCount === 'number' ? value.targetItemCount : 0,
+    step1_complete: Boolean(value.step1_complete),
+    in_update_mode: Boolean(value.in_update_mode),
+    step2_complete: Boolean(value.step2_complete),
+    step2_in_update_mode: Boolean(value.step2_in_update_mode),
+    step3_complete: Boolean(value.step3_complete),
+    step3_in_update_mode: Boolean(value.step3_in_update_mode),
+    header: {
+      introMarkdown: typeof header.introMarkdown === 'string' ? header.introMarkdown : '',
+      introLexical: isRecord(header.introLexical) ? header.introLexical : undefined,
+      introJsonText: typeof header.introJsonText === 'string' ? header.introJsonText : '',
+      featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
+    },
+    items: Array.isArray(value.items) ? value.items as SingleTypeListicleDraft['items'] : [],
+    seoSection: normalizeSeoSection(value.seoSection ?? createEmptySeoSection()),
+    status: value.status === 'published' ? 'published' : 'draft',
+    articleType: 'single-type-listicle',
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : nowIso,
+  }
+}
+
+export function listDrafts(): SingleTypeListicleDraft[] {
+  const currentDrafts = parseDraftArray(STORAGE_KEY)
+    .map((draft, index) => normalizeStoredDraft(draft, index))
+    .filter((draft): draft is SingleTypeListicleDraft => Boolean(draft))
+
+  if (currentDrafts.length > 0) {
+    return currentDrafts
+  }
+
+  for (const legacyKey of LEGACY_STORAGE_KEYS) {
+    const legacyDrafts = parseDraftArray(legacyKey)
+      .map((draft, index) => normalizeStoredDraft(draft, index))
+      .filter((draft): draft is SingleTypeListicleDraft => Boolean(draft))
+
+    if (legacyDrafts.length < 1) continue
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacyDrafts))
+    for (const key of LEGACY_STORAGE_KEYS) {
+      localStorage.removeItem(key)
+    }
+
+    return legacyDrafts
+  }
+
+  return []
 }
 
 export function saveDraft(draft: SingleTypeListicleDraft): void {
@@ -59,15 +135,17 @@ export function createEmptyDraft(): SingleTypeListicleDraft {
     targetItemCount: 0,
     step1_complete: false,
     in_update_mode: false,
+    step2_complete: false,
+    step2_in_update_mode: false,
+    step3_complete: false,
+    step3_in_update_mode: false,
     header: {
       introMarkdown: '',
       introJsonText: '',
       featuredImage: null,
     },
     items: [],
-    seoSection: {
-      seo: null,
-    },
+    seoSection: createEmptySeoSection(),
     status: 'draft',
     articleType: 'single-type-listicle',
     updatedAt: new Date().toISOString(),

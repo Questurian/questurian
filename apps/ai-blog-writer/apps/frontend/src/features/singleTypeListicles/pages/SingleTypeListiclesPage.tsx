@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../providers/useAuth'
 import { fetchListicles } from '../api'
+import { listDrafts, removeDraft } from '../storage'
 import type { PayloadListicleDoc } from '../types'
 import '../styles.css'
 
@@ -18,11 +19,38 @@ function formatDate(value?: string): string {
   })
 }
 
+function isGenericPayloadError(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  return normalized === 'something went wrong.' || normalized === 'something went wrong'
+}
+
 export default function SingleTypeListiclesPage() {
   const { token } = useAuth()
   const [listicles, setListicles] = useState<PayloadListicleDoc[]>([])
+  const [localDrafts, setLocalDrafts] = useState(() => listDrafts())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const refreshLocalDrafts = () => {
+      setLocalDrafts(listDrafts())
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key || event.key.startsWith('single_type_listicles_staged_')) {
+        refreshLocalDrafts()
+      }
+    }
+
+    refreshLocalDrafts()
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('focus', refreshLocalDrafts)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('focus', refreshLocalDrafts)
+    }
+  }, [])
 
   useEffect(() => {
     if (!token) return
@@ -62,6 +90,36 @@ export default function SingleTypeListiclesPage() {
     }))
   }, [listicles])
 
+  const hasBlockingError = Boolean(
+    error
+    && !(
+      rows.length === 0
+      && isGenericPayloadError(error)
+    ),
+  )
+
+  const localRows = useMemo(() => {
+    return [...localDrafts]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .map((draft) => ({
+        draftId: draft.draftId,
+        payloadId: draft.payloadId,
+        title: draft.title || 'Untitled',
+        location: draft.location || '-',
+        type: draft.listicleType || '-',
+        target: draft.targetItemCount > 0 ? draft.targetItemCount : '-',
+        status: draft.status || 'draft',
+        updatedAt: formatDate(draft.updatedAt),
+      }))
+  }, [localDrafts])
+
+  const discardLocalDraft = (draftId: string) => {
+    const confirmed = window.confirm('Discard this local draft? This cannot be undone.')
+    if (!confirmed) return
+    removeDraft(draftId)
+    setLocalDrafts(listDrafts())
+  }
+
   return (
     <div className="stl-page stl-single-type-page">
       <header className="stl-hero">
@@ -84,13 +142,71 @@ export default function SingleTypeListiclesPage() {
 
       <section className="stl-panel">
         <div className="stl-panel-header">
+          <h2>Local Drafts ({localRows.length})</h2>
+        </div>
+
+        {localRows.length === 0 ? (
+          <div className="stl-empty">
+            <p>No local drafts saved.</p>
+            <p>Save a local draft in the builder to continue work later.</p>
+          </div>
+        ) : (
+          <div className="stl-table-wrap">
+            <table className="stl-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Location</th>
+                  <th>Type</th>
+                  <th>Target</th>
+                  <th>Source</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {localRows.map((row) => (
+                  <tr key={row.draftId}>
+                    <td>{row.title}</td>
+                    <td>{row.location}</td>
+                    <td>{row.type}</td>
+                    <td>{row.target}</td>
+                    <td>{row.payloadId ? `Payload #${row.payloadId}` : 'Local only'}</td>
+                    <td>{row.updatedAt}</td>
+                    <td>
+                      <div className="stl-table-actions">
+                        <Link
+                          className="stl-link"
+                          to={`/single-type-listicles/builder?draftId=${encodeURIComponent(row.draftId)}`}
+                        >
+                          Resume
+                        </Link>
+                        <button
+                          type="button"
+                          className="stl-btn stl-btn-danger stl-btn-xs"
+                          onClick={() => discardLocalDraft(row.draftId)}
+                        >
+                          Discard
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="stl-panel">
+        <div className="stl-panel-header">
           <h2>Payload Documents ({rows.length})</h2>
         </div>
 
         {isLoading ? <p className="stl-placeholder">Loading listicles...</p> : null}
-        {error ? <p className="stl-error">{error}</p> : null}
+        {hasBlockingError ? <p className="stl-error">{error}</p> : null}
 
-        {!isLoading && !error ? (
+        {!isLoading && !hasBlockingError ? (
           rows.length === 0 ? (
             <div className="stl-empty">
               <p>No single-type-listicles found.</p>

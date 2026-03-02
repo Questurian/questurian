@@ -6,12 +6,12 @@ import { createItinerary, markdownToLexical, updateItinerary } from '../../api'
 import { saveDraft } from '../../storage'
 import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
 import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
+import { buildSeoPayload } from '../services/seo-section.service'
 import { withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
 import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
-import { validateItemMediaSelections } from '../validators/media.validators'
 import { validateStep1 } from '../validators/setup.validators'
-import { validateItemTimeline } from '../validators/timeline.validators'
+import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
 
 type UseItinerarySubmitParams = {
   token?: string
@@ -55,20 +55,36 @@ export function useItinerarySubmit({
       return
     }
 
+    const step2Issues = validateStep2(submitDraft)
+    if (step2Issues.length > 0) {
+      onError(step2Issues[0])
+      return
+    }
+
+    const step3Issues = validateStep3(submitDraft, relatedByBlockType)
+    if (step3Issues.length > 0) {
+      onError(step3Issues[0])
+      return
+    }
+
+    if (!submitDraft.step2_complete || submitDraft.step2_in_update_mode) {
+      onError('Lock Step 2 before syncing to Payload.')
+      return
+    }
+
+    if (!submitDraft.step3_complete || submitDraft.step3_in_update_mode) {
+      onError('Lock Step 3 before syncing to Payload.')
+      return
+    }
+
     if (!selectedLocationRefId) {
       onError('Select a valid location')
       return
     }
 
-    const timelineIssues = validateItemTimeline(submitDraft, targetStatus)
-    if (timelineIssues.length > 0) {
-      onError(timelineIssues[0])
-      return
-    }
-
-    const mediaIssues = validateItemMediaSelections(submitDraft, relatedByBlockType)
-    if (mediaIssues.length > 0) {
-      onError(mediaIssues[0])
+    const seoIssues = validateSeoSection(submitDraft)
+    if (seoIssues.length > 0) {
+      onError(seoIssues[0])
       return
     }
 
@@ -136,14 +152,16 @@ export function useItinerarySubmit({
         itineraryEndPeriod: submitDraft.itineraryEndPeriod,
         step1_complete: true,
         in_update_mode: false,
+        step2_complete: submitDraft.step2_complete,
+        step2_in_update_mode: false,
+        step3_complete: submitDraft.step3_complete,
+        step3_in_update_mode: false,
         header: {
           intro: headerIntro,
           featuredImage: submitDraft.header.featuredImage || undefined,
         },
         items: payloadItems,
-        seoSection: {
-          seo: submitDraft.seoSection.seo || undefined,
-        },
+        seoSection: buildSeoPayload(submitDraft.seoSection),
         status: targetStatus,
         articleType: 'listicle-itinerary',
       }

@@ -8,8 +8,6 @@ import type {
   PayloadItineraryDoc,
   PayloadListResponse,
   RelatedItemOption,
-  SeoMetadataForm,
-  SeoMetadataOption,
 } from './types'
 
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
@@ -115,39 +113,6 @@ export async function fetchRelatedItems(
   )
 
   return response.docs || []
-}
-
-export async function fetchSeoMetadata(token: string): Promise<SeoMetadataOption[]> {
-  const response = await payloadRequest<PayloadListResponse<SeoMetadataOption>>(
-    `/api/seo-metadata?limit=200&sort=-updatedAt`,
-    token,
-  )
-  return response.docs || []
-}
-
-export async function fetchSeoMetadataById(id: number, token: string): Promise<SeoMetadataForm> {
-  const response = await payloadRequest<{ doc: SeoMetadataForm }>(`/api/seo-metadata/${id}`, token)
-  return response.doc
-}
-
-export async function createSeoMetadata(payload: SeoMetadataForm, token: string): Promise<SeoMetadataForm> {
-  const response = await payloadRequest<{ doc: SeoMetadataForm }>(`/api/seo-metadata`, token, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-  return response.doc
-}
-
-export async function updateSeoMetadata(
-  id: number,
-  payload: SeoMetadataForm,
-  token: string,
-): Promise<SeoMetadataForm> {
-  const response = await payloadRequest<{ doc: SeoMetadataForm }>(`/api/seo-metadata/${id}`, token, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  })
-  return response.doc
 }
 
 export async function markdownToLexical(markdown: string): Promise<Record<string, unknown>> {

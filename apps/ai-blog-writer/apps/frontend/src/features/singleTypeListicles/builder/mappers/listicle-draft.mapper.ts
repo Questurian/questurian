@@ -1,4 +1,5 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
+import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
@@ -17,6 +18,12 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
   }))
 
   const fallbackTargetItemCount = typeof doc.targetItemCount === 'number' ? doc.targetItemCount : 0
+  const hasStep2Content = Boolean(
+    (doc.header?.intro && typeof doc.header.intro === 'object')
+    || getRelationshipId(doc.header?.featuredImage),
+  )
+  const hasStep3Content = items.length > 0
+  const normalizedSeoSection = normalizeSeoSection(doc.seoSection || createEmptySeoSection())
 
   return {
     draftId: existingDraftId || `stl_payload_${doc.id}`,
@@ -29,6 +36,10 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     targetItemCount: normalizeTargetItemCount(fallbackTargetItemCount, items),
     step1_complete: Boolean(doc.step1_complete),
     in_update_mode: Boolean(doc.in_update_mode),
+    step2_complete: Boolean(doc.step2_complete) || hasStep2Content,
+    step2_in_update_mode: Boolean(doc.step2_in_update_mode),
+    step3_complete: Boolean(doc.step3_complete) || hasStep3Content,
+    step3_in_update_mode: Boolean(doc.step3_in_update_mode),
     header: {
       introMarkdown: '',
       introLexical: doc.header?.intro,
@@ -36,9 +47,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
       featuredImage: getRelationshipId(doc.header?.featuredImage),
     },
     items,
-    seoSection: {
-      seo: getRelationshipId(doc.seoSection?.seo),
-    },
+    seoSection: normalizedSeoSection,
     status: doc.status || 'draft',
     articleType: 'single-type-listicle',
     updatedAt: doc.updatedAt || new Date().toISOString(),

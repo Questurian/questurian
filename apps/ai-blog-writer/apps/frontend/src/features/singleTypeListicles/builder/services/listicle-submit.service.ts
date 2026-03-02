@@ -1,4 +1,5 @@
 import { createListicle, getBlockTypeForListicleType, markdownToLexical, updateListicle } from '../../api'
+import { buildSeoPayload } from './seo-section.service'
 import type { PayloadListicleDoc, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
 import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
@@ -70,14 +71,16 @@ export async function submitListicle({
     targetItemCount: draft.targetItemCount,
     step1_complete: true,
     in_update_mode: false,
+    step2_complete: draft.step2_complete,
+    step2_in_update_mode: false,
+    step3_complete: draft.step3_complete,
+    step3_in_update_mode: false,
     header: {
       intro: headerIntro,
       featuredImage: draft.header.featuredImage || undefined,
     },
     items: payloadItems,
-    seoSection: {
-      seo: draft.seoSection.seo || undefined,
-    },
+    seoSection: buildSeoPayload(draft.seoSection),
     status: targetStatus,
     articleType: 'single-type-listicle',
   }

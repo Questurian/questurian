@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { ListicleItineraryDraft } from '../../types'
 import { hasContinuousCoverage } from '../services/itinerary-timeline.service'
 import { validateStep1 } from '../validators/setup.validators'
+import { isSeoCoreComplete } from '../validators/step.validators'
 
 type UseBuilderProgressParams = {
   draft: ListicleItineraryDraft | null
@@ -28,6 +29,10 @@ export function useBuilderProgress({ draft }: UseBuilderProgressParams): UseBuil
     const stepIssues = validateStep1(draft)
     const isSetupReady = stepIssues.length === 0
     const hasContinuous = hasContinuousCoverage(draft)
+    const seoCoreComplete = isSeoCoreComplete(draft)
+    const isStep1Locked = draft.step1_complete && !draft.in_update_mode
+    const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
+    const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
 
     const completionPercent = Math.max(
       8,
@@ -35,14 +40,12 @@ export function useBuilderProgress({ draft }: UseBuilderProgressParams): UseBuil
         100,
         Math.round(
           ([
-            draft.step1_complete ? 1 : 0,
-            draft.header.featuredImage ? 1 : 0,
-            (draft.header.introMarkdown || draft.header.introJsonText || '').trim() ? 1 : 0,
-            draft.items.length > 0 ? 1 : 0,
-            hasContinuous ? 1 : 0,
-            draft.seoSection.seo ? 1 : 0,
+            isStep1Locked ? 1 : 0,
+            isStep2Locked ? 1 : 0,
+            isStep3Locked ? 1 : 0,
+            seoCoreComplete ? 1 : 0,
           ].reduce((sum, value) => sum + value, 0) /
-            6) *
+            4) *
             100,
         ),
       ),

@@ -51,6 +51,24 @@ export type CreateArticlePayload = {
       }
   >
   seoSection?: {
-    seo?: number
+    seoTitle?: string
+    metaDescription?: string
+    openGraph?: {
+      title?: string
+      description?: string
+      imageUrl?: string
+      url?: string
+    }
+    twitterCard?: {
+      card?: 'summary' | 'summary_large_image'
+      title?: string
+      description?: string
+      imageUrl?: string
+    }
+    structuredData?: object
+    robots?: {
+      index?: 'index' | 'noindex'
+      follow?: 'follow' | 'nofollow'
+    }
   }
 }

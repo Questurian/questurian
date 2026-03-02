@@ -2,9 +2,10 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
-import { fetchItineraryById, fetchLocations, fetchMediaAssets, fetchSeoMetadata } from '../../api'
+import { fetchItineraryById, fetchLocations, fetchMediaAssets } from '../../api'
 import { createEmptyDraft, findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../../storage'
-import type { ListicleItineraryDraft, LocationOption, MediaAssetOption, SeoMetadataOption } from '../../types'
+import { normalizeSeoSection } from '../services/seo-section.service'
+import type { ListicleItineraryDraft, LocationOption, MediaAssetOption } from '../../types'
 import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
 
 type UseBuilderBootstrapParams = {
@@ -21,16 +22,19 @@ type UseBuilderBootstrapResult = {
   isLoading: boolean
   locations: LocationOption[]
   mediaAssets: MediaAssetOption[]
-  seoOptions: SeoMetadataOption[]
-  setSeoOptions: Dispatch<SetStateAction<SeoMetadataOption[]>>
 }
 
 function normalizeDraftModelName(draft: ListicleItineraryDraft): ListicleItineraryDraft {
   const normalizedModelName = resolveEditorAssistModelName(draft.editorModelName)
-  if (normalizedModelName === draft.editorModelName) return draft
+  const normalizedSeo = normalizeSeoSection(draft.seoSection)
+  if (
+    normalizedModelName === draft.editorModelName
+    && JSON.stringify(normalizedSeo) === JSON.stringify(draft.seoSection)
+  ) return draft
   return {
     ...draft,
     editorModelName: normalizedModelName,
+    seoSection: normalizedSeo,
   }
 }
 
@@ -45,7 +49,6 @@ export function useBuilderBootstrap({
   const [isLoading, setIsLoading] = useState(true)
   const [locations, setLocations] = useState<LocationOption[]>([])
   const [mediaAssets, setMediaAssets] = useState<MediaAssetOption[]>([])
-  const [seoOptions, setSeoOptions] = useState<SeoMetadataOption[]>([])
 
   useEffect(() => {
     if (!token) return
@@ -57,16 +60,14 @@ export function useBuilderBootstrap({
       onError('')
 
       try {
-        const [locationDocs, mediaDocs, seoDocs] = await Promise.all([
+        const [locationDocs, mediaDocs] = await Promise.all([
           fetchLocations(token),
           fetchMediaAssets(token),
-          fetchSeoMetadata(token),
         ])
 
         if (cancelled) return
         setLocations(locationDocs)
         setMediaAssets(mediaDocs)
-        setSeoOptions(seoDocs)
 
         const payloadId = payloadIdParam ? Number(payloadIdParam) : null
         if (payloadId && Number.isFinite(payloadId)) {
@@ -130,7 +131,5 @@ export function useBuilderBootstrap({
     isLoading,
     locations,
     mediaAssets,
-    seoOptions,
-    setSeoOptions,
   }
 }

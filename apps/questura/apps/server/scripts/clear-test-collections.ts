@@ -33,7 +33,6 @@ const COLLECTIONS_TO_CLEAR = [
   'single-type-listicles',
   'articles',
   'instagram-posts',
-  'seo-metadata',
   'key-locations',
 
   // Clear data collections (they also reference media and locations)

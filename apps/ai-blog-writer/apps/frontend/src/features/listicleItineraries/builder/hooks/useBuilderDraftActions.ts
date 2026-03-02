@@ -3,14 +3,22 @@ import { useMemo, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
 import { createEmptyDraft, removeDraft } from '../../storage'
-import type { ItineraryItemBlock, ListicleItineraryDraft, LocationOption } from '../../types'
+import type {
+  ItineraryBlockType,
+  ItineraryItemBlock,
+  ListicleItineraryDraft,
+  LocationOption,
+  RelatedItemOption,
+} from '../../types'
 import { autoChainItems, createNewItem, withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
 import { validateStep1 } from '../validators/setup.validators'
+import { validateStep2, validateStep3 } from '../validators/step.validators'
 
 type UseBuilderDraftActionsParams = {
   draft: ListicleItineraryDraft | null
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
   locations: LocationOption[]
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
   navigate: (to: string) => void
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
@@ -34,6 +42,14 @@ type UseBuilderDraftActionsResult = {
   handleUpdateSetup: () => void
   handleSaveSetup: () => void
   cancelUpdateSetup: () => void
+  handleContinueStep2: () => void
+  handleUpdateStep2: () => void
+  handleSaveStep2: () => void
+  cancelUpdateStep2: () => void
+  handleContinueStep3: () => void
+  handleUpdateStep3: () => void
+  handleSaveStep3: () => void
+  cancelUpdateStep3: () => void
   setEditorModelName: (modelName: string) => void
   handleDiscardLocalDraft: () => void
 }
@@ -42,6 +58,7 @@ export function useBuilderDraftActions({
   draft,
   setDraft,
   locations,
+  relatedByBlockType,
   navigate,
   setSearchParams,
   onError,
@@ -162,6 +179,10 @@ export function useBuilderDraftActions({
       step1_complete: true,
       in_update_mode: false,
       locationRef: selectedLocationRefId,
+      step2_complete: false,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
     })
     onError('')
   }
@@ -193,6 +214,10 @@ export function useBuilderDraftActions({
         items: [],
         in_update_mode: false,
         step1_complete: true,
+        step2_complete: false,
+        step2_in_update_mode: false,
+        step3_complete: false,
+        step3_in_update_mode: false,
         locationRef: selectedLocationRefId,
       })
       setSetupBaseline(null)
@@ -202,6 +227,10 @@ export function useBuilderDraftActions({
     updateDraft({
       in_update_mode: false,
       step1_complete: true,
+      step2_complete: false,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
       locationRef: selectedLocationRefId,
     })
     setSetupBaseline(null)
@@ -212,6 +241,98 @@ export function useBuilderDraftActions({
     if (!draft) return
     updateDraft({ in_update_mode: false })
     setSetupBaseline(null)
+    onError('')
+  }
+
+  function handleContinueStep2() {
+    if (!draft) return
+
+    const issues = validateStep2(draft)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step2_complete: true,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
+    })
+    onError('')
+  }
+
+  function handleUpdateStep2() {
+    if (!draft) return
+    updateDraft({ step2_in_update_mode: true })
+    onError('')
+  }
+
+  function handleSaveStep2() {
+    if (!draft) return
+
+    const issues = validateStep2(draft)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step2_complete: true,
+      step2_in_update_mode: false,
+      step3_complete: false,
+      step3_in_update_mode: false,
+    })
+    onError('')
+  }
+
+  function cancelUpdateStep2() {
+    if (!draft) return
+    updateDraft({ step2_in_update_mode: false })
+    onError('')
+  }
+
+  function handleContinueStep3() {
+    if (!draft) return
+
+    const issues = validateStep3(draft, relatedByBlockType)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step3_complete: true,
+      step3_in_update_mode: false,
+    })
+    onError('')
+  }
+
+  function handleUpdateStep3() {
+    if (!draft) return
+    updateDraft({ step3_in_update_mode: true })
+    onError('')
+  }
+
+  function handleSaveStep3() {
+    if (!draft) return
+
+    const issues = validateStep3(draft, relatedByBlockType)
+    if (issues.length > 0) {
+      onError(issues.join('. '))
+      return
+    }
+
+    updateDraft({
+      step3_complete: true,
+      step3_in_update_mode: false,
+    })
+    onError('')
+  }
+
+  function cancelUpdateStep3() {
+    if (!draft) return
+    updateDraft({ step3_in_update_mode: false })
     onError('')
   }
 
@@ -246,6 +367,14 @@ export function useBuilderDraftActions({
     handleUpdateSetup,
     handleSaveSetup,
     cancelUpdateSetup,
+    handleContinueStep2,
+    handleUpdateStep2,
+    handleSaveStep2,
+    cancelUpdateStep2,
+    handleContinueStep3,
+    handleUpdateStep3,
+    handleSaveStep3,
+    cancelUpdateStep3,
     setEditorModelName,
     handleDiscardLocalDraft,
   }

@@ -30,6 +30,11 @@ type BuilderItemsPanelProps = {
   removeItem: (itemId: string) => void
   updateItem: (itemId: string, updater: (item: ListicleItemBlock) => ListicleItemBlock) => void
   onItemBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
+  isLocked: boolean
+  onContinueStep3: () => void
+  onUpdateStep3: () => void
+  onSaveStep3: () => void
+  onCancelStep3Update: () => void
 }
 
 const MEDIA_MODE_OPTIONS: Array<{ value: MediaMode; label: string }> = [
@@ -59,6 +64,11 @@ export function BuilderItemsPanel({
   removeItem,
   updateItem,
   onItemBlurbAiRewrite,
+  isLocked,
+  onContinueStep3,
+  onUpdateStep3,
+  onSaveStep3,
+  onCancelStep3Update,
 }: BuilderItemsPanelProps) {
   const [activePicker, setActivePicker] = useState<ActivePicker>(null)
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null)
@@ -151,15 +161,38 @@ export function BuilderItemsPanel({
           <span className="stl-kicker">Step 3</span>
           Items ({draft.items.length}/{draft.targetItemCount})
         </h2>
+        <div className="stl-inline-actions">
+          {!draft.step3_complete ? (
+            <button type="button" className="stl-btn" onClick={onContinueStep3}>
+              Continue
+            </button>
+          ) : null}
+          {draft.step3_complete && !draft.step3_in_update_mode ? (
+            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep3}>
+              Update Items
+            </button>
+          ) : null}
+          {draft.step3_in_update_mode ? (
+            <>
+              <button type="button" className="stl-btn" onClick={onSaveStep3}>
+                Save Items
+              </button>
+              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep3Update}>
+                Cancel
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
-      {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
-      {!isLoadingRelated && draft.listicleType && relatedItems.length === 0 ? (
-        <p className="stl-placeholder">No published items found for selected location/type.</p>
-      ) : null}
+      <fieldset className="stl-panel-fieldset" disabled={isLocked}>
+        {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
+        {!isLoadingRelated && draft.listicleType && relatedItems.length === 0 ? (
+          <p className="stl-placeholder">No published items found for selected location/type.</p>
+        ) : null}
 
-      <div className="stl-list">
-        {draft.items.map((item, index) => {
+        <div className="stl-list">
+          {draft.items.map((item, index) => {
           const selectedRelatedItem = relatedItems.find((entry) => entry.id === item.item) || null
           const photoObjects = getRelatedPhotoObjects(selectedRelatedItem)
           const instagramPostObjects = getRelatedInstagramPostObjects(selectedRelatedItem)
@@ -604,8 +637,9 @@ export function BuilderItemsPanel({
               ) : null}
             </article>
           )
-        })}
-      </div>
+          })}
+        </div>
+      </fieldset>
     </section>
   )
 }

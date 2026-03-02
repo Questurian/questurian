@@ -172,6 +172,13 @@
   box-shadow: var(--stl-shadow);
 }
 
+.stl-panel-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+
 .stl-panel-header {
   display: flex;
   justify-content: space-between;
@@ -187,6 +194,60 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.stl-subheading {
+  margin: 1rem 0 0.6rem;
+  font-size: 0.88rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  letter-spacing: 0.02em;
+  color: #465267;
+}
+
+.stl-seo-panel .stl-panel-header {
+  margin-bottom: 0.7rem;
+}
+
+.stl-seo-stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.stl-seo-group {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #dbe3f0;
+  border-radius: 12px;
+  padding: 0.95rem;
+  background: #f9fbff;
+}
+
+.stl-seo-group-og {
+  border-left: 4px solid #607cad;
+  background: linear-gradient(180deg, #f6f9ff 0%, #fdfefe 100%);
+}
+
+.stl-seo-group-twitter {
+  border-left: 4px solid #4d9bb8;
+  background: linear-gradient(180deg, #f3fbff 0%, #fcfeff 100%);
+}
+
+.stl-seo-group-header {
+  display: grid;
+  gap: 0.26rem;
+}
+
+.stl-seo-group-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  color: #33435f;
+}
+
+.stl-seo-group-header p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--stl-muted);
 }
 
 .stl-kicker {
