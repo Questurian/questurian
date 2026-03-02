@@ -276,8 +276,16 @@
 }
 
 .stl-seo-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.stl-seo-group-copy {
   display: grid;
   gap: 0.26rem;
+  min-width: 0;
 }
 
 .stl-seo-group-header h3 {
@@ -291,6 +299,44 @@
   margin: 0;
   font-size: 0.82rem;
   color: var(--stl-muted);
+}
+
+.stl-seo-ai-btn {
+  min-height: auto;
+  padding: 0.26rem 0.56rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.stl-seo-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.stl-seo-input-with-ai {
+  width: 100%;
+  padding-right: 3.15rem;
+}
+
+.stl-seo-input-wrap-textarea .stl-seo-input-with-ai {
+  padding-right: 4rem;
+}
+
+.stl-seo-ai-trigger-wrap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0.38rem;
+  display: inline-flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.stl-seo-input-wrap-textarea .stl-seo-ai-trigger-wrap {
+  top: 0.38rem;
+  bottom: auto;
+  align-items: flex-start;
 }
 
 .stl-kicker {

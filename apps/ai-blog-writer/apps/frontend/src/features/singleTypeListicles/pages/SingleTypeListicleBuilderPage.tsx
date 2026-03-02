@@ -22,8 +22,10 @@ import {
   applySeoAiPatch,
   buildSeoAiPrompt,
   buildSeoAiSeed,
+  getSeoAiTargetLabel,
   parseSeoAiPatch,
 } from '../builder/services/seo-ai.service'
+import type { SeoAiTarget } from '../builder/services/seo-ai.service'
 import { generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { saveDraft } from '../storage'
 import '../styles.css'
@@ -45,7 +47,7 @@ export default function SingleTypeListicleBuilderPage() {
 
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
-  const [isGeneratingSeo, setIsGeneratingSeo] = useState(false)
+  const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -145,7 +147,7 @@ export default function SingleTypeListicleBuilderPage() {
     setResult('Saved local draft')
   }, [draft])
 
-  const generateSeoWithAi = useCallback(async (): Promise<void> => {
+  const generateSeoWithAi = useCallback(async (target: SeoAiTarget = 'all'): Promise<void> => {
     if (!draft) return
 
     const articleContext = buildListicleAiArticleContext(draft).trim()
@@ -158,7 +160,7 @@ export default function SingleTypeListicleBuilderPage() {
 
     onError('')
     setResult(null)
-    setIsGeneratingSeo(true)
+    setIsGeneratingSeoTarget(target)
 
     try {
       const response = await rewriteBlockWithAi({
@@ -167,6 +169,7 @@ export default function SingleTypeListicleBuilderPage() {
             ? `single-type-listicle (${draft.listicleType})`
             : 'single-type-listicle',
           location: draft.location,
+          target,
         }),
         blockContent: buildSeoAiSeed(draft.seoSection),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
@@ -184,15 +187,19 @@ export default function SingleTypeListicleBuilderPage() {
         if (!current) return current
         return {
           ...current,
-          seoSection: applySeoAiPatch(current.seoSection, seoPatch),
+          seoSection: applySeoAiPatch(current.seoSection, seoPatch, target),
         }
       })
 
-      setResult('SEO fields generated with AI (images unchanged).')
+      if (target === 'all') {
+        setResult('SEO fields generated with AI (images unchanged).')
+      } else {
+        setResult(`${getSeoAiTargetLabel(target)} generated with AI (images unchanged).`)
+      }
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to generate SEO with AI.')
     } finally {
-      setIsGeneratingSeo(false)
+      setIsGeneratingSeoTarget(null)
     }
   }, [draft, onError, setDraft])
 
@@ -267,7 +274,7 @@ export default function SingleTypeListicleBuilderPage() {
               draft={draft}
               setDraft={setDraft}
               onGenerateSeoWithAi={generateSeoWithAi}
-              isGeneratingSeo={isGeneratingSeo}
+              isGeneratingSeoTarget={isGeneratingSeoTarget}
             />
           ) : null}
         </main>

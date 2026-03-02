@@ -1,18 +1,19 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { ListicleItineraryDraft } from '../../types'
+import type { SeoAiTarget } from '../services/seo-ai.service'
 
 type BuilderSeoPanelProps = {
   draft: ListicleItineraryDraft
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
-  onGenerateSeoWithAi: () => Promise<void>
-  isGeneratingSeo: boolean
+  onGenerateSeoWithAi: (target?: SeoAiTarget) => Promise<void>
+  isGeneratingSeoTarget: SeoAiTarget | null
 }
 
 export function BuilderSeoPanel({
   draft,
   setDraft,
   onGenerateSeoWithAi,
-  isGeneratingSeo,
+  isGeneratingSeoTarget,
 }: BuilderSeoPanelProps) {
   const updateSeo = (updater: (current: ListicleItineraryDraft['seoSection']) => ListicleItineraryDraft['seoSection']) => {
     setDraft((current) => {
@@ -24,6 +25,18 @@ export function BuilderSeoPanel({
     })
   }
 
+  const isGeneratingAny = Boolean(isGeneratingSeoTarget)
+  const renderAiButton = (target: SeoAiTarget, label = 'AI') => (
+    <button
+      type="button"
+      className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+      onClick={() => void onGenerateSeoWithAi(target)}
+      disabled={isGeneratingAny}
+    >
+      {isGeneratingSeoTarget === target ? 'Generating...' : label}
+    </button>
+  )
+
   return (
     <section className="stl-panel stl-seo-panel">
       <div className="stl-panel-header">
@@ -34,10 +47,10 @@ export function BuilderSeoPanel({
           <button
             type="button"
             className="stl-btn stl-btn-secondary"
-            onClick={() => void onGenerateSeoWithAi()}
-            disabled={isGeneratingSeo}
+            onClick={() => void onGenerateSeoWithAi('all')}
+            disabled={isGeneratingAny}
           >
-            {isGeneratingSeo ? 'Generating...' : 'Generate SEO (AI)'}
+            {isGeneratingSeoTarget === 'all' ? 'Generating...' : 'Generate SEO (AI)'}
           </button>
         </div>
       </div>
@@ -45,70 +58,89 @@ export function BuilderSeoPanel({
       <div className="stl-seo-stack">
         <label className="stl-field">
           <span>SEO Title *</span>
-          <input
-            maxLength={60}
-            value={draft.seoSection.seoTitle}
-            onChange={(event) =>
-              updateSeo((current) => ({
-                ...current,
-                seoTitle: event.target.value,
-              }))
-            }
-          />
+          <div className="stl-seo-input-wrap">
+            <input
+              className="stl-seo-input-with-ai"
+              maxLength={60}
+              value={draft.seoSection.seoTitle}
+              onChange={(event) =>
+                updateSeo((current) => ({
+                  ...current,
+                  seoTitle: event.target.value,
+                }))
+              }
+            />
+            <span className="stl-seo-ai-trigger-wrap">{renderAiButton('seoTitle')}</span>
+          </div>
         </label>
 
         <label className="stl-field">
           <span>Meta Description *</span>
-          <textarea
-            rows={3}
-            maxLength={160}
-            value={draft.seoSection.metaDescription}
-            onChange={(event) =>
-              updateSeo((current) => ({
-                ...current,
-                metaDescription: event.target.value,
-              }))
-            }
-          />
+          <div className="stl-seo-input-wrap stl-seo-input-wrap-textarea">
+            <textarea
+              className="stl-seo-input-with-ai"
+              rows={3}
+              maxLength={160}
+              value={draft.seoSection.metaDescription}
+              onChange={(event) =>
+                updateSeo((current) => ({
+                  ...current,
+                  metaDescription: event.target.value,
+                }))
+              }
+            />
+            <span className="stl-seo-ai-trigger-wrap">{renderAiButton('metaDescription')}</span>
+          </div>
         </label>
 
         <section className="stl-seo-group stl-seo-group-og">
           <div className="stl-seo-group-header">
-            <h3>Open Graph Tags</h3>
-            <p>Social sharing metadata for Facebook and other platforms.</p>
+            <div className="stl-seo-group-copy">
+              <h3>Open Graph Tags</h3>
+              <p>Social sharing metadata for Facebook and other platforms.</p>
+            </div>
+            {renderAiButton('openGraph', 'AI Fill Section')}
           </div>
 
           <label className="stl-field">
             <span>og:title</span>
-            <input
-              value={draft.seoSection.openGraph.title}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  openGraph: {
-                    ...current.openGraph,
-                    title: event.target.value,
-                  },
-                }))
-              }
-            />
+            <div className="stl-seo-input-wrap">
+              <input
+                className="stl-seo-input-with-ai"
+                value={draft.seoSection.openGraph.title}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    openGraph: {
+                      ...current.openGraph,
+                      title: event.target.value,
+                    },
+                  }))
+                }
+              />
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('openGraphTitle')}</span>
+            </div>
           </label>
 
           <label className="stl-field">
             <span>og:description</span>
-            <textarea
-              rows={3}
-              value={draft.seoSection.openGraph.description}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  openGraph: {
-                    ...current.openGraph,
-                    description: event.target.value,
-                  },
-                }))
-              }
-            />
+            <div className="stl-seo-input-wrap stl-seo-input-wrap-textarea">
+              <textarea
+                className="stl-seo-input-with-ai"
+                rows={3}
+                value={draft.seoSection.openGraph.description}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    openGraph: {
+                      ...current.openGraph,
+                      description: event.target.value,
+                    },
+                  }))
+                }
+              />
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('openGraphDescription')}</span>
+            </div>
           </label>
 
           <label className="stl-field">
@@ -130,78 +162,97 @@ export function BuilderSeoPanel({
 
           <label className="stl-field">
             <span>og:url</span>
-            <input
-              placeholder="https://example.com/article"
-              value={draft.seoSection.openGraph.url}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  openGraph: {
-                    ...current.openGraph,
-                    url: event.target.value,
-                  },
-                }))
-              }
-            />
+            <div className="stl-seo-input-wrap">
+              <input
+                className="stl-seo-input-with-ai"
+                placeholder="https://example.com/article"
+                value={draft.seoSection.openGraph.url}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    openGraph: {
+                      ...current.openGraph,
+                      url: event.target.value,
+                    },
+                  }))
+                }
+              />
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('openGraphUrl')}</span>
+            </div>
           </label>
         </section>
 
         <section className="stl-seo-group stl-seo-group-twitter">
           <div className="stl-seo-group-header">
-            <h3>Twitter Card Tags</h3>
-            <p>Share card metadata specifically for X/Twitter previews.</p>
+            <div className="stl-seo-group-copy">
+              <h3>Twitter Card Tags</h3>
+              <p>Share card metadata specifically for X/Twitter previews.</p>
+            </div>
+            {renderAiButton('twitterCard', 'AI Fill Section')}
           </div>
 
           <label className="stl-field">
             <span>twitter:card</span>
-            <select
-              value={draft.seoSection.twitterCard.card}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  twitterCard: {
-                    ...current.twitterCard,
-                    card: event.target.value as 'summary' | 'summary_large_image',
-                  },
-                }))
-              }
-            >
-              <option value="summary">summary</option>
-              <option value="summary_large_image">summary_large_image</option>
-            </select>
+            <div className="stl-seo-input-wrap">
+              <select
+                className="stl-seo-input-with-ai"
+                value={draft.seoSection.twitterCard.card}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    twitterCard: {
+                      ...current.twitterCard,
+                      card: event.target.value as 'summary' | 'summary_large_image',
+                    },
+                  }))
+                }
+              >
+                <option value="summary">summary</option>
+                <option value="summary_large_image">summary_large_image</option>
+              </select>
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('twitterCardCard')}</span>
+            </div>
           </label>
 
           <label className="stl-field">
             <span>twitter:title</span>
-            <input
-              value={draft.seoSection.twitterCard.title}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  twitterCard: {
-                    ...current.twitterCard,
-                    title: event.target.value,
-                  },
-                }))
-              }
-            />
+            <div className="stl-seo-input-wrap">
+              <input
+                className="stl-seo-input-with-ai"
+                value={draft.seoSection.twitterCard.title}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    twitterCard: {
+                      ...current.twitterCard,
+                      title: event.target.value,
+                    },
+                  }))
+                }
+              />
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('twitterCardTitle')}</span>
+            </div>
           </label>
 
           <label className="stl-field">
             <span>twitter:description</span>
-            <textarea
-              rows={3}
-              value={draft.seoSection.twitterCard.description}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  twitterCard: {
-                    ...current.twitterCard,
-                    description: event.target.value,
-                  },
-                }))
-              }
-            />
+            <div className="stl-seo-input-wrap stl-seo-input-wrap-textarea">
+              <textarea
+                className="stl-seo-input-with-ai"
+                rows={3}
+                value={draft.seoSection.twitterCard.description}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    twitterCard: {
+                      ...current.twitterCard,
+                      description: event.target.value,
+                    },
+                  }))
+                }
+              />
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('twitterCardDescription')}</span>
+            </div>
           </label>
 
           <label className="stl-field">
@@ -224,68 +275,86 @@ export function BuilderSeoPanel({
 
         <section className="stl-seo-group">
           <div className="stl-seo-group-header">
-            <h3>Structured Data</h3>
-            <p>Optional JSON-LD object to help search engines classify this page.</p>
+            <div className="stl-seo-group-copy">
+              <h3>Structured Data</h3>
+              <p>Optional JSON-LD object to help search engines classify this page.</p>
+            </div>
+            {renderAiButton('structuredData')}
           </div>
 
           <label className="stl-field">
             <span>Structured Data (JSON-LD)</span>
-            <textarea
-              rows={6}
-              placeholder='{"@context":"https://schema.org","@type":"Article"}'
-              value={draft.seoSection.structuredData}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  structuredData: event.target.value,
-                }))
-              }
-            />
+            <div className="stl-seo-input-wrap stl-seo-input-wrap-textarea">
+              <textarea
+                className="stl-seo-input-with-ai"
+                rows={6}
+                placeholder='{"@context":"https://schema.org","@type":"Article"}'
+                value={draft.seoSection.structuredData}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    structuredData: event.target.value,
+                  }))
+                }
+              />
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('structuredData')}</span>
+            </div>
           </label>
         </section>
 
         <section className="stl-seo-group">
           <div className="stl-seo-group-header">
-            <h3>Robots Meta Tag</h3>
-            <p>Control indexing and crawling behavior for this article.</p>
+            <div className="stl-seo-group-copy">
+              <h3>Robots Meta Tag</h3>
+              <p>Control indexing and crawling behavior for this article.</p>
+            </div>
+            {renderAiButton('robots', 'AI Fill Section')}
           </div>
 
           <label className="stl-field">
             <span>index</span>
-            <select
-              value={draft.seoSection.robots.index}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  robots: {
-                    ...current.robots,
-                    index: event.target.value as 'index' | 'noindex',
-                  },
-                }))
-              }
-            >
-              <option value="index">index</option>
-              <option value="noindex">noindex</option>
-            </select>
+            <div className="stl-seo-input-wrap">
+              <select
+                className="stl-seo-input-with-ai"
+                value={draft.seoSection.robots.index}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    robots: {
+                      ...current.robots,
+                      index: event.target.value as 'index' | 'noindex',
+                    },
+                  }))
+                }
+              >
+                <option value="index">index</option>
+                <option value="noindex">noindex</option>
+              </select>
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('robotsIndex')}</span>
+            </div>
           </label>
 
           <label className="stl-field">
             <span>follow</span>
-            <select
-              value={draft.seoSection.robots.follow}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  robots: {
-                    ...current.robots,
-                    follow: event.target.value as 'follow' | 'nofollow',
-                  },
-                }))
-              }
-            >
-              <option value="follow">follow</option>
-              <option value="nofollow">nofollow</option>
-            </select>
+            <div className="stl-seo-input-wrap">
+              <select
+                className="stl-seo-input-with-ai"
+                value={draft.seoSection.robots.follow}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    robots: {
+                      ...current.robots,
+                      follow: event.target.value as 'follow' | 'nofollow',
+                    },
+                  }))
+                }
+              >
+                <option value="follow">follow</option>
+                <option value="nofollow">nofollow</option>
+              </select>
+              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('robotsFollow')}</span>
+            </div>
           </label>
         </section>
       </div>
