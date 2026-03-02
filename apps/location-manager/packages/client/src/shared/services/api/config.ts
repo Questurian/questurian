@@ -30,6 +30,10 @@ export const API_ENDPOINTS = {
   ADD_UPLOAD_IMAGESET: (category: Category, locationId: number) => `/api/${category}/${locationId}/uploads/imageset`,
   GENERATE_ALT_TEXT: "/api/generate-alt-text",
   DELETE_UPLOAD: (uploadId: number) => `/api/uploads/${uploadId}`,
+  REPROCESS_UPLOAD_VARIANTS: (uploadId: number) =>
+    `/api/uploads/${uploadId}/reprocess-variants`,
+  REPLACE_UPLOAD_VARIANTS: (uploadId: number) =>
+    `/api/uploads/${uploadId}/replace-variants`,
   UPDATE_UPLOAD_PHOTOGRAPHER_CREDIT: (uploadId: number) =>
     `/api/uploads/${uploadId}/photographer-credit`,
   CLEAR_DB: "/api/clear-db",

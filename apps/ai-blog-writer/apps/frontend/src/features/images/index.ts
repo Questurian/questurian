@@ -2,8 +2,17 @@
 export { ImageUpload } from './components/ImageUpload';
 export { MultiVariantCropper } from './components/MultiVariantCropper';
 export type { ImageUploadProps, UploadMode, VariantUploadFile } from './types';
-export { uploadImage, uploadImageVariants, processImageOnly } from './api/imagesApi';
-export type { UploadImageResponse, UploadProgress } from './api/imagesApi';
+export {
+  uploadImage,
+  uploadImageVariants,
+  processImageOnly,
+  generateSocialImageFromFeatured,
+} from './api/imagesApi';
+export type {
+  UploadImageResponse,
+  UploadProgress,
+  GenerateSocialImageResponse,
+} from './api/imagesApi';
 export {
   VARIANT_SPECS,
   VARIANT_SEQUENCE,

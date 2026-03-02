@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed } from "@client/shared/services/api/types";
-import type { ImageVariant } from "@questurian/lm-shared";
+import { VARIANT_SPECS, type ImageVariant } from "@questurian/lm-shared";
 import { Button } from "@client/components/ui";
 import { Input } from "@client/components/ui/input";
 import {
@@ -25,9 +25,11 @@ import { X } from "lucide-react";
 import { useToast } from "@client/shared/hooks/useToast";
 import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUpload";
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
+import { useReplaceUploadVariants } from "@client/shared/services/api/hooks/useReplaceUploadVariants";
 import { useUpdateUploadPhotographerCredit } from "@client/shared/services/api/hooks/useUpdateUploadPhotographerCredit";
 import { AddInstagramEmbedForm } from "./forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "./forms/AddUploadFilesForm";
+import { MultiVariantCropperModal } from "./modals/MultiVariantCropperModal";
 import { ImageLightbox } from "./ui/ImageLightbox";
 
 interface LocationMediaGalleryProps {
@@ -61,11 +63,25 @@ function normalizeInstagramHandle(username: string | undefined): string | undefi
   return normalized.startsWith("@") ? normalized : `@${normalized}`;
 }
 
+const REQUIRED_VARIANT_COUNT = Object.keys(VARIANT_SPECS).length;
+
+function getMissingVariantCount(upload: Upload): number {
+  const variantCount = upload.imageSet?.variants?.length ?? 0;
+  return Math.max(0, REQUIRED_VARIANT_COUNT - variantCount);
+}
+
+function getFileNameFromPath(path: string, fallback: string): string {
+  const fileName = path.split("/").pop();
+  if (!fileName || !fileName.trim()) {
+    return fallback;
+  }
+  return fileName;
+}
+
 export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryProps) {
   const { showToast } = useToast();
   const uploadsWithPreview = (locationDetail.uploads || []).filter((upload) => {
-    const squareVariant = upload.imageSet?.variants?.find((v) => v.type === "square");
-    return Boolean(squareVariant?.path?.trim());
+    return upload.imageSet?.variants?.some((variant) => Boolean(variant.path?.trim())) ?? false;
   });
   const instagramEmbedsWithPreview = (locationDetail.instagram_embeds || []).filter((embed) =>
     Boolean(embed.images?.[0]?.trim())
@@ -81,6 +97,18 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
     value: string;
     error: string | null;
   } | null>(null);
+  const [loadingSourceUploadId, setLoadingSourceUploadId] = useState<number | null>(null);
+  const [manualCropState, setManualCropState] = useState<{
+    isOpen: boolean;
+    uploadId: number | null;
+    file: File | null;
+    altText?: string;
+  }>({
+    isOpen: false,
+    uploadId: null,
+    file: null,
+    altText: undefined,
+  });
 
   const [lightboxState, setLightboxState] = useState({
     isOpen: false,
@@ -133,16 +161,48 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
     },
   });
 
+  const replaceVariantsMutation = useReplaceUploadVariants({
+    category: locationDetail.category,
+    locationId: locationDetail.id,
+    onSuccess: () => {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(
+        `Variants updated to ${REQUIRED_VARIANT_COUNT}. Run Payload Sync to refresh CMS media sets.`,
+        centerPosition
+      );
+    },
+    onError: (error) => {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(error.message || "Failed to replace image variants", centerPosition);
+    },
+  });
+
   const missingCreditCount = uploadsWithPreview.filter((upload) =>
     hasMissingPhotographerCredit(upload.imageSet?.photographerCredit)
+  ).length;
+  const incompleteVariantCount = uploadsWithPreview.filter((upload) =>
+    getMissingVariantCount(upload) > 0
   ).length;
 
   function handleImageSetClick(upload: Upload) {
     if ('imageSet' in upload && upload.imageSet) {
       const imageSet = upload.imageSet;
       if (imageSet && imageSet.variants) {
-        const variantPaths = imageSet.variants.map((v: ImageVariant) => v.path);
-        const squareVariantIndex = imageSet.variants.findIndex(v => v.type === 'square');
+        const missingVariantCount = getMissingVariantCount(upload);
+        if (missingVariantCount > 0) {
+          void handleOpenManualCrop(upload);
+          return;
+        }
+
+        const variantsWithPath = imageSet.variants.filter((v: ImageVariant) =>
+          Boolean(v.path?.trim())
+        );
+        if (variantsWithPath.length === 0) {
+          return;
+        }
+
+        const variantPaths = variantsWithPath.map((v: ImageVariant) => v.path);
+        const squareVariantIndex = variantsWithPath.findIndex(v => v.type === 'square');
         const startIndex = squareVariantIndex >= 0 ? squareVariantIndex : 0;
         const normalizedPhotographerCredit = imageSet.photographerCredit?.trim() || undefined;
 
@@ -151,7 +211,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
           images: variantPaths,
           currentIndex: startIndex,
           photographerCredit: normalizedPhotographerCredit,
-          imageMetadata: imageSet.variants.map(variant => ({
+          imageMetadata: variantsWithPath.map(variant => ({
             width: variant.dimensions.width,
             height: variant.dimensions.height,
             size: variant.size,
@@ -163,6 +223,70 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
         });
       }
     }
+  }
+
+  async function handleOpenManualCrop(upload: Upload) {
+    const sourcePath = upload.imageSet?.sourceImage?.path;
+    const uploadId = upload.id;
+
+    if (!uploadId || !sourcePath) {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast("Source image unavailable for manual crop", centerPosition);
+      return;
+    }
+
+    setLoadingSourceUploadId(uploadId);
+
+    try {
+      const sourceUrl = `${toImageApiPath(sourcePath)}?v=${uploadId}-source-${Date.now()}`;
+      const response = await fetch(sourceUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to load source image (${response.status})`);
+      }
+
+      const sourceBlob = await response.blob();
+      const sourceFile = new File(
+        [sourceBlob],
+        getFileNameFromPath(sourcePath, `upload-${uploadId}-source.webp`),
+        { type: sourceBlob.type || "image/webp" }
+      );
+
+      setManualCropState({
+        isOpen: true,
+        uploadId,
+        file: sourceFile,
+        altText: upload.imageSet?.altText,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load source image";
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(message, centerPosition);
+    } finally {
+      setLoadingSourceUploadId((current) => (current === uploadId ? null : current));
+    }
+  }
+
+  function handleManualCropConfirm(
+    sourceFile: File,
+    variantFiles: { type: ImageVariant["type"]; file: File }[]
+  ) {
+    if (!manualCropState.uploadId) {
+      return;
+    }
+
+    replaceVariantsMutation.mutate({
+      uploadId: manualCropState.uploadId,
+      sourceFile,
+      variantFiles,
+      altText: manualCropState.altText,
+    });
+
+    setManualCropState({
+      isOpen: false,
+      uploadId: null,
+      file: null,
+      altText: undefined,
+    });
   }
 
   function handleInstagramImageClick(embed: InstagramEmbed, imageIndex: number) {
@@ -265,19 +389,27 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
               {missingCreditCount} image set{missingCreditCount === 1 ? "" : "s"} missing photographer credit
             </p>
           )}
+          {incompleteVariantCount > 0 && (
+            <p className="ml-4 text-xs font-medium text-amber-600">
+              {incompleteVariantCount} image set{incompleteVariantCount === 1 ? "" : "s"} with fewer than {REQUIRED_VARIANT_COUNT} variants
+            </p>
+          )}
           <ul className="flex gap-2 ml-4 flex-wrap">
             {uploadsWithPreview.map((upload) => {
               if (upload.imageSet) {
                 const imageSet = upload.imageSet;
-                const squareVariant = imageSet.variants?.find(v => v.type === 'square');
-                if (!squareVariant) return null;
+                const previewVariant = imageSet.variants?.find(v => v.type === 'square') || imageSet.variants?.[0];
+                if (!previewVariant?.path) return null;
                 const hasMissingCredit = hasMissingPhotographerCredit(imageSet.photographerCredit);
+                const missingVariantCount = getMissingVariantCount(upload);
+                const hasMissingVariants = missingVariantCount > 0;
+                const isLoadingSource = loadingSourceUploadId === upload.id;
 
-                const imageUrl = `${toImageApiPath(squareVariant.path)}?v=${upload.id ?? "upload"}`;
+                const imageUrl = `${toImageApiPath(previewVariant.path)}?v=${upload.id ?? "upload"}`;
                 return (
                   <li key={`${upload.id}-imageset`} className="relative group">
                     <div className={`shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-muted transition-all ${
-                      hasMissingCredit
+                      hasMissingCredit || hasMissingVariants
                         ? "ring-2 ring-amber-500/70"
                         : "hover:ring-2 ring-primary"
                     }`}>
@@ -287,14 +419,32 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
                         className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                         loading="lazy"
                         onClick={() => handleImageSetClick(upload)}
-                        title={imageSet.photographerCredit || "Click to view all variants"}
+                        title={
+                          hasMissingVariants
+                            ? "Missing variants. Click to open manual crop UI."
+                            : (imageSet.photographerCredit || "Click to view all variants")
+                        }
                       />
                       </div>
                       <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
                         {imageSet.variants?.length || 0} variants
                       </div>
+                      {hasMissingVariants && (
+                        <div className="absolute top-1 left-1 bg-amber-700/90 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                          {missingVariantCount} missing
+                        </div>
+                      )}
+                      {isLoadingSource && (
+                        <div className="absolute top-6 left-1 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                          Loading source...
+                        </div>
+                      )}
                       {hasMissingCredit && (
-                        <div className="absolute top-1 left-1 bg-amber-600/90 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                        <div
+                          className={`absolute left-1 bg-amber-600/90 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none ${
+                            hasMissingVariants || isLoadingSource ? "top-10" : "top-1"
+                          }`}
+                        >
                           Missing Credit
                         </div>
                       )}
@@ -445,6 +595,22 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {manualCropState.isOpen && manualCropState.file && (
+        <MultiVariantCropperModal
+          file={manualCropState.file}
+          isOpen={manualCropState.isOpen}
+          onClose={() =>
+            setManualCropState({
+              isOpen: false,
+              uploadId: null,
+              file: null,
+              altText: undefined,
+            })
+          }
+          onConfirm={handleManualCropConfirm}
+        />
+      )}
 
       {/* Image Lightbox */}
       {lightboxState.isOpen && (

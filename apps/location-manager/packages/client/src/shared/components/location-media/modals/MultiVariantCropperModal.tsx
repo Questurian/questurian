@@ -23,6 +23,18 @@ interface MultiVariantCropperModalProps {
 
 const variantSequence: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'social', 'editorial', 'portrait', 'hero'];
 
+function createInitialCropStates(): Record<ImageVariantType, CropState> {
+  return {
+    thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    social: { variantType: 'social', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    editorial: { variantType: 'editorial', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+  };
+}
+
 export function MultiVariantCropperModal({
   file,
   isOpen,
@@ -35,20 +47,13 @@ export function MultiVariantCropperModal({
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Initialize crop states for all variants
-  const [cropStates, setCropStates] = useState<Record<ImageVariantType, CropState>>({
-    thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    social: { variantType: 'social', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    editorial: { variantType: 'editorial', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-  });
+  const [cropStates, setCropStates] = useState<Record<ImageVariantType, CropState>>(() => createInitialCropStates());
 
   const currentVariantType = variantSequence[currentVariantIndex];
   const currentState = cropStates[currentVariantType];
   const currentSpec = VARIANT_SPECS[currentVariantType];
   const totalVariants = variantSequence.length;
+  const fileIdentity = `${file.name}:${file.lastModified}:${file.size}`;
 
   // Create preview URL when file changes
   useEffect(() => {
@@ -59,39 +64,44 @@ export function MultiVariantCropperModal({
     }
   }, [file]);
 
+  // Reset cropper progress when switching to a different source file.
+  useEffect(() => {
+    setCurrentVariantIndex(0);
+    setIsProcessing(false);
+    setCropStates(createInitialCropStates());
+  }, [file]);
+
+  const updateVariantState = useCallback(
+    (variantType: ImageVariantType, updates: Partial<CropState>) => {
+      setCropStates((prev) => ({
+        ...prev,
+        [variantType]: { ...prev[variantType], ...updates },
+      }));
+    },
+    []
+  );
+
   // Update crop position for current variant
   const onCropChange = useCallback((crop: Point) => {
-    setCropStates(prev => ({
-      ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], crop }
-    }));
-  }, [currentVariantType]);
+    updateVariantState(currentVariantType, { crop });
+  }, [currentVariantType, updateVariantState]);
 
   // Update zoom for current variant
   const onZoomChange = useCallback((zoom: number) => {
-    setCropStates(prev => ({
-      ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], zoom }
-    }));
-  }, [currentVariantType]);
+    updateVariantState(currentVariantType, { zoom });
+  }, [currentVariantType, updateVariantState]);
 
-  // Update cropped area pixels for current variant
-  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
-    setCropStates(prev => ({
-      ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], croppedAreaPixels, completed: true }
-    }));
-  }, [currentVariantType]);
+  // Persist the pixel crop continuously to avoid stale area when switching tabs quickly.
+  const onCropAreaChange = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+    updateVariantState(currentVariantType, { croppedAreaPixels, completed: true });
+  }, [currentVariantType, updateVariantState]);
 
   // Navigate to previous variant
   const handlePrevious = () => {
     if (currentVariantIndex > 0) {
       // Mark current as completed before moving
-      setCropStates(prev => ({
-        ...prev,
-        [currentVariantType]: { ...prev[currentVariantType], completed: true }
-      }));
-      setCurrentVariantIndex(currentVariantIndex - 1);
+      updateVariantState(currentVariantType, { completed: true });
+      setCurrentVariantIndex((prev) => prev - 1);
     }
   };
 
@@ -99,21 +109,15 @@ export function MultiVariantCropperModal({
   const handleNext = () => {
     if (currentVariantIndex < variantSequence.length - 1) {
       // Mark current as completed before moving
-      setCropStates(prev => ({
-        ...prev,
-        [currentVariantType]: { ...prev[currentVariantType], completed: true }
-      }));
-      setCurrentVariantIndex(currentVariantIndex + 1);
+      updateVariantState(currentVariantType, { completed: true });
+      setCurrentVariantIndex((prev) => prev + 1);
     }
   };
 
   // Jump to specific variant
   const jumpToVariant = (index: number) => {
     // Mark current as completed before jumping
-    setCropStates(prev => ({
-      ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], completed: true }
-    }));
+    updateVariantState(currentVariantType, { completed: true });
     setCurrentVariantIndex(index);
   };
 
@@ -132,10 +136,7 @@ export function MultiVariantCropperModal({
     }
 
     // Mark current as completed
-    setCropStates(prev => ({
-      ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], completed: true }
-    }));
+    updateVariantState(currentVariantType, { completed: true });
 
     if (!allCropsComplete()) {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -182,13 +183,15 @@ export function MultiVariantCropperModal({
         <div className="relative h-[50vh] md:h-[500px] bg-black">
           {previewUrl && (
             <Cropper
+              key={`${fileIdentity}:${currentVariantType}`}
               image={previewUrl}
               crop={currentState.crop}
               zoom={currentState.zoom}
               aspect={currentSpec.ratio}
               onCropChange={onCropChange}
               onZoomChange={onZoomChange}
-              onCropComplete={onCropComplete}
+              onCropComplete={onCropAreaChange}
+              onCropAreaChange={onCropAreaChange}
               restrictPosition={true}
               cropShape="rect"
               showGrid={true}

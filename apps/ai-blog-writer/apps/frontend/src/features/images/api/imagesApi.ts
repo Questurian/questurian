@@ -5,15 +5,18 @@
 import type { ImageVariantType } from '../utils/imageProcessing';
 import { generateAltTextApi } from './alt-text/generate-alt-text.api';
 import type {
+  GenerateSocialImageResponse,
   ProcessImageOnlyResponse,
   UploadImageResponse,
   UploadProgress,
 } from './contracts/image-api.contracts';
+import { generateSocialImageApi } from './generate-social-image.api';
 import { processImageOnlyApi } from './processing/process-image-only.api';
 import { uploadSingleApi } from './uploads/upload-single.api';
 import { uploadVariantsApi } from './uploads/upload-variants.api';
 
 export type { UploadImageResponse, UploadProgress };
+export type { GenerateSocialImageResponse };
 
 /**
  * Upload pre-processed image variants to be stored in Payload CMS
@@ -81,4 +84,11 @@ export async function processImageOnly(
   altText: string = ''
 ): Promise<ProcessImageOnlyResponse> {
   return processImageOnlyApi({ file, altText });
+}
+
+export async function generateSocialImageFromFeatured(
+  featuredAssetId: number,
+  token: string
+): Promise<GenerateSocialImageResponse> {
+  return generateSocialImageApi({ featuredAssetId, token });
 }

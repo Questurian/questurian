@@ -26,7 +26,7 @@ import {
 
   // Content
   postAddInstagram, deleteInstagramEmbed,
-  postAddUpload, postAddUploadImageSet, postGenerateAltText, deleteUpload, patchUploadPhotographerCredit,
+  postAddUpload, postAddUploadImageSet, postGenerateAltText, deleteUpload, patchUploadPhotographerCredit, postReprocessUploadVariants, postReplaceUploadVariants,
   serveImage,
   fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
   fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
@@ -150,6 +150,16 @@ app.patch(
   validateParams(deleteUploadParamsSchema),
   validateBody(updateUploadPhotographerCreditBodySchema),
   patchUploadPhotographerCredit
+);
+app.post(
+  "/api/uploads/:id/reprocess-variants",
+  validateParams(deleteUploadParamsSchema),
+  postReprocessUploadVariants
+);
+app.post(
+  "/api/uploads/:id/replace-variants",
+  validateParams(deleteUploadParamsSchema),
+  postReplaceUploadVariants
 );
 app.delete(
   "/api/instagram-embeds/:id",

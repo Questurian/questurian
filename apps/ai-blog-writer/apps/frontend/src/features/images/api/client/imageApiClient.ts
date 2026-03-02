@@ -17,3 +17,24 @@ export async function postFormData(
     body: formData,
   });
 }
+
+export async function postJson<TBody extends Record<string, unknown>>(
+  path: string,
+  body: TBody,
+  token?: string
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+}

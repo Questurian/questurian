@@ -7,6 +7,8 @@ type BuilderSeoPanelProps = {
   setDraft: Dispatch<SetStateAction<SingleTypeListicleDraft | null>>
   onGenerateSeoWithAi: (target?: SeoAiTarget) => Promise<void>
   isGeneratingSeoTarget: SeoAiTarget | null
+  onGenerateSeoImageFromFeatured: () => Promise<void>
+  isGeneratingSeoImage: boolean
 }
 
 export function BuilderSeoPanel({
@@ -14,6 +16,8 @@ export function BuilderSeoPanel({
   setDraft,
   onGenerateSeoWithAi,
   isGeneratingSeoTarget,
+  onGenerateSeoImageFromFeatured,
+  isGeneratingSeoImage,
 }: BuilderSeoPanelProps) {
   const updateSeo = (updater: (current: SingleTypeListicleDraft['seoSection']) => SingleTypeListicleDraft['seoSection']) => {
     setDraft((current) => {
@@ -26,12 +30,13 @@ export function BuilderSeoPanel({
   }
 
   const isGeneratingAny = Boolean(isGeneratingSeoTarget)
+  const isSeoActionRunning = isGeneratingAny || isGeneratingSeoImage
   const renderAiButton = (target: SeoAiTarget, label = 'AI') => (
     <button
       type="button"
       className="stl-btn stl-btn-secondary stl-seo-ai-btn"
       onClick={() => void onGenerateSeoWithAi(target)}
-      disabled={isGeneratingAny}
+      disabled={isSeoActionRunning}
     >
       {isGeneratingSeoTarget === target ? 'Generating...' : label}
     </button>
@@ -48,7 +53,7 @@ export function BuilderSeoPanel({
             type="button"
             className="stl-btn stl-btn-secondary"
             onClick={() => void onGenerateSeoWithAi('all')}
-            disabled={isGeneratingAny}
+            disabled={isSeoActionRunning}
           >
             {isGeneratingSeoTarget === 'all' ? 'Generating...' : 'Generate SEO (AI)'}
           </button>
@@ -104,7 +109,7 @@ export function BuilderSeoPanel({
 
           <label className="stl-field">
             <span>og:title</span>
-            <div className="stl-seo-input-wrap">
+            <div className="stl-seo-input-wrap stl-seo-input-wrap-featured">
               <input
                 className="stl-seo-input-with-ai"
                 value={draft.seoSection.openGraph.title}
@@ -145,19 +150,32 @@ export function BuilderSeoPanel({
 
           <label className="stl-field">
             <span>og:image</span>
-            <input
-              placeholder="https://example.com/image.jpg"
-              value={draft.seoSection.openGraph.imageUrl}
-              onChange={(event) =>
-                updateSeo((current) => ({
-                  ...current,
-                  openGraph: {
-                    ...current.openGraph,
-                    imageUrl: event.target.value,
-                  },
-                }))
-              }
-            />
+            <div className="stl-seo-input-wrap">
+              <input
+                className="stl-seo-input-with-ai"
+                placeholder="https://example.com/image.jpg"
+                value={draft.seoSection.openGraph.imageUrl}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    openGraph: {
+                      ...current.openGraph,
+                      imageUrl: event.target.value,
+                    },
+                  }))
+                }
+              />
+              <span className="stl-seo-ai-trigger-wrap">
+                <button
+                  type="button"
+                  className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                  onClick={() => void onGenerateSeoImageFromFeatured()}
+                  disabled={isSeoActionRunning}
+                >
+                  {isGeneratingSeoImage ? 'Generating...' : 'Use Featured 1200x630'}
+                </button>
+              </span>
+            </div>
           </label>
 
           <label className="stl-field">

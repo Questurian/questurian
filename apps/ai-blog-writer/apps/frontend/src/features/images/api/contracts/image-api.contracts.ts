@@ -36,3 +36,14 @@ export interface ProcessImageOnlyResponse {
     };
   };
 }
+
+export interface GenerateSocialImageResponse {
+  success: boolean;
+  featuredAssetId: string;
+  mediaSetId: string;
+  sourceAssetId: string;
+  generatedAssetId: string;
+  generatedImageUrl: string;
+  width: number;
+  height: number;
+}

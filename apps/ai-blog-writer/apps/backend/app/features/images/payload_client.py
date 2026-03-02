@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional, TypedDict
 
 import httpx
 
@@ -14,6 +14,17 @@ logger = logging.getLogger("images.payload")
 
 DEFAULT_PAYLOAD_API_URL = "http://localhost:4000"
 DEFAULT_DOCKER_PAYLOAD_API_URL = "http://host.docker.internal:4000"
+
+
+class PayloadMediaAssetDoc(TypedDict):
+    id: str
+    filename: str
+    mediaSet: str | int | None
+    variant: str | None
+    width: int | None
+    height: int | None
+    bunny_original_url: str | None
+    url: str | None
 
 
 def _running_in_docker() -> bool:
@@ -105,6 +116,85 @@ def _is_variant_conflict_error(parsed_error: str, variant: str) -> bool:
             and variant_key in normalized
             and "variant" in normalized
         )
+    )
+
+
+def _extract_relationship_id(value: Any) -> str | int | None:
+    if value is None:
+        return None
+    if isinstance(value, (str, int)):
+        return value
+    if isinstance(value, dict):
+        related_id = value.get("id")
+        if isinstance(related_id, (str, int)):
+            return related_id
+    return None
+
+
+def _to_optional_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if value.is_integer():
+            return int(value)
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            return int(text)
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_media_asset_doc(doc: Any) -> PayloadMediaAssetDoc:
+    if not isinstance(doc, dict):
+        raise PayloadUploadError(
+            step="parse_media_asset_doc",
+            message="Payload returned an invalid media-asset document",
+            detail=f"Expected dict, got {type(doc).__name__}",
+        )
+
+    raw_id = doc.get("id")
+    if raw_id is None:
+        raise PayloadUploadError(
+            step="parse_media_asset_doc",
+            message="Payload media-asset document is missing id",
+            detail=f"Response keys: {list(doc.keys())}",
+        )
+
+    filename = doc.get("filename")
+    if not isinstance(filename, str) or not filename.strip():
+        raise PayloadUploadError(
+            step="parse_media_asset_doc",
+            message="Payload media-asset document is missing filename",
+            detail=f"asset_id={raw_id}",
+        )
+
+    media_set = _extract_relationship_id(doc.get("mediaSet"))
+    variant = doc.get("variant")
+    width = _to_optional_int(doc.get("width"))
+    height = _to_optional_int(doc.get("height"))
+    bunny_original_url = (
+        doc.get("bunny_original_url")
+        if isinstance(doc.get("bunny_original_url"), str)
+        else None
+    )
+    asset_url = doc.get("url") if isinstance(doc.get("url"), str) else None
+
+    return PayloadMediaAssetDoc(
+        id=str(raw_id),
+        filename=filename,
+        mediaSet=media_set,
+        variant=variant if isinstance(variant, str) else None,
+        width=width,
+        height=height,
+        bunny_original_url=bunny_original_url,
+        url=asset_url,
     )
 
 
@@ -444,6 +534,203 @@ class PayloadClient:
         found = docs[0] if docs else None
         logger.info("find_media_set(ref=%s) → %s", external_ref, found.get('id') if found else "not found")
         return found
+
+    async def get_media_asset_by_id(
+        self,
+        asset_id: str | int,
+    ) -> Optional[PayloadMediaAssetDoc]:
+        """Fetch one media-asset by ID."""
+        url = f"{self.api_url}/api/media-assets/{asset_id}"
+        headers = self._get_headers()
+        step = "get_media_asset_by_id"
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, headers=headers)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Cannot connect to Payload CMS",
+                request_url=url,
+                detail=f"Is Payload running at {self.api_url}? ({e})",
+            )
+        except httpx.TimeoutException as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Payload CMS request timed out (15s)",
+                request_url=url,
+                detail=str(e),
+            )
+
+        if response.status_code == 404:
+            return None
+
+        if response.status_code >= 400:
+            body = response.text
+            parsed = _parse_payload_error(body)
+            raise PayloadUploadError(
+                step=step,
+                message="Failed to fetch media-asset by id",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+                detail=parsed,
+            )
+
+        try:
+            result = response.json()
+        except json.JSONDecodeError:
+            body = response.text
+            raise PayloadUploadError(
+                step=step,
+                message="Payload returned invalid JSON while fetching media-asset",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+            )
+
+        doc: Any = None
+        if isinstance(result, dict):
+            # Payload responses can be either {"doc": {...}} or the raw document object.
+            if isinstance(result.get("doc"), dict):
+                doc = result.get("doc")
+            elif result.get("id") is not None and result.get("filename") is not None:
+                doc = result
+
+        if doc is None:
+            # Some deployments can return a non-standard by-id payload shape.
+            # Fall back to a filtered collection query for robustness.
+            query_url = f"{self.api_url}/api/media-assets"
+            query_params = {
+                "where[id][equals]": str(asset_id),
+                "limit": 1,
+                "depth": 0,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    query_response = await client.get(
+                        query_url,
+                        headers=headers,
+                        params=query_params,
+                    )
+            except httpx.ConnectError as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Cannot connect to Payload CMS",
+                    request_url=query_url,
+                    detail=f"Is Payload running at {self.api_url}? ({e})",
+                )
+            except httpx.TimeoutException as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload CMS request timed out (15s)",
+                    request_url=query_url,
+                    detail=str(e),
+                )
+
+            if query_response.status_code >= 400:
+                body = query_response.text
+                parsed = _parse_payload_error(body)
+                raise PayloadUploadError(
+                    step=step,
+                    message="Failed to query media-asset by id fallback",
+                    status_code=query_response.status_code,
+                    response_body=body,
+                    request_url=query_url,
+                    detail=parsed,
+                )
+
+            try:
+                query_result = query_response.json()
+            except json.JSONDecodeError:
+                body = query_response.text
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload returned invalid JSON while querying media-asset fallback",
+                    status_code=query_response.status_code,
+                    response_body=body,
+                    request_url=query_url,
+                )
+
+            docs = query_result.get("docs", []) if isinstance(query_result, dict) else []
+            if isinstance(docs, list) and docs:
+                first_doc = docs[0]
+                return _parse_media_asset_doc(first_doc)
+
+            return None
+
+        return _parse_media_asset_doc(doc)
+
+    async def list_media_assets_by_media_set(
+        self,
+        media_set_id: str | int,
+    ) -> list[PayloadMediaAssetDoc]:
+        """List all media-assets linked to a media set."""
+        url = f"{self.api_url}/api/media-assets"
+        headers = self._get_headers()
+        step = "list_media_assets_by_media_set"
+        page = 1
+        docs: list[PayloadMediaAssetDoc] = []
+        total_pages = 1
+
+        while page <= total_pages:
+            params = {
+                "where[mediaSet][equals]": str(media_set_id),
+                "limit": 100,
+                "page": page,
+            }
+
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    response = await client.get(url, headers=headers, params=params)
+            except httpx.ConnectError as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Cannot connect to Payload CMS",
+                    request_url=url,
+                    detail=f"Is Payload running at {self.api_url}? ({e})",
+                )
+            except httpx.TimeoutException as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload CMS request timed out (15s)",
+                    request_url=url,
+                    detail=str(e),
+                )
+
+            if response.status_code >= 400:
+                body = response.text
+                parsed = _parse_payload_error(body)
+                raise PayloadUploadError(
+                    step=step,
+                    message="Failed to list media-assets by media set",
+                    status_code=response.status_code,
+                    response_body=body,
+                    request_url=url,
+                    detail=parsed,
+                )
+
+            try:
+                result = response.json()
+            except json.JSONDecodeError:
+                body = response.text
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload returned invalid JSON while listing media-assets",
+                    status_code=response.status_code,
+                    response_body=body,
+                    request_url=url,
+                )
+
+            raw_docs = result.get("docs", [])
+            if isinstance(raw_docs, list):
+                docs.extend(_parse_media_asset_doc(raw_doc) for raw_doc in raw_docs)
+
+            total_pages_raw = result.get("totalPages", 1)
+            total_pages = total_pages_raw if isinstance(total_pages_raw, int) and total_pages_raw > 0 else 1
+            page += 1
+
+        return docs
 
     async def find_media_asset_by_variant(
         self,

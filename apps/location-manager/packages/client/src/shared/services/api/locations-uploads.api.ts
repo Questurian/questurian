@@ -1,4 +1,4 @@
-import { apiPostFormData, apiDelete, apiPatch, unwrapEntry } from "./client";
+import { apiPostFormData, apiDelete, apiPatch, apiPost, unwrapEntry } from "./client";
 import { API_ENDPOINTS } from "./config";
 import { uploadWithProgress } from "./upload-with-progress";
 import type { UploadResponse } from "./types";
@@ -72,6 +72,39 @@ export const locationsUploadsApi = {
 
   async deleteUpload(uploadId: number): Promise<void> {
     await apiDelete(API_ENDPOINTS.DELETE_UPLOAD(uploadId));
+  },
+
+  async reprocessUploadVariants(uploadId: number): Promise<UploadResponse["entry"]> {
+    const response = await apiPost<UploadResponse>(
+      API_ENDPOINTS.REPROCESS_UPLOAD_VARIANTS(uploadId)
+    );
+    return unwrapEntry(response);
+  },
+
+  async replaceUploadVariants(
+    uploadId: number,
+    sourceFile: File,
+    variantFiles: { type: ImageVariantType; file: File }[],
+    onProgress?: (percent: number) => void,
+    altText?: string
+  ): Promise<UploadResponse["entry"]> {
+    const formData = new FormData();
+
+    if (altText !== undefined) {
+      formData.append("altText", altText);
+    }
+
+    formData.append("source_0", sourceFile);
+
+    variantFiles.forEach(({ type, file }) => {
+      formData.append(`variant_0_${type}`, file);
+    });
+
+    return uploadWithProgress(
+      API_ENDPOINTS.REPLACE_UPLOAD_VARIANTS(uploadId),
+      formData,
+      onProgress
+    );
   },
 
   async updateUploadPhotographerCredit(

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
+import { generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured } from '../../images'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
 import { BuilderHero } from '../builder/components/BuilderHero'
 import { BuilderItemsPanel } from '../builder/components/BuilderItemsPanel'
@@ -48,6 +49,7 @@ export default function SingleTypeListicleBuilderPage() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
+  const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -203,6 +205,57 @@ export default function SingleTypeListicleBuilderPage() {
     }
   }, [draft, onError, setDraft])
 
+  const generateSeoImageFromFeatured = useCallback(async (): Promise<void> => {
+    if (!draft) return
+
+    const featuredAssetId = draft.header.featuredImage
+    if (!featuredAssetId) {
+      onError('Select a featured image in Step 2 before generating social image URLs.')
+      return
+    }
+
+    if (!token) {
+      onError('You must be logged in to generate social image URLs.')
+      return
+    }
+
+    onError('')
+    setResult(null)
+    setIsGeneratingSeoImage(true)
+
+    try {
+      const response = await requestGenerateSocialImageFromFeatured(featuredAssetId, token)
+      const bunnyUrl = response.generatedImageUrl.trim()
+      if (!bunnyUrl) {
+        throw new Error('Generated social image is missing Bunny URL.')
+      }
+
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          seoSection: {
+            ...current.seoSection,
+            openGraph: {
+              ...current.seoSection.openGraph,
+              imageUrl: bunnyUrl,
+            },
+            twitterCard: {
+              ...current.seoSection.twitterCard,
+              imageUrl: bunnyUrl,
+            },
+          },
+        }
+      })
+
+      setResult('Social image generated from featured image. Bunny URL applied to OG and Twitter.')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to generate social image from featured image.')
+    } finally {
+      setIsGeneratingSeoImage(false)
+    }
+  }, [draft, onError, setDraft, token])
+
   if (isLoading || !draft) {
     return (
       <div className="stl-page stl-single-type-page">
@@ -275,6 +328,8 @@ export default function SingleTypeListicleBuilderPage() {
               setDraft={setDraft}
               onGenerateSeoWithAi={generateSeoWithAi}
               isGeneratingSeoTarget={isGeneratingSeoTarget}
+              onGenerateSeoImageFromFeatured={generateSeoImageFromFeatured}
+              isGeneratingSeoImage={isGeneratingSeoImage}
             />
           ) : null}
         </main>

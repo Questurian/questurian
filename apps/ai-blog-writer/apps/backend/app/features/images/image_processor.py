@@ -68,48 +68,89 @@ def process_image_variants(
     Returns:
         Dictionary mapping variant types to processed variants
     """
-    # Load source image
-    source_image = Image.open(io.BytesIO(source_buffer))
-
-    # Convert to RGB if necessary (handles RGBA, P mode, etc.)
-    if source_image.mode in ('RGBA', 'P'):
-        # Create white background for transparency
-        background = Image.new('RGB', source_image.size, (255, 255, 255))
-        if source_image.mode == 'P':
-            source_image = source_image.convert('RGBA')
-        background.paste(source_image, mask=source_image.split()[-1] if source_image.mode == 'RGBA' else None)
-        source_image = background
-    elif source_image.mode != 'RGB':
-        source_image = source_image.convert('RGB')
-
-    # Generate base name from original filename
-    base_name = original_filename.rsplit('.', 1)[0] if '.' in original_filename else original_filename
+    source_image = _normalize_source_image(source_buffer)
 
     variants: Dict[ImageVariantType, ProcessedVariant] = {}
 
-    for variant_type, spec in VARIANT_SPECS.items():
-        # Resize image maintaining aspect ratio, then crop to exact dimensions
-        resized = _resize_and_crop(source_image, spec.width, spec.height)
-
-        # Save as WebP
-        output_buffer = io.BytesIO()
-        resized.save(output_buffer, format='WEBP', quality=quality, method=6)
-        webp_buffer = output_buffer.getvalue()
-
-        # Generate filename
-        filename = f"{base_name}_{variant_type.value}.webp"
-
-        variants[variant_type] = ProcessedVariant(
+    for variant_type in VARIANT_SPECS:
+        variants[variant_type] = _render_variant(
+            source_image=source_image,
+            original_filename=original_filename,
             variant_type=variant_type,
-            buffer=webp_buffer,
-            filename=filename,
-            width=spec.width,
-            height=spec.height,
-            content_type='image/webp',
-            file_size=len(webp_buffer)
+            quality=quality,
         )
 
     return variants
+
+
+def process_single_variant(
+    source_buffer: bytes,
+    original_filename: str,
+    variant_type: ImageVariantType,
+    quality: int = 85,
+) -> ProcessedVariant:
+    """Process one image variant from source bytes."""
+    source_image = _normalize_source_image(source_buffer)
+    return _render_variant(
+        source_image=source_image,
+        original_filename=original_filename,
+        variant_type=variant_type,
+        quality=quality,
+    )
+
+
+def _normalize_source_image(source_buffer: bytes) -> Image.Image:
+    source_image = Image.open(io.BytesIO(source_buffer))
+
+    if source_image.mode in ('RGBA', 'P'):
+        background = Image.new('RGB', source_image.size, (255, 255, 255))
+        if source_image.mode == 'P':
+            source_image = source_image.convert('RGBA')
+        background.paste(
+            source_image,
+            mask=source_image.split()[-1] if source_image.mode == 'RGBA' else None,
+        )
+        return background
+
+    if source_image.mode != 'RGB':
+        return source_image.convert('RGB')
+
+    return source_image
+
+
+def _build_variant_filename(original_filename: str, variant_type: ImageVariantType) -> str:
+    base_name = (
+        original_filename.rsplit('.', 1)[0]
+        if '.' in original_filename
+        else original_filename
+    )
+    return f"{base_name}_{variant_type.value}.webp"
+
+
+def _render_variant(
+    source_image: Image.Image,
+    original_filename: str,
+    variant_type: ImageVariantType,
+    quality: int,
+) -> ProcessedVariant:
+    spec = VARIANT_SPECS[variant_type]
+
+    resized = _resize_and_crop(source_image, spec.width, spec.height)
+    output_buffer = io.BytesIO()
+    resized.save(output_buffer, format='WEBP', quality=quality, method=6)
+    webp_buffer = output_buffer.getvalue()
+
+    filename = _build_variant_filename(original_filename, variant_type)
+
+    return ProcessedVariant(
+        variant_type=variant_type,
+        buffer=webp_buffer,
+        filename=filename,
+        width=spec.width,
+        height=spec.height,
+        content_type='image/webp',
+        file_size=len(webp_buffer),
+    )
 
 
 def _resize_and_crop(image: Image.Image, target_width: int, target_height: int) -> Image.Image:

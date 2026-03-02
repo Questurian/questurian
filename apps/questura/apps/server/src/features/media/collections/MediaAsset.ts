@@ -18,6 +18,57 @@ import {
   type MediaVariantKey,
 } from '@/features/media/constants'
 
+const OG_IMAGE_WIDTH = 1200
+const OG_IMAGE_HEIGHT = 630
+const BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY = 'skipBunnyOriginalUrlSync'
+
+const toNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return null
+}
+
+const normalizeHostname = (hostname: string): string =>
+  hostname.replace(/^https?:\/\//, '').replace(/\/+$/, '')
+
+const normalizePathPart = (value: string): string =>
+  value.replace(/^\/+/, '').replace(/\/+$/, '')
+
+const buildBunnyStorageUrl = (
+  hostname: string,
+  prefix: string | null | undefined,
+  filename: string
+): string | null => {
+  const normalizedHost = normalizeHostname(hostname)
+  if (!normalizedHost) return null
+
+  const pathParts = [
+    ...(prefix ? [normalizePathPart(prefix)] : []),
+    normalizePathPart(filename),
+  ].filter(Boolean)
+
+  if (pathParts.length === 0) return null
+
+  const encodedPath = encodeURI(pathParts.join('/'))
+  return `https://${normalizedHost}/${encodedPath}`
+}
+
+const getExpectedBunnyOriginalUrl = (doc: Record<string, unknown>): string | null => {
+  const width = toNumber(doc.width)
+  const height = toNumber(doc.height)
+  const filename = typeof doc.filename === 'string' ? doc.filename : null
+  const prefix = typeof doc.prefix === 'string' ? doc.prefix : null
+  const hostname = process.env.BUNNY_STORAGE_HOSTNAME
+
+  if (width !== OG_IMAGE_WIDTH || height !== OG_IMAGE_HEIGHT) return null
+  if (!filename || !hostname) return null
+
+  return buildBunnyStorageUrl(hostname, prefix, filename)
+}
+
 const extractRelationshipId = (value: unknown): string | number | null => {
   if (value === null || value === undefined) return null
   if (typeof value === 'string' || typeof value === 'number') return value
@@ -204,6 +255,37 @@ const syncMediaSetVariant: CollectionAfterChangeHook = async ({
   }
 }
 
+const syncBunnyOriginalUrl: CollectionAfterChangeHook = async ({ doc, req }) => {
+  const context = (req.context as Record<string, unknown> | undefined) ?? {}
+  if (context[BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY] === true) return
+
+  const docRecord = (doc as Record<string, unknown> | undefined) ?? {}
+  const assetId = docRecord.id as string | number | undefined
+  if (assetId === undefined) return
+
+  const expectedUrl = getExpectedBunnyOriginalUrl(docRecord)
+  const currentUrl = typeof docRecord.bunny_original_url === 'string'
+    ? docRecord.bunny_original_url
+    : null
+
+  if (currentUrl === expectedUrl) return
+
+  await req.payload.update({
+    collection: 'media-assets',
+    id: assetId,
+    data: {
+      bunny_original_url: expectedUrl,
+    },
+    disableTransaction: true,
+    overrideAccess: true,
+    req,
+    context: {
+      ...context,
+      [BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY]: true,
+    },
+  })
+}
+
 export const MediaAsset: CollectionConfig = {
   slug: 'media-assets',
 
@@ -291,7 +373,7 @@ export const MediaAsset: CollectionConfig = {
         return data
       },
     ],
-    afterChange: [syncMediaSetVariant],
+    afterChange: [syncMediaSetVariant, syncBunnyOriginalUrl],
   },
 
   // Admin UI customization
@@ -330,6 +412,16 @@ export const MediaAsset: CollectionConfig = {
       admin: {
         readOnly: true,
         hidden: true,
+      },
+    },
+    {
+      name: 'bunny_original_url',
+      type: 'text',
+      required: false,
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: 'Auto-filled for original uploads that are exactly 1200x630.',
       },
     },
     {

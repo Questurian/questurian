@@ -15,6 +15,15 @@ import {
 const container = ServiceContainer.getInstance();
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
+  "thumbnail",
+  "square",
+  "wide",
+  "social",
+  "editorial",
+  "portrait",
+  "hero",
+];
 
 function parseRequiredPhotographerCredit(formData: FormData): string {
   const photographerCredit = formData.get("photographerCredit");
@@ -110,20 +119,11 @@ export async function postAddUploadImageSet(c: Context) {
   }
 
   // Parse variant files (expecting all configured variants)
-  const variantTypes: ImageVariantType[] = [
-    'thumbnail',
-    'square',
-    'wide',
-    'social',
-    'editorial',
-    'portrait',
-    'hero'
-  ];
   const variantFiles: { type: ImageVariantType; file: File }[] = [];
 
   let totalSize = sourceFile.size;
 
-  for (const type of variantTypes) {
+  for (const type of REQUIRED_VARIANT_TYPES) {
     const fileKey = `variant_0_${type}`;
     const file = formData.get(fileKey);
 
@@ -157,6 +157,94 @@ export async function postAddUploadImageSet(c: Context) {
     sourceFile,
     variantFiles,
     photographerCreditValue,
+    altTextValue
+  );
+
+  return c.json(successResponse({ entry }));
+}
+
+/**
+ * POST /api/uploads/:id/reprocess-variants
+ * Regenerate all configured variants from the stored source image.
+ * Only allowed when the upload has fewer than 7 variants.
+ */
+export async function postReprocessUploadVariants(c: Context) {
+  const params = c.get("validatedParams") as UploadIdParamsDto;
+  const uploadId = parseInt(params.id, 10);
+
+  if (isNaN(uploadId)) {
+    throw new BadRequestError("Upload ID must be a number");
+  }
+
+  const entry = await container.uploadsService.reprocessUploadVariants(uploadId);
+
+  return c.json(successResponse({ entry }));
+}
+
+/**
+ * POST /api/uploads/:id/replace-variants
+ * Replace source + all variants for an existing image-set upload.
+ */
+export async function postReplaceUploadVariants(c: Context) {
+  const formData = await c.req.formData();
+  const params = c.get("validatedParams") as UploadIdParamsDto;
+  const uploadId = parseInt(params.id, 10);
+
+  if (isNaN(uploadId)) {
+    throw new BadRequestError("Upload ID must be a number");
+  }
+
+  const altText = formData.get("altText");
+  const altTextValue = typeof altText === "string" ? altText : undefined;
+
+  const sourceFile = formData.get("source_0");
+  if (!sourceFile || !(sourceFile instanceof File)) {
+    throw new BadRequestError("Source file required (source_0)");
+  }
+
+  if (!ALLOWED_MIME_TYPES.includes(sourceFile.type)) {
+    throw new BadRequestError(
+      `Invalid source file type. Only JPEG, PNG, WebP, and GIF images are allowed.`
+    );
+  }
+
+  if (sourceFile.size > MAX_FILE_SIZE) {
+    throw new BadRequestError(`Source file exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
+  }
+
+  const variantFiles: { type: ImageVariantType; file: File }[] = [];
+  let totalSize = sourceFile.size;
+
+  for (const type of REQUIRED_VARIANT_TYPES) {
+    const fileKey = `variant_0_${type}`;
+    const file = formData.get(fileKey);
+
+    if (!file || !(file instanceof File)) {
+      throw new BadRequestError(`Missing variant file: ${type} (expected key: ${fileKey})`);
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      throw new BadRequestError(
+        `Invalid file type for variant "${type}". Only JPEG, PNG, WebP, and GIF images are allowed.`
+      );
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      throw new BadRequestError(`Variant "${type}" exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
+    }
+
+    totalSize += file.size;
+    variantFiles.push({ type, file });
+  }
+
+  if (totalSize > MAX_TOTAL_SIZE) {
+    throw new BadRequestError(`Total upload size exceeds ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit`);
+  }
+
+  const entry = await container.uploadsService.replaceUploadVariants(
+    uploadId,
+    sourceFile,
+    variantFiles,
     altTextValue
   );
 

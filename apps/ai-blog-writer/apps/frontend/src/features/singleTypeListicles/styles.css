@@ -323,6 +323,10 @@
   padding-right: 4rem;
 }
 
+.stl-seo-input-wrap-featured .stl-seo-input-with-ai {
+  padding-right: 11.8rem;
+}
+
 .stl-seo-ai-trigger-wrap {
   position: absolute;
   top: 0;
@@ -1325,6 +1329,10 @@
 }
 
 @media (max-width: 900px) {
+  .stl-seo-input-wrap-featured .stl-seo-input-with-ai {
+    padding-right: 10.3rem;
+  }
+
   .stl-grid-2 {
     grid-template-columns: 1fr;
   }

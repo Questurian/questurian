@@ -426,6 +426,298 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
     assert detail["payload_error"]["detail"] == "Something went wrong."
 
 
+def test_generate_social_image_success(monkeypatch):
+    client = TestClient(app)
+
+    async def fake_get_media_asset(self, asset_id: str | int):
+        if str(asset_id) == "77":
+            return {
+                "id": "77",
+                "filename": "featured_editorial.webp",
+                "mediaSet": "ms_777",
+                "variant": "editorial",
+                "width": 1600,
+                "height": 1200,
+                "bunny_original_url": None,
+                "url": None,
+            }
+        if str(asset_id) == "901":
+            return {
+                "id": "901",
+                "filename": "featured_open_graph.webp",
+                "mediaSet": "ms_777",
+                "variant": "open_graph",
+                "width": 1200,
+                "height": 630,
+                "bunny_original_url": "https://cdn.example.com/featured_open_graph.webp",
+                "url": None,
+            }
+        return None
+
+    async def fake_list_media_assets(self, media_set_id: str | int):
+        assert str(media_set_id) == "ms_777"
+        return [
+            {
+                "id": "11",
+                "filename": "small_square.webp",
+                "mediaSet": "ms_777",
+                "variant": "square",
+                "width": 1080,
+                "height": 1080,
+                "bunny_original_url": None,
+                "url": None,
+            },
+            {
+                "id": "12",
+                "filename": "large_hero.webp",
+                "mediaSet": "ms_777",
+                "variant": "hero",
+                "width": 2100,
+                "height": 900,
+                "bunny_original_url": None,
+                "url": None,
+            },
+        ]
+
+    async def fake_upload_image(
+        self,
+        variant,
+        alt_text: str,
+        photographer_credit: str = "",
+        media_set_id: str | None = None,
+        location_ref: int | None = None,
+    ):
+        assert variant.variant_type.value == "open_graph"
+        assert media_set_id == "ms_777"
+        assert location_ref is None
+        return "901"
+
+    async def fake_download_media_asset_file(*, payload_client, jwt_token: str, filename: str):
+        assert jwt_token == "test-token"
+        assert filename == "large_hero.webp"
+        return b"source-image-bytes"
+
+    def fake_process_single_variant(
+        source_buffer: bytes,
+        original_filename: str,
+        variant_type: ImageVariantType,
+        quality: int = 85,
+    ):
+        assert source_buffer == b"source-image-bytes"
+        assert original_filename == "large_hero.webp"
+        assert variant_type == ImageVariantType.OPEN_GRAPH
+        assert quality == 85
+        return ProcessedVariant(
+            variant_type=ImageVariantType.OPEN_GRAPH,
+            buffer=b"og-image-bytes",
+            filename="large_hero_open_graph.webp",
+            width=1200,
+            height=630,
+            content_type="image/webp",
+            file_size=321,
+        )
+
+    monkeypatch.setattr(
+        PayloadClient,
+        "get_media_asset_by_id",
+        fake_get_media_asset,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "list_media_assets_by_media_set",
+        fake_list_media_assets,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "upload_image",
+        fake_upload_image,
+    )
+    monkeypatch.setattr(
+        "app.features.images.routes._download_media_asset_file",
+        fake_download_media_asset_file,
+    )
+    monkeypatch.setattr(
+        "app.features.images.routes.process_single_variant",
+        fake_process_single_variant,
+    )
+
+    response = client.post(
+        "/images/generate-social-image",
+        json={"featuredAssetId": 77},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["mediaSetId"] == "ms_777"
+    assert payload["sourceAssetId"] == "12"
+    assert payload["generatedAssetId"] == "901"
+    assert payload["generatedImageUrl"] == "https://cdn.example.com/featured_open_graph.webp"
+    assert payload["width"] == 1200
+    assert payload["height"] == 630
+
+
+def test_generate_social_image_rejects_non_positive_featured_asset_id():
+    client = TestClient(app)
+
+    response = client.post(
+        "/images/generate-social-image",
+        json={"featuredAssetId": 0},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_featured_asset_id"
+    assert detail["featured_asset_id"] == 0
+
+
+def test_generate_social_image_rejects_featured_asset_without_media_set(monkeypatch):
+    client = TestClient(app)
+
+    async def fake_get_media_asset(self, asset_id: str | int):
+        assert str(asset_id) == "88"
+        return {
+            "id": "88",
+            "filename": "orphan_image.webp",
+            "mediaSet": None,
+            "variant": "editorial",
+            "width": 1600,
+            "height": 1200,
+            "bunny_original_url": None,
+            "url": None,
+        }
+
+    monkeypatch.setattr(
+        PayloadClient,
+        "get_media_asset_by_id",
+        fake_get_media_asset,
+    )
+
+    response = client.post(
+        "/images/generate-social-image",
+        json={"featuredAssetId": 88},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_featured_media_set"
+    assert detail["featured_asset_id"] == 88
+
+
+def test_generate_social_image_requires_generated_bunny_url(monkeypatch):
+    client = TestClient(app)
+
+    async def fake_get_media_asset(self, asset_id: str | int):
+        if str(asset_id) == "99":
+            return {
+                "id": "99",
+                "filename": "featured_editorial.webp",
+                "mediaSet": "ms_999",
+                "variant": "editorial",
+                "width": 1600,
+                "height": 1200,
+                "bunny_original_url": None,
+                "url": None,
+            }
+        if str(asset_id) == "777":
+            return {
+                "id": "777",
+                "filename": "generated_open_graph.webp",
+                "mediaSet": "ms_999",
+                "variant": "open_graph",
+                "width": 1200,
+                "height": 630,
+                "bunny_original_url": None,
+                "url": "https://payload.example.com/file.webp",
+            }
+        return None
+
+    async def fake_list_media_assets(self, media_set_id: str | int):
+        assert str(media_set_id) == "ms_999"
+        return [
+            {
+                "id": "201",
+                "filename": "hero.webp",
+                "mediaSet": "ms_999",
+                "variant": "hero",
+                "width": 2100,
+                "height": 900,
+                "bunny_original_url": None,
+                "url": None,
+            },
+        ]
+
+    async def fake_upload_image(
+        self,
+        variant,
+        alt_text: str,
+        photographer_credit: str = "",
+        media_set_id: str | None = None,
+        location_ref: int | None = None,
+    ):
+        assert variant.variant_type.value == "open_graph"
+        assert media_set_id == "ms_999"
+        return "777"
+
+    async def fake_download_media_asset_file(*, payload_client, jwt_token: str, filename: str):
+        assert filename == "hero.webp"
+        return b"source-image"
+
+    def fake_process_single_variant(
+        source_buffer: bytes,
+        original_filename: str,
+        variant_type: ImageVariantType,
+        quality: int = 85,
+    ):
+        return ProcessedVariant(
+            variant_type=variant_type,
+            buffer=b"og-bytes",
+            filename="hero_open_graph.webp",
+            width=1200,
+            height=630,
+            content_type="image/webp",
+            file_size=123,
+        )
+
+    monkeypatch.setattr(
+        PayloadClient,
+        "get_media_asset_by_id",
+        fake_get_media_asset,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "list_media_assets_by_media_set",
+        fake_list_media_assets,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "upload_image",
+        fake_upload_image,
+    )
+    monkeypatch.setattr(
+        "app.features.images.routes._download_media_asset_file",
+        fake_download_media_asset_file,
+    )
+    monkeypatch.setattr(
+        "app.features.images.routes.process_single_variant",
+        fake_process_single_variant,
+    )
+
+    response = client.post(
+        "/images/generate-social-image",
+        json={"featuredAssetId": 99},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_generated_bunny_url"
+    assert detail["generated_asset_id"] == "777"
+
+
 def test_pexels_search_requires_api_key(monkeypatch):
     client = TestClient(app)
     monkeypatch.delenv("PEXELS_API_KEY", raising=False)

@@ -3,14 +3,26 @@ import type { ImageVariantType, ImageSet, ImageVariant } from "@questurian/lm-sh
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { ImageStorageService } from "../storage/image-storage.service";
 import { AltTextApiClient } from "./clients/alt-text-api.client";
-import { getLocationById } from "../../repositories/core";
+import { getLocationById, updateLocationById } from "../../repositories/core";
 import { saveUpload, getUploadById, deleteUploadById } from "../../repositories/content";
 import { createFromUpload, createFromImageSetUpload } from "../geocoding/location-geocoding.helper";
 import { extractImageMetadata } from "../../utils/image-metadata-extractor";
 import { sanitizeLocationName, getFileExtension } from "../../utils/location-utils";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { existsSync } from "node:fs";
 import { VARIANT_SPECS as VARIANT_SPECS_IMPORT } from "@questurian/lm-shared";
+
+const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
+  "thumbnail",
+  "square",
+  "wide",
+  "social",
+  "editorial",
+  "portrait",
+  "hero",
+];
+const REQUIRED_VARIANT_COUNT = REQUIRED_VARIANT_TYPES.length;
+const WEBP_QUALITY = 85;
 
 export class UploadsService {
   constructor(
@@ -118,9 +130,9 @@ export class UploadsService {
       throw new BadRequestError("Source file required");
     }
 
-    if (!variantFiles || variantFiles.length !== 7) {
+    if (!variantFiles || variantFiles.length !== REQUIRED_VARIANT_COUNT) {
       throw new BadRequestError(
-        "Exactly 7 variant files required (thumbnail, square, wide, social, editorial, portrait, hero)"
+        `Exactly ${REQUIRED_VARIANT_COUNT} variant files required (${REQUIRED_VARIANT_TYPES.join(", ")})`
       );
     }
 
@@ -130,18 +142,9 @@ export class UploadsService {
     }
 
     // Validate all variant types are present
-    const requiredTypes: ImageVariantType[] = [
-      'thumbnail',
-      'square',
-      'wide',
-      'social',
-      'editorial',
-      'portrait',
-      'hero'
-    ];
     const providedTypes = new Set(variantFiles.map(v => v.type));
 
-    for (const type of requiredTypes) {
+    for (const type of REQUIRED_VARIANT_TYPES) {
       if (!providedTypes.has(type)) {
         throw new BadRequestError(`Missing variant type: ${type}`);
       }
@@ -261,6 +264,7 @@ export class UploadsService {
     // 8. Update entry with ImageSet and save to database
     entry.imageSet = imageSet;
     saveUpload(entry);
+    this.touchLocationUpdatedAt(locationId);
 
     return entry;
   }
@@ -290,6 +294,185 @@ export class UploadsService {
     if (!updatedUpload) {
       throw new NotFoundError("Upload", uploadId);
     }
+
+    this.touchLocationUpdatedAt(updatedUpload.location_id);
+
+    return updatedUpload;
+  }
+
+  async reprocessUploadVariants(uploadId: number): Promise<Upload> {
+    if (!uploadId || Number.isNaN(uploadId)) {
+      throw new BadRequestError("Upload ID required");
+    }
+
+    const upload = getUploadById(uploadId);
+    if (!upload) {
+      throw new NotFoundError("Upload", uploadId);
+    }
+
+    if (upload.format !== "imageset" || !upload.imageSet) {
+      throw new BadRequestError("Only image-set uploads support variant reprocessing");
+    }
+
+    const currentVariantCount = upload.imageSet.variants?.length ?? 0;
+    if (currentVariantCount >= REQUIRED_VARIANT_COUNT) {
+      throw new BadRequestError(
+        `Upload already has ${REQUIRED_VARIANT_COUNT} variants. Reprocessing is only available for incomplete image sets.`
+      );
+    }
+
+    const sourcePath = upload.imageSet.sourceImage?.path;
+    if (!sourcePath) {
+      throw new BadRequestError("Source image is missing for this upload");
+    }
+
+    const sourceMetadata = this.imageStorage.extractPathMetadata(sourcePath);
+    if (!sourceMetadata) {
+      throw new BadRequestError("Could not resolve image storage path for source image");
+    }
+
+    const sourceImageBuffer = await this.imageStorage.readImage(sourcePath);
+    const regeneratedVariants = await this.generateVariantsFromSourceImage(
+      sourceImageBuffer,
+      sourceMetadata.timestampDir,
+      sourceMetadata.locationName
+    );
+
+    const refreshedSourceMeta = await this.extractMetadataFromFile(sourcePath);
+    upload.imageSet.sourceImage = {
+      path: sourcePath,
+      dimensions: {
+        width: refreshedSourceMeta.width,
+        height: refreshedSourceMeta.height,
+      },
+      size: refreshedSourceMeta.size,
+      format: refreshedSourceMeta.format,
+    };
+    upload.imageSet.variants = regeneratedVariants;
+
+    const saved = saveUpload(upload);
+    if (!saved) {
+      throw new Error("Failed to save reprocessed upload variants");
+    }
+
+    const updatedUpload = getUploadById(uploadId);
+    if (!updatedUpload) {
+      throw new NotFoundError("Upload", uploadId);
+    }
+
+    this.touchLocationUpdatedAt(updatedUpload.location_id);
+
+    return updatedUpload;
+  }
+
+  async replaceUploadVariants(
+    uploadId: number,
+    sourceFile: File,
+    variantFiles: { type: ImageVariantType; file: File }[],
+    altText?: string
+  ): Promise<Upload> {
+    if (!uploadId || Number.isNaN(uploadId)) {
+      throw new BadRequestError("Upload ID required");
+    }
+
+    const upload = getUploadById(uploadId);
+    if (!upload) {
+      throw new NotFoundError("Upload", uploadId);
+    }
+
+    if (upload.format !== "imageset" || !upload.imageSet) {
+      throw new BadRequestError("Only image-set uploads support replacing variants");
+    }
+
+    if (!sourceFile) {
+      throw new BadRequestError("Source file required");
+    }
+
+    if (!variantFiles || variantFiles.length !== REQUIRED_VARIANT_COUNT) {
+      throw new BadRequestError(
+        `Exactly ${REQUIRED_VARIANT_COUNT} variant files required (${REQUIRED_VARIANT_TYPES.join(", ")})`
+      );
+    }
+
+    const sourcePath = upload.imageSet.sourceImage?.path;
+    if (!sourcePath) {
+      throw new BadRequestError("Source image is missing for this upload");
+    }
+
+    const sourceMetadata = this.imageStorage.extractPathMetadata(sourcePath);
+    if (!sourceMetadata) {
+      throw new BadRequestError("Could not resolve image storage path for source image");
+    }
+
+    await this.imageStorage.ensureDirectoryExists(sourceMetadata.timestampDir);
+
+    const providedTypes = new Set(variantFiles.map((item) => item.type));
+    for (const type of REQUIRED_VARIANT_TYPES) {
+      if (!providedTypes.has(type)) {
+        throw new BadRequestError(`Missing variant type: ${type}`);
+      }
+    }
+
+    const sourceFilePath = join(process.cwd(), sourcePath);
+    await this.saveFileToPath(sourceFile, sourceFilePath);
+
+    const sourceMeta = await this.extractMetadataFromFile(sourcePath);
+    const variants: ImageVariant[] = [];
+
+    const filesByType = new Map(variantFiles.map((item) => [item.type, item.file]));
+
+    for (const type of REQUIRED_VARIANT_TYPES) {
+      const file = filesByType.get(type);
+      if (!file) {
+        throw new BadRequestError(`Missing variant type: ${type}`);
+      }
+
+      const spec = VARIANT_SPECS_IMPORT[type];
+      const variantFileName = `${sourceMetadata.locationName}_${type}.webp`;
+      const variantFilePath = join(sourceMetadata.timestampDir, variantFileName);
+      await this.saveFileToPath(file, variantFilePath);
+
+      const relativePath = this.toRelativePath(variantFilePath);
+      const meta = await this.extractMetadataFromFile(relativePath);
+
+      variants.push({
+        type,
+        aspectRatio: spec.label,
+        dimensions: {
+          width: meta.width,
+          height: meta.height,
+        },
+        path: relativePath,
+        size: meta.size,
+        format: meta.format,
+      });
+    }
+
+    upload.imageSet.sourceImage = {
+      path: sourcePath,
+      dimensions: {
+        width: sourceMeta.width,
+        height: sourceMeta.height,
+      },
+      size: sourceMeta.size,
+      format: sourceMeta.format,
+    };
+    upload.imageSet.variants = variants;
+    upload.imageSet.altText = altText !== undefined
+      ? (altText.trim() || undefined)
+      : upload.imageSet.altText;
+
+    const saved = saveUpload(upload);
+    if (!saved) {
+      throw new Error("Failed to save replaced upload variants");
+    }
+
+    const updatedUpload = getUploadById(uploadId);
+    if (!updatedUpload) {
+      throw new NotFoundError("Upload", uploadId);
+    }
+
+    this.touchLocationUpdatedAt(updatedUpload.location_id);
 
     return updatedUpload;
   }
@@ -329,10 +512,77 @@ export class UploadsService {
 
     // Convert to WebP using Sharp
     const webpBuffer = await sharp(buffer)
-      .webp({ quality: 85 })
+      .webp({ quality: WEBP_QUALITY })
       .toBuffer();
 
     await Bun.write(filePath, webpBuffer);
+  }
+
+  private async saveResizedVariantToPath(
+    sourceBuffer: Buffer,
+    outputPath: string,
+    width: number,
+    height: number
+  ): Promise<void> {
+    const { default: sharp } = await import("sharp");
+    const webpBuffer = await sharp(sourceBuffer)
+      .resize(width, height, { fit: "cover", position: "centre" })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+    await Bun.write(outputPath, webpBuffer);
+  }
+
+  private toRelativePath(filePath: string): string {
+    return relative(process.cwd(), filePath).replace(/\\/g, "/");
+  }
+
+  private async generateVariantsFromSourceImage(
+    sourceBuffer: Buffer,
+    storagePath: string,
+    locationFilePrefix: string
+  ): Promise<ImageVariant[]> {
+    const variants: ImageVariant[] = [];
+
+    for (const type of REQUIRED_VARIANT_TYPES) {
+      const spec = VARIANT_SPECS_IMPORT[type];
+      const variantFileName = `${locationFilePrefix}_${type}.webp`;
+      const variantFilePath = join(storagePath, variantFileName);
+
+      await this.saveResizedVariantToPath(
+        sourceBuffer,
+        variantFilePath,
+        spec.width,
+        spec.height
+      );
+
+      const relativePath = this.toRelativePath(variantFilePath);
+      const meta = await this.extractMetadataFromFile(relativePath);
+
+      variants.push({
+        type,
+        aspectRatio: spec.label,
+        dimensions: {
+          width: meta.width,
+          height: meta.height,
+        },
+        path: relativePath,
+        size: meta.size,
+        format: meta.format,
+      });
+    }
+
+    return variants;
+  }
+
+  private touchLocationUpdatedAt(locationId: number): void {
+    const updated = updateLocationById(locationId, {
+      // Keep this format aligned with sync-state timestamps for stable comparison.
+      updated_at: new Date().toISOString().replace("T", " ").replace(/\.\d{3}Z$/, ""),
+    });
+
+    if (!updated) {
+      console.warn(`Failed to update location.updated_at after upload mutation (location: ${locationId})`);
+    }
   }
 
   /**
@@ -372,6 +622,7 @@ export class UploadsService {
 
     // 3. Extract path from imageset format (legacy uploads don't store image paths anymore)
     let imagePath: string | null | undefined = null;
+    const locationId = upload.location_id;
 
     if (upload.format === "imageset" && upload.imageSet) {
       imagePath = upload.imageSet.sourceImage?.path;
@@ -379,12 +630,14 @@ export class UploadsService {
     // REMOVED: Legacy uploads no longer store image paths in the database
 
     if (!imagePath) {
+      this.touchLocationUpdatedAt(locationId);
       return; // No files to clean up
     }
 
     const metadata = this.imageStorage.extractPathMetadata(imagePath);
     if (!metadata) {
       console.warn("Could not extract path metadata", { path: imagePath });
+      this.touchLocationUpdatedAt(locationId);
       return;
     }
 
@@ -395,5 +648,7 @@ export class UploadsService {
     } catch (error) {
       console.error("File deletion failed for upload", { id, error });
     }
+
+    this.touchLocationUpdatedAt(locationId);
   }
 }
