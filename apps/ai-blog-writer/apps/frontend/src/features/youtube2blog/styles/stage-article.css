@@ -540,6 +540,18 @@
   cursor: not-allowed;
 }
 
+.stage-article-publish-btn.payload-action-btn {
+  background: #000;
+  border: 1px solid #111;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+}
+
+.stage-article-publish-btn.payload-action-btn:hover:not(:disabled) {
+  background: #151515;
+  border-color: #151515;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
 .stage-article-cancel {
   color: var(--muted);
   font-size: 0.9375rem;

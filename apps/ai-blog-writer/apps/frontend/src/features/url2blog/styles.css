@@ -442,6 +442,18 @@
   transform: none;
 }
 
+.url2blog-submit-btn.payload-action-btn {
+  background: #000;
+  border: 1px solid #111;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+}
+
+.url2blog-submit-btn.payload-action-btn:hover:not(:disabled) {
+  background: #151515;
+  border-color: #151515;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
 .url2blog-clear-btn {
   font-family: var(--font-body);
   border: none;

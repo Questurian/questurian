@@ -6,8 +6,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-8) var(--space-6);
-  gap: var(--space-10);
+  padding: clamp(1.25rem, 4vw, var(--space-8)) clamp(1rem, 3vw, var(--space-6));
+  gap: clamp(var(--space-6), 5vw, var(--space-10));
 }
 
 /* Hero Section */
@@ -22,6 +22,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -43,7 +44,7 @@
 
 .landing-hero h1 {
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-size: clamp(2rem, 8vw, 4rem);
   font-weight: 700;
   line-height: 1.1;
   margin-bottom: var(--space-5);
@@ -59,30 +60,32 @@
 }
 
 .landing-lede {
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 3.8vw, 1.2rem);
   line-height: 1.7;
   color: var(--muted);
-  margin: 0;
+  margin: 0 auto;
   max-width: 520px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 /* Feature Cards Grid */
 .landing-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: var(--space-6);
+  grid-template-columns: 1fr;
+  gap: clamp(var(--space-4), 3vw, var(--space-6));
   max-width: 1100px;
   width: 100%;
   animation: fadeInUp 0.6s ease-out 0.15s backwards;
 }
 
 .landing-card {
+  --card-accent: var(--accent);
+  --card-accent-soft: var(--accent-soft);
+  --card-accent-softer: var(--accent-softer);
+
   position: relative;
   background: var(--panel);
   border-radius: var(--radius-xl);
-  padding: var(--space-8) var(--space-6);
+  padding: clamp(var(--space-5), 4vw, var(--space-8)) clamp(var(--space-4), 3.5vw, var(--space-6));
   border: 1px solid var(--border);
   box-shadow:
     0 1px 2px var(--shadow-soft),
@@ -99,6 +102,12 @@
   overflow: hidden;
 }
 
+.landing-card:focus-visible {
+  outline: 2px solid var(--card-accent);
+  outline-offset: 3px;
+  border-color: var(--card-accent-soft);
+}
+
 /* Decorative corner accent */
 .landing-card::before {
   content: '';
@@ -108,16 +117,9 @@
   width: 120px;
   height: 120px;
   border-radius: 0 var(--radius-xl) 0 100%;
+  background: var(--card-accent);
   opacity: 0.06;
   transition: opacity var(--transition-base);
-}
-
-.landing-card--youtube::before {
-  background: var(--accent);
-}
-
-.landing-card--reviews::before {
-  background: var(--sage);
 }
 
 .landing-card:hover {
@@ -125,6 +127,7 @@
   box-shadow:
     0 4px 8px var(--shadow-soft),
     0 20px 48px -8px var(--shadow-medium);
+  border-color: var(--card-accent-soft);
 }
 
 .landing-card:hover::before {
@@ -140,69 +143,25 @@
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-2);
+  color: var(--card-accent);
+  background: var(--card-accent-soft);
   transition: transform var(--transition-base);
+}
+
+.landing-card-main-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
 }
 
 .landing-card:hover .landing-card-icon {
   transform: scale(1.05);
 }
 
-.landing-card--youtube .landing-card-icon {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.landing-card--youtube:hover {
-  border-color: var(--accent-soft);
-}
-
-.landing-card--reviews .landing-card-icon {
-  background: var(--sage-soft);
-  color: var(--sage);
-}
-
-.landing-card--reviews:hover {
-  border-color: var(--sage-soft);
-}
-
-.landing-card--url2blog::before {
-  background: #0d9488;
-}
-
-.landing-card--url2blog .landing-card-icon {
-  background: rgba(13, 148, 136, 0.12);
-  color: #0d9488;
-}
-
-.landing-card--url2blog:hover {
-  border-color: rgba(13, 148, 136, 0.12);
-}
-
-.landing-card--url2blog .landing-card-action {
-  color: #0d9488;
-}
-
-.landing-card--prompt2blog::before {
-  background: #3b82f6;
-}
-
-.landing-card--prompt2blog .landing-card-icon {
-  background: rgba(59, 130, 246, 0.12);
-  color: #3b82f6;
-}
-
-.landing-card--prompt2blog:hover {
-  border-color: rgba(59, 130, 246, 0.12);
-}
-
-.landing-card--prompt2blog .landing-card-action {
-  color: #3b82f6;
-}
-
 /* Card Typography */
 .landing-card h2 {
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: clamp(1.45rem, 5vw, 1.75rem);
   font-weight: 600;
   margin: 0;
   line-height: 1.2;
@@ -221,72 +180,99 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-height: 2.75rem;
   font-weight: 600;
   font-size: 0.9rem;
   margin-top: var(--space-2);
+  color: var(--card-accent);
   transition: gap var(--transition-base);
 }
 
-.landing-card--youtube .landing-card-action {
-  color: var(--accent);
-}
-
-.landing-card--reviews .landing-card-action {
-  color: var(--sage);
+.landing-card-action-icon {
+  width: 20px;
+  height: 20px;
+  transition: transform var(--transition-base);
 }
 
 .landing-card:hover .landing-card-action {
   gap: var(--space-3);
 }
 
-.landing-card-action svg {
-  transition: transform var(--transition-base);
-}
-
-.landing-card:hover .landing-card-action svg {
+.landing-card:hover .landing-card-action-icon {
   transform: translateX(4px);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .landing-page {
-    padding: var(--space-6) var(--space-4);
-    gap: var(--space-8);
-  }
+/* Per-card color identity */
+.landing-card--youtube {
+  --card-accent: var(--accent);
+  --card-accent-soft: var(--accent-soft);
+  --card-accent-softer: var(--accent-softer);
+}
 
+.landing-card--reviews {
+  --card-accent: var(--sage);
+  --card-accent-soft: var(--sage-soft);
+  --card-accent-softer: rgba(93, 122, 100, 0.06);
+}
+
+.landing-card--url2blog {
+  --card-accent: #0d9488;
+  --card-accent-soft: rgba(13, 148, 136, 0.12);
+  --card-accent-softer: rgba(13, 148, 136, 0.06);
+}
+
+.landing-card--prompt2blog {
+  --card-accent: #3b82f6;
+  --card-accent-soft: rgba(59, 130, 246, 0.12);
+  --card-accent-softer: rgba(59, 130, 246, 0.06);
+}
+
+.landing-card--single-listicles {
+  --card-accent: #b7791f;
+  --card-accent-soft: rgba(183, 121, 31, 0.14);
+  --card-accent-softer: rgba(183, 121, 31, 0.06);
+}
+
+.landing-card--itineraries {
+  --card-accent: #8d3b52;
+  --card-accent-soft: rgba(141, 59, 82, 0.14);
+  --card-accent-softer: rgba(141, 59, 82, 0.06);
+}
+
+/* Responsive: progressive enhancement */
+@media (min-width: 640px) {
   .landing-options {
-    grid-template-columns: 1fr;
-    gap: var(--space-5);
-  }
-
-  .landing-card {
-    padding: var(--space-6);
-  }
-
-  .landing-hero h1 {
-    font-size: clamp(2rem, 8vw, 3rem);
-  }
-
-  .landing-lede {
-    font-size: 1.1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 480px) {
-  .landing-page {
-    padding: var(--space-5) var(--space-4);
+@media (min-width: 1024px) {
+  .landing-options {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   }
 
-  .landing-card {
-    padding: var(--space-5);
+  .landing-hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero,
+  .landing-options,
+  .landing-card,
+  .landing-card::before,
+  .landing-card-icon,
+  .landing-card-action,
+  .landing-card-action-icon {
+    animation: none;
+    transition: none;
   }
 
-  .landing-card-icon {
-    width: 56px;
-    height: 56px;
+  .landing-card:hover {
+    transform: none;
   }
 
-  .landing-card h2 {
-    font-size: 1.5rem;
+  .landing-card:hover .landing-card-action-icon {
+    transform: none;
   }
 }

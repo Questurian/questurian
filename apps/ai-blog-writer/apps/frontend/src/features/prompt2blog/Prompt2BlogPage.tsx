@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import payloadLogoUrl from '../../assets/payload-logo.svg?url'
 import {
   getPrompt2BlogDebug,
   getPrompt2BlogResult,
@@ -898,7 +899,13 @@ export default function Prompt2BlogPage() {
                   <h3>Final Article Ready</h3>
                   <div className="p2b-panel-actions" style={{ marginBottom: '1rem' }}>
                     {stageArticleUrl && (
-                      <Link to={stageArticleUrl} className="p2b-synthesize-btn">
+                      <Link to={stageArticleUrl} className="p2b-synthesize-btn payload-action-btn">
+                        <img
+                          src={payloadLogoUrl}
+                          alt=""
+                          aria-hidden="true"
+                          className="payload-action-btn-icon"
+                        />
                         Stage in Payload Editor
                       </Link>
                     )}

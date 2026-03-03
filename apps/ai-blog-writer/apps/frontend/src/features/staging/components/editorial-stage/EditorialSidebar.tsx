@@ -1,5 +1,6 @@
 import type { Location, MediaAsset } from '../../api'
 import type { StagedArticle } from '../../types'
+import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 import { EDITOR_MODEL_OPTIONS, resolveEditorModelName } from '../../features/editorial-stage-article/constants'
 import { getMediaAssetAltText } from '../../features/editorial-stage-article/media-utils'
 import { getLocationDisplayName } from '../../features/editorial-stage-article/utils/editorial-stage-view.utils'
@@ -48,8 +49,14 @@ export function EditorialSidebar({
             <button
               onClick={onPublish}
               disabled={isPublishing || !canPublish}
-              className="stage-article-publish-btn"
+              className="stage-article-publish-btn payload-action-btn"
             >
+              <img
+                src={payloadLogoUrl}
+                alt=""
+                aria-hidden="true"
+                className="payload-action-btn-icon"
+              />
               {isPublishing ? 'Publishing...' :
                !allFieldsFilled ? 'Complete fields below' :
                hasBlockingEditorial ? 'Fix editorial blocks' :

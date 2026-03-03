@@ -2,6 +2,7 @@ import { EDITOR_ASSIST_MODEL_OPTIONS } from '../../../staging/api'
 import type { EditorAssistModelName } from '../../../staging/api'
 import type { ListicleItineraryDraft } from '../../types'
 import { isSeoCoreComplete } from '../validators/step.validators'
+import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 
 type BuilderSidebarProps = {
   completionPercent: number
@@ -74,7 +75,8 @@ export function BuilderSidebar({
           <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={isSaving}>
             Save Local Draft (Browser)
           </button>
-          <button type="button" className="stl-btn stl-btn-success" onClick={() => void onSyncToPayload()} disabled={isSaving}>
+          <button type="button" className="stl-btn stl-btn-success payload-action-btn" onClick={() => void onSyncToPayload()} disabled={isSaving}>
+            <img src={payloadLogoUrl} alt="" aria-hidden="true" className="payload-action-btn-icon" />
             {isSaving ? 'Syncing...' : 'Sync to Payload'}
           </button>
         </div>

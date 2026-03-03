@@ -28,14 +28,15 @@ export function FinalResultsTab({ debugData, lexicalCopyStatus, onCopyLexical }:
       <div className="payload-copy-row">
         <button
           type="button"
-          className={`payload-btn payload-btn-${lexicalCopyStatus}`}
+          className={`payload-action-btn payload-action-btn--${lexicalCopyStatus}`}
           disabled={!articleContent || lexicalCopyStatus === 'loading'}
           onClick={() => articleContent && onCopyLexical(articleContent)}
         >
           <img
             src={payloadLogoUrl}
-            alt="Payload CMS Logo"
-            className="payload-btn-icon"
+            alt=""
+            aria-hidden="true"
+            className="payload-action-btn-icon"
           />
           {lexicalCopyStatus === 'loading'
             ? 'Converting...'

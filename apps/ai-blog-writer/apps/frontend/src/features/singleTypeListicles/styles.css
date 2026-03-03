@@ -836,6 +836,22 @@
   background: #355183;
 }
 
+.stl-btn.payload-action-btn,
+.stl-btn-success.payload-action-btn {
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  background: #000;
+  border-color: #111;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+}
+
+.stl-btn.payload-action-btn:hover:not(:disabled),
+.stl-btn-success.payload-action-btn:hover:not(:disabled) {
+  background: #151515;
+  border-color: #151515;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
 .stl-list {
   display: flex;
   flex-direction: column;

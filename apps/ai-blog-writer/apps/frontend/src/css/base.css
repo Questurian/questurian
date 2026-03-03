@@ -158,3 +158,60 @@ a:hover {
   background: var(--accent-soft);
   color: var(--ink);
 }
+
+/* Shared Payload Action Button */
+.payload-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0.625rem 1.15rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #111111;
+  background: #000000;
+  color: #ffffff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+}
+
+.payload-action-btn:hover:not(:disabled) {
+  background: #151515;
+  border-color: #151515;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
+.payload-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.payload-action-btn:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}
+
+.payload-action-btn:disabled,
+.payload-action-btn[aria-disabled='true'] {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.payload-action-btn-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  filter: brightness(0) invert(1);
+}

@@ -69,23 +69,39 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: var(--space-3);
+  gap: clamp(var(--space-2), 1.6vw, var(--space-3));
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .badge {
-  padding: var(--space-3) var(--space-5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.625rem clamp(0.9rem, 2.2vw, 1.5rem);
   border-radius: var(--radius-full);
   background: var(--panel);
   color: var(--ink);
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   border: 1px solid var(--border);
   transition: all var(--transition-base);
+  flex: 0 1 auto;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-link {
-  transition: all var(--transition-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.625rem clamp(0.9rem, 2.2vw, 1.5rem);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
 }
 
 .nav-link:hover {

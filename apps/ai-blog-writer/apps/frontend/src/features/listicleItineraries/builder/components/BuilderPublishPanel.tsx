@@ -1,4 +1,5 @@
 import type { ListicleItineraryDraft } from '../../types'
+import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 
 type BuilderPublishPanelProps = {
   draft: ListicleItineraryDraft
@@ -32,7 +33,8 @@ export function BuilderPublishPanel({ draft, isSaving, onSaveLocalDraft, onSyncT
         <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={isSaving}>
           Save Local Draft (Browser)
         </button>
-        <button type="button" className="stl-btn stl-btn-success" onClick={() => void onSyncToPayload()} disabled={isSaving}>
+        <button type="button" className="stl-btn stl-btn-success payload-action-btn" onClick={() => void onSyncToPayload()} disabled={isSaving}>
+          <img src={payloadLogoUrl} alt="" aria-hidden="true" className="payload-action-btn-icon" />
           {isSaving ? 'Syncing...' : 'Sync to Payload'}
         </button>
       </div>

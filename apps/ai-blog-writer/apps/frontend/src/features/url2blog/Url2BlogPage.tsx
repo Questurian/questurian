@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import payloadLogoUrl from '../../assets/payload-logo.svg?url'
 import {
   runUrl2BlogPipelineV2,
   type Url2BlogExecutionProfile,
@@ -718,8 +719,14 @@ export default function Url2BlogPage() {
                       title: result.improved_article.title || result.article.original_title || 'Untitled',
                       type: result.selected_article_type.name || '',
                     }).toString()}`}
-                    className="url2blog-submit-btn"
+                    className="url2blog-submit-btn payload-action-btn"
                   >
+                    <img
+                      src={payloadLogoUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="payload-action-btn-icon"
+                    />
                     Stage for Payload
                   </Link>
                 )}

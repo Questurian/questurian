@@ -36,24 +36,26 @@ function ArticleCard({ article }: { article: SavedArticle }) {
     <div className="article-card">
       <div className="article-card-header">
         <div className="article-card-info">
+          {article.article_type && (
+            <div className="article-card-type-row">
+              <span className="article-type-badge">{article.article_type}</span>
+            </div>
+          )}
           <h3>{article.title || 'Untitled Article'}</h3>
           <div className="article-card-meta">
-            {article.article_type && (
-              <span className="article-type-badge">{article.article_type}</span>
-            )}
             <span className="article-date">{formatDate(article.updated_at)}</span>
-            <span className="article-length">{Math.round(article.markdown_length / 1000)}k chars</span>
           </div>
         </div>
         <div className="article-card-actions">
           <Link
             to={stageUrl}
-            className="stage-btn"
+            className="payload-action-btn article-payload-btn"
           >
             <img
               src={payloadLogoUrl}
               alt=""
-              className="stage-btn-icon"
+              aria-hidden="true"
+              className="payload-action-btn-icon"
             />
             Stage for Payload
           </Link>

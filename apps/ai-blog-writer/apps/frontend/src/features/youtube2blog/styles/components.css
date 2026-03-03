@@ -134,19 +134,19 @@
 
 /* Navigation Links */
 .nav-link {
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-full);
   background: white;
   color: var(--accent);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   border: 1px solid var(--border);
   transition: all var(--transition-base);
-  flex: 1;
-  min-width: 0;
+  flex: 0 1 auto;
+  min-width: 8.25rem;
   text-align: center;
-  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-link:hover {

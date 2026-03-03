@@ -45,29 +45,16 @@ function ArticleCard({ article }: { article: Prompt2BlogSavedArticle }) {
             <span className="article-length">{Math.round(article.markdown_length / 1000)}k chars</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="article-card-actions">
           <Link
             to={stageUrl}
-            className="stage-btn"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              border: '2px solid #000',
-              backgroundColor: '#000',
-              color: '#fff',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              textDecoration: 'none',
-              transition: 'all 0.2s ease',
-            }}
+            className="payload-action-btn article-payload-btn"
           >
             <img
               src={payloadLogoUrl}
               alt=""
-              style={{ width: '16px', height: '16px', filter: 'invert(1)' }}
+              aria-hidden="true"
+              className="payload-action-btn-icon"
             />
             Stage for Payload
           </Link>
