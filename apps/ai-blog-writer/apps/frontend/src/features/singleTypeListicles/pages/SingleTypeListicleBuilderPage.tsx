@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
-import { generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured } from '../../images'
+import {
+  generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured,
+  uploadSocialImage as requestUploadSocialImage,
+} from '../../images'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
 import { BuilderHero } from '../builder/components/BuilderHero'
 import { BuilderItemsPanel } from '../builder/components/BuilderItemsPanel'
@@ -27,6 +30,9 @@ import {
   parseSeoAiPatch,
 } from '../builder/services/seo-ai.service'
 import type { SeoAiTarget } from '../builder/services/seo-ai.service'
+import {
+  validateOgSocialImageFile,
+} from '../builder/services/seo-social-image-upload.service'
 import {
   buildSingleTypeListicleStructuredDataTemplate,
   serializeStructuredDataTemplate,
@@ -54,6 +60,7 @@ export default function SingleTypeListicleBuilderPage() {
   const [result, setResult] = useState<string | null>(null)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
+  const [isUploadingOgImage, setIsUploadingOgImage] = useState(false)
   const lastAutoStructuredDataRef = useRef<string>('')
 
   const onError = useCallback((message: string) => {
@@ -317,6 +324,75 @@ export default function SingleTypeListicleBuilderPage() {
     }
   }, [draft, onError, setDraft, token])
 
+  const uploadOgImageFile = useCallback(async (file: File): Promise<void> => {
+    if (!draft) return
+
+    const fileIssue = validateOgSocialImageFile(file)
+    if (fileIssue) {
+      onError(fileIssue)
+      throw new Error(fileIssue)
+    }
+
+    if (!token) {
+      const message = 'You must be logged in to upload social image URLs.'
+      onError(message)
+      throw new Error(message)
+    }
+
+    const locationRef = actions.selectedLocationRefId ?? draft.locationRef
+    if (!locationRef || locationRef < 1) {
+      const message = 'Select a location in Step 1 before uploading social images.'
+      onError(message)
+      throw new Error(message)
+    }
+
+    onError('')
+    setResult(null)
+    setIsUploadingOgImage(true)
+
+    try {
+      const articleTitle = draft.title.trim() || 'Untitled listicle'
+      const uploadResponse = await requestUploadSocialImage(
+        file,
+        `Social share image for ${articleTitle}`,
+        locationRef,
+        token,
+        'Questurian Creative',
+      )
+
+      const bunnyUrl = uploadResponse.generatedImageUrl.trim()
+      if (!bunnyUrl) {
+        throw new Error('Uploaded social image is missing Bunny URL.')
+      }
+
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          seoSection: {
+            ...current.seoSection,
+            openGraph: {
+              ...current.seoSection.openGraph,
+              imageUrl: bunnyUrl,
+            },
+            twitterCard: {
+              ...current.seoSection.twitterCard,
+              imageUrl: bunnyUrl,
+            },
+          },
+        }
+      })
+
+      setResult('Custom OG image uploaded and applied to OG and Twitter image fields.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to upload OG image.'
+      onError(message)
+      throw err instanceof Error ? err : new Error(message)
+    } finally {
+      setIsUploadingOgImage(false)
+    }
+  }, [actions.selectedLocationRefId, draft, onError, setDraft, token])
+
   if (isLoading || !draft) {
     return (
       <div className="stl-page stl-single-type-page">
@@ -387,6 +463,8 @@ export default function SingleTypeListicleBuilderPage() {
               isGeneratingSeoTarget={isGeneratingSeoTarget}
               onGenerateSeoImageFromFeatured={generateSeoImageFromFeatured}
               isGeneratingSeoImage={isGeneratingSeoImage}
+              onUploadOgImageFile={uploadOgImageFile}
+              isUploadingOgImage={isUploadingOgImage}
             />
           ) : null}
         </main>

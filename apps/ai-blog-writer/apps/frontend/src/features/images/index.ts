@@ -7,11 +7,13 @@ export {
   uploadImageVariants,
   processImageOnly,
   generateSocialImageFromFeatured,
+  uploadSocialImage,
 } from './api/imagesApi';
 export type {
   UploadImageResponse,
   UploadProgress,
   GenerateSocialImageResponse,
+  UploadSocialImageResponse,
 } from './api/imagesApi';
 export {
   VARIANT_SPECS,

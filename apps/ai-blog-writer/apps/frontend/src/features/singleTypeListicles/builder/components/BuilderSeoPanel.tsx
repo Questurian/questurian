@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { SingleTypeListicleDraft } from '../../types'
 import type { SeoAiTarget } from '../services/seo-ai.service'
+import { OgImageCropUploadModal } from './OgImageCropUploadModal'
 
 type BuilderSeoPanelProps = {
   draft: SingleTypeListicleDraft
@@ -9,6 +11,8 @@ type BuilderSeoPanelProps = {
   isGeneratingSeoTarget: SeoAiTarget | null
   onGenerateSeoImageFromFeatured: () => Promise<void>
   isGeneratingSeoImage: boolean
+  onUploadOgImageFile: (file: File) => Promise<void>
+  isUploadingOgImage: boolean
 }
 
 export function BuilderSeoPanel({
@@ -18,7 +22,11 @@ export function BuilderSeoPanel({
   isGeneratingSeoTarget,
   onGenerateSeoImageFromFeatured,
   isGeneratingSeoImage,
+  onUploadOgImageFile,
+  isUploadingOgImage,
 }: BuilderSeoPanelProps) {
+  const [isOgUploadModalOpen, setIsOgUploadModalOpen] = useState(false)
+
   const updateSeo = (updater: (current: SingleTypeListicleDraft['seoSection']) => SingleTypeListicleDraft['seoSection']) => {
     setDraft((current) => {
       if (!current) return current
@@ -30,7 +38,13 @@ export function BuilderSeoPanel({
   }
 
   const isGeneratingAny = Boolean(isGeneratingSeoTarget)
-  const isSeoActionRunning = isGeneratingAny || isGeneratingSeoImage
+  const isSeoActionRunning = isGeneratingAny || isGeneratingSeoImage || isUploadingOgImage
+
+  const openOgUploadModal = () => {
+    if (isSeoActionRunning) return
+    setIsOgUploadModalOpen(true)
+  }
+
   const renderAiButton = (target: SeoAiTarget, label = 'AI') => (
     <button
       type="button"
@@ -150,7 +164,7 @@ export function BuilderSeoPanel({
 
           <label className="stl-field">
             <span>og:image</span>
-            <div className="stl-seo-input-wrap">
+            <div className="stl-seo-input-wrap stl-seo-input-wrap-social-image">
               <input
                 className="stl-seo-input-with-ai"
                 placeholder="https://example.com/image.jpg"
@@ -166,16 +180,29 @@ export function BuilderSeoPanel({
                 }
               />
               <span className="stl-seo-ai-trigger-wrap">
-                <button
-                  type="button"
-                  className="stl-btn stl-btn-secondary stl-seo-ai-btn"
-                  onClick={() => void onGenerateSeoImageFromFeatured()}
-                  disabled={isSeoActionRunning}
-                >
-                  {isGeneratingSeoImage ? 'Generating...' : 'Use Featured 1200x630'}
-                </button>
+                <span className="stl-seo-image-actions">
+                  <button
+                    type="button"
+                    className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                    onClick={openOgUploadModal}
+                    disabled={isSeoActionRunning}
+                  >
+                    {isUploadingOgImage ? 'Uploading...' : 'Upload 1200x630'}
+                  </button>
+                  <button
+                    type="button"
+                    className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                    onClick={() => void onGenerateSeoImageFromFeatured()}
+                    disabled={isSeoActionRunning}
+                  >
+                    {isGeneratingSeoImage ? 'Generating...' : 'Use Featured 1200x630'}
+                  </button>
+                </span>
               </span>
             </div>
+            <p className="stl-legacy-note stl-seo-og-hint">
+              Thumb-stopper upload opens a manual crop editor and exports exactly 1200x630.
+            </p>
           </label>
 
           <label className="stl-field">
@@ -380,6 +407,13 @@ export function BuilderSeoPanel({
           </label>
         </section>
       </div>
+
+      <OgImageCropUploadModal
+        isOpen={isOgUploadModalOpen}
+        isUploading={isUploadingOgImage}
+        onUploadCroppedFile={onUploadOgImageFile}
+        onClose={() => setIsOgUploadModalOpen(false)}
+      />
     </section>
   )
 }

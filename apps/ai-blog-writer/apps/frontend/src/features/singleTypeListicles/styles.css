@@ -327,6 +327,39 @@
   padding-right: 11.8rem;
 }
 
+.stl-seo-input-wrap-social-image {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.stl-seo-input-wrap-social-image .stl-seo-input-with-ai {
+  padding-right: 0.75rem;
+}
+
+.stl-seo-input-wrap-social-image .stl-seo-ai-trigger-wrap {
+  position: static;
+  right: auto;
+  top: auto;
+  bottom: auto;
+}
+
+.stl-seo-image-actions {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stl-hidden-file-input {
+  display: none;
+}
+
+.stl-seo-og-hint {
+  margin-top: 0.2rem;
+}
+
 .stl-seo-ai-trigger-wrap {
   position: absolute;
   top: 0;
@@ -1101,6 +1134,65 @@
   font-family: 'Bricolage Grotesque', sans-serif;
 }
 
+.stl-og-upload-modal {
+  width: min(980px, 100%);
+  display: grid;
+  gap: 0.8rem;
+}
+
+.stl-og-upload-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.stl-og-upload-modal__header p {
+  margin: 0.28rem 0 0;
+  font-size: 0.84rem;
+  color: var(--stl-muted);
+}
+
+.stl-og-upload-modal__drop-zone {
+  border: 1px dashed #b7c5db;
+  border-radius: 12px;
+  min-height: 180px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.6rem;
+  padding: 1rem;
+  background: linear-gradient(180deg, #f7faff 0%, #ffffff 100%);
+  text-align: center;
+}
+
+.stl-og-upload-modal__drop-zone.is-dragging {
+  border-color: #4f75b8;
+  background: #edf4ff;
+}
+
+.stl-og-upload-modal__crop-wrap {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #1f2937;
+  background: #0f172a;
+}
+
+.stl-og-upload-modal__controls {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stl-og-upload-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .stl-checkbox {
   display: inline-flex;
   align-items: center;
@@ -1331,6 +1423,23 @@
 @media (max-width: 900px) {
   .stl-seo-input-wrap-featured .stl-seo-input-with-ai {
     padding-right: 10.3rem;
+  }
+
+  .stl-seo-input-wrap-social-image {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .stl-seo-image-actions {
+    justify-content: flex-start;
+  }
+
+  .stl-og-upload-modal__header {
+    flex-direction: column;
+  }
+
+  .stl-og-upload-modal__actions {
+    justify-content: flex-start;
   }
 
   .stl-grid-2 {

@@ -9,14 +9,17 @@ import type {
   ProcessImageOnlyResponse,
   UploadImageResponse,
   UploadProgress,
+  UploadSocialImageResponse,
 } from './contracts/image-api.contracts';
 import { generateSocialImageApi } from './generate-social-image.api';
 import { processImageOnlyApi } from './processing/process-image-only.api';
+import { uploadSocialImageApi } from './upload-social-image.api';
 import { uploadSingleApi } from './uploads/upload-single.api';
 import { uploadVariantsApi } from './uploads/upload-variants.api';
 
 export type { UploadImageResponse, UploadProgress };
 export type { GenerateSocialImageResponse };
+export type { UploadSocialImageResponse };
 
 /**
  * Upload pre-processed image variants to be stored in Payload CMS
@@ -91,4 +94,20 @@ export async function generateSocialImageFromFeatured(
   token: string
 ): Promise<GenerateSocialImageResponse> {
   return generateSocialImageApi({ featuredAssetId, token });
+}
+
+export async function uploadSocialImage(
+  file: File,
+  altText: string,
+  locationRef: number,
+  token: string,
+  photographerCredit: string
+): Promise<UploadSocialImageResponse> {
+  return uploadSocialImageApi({
+    file,
+    altText,
+    locationRef,
+    token,
+    photographerCredit,
+  });
 }

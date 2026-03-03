@@ -47,3 +47,13 @@ export interface GenerateSocialImageResponse {
   width: number;
   height: number;
 }
+
+export interface UploadSocialImageResponse {
+  success: boolean;
+  mediaSetId: string;
+  externalRef: string;
+  generatedAssetId: string;
+  generatedImageUrl: string;
+  width: number;
+  height: number;
+}

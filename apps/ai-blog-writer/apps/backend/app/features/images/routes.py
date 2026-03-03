@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import re
+import time
 from collections import Counter
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
@@ -284,6 +285,18 @@ def _validate_photographer_credit(photographer_credit: str) -> str:
             step="validate_photographer_credit",
         )
     return normalized_credit
+
+
+def _validate_alt_text(alt_text: str) -> str:
+    """Ensure uploads provide non-empty alt text."""
+    normalized_alt_text = alt_text.strip()
+    if not normalized_alt_text:
+        _raise_http_error(
+            status_code=400,
+            message="alt_text is required",
+            step="validate_alt_text",
+        )
+    return normalized_alt_text
 
 
 def _get_pexels_api_key() -> str:
@@ -1397,6 +1410,111 @@ async def generate_social_image(
             "mediaSetId": media_set_id,
             "sourceAssetId": source_asset_id,
             "generatedAssetId": generated_asset_id,
+            "generatedImageUrl": generated_image_url,
+            "width": VARIANT_SPECS[ImageVariantType.OPEN_GRAPH].width,
+            "height": VARIANT_SPECS[ImageVariantType.OPEN_GRAPH].height,
+        }
+    )
+
+
+@router.post("/upload-social-image")
+async def upload_social_image(
+    file: UploadFile = File(...),
+    alt_text: str = Form(..., description="Alt text for accessibility"),
+    photographer_credit: str = Form(
+        ...,
+        description="Photographer credit for uploaded asset",
+    ),
+    location_ref: int = Form(
+        ...,
+        description="Payload location id to attach to uploaded image",
+    ),
+    authorization: Optional[str] = Header(None),
+) -> JSONResponse:
+    """
+    Upload one social image for OG/Twitter usage only.
+
+    This endpoint processes the source into a single open_graph (1200x630) variant
+    and uploads it directly without creating/updating a media set.
+    """
+    jwt_token = _extract_bearer_token(authorization)
+    valid_location_ref = _validate_location_ref(location_ref)
+    valid_photographer_credit = _validate_photographer_credit(photographer_credit)
+    valid_alt_text = _validate_alt_text(alt_text)
+    content = await _read_upload_file(file, step="validate_file")
+
+    media_set_id: Optional[str] = None
+    external_ref: Optional[str] = None
+    generated_asset_id: Optional[str] = None
+
+    try:
+        open_graph_variant = process_single_variant(
+            source_buffer=content,
+            original_filename=file.filename or "social-upload.jpg",
+            variant_type=ImageVariantType.OPEN_GRAPH,
+        )
+
+        client = PayloadClient(jwt_token)
+        filename_seed = re.sub(
+            r"[^A-Za-z0-9_-]+",
+            "-",
+            (file.filename or "social-upload").rsplit(".", 1)[0],
+        ).strip("-").lower() or "social-upload"
+        external_ref = f"social-og-{filename_seed}-{int(time.time() * 1000)}"
+        media_set_id = await client.create_media_set(
+            title=f"Social OG {filename_seed}",
+            alt_text=valid_alt_text,
+            external_ref=external_ref,
+            location_ref=valid_location_ref,
+        )
+        generated_asset_id = await client.upload_image(
+            variant=open_graph_variant,
+            alt_text=valid_alt_text,
+            photographer_credit=valid_photographer_credit,
+            media_set_id=media_set_id,
+            location_ref=valid_location_ref,
+        )
+        generated_image_url = await _wait_for_bunny_original_url(
+            client=client,
+            asset_id=generated_asset_id,
+        )
+    except PayloadUploadError as exc:
+        logger.exception(
+            "Payload error during /images/upload-social-image | generated_asset_id=%s",
+            generated_asset_id,
+        )
+        _raise_http_error(
+            status_code=_status_from_payload_error(exc),
+            message="Failed to upload social image",
+            step=exc.step,
+            detail=exc.detail or str(exc),
+            media_set_id=media_set_id,
+            external_ref=external_ref,
+            generated_asset_id=generated_asset_id,
+            location_ref=valid_location_ref,
+            payload_error=exc.to_dict(),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Unexpected error during /images/upload-social-image")
+        _raise_http_error(
+            status_code=500,
+            message="Unexpected error while uploading social image",
+            step="upload_social_image",
+            detail=str(exc),
+            media_set_id=media_set_id,
+            external_ref=external_ref,
+            generated_asset_id=generated_asset_id,
+            location_ref=valid_location_ref,
+        )
+
+    return JSONResponse(
+        {
+            "success": True,
+            "mediaSetId": media_set_id,
+            "externalRef": external_ref,
+            "generatedAssetId": str(generated_asset_id),
             "generatedImageUrl": generated_image_url,
             "width": VARIANT_SPECS[ImageVariantType.OPEN_GRAPH].width,
             "height": VARIANT_SPECS[ImageVariantType.OPEN_GRAPH].height,
