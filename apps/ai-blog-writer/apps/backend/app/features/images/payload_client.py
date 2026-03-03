@@ -13,7 +13,6 @@ from .image_processor import ImageVariantType, ProcessedVariant
 logger = logging.getLogger("images.payload")
 
 DEFAULT_PAYLOAD_API_URL = "http://localhost:4000"
-DEFAULT_DOCKER_PAYLOAD_API_URL = "http://host.docker.internal:4000"
 
 
 class PayloadMediaAssetDoc(TypedDict):
@@ -38,8 +37,7 @@ def _resolve_payload_api_url() -> str:
 
     Priority:
     1. PAYLOAD_API_URL env var
-    2. host.docker.internal when running in Docker
-    3. localhost for non-Docker local development
+    2. localhost for local development and host-based runs
     """
     configured_url = os.getenv("PAYLOAD_API_URL")
     if configured_url:
@@ -47,11 +45,10 @@ def _resolve_payload_api_url() -> str:
 
     if _running_in_docker():
         logger.warning(
-            "PAYLOAD_API_URL not set; defaulting to %s because backend runs in Docker",
-            DEFAULT_DOCKER_PAYLOAD_API_URL,
+            "PAYLOAD_API_URL not set while running in Docker; defaulting to %s. "
+            "Set PAYLOAD_API_URL explicitly if Payload is outside this container.",
+            DEFAULT_PAYLOAD_API_URL,
         )
-        return DEFAULT_DOCKER_PAYLOAD_API_URL
-
     return DEFAULT_PAYLOAD_API_URL
 
 
