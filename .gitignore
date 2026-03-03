@@ -80,3 +80,6 @@ apps/location-manager/packages/server/data/reviews/
 apps/location-manager/packages/server/data/merged-reviews/
 apps/location-manager/packages/server/data/tripadvisor-places/
 apps/location-manager/packages/server/data/tripadvisor-reviews/
+apps/location-manager/packages/server/data/*.bak-*
+apps/location-manager/packages/server/data/images.bak-*/
+apps/questurian-leads/apps/client/vite.config.js.timestamp-*.mjs
