@@ -150,10 +150,10 @@ PAYLOAD_API_URL=http://host.docker.internal:4000
 ### 4. Start Development Servers
 
 ```bash
-# Start local AI Blog Writer dev services (frontend + backend)
+# Start local AI Blog Writer dev services (frontend + backend + converter)
 pnpm run dev
 
-# Optional: include converter service too
+# Alias of default local dev (also includes converter)
 pnpm run dev:local:full
 ```
 
@@ -247,8 +247,8 @@ The AI processing pipeline consists of 5 sequential stages:
 
 ```bash
 # Default local development (no Docker)
-pnpm run dev              # Starts backend + frontend via Nx
-pnpm run dev:local:full   # Starts backend + frontend + converter via Nx
+pnpm run dev              # Starts backend + frontend + converter via Nx
+pnpm run dev:local:full   # Alias of pnpm run dev
 pnpm run dev:clean        # Kills ports, reinstalls deps, then starts local dev
 pnpm run dev:docker       # Containerized dev (builds images)
 
