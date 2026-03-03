@@ -10,6 +10,7 @@ pnpm install
 
 # Run all in dev/watch mode
 pnpm run dev
+# Note: AI Blog Writer runs local dev services by default (Docker is opt-in via `pnpm -C apps/ai-blog-writer run dev:docker`)
 
 # Build everything
 pnpm run build

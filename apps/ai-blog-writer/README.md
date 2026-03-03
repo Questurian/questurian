@@ -72,6 +72,7 @@ data/                  # Pipeline stage data and article guidelines
 
 - **Node.js** 20+
 - **Python** 3.11+
+- **uv** (recommended for fast Python env/dependency bootstrap)
 - **Google Cloud Project** with Vertex AI enabled
 - **Docker** + Docker Compose (optional, for full containerized setup)
 
@@ -149,12 +150,14 @@ PAYLOAD_API_URL=http://host.docker.internal:4000
 ### 4. Start Development Servers
 
 ```bash
-# Terminal 1: Start backend (FastAPI)
-pnpm nx serve backend
+# Start local AI Blog Writer dev services (frontend + backend)
+pnpm run dev
 
-# Terminal 2: Start frontend (Vite)
-pnpm nx serve frontend
+# Optional: include converter service too
+pnpm run dev:local:full
 ```
+
+On first run, this command may do a one-time local dependency bootstrap for `node_modules` metadata and Python deps.
 
 Access the application at:
 - **Frontend**: http://localhost:3003
@@ -165,7 +168,7 @@ Access the application at:
 For a fully containerized environment:
 
 ```bash
-docker compose up --build
+pnpm run dev:docker
 ```
 
 This starts all services:
@@ -243,6 +246,12 @@ The AI processing pipeline consists of 5 sequential stages:
 ### Available Nx Commands
 
 ```bash
+# Default local development (no Docker)
+pnpm run dev              # Starts backend + frontend via Nx
+pnpm run dev:local:full   # Starts backend + frontend + converter via Nx
+pnpm run dev:clean        # Kills ports, reinstalls deps, then starts local dev
+pnpm run dev:docker       # Containerized dev (builds images)
+
 # Development servers
 pnpm nx serve backend      # FastAPI dev server
 pnpm nx serve frontend     # Vite dev server
