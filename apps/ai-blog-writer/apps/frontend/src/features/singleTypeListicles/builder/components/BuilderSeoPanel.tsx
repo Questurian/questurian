@@ -4,6 +4,19 @@ import type { SingleTypeListicleDraft } from '../../types'
 import type { SeoAiTarget } from '../services/seo-ai.service'
 import { OgImageCropUploadModal } from './OgImageCropUploadModal'
 
+const resolveSocialPreviewUrl = (url: string): string | null => {
+  const trimmed = url.trim()
+  if (!trimmed) return null
+
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
 type BuilderSeoPanelProps = {
   draft: SingleTypeListicleDraft
   setDraft: Dispatch<SetStateAction<SingleTypeListicleDraft | null>>
@@ -26,6 +39,8 @@ export function BuilderSeoPanel({
   isUploadingOgImage,
 }: BuilderSeoPanelProps) {
   const [isOgUploadModalOpen, setIsOgUploadModalOpen] = useState(false)
+  const ogImagePreviewUrl = resolveSocialPreviewUrl(draft.seoSection.openGraph.imageUrl)
+  const twitterImagePreviewUrl = resolveSocialPreviewUrl(draft.seoSection.twitterCard.imageUrl)
 
   const updateSeo = (updater: (current: SingleTypeListicleDraft['seoSection']) => SingleTypeListicleDraft['seoSection']) => {
     setDraft((current) => {
@@ -203,6 +218,29 @@ export function BuilderSeoPanel({
             <p className="stl-legacy-note stl-seo-og-hint">
               Thumb-stopper upload opens a manual crop editor and exports exactly 1200x630.
             </p>
+            {ogImagePreviewUrl ? (
+              <div className="stl-seo-social-preview">
+                <div className="stl-seo-social-preview__header">
+                  <p className="stl-seo-social-preview__label">Open Graph Preview</p>
+                  <a
+                    className="stl-seo-social-preview__link"
+                    href={ogImagePreviewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open image
+                  </a>
+                </div>
+                <a
+                  className="stl-seo-social-preview__media"
+                  href={ogImagePreviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img src={ogImagePreviewUrl} alt="Open Graph social image preview" />
+                </a>
+              </div>
+            ) : null}
           </label>
 
           <label className="stl-field">
@@ -314,6 +352,29 @@ export function BuilderSeoPanel({
                 }))
               }
             />
+            {twitterImagePreviewUrl ? (
+              <div className="stl-seo-social-preview">
+                <div className="stl-seo-social-preview__header">
+                  <p className="stl-seo-social-preview__label">Twitter Image Preview</p>
+                  <a
+                    className="stl-seo-social-preview__link"
+                    href={twitterImagePreviewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open image
+                  </a>
+                </div>
+                <a
+                  className="stl-seo-social-preview__media"
+                  href={twitterImagePreviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img src={twitterImagePreviewUrl} alt="Twitter social image preview" />
+                </a>
+              </div>
+            ) : null}
           </label>
         </section>
 
