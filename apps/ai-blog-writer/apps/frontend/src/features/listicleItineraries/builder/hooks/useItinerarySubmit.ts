@@ -82,7 +82,10 @@ export function useItinerarySubmit({
       return
     }
 
-    const seoIssues = validateSeoSection(submitDraft)
+    const seoIssues = validateSeoSection({
+      draft: submitDraft,
+      targetStatus,
+    })
     if (seoIssues.length > 0) {
       onError(seoIssues[0])
       return

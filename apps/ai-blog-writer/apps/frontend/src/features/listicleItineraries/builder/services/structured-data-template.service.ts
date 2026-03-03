@@ -1,8 +1,8 @@
 import type {
-  ListicleItemBlock,
-  ListicleType,
+  ItineraryBlockType,
+  ItineraryItemBlock,
+  ListicleItineraryDraft,
   RelatedItemOption,
-  SingleTypeListicleDraft,
 } from '../../types'
 import {
   getRelatedInstagramPostObjects,
@@ -10,6 +10,8 @@ import {
   resolveImageUrl,
   resolveInstagramPermalink,
 } from '../utils/item-media.utils'
+import { formatMinutes, toMinutesFromMidnight } from '../../time'
+import type { ItinerarySchemaPublisherConfig } from './schema-config.service'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -185,10 +187,8 @@ const clipReadableText = (value: string, maxLength: number): string => {
 
 function toStructuredDescription(value: string | undefined): string | undefined {
   if (!value) return undefined
-
   const normalized = stripPromotionalLeadIn(stripMarkdownSyntax(value))
   if (!normalized) return undefined
-
   return clipReadableText(normalized, STRUCTURED_DESCRIPTION_MAX_LENGTH)
 }
 
@@ -232,31 +232,69 @@ const normalizePriceRange = (rawValue: string | undefined): string | undefined =
   return PRICE_LEVEL_TO_RANGE[trimmed] || trimmed
 }
 
-export const LISTICLE_ITEM_SCHEMA_TYPE: Record<ListicleType, string> = {
-  dining: 'Restaurant',
-  accommodations: 'LodgingBusiness',
-  attractions: 'TouristAttraction',
-  nightlife: 'NightClub',
+export const ITINERARY_STOP_SCHEMA_TYPE: Record<ItineraryBlockType, string> = {
+  'itinerary-dining': 'Restaurant',
+  'itinerary-accommodations': 'LodgingBusiness',
+  'itinerary-attractions': 'TouristAttraction',
+  'itinerary-nightlife': 'NightClub',
+  'itinerary-key-location': 'Place',
 }
 
-function getListicleTypeLabel(type: ListicleType | ''): string {
-  switch (type) {
-    case 'dining':
+const ITINERARY_STOP_ALLOWED_SCHEMA_TYPES: Record<ItineraryBlockType, string[]> = {
+  'itinerary-dining': [
+    'Restaurant',
+    'FoodEstablishment',
+    'CafeOrCoffeeShop',
+    'IceCreamShop',
+    'Bakery',
+    'FastFoodRestaurant',
+  ],
+  'itinerary-accommodations': [
+    'LodgingBusiness',
+    'Hotel',
+    'Hostel',
+    'BedAndBreakfast',
+    'Resort',
+  ],
+  'itinerary-attractions': [
+    'TouristAttraction',
+    'Place',
+  ],
+  'itinerary-nightlife': [
+    'NightClub',
+    'BarOrPub',
+    'EntertainmentBusiness',
+    'LocalBusiness',
+  ],
+  'itinerary-key-location': [
+    'Place',
+    'LocalBusiness',
+  ],
+}
+
+function getStopTypeLabel(blockType: ItineraryBlockType): string {
+  switch (blockType) {
+    case 'itinerary-dining':
       return 'Dining'
-    case 'accommodations':
+    case 'itinerary-accommodations':
       return 'Accommodations'
-    case 'attractions':
+    case 'itinerary-attractions':
       return 'Attractions'
-    case 'nightlife':
+    case 'itinerary-nightlife':
       return 'Nightlife'
+    case 'itinerary-key-location':
+      return 'Key Location'
     default:
-      return 'Listicle'
+      return 'Stop'
   }
 }
 
-export function getSchemaTypeForListicleType(type: ListicleType | ''): string | null {
-  if (!type) return null
-  return LISTICLE_ITEM_SCHEMA_TYPE[type]
+export function getSchemaTypeForItineraryBlockType(blockType: ItineraryBlockType): string {
+  return ITINERARY_STOP_SCHEMA_TYPE[blockType] || 'Place'
+}
+
+function getAllowedSchemaTypesForItineraryBlockType(blockType: ItineraryBlockType): string[] {
+  return ITINERARY_STOP_ALLOWED_SCHEMA_TYPES[blockType] || ['Place']
 }
 
 function resolveEntityName(source: Record<string, unknown>): string | undefined {
@@ -323,7 +361,7 @@ function resolveEntityGeo(source: Record<string, unknown>): Record<string, unkno
 }
 
 function resolveSelectedImageUrl(
-  listicleItem: ListicleItemBlock,
+  itineraryItem: ItineraryItemBlock,
   relatedItem: RelatedItemOption,
 ): string | undefined {
   const photoById = new Map<number, string>()
@@ -333,7 +371,7 @@ function resolveSelectedImageUrl(
     photoById.set(photo.id, url)
   })
 
-  for (const photoId of listicleItem.selectedPhotos) {
+  for (const photoId of itineraryItem.selectedPhotos) {
     const selected = photoById.get(photoId)
     if (selected) return selected
   }
@@ -346,34 +384,48 @@ function resolveSelectedImageUrl(
 }
 
 function resolveSelectedInstagramPermalink(
-  listicleItem: ListicleItemBlock,
+  itineraryItem: ItineraryItemBlock,
   relatedItem: RelatedItemOption,
 ): string | undefined {
-  if (!listicleItem.selectedInstagramPost) return undefined
+  if (!itineraryItem.selectedInstagramPost) return undefined
   const selectedPost = getRelatedInstagramPostObjects(relatedItem)
-    .find((post) => post.id === listicleItem.selectedInstagramPost)
+    .find((post) => post.id === itineraryItem.selectedInstagramPost)
   if (!selectedPost) return undefined
   return resolveInstagramPermalink(selectedPost)
 }
 
-function buildRankedItemEntity(input: {
-  listicleItem: ListicleItemBlock
+function resolveTripTime(value: {
+  date: string | undefined
+  hour: number
+  minute: string
+  period: string
+}): string | undefined {
+  try {
+    if (!value.date) return undefined
+    const minutes = toMinutesFromMidnight(value.hour, value.minute, value.period)
+    return `${value.date}T${formatMinutes(minutes)}:00`
+  } catch {
+    return undefined
+  }
+}
+
+function buildStopEntity(input: {
+  itineraryItem: ItineraryItemBlock
   relatedItem?: RelatedItemOption
   position: number
-  schemaType: string
   includeUrlFields: boolean
 }): Record<string, unknown> {
   const {
-    listicleItem,
+    itineraryItem,
     relatedItem,
     position,
-    schemaType,
     includeUrlFields,
   } = input
   const source = relatedItem && isRecord(relatedItem) ? relatedItem : null
+  const schemaType = getSchemaTypeForItineraryBlockType(itineraryItem.blockType)
   const itemName = source ? resolveEntityName(source) : undefined
   const itemDescription = toStructuredDescription(
-    extractDraftText(listicleItem.blurbMarkdown, listicleItem.blurbJsonText),
+    extractDraftText(itineraryItem.blurbMarkdown, itineraryItem.blurbJsonText),
   )
   const itemAddress = source ? resolveEntityAddress(source) : undefined
   const itemWebsite = source ? resolveEntityWebsite(source) : undefined
@@ -381,16 +433,16 @@ function buildRankedItemEntity(input: {
   const itemPriceRange = source ? resolveEntityPriceRange(source) : undefined
   const itemTypeLabel = source ? resolveEntityTypeLabel(source) : undefined
   const itemGeo = source ? resolveEntityGeo(source) : undefined
-  const itemImage = relatedItem ? resolveSelectedImageUrl(listicleItem, relatedItem) : undefined
-  const itemInstagram = relatedItem ? resolveSelectedInstagramPermalink(listicleItem, relatedItem) : undefined
+  const itemImage = relatedItem ? resolveSelectedImageUrl(itineraryItem, relatedItem) : undefined
+  const itemInstagram = relatedItem ? resolveSelectedInstagramPermalink(itineraryItem, relatedItem) : undefined
   const cuisines = source ? pickStringArray(source, [['cuisines']]) : []
   const idealFor = source ? pickStringArray(source, [['idealFor'], ['nightlifeDetails', 'core', 'idealFor']]) : []
 
   const entity: Record<string, unknown> = {
     '@type': schemaType,
-    identifier: listicleItem.item ?? `item-${position}`,
-    name: itemName || `AI_FILL_ITEM_NAME_${position}`,
-    description: itemDescription || 'AI_FILL_ITEM_DESCRIPTION',
+    identifier: itineraryItem.item ?? `stop-${position}`,
+    name: itemName || `AI_FILL_STOP_NAME_${position}`,
+    description: itemDescription || 'AI_FILL_STOP_DESCRIPTION',
     image: itemImage,
     address: itemAddress,
     telephone: itemPhone,
@@ -400,7 +452,7 @@ function buildRankedItemEntity(input: {
     priceRange: itemPriceRange,
     servesCuisine: cuisines.length > 0 ? cuisines : undefined,
     keywords: idealFor.length > 0 ? idealFor.join(', ') : undefined,
-    category: itemTypeLabel,
+    category: itemTypeLabel || getStopTypeLabel(itineraryItem.blockType),
   }
 
   if (includeUrlFields && !entity.url && itemInstagram && isValidAbsoluteHttpUrl(itemInstagram)) {
@@ -410,64 +462,83 @@ function buildRankedItemEntity(input: {
   return compactValue(entity) as Record<string, unknown>
 }
 
-export function buildSingleTypeListicleStructuredDataTemplate(input: {
-  draft: SingleTypeListicleDraft
-  relatedItems: RelatedItemOption[]
+export function buildListicleItineraryStructuredDataTemplate(input: {
+  draft: ListicleItineraryDraft
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
+  publisherConfig?: ItinerarySchemaPublisherConfig
 }): Record<string, unknown> {
-  const { draft, relatedItems } = input
-  const schemaType = getSchemaTypeForListicleType(draft.listicleType) || 'Place'
+  const { draft, relatedByBlockType, publisherConfig } = input
   const canonicalUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.url)
   const schemaDate = toSchemaDate(draft.updatedAt)
   const articleImageUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.imageUrl)
     || normalizeAbsoluteUrl(draft.seoSection.twitterCard.imageUrl)
-  const itemListId = canonicalUrl
-    ? `${canonicalUrl}#single-type-listicle-item-list`
-    : '#single-type-listicle-item-list'
+  const tripId = canonicalUrl ? `${canonicalUrl}#listicle-itinerary-trip` : '#listicle-itinerary-trip'
+  const itemListId = canonicalUrl ? `${canonicalUrl}#listicle-itinerary-stop-list` : '#listicle-itinerary-stop-list'
   const articleTitle = draft.title.trim() || 'AI_FILL_HEADLINE'
   const intro = toStructuredDescription(
     extractDraftText(draft.header.introMarkdown, draft.header.introJsonText),
   )
-  const listicleLabel = getListicleTypeLabel(draft.listicleType)
+  const startTime = resolveTripTime({
+    date: schemaDate,
+    hour: draft.itineraryStartHour,
+    minute: draft.itineraryStartMinute,
+    period: draft.itineraryStartPeriod,
+  })
+  const endTime = resolveTripTime({
+    date: schemaDate,
+    hour: draft.itineraryEndHour,
+    minute: draft.itineraryEndMinute,
+    period: draft.itineraryEndPeriod,
+  })
 
-  const relatedById = new Map<number, RelatedItemOption>(
-    relatedItems.map((entry) => [entry.id, entry]),
-  )
-
-  const itemListElement = draft.items.map((listicleItem, index) => {
+  const itemListElement = draft.items.map((itineraryItem, index) => {
     const position = index + 1
-    const relatedItem = listicleItem.item ? relatedById.get(listicleItem.item) : undefined
-    const rankedEntity = buildRankedItemEntity({
-      listicleItem,
+    const relatedItem = (relatedByBlockType[itineraryItem.blockType] || [])
+      .find((entry) => entry.id === itineraryItem.item)
+    const stopEntity = buildStopEntity({
+      itineraryItem,
       relatedItem,
       position,
-      schemaType,
       includeUrlFields: Boolean(canonicalUrl),
     })
 
     return {
       '@type': 'ListItem',
       position,
-      name: rankedEntity.name,
-      item: rankedEntity,
+      name: `${getStopTypeLabel(itineraryItem.blockType)} stop ${position}`,
+      item: stopEntity,
     }
   })
 
   const itemListNode: Record<string, unknown> = {
     '@type': 'ItemList',
     '@id': itemListId,
-    name: `${articleTitle} ranked list`,
+    name: `${articleTitle} itinerary stops`,
     itemListOrder: 'https://schema.org/ItemListOrderAscending',
     numberOfItems: draft.items.length,
     itemListElement,
   }
 
+  const tripNode: Record<string, unknown> = {
+    '@type': 'Trip',
+    '@id': tripId,
+    name: articleTitle,
+    description: intro || 'AI_FILL_TRIP_DESCRIPTION',
+    departureTime: startTime,
+    arrivalTime: endTime,
+    itinerary: {
+      '@id': itemListId,
+    },
+    url: canonicalUrl,
+  }
+
   const blogPostingNode: Record<string, unknown> = {
     '@type': 'BlogPosting',
-    '@id': '#single-type-listicle-blog-posting',
+    '@id': '#listicle-itinerary-blog-posting',
     headline: articleTitle,
     name: articleTitle,
     description: intro || 'AI_FILL_ARTICLE_DESCRIPTION',
-    articleSection: listicleLabel,
+    articleSection: 'Itinerary',
     contentLocation: draft.location.trim()
       ? {
           '@type': 'Place',
@@ -475,11 +546,11 @@ export function buildSingleTypeListicleStructuredDataTemplate(input: {
         }
       : undefined,
     about: {
-      '@id': itemListId,
+      '@id': tripId,
     },
     mainEntity: {
-      '@type': 'ItemList',
-      '@id': itemListId,
+      '@type': 'Trip',
+      '@id': tripId,
     },
     url: canonicalUrl,
     image: articleImageUrl,
@@ -491,11 +562,29 @@ export function buildSingleTypeListicleStructuredDataTemplate(input: {
           '@id': canonicalUrl,
         }
       : undefined,
+    author: publisherConfig?.defaultAuthorName
+      ? {
+          '@type': 'Person',
+          name: publisherConfig.defaultAuthorName,
+        }
+      : undefined,
+    publisher: publisherConfig?.siteName
+      ? {
+          '@type': 'Organization',
+          name: publisherConfig.siteName,
+          logo: publisherConfig.logoUrl
+            ? {
+                '@type': 'ImageObject',
+                url: publisherConfig.logoUrl,
+              }
+            : undefined,
+        }
+      : undefined,
   }
 
   const payload = {
     '@context': 'https://schema.org',
-    '@graph': [blogPostingNode, itemListNode],
+    '@graph': [blogPostingNode, tripNode, itemListNode],
   }
 
   return compactValue(payload) as Record<string, unknown>
@@ -513,18 +602,25 @@ const getNodeType = (value: unknown): string | null => {
   return typeof first === 'string' ? first : null
 }
 
-export function validateSingleTypeListicleStructuredDataShape(input: {
+const getNodeTypes = (value: unknown): string[] => {
+  if (typeof value === 'string') return [value]
+  const typeArray = asArray(value)
+  if (!typeArray || typeArray.length < 1) return []
+  return typeArray.filter((entry): entry is string => typeof entry === 'string')
+}
+
+const getReferenceId = (value: unknown): string | undefined => {
+  if (!isRecord(value)) return undefined
+  const id = value['@id']
+  return typeof id === 'string' ? id : undefined
+}
+
+export function validateListicleItineraryStructuredDataShape(input: {
   structuredData: Record<string, unknown>
-  draft: SingleTypeListicleDraft
+  draft: ListicleItineraryDraft
 }): string[] {
   const { structuredData, draft } = input
   const issues: string[] = []
-
-  const expectedItemType = getSchemaTypeForListicleType(draft.listicleType)
-  if (!expectedItemType) {
-    issues.push('Structured Data validation requires a selected listicle type.')
-    return issues
-  }
 
   const context = structuredData['@context']
   if (context !== 'https://schema.org' && context !== 'http://schema.org') {
@@ -542,15 +638,32 @@ export function validateSingleTypeListicleStructuredDataShape(input: {
     .filter((node): node is Record<string, unknown> => Boolean(node))
 
   const blogPostingNode = graphNodes.find((node) => getNodeType(node['@type']) === 'BlogPosting')
+  const tripNode = graphNodes.find((node) => getNodeType(node['@type']) === 'Trip')
   const itemListNode = graphNodes.find((node) => getNodeType(node['@type']) === 'ItemList')
 
   if (!blogPostingNode) {
     issues.push('Structured Data "@graph" must include a BlogPosting node.')
   }
 
+  if (!tripNode) {
+    issues.push('Structured Data "@graph" must include a Trip node.')
+  }
+
   if (!itemListNode) {
     issues.push('Structured Data "@graph" must include an ItemList node.')
     return issues
+  }
+
+  const itemListId = getReferenceId(itemListNode)
+  const tripItineraryId = getReferenceId(tripNode?.itinerary)
+  if (tripNode && itemListId && tripItineraryId && itemListId !== tripItineraryId) {
+    issues.push('Structured Data Trip.itinerary must reference the ItemList @id.')
+  }
+
+  const tripId = getReferenceId(tripNode)
+  const blogMainEntityId = getReferenceId(blogPostingNode?.mainEntity)
+  if (blogPostingNode && tripId && blogMainEntityId && tripId !== blogMainEntityId) {
+    issues.push('Structured Data BlogPosting.mainEntity must reference the Trip @id.')
   }
 
   const itemListElement = asArray(itemListNode.itemListElement)
@@ -565,6 +678,7 @@ export function validateSingleTypeListicleStructuredDataShape(input: {
 
   for (let index = 0; index < itemListElement.length; index += 1) {
     const expectedPosition = index + 1
+    const draftItem = draft.items[index]
     const entry = itemListElement[index]
     const listItem = isRecord(entry) ? entry : null
 
@@ -587,8 +701,16 @@ export function validateSingleTypeListicleStructuredDataShape(input: {
       continue
     }
 
-    if (getNodeType(itemEntity['@type']) !== expectedItemType) {
-      issues.push(`Structured Data itemListElement[${index}].item must have "@type": "${expectedItemType}".`)
+    const expectedType = draftItem ? getSchemaTypeForItineraryBlockType(draftItem.blockType) : 'Place'
+    const allowedTypes = draftItem
+      ? getAllowedSchemaTypesForItineraryBlockType(draftItem.blockType)
+      : [expectedType]
+    const entityTypes = getNodeTypes(itemEntity['@type'])
+    const hasAllowedType = entityTypes.some((type) => allowedTypes.includes(type))
+    if (!hasAllowedType) {
+      issues.push(
+        `Structured Data itemListElement[${index}].item must include an allowed "@type" for this stop. Prefer "${expectedType}".`,
+      )
     }
 
     if (!normalizeText(itemEntity.name)) {

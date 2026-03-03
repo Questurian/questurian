@@ -180,15 +180,54 @@ export type MediaAssetOption = {
   variant?: string
 }
 
+export type GalleryMediaAsset = {
+  id: number
+  filename?: string | null
+  url?: string | null
+  alt_text?: string | null
+}
+
+export type GalleryImageObject = {
+  id: number
+  title?: string | null
+  alt_text?: string | null
+  variants?: {
+    thumbnail?: number | GalleryMediaAsset | null
+    square?: number | GalleryMediaAsset | null
+    wide?: number | GalleryMediaAsset | null
+    portrait?: number | GalleryMediaAsset | null
+    editorial?: number | GalleryMediaAsset | null
+  } | null
+}
+
+export type InstagramPreviewAsset = {
+  id: number
+  filename?: string | null
+  url?: string | null
+  alt_text?: string | null
+}
+
+export type InstagramPostOption = {
+  id: number
+  title: string
+  status?: string | null
+  embedCode?: string | null
+  permalink?: string | null
+  url?: string | null
+  instagramUrl?: string | null
+  shortcode?: string | null
+  previewImage?: number | InstagramPreviewAsset | null
+}
+
 export type RelatedItemOption = {
   id: number
   title: string
   location?: string
   status?: string
   gallery?: Array<{
-    image?: number | { id?: number }
+    image?: number | GalleryImageObject
   }>
   instagramGallery?: Array<{
-    post?: number | { id?: number }
+    post?: number | InstagramPostOption
   }>
 }

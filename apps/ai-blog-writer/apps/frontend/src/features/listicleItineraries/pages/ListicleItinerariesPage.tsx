@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../providers/useAuth'
 import { fetchItineraries } from '../api'
+import { listDrafts, removeDraft } from '../storage'
 import { formatMinutes, toMinutesFromMidnight } from '../time'
-import type { PayloadItineraryDoc } from '../types'
+import type { ListicleItineraryDraft, PayloadItineraryDoc } from '../types'
 import '../styles.css'
 
 function formatDate(value?: string): string {
@@ -19,12 +20,17 @@ function formatDate(value?: string): string {
   })
 }
 
-function isGenericPayloadError(value: string): boolean {
-  const normalized = value.trim().toLowerCase()
-  return normalized === 'something went wrong.' || normalized === 'something went wrong'
-}
+type ItineraryWindowInput = Pick<
+  PayloadItineraryDoc | ListicleItineraryDraft,
+  'itineraryStartHour'
+  | 'itineraryStartMinute'
+  | 'itineraryStartPeriod'
+  | 'itineraryEndHour'
+  | 'itineraryEndMinute'
+  | 'itineraryEndPeriod'
+>
 
-function formatWindow(doc: PayloadItineraryDoc): string {
+function formatWindow(doc: ItineraryWindowInput): string {
   if (
     typeof doc.itineraryStartHour !== 'number' ||
     !doc.itineraryStartMinute ||
@@ -48,8 +54,30 @@ function formatWindow(doc: PayloadItineraryDoc): string {
 export default function ListicleItinerariesPage() {
   const { token } = useAuth()
   const [itineraries, setItineraries] = useState<PayloadItineraryDoc[]>([])
+  const [localDrafts, setLocalDrafts] = useState(() => listDrafts())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const refreshLocalDrafts = () => {
+      setLocalDrafts(listDrafts())
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key || event.key.startsWith('listicle_itineraries_staged_')) {
+        refreshLocalDrafts()
+      }
+    }
+
+    refreshLocalDrafts()
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('focus', refreshLocalDrafts)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('focus', refreshLocalDrafts)
+    }
+  }, [])
 
   useEffect(() => {
     if (!token) return
@@ -89,13 +117,26 @@ export default function ListicleItinerariesPage() {
     }))
   }, [itineraries])
 
-  const hasBlockingError = Boolean(
-    error
-    && !(
-      rows.length === 0
-      && isGenericPayloadError(error)
-    ),
-  )
+  const localRows = useMemo(() => {
+    return [...localDrafts]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .map((draft) => ({
+        draftId: draft.draftId,
+        payloadId: draft.payloadId,
+        title: draft.title || 'Untitled',
+        location: draft.location || '-',
+        dayAudience: draft.dayAudience || '-',
+        window: formatWindow(draft),
+        updatedAt: formatDate(draft.updatedAt),
+      }))
+  }, [localDrafts])
+
+  const discardLocalDraft = (draftId: string) => {
+    const confirmed = window.confirm('Discard this local draft? This cannot be undone.')
+    if (!confirmed) return
+    removeDraft(draftId)
+    setLocalDrafts(listDrafts())
+  }
 
   return (
     <div className="stl-page">
@@ -119,13 +160,71 @@ export default function ListicleItinerariesPage() {
 
       <section className="stl-panel">
         <div className="stl-panel-header">
+          <h2>Local Drafts ({localRows.length})</h2>
+        </div>
+
+        {localRows.length === 0 ? (
+          <div className="stl-empty">
+            <p>No local drafts saved.</p>
+            <p>Save a local draft in the builder to continue work later.</p>
+          </div>
+        ) : (
+          <div className="stl-table-wrap">
+            <table className="stl-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Location</th>
+                  <th>Day Type</th>
+                  <th>Window</th>
+                  <th>Source</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {localRows.map((row) => (
+                  <tr key={row.draftId}>
+                    <td>{row.title}</td>
+                    <td>{row.location}</td>
+                    <td>{row.dayAudience}</td>
+                    <td>{row.window}</td>
+                    <td>{row.payloadId ? `Payload #${row.payloadId}` : 'Local only'}</td>
+                    <td>{row.updatedAt}</td>
+                    <td>
+                      <div className="stl-table-actions">
+                        <Link
+                          className="stl-link"
+                          to={`/listicle-itineraries/builder?draftId=${encodeURIComponent(row.draftId)}`}
+                        >
+                          Resume
+                        </Link>
+                        <button
+                          type="button"
+                          className="stl-btn stl-btn-danger stl-btn-xs"
+                          onClick={() => discardLocalDraft(row.draftId)}
+                        >
+                          Discard
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="stl-panel">
+        <div className="stl-panel-header">
           <h2>Payload Documents ({rows.length})</h2>
         </div>
 
         {isLoading ? <p className="stl-placeholder">Loading itineraries...</p> : null}
-        {hasBlockingError ? <p className="stl-error">{error}</p> : null}
+        {error ? <p className="stl-error">{error}</p> : null}
 
-        {!isLoading && !hasBlockingError ? (
+        {!isLoading && !error ? (
           rows.length === 0 ? (
             <div className="stl-empty">
               <p>No listicle-itineraries found.</p>

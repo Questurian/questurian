@@ -65,22 +65,25 @@ export function BuilderSetupPanel({
 
       <div className="stl-grid stl-grid-2">
         <label className="stl-field">
-          <div className="stl-field-label-row">
-            <span>Title *</span>
+          <span>Title *</span>
+          <div className="stl-title-input-wrap">
+            <input
+              className="stl-title-input"
+              value={draft.title}
+              disabled={draft.step1_complete && !draft.in_update_mode}
+              onChange={(event) => updateDraft({ title: event.target.value })}
+            />
             {onTitleAiGenerate ? (
-              <AiTitleInput
-                currentTitle={draft.title}
-                onGenerate={onTitleAiGenerate}
-                onApply={(title) => updateDraft({ title })}
-                disabledReason={aiTitleDisabledReason}
-              />
+              <span className="stl-title-ai-trigger-wrap">
+                <AiTitleInput
+                  currentTitle={draft.title}
+                  onGenerate={onTitleAiGenerate}
+                  onApply={(title) => updateDraft({ title })}
+                  disabledReason={aiTitleDisabledReason}
+                />
+              </span>
             ) : null}
           </div>
-          <input
-            value={draft.title}
-            disabled={draft.step1_complete && !draft.in_update_mode}
-            onChange={(event) => updateDraft({ title: event.target.value })}
-          />
         </label>
 
         <label className="stl-field">

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
@@ -16,6 +16,7 @@ import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
 import { useItinerarySubmit } from '../builder/hooks/useItinerarySubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
+import { saveDraft } from '../storage'
 import {
   buildItineraryAiArticleContext,
   getItineraryAiArticleTitle,
@@ -28,6 +29,11 @@ import {
   parseSeoAiPatch,
 } from '../builder/services/seo-ai.service'
 import type { SeoAiTarget } from '../builder/services/seo-ai.service'
+import {
+  buildListicleItineraryStructuredDataTemplate,
+  serializeStructuredDataTemplate,
+} from '../builder/services/structured-data-template.service'
+import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
 import { generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import '../styles.css'
 
@@ -37,6 +43,8 @@ type AiRewriteInput = {
   prompt: string
   includeWholeArticleContext: boolean
 }
+
+const schemaPublisherConfig = getItinerarySchemaPublisherConfig()
 
 export default function ListicleItineraryBuilderPage() {
   const { token } = useAuth()
@@ -100,6 +108,47 @@ export default function ListicleItineraryBuilderPage() {
   })
 
   const progress = useBuilderProgress({ draft })
+  const isStep1Locked = draft?.step1_complete && !draft?.in_update_mode
+  const isStep2Locked = draft?.step2_complete && !draft?.step2_in_update_mode
+  const isStep3Locked = draft?.step3_complete && !draft?.step3_in_update_mode
+  const isStep4Ready = Boolean(isStep1Locked && isStep2Locked && isStep3Locked)
+  const canonicalStructuredData = useMemo(() => {
+    if (!draft || !isStep4Ready) return ''
+    return serializeStructuredDataTemplate(
+      buildListicleItineraryStructuredDataTemplate({
+        draft,
+        relatedByBlockType,
+        publisherConfig: schemaPublisherConfig,
+      }),
+    )
+  }, [draft, isStep4Ready, relatedByBlockType])
+
+  useEffect(() => {
+    if (!draft || !isStep4Ready || !canonicalStructuredData) return
+
+    setDraft((current) => {
+      if (!current) return current
+      const existingStructuredData = current.seoSection.structuredData.trim()
+      if (existingStructuredData === canonicalStructuredData) {
+        return current
+      }
+
+      return {
+        ...current,
+        seoSection: {
+          ...current.seoSection,
+          structuredData: canonicalStructuredData,
+        },
+      }
+    })
+  }, [canonicalStructuredData, draft, isStep4Ready, setDraft])
+
+  const saveLocalDraft = useCallback(async (): Promise<void> => {
+    if (!draft) return
+    saveDraft(draft)
+    setError(null)
+    setResult('Saved local draft in this browser only (not synced to Payload).')
+  }, [draft])
 
   const generateDraftTitleWithAi = useCallback(async ({ prompt }: { prompt: string }): Promise<string> => {
     if (!draft) {
@@ -151,6 +200,7 @@ export default function ListicleItineraryBuilderPage() {
 
     const articleContext = buildItineraryAiArticleContext(draft).trim()
     const articleTitle = getItineraryAiArticleTitle(draft).trim()
+    const structuredDataTemplate = canonicalStructuredData
     const hasSourceContent = Boolean(draft.title.trim() || articleContext)
     if (!hasSourceContent) {
       onError('Add article content before generating SEO with AI.')
@@ -170,6 +220,9 @@ export default function ListicleItineraryBuilderPage() {
           dayAudience: draft.dayAudience || undefined,
           itineraryWindow,
           target,
+          structuredDataTemplate: target === 'structuredData'
+            ? structuredDataTemplate
+            : undefined,
         }),
         blockContent: buildSeoAiSeed(draft.seoSection),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
@@ -185,14 +238,20 @@ export default function ListicleItineraryBuilderPage() {
       const seoPatch = parseSeoAiPatch(aiText)
       setDraft((current) => {
         if (!current) return current
+        const patchedSeo = applySeoAiPatch(current.seoSection, seoPatch, target)
         return {
           ...current,
-          seoSection: applySeoAiPatch(current.seoSection, seoPatch, target),
+          seoSection: target === 'all'
+            ? {
+                ...patchedSeo,
+                structuredData: current.seoSection.structuredData,
+              }
+            : patchedSeo,
         }
       })
 
       if (target === 'all') {
-        setResult('SEO fields generated with AI (images unchanged).')
+        setResult('SEO fields generated with AI (images and structured data unchanged).')
       } else {
         setResult(`${getSeoAiTargetLabel(target)} generated with AI (images unchanged).`)
       }
@@ -201,7 +260,23 @@ export default function ListicleItineraryBuilderPage() {
     } finally {
       setIsGeneratingSeoTarget(null)
     }
-  }, [draft, onError, setDraft])
+  }, [canonicalStructuredData, draft, onError, setDraft])
+
+  const regenerateStructuredDataFromTemplate = useCallback(() => {
+    if (!canonicalStructuredData) return
+    setDraft((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        seoSection: {
+          ...current.seoSection,
+          structuredData: canonicalStructuredData,
+        },
+      }
+    })
+    setResult('Structured data regenerated from the itinerary template.')
+    onError('')
+  }, [canonicalStructuredData, onError, setDraft])
 
   const generateSeoImageFromFeatured = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -262,9 +337,9 @@ export default function ListicleItineraryBuilderPage() {
     )
   }
 
-  const isStep1Locked = draft.step1_complete && !draft.in_update_mode
-  const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
-  const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
+  const isStep1LockedView = draft.step1_complete && !draft.in_update_mode
+  const isStep2LockedView = draft.step2_complete && !draft.step2_in_update_mode
+  const isStep3LockedView = draft.step3_complete && !draft.step3_in_update_mode
 
   return (
     <div className="stl-page">
@@ -286,13 +361,15 @@ export default function ListicleItineraryBuilderPage() {
             onTitleAiGenerate={generateDraftTitleWithAi}
           />
 
-          {isStep1Locked ? (
+          {isStep1LockedView ? (
             <BuilderHeaderPanel
               draft={draft}
+              token={token ?? null}
+              locationRef={actions.selectedLocationRefId}
               mediaAssets={mediaAssets}
               updateHeader={actions.updateHeader}
               onIntroAiRewrite={rewriteDraftBlockWithAi}
-              isLocked={isStep2Locked}
+              isLocked={isStep2LockedView}
               onContinueStep2={actions.handleContinueStep2}
               onUpdateStep2={actions.handleUpdateStep2}
               onSaveStep2={actions.handleSaveStep2}
@@ -300,7 +377,7 @@ export default function ListicleItineraryBuilderPage() {
             />
           ) : null}
 
-          {isStep1Locked && isStep2Locked ? (
+          {isStep1LockedView && isStep2LockedView ? (
             <BuilderStopsPanel
               draft={draft}
               isLoadingRelated={isLoadingRelated}
@@ -311,7 +388,7 @@ export default function ListicleItineraryBuilderPage() {
               onRemoveItem={actions.removeItem}
               onUpdateItem={actions.updateItem}
               onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
-              isLocked={isStep3Locked}
+              isLocked={isStep3LockedView}
               onContinueStep3={actions.handleContinueStep3}
               onUpdateStep3={actions.handleUpdateStep3}
               onSaveStep3={actions.handleSaveStep3}
@@ -319,7 +396,7 @@ export default function ListicleItineraryBuilderPage() {
             />
           ) : null}
 
-          {isStep1Locked && isStep2Locked && isStep3Locked ? (
+          {isStep1LockedView && isStep2LockedView && isStep3LockedView ? (
             <BuilderSeoPanel
               draft={draft}
               setDraft={setDraft}
@@ -327,15 +404,17 @@ export default function ListicleItineraryBuilderPage() {
               isGeneratingSeoTarget={isGeneratingSeoTarget}
               onGenerateSeoImageFromFeatured={generateSeoImageFromFeatured}
               isGeneratingSeoImage={isGeneratingSeoImage}
+              onRegenerateStructuredData={regenerateStructuredDataFromTemplate}
+              canRegenerateStructuredData={Boolean(canonicalStructuredData)}
             />
           ) : null}
 
-          {isStep1Locked && isStep2Locked && isStep3Locked ? (
+          {isStep1LockedView && isStep2LockedView && isStep3LockedView ? (
             <BuilderPublishPanel
               draft={draft}
               isSaving={isSaving}
-              updateDraft={actions.updateDraft}
-              onSubmit={submit}
+              onSaveLocalDraft={saveLocalDraft}
+              onSyncToPayload={() => submit('draft')}
             />
           ) : null}
         </main>
@@ -349,7 +428,8 @@ export default function ListicleItineraryBuilderPage() {
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
           stepIssues={progress.stepIssues}
-          onSubmit={submit}
+          onSaveLocalDraft={saveLocalDraft}
+          onSyncToPayload={() => submit('draft')}
         />
       </div>
     </div>

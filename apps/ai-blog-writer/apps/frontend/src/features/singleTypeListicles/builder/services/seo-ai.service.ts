@@ -112,6 +112,8 @@ const normalizeText = (value: unknown): string | undefined => {
   return normalized ? normalized : undefined
 }
 
+const STRUCTURED_DATA_DESCRIPTION_MAX_LENGTH = 220
+
 const withMaxLength = (value: string | undefined, maxLength: number): string | undefined => {
   if (!value) return value
   return value.length > maxLength ? value.slice(0, maxLength) : value
@@ -139,6 +141,65 @@ const withReadableMaxLength = (
   const lastSpace = clipped.lastIndexOf(' ')
   const base = (lastSpace >= Math.floor(maxLength * 0.5) ? clipped.slice(0, lastSpace) : clipped).trim()
   return base.replace(/[,:;.\-–—\s]+$/g, '')
+}
+
+const stripMarkdownSyntax = (value: string): string => (
+  value
+    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/`{1,3}[^`]*`{1,3}/g, ' ')
+    .replace(/[*_~>#]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+)
+
+const stripPromotionalLeadIn = (value: string): string => {
+  const leadInPatterns = [
+    /^discover\s+/i,
+    /^explore\s+/i,
+    /^experience\s+/i,
+    /^enjoy\s+/i,
+    /^visit\s+/i,
+  ]
+
+  for (const pattern of leadInPatterns) {
+    if (pattern.test(value)) {
+      return value.replace(pattern, '').trim()
+    }
+  }
+
+  return value
+}
+
+const toStructuredDataDescription = (value: string | undefined): string | undefined => {
+  if (!value) return undefined
+  const normalized = stripPromotionalLeadIn(stripMarkdownSyntax(value))
+  if (!normalized) return undefined
+  return withReadableMaxLength(normalized, STRUCTURED_DATA_DESCRIPTION_MAX_LENGTH)
+}
+
+const sanitizeStructuredDataValue = (value: unknown, key?: string): unknown => {
+  if (typeof value === 'string') {
+    if (key === 'description') {
+      return toStructuredDataDescription(value)
+    }
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => sanitizeStructuredDataValue(entry))
+      .filter((entry) => entry !== undefined)
+  }
+
+  const record = asRecord(value)
+  if (!record) return value
+
+  return Object.fromEntries(
+    Object.entries(record)
+      .map(([entryKey, entryValue]) => [entryKey, sanitizeStructuredDataValue(entryValue, entryKey)])
+      .filter(([, entryValue]) => entryValue !== undefined),
+  )
 }
 
 const normalizeTwitterCard = (value: unknown): SeoSection['twitterCard']['card'] | undefined => {
@@ -201,7 +262,10 @@ function extractJsonPayload(value: string): Record<string, unknown> {
 
 function normalizeStructuredData(value: unknown): string | undefined {
   if (asRecord(value)) {
-    return JSON.stringify(value, null, 2)
+    const sanitized = sanitizeStructuredDataValue(value)
+    const sanitizedRecord = asRecord(sanitized)
+    if (!sanitizedRecord) return undefined
+    return JSON.stringify(sanitizedRecord, null, 2)
   }
 
   if (typeof value !== 'string') return undefined
@@ -213,7 +277,10 @@ function normalizeStructuredData(value: unknown): string | undefined {
     const parsed = JSON.parse(trimmed)
     const record = asRecord(parsed)
     if (!record) return undefined
-    return JSON.stringify(record, null, 2)
+    const sanitized = sanitizeStructuredDataValue(record)
+    const sanitizedRecord = asRecord(sanitized)
+    if (!sanitizedRecord) return undefined
+    return JSON.stringify(sanitizedRecord, null, 2)
   } catch {
     return undefined
   }
@@ -370,6 +437,8 @@ export function buildSeoAiPrompt(input: {
     '- structuredData must be a JSON object (JSON-LD style).',
     '- If structuredData is requested, preserve the existing structuredData shape from input block content.',
     '- If structuredData is requested, only refine values and optional fields; do not remove required nodes.',
+    `- If structuredData is requested, keep every "description" concise and factual (max ${STRUCTURED_DATA_DESCRIPTION_MAX_LENGTH} chars).`,
+    '- If structuredData is requested, avoid marketing tone, keyword stuffing, and sales language.',
     '- robots should usually be index/follow unless context suggests otherwise.',
     '',
     `Article type: ${input.articleType}`,

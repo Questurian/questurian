@@ -50,7 +50,6 @@ export function normalizeSeoSection(value: unknown): SeoSection {
     ? source.robots
     : {}) as Record<string, unknown>
   const rawStructuredData = source.structuredData
-
   return {
     seoTitle: normalizeText(source.seoTitle),
     metaDescription: normalizeText(source.metaDescription),

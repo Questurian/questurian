@@ -1,5 +1,10 @@
+import { useEffect, useMemo, useState } from 'react'
+import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
-import type { ListicleItineraryDraft } from '../../types'
+import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
+import type { MediaAsset } from '../../../staging/api/payload/payload.types'
+import type { ListicleItineraryDraft, MediaAssetOption } from '../../types'
+import { resolveImageUrl } from '../utils/item-media.utils'
 
 type AiRewriteInput = {
   blockId: string
@@ -10,7 +15,9 @@ type AiRewriteInput = {
 
 type BuilderHeaderPanelProps = {
   draft: ListicleItineraryDraft
-  mediaAssets: Array<{ id: number; filename: string }>
+  token: string | null
+  locationRef: number | null
+  mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
   isLocked: boolean
@@ -22,6 +29,8 @@ type BuilderHeaderPanelProps = {
 
 export function BuilderHeaderPanel({
   draft,
+  token,
+  locationRef,
   mediaAssets,
   updateHeader,
   onIntroAiRewrite,
@@ -31,6 +40,77 @@ export function BuilderHeaderPanel({
   onSaveStep2,
   onCancelStep2Update,
 }: BuilderHeaderPanelProps) {
+  const resolvedToken = token ?? ''
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [fetchedFeaturedAsset, setFetchedFeaturedAsset] = useState<MediaAssetOption | null>(null)
+
+  const featuredImageId = draft.header.featuredImage
+  const selectedFeaturedAsset = useMemo(
+    () => mediaAssets.find((asset) => asset.id === featuredImageId) || null,
+    [featuredImageId, mediaAssets],
+  )
+  const prefetchedPayloadAssets = useMemo<MediaAsset[]>(
+    () => mediaAssets.map((asset) => ({
+      id: asset.id,
+      filename: asset.filename,
+      url: asset.url,
+      alt: asset.alt,
+      alt_text: asset.alt_text,
+      altText: asset.altText,
+      variant: asset.variant as MediaAsset['variant'],
+    })),
+    [mediaAssets],
+  )
+
+  useEffect(() => {
+    if (!featuredImageId || selectedFeaturedAsset || !resolvedToken) {
+      setFetchedFeaturedAsset(null)
+      return
+    }
+
+    let cancelled = false
+
+    const loadSelectedAsset = async () => {
+      try {
+        const response = await fetchPayloadMediaAssets(resolvedToken, {
+          id: featuredImageId,
+          limit: 1,
+        })
+        if (cancelled) return
+        const asset = response.docs?.[0]
+        if (!asset) {
+          setFetchedFeaturedAsset(null)
+          return
+        }
+        setFetchedFeaturedAsset({
+          id: asset.id,
+          filename: asset.filename,
+          url: asset.url,
+          alt: asset.alt,
+          alt_text: asset.alt_text,
+          altText: asset.altText,
+          variant: asset.variant,
+        })
+      } catch {
+        if (!cancelled) setFetchedFeaturedAsset(null)
+      }
+    }
+
+    void loadSelectedAsset()
+
+    return () => {
+      cancelled = true
+    }
+  }, [featuredImageId, selectedFeaturedAsset, resolvedToken])
+
+  const featuredAsset = selectedFeaturedAsset || fetchedFeaturedAsset
+  const featuredImagePreviewUrl = featuredAsset ? resolveImageUrl(featuredAsset) : undefined
+  const triggerLabel = featuredImageId
+    ? featuredAsset?.filename || `Image #${featuredImageId} selected`
+    : 'Select Featured Image...'
+  const headerPreviewTitle = draft.title.trim() || 'Your itinerary headline will appear here'
+  const isPlaceholder = !featuredImageId
+
   return (
     <section className="stl-panel">
       <div className="stl-panel-header">
@@ -62,24 +142,40 @@ export function BuilderHeaderPanel({
       </div>
 
       <fieldset className="stl-panel-fieldset" disabled={isLocked}>
-        <label className="stl-field">
+        <div className="stl-field">
           <span>Featured Image</span>
-          <select
-            value={draft.header.featuredImage || ''}
-            onChange={(event) =>
-              updateHeader({
-                featuredImage: event.target.value ? Number(event.target.value) : null,
-              })
-            }
-          >
-            <option value="">None</option>
-            {mediaAssets.map((asset) => (
-              <option key={asset.id} value={asset.id}>
-                #{asset.id} {asset.filename}
-              </option>
-            ))}
-          </select>
-        </label>
+          {!featuredImageId ? (
+            <button
+              type="button"
+              className="stl-picker-trigger"
+              onClick={() => setPickerOpen(true)}
+            >
+              <span className="stl-picker-trigger__preview">
+                <span className={`stl-picker-trigger__label${isPlaceholder ? ' stl-picker-trigger__label--placeholder' : ''}`}>
+                  {triggerLabel}
+                </span>
+              </span>
+              <span className="stl-picker-trigger__caret">▼</span>
+            </button>
+          ) : (
+            <div className="stl-featured-header-preview">
+              <button
+                type="button"
+                className="stl-featured-header-preview__media"
+                onClick={() => setPickerOpen(true)}
+              >
+                {featuredImagePreviewUrl ? (
+                  <img src={featuredImagePreviewUrl} alt="" />
+                ) : (
+                  <div className="stl-featured-header-preview__fallback">Image selected</div>
+                )}
+                <div className="stl-featured-header-preview__overlay">
+                  <p className="stl-featured-header-preview__title">{headerPreviewTitle}</p>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
 
         <label className="stl-field">
           <span>Intro *</span>
@@ -106,6 +202,17 @@ export function BuilderHeaderPanel({
           </p>
         ) : null}
       </fieldset>
+
+      <FeaturedImagePicker
+        isOpen={pickerOpen}
+        selectedId={featuredImageId}
+        token={resolvedToken}
+        locationRef={locationRef}
+        payloadVariant="wide"
+        prefetchedPayloadAssets={prefetchedPayloadAssets}
+        onSelect={(id) => updateHeader({ featuredImage: id })}
+        onClose={() => setPickerOpen(false)}
+      />
     </section>
   )
 }

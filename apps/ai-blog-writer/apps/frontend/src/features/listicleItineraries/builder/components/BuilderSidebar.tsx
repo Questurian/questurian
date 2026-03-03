@@ -12,7 +12,8 @@ type BuilderSidebarProps = {
   onEditorModelChange: (modelName: string) => void
   isSaving: boolean
   stepIssues: string[]
-  onSubmit: (targetStatus: 'draft' | 'published') => Promise<void>
+  onSaveLocalDraft: () => Promise<void>
+  onSyncToPayload: () => Promise<void>
 }
 
 export function BuilderSidebar({
@@ -24,7 +25,8 @@ export function BuilderSidebar({
   onEditorModelChange,
   isSaving,
   stepIssues,
-  onSubmit,
+  onSaveLocalDraft,
+  onSyncToPayload,
 }: BuilderSidebarProps) {
   const seoCoreComplete = isSeoCoreComplete(draft)
   const isStep1Locked = draft.step1_complete && !draft.in_update_mode
@@ -56,7 +58,7 @@ export function BuilderSidebar({
         </ul>
       </section>
 
-      <section className="stl-summary-card">
+      <section className="stl-summary-card stl-summary-card--quick-actions">
         <h3>Quick Actions</h3>
         <label className="stl-field">
           <span>AI Model</span>
@@ -69,14 +71,13 @@ export function BuilderSidebar({
           </select>
         </label>
         <div className="stl-summary-actions">
-          <button type="button" className="stl-btn" onClick={() => void onSubmit('draft')} disabled={isSaving}>
-            Save Draft
+          <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={isSaving}>
+            Save Local Draft (Browser)
           </button>
-          <button type="button" className="stl-btn stl-btn-success" onClick={() => void onSubmit('published')} disabled={isSaving}>
-            Publish
+          <button type="button" className="stl-btn stl-btn-success" onClick={() => void onSyncToPayload()} disabled={isSaving}>
+            {isSaving ? 'Syncing...' : 'Sync to Payload'}
           </button>
         </div>
-        <p className="stl-summary-note">Publishing requires continuous coverage from itinerary start with no gaps.</p>
         {stepIssues.length > 0 ? (
           <div className="stl-summary-warning">
             <strong>Setup needs attention:</strong>

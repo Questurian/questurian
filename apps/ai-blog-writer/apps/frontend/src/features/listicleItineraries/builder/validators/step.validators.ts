@@ -1,4 +1,5 @@
 import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
+import { validateListicleItineraryStructuredDataShape } from '../services/structured-data-template.service'
 import { validateItemMediaSelections } from './media.validators'
 import { validateItemTimeline } from './timeline.validators'
 
@@ -53,8 +54,12 @@ export function isSeoCoreComplete(draft: ListicleItineraryDraft): boolean {
   )
 }
 
-export function validateSeoSection(draft: ListicleItineraryDraft): string[] {
+export function validateSeoSection(input: {
+  draft: ListicleItineraryDraft
+  targetStatus: 'draft' | 'published'
+}): string[] {
   const issues: string[] = []
+  const { draft, targetStatus } = input
   const { openGraph, twitterCard, structuredData } = draft.seoSection
 
   if (!isValidAbsoluteUrl(openGraph.imageUrl)) {
@@ -69,11 +74,23 @@ export function validateSeoSection(draft: ListicleItineraryDraft): string[] {
     issues.push('Twitter image URL must be a valid absolute URL.')
   }
 
-  if (structuredData.trim()) {
+  const structuredDataInput = structuredData.trim()
+  if (!structuredDataInput && targetStatus === 'published') {
+    issues.push('Structured Data is required before publishing.')
+    return issues
+  }
+
+  if (structuredDataInput) {
     try {
-      const parsed = JSON.parse(structuredData)
+      const parsed = JSON.parse(structuredDataInput)
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         issues.push('Structured Data must be a valid JSON object.')
+      } else if (targetStatus === 'published') {
+        const shapeIssues = validateListicleItineraryStructuredDataShape({
+          structuredData: parsed as Record<string, unknown>,
+          draft,
+        })
+        issues.push(...shapeIssues)
       }
     } catch {
       issues.push('Structured Data must be valid JSON.')

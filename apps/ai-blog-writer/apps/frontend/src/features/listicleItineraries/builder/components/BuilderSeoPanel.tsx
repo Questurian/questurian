@@ -9,6 +9,8 @@ type BuilderSeoPanelProps = {
   isGeneratingSeoTarget: SeoAiTarget | null
   onGenerateSeoImageFromFeatured: () => Promise<void>
   isGeneratingSeoImage: boolean
+  onRegenerateStructuredData: () => void
+  canRegenerateStructuredData: boolean
 }
 
 export function BuilderSeoPanel({
@@ -18,6 +20,8 @@ export function BuilderSeoPanel({
   isGeneratingSeoTarget,
   onGenerateSeoImageFromFeatured,
   isGeneratingSeoImage,
+  onRegenerateStructuredData,
+  canRegenerateStructuredData,
 }: BuilderSeoPanelProps) {
   const updateSeo = (updater: (current: ListicleItineraryDraft['seoSection']) => ListicleItineraryDraft['seoSection']) => {
     setDraft((current) => {
@@ -294,9 +298,18 @@ export function BuilderSeoPanel({
           <div className="stl-seo-group-header">
             <div className="stl-seo-group-copy">
               <h3>Structured Data</h3>
-              <p>Optional JSON-LD object to help search engines classify this page.</p>
+              <p>Auto-formatted JSON-LD generated from your itinerary content.</p>
             </div>
-            {renderAiButton('structuredData')}
+            <div className="stl-inline-actions">
+              <button
+                type="button"
+                className="stl-btn stl-btn-secondary"
+                onClick={onRegenerateStructuredData}
+                disabled={!canRegenerateStructuredData}
+              >
+                Regenerate from Template
+              </button>
+            </div>
           </div>
 
           <label className="stl-field">
@@ -307,16 +320,11 @@ export function BuilderSeoPanel({
                 rows={6}
                 placeholder='{"@context":"https://schema.org","@type":"Article"}'
                 value={draft.seoSection.structuredData}
-                onChange={(event) =>
-                  updateSeo((current) => ({
-                    ...current,
-                    structuredData: event.target.value,
-                  }))
-                }
+                readOnly
               />
-              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('structuredData')}</span>
             </div>
           </label>
+          <p className="stl-placeholder">Read-only to prevent format errors. Use regenerate after content changes.</p>
         </section>
 
         <section className="stl-seo-group">

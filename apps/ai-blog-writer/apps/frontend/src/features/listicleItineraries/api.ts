@@ -98,7 +98,7 @@ export async function fetchRelatedItems(
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForBlockType(blockType)
   const params = new URLSearchParams()
-  params.set('depth', '0')
+  params.set('depth', '2')
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
 
