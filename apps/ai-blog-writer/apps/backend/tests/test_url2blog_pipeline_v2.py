@@ -11,7 +11,7 @@ utils_stub = types.ModuleType("utils")
 utils_stub.get_vertex_llm = lambda *args, **kwargs: None
 sys.modules.setdefault("utils", utils_stub)
 
-import app.features.url2blog.routes as url2blog_routes
+import app.features.url2blog.routes as url2blog_routes  # noqa: E402
 
 
 @pytest.fixture
@@ -21,9 +21,15 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def _disable_markdown_long_stages_by_default(monkeypatch):
+    """Keep legacy JSON path as default in existing tests."""
+    monkeypatch.setenv("URL2BLOG_USE_MARKDOWN_LONG_STAGES", "0")
+
+
 def test_pipeline_v2_uses_langgraph_runner(client, monkeypatch):
-    async def _fake_graph_runner(*, pipeline_runner):
-        del pipeline_runner
+    async def _fake_graph_runner(*, request):
+        del request
         return JSONResponse({"message": "langgraph path"})
 
     monkeypatch.setattr(
@@ -913,6 +919,252 @@ def test_extract_json_from_response_repairs_unterminated_string():
     assert parsed["content"].endswith("crowds")
 
 
+def test_extract_json_from_response_repairs_raw_newline_in_string():
+    raw_response = (
+        "{\n"
+        '  "title": "Sample headline",\n'
+        '  "content": "Line one\n'
+        'Line two",\n'
+        '  "summary": "ok"\n'
+        "}"
+    )
+
+    parsed, parse_error = url2blog_routes._extract_json_from_response(raw_response)
+
+    assert parse_error is None
+    assert parsed is not None
+    assert parsed["title"] == "Sample headline"
+    assert parsed["summary"] == "ok"
+    assert "Line one" in parsed["content"]
+    assert "Line two" in parsed["content"]
+
+
+def test_extract_json_from_response_repairs_unescaped_quote_in_string():
+    raw_response = (
+        "{\n"
+        '  "title": "Sample headline",\n'
+        '  "content": "He said "hello" loudly to the group."\n'
+        "}"
+    )
+
+    parsed, parse_error = url2blog_routes._extract_json_from_response(raw_response)
+
+    assert parse_error is None
+    assert parsed is not None
+    assert parsed["title"] == "Sample headline"
+    assert parsed["content"] == 'He said "hello" loudly to the group.'
+
+
+def test_build_v2_rewrite_retry_feedback_is_empty_for_initial_attempt():
+    feedback = url2blog_routes._build_v2_rewrite_retry_feedback(
+        retry_count=0,
+        retry_feedback={},
+        previous_quality={},
+    )
+
+    assert feedback == ""
+
+
+def test_build_v2_rewrite_retry_feedback_uses_previous_quality_details():
+    feedback = url2blog_routes._build_v2_rewrite_retry_feedback(
+        retry_count=1,
+        retry_feedback={},
+        previous_quality={
+            "overall_score": 6,
+            "quality_summary": "Needs stronger structure and clearer utility.",
+            "required_revisions": [
+                "Improve section progression and transitions.",
+                "Add concrete reader takeaways in each section.",
+            ],
+        },
+    )
+
+    assert "rewrite attempt #2" in feedback
+    assert "Prior overall score: 6/10" in feedback
+    assert "Recommended rewrite intensity: strong" in feedback
+    assert "Needs stronger structure and clearer utility." in feedback
+    assert "- Improve section progression and transitions." in feedback
+    assert "- Add concrete reader takeaways in each section." in feedback
+
+
+def test_invoke_markdown_long_output_accepts_markdown(monkeypatch):
+    class _FakeLLM:
+        def invoke(self, prompt):
+            del prompt
+            return "## Overview\n\nExpanded body content."
+
+    monkeypatch.setattr(
+        url2blog_routes,
+        "get_vertex_llm",
+        lambda *args, **kwargs: _FakeLLM(),
+    )
+
+    result = url2blog_routes._invoke_markdown_long_output(
+        prompt="Write markdown",
+        stage_name="guideline_rewrite_initial",
+        model_name="gemini-2.5-flash",
+        temperature=0.1,
+        max_tokens=1024,
+        fallback_content="Fallback body",
+        parse_metrics={},
+        legacy_json_prompt="legacy json prompt",
+        legacy_json_stage_name="legacy_json_stage",
+        legacy_content_key="improved_content",
+    )
+
+    assert result["transport"] == "markdown"
+    assert "## Overview" in result["content"]
+    assert "Expanded body content." in result["content"]
+
+
+def test_invoke_markdown_long_output_falls_back_to_legacy_json(monkeypatch):
+    monkeypatch.setattr(
+        url2blog_routes,
+        "get_vertex_llm",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        url2blog_routes,
+        "_invoke_json_llm_tracked",
+        lambda **kwargs: (
+            {
+                "improved_title": "Fallback generated title",
+                "improved_content": "## Overview\n\nRecovered body from legacy JSON path.",
+            },
+            '{"improved_title":"Fallback generated title"}',
+        ),
+    )
+
+    result = url2blog_routes._invoke_markdown_long_output(
+        prompt="Write markdown",
+        stage_name="fact_repair",
+        model_name="gemini-2.5-flash",
+        temperature=0.1,
+        max_tokens=1024,
+        fallback_content="Fallback body",
+        parse_metrics={},
+        legacy_json_prompt="legacy json prompt",
+        legacy_json_stage_name="legacy_json_stage",
+        legacy_content_key="improved_content",
+        legacy_title_key="improved_title",
+    )
+
+    assert result["transport"] == "json_fallback"
+    assert result["fallback_title"] == "Fallback generated title"
+    assert "Recovered body from legacy JSON path." in result["content"]
+
+
+def test_invoke_markdown_long_output_raises_when_legacy_json_content_missing(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        url2blog_routes,
+        "get_vertex_llm",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        url2blog_routes,
+        "_invoke_json_llm_tracked",
+        lambda **kwargs: (
+            {"improved_title": "Fallback generated title"},
+            '{"improved_title":"Fallback generated title"}',
+        ),
+    )
+
+    with pytest.raises(Exception) as exc_info:  # HTTPException from FastAPI
+        url2blog_routes._invoke_markdown_long_output(
+            prompt="Write markdown",
+            stage_name="guideline_rewrite_initial",
+            model_name="gemini-2.5-flash",
+            temperature=0.1,
+            max_tokens=1024,
+            fallback_content="Fallback body",
+            parse_metrics={},
+            legacy_json_prompt="legacy json prompt",
+            legacy_json_stage_name="legacy_json_stage",
+            legacy_content_key="improved_content",
+            legacy_title_key="improved_title",
+        )
+
+    exc = exc_info.value
+    assert getattr(exc, "status_code", None) == 500
+    assert "did not return 'improved_content'" in str(getattr(exc, "detail", exc))
+
+
+def test_invoke_markdown_long_output_allows_source_fallback_with_flag(monkeypatch):
+    monkeypatch.setenv("URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK", "1")
+    monkeypatch.setattr(
+        url2blog_routes,
+        "get_vertex_llm",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        url2blog_routes,
+        "_invoke_json_llm_tracked",
+        lambda **kwargs: (
+            {"improved_title": "Fallback generated title"},
+            '{"improved_title":"Fallback generated title"}',
+        ),
+    )
+
+    result = url2blog_routes._invoke_markdown_long_output(
+        prompt="Write markdown",
+        stage_name="guideline_rewrite_initial",
+        model_name="gemini-2.5-flash",
+        temperature=0.1,
+        max_tokens=1024,
+        fallback_content="Fallback body",
+        parse_metrics={},
+        legacy_json_prompt="legacy json prompt",
+        legacy_json_stage_name="legacy_json_stage",
+        legacy_content_key="improved_content",
+        legacy_title_key="improved_title",
+    )
+
+    assert result["transport"] == "json_fallback"
+    assert result["content"].strip()
+    assert "Fallback body" in result["content"]
+
+
+def test_invoke_title_generation_returns_fallback_when_llm_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        url2blog_routes,
+        "get_vertex_llm",
+        lambda *args, **kwargs: None,
+    )
+
+    title, raw = url2blog_routes._invoke_title_generation(
+        prompt="Generate a title",
+        model_name="gemini-2.5-flash",
+        fallback_title="Existing fallback title",
+    )
+
+    assert title == "Existing fallback title"
+    assert raw == ""
+
+
+def test_invoke_title_generation_sanitizes_markdown_heading(monkeypatch):
+    class _FakeTitleLLM:
+        def invoke(self, prompt):
+            del prompt
+            return "###  Better Comparison Title  \n\nExtra line"
+
+    monkeypatch.setattr(
+        url2blog_routes,
+        "get_vertex_llm",
+        lambda *args, **kwargs: _FakeTitleLLM(),
+    )
+
+    title, raw = url2blog_routes._invoke_title_generation(
+        prompt="Generate a title",
+        model_name="gemini-2.5-flash",
+        fallback_title="Existing fallback title",
+    )
+
+    assert title == "Better Comparison Title"
+    assert "Better Comparison Title" in raw
+
+
 def test_editorial_augmentation_normalizes_faq_component_and_adds_box():
     parsed = {
         "augmented_content": (
@@ -1113,3 +1365,80 @@ def test_editorial_augmentation_does_not_shorten_article_body():
         url2blog_routes._tokenize_similarity_words(fallback_content)
     )
     assert "[!EDITORIAL-BLOCK-START|faq_block]" in sanitized["augmented_content"]
+
+
+def test_sanitize_v2_editorial_blueprint_limits_components_and_defaults():
+    parsed = {
+        "apply_plan": True,
+        "components": [
+            {"component": "faq", "placement": "Near end", "objective": "Answer common questions."},
+            {"component": "pull_quote", "placement": "After overview", "objective": "Emphasize a key line."},
+            {"component": "highlight", "placement": "Midpoint", "objective": "Break dense pacing."},
+            {"component": "key_takeaways_box", "placement": "End", "objective": "Summarize points."},
+        ],
+        "drafting_directives": [],
+        "guardrails": [],
+    }
+
+    blueprint = url2blog_routes._sanitize_v2_editorial_blueprint(parsed)
+
+    assert blueprint["apply_plan"] is True
+    assert len(blueprint["components"]) == url2blog_routes.URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS
+    assert blueprint["components"][0]["component"] == "faq_block"
+    assert blueprint["components"][1]["component"] == "pull_quote"
+    assert blueprint["drafting_directives"]
+    assert blueprint["guardrails"]
+
+
+def test_format_editorial_blueprint_for_prompt_handles_no_plan():
+    text = url2blog_routes._format_editorial_blueprint_for_prompt(
+        {"apply_plan": False, "components": []}
+    )
+    assert text == "No editorial blueprint directives."
+
+
+def test_build_insert_only_editorial_augmentation_adds_component_boxes():
+    fallback = (
+        "## Overview\n\nReader context.\n\n"
+        "## Key Insights\n\nMain ideas.\n\n"
+        "## Practical Implications\n\nActionable guidance."
+    )
+    blueprint = {
+        "apply_plan": True,
+        "components": [
+            {
+                "component": "faq_block",
+                "placement": "Near the end",
+                "objective": "Support skimmers with clear Q&A.",
+                "priority": "medium",
+            }
+        ],
+    }
+
+    result = url2blog_routes._build_insert_only_editorial_augmentation(
+        fallback_content=fallback,
+        editorial_blueprint=blueprint,
+    )
+
+    assert result["augmentation_applied"] is True
+    assert result["components_added"][0]["component"] == "faq_block"
+    assert "[!EDITORIAL-BLOCK-START|faq_block]" in result["augmented_content"]
+
+
+def test_editorial_post_recheck_skips_when_disabled():
+    context = {
+        "run_id": "run-test",
+        "selected_model_name": "gemini-2.5-flash",
+        "include_debug": False,
+        "use_editorial_post_recheck": False,
+        "editorial_augmentation": {
+            "augmentation_applied": True,
+            "augmented_content": "## Overview\n\nBody.",
+        },
+        "stage_trace": [],
+    }
+
+    updated = url2blog_routes._pipeline_v2_run_editorial_post_recheck_phase(context)
+
+    assert updated["editorial_post_recheck"]["decision"] == "skipped"
+    assert updated["editorial_post_recheck"]["pass_mode"] == "skipped"

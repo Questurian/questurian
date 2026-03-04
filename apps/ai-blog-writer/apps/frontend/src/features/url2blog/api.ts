@@ -14,9 +14,43 @@ import {
   type Location,
   type MediaAsset,
 } from '../staging/api'
+import type { StatusResponse } from '@shared/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003'
 const FEATURE_PREFIX = '/url2blog'
+
+function formatDetail(detail: unknown): string | null {
+  if (typeof detail === 'string') {
+    return detail
+  }
+
+  if (Array.isArray(detail)) {
+    const items = detail
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item
+        }
+        if (item && typeof item === 'object' && 'msg' in item && typeof item.msg === 'string') {
+          return item.msg
+        }
+        return null
+      })
+      .filter((item): item is string => Boolean(item))
+    return items.length > 0 ? items.join('; ') : null
+  }
+
+  return null
+}
+
+async function resolveErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = await response.json()
+    const detail = formatDetail(payload?.detail)
+    return detail || fallback
+  } catch {
+    return fallback
+  }
+}
 
 export type ExtractResponse = {
   message: string
@@ -44,6 +78,7 @@ export type Stage2ClassifyResponse = {
 }
 
 export type Url2BlogPipelineV2Request = {
+  run_id?: string
   url: string
   include_debug?: boolean
   narrative_focus?: string
@@ -148,6 +183,23 @@ export type Url2BlogPipelineV2Response = {
       originality: number
     }
     second_pass_applied?: boolean
+    editorial_blueprint_applied?: boolean
+    editorial_blueprint_components_planned?: Array<
+      | 'pull_quote'
+      | 'in_the_know_box'
+      | 'key_takeaways_box'
+      | 'highlight_callout'
+      | 'faq_block'
+    >
+    editorial_insert_only_post_applied?: boolean
+    editorial_post_recheck_decision?: 'pass' | 'rollback' | 'skipped'
+    editorial_post_recheck_pass_mode?:
+      | 'strict'
+      | 'near_pass'
+      | 'rollback_after_failed_recheck'
+      | 'skipped'
+    editorial_post_recheck_quality_score?: number
+    editorial_post_recheck_fact_coverage_score?: number
     similarity_ngram_overlap?: number
     json_parse_failures_total?: number
     json_parse_recovered_calls?: number
@@ -164,6 +216,9 @@ export type Url2BlogPipelineV2Response = {
       enable_editorial_augmentation: boolean
       max_external_context_items: number
       model_name: Url2BlogModel
+      use_editorial_blueprint?: boolean
+      use_editorial_insert_only_post?: boolean
+      use_editorial_post_recheck?: boolean
     }
     guideline: {
       id: number
@@ -206,6 +261,24 @@ export type Url2BlogPipelineV2Response = {
     }>
     fact_repair_raw_response?: string
     length_expansion_raw_response?: string
+    editorial_blueprint_raw_response?: string
+    editorial_blueprint?: {
+      apply_plan: boolean
+      summary: string
+      components: Array<{
+        component:
+          | 'pull_quote'
+          | 'in_the_know_box'
+          | 'key_takeaways_box'
+          | 'highlight_callout'
+          | 'faq_block'
+        placement: string
+        objective: string
+        priority: 'high' | 'medium'
+      }>
+      drafting_directives: string[]
+      guardrails: string[]
+    }
     editorial_augmentation_raw_response?: string
     editorial_components_added?: Array<{
       component:
@@ -223,6 +296,21 @@ export type Url2BlogPipelineV2Response = {
       emphasis_clarity: 'strong' | 'weak'
       reading_behavior_risk: 'strong' | 'weak'
     }
+    editorial_post_quality_raw_response?: string
+    editorial_post_fact_coverage_raw_response?: string
+    editorial_post_recheck?: {
+      decision: 'pass' | 'rollback' | 'skipped'
+      pass_mode:
+        | 'strict'
+        | 'near_pass'
+        | 'rollback_after_failed_recheck'
+        | 'skipped'
+      quality_score?: number
+      fact_coverage_score?: number
+      missing_high_count?: number
+      too_close_to_source?: boolean
+      ngram_overlap?: number
+    }
     json_parse_metrics?: {
       total_parse_failures: number
       recovered_calls: number
@@ -239,6 +327,8 @@ export type Url2BlogResultResponse = {
   langsmith_trace_url?: string
   langsmith_trace_run_id?: string
 }
+
+export type Url2BlogStatusResponse = StatusResponse
 
 export type Url2BlogSavedArticle = {
   run_id: string
@@ -265,10 +355,43 @@ export async function runUrl2BlogPipelineV2(
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ detail: 'URL2Blog pipeline v2 failed' }))
-    throw new Error(errorData.detail || 'URL2Blog pipeline v2 failed')
+    throw new Error(await resolveErrorMessage(response, 'URL2Blog pipeline v2 failed'))
   }
 
+  return response.json()
+}
+
+export async function fetchStatus(
+  runId: string,
+  options: { allowNotFound?: boolean } = {}
+): Promise<Url2BlogStatusResponse | null> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/status/${runId}`)
+
+  if (response.status === 404) {
+    if (options.allowNotFound) {
+      // During request bootstrap we allow a brief not-found race.
+      return null
+    }
+    throw new Error(
+      `Run not found for ${runId}. This usually means backend instances are not sharing the same pipeline DB path.`
+    )
+  }
+
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'URL2Blog status fetch failed'))
+  }
+
+  return response.json()
+}
+
+export async function fetchLatestStatus(): Promise<Url2BlogStatusResponse | null> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/status-latest`)
+  if (response.status === 404) {
+    return null
+  }
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'URL2Blog latest status fetch failed'))
+  }
   return response.json()
 }
 
