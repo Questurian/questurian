@@ -1,37 +1,47 @@
 import type { StatusResponse } from '@shared/types'
 
-import { STAGE_LABELS, STAGE_ORDER } from '../constants/pipeline.constants'
+import { PIPELINE_TIMELINE, STAGE_LABELS, STAGE_ORDER } from '../constants/pipeline.constants'
 
-const CHECKLIST_STAGE_ORDER = [
-  'stage_1',
-  'stage_2',
-  'stage_3',
-  'stage_editorial_augmentation',
-  'stage_4',
-] as const
-
-type ChecklistStageNumber = 1 | 2 | 3 | 4 | 5
-
-function getChecklistStage(stageNum: ChecklistStageNumber): (typeof CHECKLIST_STAGE_ORDER)[number] {
-  return CHECKLIST_STAGE_ORDER[stageNum - 1]
-}
+export type TimelineStep = (typeof PIPELINE_TIMELINE)[number]
 
 function getStageIndex(stage: string): number {
   return STAGE_ORDER.indexOf(stage as (typeof STAGE_ORDER)[number])
 }
 
-function getRunningPhaseLabel(stage: (typeof CHECKLIST_STAGE_ORDER)[number]): string {
+function getRunningPhaseLabel(stage: string): string {
   switch (stage) {
     case 'stage_1':
       return 'Clean Transcript'
+    case 'stage_1_quality_gate':
+      return 'Check Transcript Quality'
+    case 'stage_1_repair':
+      return 'Repair Transcript'
     case 'stage_2':
       return 'Classify Article Type'
+    case 'stage_2_quality_gate':
+      return 'Check Classification Confidence'
+    case 'stage_2_retry':
+      return 'Re-classify Article Type'
+    case 'stage_3_guideline':
+      return 'Retrieve Guideline'
+    case 'stage_3_coverage':
+      return 'Analyze Coverage'
+    case 'stage_3_supplement':
+      return 'Generate Supplement'
     case 'stage_3':
       return 'Compose Article'
+    case 'stage_editorial_gate':
+      return 'Evaluate Editorial Gate'
     case 'stage_editorial_augmentation':
       return 'Apply Editorial Augmentation'
+    case 'stage_editorial_skip':
+      return 'Skip Editorial Augmentation'
     case 'stage_4':
       return 'Generate Title'
+    case 'stage_5_quality_gate':
+      return 'Evaluate Title Quality'
+    case 'stage_5_retry':
+      return 'Retry Title Generation'
     default:
       return 'Processing'
   }
@@ -44,10 +54,19 @@ export function getStageLabel(status: StatusResponse): string {
   return STAGE_LABELS[status.stage] ?? status.stage.replace(/_/g, ' ').toUpperCase()
 }
 
-export function getStagePhase(status: StatusResponse, stageNum: ChecklistStageNumber): string {
+export function getStagePhase(status: StatusResponse, step: TimelineStep): string {
+  if (step.optional) {
+    if (status.stage === step.key && status.state === 'running') {
+      return getRunningPhaseLabel(step.key)
+    }
+    if (status.stage === step.key && status.state === 'failed') {
+      return 'Failed'
+    }
+    return 'Conditional'
+  }
+
   const activeIndex = getStageIndex(status.stage)
-  const checklistStage = getChecklistStage(stageNum)
-  const checklistIndex = getStageIndex(checklistStage)
+  const checklistIndex = getStageIndex(step.key)
 
   if (activeIndex === -1 || checklistIndex === -1) {
     return 'Pending'
@@ -55,14 +74,14 @@ export function getStagePhase(status: StatusResponse, stageNum: ChecklistStageNu
   if (status.state === 'completed') {
     return 'Completed'
   }
-  if (status.state === 'failed' && status.stage === checklistStage) {
+  if (status.state === 'failed' && status.stage === step.key) {
     return 'Failed'
   }
   if (activeIndex > checklistIndex) {
     return 'Completed'
   }
   if (activeIndex === checklistIndex && status.state === 'running') {
-    return getRunningPhaseLabel(checklistStage)
+    return getRunningPhaseLabel(step.key)
   }
   if (activeIndex === checklistIndex) {
     return 'Completed'
@@ -72,11 +91,20 @@ export function getStagePhase(status: StatusResponse, stageNum: ChecklistStageNu
 
 export function getStageItemState(
   status: StatusResponse,
-  stageNum: ChecklistStageNumber
+  step: TimelineStep
 ): 'done' | 'running' | 'pending' {
+  if (step.optional) {
+    if (status.stage === step.key && status.state === 'running') {
+      return 'running'
+    }
+    if (status.stage === step.key && status.state === 'failed') {
+      return 'running'
+    }
+    return 'pending'
+  }
+
   const activeIndex = getStageIndex(status.stage)
-  const checklistStage = getChecklistStage(stageNum)
-  const checklistIndex = getStageIndex(checklistStage)
+  const checklistIndex = getStageIndex(step.key)
 
   if (activeIndex === -1 || checklistIndex === -1) {
     return 'pending'
@@ -85,10 +113,10 @@ export function getStageItemState(
   if (status.state === 'completed') {
     return 'done'
   }
-  if (status.stage === checklistStage && status.state === 'running') {
+  if (status.stage === step.key && status.state === 'running') {
     return 'running'
   }
-  if (status.state === 'failed' && status.stage === checklistStage) {
+  if (status.state === 'failed' && status.stage === step.key) {
     return 'running'
   }
   return activeIndex > checklistIndex ? 'done' : 'pending'

@@ -11,12 +11,13 @@ import logging
 import re
 from typing import Any
 
+from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
 from utils import get_vertex_llm, parse_json_response
 from shared import Stage3Output, StageEditorialAugmentationOutput
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = Y2B_PRIMARY_MODEL
 
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
@@ -552,7 +553,11 @@ def _invoke_json_llm(*, prompt: str) -> tuple[dict[str, Any], str]:
     )
 
 
-def stage_editorial_augmentation(stage3: Stage3Output) -> StageEditorialAugmentationOutput:
+def stage_editorial_augmentation(
+    stage3: Stage3Output,
+    *,
+    fail_fast: bool = False,
+) -> StageEditorialAugmentationOutput:
     """Apply optional editorial augmentation to stage 3 content."""
     prompt = (
         Y2B_EDITORIAL_AUGMENTATION_PROMPT
@@ -583,6 +588,8 @@ def stage_editorial_augmentation(stage3: Stage3Output) -> StageEditorialAugmenta
             error=None,
         )
     except Exception as exc:  # noqa: BLE001
+        if fail_fast:
+            raise RuntimeError(f"YouTube2Blog editorial augmentation failed: {exc}") from exc
         logger.warning("YouTube2Blog editorial augmentation failed: %s", exc)
         return StageEditorialAugmentationOutput(
             video_id=stage3.video_id,

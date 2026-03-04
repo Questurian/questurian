@@ -27,6 +27,27 @@ from .youtube_source import (
 
 router = APIRouter(prefix="/youtube2blog", tags=["youtube2blog"])
 
+Y2B_DEBUG_STAGE_ORDER = [
+    "stage_0",
+    "stage_1",
+    "stage_1_quality_gate",
+    "stage_1_repair",
+    "stage_2",
+    "stage_2_quality_gate",
+    "stage_2_retry",
+    "stage_3_guideline",
+    "stage_3_coverage",
+    "stage_3_supplement",
+    "stage_3",
+    "stage_editorial_gate",
+    "stage_editorial_augmentation",
+    "stage_editorial_skip",
+    "stage_4",
+    "stage_5_quality_gate",
+    "stage_5_retry",
+    "langgraph_trace",
+]
+
 # Hardcoded test record for /test endpoint
 TEST_RECORD = RawVideoRecord(
     video_id="test_video_001",
@@ -184,15 +205,7 @@ async def debug_run(run_id: str) -> JSONResponse:
         raise HTTPException(status_code=404, detail="Run not found.")
 
     stages = {}
-    for stage_name in [
-        "stage_0",
-        "stage_1",
-        "stage_2",
-        "stage_3",
-        "stage_editorial_augmentation",
-        "stage_4",
-        "langgraph_trace",
-    ]:
+    for stage_name in Y2B_DEBUG_STAGE_ORDER:
         stage_data = read_stage_result(run_id, stage_name)
         if stage_data:
             stages[stage_name] = stage_data
