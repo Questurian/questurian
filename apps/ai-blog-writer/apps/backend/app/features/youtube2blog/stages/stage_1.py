@@ -3,7 +3,7 @@ Stage 1: Clean transcript text from the raw video record.
 """
 import logging
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from shared import RawVideoRecord, Stage1Output
 from utils import LLMPresets

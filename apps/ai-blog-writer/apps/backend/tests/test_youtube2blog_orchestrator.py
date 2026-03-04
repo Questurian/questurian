@@ -150,6 +150,11 @@ def test_process_run_writes_editorial_stage_and_final_markdown(monkeypatch):
     monkeypatch.setattr(y2b_orchestrator, "write_stage_result", fake_write_stage_result)
     monkeypatch.setattr(y2b_orchestrator, "write_artifact", fake_write_artifact)
     monkeypatch.setattr(y2b_orchestrator, "read_stage_result", fake_read_stage_result)
+    monkeypatch.setattr(
+        y2b_orchestrator,
+        "run_youtube2blog_graph",
+        lambda record, meta: y2b_orchestrator._process_run_stages(record, meta),
+    )
 
     markdown = y2b_orchestrator.process_run(_sample_record(), _sample_meta())
 
@@ -167,3 +172,22 @@ def test_process_run_writes_editorial_stage_and_final_markdown(monkeypatch):
     assert isinstance(artifact_payload, dict)
     assert artifact_payload["markdown"] == markdown
     assert "stage_editorial_augmentation" in artifact_payload["stages"]
+
+
+def test_process_run_uses_langgraph_runner(monkeypatch):
+    record = _sample_record()
+    meta = _sample_meta()
+    captured: dict[str, object] = {}
+
+    def _fake_graph_runner(record_arg, meta_arg):
+        captured["record"] = record_arg
+        captured["meta"] = meta_arg
+        return "# Graph Markdown"
+
+    monkeypatch.setattr(y2b_orchestrator, "run_youtube2blog_graph", _fake_graph_runner)
+
+    markdown = y2b_orchestrator.process_run(record, meta)
+
+    assert markdown == "# Graph Markdown"
+    assert captured["record"] is record
+    assert captured["meta"] is meta

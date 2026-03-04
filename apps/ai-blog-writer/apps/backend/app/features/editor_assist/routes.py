@@ -11,6 +11,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from utils import get_vertex_llm
+from .graph import (
+    run_editor_assist_generate_title_graph,
+    run_editor_assist_rewrite_graph,
+)
 
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
 logger = logging.getLogger(__name__)
@@ -127,8 +131,7 @@ def _extract_generated_title(raw_response: str) -> str:
     return cleaned
 
 
-@router.post("/generate-title", response_model=GenerateTitleResponse)
-async def generate_title(request: GenerateTitleRequest) -> GenerateTitleResponse:
+def _generate_title_impl(request: GenerateTitleRequest) -> GenerateTitleResponse:
     current_title = request.current_title.strip()
     prompt = request.prompt.strip()
 
@@ -168,8 +171,21 @@ async def generate_title(request: GenerateTitleRequest) -> GenerateTitleResponse
     return GenerateTitleResponse(title=title)
 
 
-@router.post("/rewrite-block", response_model=RewriteBlockResponse)
-async def rewrite_block(request: RewriteBlockRequest) -> RewriteBlockResponse:
+@router.post("/generate-title", response_model=GenerateTitleResponse)
+async def generate_title(request: GenerateTitleRequest) -> GenerateTitleResponse:
+    try:
+        return run_editor_assist_generate_title_graph(
+            step_runner=lambda: _generate_title_impl(request),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Editor Assist graph generate-title failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI title generation graph failed",
+        ) from exc
+
+
+def _rewrite_block_impl(request: RewriteBlockRequest) -> RewriteBlockResponse:
     prompt = request.prompt.strip()
     block_content = request.block_content.strip()
     article_title = (
@@ -231,3 +247,17 @@ async def rewrite_block(request: RewriteBlockRequest) -> RewriteBlockResponse:
         rewritten_content=rewritten_content,
         model_used=model_used,
     )
+
+
+@router.post("/rewrite-block", response_model=RewriteBlockResponse)
+async def rewrite_block(request: RewriteBlockRequest) -> RewriteBlockResponse:
+    try:
+        return run_editor_assist_rewrite_graph(
+            step_runner=lambda: _rewrite_block_impl(request),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Editor Assist graph rewrite failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI rewrite graph failed",
+        ) from exc

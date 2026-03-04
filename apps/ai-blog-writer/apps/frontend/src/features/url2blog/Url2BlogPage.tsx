@@ -712,6 +712,16 @@ export default function Url2BlogPage() {
                 <Link to="/url2blog/articles" className="url2blog-clear-btn">
                   Saved Articles
                 </Link>
+                {result.langsmith_trace_url && (
+                  <a
+                    href={result.langsmith_trace_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="url2blog-submit-btn"
+                  >
+                    View LangSmith Trace
+                  </a>
+                )}
                 {result.run_id && (
                   <Link
                     to={`/url2blog/stage-article?${new URLSearchParams({

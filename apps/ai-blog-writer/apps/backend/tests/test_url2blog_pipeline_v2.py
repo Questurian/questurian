@@ -21,6 +21,23 @@ def client():
     return TestClient(app)
 
 
+def test_pipeline_v2_uses_langgraph_runner(client, monkeypatch):
+    async def _fake_graph_runner(*, pipeline_runner):
+        del pipeline_runner
+        return JSONResponse({"message": "langgraph path"})
+
+    monkeypatch.setattr(
+        url2blog_routes,
+        "run_url2blog_pipeline_graph",
+        _fake_graph_runner,
+    )
+
+    response = client.post("/url2blog/pipeline-v2", json={"url": "https://example.com"})
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "langgraph path"
+
+
 def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypatch):
     captured = {
         "extract_called": False,

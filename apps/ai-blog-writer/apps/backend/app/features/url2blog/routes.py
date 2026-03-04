@@ -38,6 +38,7 @@ from app.core import (
     write_status,
 )
 from utils import get_vertex_llm
+from .graph import run_url2blog_pipeline_graph
 from .storage import (
     get_all_completed_articles,
     get_article_sync_status,
@@ -759,6 +760,24 @@ def _now_iso() -> str:
     return datetime.utcnow().isoformat()
 
 
+def _read_langgraph_trace(run_id: str) -> dict[str, str]:
+    stage_payload = read_stage_result(run_id, "langgraph_trace")
+    if not isinstance(stage_payload, dict):
+        return {}
+    data = stage_payload.get("data")
+    if not isinstance(data, dict):
+        return {}
+
+    trace_payload: dict[str, str] = {}
+    trace_url = data.get("langsmith_trace_url")
+    if isinstance(trace_url, str) and trace_url.strip():
+        trace_payload["langsmith_trace_url"] = trace_url.strip()
+    trace_run_id = data.get("langsmith_trace_run_id")
+    if isinstance(trace_run_id, str) and trace_run_id.strip():
+        trace_payload["langsmith_trace_run_id"] = trace_run_id.strip()
+    return trace_payload
+
+
 @router.get("/status/{run_id}")
 async def get_status(run_id: str) -> JSONResponse:
     """Get the status of a URL2Blog pipeline run."""
@@ -779,12 +798,22 @@ async def get_result(run_id: str) -> JSONResponse:
     if not output:
         raise HTTPException(status_code=404, detail="Result not available yet.")
 
+    trace_payload = _read_langgraph_trace(run_id)
+    artifact = output["artifact"]
+    if trace_payload and isinstance(artifact, dict):
+        pipeline_payload = artifact.get("pipeline_v2")
+        if isinstance(pipeline_payload, dict):
+            pipeline_payload.update(trace_payload)
+
+    response_payload: dict[str, Any] = {
+        "run_id": run_id,
+        "markdown": output["markdown"],
+        "artifact": artifact,
+    }
+    response_payload.update(trace_payload)
+
     return JSONResponse(
-        {
-            "run_id": run_id,
-            "markdown": output["markdown"],
-            "artifact": output["artifact"],
-        }
+        response_payload
     )
 
 
@@ -796,7 +825,7 @@ async def debug_run(run_id: str) -> JSONResponse:
         raise HTTPException(status_code=404, detail="Run not found.")
 
     stages = {}
-    for stage_name in ["stage_1", "stage_2", "pipeline_v2"]:
+    for stage_name in ["stage_1", "stage_2", "pipeline_v2", "langgraph_trace"]:
         stage_data = read_stage_result(run_id, stage_name)
         if stage_data:
             stages[stage_name] = stage_data
@@ -2721,11 +2750,28 @@ async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
 
 
 @router.post("/pipeline-v2")
-async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
+async def pipeline_v2(
+    request: PipelineV2Request,
+    _graph_invoked: bool = False,
+) -> JSONResponse:
     """
     Simplified URL2Blog pipeline:
     extract -> classify -> guideline-based rewrite.
     """
+    if not _graph_invoked:
+        try:
+            return await run_url2blog_pipeline_graph(
+                pipeline_runner=lambda: pipeline_v2(request, _graph_invoked=True)
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("URL2Blog pipeline-v2 request failed")
+            raise HTTPException(
+                status_code=500,
+                detail=f"URL2Blog pipeline failed: {exc}",
+            )
+
     url = request.url.strip()
     selected_model_name = _resolve_url2blog_model(request.model_name)
     execution_profile = _resolve_execution_profile(request.execution_profile)

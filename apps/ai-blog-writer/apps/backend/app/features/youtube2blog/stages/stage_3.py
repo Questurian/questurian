@@ -10,7 +10,7 @@ This stage:
 import logging
 from pathlib import Path
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from app.core import get_article_type_by_name
 from shared import Stage1Output, Stage2Output, Stage3Output

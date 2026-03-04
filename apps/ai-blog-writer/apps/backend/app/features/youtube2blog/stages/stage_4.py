@@ -8,7 +8,7 @@ This stage:
 """
 import logging
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from app.core import get_article_type_by_name
 from shared import Stage3Output, Stage4Output

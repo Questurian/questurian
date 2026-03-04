@@ -74,6 +74,8 @@ export type Url2BlogStageTrace = {
 export type Url2BlogPipelineV2Response = {
   message: string
   run_id?: string
+  langsmith_trace_url?: string
+  langsmith_trace_run_id?: string
   pipeline_status: 'ready_for_drafting' | 'needs_revision'
   article: {
     source_url: string
@@ -234,6 +236,8 @@ export type Url2BlogResultResponse = {
   run_id: string
   markdown: string
   artifact: Record<string, unknown>
+  langsmith_trace_url?: string
+  langsmith_trace_run_id?: string
 }
 
 export type Url2BlogSavedArticle = {

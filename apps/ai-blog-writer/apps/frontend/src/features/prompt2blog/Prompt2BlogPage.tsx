@@ -433,6 +433,10 @@ export default function Prompt2BlogPage() {
           if (cancelled) return
           if (result.artifact?.pipeline_v2) {
             setPipelineResult(result.artifact.pipeline_v2)
+            const traceUrl = result.artifact.pipeline_v2.langsmith_trace_url || result.langsmith_trace_url
+            if (traceUrl) {
+              appendPipelineLog(`LangSmith trace available: ${traceUrl}`)
+            }
           } else {
             setError('Pipeline finished but no final payload was returned.')
           }
@@ -908,6 +912,16 @@ export default function Prompt2BlogPage() {
                         />
                         Stage in Payload Editor
                       </Link>
+                    )}
+                    {pipelineResult.langsmith_trace_url && (
+                      <a
+                        href={pipelineResult.langsmith_trace_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p2b-synthesize-btn"
+                      >
+                        View LangSmith Trace
+                      </a>
                     )}
                     <Link to="/prompt2blog/articles" className="p2b-rerun-btn">
                       View Saved Articles

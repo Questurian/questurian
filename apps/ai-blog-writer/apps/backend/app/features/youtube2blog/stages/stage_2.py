@@ -3,7 +3,7 @@ Stage 2: Classify article type using AI.
 """
 import logging
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from app.core import read_article_definitions
 from shared import Stage1Output, Stage2Output

@@ -66,6 +66,24 @@ class YouTubeUrlRequest(BaseModel):
     url: str = Field(..., min_length=1)
 
 
+def _read_langgraph_trace(run_id: str) -> dict[str, str]:
+    stage_payload = read_stage_result(run_id, "langgraph_trace")
+    if not isinstance(stage_payload, dict):
+        return {}
+    data = stage_payload.get("data")
+    if not isinstance(data, dict):
+        return {}
+
+    trace_payload: dict[str, str] = {}
+    trace_url = data.get("langsmith_trace_url")
+    if isinstance(trace_url, str) and trace_url.strip():
+        trace_payload["langsmith_trace_url"] = trace_url.strip()
+    trace_run_id = data.get("langsmith_trace_run_id")
+    if isinstance(trace_run_id, str) and trace_run_id.strip():
+        trace_payload["langsmith_trace_run_id"] = trace_run_id.strip()
+    return trace_payload
+
+
 @router.post("/from-url")
 async def start_from_youtube_url(
     request: YouTubeUrlRequest,
@@ -133,18 +151,29 @@ async def get_result(run_id: str, format: str = "json") -> JSONResponse:
     if not output:
         raise HTTPException(status_code=404, detail="Result not available yet.")
 
+    trace_payload = _read_langgraph_trace(run_id)
+
     if format == "md":
-        return JSONResponse({
+        response_payload: dict[str, str] = {
             "run_id": run_id,
             "markdown": output["markdown"],
-            "filename": f"{run_id}.md"
-        })
+            "filename": f"{run_id}.md",
+        }
+        response_payload.update(trace_payload)
+        return JSONResponse(response_payload)
 
-    return JSONResponse({
+    artifact = output["artifact"]
+    if trace_payload and isinstance(artifact, dict):
+        artifact.update(trace_payload)
+
+    response_payload: dict[str, object] = {
         "run_id": run_id,
         "markdown": output["markdown"],
-        "artifact": output["artifact"]
-    })
+        "artifact": artifact,
+    }
+    response_payload.update(trace_payload)
+
+    return JSONResponse(response_payload)
 
 
 @router.get("/debug/{run_id}")
@@ -162,6 +191,7 @@ async def debug_run(run_id: str) -> JSONResponse:
         "stage_3",
         "stage_editorial_augmentation",
         "stage_4",
+        "langgraph_trace",
     ]:
         stage_data = read_stage_result(run_id, stage_name)
         if stage_data:
@@ -180,7 +210,12 @@ async def debug_run(run_id: str) -> JSONResponse:
 @router.post("/test-stage1")
 async def test_stage1() -> JSONResponse:
     """Test Stage 1 only (requires AI)."""
-    stage1_output = stage_1_clean_transcript(TEST_RECORD)
+    try:
+        stage1_output = stage_1_clean_transcript(TEST_RECORD)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail="YouTube2Blog stage 1 test failed") from exc
     return JSONResponse({
         "message": "Stage 1 test completed successfully",
         "stage_1": stage1_output.model_dump(),
@@ -190,7 +225,12 @@ async def test_stage1() -> JSONResponse:
 @router.post("/test")
 async def test_pipeline() -> JSONResponse:
     """Test endpoint that runs Stage 1 with a hardcoded test record."""
-    stage1_output = stage_1_clean_transcript(TEST_RECORD)
+    try:
+        stage1_output = stage_1_clean_transcript(TEST_RECORD)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail="YouTube2Blog pipeline test failed") from exc
     return JSONResponse({
         "message": "Pipeline test completed successfully",
         "stage_1": stage1_output.model_dump(),

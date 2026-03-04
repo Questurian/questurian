@@ -109,3 +109,63 @@ def test_rewrite_block_sends_title_and_context_to_prompt(monkeypatch):
     assert "Article title (reference only):\nIca Travel Guide" in stub_llm.last_prompt
     assert "<<<ARTICLE_CONTEXT>>>" in stub_llm.last_prompt
     assert "Rewrite only the current markdown block." in stub_llm.last_prompt
+
+
+def test_generate_title_uses_langgraph_runner(monkeypatch):
+    called = {"graph": False}
+
+    def _fake_graph_runner(*, step_runner):
+        del step_runner
+        called["graph"] = True
+        return editor_assist_routes.GenerateTitleResponse(title="Graph Generated Title")
+
+    monkeypatch.setattr(
+        editor_assist_routes,
+        "run_editor_assist_generate_title_graph",
+        _fake_graph_runner,
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/generate-title",
+        json={
+            "current_title": "Old Title",
+            "prompt": "Make it clearer.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Graph Generated Title"
+    assert called["graph"] is True
+
+
+def test_rewrite_block_uses_langgraph_runner(monkeypatch):
+    called = {"graph": False}
+
+    def _fake_graph_runner(*, step_runner):
+        del step_runner
+        called["graph"] = True
+        return editor_assist_routes.RewriteBlockResponse(
+            rewritten_content="Graph rewritten block",
+            model_used="gemini-2.5-flash",
+        )
+
+    monkeypatch.setattr(
+        editor_assist_routes,
+        "run_editor_assist_rewrite_graph",
+        _fake_graph_runner,
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/rewrite-block",
+        json={
+            "prompt": "Tighten this block.",
+            "block_content": "Original block.",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["rewritten_content"] == "Graph rewritten block"
+    assert called["graph"] is True
