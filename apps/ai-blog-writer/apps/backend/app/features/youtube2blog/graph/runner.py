@@ -35,6 +35,9 @@ from app.features.youtube2blog.config import (
     Y2B_STAGE1_REPAIR_MAX_RETRIES,
     Y2B_STAGE2_CLASSIFICATION_MAX_RETRIES,
     Y2B_STAGE2_MIN_CONFIDENCE,
+    Y2B_SEO_MAX_RETRIES,
+    Y2B_SEO_MIN_SCORE,
+    Y2B_SEO_NEAR_PASS_MARGIN,
     Y2B_STAGE3_MIN_CRITICAL_DIMENSION_SCORE,
     Y2B_STAGE3_NEAR_PASS_MARGIN,
     Y2B_STAGE3_MIN_QUALITY_SCORE,
@@ -54,6 +57,9 @@ from app.features.youtube2blog.stages import (
     stage_3_improve_article,
     stage_3_pick_improvement_mode,
     stage_3_retrieve_guideline,
+    stage_seo_enrich_article,
+    stage_seo_evaluate_quality,
+    stage_seo_generate_brief,
     stage_4_generate_title,
     stage_5_evaluate_title_quality,
     stage_5_generate_title_retry,
@@ -121,6 +127,15 @@ class YouTube2BlogGraphState(TypedDict, total=False):
     stage3_quality_gate: dict[str, Any]
     stage3_quality_feedback: dict[str, Any]
     stage3_quality_gate_decision: str
+    stage3_for_editorial: dict[str, Any]
+
+    stage_seo_brief: dict[str, Any]
+    stage_seo: dict[str, Any]
+    stage_seo_retry_count: int
+    stage_seo_gate: dict[str, Any]
+    stage_seo_feedback: str
+    stage_seo_gate_decision: str
+    stage_seo_rollback: dict[str, Any]
 
     stage_editorial_gate: dict[str, Any]
     stage_editorial_decision: str
@@ -688,9 +703,211 @@ def run_youtube2blog_graph(
             "stage_results": stage_results,
         }
 
+    def stage_seo_brief_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
+        _write_running_status("stage_seo_brief")
+        stage3 = Stage3Output.model_validate(state["stage3"])
+        seo_brief = stage_seo_generate_brief(stage3=stage3)
+        stage_results = _record_stage_result(
+            state,
+            stage_name="stage_seo_brief",
+            input_refs={"stage_3": _stage_ref(run_id, "stage_3")},
+            data=seo_brief,
+        )
+        return {
+            "stage_seo_brief": seo_brief,
+            "stage_results": stage_results,
+        }
+
+    def stage_seo_enrich_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
+        _write_running_status("stage_seo_enrich")
+        stage3 = Stage3Output.model_validate(state["stage3"])
+        seo_brief = dict(state.get("stage_seo_brief") or {})
+        seo_output = stage_seo_enrich_article(
+            stage3=stage3,
+            seo_brief=seo_brief,
+            mode="primary",
+        )
+
+        seo_article = str(seo_output.get("seo_article") or stage3.final_article)
+        existing_comp_prompt = stage3.debug_composition_prompt or ""
+        existing_comp_response = stage3.debug_composition_response or ""
+        seo_prompt = str(seo_output.get("debug_seo_prompt") or "")
+        seo_response = str(seo_output.get("debug_seo_response") or "")
+        stage3_for_editorial = stage3.model_copy(
+            update={
+                "final_article": seo_article,
+                "debug_composition_prompt": (
+                    f"{existing_comp_prompt}\n\n---\n\n[stage_seo_enrich]\n{seo_prompt}"
+                ).strip(),
+                "debug_composition_response": (
+                    f"{existing_comp_response}\n\n---\n\n[stage_seo_enrich]\n{seo_response}"
+                ).strip(),
+            }
+        )
+
+        stage_results = _record_stage_result(
+            state,
+            stage_name="stage_seo_enrich",
+            input_refs={"stage_seo_brief": _stage_ref(run_id, "stage_seo_brief")},
+            data=seo_output,
+        )
+        return {
+            "stage_seo": seo_output,
+            "stage3_for_editorial": stage3_for_editorial.model_dump(),
+            "stage_results": stage_results,
+        }
+
+    def stage_seo_quality_gate_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
+        _write_running_status("stage_seo_quality_gate")
+        stage3 = Stage3Output.model_validate(state["stage3"])
+        stage3_for_editorial = Stage3Output.model_validate(state["stage3_for_editorial"])
+        seo_brief = dict(state.get("stage_seo_brief") or {})
+        evaluation = stage_seo_evaluate_quality(
+            article=stage3_for_editorial.final_article,
+            seo_brief=seo_brief,
+            baseline_article=stage3.final_article,
+        )
+        retry_count = int(state.get("stage_seo_retry_count", 0))
+        score = float(evaluation.get("score", 0.0))
+        checks = evaluation.get("checks", {})
+        checks_dict = dict(checks) if isinstance(checks, dict) else {}
+
+        critical_checks = (
+            "no_keyword_stuffing",
+            "article_length_retained",
+        )
+        critical_failed = [
+            key for key in critical_checks if not bool(checks_dict.get(key))
+        ]
+
+        strict_pass = score >= Y2B_SEO_MIN_SCORE and not critical_failed
+        near_pass = (
+            score >= (Y2B_SEO_MIN_SCORE - Y2B_SEO_NEAR_PASS_MARGIN)
+            and not critical_failed
+        )
+        if strict_pass:
+            decision = "pass"
+            pass_mode = "strict"
+        elif retry_count < Y2B_SEO_MAX_RETRIES:
+            decision = "retry"
+            pass_mode = "retry_required"
+        elif near_pass:
+            decision = "pass"
+            pass_mode = "near_pass"
+        else:
+            decision = "rollback"
+            pass_mode = "rollback_after_failed_gate"
+
+        gate_data = {
+            **evaluation,
+            "decision": decision,
+            "pass_mode": pass_mode,
+            "retry_count": retry_count,
+            "max_retries": Y2B_SEO_MAX_RETRIES,
+            "score_threshold": Y2B_SEO_MIN_SCORE,
+            "near_pass_margin": Y2B_SEO_NEAR_PASS_MARGIN,
+            "critical_checks": list(critical_checks),
+            "critical_failed": critical_failed,
+        }
+        stage_results = _record_stage_result(
+            state,
+            stage_name="stage_seo_quality_gate",
+            input_refs={"stage_seo_enrich": _stage_ref(run_id, "stage_seo_enrich")},
+            data=gate_data,
+        )
+        return {
+            "stage_seo_gate": gate_data,
+            "stage_seo_feedback": str(evaluation.get("feedback") or ""),
+            "stage_seo_gate_decision": decision,
+            "stage_results": stage_results,
+        }
+
+    def stage_seo_retry_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
+        _write_running_status("stage_seo_retry")
+        stage3_for_editorial = Stage3Output.model_validate(state["stage3_for_editorial"])
+        seo_brief = dict(state.get("stage_seo_brief") or {})
+        feedback = str(
+            state.get("stage_seo_feedback")
+            or "Improve SEO placement naturally without keyword stuffing."
+        )
+        retry_count = int(state.get("stage_seo_retry_count", 0)) + 1
+        seo_output = stage_seo_enrich_article(
+            stage3=stage3_for_editorial,
+            seo_brief=seo_brief,
+            mode="retry",
+            feedback=feedback,
+        )
+        seo_article = str(seo_output.get("seo_article") or stage3_for_editorial.final_article)
+
+        existing_comp_prompt = stage3_for_editorial.debug_composition_prompt or ""
+        existing_comp_response = stage3_for_editorial.debug_composition_response or ""
+        seo_prompt = str(seo_output.get("debug_seo_prompt") or "")
+        seo_response = str(seo_output.get("debug_seo_response") or "")
+        updated_stage3_for_editorial = stage3_for_editorial.model_copy(
+            update={
+                "final_article": seo_article,
+                "debug_composition_prompt": (
+                    f"{existing_comp_prompt}\n\n---\n\n[stage_seo_retry]\n{seo_prompt}"
+                ).strip(),
+                "debug_composition_response": (
+                    f"{existing_comp_response}\n\n---\n\n[stage_seo_retry]\n{seo_response}"
+                ).strip(),
+            }
+        )
+
+        stage_results = _record_stage_result(
+            state,
+            stage_name="stage_seo_retry",
+            input_refs={"stage_seo_quality_gate": _stage_ref(run_id, "stage_seo_quality_gate")},
+            data={
+                "retry_count": retry_count,
+                "feedback": feedback,
+                **seo_output,
+            },
+        )
+        stage_results = _record_stage_result(
+            {"stage_results": stage_results},
+            stage_name="stage_seo_enrich",
+            input_refs={"stage_seo_retry": _stage_ref(run_id, "stage_seo_retry")},
+            data=seo_output,
+        )
+        return {
+            "stage_seo": seo_output,
+            "stage3_for_editorial": updated_stage3_for_editorial.model_dump(),
+            "stage_seo_retry_count": retry_count,
+            "stage_results": stage_results,
+        }
+
+    def stage_seo_rollback_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
+        _write_running_status("stage_seo_rollback")
+        stage3 = Stage3Output.model_validate(state["stage3"])
+        gate_data = dict(state.get("stage_seo_gate") or {})
+        rollback_data = {
+            "reason": "seo_gate_failed_after_retries",
+            "gate_decision": str(gate_data.get("decision") or "rollback"),
+            "score": gate_data.get("score"),
+            "feedback": str(gate_data.get("feedback") or ""),
+            "restored_word_count": _count_words(stage3.final_article),
+            "restored_article_source": "stage_3",
+        }
+        stage_results = _record_stage_result(
+            state,
+            stage_name="stage_seo_rollback",
+            input_refs={"stage_seo_quality_gate": _stage_ref(run_id, "stage_seo_quality_gate")},
+            data=rollback_data,
+        )
+        return {
+            "stage3_for_editorial": stage3.model_dump(),
+            "stage_seo_rollback": rollback_data,
+            "stage_results": stage_results,
+        }
+
     def stage_editorial_gate_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_editorial_gate")
-        stage3 = Stage3Output.model_validate(state["stage3"])
+        stage3 = Stage3Output.model_validate(state["stage3_for_editorial"])
+        seo_source_stage = "stage_seo_enrich"
+        if str(state.get("stage_seo_gate_decision") or "") == "rollback":
+            seo_source_stage = "stage_seo_rollback"
         words = _count_words(stage3.final_article)
         paragraphs = _count_paragraphs(stage3.final_article)
         should_augment = (
@@ -709,11 +926,12 @@ def run_youtube2blog_graph(
                 "word_count": words,
                 "paragraph_count": paragraphs,
             },
+            "seo_source_stage": seo_source_stage,
         }
         stage_results = _record_stage_result(
             state,
             stage_name="stage_editorial_gate",
-            input_refs={"stage_3": _stage_ref(run_id, "stage_3")},
+            input_refs={seo_source_stage: _stage_ref(run_id, seo_source_stage)},
             data=gate_data,
         )
         return {
@@ -724,12 +942,12 @@ def run_youtube2blog_graph(
 
     def stage_editorial_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_editorial_augmentation")
-        stage3 = Stage3Output.model_validate(state["stage3"])
+        stage3 = Stage3Output.model_validate(state["stage3_for_editorial"])
         stage_editorial = stage_editorial_augmentation(stage3, fail_fast=True)
         stage_results = _record_stage_result(
             state,
             stage_name="stage_editorial_augmentation",
-            input_refs={"stage_3": _stage_ref(run_id, "stage_3")},
+            input_refs={"stage_editorial_gate": _stage_ref(run_id, "stage_editorial_gate")},
             data=stage_editorial.model_dump(),
         )
         stage3_for_title = stage3.model_copy(
@@ -743,7 +961,7 @@ def run_youtube2blog_graph(
 
     def stage_editorial_skip_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_editorial_skip")
-        stage3 = Stage3Output.model_validate(state["stage3"])
+        stage3 = Stage3Output.model_validate(state["stage3_for_editorial"])
         stage_editorial = StageEditorialAugmentationOutput(
             video_id=stage3.video_id,
             title=stage3.title,
@@ -790,17 +1008,21 @@ def run_youtube2blog_graph(
     def stage_4_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_4")
         stage3_for_title = Stage3Output.model_validate(state["stage3_for_title"])
+        gate_data = dict(state.get("stage_editorial_gate") or {})
+        seo_source_stage = str(gate_data.get("seo_source_stage") or "stage_seo_enrich")
         stage4 = stage_4_generate_title(stage3_for_title)
+        input_refs = {
+            "stage_editorial_augmentation": _stage_ref(
+                run_id,
+                "stage_editorial_augmentation",
+            ),
+        }
+        if seo_source_stage in {"stage_seo_enrich", "stage_seo_rollback"}:
+            input_refs[seo_source_stage] = _stage_ref(run_id, seo_source_stage)
         stage_results = _record_stage_result(
             state,
             stage_name="stage_4",
-            input_refs={
-                "stage_3": _stage_ref(run_id, "stage_3"),
-                "stage_editorial_augmentation": _stage_ref(
-                    run_id,
-                    "stage_editorial_augmentation",
-                ),
-            },
+            input_refs=input_refs,
             data=stage4.model_dump(),
         )
         return {
@@ -951,6 +1173,9 @@ def run_youtube2blog_graph(
     def route_stage_3_quality_gate(state: YouTube2BlogGraphState) -> str:
         return str(state.get("stage3_quality_gate_decision") or "pass")
 
+    def route_stage_seo_gate(state: YouTube2BlogGraphState) -> str:
+        return str(state.get("stage_seo_gate_decision") or "pass")
+
     def route_editorial_gate(state: YouTube2BlogGraphState) -> str:
         return str(state.get("stage_editorial_decision") or "skip")
 
@@ -972,6 +1197,11 @@ def run_youtube2blog_graph(
     builder.add_node("stage_3", stage_3_compose_node)
     builder.add_node("stage_3_quality_gate", stage_3_quality_gate_node)
     builder.add_node("stage_3_improve", stage_3_improve_node)
+    builder.add_node("stage_seo_brief", stage_seo_brief_node)
+    builder.add_node("stage_seo_enrich", stage_seo_enrich_node)
+    builder.add_node("stage_seo_quality_gate", stage_seo_quality_gate_node)
+    builder.add_node("stage_seo_retry", stage_seo_retry_node)
+    builder.add_node("stage_seo_rollback", stage_seo_rollback_node)
 
     builder.add_node("stage_editorial_gate", stage_editorial_gate_node)
     builder.add_node("stage_editorial_augmentation", stage_editorial_node)
@@ -1021,11 +1251,25 @@ def run_youtube2blog_graph(
         "stage_3_quality_gate",
         route_stage_3_quality_gate,
         {
-            "pass": "stage_editorial_gate",
+            "pass": "stage_seo_brief",
             "retry": "stage_3_improve",
         },
     )
     builder.add_edge("stage_3_improve", "stage_3_quality_gate")
+
+    builder.add_edge("stage_seo_brief", "stage_seo_enrich")
+    builder.add_edge("stage_seo_enrich", "stage_seo_quality_gate")
+    builder.add_conditional_edges(
+        "stage_seo_quality_gate",
+        route_stage_seo_gate,
+        {
+            "pass": "stage_editorial_gate",
+            "retry": "stage_seo_retry",
+            "rollback": "stage_seo_rollback",
+        },
+    )
+    builder.add_edge("stage_seo_retry", "stage_seo_quality_gate")
+    builder.add_edge("stage_seo_rollback", "stage_editorial_gate")
 
     builder.add_conditional_edges(
         "stage_editorial_gate",
@@ -1070,6 +1314,7 @@ def run_youtube2blog_graph(
                         "stage1_retry_count": 0,
                         "stage2_retry_count": 0,
                         "stage3_quality_retry_count": 0,
+                        "stage_seo_retry_count": 0,
                         "stage5_retry_count": 0,
                         "stage_results": {},
                     },

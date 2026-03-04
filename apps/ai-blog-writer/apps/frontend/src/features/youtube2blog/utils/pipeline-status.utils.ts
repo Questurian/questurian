@@ -34,6 +34,16 @@ function getRunningPhaseLabel(stage: string): string {
       return 'Evaluate Article Quality'
     case 'stage_3_improve':
       return 'Rewrite Article for Quality'
+    case 'stage_seo_brief':
+      return 'Generate SEO Brief'
+    case 'stage_seo_enrich':
+      return 'Enrich Article for SEO'
+    case 'stage_seo_quality_gate':
+      return 'Evaluate SEO Quality'
+    case 'stage_seo_retry':
+      return 'Retry SEO Enrichment'
+    case 'stage_seo_rollback':
+      return 'Restore Pre-SEO Article'
     case 'stage_editorial_gate':
       return 'Evaluate Editorial Gate'
     case 'stage_editorial_augmentation':

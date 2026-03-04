@@ -14,6 +14,11 @@ from .stage_3_quality import (
     stage_3_improve_article,
     stage_3_pick_improvement_mode,
 )
+from .stage_seo import (
+    stage_seo_enrich_article,
+    stage_seo_evaluate_quality,
+    stage_seo_generate_brief,
+)
 from .stage_editorial_augmentation import stage_editorial_augmentation
 from .stage_4 import (
     stage_4_generate_title,
@@ -34,6 +39,9 @@ __all__ = [
     "stage_3_build_targeted_feedback",
     "stage_3_pick_improvement_mode",
     "stage_3_improve_article",
+    "stage_seo_generate_brief",
+    "stage_seo_enrich_article",
+    "stage_seo_evaluate_quality",
     "stage_editorial_augmentation",
     "stage_4_generate_title",
     "stage_5_generate_title_retry",
