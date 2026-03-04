@@ -31,6 +31,10 @@ from app.core import (
     write_stage_result,
     write_status,
 )
+from .graph import (
+    run_prompt2blog_full_graph,
+    run_prompt2blog_pipeline_v2_graph,
+)
 from utils import get_vertex_llm, parse_json_response
 from .storage import (
     get_all_completed_articles,
@@ -540,6 +544,24 @@ class RunRequest(BaseModel):
 
 def _now_iso() -> str:
     return datetime.utcnow().isoformat()
+
+
+def _read_langgraph_trace(run_id: str) -> dict[str, str]:
+    stage_payload = read_stage_result(run_id, "langgraph_trace")
+    if not isinstance(stage_payload, dict):
+        return {}
+    data = stage_payload.get("data")
+    if not isinstance(data, dict):
+        return {}
+
+    trace_payload: dict[str, str] = {}
+    trace_url = data.get("langsmith_trace_url")
+    if isinstance(trace_url, str) and trace_url.strip():
+        trace_payload["langsmith_trace_url"] = trace_url.strip()
+    trace_run_id = data.get("langsmith_trace_run_id")
+    if isinstance(trace_run_id, str) and trace_run_id.strip():
+        trace_payload["langsmith_trace_run_id"] = trace_run_id.strip()
+    return trace_payload
 
 
 def _safe_str(value: Any) -> str:
@@ -1415,107 +1437,114 @@ def _classify_cleaned_material(
     return classification, result_text, parsed, raw_response
 
 
-def _run_full_pipeline(run_id: str, request: RunRequest) -> None:
-    """Run one-click Prompt2Blog flow from raw sources to final article."""
+def _prepare_full_pipeline_request(run_id: str, request: RunRequest) -> PipelineV2Request:
+    """Prepare synthesized + classified inputs for Prompt2Blog pipeline-v2."""
     model_name = request.model_name or DEFAULT_MODEL
     include_debug = request.include_debug
     writing_brief = request.writing_brief if isinstance(request.writing_brief, dict) else {}
     raw_sources = _extract_raw_sources_from_brief(request.raw_sources, writing_brief)
+    if not raw_sources:
+        raise RuntimeError("At least one raw source is required.")
+
+    current_stage = "stage_synthesize_sources"
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": current_stage,
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
+    combined = "\n\n---\n\n".join(raw_sources)
+    synth_prompt = SYNTHESIZE_PROMPT + combined
+    synthesized_text = _invoke_text_llm(
+        prompt=synth_prompt,
+        max_tokens=4096,
+        temperature=0.3,
+        model_name=model_name,
+    ).strip()
+    if not synthesized_text:
+        raise RuntimeError("Synthesis produced empty output.")
+
+    write_stage_result(
+        run_id,
+        current_stage,
+        {
+            "created_at": _now_iso(),
+            "data": {
+                "raw_sources_count": len(raw_sources),
+                "synthesized_text": synthesized_text,
+            },
+        },
+    )
+
+    current_stage = "stage_classify_article_type"
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": current_stage,
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
+    article_types = read_article_type_name_definitions()
+    classification, result_text, parsed, raw_response = _classify_cleaned_material(
+        cleaned_data=synthesized_text,
+        article_types=article_types,
+        writing_brief=writing_brief,
+        model_name=model_name,
+    )
+    write_stage_result(
+        run_id,
+        current_stage,
+        {
+            "created_at": _now_iso(),
+            "data": {
+                "classification": classification.model_dump(),
+                "result": result_text,
+                "raw_response": raw_response,
+                "parsed": parsed,
+            },
+        },
+    )
+
+    return PipelineV2Request(
+        cleaned_data=synthesized_text,
+        raw_sources=raw_sources,
+        writing_brief=writing_brief,
+        article_type_id=classification.id,
+        include_debug=include_debug,
+        enable_editorial_augmentation=request.enable_editorial_augmentation,
+        model_name=model_name,
+    )
+
+
+def _run_full_pipeline_impl(run_id: str, request: RunRequest) -> None:
+    """Run one-click Prompt2Blog flow from raw sources to final article."""
+    include_debug = request.include_debug
     current_stage = "stage_synthesize_sources"
 
     try:
-        if not raw_sources:
-            raise RuntimeError("At least one raw source is required.")
-
-        # Stage: synthesize sources -> cleaned_data
-        write_status(
-            run_id,
-            {
-                "run_id": run_id,
-                "state": "running",
-                "stage": current_stage,
-                "error": None,
-                "updated_at": _now_iso(),
-            },
-            feature=FEATURE_NAME,
-        )
-
-        combined = "\n\n---\n\n".join(raw_sources)
-        synth_prompt = SYNTHESIZE_PROMPT + combined
-        synthesized_text = _invoke_text_llm(
-            prompt=synth_prompt,
-            max_tokens=4096,
-            temperature=0.3,
-            model_name=model_name,
-        ).strip()
-        if not synthesized_text:
-            raise RuntimeError("Synthesis produced empty output.")
-
-        write_stage_result(
-            run_id,
-            current_stage,
-            {
-                "created_at": _now_iso(),
-                "data": {
-                    "raw_sources_count": len(raw_sources),
-                    "synthesized_text": synthesized_text,
-                },
-            },
-        )
-
-        # Stage: classify article type from synthesized text
-        current_stage = "stage_classify_article_type"
-        write_status(
-            run_id,
-            {
-                "run_id": run_id,
-                "state": "running",
-                "stage": current_stage,
-                "error": None,
-                "updated_at": _now_iso(),
-            },
-            feature=FEATURE_NAME,
-        )
-
-        article_types = read_article_type_name_definitions()
-        classification, result_text, parsed, raw_response = _classify_cleaned_material(
-            cleaned_data=synthesized_text,
-            article_types=article_types,
-            writing_brief=writing_brief,
-            model_name=model_name,
-        )
-        write_stage_result(
-            run_id,
-            current_stage,
-            {
-                "created_at": _now_iso(),
-                "data": {
-                    "classification": classification.model_dump(),
-                    "result": result_text,
-                    "raw_response": raw_response,
-                    "parsed": parsed,
-                },
-            },
-        )
-
-        pipeline_request = PipelineV2Request(
-            cleaned_data=synthesized_text,
-            raw_sources=raw_sources,
-            writing_brief=writing_brief,
-            article_type_id=classification.id,
-            include_debug=include_debug,
-            enable_editorial_augmentation=request.enable_editorial_augmentation,
-            model_name=model_name,
-        )
-        _run_pipeline_v2(run_id, pipeline_request)
+        pipeline_request = _prepare_full_pipeline_request(run_id, request)
+        _run_pipeline_v2_impl(run_id, pipeline_request)
     except Exception as exc:  # noqa: BLE001
+        status = read_status(run_id) or {}
+        failed_stage = _safe_str(status.get("stage")) or current_stage
         logger.exception("Prompt2Blog full run failed", extra={"run_id": run_id})
         write_status(
             run_id,
             {
                 "run_id": run_id,
                 "state": "failed",
-                "stage": current_stage,
+                "stage": failed_stage,
                 "error": str(exc),
                 "updated_at": _now_iso(),
             },
@@ -1529,13 +1558,13 @@ def _run_full_pipeline(run_id: str, request: RunRequest) -> None:
                     "created_at": _now_iso(),
                     "data": {
                         "error": str(exc),
-                        "failed_stage": current_stage,
+                        "failed_stage": failed_stage,
                     },
                 },
             )
 
 
-def _run_pipeline_v2(run_id: str, request: PipelineV2Request) -> None:
+def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
     model_name = request.model_name or DEFAULT_MODEL
     cleaned_data = _safe_str(request.cleaned_data)
     raw_sources = [_safe_str(source) for source in request.raw_sources if _safe_str(source)]
@@ -2301,6 +2330,52 @@ def _run_pipeline_v2(run_id: str, request: PipelineV2Request) -> None:
             )
 
 
+def _run_pipeline_v2(run_id: str, request: PipelineV2Request) -> None:
+    try:
+        run_prompt2blog_pipeline_v2_graph(
+            run_id=run_id,
+            pipeline_runner=lambda: _run_pipeline_v2_impl(run_id, request),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Prompt2Blog graph pipeline-v2 failed", extra={"run_id": run_id})
+        write_status(
+            run_id,
+            {
+                "run_id": run_id,
+                "state": "failed",
+                "stage": "graph_execution",
+                "error": str(exc),
+                "updated_at": _now_iso(),
+            },
+            feature=FEATURE_NAME,
+        )
+
+
+def _run_full_pipeline(run_id: str, request: RunRequest) -> None:
+    try:
+        run_prompt2blog_full_graph(
+            run_id=run_id,
+            prepare_runner=lambda: _prepare_full_pipeline_request(run_id, request).model_dump(),
+            pipeline_runner=lambda payload: _run_pipeline_v2_impl(
+                run_id,
+                PipelineV2Request.model_validate(payload),
+            ),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Prompt2Blog graph full-run failed", extra={"run_id": run_id})
+        write_status(
+            run_id,
+            {
+                "run_id": run_id,
+                "state": "failed",
+                "stage": "graph_execution",
+                "error": str(exc),
+                "updated_at": _now_iso(),
+            },
+            feature=FEATURE_NAME,
+        )
+
+
 @router.post("/synthesize", response_model=SynthesizeResponse)
 async def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
     """Take raw source blobs and return a synthesized overview."""
@@ -2469,12 +2544,22 @@ async def get_result(run_id: str) -> JSONResponse:
     if not output:
         raise HTTPException(status_code=404, detail="Result not available yet.")
 
+    trace_payload = _read_langgraph_trace(run_id)
+    artifact = output["artifact"]
+    if trace_payload and isinstance(artifact, dict):
+        pipeline_payload = artifact.get("pipeline_v2")
+        if isinstance(pipeline_payload, dict):
+            pipeline_payload.update(trace_payload)
+
+    response_payload: dict[str, Any] = {
+        "run_id": run_id,
+        "markdown": output["markdown"],
+        "artifact": artifact,
+    }
+    response_payload.update(trace_payload)
+
     return JSONResponse(
-        {
-            "run_id": run_id,
-            "markdown": output["markdown"],
-            "artifact": output["artifact"],
-        }
+        response_payload
     )
 
 
@@ -2500,6 +2585,7 @@ async def debug_run(run_id: str) -> JSONResponse:
         "stage_title",
         "stage_finalize",
         "pipeline_v2",
+        "langgraph_trace",
     ]:
         stage_data = read_stage_result(run_id, stage_name)
         if stage_data:

@@ -1,5 +1,6 @@
 import type { StatusResponse } from '@shared/types'
 
+import { PIPELINE_TIMELINE } from '../constants/pipeline.constants'
 import { getStageItemState, getStageLabel, getStagePhase } from '../utils/pipeline-status.utils'
 
 type StatusPanelProps = {
@@ -9,11 +10,6 @@ type StatusPanelProps = {
 
 export function StatusPanel({ status, runInputType = null }: StatusPanelProps) {
   const stageLabel = getStageLabel(status)
-  const stageOneState = getStageItemState(status, 1)
-  const stageTwoState = getStageItemState(status, 2)
-  const stageThreeState = getStageItemState(status, 3)
-  const stageFourState = getStageItemState(status, 4)
-  const stageFiveState = getStageItemState(status, 5)
   const transcriptCaptured =
     runInputType === 'url' && status.stage !== 'stage_0' && status.state !== 'failed'
 
@@ -34,26 +30,17 @@ export function StatusPanel({ status, runInputType = null }: StatusPanelProps) {
           </p>
         ) : null}
         <div className="stage-checklist">
-          <div className={`stage-item ${stageOneState}`}>
-            <span className="stage-dot" />
-            <span>Stage 1 - ({getStagePhase(status, 1)})</span>
-          </div>
-          <div className={`stage-item ${stageTwoState}`}>
-            <span className="stage-dot" />
-            <span>Stage 2 - ({getStagePhase(status, 2)})</span>
-          </div>
-          <div className={`stage-item ${stageThreeState}`}>
-            <span className="stage-dot" />
-            <span>Stage 3 - ({getStagePhase(status, 3)})</span>
-          </div>
-          <div className={`stage-item ${stageFourState}`}>
-            <span className="stage-dot" />
-            <span>Stage 4 (Editorial) - ({getStagePhase(status, 4)})</span>
-          </div>
-          <div className={`stage-item ${stageFiveState}`}>
-            <span className="stage-dot" />
-            <span>Stage 5 - ({getStagePhase(status, 5)})</span>
-          </div>
+          {PIPELINE_TIMELINE.map((step) => {
+            const itemState = getStageItemState(status, step)
+            return (
+              <div key={step.key} className={`stage-item ${itemState}`}>
+                <span className="stage-dot" />
+                <span>
+                  {step.label} - ({getStagePhase(status, step)})
+                </span>
+              </div>
+            )
+          })}
         </div>
         {status.evaluation_metrics ? (
           <div className="metrics">

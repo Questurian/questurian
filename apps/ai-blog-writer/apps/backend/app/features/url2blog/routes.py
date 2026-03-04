@@ -27,6 +27,7 @@ except Exception:  # pragma: no cover - optional runtime dependency
     gm = None
 
 from app.core import (
+    get_all_runs,
     read_output,
     read_stage_result,
     read_status,
@@ -38,6 +39,7 @@ from app.core import (
     write_status,
 )
 from utils import get_vertex_llm
+from .graph import run_url2blog_pipeline_graph
 from .storage import (
     get_all_completed_articles,
     get_article_sync_status,
@@ -66,6 +68,29 @@ DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS = 3
 MIN_EXPANDED_WORD_DELTA = 80
 MIN_EXPANDED_WORD_RATIO = 1.1
 MAX_LENGTH_EXPANSION_PASSES = 2
+URL2BLOG_USE_MARKDOWN_LONG_STAGES_ENV = "URL2BLOG_USE_MARKDOWN_LONG_STAGES"
+URL2BLOG_USE_MARKDOWN_LONG_STAGES_DEFAULT = True
+URL2BLOG_LONG_OUTPUT_MAX_RETRIES = 3
+URL2BLOG_INPUT_CHAR_LIMIT_ENV = "URL2BLOG_INPUT_CHAR_LIMIT"
+URL2BLOG_INPUT_CHAR_LIMIT_DEFAULT = 0
+URL2BLOG_MAX_TOKENS_FLOOR_ENV = "URL2BLOG_MAX_TOKENS_FLOOR"
+URL2BLOG_MAX_TOKENS_FLOOR_DEFAULT = 8192
+URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK_ENV = (
+    "URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK"
+)
+URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK_DEFAULT = False
+URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED_ENV = "URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED"
+URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED_DEFAULT = True
+URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED_ENV = (
+    "URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED"
+)
+URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED_DEFAULT = True
+URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED_ENV = "URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED"
+URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED_DEFAULT = True
+URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS = 3
+URL2BLOG_EDITORIAL_RECHECK_MIN_QUALITY_SCORE = 8.0
+URL2BLOG_EDITORIAL_RECHECK_MIN_FACT_SCORE = 8.0
+URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN = 0.5
 _vertexai_grounding_initialized = False
 _json_parse_tracking_ctx: contextvars.ContextVar[dict[str, Any] | None] = (
     contextvars.ContextVar("url2blog_json_parse_tracking", default=None)
@@ -270,6 +295,27 @@ NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
 
 EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
 {external_context}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
+"""
+
+V2_REWRITE_RETRY_FEEDBACK_SUFFIX = """RETRY CONTEXT:
+This is rewrite attempt #{retry_attempt} after a failed quality gate.
+Prior overall score: {previous_overall_score}/10
+Prior ngram overlap signal: {previous_ngram_overlap}
+Recommended rewrite intensity: {rewrite_intensity}
+
+Quality feedback summary:
+{quality_summary}
+
+Required revisions to address now:
+{required_revisions}
+
+Retry rules:
+- Apply all required revisions directly in this draft.
+- Change structure decisively where needed; do not perform light paraphrase-only edits.
+- Preserve factual meaning, but rewrite with clearly improved usefulness and flow.
 """
 
 V2_QUALITY_AUDIT_PROMPT = """You are running URL2Blog QUALITY AUDIT.
@@ -396,6 +442,9 @@ NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
 
 EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
 {external_context}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
 """
 
 V2_SOURCE_FACTS_EXTRACTION_PROMPT = """You are extracting factual anchors from a source article.
@@ -515,6 +564,9 @@ NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
 
 EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
 {external_context}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
 """
 
 V2_LENGTH_EXPANSION_PROMPT = """You are running URL2Blog LENGTH EXPANSION.
@@ -571,6 +623,312 @@ NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
 
 EXTERNAL CONTEXT FOR DEPTH (OPTIONAL):
 {external_context}
+
+SOURCE FACT ANCHORS (OPTIONAL):
+{source_facts}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
+"""
+
+V2_GUIDELINE_REWRITE_MARKDOWN_PROMPT = """You are improving an extracted article so it better matches a target article-type guideline.
+
+Primary goal:
+- Deliver a materially transformed draft with stronger reader value.
+- Improve structure, clarity, and editorial fit against the guideline.
+- Keep factual content anchored to the source article; do not invent facts.
+
+Output requirements:
+- Return ONLY markdown article body text.
+- No JSON, no explanations, no code fences.
+- Include at least three `##` section headings; optional `###` subheadings allowed.
+- Do not include a `#` H1 heading (title is generated separately).
+
+Rules:
+- Preserve factual meaning from source content, but do not mirror source sequencing.
+- Add concrete reader value (context, interpretation, practical guidance) beyond paraphrase.
+- Avoid copying source phrasing; do not reuse long verbatim fragments.
+- Keep complete article prose, not a bullet-list article.
+- If important practical details are missing in source, explicitly say they are not confirmed.
+- Do not use academic signpost phrasing like "In conclusion".
+
+SOURCE TITLE:
+{title}
+
+SOURCE CONTENT:
+{content}
+
+SELECTED ARTICLE TYPE:
+{article_type}
+
+GUIDELINE:
+{guideline}
+
+TITLE GUIDELINE:
+{title_guideline}
+
+SEO-SAFE CONTENT GENERATION GUIDELINES:
+{seo_guideline}
+
+NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
+{narrative_focus}
+
+EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
+{external_context}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
+"""
+
+V2_REWRITE_REPAIR_MARKDOWN_PROMPT = """You are running URL2Blog HARD REWRITE.
+
+The previous draft is not strong enough. Rewrite it so it is:
+- less like the source wording/flow,
+- more informative for the reader,
+- stricter on guideline compliance.
+
+Output requirements:
+- Return ONLY markdown article body text.
+- No JSON, no explanations, no code fences.
+- Include at least three `##` section headings; optional `###` subheadings allowed.
+- Do not include a `#` H1 heading (title is generated separately).
+
+Rules:
+- Preserve factual meaning from source; do not invent details.
+- Do not mirror source paragraph order.
+- Provide clearer interpretation and practical utility.
+- Avoid near-verbatim phrasing from source.
+- Explicitly mark unconfirmed practical details when relevant.
+- Do not use academic signpost phrasing like "In conclusion".
+
+SOURCE TITLE:
+{source_title}
+
+SOURCE CONTENT:
+{source_content}
+
+PREVIOUS DRAFT TITLE:
+{previous_title}
+
+PREVIOUS DRAFT CONTENT:
+{previous_content}
+
+REQUIRED REVISIONS:
+{required_revisions}
+
+SELECTED ARTICLE TYPE:
+{article_type}
+
+GUIDELINE:
+{guideline}
+
+TITLE GUIDELINE:
+{title_guideline}
+
+SEO-SAFE CONTENT GENERATION GUIDELINES:
+{seo_guideline}
+
+NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
+{narrative_focus}
+
+EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
+{external_context}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
+"""
+
+V2_FACT_REPAIR_MARKDOWN_PROMPT = """You are repairing a rewritten article to restore missing source facts.
+
+Output requirements:
+- Return ONLY markdown article body text.
+- No JSON, no explanations, no code fences.
+- Include at least three `##` section headings; optional `###` subheadings allowed.
+- Do not include a `#` H1 heading (title is generated separately).
+
+Rules:
+- Keep existing strong structure and readability.
+- Reintroduce missing source facts naturally and precisely.
+- Do not invent new facts.
+- Do not remove already-correct details.
+- Do not use academic signpost phrasing like "In conclusion".
+
+SOURCE TITLE:
+{source_title}
+
+SOURCE CONTENT:
+{source_content}
+
+CURRENT REWRITTEN TITLE:
+{rewritten_title}
+
+CURRENT REWRITTEN CONTENT:
+{rewritten_content}
+
+MISSING FACTS TO RESTORE:
+{missing_facts}
+
+SELECTED ARTICLE TYPE:
+{article_type}
+
+GUIDELINE:
+{guideline}
+
+TITLE GUIDELINE:
+{title_guideline}
+
+SEO-SAFE CONTENT GENERATION GUIDELINES:
+{seo_guideline}
+
+NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
+{narrative_focus}
+
+EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
+{external_context}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
+"""
+
+V2_LENGTH_EXPANSION_MARKDOWN_PROMPT = """You are running URL2Blog LENGTH EXPANSION.
+
+Goal:
+- Expand the rewritten article so it is materially longer than the source.
+- Increase useful depth while preserving factual integrity and structure.
+
+Output requirements:
+- Return ONLY markdown article body text.
+- No JSON, no explanations, no code fences.
+- Include at least three `##` section headings; optional `###` subheadings allowed.
+- Do not include a `#` H1 heading (title is generated separately).
+
+Rules:
+- Keep all existing valid facts and practical guidance.
+- Do not invent facts.
+- Expand with concrete context, clarifications, caveats, and comparisons
+  grounded in the provided source and context.
+- Do not compress existing sections.
+- Expanded content must be at least {min_word_target} words.
+- Expanded content must be longer than source content ({source_word_count} words).
+- Do not use academic signpost phrasing like "In conclusion".
+
+SOURCE TITLE:
+{source_title}
+
+SOURCE CONTENT:
+{source_content}
+
+CURRENT REWRITTEN TITLE:
+{rewritten_title}
+
+CURRENT REWRITTEN CONTENT:
+{rewritten_content}
+
+CURRENT WORD COUNT:
+{current_word_count}
+
+SELECTED ARTICLE TYPE:
+{article_type}
+
+GUIDELINE:
+{guideline}
+
+TITLE GUIDELINE:
+{title_guideline}
+
+SEO-SAFE CONTENT GENERATION GUIDELINES:
+{seo_guideline}
+
+NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
+{narrative_focus}
+
+EXTERNAL CONTEXT FOR DEPTH (OPTIONAL):
+{external_context}
+
+SOURCE FACT ANCHORS (OPTIONAL):
+{source_facts}
+
+EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
+{editorial_blueprint_directives}
+"""
+
+V2_TITLE_GENERATION_PROMPT = """You are generating a publish-ready title for a rewritten article.
+
+Output requirements:
+- Return ONLY the title text.
+- Single line.
+- No JSON, no markdown, no quotes.
+
+Rules:
+- Follow the title guideline while matching article intent.
+- Keep it specific, clear, and naturally readable.
+- Avoid clickbait and vague wording.
+- Keep between 35 and 95 characters when feasible.
+
+ARTICLE TYPE:
+{article_type}
+
+TITLE GUIDELINE:
+{title_guideline}
+
+NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
+{narrative_focus}
+
+SOURCE TITLE:
+{source_title}
+
+REWRITTEN ARTICLE (MARKDOWN BODY):
+{rewritten_content}
+"""
+
+V2_EDITORIAL_BLUEPRINT_PROMPT = """You are planning editorial support before drafting a rewritten article.
+
+Goal:
+- Decide whether editorial components should be planned into the first draft.
+- If needed, specify a restrained component plan that improves readability
+  without changing factual scope.
+
+Return strict JSON only:
+{
+  "apply_plan": true,
+  "summary": "string",
+  "components": [
+    {
+      "component": "pull_quote|in_the_know_box|key_takeaways_box|highlight_callout|faq_block",
+      "placement": "string",
+      "objective": "string",
+      "priority": "high|medium"
+    }
+  ],
+  "drafting_directives": ["string"],
+  "guardrails": ["string"]
+}
+
+Rules:
+- Keep plan restrained: usually 0-2 components, maximum 3.
+- Do not require components that need new facts.
+- Prefer component placement that supports existing section flow.
+- If article is already clear, set apply_plan=false and empty components.
+- Drafting directives must be actionable and concise.
+- Guardrails must reinforce factual integrity and non-redundancy.
+
+SOURCE TITLE:
+{source_title}
+
+SOURCE CONTENT:
+{source_content}
+
+SELECTED ARTICLE TYPE:
+{article_type}
+
+GUIDELINE:
+{guideline}
+
+TITLE GUIDELINE:
+{title_guideline}
+
+NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
+{narrative_focus}
 
 SOURCE FACT ANCHORS (OPTIONAL):
 {source_facts}
@@ -744,6 +1102,7 @@ class Stage2ClassifyRequest(BaseModel):
 
 
 class PipelineV2Request(BaseModel):
+    run_id: str | None = None
     url: str
     include_debug: bool = False
     narrative_focus: str | None = None
@@ -759,6 +1118,24 @@ def _now_iso() -> str:
     return datetime.utcnow().isoformat()
 
 
+def _read_langgraph_trace(run_id: str) -> dict[str, str]:
+    stage_payload = read_stage_result(run_id, "langgraph_trace")
+    if not isinstance(stage_payload, dict):
+        return {}
+    data = stage_payload.get("data")
+    if not isinstance(data, dict):
+        return {}
+
+    trace_payload: dict[str, str] = {}
+    trace_url = data.get("langsmith_trace_url")
+    if isinstance(trace_url, str) and trace_url.strip():
+        trace_payload["langsmith_trace_url"] = trace_url.strip()
+    trace_run_id = data.get("langsmith_trace_run_id")
+    if isinstance(trace_run_id, str) and trace_run_id.strip():
+        trace_payload["langsmith_trace_run_id"] = trace_run_id.strip()
+    return trace_payload
+
+
 @router.get("/status/{run_id}")
 async def get_status(run_id: str) -> JSONResponse:
     """Get the status of a URL2Blog pipeline run."""
@@ -766,6 +1143,24 @@ async def get_status(run_id: str) -> JSONResponse:
     if not status or status.get("feature") != FEATURE_NAME:
         raise HTTPException(status_code=404, detail="Run not found.")
     return JSONResponse(status)
+
+
+@router.get("/status-latest")
+async def get_latest_status() -> JSONResponse:
+    """Get latest URL2Blog run status row (helps recover run-id mismatches)."""
+    runs = get_all_runs(feature=FEATURE_NAME)
+    if not runs:
+        raise HTTPException(status_code=404, detail="No URL2Blog runs found.")
+    latest = runs[0]
+    return JSONResponse(
+        {
+            "run_id": latest.get("run_id"),
+            "feature": FEATURE_NAME,
+            "state": latest.get("status"),
+            "stage": latest.get("stage"),
+            "updated_at": latest.get("updated_at"),
+        }
+    )
 
 
 @router.get("/result/{run_id}")
@@ -779,12 +1174,22 @@ async def get_result(run_id: str) -> JSONResponse:
     if not output:
         raise HTTPException(status_code=404, detail="Result not available yet.")
 
+    trace_payload = _read_langgraph_trace(run_id)
+    artifact = output["artifact"]
+    if trace_payload and isinstance(artifact, dict):
+        pipeline_payload = artifact.get("pipeline_v2")
+        if isinstance(pipeline_payload, dict):
+            pipeline_payload.update(trace_payload)
+
+    response_payload: dict[str, Any] = {
+        "run_id": run_id,
+        "markdown": output["markdown"],
+        "artifact": artifact,
+    }
+    response_payload.update(trace_payload)
+
     return JSONResponse(
-        {
-            "run_id": run_id,
-            "markdown": output["markdown"],
-            "artifact": output["artifact"],
-        }
+        response_payload
     )
 
 
@@ -796,7 +1201,7 @@ async def debug_run(run_id: str) -> JSONResponse:
         raise HTTPException(status_code=404, detail="Run not found.")
 
     stages = {}
-    for stage_name in ["stage_1", "stage_2", "pipeline_v2"]:
+    for stage_name in ["stage_1", "stage_2", "pipeline_v2", "langgraph_trace"]:
         stage_data = read_stage_result(run_id, stage_name)
         if stage_data:
             stages[stage_name] = stage_data
@@ -984,7 +1389,7 @@ def _extract_first_json_object(text: str) -> str | None:
 
 
 def _try_fix_truncated_json_object(text: str) -> dict[str, Any] | None:
-    """Attempt to recover from truncated JSON by closing open strings/braces."""
+    """Attempt to recover malformed/truncated JSON by repairing common breakage."""
     candidate = text.strip()
     if not candidate:
         return None
@@ -994,21 +1399,115 @@ def _try_fix_truncated_json_object(text: str) -> dict[str, Any] | None:
         return None
     candidate = candidate[first_brace:]
 
-    # Close odd quote counts when the response ends mid-string.
-    if candidate.count('"') % 2 == 1:
+    repaired_chars: list[str] = []
+    in_string = False
+    escape = False
+    curly_depth = 0
+    square_depth = 0
+
+    for idx, char in enumerate(candidate):
+        if in_string:
+            if escape:
+                repaired_chars.append(char)
+                escape = False
+                continue
+
+            if char == "\\":
+                repaired_chars.append(char)
+                escape = True
+                continue
+
+            # Raw control characters inside a JSON string are invalid.
+            if char == "\n":
+                repaired_chars.append("\\n")
+                continue
+            if char == "\r":
+                repaired_chars.append("\\r")
+                continue
+            if char == "\t":
+                repaired_chars.append("\\t")
+                continue
+
+            if char == '"':
+                lookahead = idx + 1
+                while lookahead < len(candidate) and candidate[lookahead].isspace():
+                    lookahead += 1
+                if lookahead < len(candidate) and candidate[lookahead] not in {
+                    ",",
+                    "}",
+                    "]",
+                    ":",
+                }:
+                    # Likely an unescaped quote inside a string value.
+                    repaired_chars.append('\\"')
+                    continue
+                in_string = False
+                repaired_chars.append(char)
+                continue
+
+            repaired_chars.append(char)
+            continue
+
+        if char == '"':
+            in_string = True
+            repaired_chars.append(char)
+            continue
+
+        if char == "{":
+            curly_depth += 1
+            repaired_chars.append(char)
+            continue
+
+        if char == "}":
+            if curly_depth == 0:
+                continue
+            curly_depth -= 1
+            repaired_chars.append(char)
+            if curly_depth == 0 and square_depth == 0:
+                break
+            continue
+
+        if char == "[":
+            square_depth += 1
+            repaired_chars.append(char)
+            continue
+
+        if char == "]":
+            if square_depth == 0:
+                continue
+            square_depth -= 1
+            repaired_chars.append(char)
+            continue
+
+        repaired_chars.append(char)
+
+    candidate = "".join(repaired_chars)
+
+    if in_string:
         candidate = f'{candidate}"'
 
-    open_braces = candidate.count("{")
-    close_braces = candidate.count("}")
-    if open_braces > close_braces:
-        candidate = f"{candidate}{'}' * (open_braces - close_braces)}"
+    if square_depth > 0:
+        candidate = f"{candidate}{']' * square_depth}"
+
+    if curly_depth > 0:
+        candidate = f"{candidate}{'}' * curly_depth}"
+
+    # Drop trailing commas before object/array closure.
+    candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
 
     try:
         parsed = json.loads(candidate)
         if isinstance(parsed, dict):
             return parsed
     except json.JSONDecodeError:
-        return None
+        fallback = _extract_first_json_object(candidate)
+        if fallback:
+            try:
+                parsed = json.loads(fallback)
+                if isinstance(parsed, dict):
+                    return parsed
+            except json.JSONDecodeError:
+                return None
 
     return None
 
@@ -1142,6 +1641,98 @@ def _resolve_execution_profile(profile: str | None) -> str:
             "Invalid URL2Blog execution_profile. Allowed values: "
             + ", ".join(URL2BLOG_ALLOWED_EXECUTION_PROFILES)
         ),
+    )
+
+
+def _read_bool_env(key: str, default: bool = False) -> bool:
+    """Read a boolean environment flag with permissive parsing."""
+    raw_value = os.getenv(key)
+    if raw_value is None:
+        return default
+    return _safe_bool(raw_value, default=default)
+
+
+def _read_int_env(
+    key: str,
+    *,
+    default: int = 0,
+    min_value: int = 0,
+    max_value: int = 1_000_000,
+) -> int:
+    """Read an integer environment flag with clamping."""
+    raw_value = os.getenv(key)
+    if raw_value is None:
+        return default
+    try:
+        parsed = int(str(raw_value).strip())
+    except (TypeError, ValueError):
+        return default
+    return max(min_value, min(max_value, parsed))
+
+
+def _llm_context_text(text: str) -> str:
+    """Optionally clamp very large prompt fragments via env override."""
+    limit = _read_int_env(
+        URL2BLOG_INPUT_CHAR_LIMIT_ENV,
+        default=URL2BLOG_INPUT_CHAR_LIMIT_DEFAULT,
+        min_value=0,
+        max_value=1_000_000,
+    )
+    if limit <= 0:
+        return text
+    return text[:limit]
+
+
+def _resolve_max_tokens(requested: int) -> int:
+    """Lift low per-stage token caps to a configurable floor."""
+    floor = _read_int_env(
+        URL2BLOG_MAX_TOKENS_FLOOR_ENV,
+        default=URL2BLOG_MAX_TOKENS_FLOOR_DEFAULT,
+        min_value=0,
+        max_value=65_536,
+    )
+    if floor <= 0:
+        return requested
+    return max(requested, floor)
+
+
+def _use_markdown_long_stages() -> bool:
+    """Return whether long-form URL2Blog stages should use markdown transport."""
+    return _read_bool_env(
+        URL2BLOG_USE_MARKDOWN_LONG_STAGES_ENV,
+        default=URL2BLOG_USE_MARKDOWN_LONG_STAGES_DEFAULT,
+    )
+
+
+def _allow_long_output_source_fallback() -> bool:
+    """Return whether long-output JSON fallback can reuse prior stage content."""
+    return _read_bool_env(
+        URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK_ENV,
+        default=URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK_DEFAULT,
+    )
+
+
+def _use_editorial_blueprint() -> bool:
+    """Return whether pre-draft editorial blueprint planning is enabled."""
+    return _read_bool_env(
+        URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED_ENV,
+        default=URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED_DEFAULT,
+    )
+
+
+def _use_editorial_insert_only_post() -> bool:
+    """Return whether post editorial phase should run in insert-only mode."""
+    return _read_bool_env(
+        URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED_ENV,
+        default=URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED_DEFAULT,
+    )
+
+
+def _use_editorial_post_recheck() -> bool:
+    """Return whether to run post-editorial quality/fact recheck."""
+    return _read_bool_env(
+        URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED_ENV,
+        default=URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED_DEFAULT,
     )
 
 
@@ -1293,6 +1884,7 @@ def _invoke_google_grounded_json(
         "Return ONLY one valid JSON object.\n"
         "No prose, no markdown, no code fences."
     )
+    effective_max_tokens = _resolve_max_tokens(max_tokens)
 
     grounded_model_name = _resolve_grounded_model(model_name)
 
@@ -1313,7 +1905,7 @@ def _invoke_google_grounded_json(
                 strict_prompt,
                 generation_config=gm.GenerationConfig(
                     temperature=temperature,
-                    max_output_tokens=max_tokens,
+                    max_output_tokens=effective_max_tokens,
                 ),
                 tools=[retrieval_tool],
             )
@@ -1368,6 +1960,253 @@ def _build_markdown(title: str, content: str) -> str:
     if cleaned_title:
         return f"# {cleaned_title}\n\n{cleaned_content}".strip()
     return cleaned_content
+
+
+def _sanitize_generated_title(raw_title: str, *, fallback_title: str) -> str:
+    """Normalize generated title text into a single clean line."""
+    candidate = _safe_str(raw_title)
+    if not candidate:
+        return fallback_title
+
+    if candidate.startswith("```"):
+        candidate = re.sub(
+            r"^```(?:markdown|md|text)?\s*",
+            "",
+            candidate,
+            flags=re.IGNORECASE,
+        )
+        candidate = re.sub(r"\s*```$", "", candidate).strip()
+
+    first_non_empty = next(
+        (line.strip() for line in candidate.splitlines() if line.strip()),
+        "",
+    )
+    if not first_non_empty:
+        return fallback_title
+
+    cleaned = re.sub(r"^\s*#+\s*", "", first_non_empty)
+    cleaned = cleaned.strip().strip('"').strip("'")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    if len(cleaned) < 8:
+        return fallback_title
+    if len(cleaned) > 140:
+        cleaned = cleaned[:140].rstrip(" .,:;-")
+
+    return cleaned or fallback_title
+
+
+def _invoke_markdown_long_output(
+    *,
+    prompt: str,
+    stage_name: str,
+    model_name: str,
+    temperature: float,
+    max_tokens: int,
+    fallback_content: str,
+    parse_metrics: dict[str, Any],
+    legacy_json_prompt: str | None = None,
+    legacy_json_stage_name: str | None = None,
+    legacy_content_key: str | None = None,
+    legacy_title_key: str | None = None,
+) -> dict[str, Any]:
+    """Invoke long-form stage expecting markdown output, with legacy JSON fallback."""
+    current_prompt = prompt.strip()
+    last_error = ""
+    last_response = ""
+    effective_max_tokens = _resolve_max_tokens(max_tokens)
+
+    for attempt in range(1, URL2BLOG_LONG_OUTPUT_MAX_RETRIES + 1):
+        llm = get_vertex_llm(
+            temperature=temperature if attempt == 1 else min(0.25, temperature + 0.05),
+            max_tokens=effective_max_tokens,
+            model_name=model_name,
+        )
+        invoke = getattr(llm, "invoke", None)
+        if not callable(invoke):
+            last_error = "LLM client unavailable for markdown invocation."
+            break
+
+        try:
+            raw_response = _safe_str(invoke(current_prompt)).strip()
+        except Exception as exc:  # noqa: BLE001
+            last_error = str(exc)
+            raw_response = ""
+
+        if raw_response:
+            normalized = _remove_academic_conclusion_phrases(raw_response)
+            normalized = _ensure_markdown_section_headers(normalized)
+            if normalized.strip():
+                return {
+                    "content": normalized,
+                    "raw_response": raw_response,
+                    "transport": "markdown",
+                    "fallback_title": "",
+                }
+
+        last_response = raw_response[:2000] if raw_response else ""
+        current_prompt = (
+            "Your previous output did not follow requirements.\n"
+            "Return ONLY markdown article body text.\n"
+            "No JSON, no markdown fences, no explanations.\n"
+            "Include clear section headers and complete prose paragraphs.\n\n"
+            f"Previous invalid output:\n{raw_response[:4000]}\n"
+        )
+
+    if (
+        legacy_json_prompt
+        and legacy_json_stage_name
+        and legacy_content_key
+    ):
+        logger.warning(
+            "URL2Blog markdown long-output failed for %s; falling back to JSON path. error=%s",
+            stage_name,
+            last_error or "empty response",
+        )
+        parsed, raw_response = _invoke_json_llm_tracked(
+            prompt=legacy_json_prompt,
+            stage_name=legacy_json_stage_name,
+            parse_metrics=parse_metrics,
+            max_tokens=effective_max_tokens,
+            temperature=temperature,
+            model_name=model_name,
+        )
+        fallback_value = _safe_str(parsed.get(legacy_content_key))
+        if not fallback_value:
+            if _allow_long_output_source_fallback():
+                fallback_value = fallback_content
+                logger.warning(
+                    "URL2Blog %s JSON fallback returned empty '%s'; using source fallback due to %s=1",
+                    stage_name,
+                    legacy_content_key,
+                    URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK_ENV,
+                )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        f"Failed to generate {stage_name}: legacy JSON fallback "
+                        f"did not return '{legacy_content_key}'."
+                    ),
+                )
+        fallback_value = _ensure_markdown_section_headers(
+            _remove_academic_conclusion_phrases(fallback_value)
+        )
+        return {
+            "content": fallback_value,
+            "raw_response": raw_response,
+            "transport": "json_fallback",
+            "fallback_title": (
+                _safe_str(parsed.get(legacy_title_key)) if legacy_title_key else ""
+            ),
+        }
+
+    raise HTTPException(
+        status_code=500,
+        detail=(
+            f"Failed to generate markdown output for {stage_name}: "
+            f"{last_error or 'empty response'} | preview={last_response[:240]}"
+        ),
+    )
+
+
+def _invoke_title_generation(
+    *,
+    prompt: str,
+    model_name: str,
+    fallback_title: str,
+    temperature: float = 0.1,
+    max_tokens: int = 256,
+) -> tuple[str, str]:
+    """Generate a single-line title with graceful fallback."""
+    current_prompt = prompt.strip()
+    last_raw_response = ""
+
+    for attempt in range(1, URL2BLOG_LONG_OUTPUT_MAX_RETRIES + 1):
+        llm = get_vertex_llm(
+            temperature=temperature if attempt == 1 else 0.0,
+            max_tokens=max_tokens,
+            model_name=model_name,
+        )
+        invoke = getattr(llm, "invoke", None)
+        if not callable(invoke):
+            return fallback_title, ""
+
+        try:
+            raw_response = _safe_str(invoke(current_prompt)).strip()
+        except Exception:  # noqa: BLE001
+            raw_response = ""
+        last_raw_response = raw_response
+
+        generated = _sanitize_generated_title(
+            raw_response,
+            fallback_title=fallback_title,
+        )
+        if generated and generated != fallback_title:
+            return generated, raw_response
+
+        current_prompt = (
+            "Your previous output was invalid.\n"
+            "Return ONLY a single-line title.\n"
+            "No quotes, no markdown, no JSON, no commentary.\n\n"
+            f"Previous invalid output:\n{raw_response[:1000]}"
+        )
+
+    return fallback_title, last_raw_response
+
+
+def _build_v2_rewrite_from_markdown(
+    *,
+    improved_title: str,
+    improved_content: str,
+    previous_rewrite: dict[str, Any] | None = None,
+    guideline_alignment_summary: str | None = None,
+    improvements_applied: list[str] | None = None,
+    remaining_gaps: list[str] | None = None,
+) -> dict[str, Any]:
+    """Build canonical rewrite payload from markdown stage output."""
+    previous_payload = _safe_dict(previous_rewrite)
+    cleaned_content = _safe_str(improved_content) or _safe_str(
+        previous_payload.get("improved_content")
+    )
+    cleaned_content = _ensure_markdown_section_headers(
+        _remove_academic_conclusion_phrases(cleaned_content)
+    )
+
+    cleaned_title = _safe_str(improved_title) or _safe_str(
+        previous_payload.get("improved_title")
+    )
+
+    summary = _safe_str(guideline_alignment_summary) or _safe_str(
+        previous_payload.get("guideline_alignment_summary")
+    )
+    if not summary:
+        summary = (
+            "Article was revised for stronger guideline alignment, clearer flow, and "
+            "more consistent editorial tone."
+        )
+
+    applied = (
+        _safe_string_list(improvements_applied)
+        or _safe_string_list(previous_payload.get("improvements_applied"))
+        or [
+            "Tightened structure and transitions between sections.",
+            "Improved editorial clarity and consistency.",
+            "Adjusted wording to better match article-type guidance.",
+        ]
+    )
+
+    gaps = _safe_string_list(remaining_gaps)
+    if not gaps:
+        gaps = _safe_string_list(previous_payload.get("remaining_gaps"))
+
+    return {
+        "improved_title": cleaned_title,
+        "improved_content": cleaned_content,
+        "guideline_alignment_summary": _remove_academic_conclusion_phrases(summary),
+        "improvements_applied": applied,
+        "remaining_gaps": gaps,
+    }
 
 
 @contextmanager
@@ -1461,7 +2300,7 @@ def _invoke_json_llm_tracked(
     max_tokens: int = 4096,
     temperature: float = 0.05,
     model_name: str | None = None,
-    allow_truncated_repair: bool = False,
+    allow_truncated_repair: bool = True,
 ) -> tuple[dict[str, Any], str]:
     """Invoke JSON LLM with parse-retry tracking for a named stage."""
     with _json_parse_tracking_scope(parse_metrics, stage_name):
@@ -1545,7 +2384,7 @@ def _invoke_json_llm(
     max_tokens: int = 4096,
     temperature: float = 0.05,
     model_name: str | None = None,
-    allow_truncated_repair: bool = False,
+    allow_truncated_repair: bool = True,
 ) -> tuple[dict[str, Any], str]:
     """Invoke LLM and parse strict JSON response."""
     parsed, raw_response, parse_error = _invoke_json_llm_best_effort(
@@ -1569,7 +2408,7 @@ def _invoke_json_llm_best_effort(
     max_tokens: int = 4096,
     temperature: float = 0.05,
     model_name: str | None = None,
-    allow_truncated_repair: bool = False,
+    allow_truncated_repair: bool = True,
 ) -> tuple[dict[str, Any] | None, str, str | None]:
     """Invoke LLM with JSON-recovery retries without raising on parse failure."""
     strict_prompt = (
@@ -1584,6 +2423,7 @@ def _invoke_json_llm_best_effort(
     current_prompt = strict_prompt
 
     selected_model_name = _resolve_url2blog_model(model_name)
+    effective_max_tokens = _resolve_max_tokens(max_tokens)
     for resolved_model_name in (selected_model_name,):
         current_prompt = strict_prompt
         parse_failures_this_call = 0
@@ -1591,7 +2431,7 @@ def _invoke_json_llm_best_effort(
         for attempt in range(1, 4):
             llm = get_vertex_llm(
                 temperature=temperature if attempt == 1 else 0.0,
-                max_tokens=max_tokens,
+                max_tokens=effective_max_tokens,
                 model_name=resolved_model_name,
             )
             result = llm.invoke(current_prompt)
@@ -1731,6 +2571,182 @@ def _sanitize_v2_length_expansion(
     return {
         "expanded_content": expanded_content,
         "expansion_summary": expansion_summary,
+    }
+
+
+def _sanitize_v2_editorial_blueprint(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Normalize editorial blueprint planning output."""
+    components: list[dict[str, str]] = []
+    seen_components: set[str] = set()
+    raw_components = parsed.get("components")
+    if isinstance(raw_components, list):
+        for item in raw_components:
+            if not isinstance(item, dict):
+                continue
+            component = _normalize_editorial_component_name(_safe_str(item.get("component")))
+            if not component or component in seen_components:
+                continue
+            seen_components.add(component)
+
+            priority_raw = _safe_str(item.get("priority")).lower()
+            priority = "high" if priority_raw == "high" else "medium"
+            components.append(
+                {
+                    "component": component,
+                    "placement": _safe_str(item.get("placement")),
+                    "objective": _safe_str(item.get("objective")),
+                    "priority": priority,
+                }
+            )
+            if len(components) >= URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS:
+                break
+
+    apply_plan = _safe_bool(parsed.get("apply_plan"), default=bool(components))
+    if not apply_plan:
+        components = []
+
+    summary = _safe_str(parsed.get("summary"))
+    if not summary:
+        summary = (
+            "No editorial blueprint needed before drafting."
+            if not apply_plan
+            else "Apply a restrained editorial blueprint during drafting."
+        )
+
+    drafting_directives = _safe_string_list(parsed.get("drafting_directives"))[:8]
+    if apply_plan and not drafting_directives:
+        drafting_directives = [
+            "Integrate planned editorial components naturally in relevant sections.",
+            "Preserve factual scope and avoid introducing new claims.",
+            "Keep component content concise and non-redundant with nearby prose.",
+        ]
+
+    guardrails = _safe_string_list(parsed.get("guardrails"))[:8]
+    if not guardrails:
+        guardrails = [
+            "Do not add facts not present in source or approved context.",
+            "Use editorial blocks only when they improve clarity or skimmability.",
+            "Avoid duplicating the same insight in prose and component boxes.",
+        ]
+
+    return {
+        "apply_plan": apply_plan,
+        "summary": summary,
+        "components": components,
+        "drafting_directives": drafting_directives,
+        "guardrails": guardrails,
+    }
+
+
+def _format_editorial_blueprint_for_prompt(editorial_blueprint: dict[str, Any]) -> str:
+    """Render blueprint instructions into prompt-safe plain text."""
+    blueprint = _safe_dict(editorial_blueprint)
+    if not _safe_bool(blueprint.get("apply_plan"), default=False):
+        return "No editorial blueprint directives."
+
+    components = list(blueprint.get("components") or [])
+    directives = _safe_string_list(blueprint.get("drafting_directives"))
+    guardrails = _safe_string_list(blueprint.get("guardrails"))
+    summary = _safe_str(blueprint.get("summary"))
+
+    lines: list[str] = []
+    if summary:
+        lines.append(f"Summary: {summary}")
+
+    if components:
+        lines.append("Planned components:")
+        for item in components[:URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS]:
+            if not isinstance(item, dict):
+                continue
+            component = _safe_str(item.get("component"))
+            placement = _safe_str(item.get("placement"))
+            objective = _safe_str(item.get("objective"))
+            priority = _safe_str(item.get("priority")) or "medium"
+            lines.append(
+                (
+                    f"- component={component}; priority={priority}; "
+                    f"placement={placement or 'contextual'}; "
+                    f"objective={objective or 'improve readability'}"
+                )
+            )
+
+    if directives:
+        lines.append("Drafting directives:")
+        lines.extend(f"- {directive}" for directive in directives[:8])
+
+    if guardrails:
+        lines.append("Guardrails:")
+        lines.extend(f"- {guardrail}" for guardrail in guardrails[:8])
+
+    lines.append(
+        "When applying components, use canonical editorial block markers and avoid duplicating nearby prose."
+    )
+    return "\n".join(lines).strip() or "No editorial blueprint directives."
+
+
+def _editorial_blueprint_to_component_entries(
+    editorial_blueprint: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Convert blueprint components to editorial augmentation component schema."""
+    blueprint = _safe_dict(editorial_blueprint)
+    if not _safe_bool(blueprint.get("apply_plan"), default=False):
+        return []
+
+    entries: list[dict[str, str]] = []
+    for item in list(blueprint.get("components") or []):
+        if not isinstance(item, dict):
+            continue
+        component = _normalize_editorial_component_name(_safe_str(item.get("component")))
+        if not component:
+            continue
+        entries.append(
+            {
+                "component": component,
+                "justification": _safe_str(item.get("objective"))
+                or "Planned in editorial blueprint.",
+                "placement": _safe_str(item.get("placement")),
+            }
+        )
+        if len(entries) >= URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS:
+            break
+    return entries
+
+
+def _build_insert_only_editorial_augmentation(
+    *,
+    fallback_content: str,
+    editorial_blueprint: dict[str, Any],
+) -> dict[str, Any]:
+    """Apply insert-only editorial cleanup from precomputed blueprint."""
+    fallback_markdown = _ensure_markdown_section_headers(fallback_content)
+    components_added = _editorial_blueprint_to_component_entries(editorial_blueprint)
+    augmented_content = _ensure_editorial_component_boxes(
+        fallback_markdown,
+        components_added,
+    )
+    augmentation_applied = (
+        bool(components_added)
+        and _normalize_markdown_for_comparison(augmented_content)
+        != _normalize_markdown_for_comparison(fallback_markdown)
+    )
+    component_names = ", ".join(item["component"] for item in components_added) or "none"
+    augmentation_summary = (
+        "Applied insert-only editorial cleanup from blueprint: "
+        f"{component_names}."
+        if components_added
+        else "No insert-only editorial cleanup needed from blueprint."
+    )
+    return {
+        "augmented_content": augmented_content,
+        "components_added": components_added,
+        "diagnostic": {
+            "cognitive_load": "strong",
+            "narrative_density": "strong",
+            "emphasis_clarity": "strong",
+            "reading_behavior_risk": "strong",
+        },
+        "augmentation_summary": augmentation_summary,
+        "augmentation_applied": augmentation_applied,
     }
 
 
@@ -2409,6 +3425,69 @@ def _should_force_v2_second_pass(
     )
 
 
+def _build_v2_rewrite_retry_feedback(
+    *,
+    retry_count: int,
+    retry_feedback: dict[str, Any],
+    previous_quality: dict[str, Any],
+) -> str:
+    """Build prompt suffix for graph-level rewrite retries."""
+    if retry_count <= 0:
+        return ""
+
+    retry_payload = _safe_dict(retry_feedback)
+    quality_payload = _safe_dict(previous_quality)
+
+    required_revisions = _safe_string_list(retry_payload.get("required_revisions"))
+    if not required_revisions:
+        required_revisions = _safe_string_list(quality_payload.get("required_revisions"))
+    if not required_revisions:
+        required_revisions = [
+            "Increase guideline-aligned reader utility with clearer section intent.",
+            "Improve specificity and practical takeaways; reduce generic filler.",
+            "Restructure flow more decisively instead of light paraphrasing.",
+        ]
+
+    previous_overall_score = _safe_int(
+        retry_payload.get("overall_score"),
+        default=_safe_int(
+            quality_payload.get("overall_score"),
+            default=0,
+            min_value=0,
+            max_value=10,
+        ),
+        min_value=0,
+        max_value=10,
+    )
+    previous_ngram_overlap = retry_payload.get("ngram_overlap")
+    try:
+        ngram_text = f"{float(previous_ngram_overlap):.3f}"
+    except (TypeError, ValueError):
+        ngram_text = "N/A"
+
+    quality_summary = _safe_str(retry_payload.get("quality_summary")) or _safe_str(
+        quality_payload.get("quality_summary")
+    )
+    if not quality_summary:
+        quality_summary = (
+            "Prior attempt did not clear quality thresholds for publication readiness."
+        )
+
+    rewrite_intensity = (
+        "strong" if retry_count >= 2 or previous_overall_score <= 6 else "medium"
+    )
+    required_revisions_text = "\n".join(f"- {item}" for item in required_revisions[:6])
+
+    return (
+        V2_REWRITE_RETRY_FEEDBACK_SUFFIX.replace("{retry_attempt}", str(retry_count + 1))
+        .replace("{previous_overall_score}", str(previous_overall_score))
+        .replace("{previous_ngram_overlap}", ngram_text)
+        .replace("{rewrite_intensity}", rewrite_intensity)
+        .replace("{quality_summary}", quality_summary)
+        .replace("{required_revisions}", required_revisions_text)
+    )
+
+
 async def extract_article(request: ExtractRequest) -> JSONResponse:
     """
     Fetch an article URL and extract title + content using Gemini.
@@ -2457,9 +3536,13 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
             detail="Page returned too little text content to extract an article.",
         )
 
-    # Truncate very long pages to avoid token limits
-    max_chars = 60_000
-    if len(raw_text) > max_chars:
+    max_chars = _read_int_env(
+        URL2BLOG_INPUT_CHAR_LIMIT_ENV,
+        default=URL2BLOG_INPUT_CHAR_LIMIT_DEFAULT,
+        min_value=0,
+        max_value=1_000_000,
+    )
+    if max_chars > 0 and len(raw_text) > max_chars:
         raw_text = raw_text[:max_chars]
 
     # Send to Gemini for extraction
@@ -2614,7 +3697,7 @@ async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
     article_types_for_prompt = "\n".join(
         f"- {item['name']}: {item['definition']}" for item in article_types
     )
-    content_for_prompt = content[:15_000]
+    content_for_prompt = _llm_context_text(content)
 
     prompt = CLASSIFY_ARTICLE_TYPE_PROMPT.format(
         article_types=article_types_for_prompt,
@@ -2723,81 +3806,38 @@ async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
 @router.post("/pipeline-v2")
 async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
     """
-    Simplified URL2Blog pipeline:
-    extract -> classify -> guideline-based rewrite.
+    URL2Blog pipeline-v2 entrypoint.
+
+    Internals run through the LangGraph runner; request/response contract remains stable.
     """
+    try:
+        return await run_url2blog_pipeline_graph(request=request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("URL2Blog pipeline-v2 request failed")
+        raise HTTPException(
+            status_code=500,
+            detail=f"URL2Blog pipeline failed: {exc}",
+        )
+
+
+async def _pipeline_v2_run_stage1(
+    *,
+    request: PipelineV2Request,
+    run_id: str,
+    selected_model_name: str,
+    include_debug: bool,
+    stage_trace: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Execute URL2Blog stage 1 extraction and normalization."""
     url = request.url.strip()
-    selected_model_name = _resolve_url2blog_model(request.model_name)
-    execution_profile = _resolve_execution_profile(request.execution_profile)
-    is_lean_profile = execution_profile == "lean"
-    include_debug = request.include_debug
-    narrative_focus = _safe_str(request.narrative_focus)
-    enable_web_enrichment = request.enable_web_enrichment and not is_lean_profile
-    enable_editorial_augmentation = (
-        request.enable_editorial_augmentation and not is_lean_profile
-    )
-    json_parse_metrics: dict[str, Any] = {
-        "total_parse_failures": 0,
-        "recovered_calls": 0,
-        "recovered_parse_failures": 0,
-        "failures_by_stage": {},
-    }
-    max_external_context_items = _safe_int(
-        request.max_external_context_items,
-        default=DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS,
-        min_value=1,
-        max_value=5,
-    )
-    max_length_expansion_passes = (
-        1 if is_lean_profile else MAX_LENGTH_EXPANSION_PASSES
-    )
-    stage_trace: list[dict[str, Any]] = []
-
-    def _append_stage_trace(
-        *,
-        stage: str,
-        model_name: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
-        input_payload: Any | None = None,
-        prompt: str | None = None,
-        raw_response: str | None = None,
-        parsed: Any | None = None,
-        output: Any | None = None,
-        grounded_urls: list[str] | None = None,
-        error: str | None = None,
-    ) -> None:
-        if not include_debug:
-            return
-
-        entry: dict[str, Any] = {"stage": stage}
-        if model_name is not None:
-            entry["model_name"] = model_name
-        if max_tokens is not None:
-            entry["max_tokens"] = max_tokens
-        if temperature is not None:
-            entry["temperature"] = temperature
-        if input_payload is not None:
-            entry["input"] = input_payload
-        if prompt is not None:
-            entry["prompt"] = prompt
-        if raw_response is not None:
-            entry["raw_response"] = raw_response
-        if parsed is not None:
-            entry["parsed"] = parsed
-        if output is not None:
-            entry["output"] = output
-        if grounded_urls is not None:
-            entry["grounded_urls"] = grounded_urls
-        if error:
-            entry["error"] = error
-
-        stage_trace.append(entry)
     if not url.startswith(("http://", "https://")):
         raise HTTPException(
             status_code=400, detail="URL must start with http:// or https://"
         )
-    run_id = str(uuid4())
+
+    trace = list(stage_trace or [])
     write_status(
         run_id,
         {
@@ -2810,7 +3850,6 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         feature=FEATURE_NAME,
     )
 
-    # Reuse existing extraction logic.
     stage1_response = await extract_article(
         ExtractRequest(
             url=url,
@@ -2824,26 +3863,16 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         "stage_1",
         {"created_at": _now_iso(), "data": stage1_payload},
     )
-    write_status(
-        run_id,
-        {
-            "run_id": run_id,
-            "state": "running",
-            "stage": "stage_2",
-            "error": None,
-            "updated_at": _now_iso(),
-        },
-        feature=FEATURE_NAME,
-    )
+
     if include_debug:
         stage1_debug = _safe_dict(stage1_payload.get("debug"))
         stage1_trace = stage1_debug.get("trace")
         if isinstance(stage1_trace, list):
             for entry in stage1_trace:
                 if isinstance(entry, dict):
-                    stage_trace.append(entry)
-    parsed_article = _safe_dict(stage1_payload.get("parsed"))
+                    trace.append(entry)
 
+    parsed_article = _safe_dict(stage1_payload.get("parsed"))
     if not parsed_article:
         raise HTTPException(
             status_code=500,
@@ -2871,9 +3900,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         raise HTTPException(
             status_code=422, detail="No article content available after extraction."
         )
+
     source_word_count = len(_tokenize_similarity_words(normalized_content))
     min_expanded_word_target = _resolve_min_expanded_word_target(source_word_count)
-
     normalized_language = (
         "English"
         if was_translated
@@ -2882,13 +3911,48 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         )
     )
 
-    # Reuse existing classification logic.
+    return {
+        "stage1_payload": stage1_payload,
+        "trace": trace,
+        "normalized_title": normalized_title,
+        "normalized_content": normalized_content,
+        "normalized_language": normalized_language,
+        "source_word_count": source_word_count,
+        "min_expanded_word_target": min_expanded_word_target,
+    }
+
+
+async def _pipeline_v2_run_stage2(
+    *,
+    request: PipelineV2Request,
+    run_id: str,
+    selected_model_name: str,
+    include_debug: bool,
+    json_parse_metrics: dict[str, Any],
+    stage_trace: list[dict[str, Any]],
+    normalized_title: str,
+    normalized_content: str,
+    normalized_language: str,
+) -> dict[str, Any]:
+    """Execute URL2Blog stage 2 classification."""
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": "stage_2",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
     with _json_parse_tracking_scope(json_parse_metrics, "stage2_classification"):
         stage2_response = await classify_article_type(
             Stage2ClassifyRequest(
                 title=normalized_title,
                 content=normalized_content,
-                source_url=url,
+                source_url=request.url.strip(),
                 language=normalized_language,
                 model_name=selected_model_name,
                 include_debug=include_debug,
@@ -2900,26 +3964,177 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         "stage_2",
         {"created_at": _now_iso(), "data": stage2_payload},
     )
+    next_stage = "rewrite_quality"
+    if (
+        request.enable_editorial_augmentation
+        and _use_editorial_blueprint()
+        and _resolve_execution_profile(request.execution_profile) != "lean"
+    ):
+        next_stage = "editorial_blueprint"
+
     write_status(
         run_id,
         {
             "run_id": run_id,
             "state": "running",
-            "stage": "rewrite",
+            "stage": next_stage,
             "error": None,
             "updated_at": _now_iso(),
         },
         feature=FEATURE_NAME,
     )
+
+    trace = list(stage_trace)
     if include_debug:
         stage2_debug = _safe_dict(stage2_payload.get("debug"))
         stage2_trace = stage2_debug.get("trace")
         if isinstance(stage2_trace, list):
             for entry in stage2_trace:
                 if isinstance(entry, dict):
-                    stage_trace.append(entry)
-    classification = _safe_dict(stage2_payload.get("classification"))
+                    trace.append(entry)
 
+    return {
+        "stage2_payload": stage2_payload,
+        "trace": trace,
+        "classification": _safe_dict(stage2_payload.get("classification")),
+    }
+
+
+def _pipeline_v2_append_stage_trace(
+    *,
+    stage_trace: list[dict[str, Any]],
+    include_debug: bool,
+    stage: str,
+    model_name: str | None = None,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    input_payload: Any | None = None,
+    prompt: str | None = None,
+    raw_response: str | None = None,
+    parsed: Any | None = None,
+    output: Any | None = None,
+    grounded_urls: list[str] | None = None,
+    error: str | None = None,
+) -> list[dict[str, Any]]:
+    if not include_debug:
+        return stage_trace
+
+    entry: dict[str, Any] = {"stage": stage}
+    if model_name is not None:
+        entry["model_name"] = model_name
+    if max_tokens is not None:
+        entry["max_tokens"] = max_tokens
+    if temperature is not None:
+        entry["temperature"] = temperature
+    if input_payload is not None:
+        entry["input"] = input_payload
+    if prompt is not None:
+        entry["prompt"] = prompt
+    if raw_response is not None:
+        entry["raw_response"] = raw_response
+    if parsed is not None:
+        entry["parsed"] = parsed
+    if output is not None:
+        entry["output"] = output
+    if grounded_urls is not None:
+        entry["grounded_urls"] = grounded_urls
+    if error:
+        entry["error"] = error
+
+    stage_trace.append(entry)
+    return stage_trace
+
+
+def _pipeline_v2_prepare_context(
+    *,
+    request: PipelineV2Request,
+    run_id: str,
+    selected_model_name: str,
+    execution_profile: str,
+    stage1_payload: dict[str, Any],
+    stage2_payload: dict[str, Any],
+    stage_trace: list[dict[str, Any]] | None,
+    json_parse_metrics: dict[str, Any] | None,
+) -> dict[str, Any]:
+    url = request.url.strip()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(
+            status_code=400, detail="URL must start with http:// or https://"
+        )
+
+    include_debug = request.include_debug
+    is_lean_profile = execution_profile == "lean"
+    narrative_focus = _safe_str(request.narrative_focus)
+    use_markdown_long_stages = _use_markdown_long_stages()
+    use_editorial_blueprint = _use_editorial_blueprint()
+    use_editorial_insert_only_post = _use_editorial_insert_only_post()
+    use_editorial_post_recheck = _use_editorial_post_recheck()
+    enable_web_enrichment = request.enable_web_enrichment and not is_lean_profile
+    enable_editorial_augmentation = (
+        request.enable_editorial_augmentation and not is_lean_profile
+    )
+
+    parse_metrics = (
+        json_parse_metrics
+        if isinstance(json_parse_metrics, dict)
+        else {
+            "total_parse_failures": 0,
+            "recovered_calls": 0,
+            "recovered_parse_failures": 0,
+            "failures_by_stage": {},
+        }
+    )
+
+    max_external_context_items = _safe_int(
+        request.max_external_context_items,
+        default=DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS,
+        min_value=1,
+        max_value=5,
+    )
+    max_length_expansion_passes = (
+        1 if is_lean_profile else MAX_LENGTH_EXPANSION_PASSES
+    )
+
+    parsed_article = _safe_dict(stage1_payload.get("parsed"))
+    if not parsed_article:
+        raise HTTPException(
+            status_code=500,
+            detail=stage1_payload.get("parse_error")
+            or "Stage 1 returned no parsed article content.",
+        )
+
+    translated_article = _safe_dict(stage1_payload.get("translated"))
+    translation_skipped = _safe_bool(
+        stage1_payload.get("translation_skipped"), default=False
+    )
+    was_translated = not translation_skipped and bool(translated_article)
+
+    normalized_title = (
+        _safe_str(translated_article.get("title"))
+        if was_translated
+        else _safe_str(parsed_article.get("title"))
+    )
+    normalized_content = (
+        _safe_str(translated_article.get("content"))
+        if was_translated
+        else _safe_str(parsed_article.get("content"))
+    )
+    if not normalized_content:
+        raise HTTPException(
+            status_code=422, detail="No article content available after extraction."
+        )
+
+    source_word_count = len(_tokenize_similarity_words(normalized_content))
+    min_expanded_word_target = _resolve_min_expanded_word_target(source_word_count)
+    normalized_language = (
+        "English"
+        if was_translated
+        else _normalize_language_name(
+            _safe_str(parsed_article.get("language")) or "English"
+        )
+    )
+
+    classification = _safe_dict(stage2_payload.get("classification"))
     article_type_id: int | None = None
     raw_type_id = classification.get("id")
     if isinstance(raw_type_id, int):
@@ -2944,6 +4159,140 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 "title_guideline": article_type_row.get("title_guideline") or "",
             }
 
+    return {
+        "run_id": run_id,
+        "url": url,
+        "selected_model_name": selected_model_name,
+        "execution_profile": execution_profile,
+        "is_lean_profile": is_lean_profile,
+        "include_debug": include_debug,
+        "narrative_focus": narrative_focus,
+        "use_markdown_long_stages": use_markdown_long_stages,
+        "use_editorial_blueprint": use_editorial_blueprint,
+        "use_editorial_insert_only_post": use_editorial_insert_only_post,
+        "use_editorial_post_recheck": use_editorial_post_recheck,
+        "enable_web_enrichment": enable_web_enrichment,
+        "enable_editorial_augmentation": enable_editorial_augmentation,
+        "json_parse_metrics": parse_metrics,
+        "max_external_context_items": max_external_context_items,
+        "max_length_expansion_passes": max_length_expansion_passes,
+        "stage_trace": list(stage_trace or []),
+        "stage1_payload": _safe_dict(stage1_payload),
+        "stage2_payload": _safe_dict(stage2_payload),
+        "parsed_article": parsed_article,
+        "was_translated": was_translated,
+        "normalized_title": normalized_title,
+        "normalized_content": normalized_content,
+        "normalized_language": normalized_language,
+        "source_word_count": source_word_count,
+        "min_expanded_word_target": min_expanded_word_target,
+        "classification": classification,
+        "guideline_payload": guideline_payload,
+    }
+
+
+def _pipeline_v2_run_rewrite_quality_phase(
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    run_id = _safe_str(context.get("run_id"))
+    url = _safe_str(context.get("url"))
+    selected_model_name = _safe_str(context.get("selected_model_name"))
+    include_debug = _safe_bool(context.get("include_debug"), default=False)
+    narrative_focus = _safe_str(context.get("narrative_focus"))
+    enable_web_enrichment = _safe_bool(
+        context.get("enable_web_enrichment"), default=False
+    )
+    enable_editorial_augmentation = _safe_bool(
+        context.get("enable_editorial_augmentation"), default=False
+    )
+    is_lean_profile = _safe_bool(context.get("is_lean_profile"), default=False)
+    use_markdown_long_stages = _safe_bool(
+        context.get("use_markdown_long_stages"),
+        default=URL2BLOG_USE_MARKDOWN_LONG_STAGES_DEFAULT,
+    )
+    use_editorial_blueprint = _safe_bool(
+        context.get("use_editorial_blueprint"),
+        default=URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED_DEFAULT,
+    )
+    long_output_transport = "markdown" if use_markdown_long_stages else "json"
+    title_pass_applied_count = _safe_int(
+        context.get("title_pass_applied_count"),
+        default=0,
+        min_value=0,
+        max_value=99,
+    )
+    editorial_blueprint = _safe_dict(context.get("editorial_blueprint"))
+    editorial_blueprint_for_prompt = _safe_str(
+        context.get("editorial_blueprint_for_prompt")
+    )
+    if not editorial_blueprint_for_prompt:
+        editorial_blueprint_for_prompt = _format_editorial_blueprint_for_prompt(
+            editorial_blueprint
+        )
+    editorial_blueprint_raw_response = _safe_str(
+        context.get("editorial_blueprint_raw_response")
+    )
+    editorial_blueprint_applied = _safe_bool(
+        context.get("editorial_blueprint_applied"),
+        default=False,
+    )
+
+    json_parse_metrics = _safe_dict(context.get("json_parse_metrics"))
+    if not json_parse_metrics:
+        json_parse_metrics = {
+            "total_parse_failures": 0,
+            "recovered_calls": 0,
+            "recovered_parse_failures": 0,
+            "failures_by_stage": {},
+        }
+
+    max_external_context_items = _safe_int(
+        context.get("max_external_context_items"),
+        default=DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS,
+        min_value=1,
+        max_value=5,
+    )
+    rewrite_retry_count = _safe_int(
+        context.get("rewrite_quality_retry_count"),
+        default=0,
+        min_value=0,
+        max_value=10,
+    )
+    rewrite_retry_feedback = _safe_dict(context.get("rewrite_retry_feedback"))
+    previous_quality = _safe_dict(context.get("quality"))
+
+    normalized_title = _safe_str(context.get("normalized_title"))
+    normalized_content = _safe_str(context.get("normalized_content"))
+    source_word_count = _safe_int(
+        context.get("source_word_count"),
+        default=0,
+        min_value=0,
+        max_value=200_000,
+    )
+    classification = _safe_dict(context.get("classification"))
+    guideline_payload = _safe_dict(context.get("guideline_payload"))
+    stage_trace = list(context.get("stage_trace") or [])
+
+    should_generate_editorial_blueprint = (
+        enable_editorial_augmentation and use_editorial_blueprint and not is_lean_profile
+    )
+
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": (
+                "editorial_blueprint"
+                if should_generate_editorial_blueprint
+                else "rewrite_quality"
+            ),
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
     external_context_points: list[dict[str, str]] = []
     external_context_usage_note = ""
     external_context_raw_response = ""
@@ -2965,7 +4314,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             )
             .replace("{source_url}", url)
             .replace("{source_title}", normalized_title)
-            .replace("{source_content}", normalized_content[:20_000])
+            .replace("{source_content}", _llm_context_text(normalized_content))
             .replace(
                 "{article_type}",
                 json.dumps(classification, ensure_ascii=False, indent=2),
@@ -2993,7 +4342,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         external_context_points = external_context["context_points"]
         external_context_usage_note = external_context["usage_note"]
         short_article_enrichment_applied = bool(external_context_points)
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="short_article_enrichment",
             model_name=selected_model_name,
             max_tokens=1024,
@@ -3001,7 +4352,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             input_payload={
                 "source_url": url,
                 "source_title": normalized_title,
-                "source_content": normalized_content[:20_000],
+                "source_content": _llm_context_text(normalized_content),
                 "article_type": classification,
                 "narrative_focus": narrative_focus,
                 "max_external_context_items": max_external_context_items,
@@ -3013,7 +4364,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             grounded_urls=external_context_grounded_urls,
         )
     else:
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="short_article_enrichment",
             model_name=selected_model_name,
             max_tokens=1024,
@@ -3035,12 +4388,10 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         else "No external context collected."
     )
 
-    source_fact_anchors: list[dict[str, str]] = []
-    source_facts_raw_response = ""
     source_facts_prompt = (
         V2_SOURCE_FACTS_EXTRACTION_PROMPT.replace("{max_facts}", "18")
         .replace("{source_title}", normalized_title)
-        .replace("{source_content}", normalized_content[:20_000])
+        .replace("{source_content}", _llm_context_text(normalized_content))
     )
     source_facts_parsed, source_facts_raw_response = _invoke_json_llm_tracked(
         prompt=source_facts_prompt,
@@ -3051,14 +4402,16 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         model_name=selected_model_name,
     )
     source_fact_anchors = _sanitize_v2_source_facts(source_facts_parsed, max_facts=18)
-    _append_stage_trace(
+    stage_trace = _pipeline_v2_append_stage_trace(
+        stage_trace=stage_trace,
+        include_debug=include_debug,
         stage="source_facts_extraction",
         model_name=selected_model_name,
         max_tokens=1536,
         temperature=0.05,
         input_payload={
             "source_title": normalized_title,
-            "source_content": normalized_content[:20_000],
+            "source_content": _llm_context_text(normalized_content),
             "max_facts": 18,
         },
         prompt=source_facts_prompt,
@@ -3067,20 +4420,147 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         output={"source_fact_anchors": source_fact_anchors},
     )
 
+    if should_generate_editorial_blueprint:
+        if not editorial_blueprint:
+            editorial_blueprint_prompt = (
+                V2_EDITORIAL_BLUEPRINT_PROMPT.replace("{source_title}", normalized_title)
+                .replace("{source_content}", _llm_context_text(normalized_content))
+                .replace(
+                    "{article_type}",
+                    json.dumps(classification, ensure_ascii=False, indent=2),
+                )
+                .replace(
+                    "{guideline}",
+                    guideline_payload.get("guideline") or "No guideline provided.",
+                )
+                .replace(
+                    "{title_guideline}",
+                    guideline_payload.get("title_guideline")
+                    or "No title guideline provided.",
+                )
+                .replace(
+                    "{narrative_focus}",
+                    narrative_focus or "No additional narrative focus provided.",
+                )
+                .replace(
+                    "{source_facts}",
+                    json.dumps(source_fact_anchors, ensure_ascii=False, indent=2)
+                    if source_fact_anchors
+                    else "No source facts extracted.",
+                )
+            )
+            editorial_blueprint_parsed, editorial_blueprint_raw_response = (
+                _invoke_json_llm_tracked(
+                    prompt=editorial_blueprint_prompt,
+                    stage_name="editorial_blueprint",
+                    parse_metrics=json_parse_metrics,
+                    max_tokens=1536,
+                    temperature=0.05,
+                    model_name=selected_model_name,
+                )
+            )
+            editorial_blueprint = _sanitize_v2_editorial_blueprint(
+                editorial_blueprint_parsed
+            )
+            editorial_blueprint_applied = _safe_bool(
+                editorial_blueprint.get("apply_plan"), default=False
+            ) and bool(list(editorial_blueprint.get("components") or []))
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
+                stage="editorial_blueprint",
+                model_name=selected_model_name,
+                max_tokens=1536,
+                temperature=0.05,
+                input_payload={
+                    "source_title": normalized_title,
+                    "source_content": _llm_context_text(normalized_content),
+                    "article_type": classification,
+                    "guideline": guideline_payload.get("guideline")
+                    or "No guideline provided.",
+                    "title_guideline": guideline_payload.get("title_guideline")
+                    or "No title guideline provided.",
+                    "narrative_focus": narrative_focus,
+                    "source_facts": source_fact_anchors,
+                },
+                prompt=editorial_blueprint_prompt,
+                raw_response=editorial_blueprint_raw_response,
+                parsed=editorial_blueprint_parsed,
+                output=editorial_blueprint,
+            )
+            write_stage_result(
+                run_id,
+                "editorial_blueprint",
+                {"created_at": _now_iso(), "data": editorial_blueprint},
+            )
+        else:
+            editorial_blueprint = _sanitize_v2_editorial_blueprint(editorial_blueprint)
+            editorial_blueprint_applied = _safe_bool(
+                editorial_blueprint.get("apply_plan"), default=False
+            ) and bool(list(editorial_blueprint.get("components") or []))
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
+                stage="editorial_blueprint",
+                model_name=selected_model_name,
+                max_tokens=1536,
+                temperature=0.05,
+                output={
+                    "reused_from_context": True,
+                    "editorial_blueprint_applied": editorial_blueprint_applied,
+                    "components_planned": [
+                        _safe_str(item.get("component"))
+                        for item in list(editorial_blueprint.get("components") or [])
+                        if isinstance(item, dict)
+                    ],
+                },
+            )
+        write_status(
+            run_id,
+            {
+                "run_id": run_id,
+                "state": "running",
+                "stage": "rewrite_quality",
+                "error": None,
+                "updated_at": _now_iso(),
+            },
+            feature=FEATURE_NAME,
+        )
+    else:
+        editorial_blueprint = _sanitize_v2_editorial_blueprint(editorial_blueprint)
+        editorial_blueprint_applied = False
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
+            stage="editorial_blueprint",
+            model_name=selected_model_name,
+            max_tokens=1536,
+            temperature=0.05,
+            output={
+                "skipped": True,
+                "reason": "Editorial blueprint disabled for this run.",
+            },
+        )
+
+    editorial_blueprint_for_prompt = _format_editorial_blueprint_for_prompt(
+        editorial_blueprint
+    )
+
     rewrite_prompt = (
         V2_GUIDELINE_REWRITE_PROMPT.replace("{title}", normalized_title)
-        .replace("{content}", normalized_content[:20_000])
+        .replace("{content}", _llm_context_text(normalized_content))
         .replace(
             "{article_type}",
             json.dumps(classification, ensure_ascii=False, indent=2),
         )
         .replace(
             "{guideline}",
-            guideline_payload["guideline"] or "No guideline provided.",
+            guideline_payload.get("guideline") or "No guideline provided.",
         )
         .replace(
             "{title_guideline}",
-            guideline_payload["title_guideline"] or "No title guideline provided.",
+            guideline_payload.get("title_guideline")
+            or "No title guideline provided.",
         )
         .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
         .replace(
@@ -3088,39 +4568,150 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             narrative_focus or "No additional narrative focus provided.",
         )
         .replace("{external_context}", external_context_for_prompt)
+        .replace(
+            "{editorial_blueprint_directives}",
+            editorial_blueprint_for_prompt,
+        )
     )
-    rewrite_parsed, rewrite_raw_response = _invoke_json_llm_tracked(
-        prompt=rewrite_prompt,
-        stage_name="guideline_rewrite_initial",
-        parse_metrics=json_parse_metrics,
-        max_tokens=6144,
-        temperature=0.1,
-        model_name=selected_model_name,
+    retry_feedback_prompt = _build_v2_rewrite_retry_feedback(
+        retry_count=rewrite_retry_count,
+        retry_feedback=rewrite_retry_feedback,
+        previous_quality=previous_quality,
     )
-    rewrite = _sanitize_v2_guideline_rewrite(
-        rewrite_parsed,
-        fallback_title=normalized_title,
-        fallback_content=normalized_content,
+    if retry_feedback_prompt:
+        rewrite_prompt = f"{rewrite_prompt}\n\n{retry_feedback_prompt}".strip()
+
+    rewrite_prompt_markdown = (
+        V2_GUIDELINE_REWRITE_MARKDOWN_PROMPT.replace("{title}", normalized_title)
+        .replace("{content}", _llm_context_text(normalized_content))
+        .replace(
+            "{article_type}",
+            json.dumps(classification, ensure_ascii=False, indent=2),
+        )
+        .replace(
+            "{guideline}",
+            guideline_payload.get("guideline") or "No guideline provided.",
+        )
+        .replace(
+            "{title_guideline}",
+            guideline_payload.get("title_guideline")
+            or "No title guideline provided.",
+        )
+        .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
+        .replace(
+            "{narrative_focus}",
+            narrative_focus or "No additional narrative focus provided.",
+        )
+        .replace("{external_context}", external_context_for_prompt)
+        .replace(
+            "{editorial_blueprint_directives}",
+            editorial_blueprint_for_prompt,
+        )
     )
-    _append_stage_trace(
+    if retry_feedback_prompt:
+        rewrite_prompt_markdown = (
+            f"{rewrite_prompt_markdown}\n\n{retry_feedback_prompt}".strip()
+        )
+
+    rewrite_temperature = 0.1 if rewrite_retry_count == 0 else 0.2
+    rewrite_stage_transport = "json"
+    rewrite_title_raw_response = ""
+    rewrite_parsed: dict[str, Any] = {}
+    if use_markdown_long_stages:
+        rewrite_long_output = _invoke_markdown_long_output(
+            prompt=rewrite_prompt_markdown,
+            stage_name="guideline_rewrite_initial",
+            model_name=selected_model_name,
+            temperature=rewrite_temperature,
+            max_tokens=6144,
+            fallback_content=normalized_content,
+            parse_metrics=json_parse_metrics,
+            legacy_json_prompt=rewrite_prompt,
+            legacy_json_stage_name="guideline_rewrite_initial_legacy_json",
+            legacy_content_key="improved_content",
+            legacy_title_key="improved_title",
+        )
+        rewrite_raw_response = _safe_str(rewrite_long_output.get("raw_response"))
+        rewrite_stage_transport = _safe_str(rewrite_long_output.get("transport")) or "markdown"
+        if rewrite_stage_transport == "json_fallback":
+            long_output_transport = "json_fallback"
+        rewrite_fallback_title = _safe_str(
+            rewrite_long_output.get("fallback_title")
+        ) or normalized_title
+        title_prompt = (
+            V2_TITLE_GENERATION_PROMPT.replace(
+                "{article_type}",
+                json.dumps(classification, ensure_ascii=False, indent=2),
+            )
+            .replace(
+                "{title_guideline}",
+                guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
+            )
+            .replace(
+                "{narrative_focus}",
+                narrative_focus or "No additional narrative focus provided.",
+            )
+            .replace("{source_title}", normalized_title)
+            .replace(
+                "{rewritten_content}",
+                _llm_context_text(_safe_str(rewrite_long_output.get("content"))),
+            )
+        )
+        generated_title, rewrite_title_raw_response = _invoke_title_generation(
+            prompt=title_prompt,
+            model_name=selected_model_name,
+            fallback_title=rewrite_fallback_title,
+        )
+        title_pass_applied_count += 1
+        rewrite = _build_v2_rewrite_from_markdown(
+            improved_title=generated_title,
+            improved_content=_safe_str(rewrite_long_output.get("content")),
+        )
+    else:
+        rewrite_parsed, rewrite_raw_response = _invoke_json_llm_tracked(
+            prompt=rewrite_prompt,
+            stage_name="guideline_rewrite_initial",
+            parse_metrics=json_parse_metrics,
+            max_tokens=6144,
+            temperature=rewrite_temperature,
+            model_name=selected_model_name,
+        )
+        rewrite = _sanitize_v2_guideline_rewrite(
+            rewrite_parsed,
+            fallback_title=normalized_title,
+            fallback_content=normalized_content,
+        )
+
+    stage_trace = _pipeline_v2_append_stage_trace(
+        stage_trace=stage_trace,
+        include_debug=include_debug,
         stage="guideline_rewrite_initial",
         model_name=selected_model_name,
         max_tokens=6144,
-        temperature=0.1,
+        temperature=rewrite_temperature,
         input_payload={
             "title": normalized_title,
-            "content": normalized_content[:20_000],
+            "content": _llm_context_text(normalized_content),
             "article_type": classification,
-            "guideline": guideline_payload["guideline"] or "No guideline provided.",
-            "title_guideline": guideline_payload["title_guideline"]
+            "guideline": guideline_payload.get("guideline") or "No guideline provided.",
+            "title_guideline": guideline_payload.get("title_guideline")
             or "No title guideline provided.",
             "narrative_focus": narrative_focus,
             "external_context": external_context_points,
+            "rewrite_retry_count": rewrite_retry_count,
+            "rewrite_retry_feedback": rewrite_retry_feedback,
+            "transport": rewrite_stage_transport,
+            "use_markdown_long_stages": use_markdown_long_stages,
         },
-        prompt=rewrite_prompt,
+        prompt=rewrite_prompt_markdown if use_markdown_long_stages else rewrite_prompt,
         raw_response=rewrite_raw_response,
-        parsed=rewrite_parsed,
-        output=rewrite,
+        parsed=rewrite_parsed if not use_markdown_long_stages else None,
+        output={
+            **rewrite,
+            "transport": rewrite_stage_transport,
+            "title_raw_response": rewrite_title_raw_response,
+        },
     )
 
     source_words = _tokenize_similarity_words(normalized_content)
@@ -3129,20 +4720,21 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
 
     quality_prompt = (
         V2_QUALITY_AUDIT_PROMPT.replace("{source_title}", normalized_title)
-        .replace("{source_content}", normalized_content[:20_000])
+        .replace("{source_content}", _llm_context_text(normalized_content))
         .replace("{rewritten_title}", rewrite["improved_title"])
-        .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+        .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
         .replace(
             "{article_type}",
             json.dumps(classification, ensure_ascii=False, indent=2),
         )
         .replace(
             "{guideline}",
-            guideline_payload["guideline"] or "No guideline provided.",
+            guideline_payload.get("guideline") or "No guideline provided.",
         )
         .replace(
             "{title_guideline}",
-            guideline_payload["title_guideline"] or "No title guideline provided.",
+            guideline_payload.get("title_guideline")
+            or "No title guideline provided.",
         )
         .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
         .replace("{ngram_overlap}", f"{ngram_overlap:.3f}")
@@ -3161,19 +4753,21 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         model_name=selected_model_name,
     )
     quality = _sanitize_v2_quality_audit(quality_parsed)
-    _append_stage_trace(
+    stage_trace = _pipeline_v2_append_stage_trace(
+        stage_trace=stage_trace,
+        include_debug=include_debug,
         stage="quality_audit_initial",
         model_name=selected_model_name,
         max_tokens=1024,
         temperature=0.05,
         input_payload={
             "source_title": normalized_title,
-            "source_content": normalized_content[:20_000],
+            "source_content": _llm_context_text(normalized_content),
             "rewritten_title": rewrite["improved_title"],
-            "rewritten_content": rewrite["improved_content"][:20_000],
+            "rewritten_content": _llm_context_text(rewrite["improved_content"]),
             "article_type": classification,
-            "guideline": guideline_payload["guideline"] or "No guideline provided.",
-            "title_guideline": guideline_payload["title_guideline"]
+            "guideline": guideline_payload.get("guideline") or "No guideline provided.",
+            "title_guideline": guideline_payload.get("title_guideline")
             or "No title guideline provided.",
             "ngram_overlap": round(ngram_overlap, 3),
             "narrative_focus": narrative_focus,
@@ -3187,15 +4781,16 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
 
     second_pass_applied = False
     repair_raw_response = ""
+
     if not is_lean_profile and _should_force_v2_second_pass(quality, ngram_overlap):
         second_pass_applied = True
         previous_title = rewrite["improved_title"]
         previous_content = rewrite["improved_content"]
         repair_prompt = (
             V2_REWRITE_REPAIR_PROMPT.replace("{source_title}", normalized_title)
-            .replace("{source_content}", normalized_content[:20_000])
+            .replace("{source_content}", _llm_context_text(normalized_content))
             .replace("{previous_title}", previous_title)
-            .replace("{previous_content}", previous_content[:20_000])
+            .replace("{previous_content}", _llm_context_text(previous_content))
             .replace(
                 "{required_revisions}",
                 json.dumps(
@@ -3210,11 +4805,12 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             )
             .replace(
                 "{guideline}",
-                guideline_payload["guideline"] or "No guideline provided.",
+                guideline_payload.get("guideline") or "No guideline provided.",
             )
             .replace(
                 "{title_guideline}",
-                guideline_payload["title_guideline"] or "No title guideline provided.",
+                guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
             )
             .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
             .replace(
@@ -3222,63 +4818,181 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 narrative_focus or "No additional narrative focus provided.",
             )
             .replace("{external_context}", external_context_for_prompt)
+            .replace(
+                "{editorial_blueprint_directives}",
+                editorial_blueprint_for_prompt,
+            )
         )
-        repair_parsed, repair_raw_response = _invoke_json_llm_tracked(
-            prompt=repair_prompt,
-            stage_name="rewrite_repair_second_pass",
-            parse_metrics=json_parse_metrics,
-            max_tokens=6144,
-            temperature=0.1,
-            model_name=selected_model_name,
-        )
-        rewrite = _sanitize_v2_guideline_rewrite(
-            repair_parsed,
-            fallback_title=previous_title,
-            fallback_content=previous_content,
-        )
-        _append_stage_trace(
-            stage="rewrite_repair_second_pass",
-            model_name=selected_model_name,
-            max_tokens=6144,
-            temperature=0.1,
-            input_payload={
-                "source_title": normalized_title,
-                "source_content": normalized_content[:20_000],
-                "previous_title": previous_title,
-                "previous_content": previous_content[:20_000],
-                "required_revisions": quality["required_revisions"],
-                "article_type": classification,
-                "guideline": guideline_payload["guideline"]
-                or "No guideline provided.",
-                "title_guideline": guideline_payload["title_guideline"]
-                or "No title guideline provided.",
-                "narrative_focus": narrative_focus,
-                "external_context": external_context_points,
-            },
-            prompt=repair_prompt,
-            raw_response=repair_raw_response,
-            parsed=repair_parsed,
-            output=rewrite,
-        )
-
-        rewritten_words = _tokenize_similarity_words(rewrite["improved_content"])
-        ngram_overlap = _ngram_overlap_ratio(source_words, rewritten_words, n=10)
-        quality_prompt = (
-            V2_QUALITY_AUDIT_PROMPT.replace("{source_title}", normalized_title)
-            .replace("{source_content}", normalized_content[:20_000])
-            .replace("{rewritten_title}", rewrite["improved_title"])
-            .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+        repair_prompt_markdown = (
+            V2_REWRITE_REPAIR_MARKDOWN_PROMPT.replace("{source_title}", normalized_title)
+            .replace("{source_content}", _llm_context_text(normalized_content))
+            .replace("{previous_title}", previous_title)
+            .replace("{previous_content}", _llm_context_text(previous_content))
+            .replace(
+                "{required_revisions}",
+                json.dumps(
+                    quality["required_revisions"],
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
             .replace(
                 "{article_type}",
                 json.dumps(classification, ensure_ascii=False, indent=2),
             )
             .replace(
                 "{guideline}",
-                guideline_payload["guideline"] or "No guideline provided.",
+                guideline_payload.get("guideline") or "No guideline provided.",
             )
             .replace(
                 "{title_guideline}",
-                guideline_payload["title_guideline"] or "No title guideline provided.",
+                guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
+            )
+            .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
+            .replace(
+                "{narrative_focus}",
+                narrative_focus or "No additional narrative focus provided.",
+            )
+            .replace("{external_context}", external_context_for_prompt)
+            .replace(
+                "{editorial_blueprint_directives}",
+                editorial_blueprint_for_prompt,
+            )
+        )
+        repair_stage_transport = "json"
+        repair_title_raw_response = ""
+        repair_parsed: dict[str, Any] = {}
+        if use_markdown_long_stages:
+            repair_long_output = _invoke_markdown_long_output(
+                prompt=repair_prompt_markdown,
+                stage_name="rewrite_repair_second_pass",
+                model_name=selected_model_name,
+                temperature=0.1,
+                max_tokens=6144,
+                fallback_content=previous_content,
+                parse_metrics=json_parse_metrics,
+                legacy_json_prompt=repair_prompt,
+                legacy_json_stage_name="rewrite_repair_second_pass_legacy_json",
+                legacy_content_key="improved_content",
+                legacy_title_key="improved_title",
+            )
+            repair_raw_response = _safe_str(repair_long_output.get("raw_response"))
+            repair_stage_transport = (
+                _safe_str(repair_long_output.get("transport")) or "markdown"
+            )
+            if repair_stage_transport == "json_fallback":
+                long_output_transport = "json_fallback"
+            repair_fallback_title = _safe_str(
+                repair_long_output.get("fallback_title")
+            ) or previous_title
+            title_prompt = (
+                V2_TITLE_GENERATION_PROMPT.replace(
+                    "{article_type}",
+                    json.dumps(classification, ensure_ascii=False, indent=2),
+                )
+                .replace(
+                    "{title_guideline}",
+                    guideline_payload.get("title_guideline")
+                    or "No title guideline provided.",
+                )
+                .replace(
+                    "{narrative_focus}",
+                    narrative_focus or "No additional narrative focus provided.",
+                )
+                .replace("{source_title}", normalized_title)
+                .replace(
+                    "{rewritten_content}",
+                    _llm_context_text(_safe_str(repair_long_output.get("content"))),
+                )
+            )
+            generated_title, repair_title_raw_response = _invoke_title_generation(
+                prompt=title_prompt,
+                model_name=selected_model_name,
+                fallback_title=repair_fallback_title,
+            )
+            title_pass_applied_count += 1
+            rewrite = _build_v2_rewrite_from_markdown(
+                improved_title=generated_title,
+                improved_content=_safe_str(repair_long_output.get("content")),
+                previous_rewrite=rewrite,
+                guideline_alignment_summary=(
+                    "Second-pass hard rewrite improved structure, originality, and "
+                    "guideline alignment."
+                ),
+                improvements_applied=[
+                    "Applied required revisions from the failed quality audit.",
+                    "Restructured sections for stronger originality and flow.",
+                ],
+                remaining_gaps=[],
+            )
+        else:
+            repair_parsed, repair_raw_response = _invoke_json_llm_tracked(
+                prompt=repair_prompt,
+                stage_name="rewrite_repair_second_pass",
+                parse_metrics=json_parse_metrics,
+                max_tokens=6144,
+                temperature=0.1,
+                model_name=selected_model_name,
+            )
+            rewrite = _sanitize_v2_guideline_rewrite(
+                repair_parsed,
+                fallback_title=previous_title,
+                fallback_content=previous_content,
+            )
+
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
+            stage="rewrite_repair_second_pass",
+            model_name=selected_model_name,
+            max_tokens=6144,
+            temperature=0.1,
+            input_payload={
+                "source_title": normalized_title,
+                "source_content": _llm_context_text(normalized_content),
+                "previous_title": previous_title,
+                "previous_content": _llm_context_text(previous_content),
+                "required_revisions": quality["required_revisions"],
+                "article_type": classification,
+                "guideline": guideline_payload.get("guideline")
+                or "No guideline provided.",
+                "title_guideline": guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
+                "narrative_focus": narrative_focus,
+                "external_context": external_context_points,
+                "transport": repair_stage_transport,
+            },
+            prompt=repair_prompt_markdown if use_markdown_long_stages else repair_prompt,
+            raw_response=repair_raw_response,
+            parsed=repair_parsed if not use_markdown_long_stages else None,
+            output={
+                **rewrite,
+                "transport": repair_stage_transport,
+                "title_raw_response": repair_title_raw_response,
+            },
+        )
+
+        rewritten_words = _tokenize_similarity_words(rewrite["improved_content"])
+        ngram_overlap = _ngram_overlap_ratio(source_words, rewritten_words, n=10)
+
+        quality_prompt = (
+            V2_QUALITY_AUDIT_PROMPT.replace("{source_title}", normalized_title)
+            .replace("{source_content}", _llm_context_text(normalized_content))
+            .replace("{rewritten_title}", rewrite["improved_title"])
+            .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
+            .replace(
+                "{article_type}",
+                json.dumps(classification, ensure_ascii=False, indent=2),
+            )
+            .replace(
+                "{guideline}",
+                guideline_payload.get("guideline") or "No guideline provided.",
+            )
+            .replace(
+                "{title_guideline}",
+                guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
             )
             .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
             .replace("{ngram_overlap}", f"{ngram_overlap:.3f}")
@@ -3297,20 +5011,22 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             model_name=selected_model_name,
         )
         quality = _sanitize_v2_quality_audit(quality_parsed)
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="quality_audit_after_second_pass",
             model_name=selected_model_name,
             max_tokens=1024,
             temperature=0.05,
             input_payload={
                 "source_title": normalized_title,
-                "source_content": normalized_content[:20_000],
+                "source_content": _llm_context_text(normalized_content),
                 "rewritten_title": rewrite["improved_title"],
-                "rewritten_content": rewrite["improved_content"][:20_000],
+                "rewritten_content": _llm_context_text(rewrite["improved_content"]),
                 "article_type": classification,
-                "guideline": guideline_payload["guideline"]
+                "guideline": guideline_payload.get("guideline")
                 or "No guideline provided.",
-                "title_guideline": guideline_payload["title_guideline"]
+                "title_guideline": guideline_payload.get("title_guideline")
                 or "No title guideline provided.",
                 "ngram_overlap": round(ngram_overlap, 3),
                 "narrative_focus": narrative_focus,
@@ -3322,7 +5038,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             output=quality,
         )
     else:
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="rewrite_repair_second_pass",
             model_name=selected_model_name,
             max_tokens=6144,
@@ -3332,6 +5050,159 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 "reason": "Initial quality/originality checks passed.",
             },
         )
+
+    write_stage_result(
+        run_id,
+        "rewrite_quality",
+        {
+            "created_at": _now_iso(),
+            "data": {
+                "second_pass_applied": second_pass_applied,
+                "quality_scores": {
+                    "overall": quality["overall_score"],
+                    "guideline_coverage": quality["guideline_coverage_score"],
+                    "informativeness": quality["informativeness_score"],
+                    "originality": quality["originality_score"],
+                },
+                "similarity_ngram_overlap": round(ngram_overlap, 3),
+                "short_article_enrichment_applied": short_article_enrichment_applied,
+                "external_context_points_used": len(external_context_points),
+                "source_facts_extracted_count": len(source_fact_anchors),
+                "editorial_blueprint_applied": editorial_blueprint_applied,
+                "editorial_blueprint_components_planned": [
+                    _safe_str(item.get("component"))
+                    for item in list(editorial_blueprint.get("components") or [])
+                    if isinstance(item, dict)
+                ],
+                "long_output_transport": long_output_transport,
+                "title_pass_applied_count": title_pass_applied_count,
+            },
+        },
+    )
+
+    context.update(
+        {
+            "json_parse_metrics": json_parse_metrics,
+            "stage_trace": stage_trace,
+            "external_context_points": external_context_points,
+            "external_context_usage_note": external_context_usage_note,
+            "external_context_raw_response": external_context_raw_response,
+            "external_context_grounded_urls": external_context_grounded_urls,
+            "short_article_enrichment_applied": short_article_enrichment_applied,
+            "external_context_for_prompt": external_context_for_prompt,
+            "source_fact_anchors": source_fact_anchors,
+            "source_facts_raw_response": source_facts_raw_response,
+            "rewrite": rewrite,
+            "rewrite_raw_response": rewrite_raw_response,
+            "repair_raw_response": repair_raw_response,
+            "quality": quality,
+            "quality_raw_response": quality_raw_response,
+            "source_words": source_words,
+            "rewritten_words": rewritten_words,
+            "ngram_overlap": ngram_overlap,
+            "second_pass_applied": second_pass_applied,
+            "rewrite_retry_count": rewrite_retry_count,
+            "rewrite_retry_feedback": rewrite_retry_feedback,
+            "long_output_transport": long_output_transport,
+            "title_pass_applied_count": title_pass_applied_count,
+            "use_markdown_long_stages": use_markdown_long_stages,
+            "use_editorial_blueprint": use_editorial_blueprint,
+            "editorial_blueprint": editorial_blueprint,
+            "editorial_blueprint_raw_response": editorial_blueprint_raw_response,
+            "editorial_blueprint_applied": editorial_blueprint_applied,
+            "editorial_blueprint_for_prompt": editorial_blueprint_for_prompt,
+        }
+    )
+
+    return context
+
+
+def _pipeline_v2_run_fact_length_phase(
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    run_id = _safe_str(context.get("run_id"))
+    selected_model_name = _safe_str(context.get("selected_model_name"))
+    include_debug = _safe_bool(context.get("include_debug"), default=False)
+    narrative_focus = _safe_str(context.get("narrative_focus"))
+    is_lean_profile = _safe_bool(context.get("is_lean_profile"), default=False)
+    use_markdown_long_stages = _safe_bool(
+        context.get("use_markdown_long_stages"),
+        default=URL2BLOG_USE_MARKDOWN_LONG_STAGES_DEFAULT,
+    )
+
+    json_parse_metrics = _safe_dict(context.get("json_parse_metrics"))
+    if not json_parse_metrics:
+        json_parse_metrics = {
+            "total_parse_failures": 0,
+            "recovered_calls": 0,
+            "recovered_parse_failures": 0,
+            "failures_by_stage": {},
+        }
+
+    stage_trace = list(context.get("stage_trace") or [])
+    normalized_title = _safe_str(context.get("normalized_title"))
+    normalized_content = _safe_str(context.get("normalized_content"))
+    source_word_count = _safe_int(
+        context.get("source_word_count"),
+        default=0,
+        min_value=0,
+        max_value=200_000,
+    )
+    min_expanded_word_target = _safe_int(
+        context.get("min_expanded_word_target"),
+        default=0,
+        min_value=0,
+        max_value=300_000,
+    )
+    max_length_expansion_passes = _safe_int(
+        context.get("max_length_expansion_passes"),
+        default=MAX_LENGTH_EXPANSION_PASSES,
+        min_value=1,
+        max_value=MAX_LENGTH_EXPANSION_PASSES,
+    )
+    classification = _safe_dict(context.get("classification"))
+    guideline_payload = _safe_dict(context.get("guideline_payload"))
+    source_words = list(context.get("source_words") or [])
+    rewritten_words = list(context.get("rewritten_words") or [])
+    ngram_overlap = float(context.get("ngram_overlap") or 0.0)
+    rewrite = _safe_dict(context.get("rewrite"))
+    quality = _safe_dict(context.get("quality"))
+    quality_raw_response = _safe_str(context.get("quality_raw_response"))
+    long_output_transport = _safe_str(context.get("long_output_transport")) or (
+        "markdown" if use_markdown_long_stages else "json"
+    )
+    title_pass_applied_count = _safe_int(
+        context.get("title_pass_applied_count"),
+        default=0,
+        min_value=0,
+        max_value=99,
+    )
+    editorial_blueprint = _safe_dict(context.get("editorial_blueprint"))
+    editorial_blueprint_for_prompt = _safe_str(
+        context.get("editorial_blueprint_for_prompt")
+    )
+    if not editorial_blueprint_for_prompt:
+        editorial_blueprint_for_prompt = _format_editorial_blueprint_for_prompt(
+            editorial_blueprint
+        )
+
+    external_context_points = list(context.get("external_context_points") or [])
+    external_context_for_prompt = _safe_str(
+        context.get("external_context_for_prompt")
+    ) or "No external context collected."
+    source_fact_anchors = list(context.get("source_fact_anchors") or [])
+
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": "fact_length",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
 
     fact_coverage = _sanitize_v2_fact_coverage({}, source_fact_anchors)
     fact_coverage_raw_response = ""
@@ -3349,7 +5220,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 json.dumps(source_fact_anchors, ensure_ascii=False, indent=2),
             )
             .replace("{rewritten_title}", rewrite["improved_title"])
-            .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+            .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
         )
         fact_coverage_parsed, fact_coverage_raw_response = _invoke_json_llm_tracked(
             prompt=fact_coverage_prompt,
@@ -3362,7 +5233,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         fact_coverage = _sanitize_v2_fact_coverage(
             fact_coverage_parsed, source_fact_anchors
         )
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="fact_coverage_audit_initial",
             model_name=selected_model_name,
             max_tokens=1536,
@@ -3370,7 +5243,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             input_payload={
                 "source_facts": source_fact_anchors,
                 "rewritten_title": rewrite["improved_title"],
-                "rewritten_content": rewrite["improved_content"][:20_000],
+                "rewritten_content": _llm_context_text(rewrite["improved_content"]),
             },
             prompt=fact_coverage_prompt,
             raw_response=fact_coverage_raw_response,
@@ -3384,9 +5257,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             previous_content = rewrite["improved_content"]
             fact_repair_prompt = (
                 V2_FACT_REPAIR_PROMPT.replace("{source_title}", normalized_title)
-                .replace("{source_content}", normalized_content[:20_000])
+                .replace("{source_content}", _llm_context_text(normalized_content))
                 .replace("{rewritten_title}", previous_title)
-                .replace("{rewritten_content}", previous_content[:20_000])
+                .replace("{rewritten_content}", _llm_context_text(previous_content))
                 .replace(
                     "{missing_facts}",
                     json.dumps(
@@ -3401,11 +5274,12 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 )
                 .replace(
                     "{guideline}",
-                    guideline_payload["guideline"] or "No guideline provided.",
+                    guideline_payload.get("guideline") or "No guideline provided.",
                 )
                 .replace(
                     "{title_guideline}",
-                    guideline_payload["title_guideline"] or "No title guideline provided.",
+                    guideline_payload.get("title_guideline")
+                    or "No title guideline provided.",
                 )
                 .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
                 .replace(
@@ -3413,63 +5287,187 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                     narrative_focus or "No additional narrative focus provided.",
                 )
                 .replace("{external_context}", external_context_for_prompt)
+                .replace(
+                    "{editorial_blueprint_directives}",
+                    editorial_blueprint_for_prompt,
+                )
             )
-            fact_repair_parsed, fact_repair_raw_response = _invoke_json_llm_tracked(
-                prompt=fact_repair_prompt,
-                stage_name="fact_repair",
-                parse_metrics=json_parse_metrics,
-                max_tokens=6144,
-                temperature=0.1,
-                model_name=selected_model_name,
-            )
-            rewrite = _sanitize_v2_guideline_rewrite(
-                fact_repair_parsed,
-                fallback_title=previous_title,
-                fallback_content=previous_content,
-            )
-            _append_stage_trace(
-                stage="fact_repair",
-                model_name=selected_model_name,
-                max_tokens=6144,
-                temperature=0.1,
-                input_payload={
-                    "source_title": normalized_title,
-                    "source_content": normalized_content[:20_000],
-                    "rewritten_title": previous_title,
-                    "rewritten_content": previous_content[:20_000],
-                    "missing_facts": fact_coverage["missing_facts"],
-                    "article_type": classification,
-                    "guideline": guideline_payload["guideline"]
-                    or "No guideline provided.",
-                    "title_guideline": guideline_payload["title_guideline"]
-                    or "No title guideline provided.",
-                    "narrative_focus": narrative_focus,
-                    "external_context": external_context_points,
-                },
-                prompt=fact_repair_prompt,
-                raw_response=fact_repair_raw_response,
-                parsed=fact_repair_parsed,
-                output=rewrite,
-            )
-
-            rewritten_words = _tokenize_similarity_words(rewrite["improved_content"])
-            ngram_overlap = _ngram_overlap_ratio(source_words, rewritten_words, n=10)
-            quality_prompt = (
-                V2_QUALITY_AUDIT_PROMPT.replace("{source_title}", normalized_title)
-                .replace("{source_content}", normalized_content[:20_000])
-                .replace("{rewritten_title}", rewrite["improved_title"])
-                .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+            fact_repair_prompt_markdown = (
+                V2_FACT_REPAIR_MARKDOWN_PROMPT.replace("{source_title}", normalized_title)
+                .replace("{source_content}", _llm_context_text(normalized_content))
+                .replace("{rewritten_title}", previous_title)
+                .replace("{rewritten_content}", _llm_context_text(previous_content))
+                .replace(
+                    "{missing_facts}",
+                    json.dumps(
+                        fact_coverage["missing_facts"],
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                )
                 .replace(
                     "{article_type}",
                     json.dumps(classification, ensure_ascii=False, indent=2),
                 )
                 .replace(
                     "{guideline}",
-                    guideline_payload["guideline"] or "No guideline provided.",
+                    guideline_payload.get("guideline") or "No guideline provided.",
                 )
                 .replace(
                     "{title_guideline}",
-                    guideline_payload["title_guideline"]
+                    guideline_payload.get("title_guideline")
+                    or "No title guideline provided.",
+                )
+                .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
+                .replace(
+                    "{narrative_focus}",
+                    narrative_focus or "No additional narrative focus provided.",
+                )
+                .replace("{external_context}", external_context_for_prompt)
+                .replace(
+                    "{editorial_blueprint_directives}",
+                    editorial_blueprint_for_prompt,
+                )
+            )
+            fact_repair_stage_transport = "json"
+            fact_repair_title_raw_response = ""
+            fact_repair_parsed: dict[str, Any] = {}
+            if use_markdown_long_stages:
+                fact_repair_long_output = _invoke_markdown_long_output(
+                    prompt=fact_repair_prompt_markdown,
+                    stage_name="fact_repair",
+                    model_name=selected_model_name,
+                    temperature=0.1,
+                    max_tokens=6144,
+                    fallback_content=previous_content,
+                    parse_metrics=json_parse_metrics,
+                    legacy_json_prompt=fact_repair_prompt,
+                    legacy_json_stage_name="fact_repair_legacy_json",
+                    legacy_content_key="improved_content",
+                    legacy_title_key="improved_title",
+                )
+                fact_repair_raw_response = _safe_str(
+                    fact_repair_long_output.get("raw_response")
+                )
+                fact_repair_stage_transport = (
+                    _safe_str(fact_repair_long_output.get("transport"))
+                    or "markdown"
+                )
+                if fact_repair_stage_transport == "json_fallback":
+                    long_output_transport = "json_fallback"
+                fact_repair_fallback_title = _safe_str(
+                    fact_repair_long_output.get("fallback_title")
+                ) or previous_title
+                title_prompt = (
+                    V2_TITLE_GENERATION_PROMPT.replace(
+                        "{article_type}",
+                        json.dumps(classification, ensure_ascii=False, indent=2),
+                    )
+                    .replace(
+                        "{title_guideline}",
+                        guideline_payload.get("title_guideline")
+                        or "No title guideline provided.",
+                    )
+                    .replace(
+                        "{narrative_focus}",
+                        narrative_focus or "No additional narrative focus provided.",
+                    )
+                    .replace("{source_title}", normalized_title)
+                    .replace(
+                        "{rewritten_content}",
+                        _llm_context_text(_safe_str(fact_repair_long_output.get("content"))),
+                    )
+                )
+                generated_title, fact_repair_title_raw_response = _invoke_title_generation(
+                    prompt=title_prompt,
+                    model_name=selected_model_name,
+                    fallback_title=fact_repair_fallback_title,
+                )
+                title_pass_applied_count += 1
+                rewrite = _build_v2_rewrite_from_markdown(
+                    improved_title=generated_title,
+                    improved_content=_safe_str(fact_repair_long_output.get("content")),
+                    previous_rewrite=rewrite,
+                    guideline_alignment_summary=(
+                        "Fact repair restored missing source-grounded details while "
+                        "preserving readability."
+                    ),
+                    improvements_applied=[
+                        "Restored missing source facts identified by factual coverage audit.",
+                        "Preserved structure and reader-facing clarity.",
+                    ],
+                    remaining_gaps=[],
+                )
+            else:
+                fact_repair_parsed, fact_repair_raw_response = _invoke_json_llm_tracked(
+                    prompt=fact_repair_prompt,
+                    stage_name="fact_repair",
+                    parse_metrics=json_parse_metrics,
+                    max_tokens=6144,
+                    temperature=0.1,
+                    model_name=selected_model_name,
+                )
+                rewrite = _sanitize_v2_guideline_rewrite(
+                    fact_repair_parsed,
+                    fallback_title=previous_title,
+                    fallback_content=previous_content,
+                )
+
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
+                stage="fact_repair",
+                model_name=selected_model_name,
+                max_tokens=6144,
+                temperature=0.1,
+                input_payload={
+                    "source_title": normalized_title,
+                    "source_content": _llm_context_text(normalized_content),
+                    "rewritten_title": previous_title,
+                    "rewritten_content": _llm_context_text(previous_content),
+                    "missing_facts": fact_coverage["missing_facts"],
+                    "article_type": classification,
+                    "guideline": guideline_payload.get("guideline")
+                    or "No guideline provided.",
+                    "title_guideline": guideline_payload.get("title_guideline")
+                    or "No title guideline provided.",
+                    "narrative_focus": narrative_focus,
+                    "external_context": external_context_points,
+                    "transport": fact_repair_stage_transport,
+                },
+                prompt=(
+                    fact_repair_prompt_markdown
+                    if use_markdown_long_stages
+                    else fact_repair_prompt
+                ),
+                raw_response=fact_repair_raw_response,
+                parsed=fact_repair_parsed if not use_markdown_long_stages else None,
+                output={
+                    **rewrite,
+                    "transport": fact_repair_stage_transport,
+                    "title_raw_response": fact_repair_title_raw_response,
+                },
+            )
+
+            rewritten_words = _tokenize_similarity_words(rewrite["improved_content"])
+            ngram_overlap = _ngram_overlap_ratio(source_words, rewritten_words, n=10)
+
+            quality_prompt = (
+                V2_QUALITY_AUDIT_PROMPT.replace("{source_title}", normalized_title)
+                .replace("{source_content}", _llm_context_text(normalized_content))
+                .replace("{rewritten_title}", rewrite["improved_title"])
+                .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
+                .replace(
+                    "{article_type}",
+                    json.dumps(classification, ensure_ascii=False, indent=2),
+                )
+                .replace(
+                    "{guideline}",
+                    guideline_payload.get("guideline") or "No guideline provided.",
+                )
+                .replace(
+                    "{title_guideline}",
+                    guideline_payload.get("title_guideline")
                     or "No title guideline provided.",
                 )
                 .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
@@ -3489,20 +5487,22 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 model_name=selected_model_name,
             )
             quality = _sanitize_v2_quality_audit(quality_parsed)
-            _append_stage_trace(
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
                 stage="quality_audit_after_fact_repair",
                 model_name=selected_model_name,
                 max_tokens=1024,
                 temperature=0.05,
                 input_payload={
                     "source_title": normalized_title,
-                    "source_content": normalized_content[:20_000],
+                    "source_content": _llm_context_text(normalized_content),
                     "rewritten_title": rewrite["improved_title"],
-                    "rewritten_content": rewrite["improved_content"][:20_000],
+                    "rewritten_content": _llm_context_text(rewrite["improved_content"]),
                     "article_type": classification,
-                    "guideline": guideline_payload["guideline"]
+                    "guideline": guideline_payload.get("guideline")
                     or "No guideline provided.",
-                    "title_guideline": guideline_payload["title_guideline"]
+                    "title_guideline": guideline_payload.get("title_guideline")
                     or "No title guideline provided.",
                     "ngram_overlap": round(ngram_overlap, 3),
                     "narrative_focus": narrative_focus,
@@ -3520,7 +5520,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                     json.dumps(source_fact_anchors, ensure_ascii=False, indent=2),
                 )
                 .replace("{rewritten_title}", rewrite["improved_title"])
-                .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+                .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
             )
             fact_coverage_parsed, fact_coverage_raw_response = _invoke_json_llm_tracked(
                 prompt=fact_coverage_prompt,
@@ -3533,7 +5533,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             fact_coverage = _sanitize_v2_fact_coverage(
                 fact_coverage_parsed, source_fact_anchors
             )
-            _append_stage_trace(
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
                 stage="fact_coverage_audit_after_fact_repair",
                 model_name=selected_model_name,
                 max_tokens=1536,
@@ -3541,7 +5543,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 input_payload={
                     "source_facts": source_fact_anchors,
                     "rewritten_title": rewrite["improved_title"],
-                    "rewritten_content": rewrite["improved_content"][:20_000],
+                    "rewritten_content": _llm_context_text(rewrite["improved_content"]),
                 },
                 prompt=fact_coverage_prompt,
                 raw_response=fact_coverage_raw_response,
@@ -3549,7 +5551,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 output=fact_coverage,
             )
         else:
-            _append_stage_trace(
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
                 stage="fact_repair",
                 model_name=selected_model_name,
                 max_tokens=6144,
@@ -3561,7 +5565,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 },
             )
     else:
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="fact_coverage_audit_initial",
             model_name=selected_model_name,
             max_tokens=1536,
@@ -3586,9 +5592,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
     ):
         expansion_prompt = (
             V2_LENGTH_EXPANSION_PROMPT.replace("{source_title}", normalized_title)
-            .replace("{source_content}", normalized_content[:20_000])
+            .replace("{source_content}", _llm_context_text(normalized_content))
             .replace("{rewritten_title}", rewrite["improved_title"])
-            .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+            .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
             .replace("{current_word_count}", str(rewritten_word_count))
             .replace("{source_word_count}", str(source_word_count))
             .replace("{min_word_target}", str(min_expanded_word_target))
@@ -3598,11 +5604,12 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             )
             .replace(
                 "{guideline}",
-                guideline_payload["guideline"] or "No guideline provided.",
+                guideline_payload.get("guideline") or "No guideline provided.",
             )
             .replace(
                 "{title_guideline}",
-                guideline_payload["title_guideline"] or "No title guideline provided.",
+                guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
             )
             .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
             .replace(
@@ -3611,86 +5618,199 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             )
             .replace("{external_context}", external_context_for_prompt)
             .replace("{source_facts}", source_facts_for_prompt)
+            .replace(
+                "{editorial_blueprint_directives}",
+                editorial_blueprint_for_prompt,
+            )
+        )
+        expansion_prompt_markdown = (
+            V2_LENGTH_EXPANSION_MARKDOWN_PROMPT.replace(
+                "{source_title}", normalized_title
+            )
+            .replace("{source_content}", _llm_context_text(normalized_content))
+            .replace("{rewritten_title}", rewrite["improved_title"])
+            .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
+            .replace("{current_word_count}", str(rewritten_word_count))
+            .replace("{source_word_count}", str(source_word_count))
+            .replace("{min_word_target}", str(min_expanded_word_target))
+            .replace(
+                "{article_type}",
+                json.dumps(classification, ensure_ascii=False, indent=2),
+            )
+            .replace(
+                "{guideline}",
+                guideline_payload.get("guideline") or "No guideline provided.",
+            )
+            .replace(
+                "{title_guideline}",
+                guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
+            )
+            .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
+            .replace(
+                "{narrative_focus}",
+                narrative_focus or "No additional narrative focus provided.",
+            )
+            .replace("{external_context}", external_context_for_prompt)
+            .replace("{source_facts}", source_facts_for_prompt)
+            .replace(
+                "{editorial_blueprint_directives}",
+                editorial_blueprint_for_prompt,
+            )
         )
         stage_name = f"length_expansion_pass_{length_expansion_passes + 1}"
+        expansion_stage_transport = "json"
+        expansion_parsed: dict[str, Any] = {}
         try:
-            expansion_parsed, length_expansion_raw_response = _invoke_json_llm_tracked(
-                prompt=expansion_prompt,
-                stage_name=stage_name,
-                parse_metrics=json_parse_metrics,
-                max_tokens=6144,
-                temperature=0.1,
-                model_name=selected_model_name,
-            )
+            if use_markdown_long_stages:
+                expansion_long_output = _invoke_markdown_long_output(
+                    prompt=expansion_prompt_markdown,
+                    stage_name=stage_name,
+                    model_name=selected_model_name,
+                    temperature=0.1,
+                    max_tokens=6144,
+                    fallback_content=rewrite["improved_content"],
+                    parse_metrics=json_parse_metrics,
+                    legacy_json_prompt=expansion_prompt,
+                    legacy_json_stage_name=f"{stage_name}_legacy_json",
+                    legacy_content_key="expanded_content",
+                )
+                length_expansion_raw_response = _safe_str(
+                    expansion_long_output.get("raw_response")
+                )
+                expansion_stage_transport = (
+                    _safe_str(expansion_long_output.get("transport"))
+                    or "markdown"
+                )
+                if expansion_stage_transport == "json_fallback":
+                    long_output_transport = "json_fallback"
+                expansion = {
+                    "expanded_content": _safe_str(expansion_long_output.get("content")),
+                    "expansion_summary": (
+                        "Expanded article depth while preserving factual integrity and "
+                        "structure."
+                    ),
+                }
+            else:
+                expansion_parsed, length_expansion_raw_response = _invoke_json_llm_tracked(
+                    prompt=expansion_prompt,
+                    stage_name=stage_name,
+                    parse_metrics=json_parse_metrics,
+                    max_tokens=6144,
+                    temperature=0.1,
+                    model_name=selected_model_name,
+                )
+                expansion = _sanitize_v2_length_expansion(
+                    expansion_parsed,
+                    fallback_content=rewrite["improved_content"],
+                )
         except HTTPException as exc:
             logger.warning("URL2Blog length expansion failed: %s", exc.detail)
-            _append_stage_trace(
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
                 stage=stage_name,
                 model_name=selected_model_name,
                 max_tokens=6144,
                 temperature=0.1,
                 input_payload={
                     "source_title": normalized_title,
-                    "source_content": normalized_content[:20_000],
+                    "source_content": _llm_context_text(normalized_content),
                     "rewritten_title": rewrite["improved_title"],
-                    "rewritten_content": rewrite["improved_content"][:20_000],
+                    "rewritten_content": _llm_context_text(rewrite["improved_content"]),
                     "current_word_count": rewritten_word_count,
                     "source_word_count": source_word_count,
                     "min_word_target": min_expanded_word_target,
                     "article_type": classification,
-                    "guideline": guideline_payload["guideline"]
+                    "guideline": guideline_payload.get("guideline")
                     or "No guideline provided.",
-                    "title_guideline": guideline_payload["title_guideline"]
+                    "title_guideline": guideline_payload.get("title_guideline")
                     or "No title guideline provided.",
                     "narrative_focus": narrative_focus,
                     "external_context": external_context_points,
                     "source_facts": source_fact_anchors,
                 },
-                prompt=expansion_prompt,
+                prompt=(
+                    expansion_prompt_markdown
+                    if use_markdown_long_stages
+                    else expansion_prompt
+                ),
                 error=_safe_str(exc.detail),
             )
             break
 
-        expansion = _sanitize_v2_length_expansion(
-            expansion_parsed,
-            fallback_content=rewrite["improved_content"],
-        )
         expanded_content = expansion["expanded_content"]
         expanded_words = _tokenize_similarity_words(expanded_content)
         expanded_word_count = len(expanded_words)
-        _append_stage_trace(
+
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage=stage_name,
             model_name=selected_model_name,
             max_tokens=6144,
             temperature=0.1,
             input_payload={
                 "source_title": normalized_title,
-                "source_content": normalized_content[:20_000],
+                "source_content": _llm_context_text(normalized_content),
                 "rewritten_title": rewrite["improved_title"],
-                "rewritten_content": rewrite["improved_content"][:20_000],
+                "rewritten_content": _llm_context_text(rewrite["improved_content"]),
                 "current_word_count": rewritten_word_count,
                 "source_word_count": source_word_count,
                 "min_word_target": min_expanded_word_target,
                 "article_type": classification,
-                "guideline": guideline_payload["guideline"] or "No guideline provided.",
-                "title_guideline": guideline_payload["title_guideline"]
+                "guideline": guideline_payload.get("guideline")
+                or "No guideline provided.",
+                "title_guideline": guideline_payload.get("title_guideline")
                 or "No title guideline provided.",
                 "narrative_focus": narrative_focus,
                 "external_context": external_context_points,
                 "source_facts": source_fact_anchors,
+                "transport": expansion_stage_transport,
             },
-            prompt=expansion_prompt,
+            prompt=(
+                expansion_prompt_markdown
+                if use_markdown_long_stages
+                else expansion_prompt
+            ),
             raw_response=length_expansion_raw_response,
-            parsed=expansion_parsed,
+            parsed=expansion_parsed if not use_markdown_long_stages else None,
             output={
                 "expansion_summary": expansion["expansion_summary"],
                 "expanded_word_count": expanded_word_count,
+                "transport": expansion_stage_transport,
             },
         )
+
         if expanded_word_count <= rewritten_word_count:
             break
 
         rewrite["improved_content"] = expanded_content
+        if use_markdown_long_stages:
+            title_prompt = (
+                V2_TITLE_GENERATION_PROMPT.replace(
+                    "{article_type}",
+                    json.dumps(classification, ensure_ascii=False, indent=2),
+                )
+                .replace(
+                    "{title_guideline}",
+                    guideline_payload.get("title_guideline")
+                    or "No title guideline provided.",
+                )
+                .replace(
+                    "{narrative_focus}",
+                    narrative_focus or "No additional narrative focus provided.",
+                )
+                .replace("{source_title}", normalized_title)
+                .replace("{rewritten_content}", _llm_context_text(expanded_content))
+            )
+            generated_title, _ = _invoke_title_generation(
+                prompt=title_prompt,
+                model_name=selected_model_name,
+                fallback_title=_safe_str(rewrite.get("improved_title")) or normalized_title,
+            )
+            rewrite["improved_title"] = generated_title
+            title_pass_applied_count += 1
         rewritten_words = expanded_words
         rewritten_word_count = expanded_word_count
         length_expansion_summary = expansion["expansion_summary"]
@@ -3701,20 +5821,21 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         ngram_overlap = _ngram_overlap_ratio(source_words, rewritten_words, n=10)
         quality_prompt = (
             V2_QUALITY_AUDIT_PROMPT.replace("{source_title}", normalized_title)
-            .replace("{source_content}", normalized_content[:20_000])
+            .replace("{source_content}", _llm_context_text(normalized_content))
             .replace("{rewritten_title}", rewrite["improved_title"])
-            .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+            .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
             .replace(
                 "{article_type}",
                 json.dumps(classification, ensure_ascii=False, indent=2),
             )
             .replace(
                 "{guideline}",
-                guideline_payload["guideline"] or "No guideline provided.",
+                guideline_payload.get("guideline") or "No guideline provided.",
             )
             .replace(
                 "{title_guideline}",
-                guideline_payload["title_guideline"] or "No title guideline provided.",
+                guideline_payload.get("title_guideline")
+                or "No title guideline provided.",
             )
             .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
             .replace("{ngram_overlap}", f"{ngram_overlap:.3f}")
@@ -3733,19 +5854,22 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             model_name=selected_model_name,
         )
         quality = _sanitize_v2_quality_audit(quality_parsed)
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="quality_audit_after_length_expansion",
             model_name=selected_model_name,
             max_tokens=1024,
             temperature=0.05,
             input_payload={
                 "source_title": normalized_title,
-                "source_content": normalized_content[:20_000],
+                "source_content": _llm_context_text(normalized_content),
                 "rewritten_title": rewrite["improved_title"],
-                "rewritten_content": rewrite["improved_content"][:20_000],
+                "rewritten_content": _llm_context_text(rewrite["improved_content"]),
                 "article_type": classification,
-                "guideline": guideline_payload["guideline"] or "No guideline provided.",
-                "title_guideline": guideline_payload["title_guideline"]
+                "guideline": guideline_payload.get("guideline")
+                or "No guideline provided.",
+                "title_guideline": guideline_payload.get("title_guideline")
                 or "No title guideline provided.",
                 "ngram_overlap": round(ngram_overlap, 3),
                 "narrative_focus": narrative_focus,
@@ -3764,7 +5888,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                     json.dumps(source_fact_anchors, ensure_ascii=False, indent=2),
                 )
                 .replace("{rewritten_title}", rewrite["improved_title"])
-                .replace("{rewritten_content}", rewrite["improved_content"][:20_000])
+                .replace("{rewritten_content}", _llm_context_text(rewrite["improved_content"]))
             )
             fact_coverage_parsed, fact_coverage_raw_response = _invoke_json_llm_tracked(
                 prompt=fact_coverage_prompt,
@@ -3777,7 +5901,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             fact_coverage = _sanitize_v2_fact_coverage(
                 fact_coverage_parsed, source_fact_anchors
             )
-            _append_stage_trace(
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
                 stage="fact_coverage_audit_after_length_expansion",
                 model_name=selected_model_name,
                 max_tokens=1536,
@@ -3785,7 +5911,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 input_payload={
                     "source_facts": source_fact_anchors,
                     "rewritten_title": rewrite["improved_title"],
-                    "rewritten_content": rewrite["improved_content"][:20_000],
+                    "rewritten_content": _llm_context_text(rewrite["improved_content"]),
                 },
                 prompt=fact_coverage_prompt,
                 raw_response=fact_coverage_raw_response,
@@ -3793,7 +5919,9 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 output=fact_coverage,
             )
     else:
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="length_expansion",
             model_name=selected_model_name,
             max_tokens=6144,
@@ -3806,83 +5934,215 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             },
         )
 
-    final_improved_content = _ensure_markdown_section_headers(
-        rewrite["improved_content"]
+    write_stage_result(
+        run_id,
+        "fact_length",
+        {
+            "created_at": _now_iso(),
+            "data": {
+                "factual_coverage_score": fact_coverage["coverage_score"],
+                "missing_source_facts_count": fact_coverage["missing_count"],
+                "missing_high_priority_facts_count": fact_coverage[
+                    "missing_high_count"
+                ],
+                "fact_repair_applied": fact_repair_applied,
+                "length_expansion_applied": length_expansion_applied,
+                "length_expansion_passes": length_expansion_passes,
+                "length_expansion_summary": length_expansion_summary,
+                "long_output_transport": long_output_transport,
+                "title_pass_applied_count": title_pass_applied_count,
+            },
+        },
     )
+
+    context.update(
+        {
+            "json_parse_metrics": json_parse_metrics,
+            "stage_trace": stage_trace,
+            "rewrite": rewrite,
+            "quality": quality,
+            "quality_raw_response": quality_raw_response,
+            "rewritten_words": rewritten_words,
+            "ngram_overlap": ngram_overlap,
+            "fact_coverage": fact_coverage,
+            "fact_coverage_raw_response": fact_coverage_raw_response,
+            "fact_repair_applied": fact_repair_applied,
+            "fact_repair_raw_response": fact_repair_raw_response,
+            "length_expansion_applied": length_expansion_applied,
+            "length_expansion_passes": length_expansion_passes,
+            "length_expansion_summary": length_expansion_summary,
+            "length_expansion_raw_response": length_expansion_raw_response,
+            "long_output_transport": long_output_transport,
+            "title_pass_applied_count": title_pass_applied_count,
+            "use_markdown_long_stages": use_markdown_long_stages,
+            "editorial_blueprint": editorial_blueprint,
+            "editorial_blueprint_for_prompt": editorial_blueprint_for_prompt,
+        }
+    )
+
+    return context
+
+
+def _pipeline_v2_run_editorial_phase(
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    run_id = _safe_str(context.get("run_id"))
+    selected_model_name = _safe_str(context.get("selected_model_name"))
+    include_debug = _safe_bool(context.get("include_debug"), default=False)
+    narrative_focus = _safe_str(context.get("narrative_focus"))
+    enable_editorial_augmentation = _safe_bool(
+        context.get("enable_editorial_augmentation"), default=False
+    )
+    use_editorial_insert_only_post = _safe_bool(
+        context.get("use_editorial_insert_only_post"),
+        default=URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED_DEFAULT,
+    )
+    classification = _safe_dict(context.get("classification"))
+    rewrite = _safe_dict(context.get("rewrite"))
+    editorial_blueprint = _safe_dict(context.get("editorial_blueprint"))
+    stage_trace = list(context.get("stage_trace") or [])
+
+    json_parse_metrics = _safe_dict(context.get("json_parse_metrics"))
+    if not json_parse_metrics:
+        json_parse_metrics = {
+            "total_parse_failures": 0,
+            "recovered_calls": 0,
+            "recovered_parse_failures": 0,
+            "failures_by_stage": {},
+        }
+
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": "editorial_augmentation",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
+    final_improved_content = _ensure_markdown_section_headers(
+        rewrite.get("improved_content") or ""
+    )
+    pre_editorial_content = final_improved_content
+    pre_editorial_word_count = len(_tokenize_similarity_words(pre_editorial_content))
     editorial_augmentation_raw_response = ""
     editorial_augmentation = _sanitize_v2_editorial_augmentation(
         {},
         fallback_content=final_improved_content,
     )
+    editorial_insert_only_post_applied = False
 
     if enable_editorial_augmentation:
-        augmentation_prompt = (
-            V2_EDITORIAL_AUGMENTATION_PROMPT.replace(
-                "{article_title}", rewrite["improved_title"][:500]
+        if use_editorial_insert_only_post and _safe_bool(
+            editorial_blueprint.get("apply_plan"), default=False
+        ):
+            editorial_insert_only_post_applied = True
+            editorial_augmentation = _build_insert_only_editorial_augmentation(
+                fallback_content=final_improved_content,
+                editorial_blueprint=editorial_blueprint,
             )
-            .replace("{article_content}", final_improved_content[:20_000])
-            .replace(
-                "{article_type}",
-                json.dumps(classification, ensure_ascii=False, indent=2),
+            stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace=stage_trace,
+                include_debug=include_debug,
+                stage="editorial_augmentation",
+                model_name=selected_model_name,
+                max_tokens=0,
+                temperature=0.0,
+                input_payload={
+                    "article_title": _safe_str(rewrite.get("improved_title")),
+                    "article_content": _llm_context_text(final_improved_content),
+                    "article_type": classification,
+                    "narrative_focus": narrative_focus,
+                    "mode": "insert_only",
+                    "editorial_blueprint": editorial_blueprint,
+                },
+                output={
+                    **editorial_augmentation,
+                    "mode": "insert_only",
+                },
             )
-            .replace(
-                "{narrative_focus}",
-                narrative_focus or "No additional narrative focus provided.",
-            )
-        )
-
-        try:
-            augmentation_parsed, editorial_augmentation_raw_response = (
-                _invoke_json_llm_tracked(
-                    prompt=augmentation_prompt,
-                    stage_name="editorial_augmentation",
-                    parse_metrics=json_parse_metrics,
-                    max_tokens=6144,
-                    temperature=0.05,
-                    model_name=selected_model_name,
+        else:
+            augmentation_prompt = (
+                V2_EDITORIAL_AUGMENTATION_PROMPT.replace(
+                    "{article_title}", _safe_str(rewrite.get("improved_title"))
+                )
+                .replace("{article_content}", _llm_context_text(final_improved_content))
+                .replace(
+                    "{article_type}",
+                    json.dumps(classification, ensure_ascii=False, indent=2),
+                )
+                .replace(
+                    "{narrative_focus}",
+                    narrative_focus or "No additional narrative focus provided.",
                 )
             )
-            editorial_augmentation = _sanitize_v2_editorial_augmentation(
-                augmentation_parsed,
-                fallback_content=final_improved_content,
-            )
-            _append_stage_trace(
-                stage="editorial_augmentation",
-                model_name=selected_model_name,
-                max_tokens=6144,
-                temperature=0.05,
-                input_payload={
-                    "article_title": rewrite["improved_title"][:500],
-                    "article_content": final_improved_content[:20_000],
-                    "article_type": classification,
-                    "narrative_focus": narrative_focus,
-                },
-                prompt=augmentation_prompt,
-                raw_response=editorial_augmentation_raw_response,
-                parsed=augmentation_parsed,
-                output=editorial_augmentation,
-            )
-        except HTTPException as exc:
-            logger.warning(
-                "URL2Blog editorial augmentation failed: %s",
-                exc.detail,
-            )
-            _append_stage_trace(
-                stage="editorial_augmentation",
-                model_name=selected_model_name,
-                max_tokens=6144,
-                temperature=0.05,
-                input_payload={
-                    "article_title": rewrite["improved_title"][:500],
-                    "article_content": final_improved_content[:20_000],
-                    "article_type": classification,
-                    "narrative_focus": narrative_focus,
-                },
-                prompt=augmentation_prompt,
-                error=_safe_str(exc.detail),
-            )
+
+            try:
+                augmentation_parsed, editorial_augmentation_raw_response = (
+                    _invoke_json_llm_tracked(
+                        prompt=augmentation_prompt,
+                        stage_name="editorial_augmentation",
+                        parse_metrics=json_parse_metrics,
+                        max_tokens=6144,
+                        temperature=0.05,
+                        model_name=selected_model_name,
+                    )
+                )
+                editorial_augmentation = _sanitize_v2_editorial_augmentation(
+                    augmentation_parsed,
+                    fallback_content=final_improved_content,
+                )
+                stage_trace = _pipeline_v2_append_stage_trace(
+                    stage_trace=stage_trace,
+                    include_debug=include_debug,
+                    stage="editorial_augmentation",
+                    model_name=selected_model_name,
+                    max_tokens=6144,
+                    temperature=0.05,
+                    input_payload={
+                        "article_title": _safe_str(rewrite.get("improved_title")),
+                        "article_content": _llm_context_text(final_improved_content),
+                        "article_type": classification,
+                        "narrative_focus": narrative_focus,
+                        "mode": "llm",
+                    },
+                    prompt=augmentation_prompt,
+                    raw_response=editorial_augmentation_raw_response,
+                    parsed=augmentation_parsed,
+                    output={
+                        **editorial_augmentation,
+                        "mode": "llm",
+                    },
+                )
+            except HTTPException as exc:
+                logger.warning(
+                    "URL2Blog editorial augmentation failed: %s",
+                    exc.detail,
+                )
+                stage_trace = _pipeline_v2_append_stage_trace(
+                    stage_trace=stage_trace,
+                    include_debug=include_debug,
+                    stage="editorial_augmentation",
+                    model_name=selected_model_name,
+                    max_tokens=6144,
+                    temperature=0.05,
+                    input_payload={
+                        "article_title": _safe_str(rewrite.get("improved_title")),
+                        "article_content": _llm_context_text(final_improved_content),
+                        "article_type": classification,
+                        "narrative_focus": narrative_focus,
+                        "mode": "llm",
+                    },
+                    prompt=augmentation_prompt,
+                    error=_safe_str(exc.detail),
+                )
     else:
-        _append_stage_trace(
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
             stage="editorial_augmentation",
             model_name=selected_model_name,
             max_tokens=6144,
@@ -3894,6 +6154,492 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
         )
 
     final_improved_content = editorial_augmentation["augmented_content"]
+    post_editorial_word_count = len(_tokenize_similarity_words(final_improved_content))
+
+    write_stage_result(
+        run_id,
+        "editorial_augmentation_stage",
+        {
+            "created_at": _now_iso(),
+            "data": {
+                "editorial_augmentation_applied": editorial_augmentation[
+                    "augmentation_applied"
+                ],
+                "pre_editorial_word_count": pre_editorial_word_count,
+                "post_editorial_word_count": post_editorial_word_count,
+                "editorial_components_added": [
+                    item["component"]
+                    for item in editorial_augmentation["components_added"]
+                ],
+                "editorial_augmentation_summary": editorial_augmentation[
+                    "augmentation_summary"
+                ],
+                "editorial_insert_only_post_applied": editorial_insert_only_post_applied,
+            },
+        },
+    )
+
+    context.update(
+        {
+            "json_parse_metrics": json_parse_metrics,
+            "stage_trace": stage_trace,
+            "editorial_augmentation": editorial_augmentation,
+            "editorial_augmentation_raw_response": editorial_augmentation_raw_response,
+            "pre_editorial_content": pre_editorial_content,
+            "pre_editorial_word_count": pre_editorial_word_count,
+            "post_editorial_word_count": post_editorial_word_count,
+            "final_improved_content": final_improved_content,
+            "editorial_insert_only_post_applied": editorial_insert_only_post_applied,
+        }
+    )
+
+    return context
+
+
+def _pipeline_v2_run_editorial_post_recheck_phase(
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    """Run post-editorial quality/fact recheck with rollback fallback."""
+    run_id = _safe_str(context.get("run_id"))
+    selected_model_name = _safe_str(context.get("selected_model_name"))
+    include_debug = _safe_bool(context.get("include_debug"), default=False)
+    narrative_focus = _safe_str(context.get("narrative_focus"))
+    normalized_title = _safe_str(context.get("normalized_title"))
+    normalized_content = _safe_str(context.get("normalized_content"))
+    classification = _safe_dict(context.get("classification"))
+    guideline_payload = _safe_dict(context.get("guideline_payload"))
+    rewrite = _safe_dict(context.get("rewrite"))
+    source_fact_anchors = list(context.get("source_fact_anchors") or [])
+    external_context_points = list(context.get("external_context_points") or [])
+    external_context_for_prompt = _safe_str(
+        context.get("external_context_for_prompt")
+    ) or "No external context collected."
+    stage_trace = list(context.get("stage_trace") or [])
+    json_parse_metrics = _safe_dict(context.get("json_parse_metrics"))
+    if not json_parse_metrics:
+        json_parse_metrics = {
+            "total_parse_failures": 0,
+            "recovered_calls": 0,
+            "recovered_parse_failures": 0,
+            "failures_by_stage": {},
+        }
+
+    use_editorial_post_recheck = _safe_bool(
+        context.get("use_editorial_post_recheck"),
+        default=URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED_DEFAULT,
+    )
+    editorial_augmentation = _safe_dict(context.get("editorial_augmentation"))
+    editorial_augmentation_applied = _safe_bool(
+        editorial_augmentation.get("augmentation_applied"),
+        default=False,
+    )
+    final_improved_content = _safe_str(
+        context.get("final_improved_content")
+        or editorial_augmentation.get("augmented_content")
+    )
+    if not final_improved_content:
+        final_improved_content = _ensure_markdown_section_headers(
+            _safe_str(rewrite.get("improved_content"))
+        )
+
+    if not use_editorial_post_recheck or not editorial_augmentation_applied:
+        editorial_post_recheck = {
+            "decision": "skipped",
+            "pass_mode": "skipped",
+            "reason": (
+                "Post-editorial recheck disabled."
+                if not use_editorial_post_recheck
+                else "Editorial augmentation not applied."
+            ),
+        }
+        stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace=stage_trace,
+            include_debug=include_debug,
+            stage="editorial_post_recheck",
+            model_name=selected_model_name,
+            output=editorial_post_recheck,
+        )
+        context.update(
+            {
+                "stage_trace": stage_trace,
+                "editorial_post_recheck": editorial_post_recheck,
+            }
+        )
+        return context
+
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": "editorial_post_recheck",
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
+    source_words = list(context.get("source_words") or [])
+    if not source_words:
+        source_words = _tokenize_similarity_words(normalized_content)
+    post_editorial_words = _tokenize_similarity_words(final_improved_content)
+    post_editorial_ngram_overlap = _ngram_overlap_ratio(
+        source_words, post_editorial_words, n=10
+    )
+
+    quality_prompt = (
+        V2_QUALITY_AUDIT_PROMPT.replace("{source_title}", normalized_title)
+        .replace("{source_content}", _llm_context_text(normalized_content))
+        .replace("{rewritten_title}", _safe_str(rewrite.get("improved_title")))
+        .replace("{rewritten_content}", _llm_context_text(final_improved_content))
+        .replace(
+            "{article_type}",
+            json.dumps(classification, ensure_ascii=False, indent=2),
+        )
+        .replace(
+            "{guideline}",
+            guideline_payload.get("guideline") or "No guideline provided.",
+        )
+        .replace(
+            "{title_guideline}",
+            guideline_payload.get("title_guideline")
+            or "No title guideline provided.",
+        )
+        .replace("{seo_guideline}", SEO_SAFE_CONTENT_GENERATION_GUIDELINES)
+        .replace("{ngram_overlap}", f"{post_editorial_ngram_overlap:.3f}")
+        .replace(
+            "{narrative_focus}",
+            narrative_focus or "No additional narrative focus provided.",
+        )
+        .replace("{external_context}", external_context_for_prompt)
+    )
+    quality_parsed, editorial_post_quality_raw_response = _invoke_json_llm_tracked(
+        prompt=quality_prompt,
+        stage_name="editorial_post_recheck_quality_audit",
+        parse_metrics=json_parse_metrics,
+        max_tokens=1024,
+        temperature=0.05,
+        model_name=selected_model_name,
+    )
+    post_quality = _sanitize_v2_quality_audit(quality_parsed)
+
+    fact_coverage_prompt = ""
+    editorial_post_fact_coverage_raw_response = ""
+    post_fact_coverage = _sanitize_v2_fact_coverage({}, source_fact_anchors)
+    if source_fact_anchors:
+        fact_coverage_prompt = (
+            V2_FACT_COVERAGE_AUDIT_PROMPT.replace(
+                "{source_facts}",
+                json.dumps(source_fact_anchors, ensure_ascii=False, indent=2),
+            )
+            .replace("{rewritten_title}", _safe_str(rewrite.get("improved_title")))
+            .replace("{rewritten_content}", _llm_context_text(final_improved_content))
+        )
+        (
+            fact_coverage_parsed,
+            editorial_post_fact_coverage_raw_response,
+        ) = _invoke_json_llm_tracked(
+            prompt=fact_coverage_prompt,
+            stage_name="editorial_post_recheck_fact_coverage",
+            parse_metrics=json_parse_metrics,
+            max_tokens=1536,
+            temperature=0.05,
+            model_name=selected_model_name,
+        )
+        post_fact_coverage = _sanitize_v2_fact_coverage(
+            fact_coverage_parsed, source_fact_anchors
+        )
+
+    quality_score = float(post_quality.get("overall_score") or 0.0)
+    fact_score = float(post_fact_coverage.get("coverage_score") or 0.0)
+    missing_high_count = int(post_fact_coverage.get("missing_high_count") or 0)
+    too_close_to_source = _safe_bool(
+        post_quality.get("too_close_to_source"), default=False
+    )
+
+    strict_pass = (
+        quality_score >= URL2BLOG_EDITORIAL_RECHECK_MIN_QUALITY_SCORE
+        and fact_score >= URL2BLOG_EDITORIAL_RECHECK_MIN_FACT_SCORE
+        and missing_high_count == 0
+        and not too_close_to_source
+        and post_editorial_ngram_overlap <= 0.90
+    )
+    near_pass = (
+        quality_score
+        >= (
+            URL2BLOG_EDITORIAL_RECHECK_MIN_QUALITY_SCORE
+            - URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN
+        )
+        and fact_score
+        >= (
+            URL2BLOG_EDITORIAL_RECHECK_MIN_FACT_SCORE
+            - URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN
+        )
+        and missing_high_count == 0
+        and not too_close_to_source
+        and post_editorial_ngram_overlap <= 0.93
+    )
+
+    if strict_pass:
+        decision = "pass"
+        pass_mode = "strict"
+    elif near_pass:
+        decision = "pass"
+        pass_mode = "near_pass"
+    else:
+        decision = "rollback"
+        pass_mode = "rollback_after_failed_recheck"
+
+    rollback_data: dict[str, Any] = {}
+    if decision == "rollback":
+        pre_editorial_content = _safe_str(context.get("pre_editorial_content"))
+        if pre_editorial_content:
+            restored_word_count = len(_tokenize_similarity_words(pre_editorial_content))
+            context["final_improved_content"] = pre_editorial_content
+            context["post_editorial_word_count"] = restored_word_count
+            existing_summary = _safe_str(editorial_augmentation.get("augmentation_summary"))
+            editorial_augmentation.update(
+                {
+                    "augmentation_applied": False,
+                    "components_added": [],
+                    "augmentation_summary": (
+                        f"{existing_summary} Rolled back after post-editorial recheck."
+                    ).strip(),
+                }
+            )
+            context["editorial_augmentation"] = editorial_augmentation
+            rollback_data = {
+                "restored_from": "pre_editorial_content",
+                "restored_word_count": restored_word_count,
+            }
+        else:
+            rollback_data = {
+                "restored_from": "none",
+                "reason": "pre_editorial_content_missing",
+            }
+    else:
+        context["quality"] = post_quality
+        context["quality_raw_response"] = editorial_post_quality_raw_response
+        context["fact_coverage"] = post_fact_coverage
+        context["fact_coverage_raw_response"] = editorial_post_fact_coverage_raw_response
+        context["ngram_overlap"] = post_editorial_ngram_overlap
+
+    editorial_post_recheck = {
+        "decision": decision,
+        "pass_mode": pass_mode,
+        "quality_score": quality_score,
+        "fact_coverage_score": fact_score,
+        "missing_high_count": missing_high_count,
+        "too_close_to_source": too_close_to_source,
+        "ngram_overlap": round(post_editorial_ngram_overlap, 3),
+        "quality_threshold": URL2BLOG_EDITORIAL_RECHECK_MIN_QUALITY_SCORE,
+        "fact_threshold": URL2BLOG_EDITORIAL_RECHECK_MIN_FACT_SCORE,
+        "near_pass_margin": URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN,
+        "rollback_data": rollback_data,
+    }
+
+    stage_trace = _pipeline_v2_append_stage_trace(
+        stage_trace=stage_trace,
+        include_debug=include_debug,
+        stage="editorial_post_recheck",
+        model_name=selected_model_name,
+        max_tokens=1536,
+        temperature=0.05,
+        input_payload={
+            "rewritten_title": _safe_str(rewrite.get("improved_title")),
+            "rewritten_content": _llm_context_text(final_improved_content),
+            "article_type": classification,
+            "narrative_focus": narrative_focus,
+            "source_facts_count": len(source_fact_anchors),
+        },
+        output={
+            **editorial_post_recheck,
+            "quality_summary": _safe_str(post_quality.get("quality_summary")),
+            "factual_coverage_summary": _safe_str(
+                post_fact_coverage.get("coverage_summary")
+            ),
+        },
+    )
+    write_stage_result(
+        run_id,
+        "editorial_post_recheck",
+        {"created_at": _now_iso(), "data": editorial_post_recheck},
+    )
+    if rollback_data:
+        write_stage_result(
+            run_id,
+            "editorial_post_recheck_rollback",
+            {"created_at": _now_iso(), "data": rollback_data},
+        )
+
+    context.update(
+        {
+            "json_parse_metrics": json_parse_metrics,
+            "stage_trace": stage_trace,
+            "editorial_post_recheck": editorial_post_recheck,
+            "editorial_post_quality_raw_response": editorial_post_quality_raw_response,
+            "editorial_post_fact_coverage_raw_response": (
+                editorial_post_fact_coverage_raw_response
+            ),
+        }
+    )
+    return context
+
+
+def _pipeline_v2_finalize_response(
+    context: dict[str, Any],
+) -> JSONResponse:
+    run_id = _safe_str(context.get("run_id"))
+    url = _safe_str(context.get("url"))
+    include_debug = _safe_bool(context.get("include_debug"), default=False)
+    narrative_focus = _safe_str(context.get("narrative_focus"))
+    selected_model_name = _safe_str(context.get("selected_model_name"))
+    execution_profile = _safe_str(context.get("execution_profile"))
+
+    parsed_article = _safe_dict(context.get("parsed_article"))
+    was_translated = _safe_bool(context.get("was_translated"), default=False)
+    normalized_title = _safe_str(context.get("normalized_title"))
+    normalized_content = _safe_str(context.get("normalized_content"))
+    normalized_language = _safe_str(context.get("normalized_language"))
+
+    source_word_count = _safe_int(
+        context.get("source_word_count"),
+        default=0,
+        min_value=0,
+        max_value=200_000,
+    )
+    min_expanded_word_target = _safe_int(
+        context.get("min_expanded_word_target"),
+        default=0,
+        min_value=0,
+        max_value=300_000,
+    )
+
+    classification = _safe_dict(context.get("classification"))
+    guideline_payload = _safe_dict(context.get("guideline_payload"))
+    rewrite_quality_gate = _safe_dict(context.get("rewrite_quality_gate"))
+    fact_gate = _safe_dict(context.get("fact_gate"))
+    editorial_gate = _safe_dict(context.get("editorial_gate"))
+
+    stage1_payload = _safe_dict(context.get("stage1_payload"))
+    stage2_payload = _safe_dict(context.get("stage2_payload"))
+
+    rewrite = _safe_dict(context.get("rewrite"))
+    quality = _safe_dict(context.get("quality"))
+    fact_coverage = _safe_dict(context.get("fact_coverage"))
+    editorial_augmentation = _safe_dict(context.get("editorial_augmentation"))
+    editorial_blueprint = _safe_dict(context.get("editorial_blueprint"))
+    editorial_post_recheck = _safe_dict(context.get("editorial_post_recheck"))
+
+    if not rewrite:
+        raise HTTPException(status_code=500, detail="Rewrite output missing")
+
+    if not quality:
+        quality = _sanitize_v2_quality_audit({})
+
+    if not fact_coverage:
+        fact_coverage = _sanitize_v2_fact_coverage({}, [])
+
+    if not editorial_augmentation:
+        fallback_content = _ensure_markdown_section_headers(
+            _safe_str(rewrite.get("improved_content"))
+        )
+        editorial_augmentation = _sanitize_v2_editorial_augmentation(
+            {},
+            fallback_content=fallback_content,
+        )
+
+    final_improved_content = _safe_str(
+        context.get("final_improved_content")
+        or editorial_augmentation.get("augmented_content")
+    )
+
+    rewrite_raw_response = _safe_str(context.get("rewrite_raw_response"))
+    repair_raw_response = _safe_str(context.get("repair_raw_response"))
+    quality_raw_response = _safe_str(context.get("quality_raw_response"))
+    source_facts_raw_response = _safe_str(context.get("source_facts_raw_response"))
+    fact_coverage_raw_response = _safe_str(context.get("fact_coverage_raw_response"))
+    fact_repair_raw_response = _safe_str(context.get("fact_repair_raw_response"))
+    length_expansion_raw_response = _safe_str(
+        context.get("length_expansion_raw_response")
+    )
+    editorial_augmentation_raw_response = _safe_str(
+        context.get("editorial_augmentation_raw_response")
+    )
+    editorial_blueprint_raw_response = _safe_str(
+        context.get("editorial_blueprint_raw_response")
+    )
+    editorial_post_quality_raw_response = _safe_str(
+        context.get("editorial_post_quality_raw_response")
+    )
+    editorial_post_fact_coverage_raw_response = _safe_str(
+        context.get("editorial_post_fact_coverage_raw_response")
+    )
+
+    stage_trace = list(context.get("stage_trace") or [])
+    json_parse_metrics = _safe_dict(context.get("json_parse_metrics"))
+
+    external_context_points = list(context.get("external_context_points") or [])
+    external_context_usage_note = _safe_str(context.get("external_context_usage_note"))
+    external_context_raw_response = _safe_str(context.get("external_context_raw_response"))
+    external_context_grounded_urls = list(
+        context.get("external_context_grounded_urls") or []
+    )
+    short_article_enrichment_applied = _safe_bool(
+        context.get("short_article_enrichment_applied"), default=False
+    )
+    source_fact_anchors = list(context.get("source_fact_anchors") or [])
+
+    length_expansion_applied = _safe_bool(
+        context.get("length_expansion_applied"), default=False
+    )
+    length_expansion_passes = _safe_int(
+        context.get("length_expansion_passes"),
+        default=0,
+        min_value=0,
+        max_value=MAX_LENGTH_EXPANSION_PASSES,
+    )
+    length_expansion_summary = _safe_str(context.get("length_expansion_summary"))
+    fact_repair_applied = _safe_bool(context.get("fact_repair_applied"), default=False)
+    second_pass_applied = _safe_bool(context.get("second_pass_applied"), default=False)
+    use_markdown_long_stages = _safe_bool(
+        context.get("use_markdown_long_stages"),
+        default=URL2BLOG_USE_MARKDOWN_LONG_STAGES_DEFAULT,
+    )
+    use_editorial_blueprint = _safe_bool(
+        context.get("use_editorial_blueprint"),
+        default=URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED_DEFAULT,
+    )
+    use_editorial_insert_only_post = _safe_bool(
+        context.get("use_editorial_insert_only_post"),
+        default=URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED_DEFAULT,
+    )
+    use_editorial_post_recheck = _safe_bool(
+        context.get("use_editorial_post_recheck"),
+        default=URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED_DEFAULT,
+    )
+    editorial_blueprint_applied = _safe_bool(
+        context.get("editorial_blueprint_applied"),
+        default=(
+            _safe_bool(editorial_blueprint.get("apply_plan"), default=False)
+            and bool(list(editorial_blueprint.get("components") or []))
+        ),
+    )
+    editorial_insert_only_post_applied = _safe_bool(
+        context.get("editorial_insert_only_post_applied"), default=False
+    )
+    long_output_transport = _safe_str(context.get("long_output_transport")) or (
+        "markdown" if use_markdown_long_stages else "json"
+    )
+    title_pass_applied_count = _safe_int(
+        context.get("title_pass_applied_count"),
+        default=0,
+        min_value=0,
+        max_value=99,
+    )
+
+    ngram_overlap = float(context.get("ngram_overlap") or 0.0)
+
     final_word_count = len(_tokenize_similarity_words(final_improved_content))
     length_requirement_met = final_word_count >= min_expanded_word_target
     pipeline_status = (
@@ -3905,14 +6651,18 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "Final article length is below minimum expansion target "
             f"({final_word_count} < {min_expanded_word_target} words)."
         )
+
     final_markdown = _build_markdown(
-        rewrite["improved_title"],
+        _safe_str(rewrite.get("improved_title")),
         final_improved_content,
     )
-    _append_stage_trace(
+
+    stage_trace = _pipeline_v2_append_stage_trace(
+        stage_trace=stage_trace,
+        include_debug=include_debug,
         stage="finalize_output",
         output={
-            "improved_title": rewrite["improved_title"],
+            "improved_title": _safe_str(rewrite.get("improved_title")),
             "improved_content": final_improved_content,
             "final_markdown": final_markdown,
             "pipeline_status": pipeline_status,
@@ -3942,18 +6692,18 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "reasoning": _safe_str(classification.get("reasoning")),
         },
         "guideline_meta": {
-            "id": guideline_payload["id"],
-            "name": guideline_payload["name"],
+            "id": guideline_payload.get("id"),
+            "name": guideline_payload.get("name"),
         },
         "improved_article": {
-            "title": rewrite["improved_title"],
+            "title": _safe_str(rewrite.get("improved_title")),
             "content": final_improved_content,
         },
         "final_markdown": final_markdown,
         "guideline_review": {
-            "alignment_summary": rewrite["guideline_alignment_summary"],
-            "improvements_applied": rewrite["improvements_applied"],
-            "remaining_gaps": rewrite["remaining_gaps"],
+            "alignment_summary": _safe_str(rewrite.get("guideline_alignment_summary")),
+            "improvements_applied": list(rewrite.get("improvements_applied") or []),
+            "remaining_gaps": list(rewrite.get("remaining_gaps") or []),
             "narrative_focus_applied": narrative_focus,
             "model_used": selected_model_name,
             "execution_profile": execution_profile,
@@ -3969,30 +6719,42 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "external_context_points_used": len(external_context_points),
             "external_context_usage_note": external_context_usage_note,
             "source_facts_extracted_count": len(source_fact_anchors),
-            "factual_coverage_summary": fact_coverage["coverage_summary"],
-            "factual_coverage_score": fact_coverage["coverage_score"],
-            "missing_source_facts_count": fact_coverage["missing_count"],
-            "missing_high_priority_facts_count": fact_coverage["missing_high_count"],
+            "factual_coverage_summary": _safe_str(fact_coverage.get("coverage_summary")),
+            "factual_coverage_score": fact_coverage.get("coverage_score"),
+            "missing_source_facts_count": fact_coverage.get("missing_count"),
+            "missing_high_priority_facts_count": fact_coverage.get("missing_high_count"),
             "fact_repair_applied": fact_repair_applied,
-            "quality_summary": quality["quality_summary"],
-            "editorial_augmentation_applied": editorial_augmentation[
-                "augmentation_applied"
+            "quality_summary": _safe_str(quality.get("quality_summary")),
+            "editorial_blueprint_applied": editorial_blueprint_applied,
+            "editorial_blueprint_components_planned": [
+                _safe_str(item.get("component"))
+                for item in list(editorial_blueprint.get("components") or [])
+                if isinstance(item, dict)
             ],
+            "editorial_insert_only_post_applied": editorial_insert_only_post_applied,
+            "editorial_augmentation_applied": _safe_bool(
+                editorial_augmentation.get("augmentation_applied"), default=False
+            ),
             "editorial_components_added": [
-                item["component"]
-                for item in editorial_augmentation["components_added"]
+                item.get("component")
+                for item in list(editorial_augmentation.get("components_added") or [])
+                if isinstance(item, dict)
             ],
-            "editorial_augmentation_summary": editorial_augmentation[
-                "augmentation_summary"
-            ],
-            "editorial_diagnostic": editorial_augmentation["diagnostic"],
+            "editorial_augmentation_summary": _safe_str(
+                editorial_augmentation.get("augmentation_summary")
+            ),
+            "editorial_diagnostic": _safe_dict(
+                editorial_augmentation.get("diagnostic")
+            ),
             "quality_scores": {
-                "overall": quality["overall_score"],
-                "guideline_coverage": quality["guideline_coverage_score"],
-                "informativeness": quality["informativeness_score"],
-                "originality": quality["originality_score"],
+                "overall": quality.get("overall_score"),
+                "guideline_coverage": quality.get("guideline_coverage_score"),
+                "informativeness": quality.get("informativeness_score"),
+                "originality": quality.get("originality_score"),
             },
             "second_pass_applied": second_pass_applied,
+            "long_output_transport": long_output_transport,
+            "title_pass_applied_count": title_pass_applied_count,
             "similarity_ngram_overlap": round(ngram_overlap, 3),
             "json_parse_failures_total": _safe_int(
                 json_parse_metrics.get("total_parse_failures"),
@@ -4015,6 +6777,32 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "json_parse_failures_by_stage": _safe_dict(
                 json_parse_metrics.get("failures_by_stage")
             ),
+            "rewrite_quality_gate_decision": _safe_str(
+                rewrite_quality_gate.get("decision")
+            )
+            or "pass",
+            "rewrite_quality_gate_pass_mode": _safe_str(
+                rewrite_quality_gate.get("pass_mode")
+            )
+            or "strict",
+            "fact_gate_decision": _safe_str(fact_gate.get("decision")) or "pass",
+            "fact_gate_pass_mode": _safe_str(fact_gate.get("pass_mode")) or "strict",
+            "editorial_gate_decision": _safe_str(editorial_gate.get("decision"))
+            or "pass",
+            "editorial_post_recheck_decision": _safe_str(
+                editorial_post_recheck.get("decision")
+            )
+            or "skipped",
+            "editorial_post_recheck_pass_mode": _safe_str(
+                editorial_post_recheck.get("pass_mode")
+            )
+            or "skipped",
+            "editorial_post_recheck_quality_score": editorial_post_recheck.get(
+                "quality_score"
+            ),
+            "editorial_post_recheck_fact_coverage_score": editorial_post_recheck.get(
+                "fact_coverage_score"
+            ),
         },
     }
 
@@ -4029,10 +6817,24 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
                 "include_debug": include_debug,
                 "narrative_focus": narrative_focus,
                 "execution_profile": execution_profile,
-                "enable_web_enrichment": enable_web_enrichment,
-                "enable_editorial_augmentation": enable_editorial_augmentation,
-                "max_external_context_items": max_external_context_items,
+                "enable_web_enrichment": _safe_bool(
+                    context.get("enable_web_enrichment"), default=False
+                ),
+                "enable_editorial_augmentation": _safe_bool(
+                    context.get("enable_editorial_augmentation"), default=False
+                ),
+                "max_external_context_items": _safe_int(
+                    context.get("max_external_context_items"),
+                    default=DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS,
+                    min_value=1,
+                    max_value=5,
+                ),
                 "model_name": selected_model_name,
+                "use_markdown_long_stages": use_markdown_long_stages,
+                "long_output_transport": long_output_transport,
+                "use_editorial_blueprint": use_editorial_blueprint,
+                "use_editorial_insert_only_post": use_editorial_insert_only_post,
+                "use_editorial_post_recheck": use_editorial_post_recheck,
             },
             "guideline": guideline_payload,
             "article_original_content": normalized_content,
@@ -4042,7 +6844,7 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "rewrite_raw_response": rewrite_raw_response,
             "repair_raw_response": repair_raw_response,
             "quality_raw_response": quality_raw_response,
-            "quality_required_revisions": quality["required_revisions"],
+            "quality_required_revisions": list(quality.get("required_revisions") or []),
             "narrative_focus": narrative_focus,
             "model_name": selected_model_name,
             "external_context_points": external_context_points,
@@ -4052,13 +6854,30 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             "source_fact_anchors": source_fact_anchors,
             "source_facts_raw_response": source_facts_raw_response,
             "fact_coverage_raw_response": fact_coverage_raw_response,
-            "fact_coverage_missing_facts": fact_coverage["missing_facts"],
+            "fact_coverage_missing_facts": list(fact_coverage.get("missing_facts") or []),
             "fact_repair_raw_response": fact_repair_raw_response,
             "length_expansion_raw_response": length_expansion_raw_response,
+            "editorial_blueprint_raw_response": editorial_blueprint_raw_response,
+            "editorial_blueprint": editorial_blueprint,
             "editorial_augmentation_raw_response": editorial_augmentation_raw_response,
-            "editorial_components_added": editorial_augmentation["components_added"],
-            "editorial_diagnostic": editorial_augmentation["diagnostic"],
+            "editorial_components_added": list(
+                editorial_augmentation.get("components_added") or []
+            ),
+            "editorial_diagnostic": _safe_dict(editorial_augmentation.get("diagnostic")),
+            "editorial_post_quality_raw_response": editorial_post_quality_raw_response,
+            "editorial_post_fact_coverage_raw_response": (
+                editorial_post_fact_coverage_raw_response
+            ),
+            "editorial_post_recheck": editorial_post_recheck,
             "json_parse_metrics": json_parse_metrics,
+            "title_pass_applied_count": title_pass_applied_count,
+            "long_output_transport": long_output_transport,
+            "graph_gates": {
+                "rewrite_quality_gate": rewrite_quality_gate,
+                "fact_gate": fact_gate,
+                "editorial_gate": editorial_gate,
+                "editorial_post_recheck": editorial_post_recheck,
+            },
         }
 
     write_stage_result(
@@ -4090,3 +6909,109 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
     )
 
     return JSONResponse(response_payload)
+
+
+async def _pipeline_v2_core(
+    request: PipelineV2Request,
+    *,
+    run_id_override: str | None = None,
+    stage1_payload_override: dict[str, Any] | None = None,
+    stage2_payload_override: dict[str, Any] | None = None,
+    stage_trace_override: list[dict[str, Any]] | None = None,
+    json_parse_metrics_override: dict[str, Any] | None = None,
+    selected_model_name_override: str | None = None,
+    execution_profile_override: str | None = None,
+) -> JSONResponse:
+    """Core URL2Blog rewrite/finalization path (optionally with precomputed stage outputs)."""
+    selected_model_name = selected_model_name_override or _resolve_url2blog_model(
+        request.model_name
+    )
+    execution_profile = execution_profile_override or _resolve_execution_profile(
+        request.execution_profile
+    )
+
+    json_parse_metrics: dict[str, Any] = (
+        json_parse_metrics_override
+        if isinstance(json_parse_metrics_override, dict)
+        else {
+            "total_parse_failures": 0,
+            "recovered_calls": 0,
+            "recovered_parse_failures": 0,
+            "failures_by_stage": {},
+        }
+    )
+    stage_trace: list[dict[str, Any]] = list(stage_trace_override or [])
+    include_debug = request.include_debug
+
+    run_id = run_id_override or str(uuid4())
+
+    if stage1_payload_override is None:
+        stage1_result = await _pipeline_v2_run_stage1(
+            request=request,
+            run_id=run_id,
+            selected_model_name=selected_model_name,
+            include_debug=include_debug,
+            stage_trace=stage_trace,
+        )
+        stage1_payload = _safe_dict(stage1_result.get("stage1_payload"))
+        stage_trace = list(stage1_result.get("trace") or [])
+    else:
+        stage1_payload = _safe_dict(stage1_payload_override)
+
+    if stage2_payload_override is None:
+        parsed_article = _safe_dict(stage1_payload.get("parsed"))
+        translated_article = _safe_dict(stage1_payload.get("translated"))
+        translation_skipped = _safe_bool(
+            stage1_payload.get("translation_skipped"), default=False
+        )
+        was_translated = not translation_skipped and bool(translated_article)
+        normalized_title = (
+            _safe_str(translated_article.get("title"))
+            if was_translated
+            else _safe_str(parsed_article.get("title"))
+        )
+        normalized_content = (
+            _safe_str(translated_article.get("content"))
+            if was_translated
+            else _safe_str(parsed_article.get("content"))
+        )
+        normalized_language = (
+            "English"
+            if was_translated
+            else _normalize_language_name(
+                _safe_str(parsed_article.get("language")) or "English"
+            )
+        )
+
+        stage2_result = await _pipeline_v2_run_stage2(
+            request=request,
+            run_id=run_id,
+            selected_model_name=selected_model_name,
+            include_debug=include_debug,
+            json_parse_metrics=json_parse_metrics,
+            stage_trace=stage_trace,
+            normalized_title=normalized_title,
+            normalized_content=normalized_content,
+            normalized_language=normalized_language,
+        )
+        stage2_payload = _safe_dict(stage2_result.get("stage2_payload"))
+        stage_trace = list(stage2_result.get("trace") or [])
+    else:
+        stage2_payload = _safe_dict(stage2_payload_override)
+
+    context = _pipeline_v2_prepare_context(
+        request=request,
+        run_id=run_id,
+        selected_model_name=selected_model_name,
+        execution_profile=execution_profile,
+        stage1_payload=stage1_payload,
+        stage2_payload=stage2_payload,
+        stage_trace=stage_trace,
+        json_parse_metrics=json_parse_metrics,
+    )
+    context = _pipeline_v2_run_rewrite_quality_phase(context)
+    context = _pipeline_v2_run_fact_length_phase(context)
+    context = _pipeline_v2_run_editorial_phase(context)
+    context = _pipeline_v2_run_editorial_post_recheck_phase(context)
+
+    return _pipeline_v2_finalize_response(context)

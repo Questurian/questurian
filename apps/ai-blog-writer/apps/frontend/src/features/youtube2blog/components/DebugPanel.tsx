@@ -13,12 +13,34 @@ type DebugPanelProps = {
   debugData?: DebugResponse
 }
 
+const BRANCH_DEBUG_STAGES = [
+  { key: 'stage_1_quality_gate', label: 'Stage 1 Gate: Transcript Quality' },
+  { key: 'stage_1_repair', label: 'Stage 1 Retry: Transcript Repair' },
+  { key: 'stage_2_quality_gate', label: 'Stage 2 Gate: Classification Confidence' },
+  { key: 'stage_2_retry', label: 'Stage 2 Retry: Re-classification' },
+  { key: 'stage_3_guideline', label: 'Stage 3A: Guideline Retrieval' },
+  { key: 'stage_3_coverage', label: 'Stage 3B: Coverage Analysis' },
+  { key: 'stage_3_supplement', label: 'Stage 3C: Supplement Generation' },
+  { key: 'stage_3_quality_gate', label: 'Stage 3 Gate: Article Quality' },
+  { key: 'stage_3_improve', label: 'Stage 3 Retry: Article Rewrite' },
+  { key: 'stage_seo_brief', label: 'SEO Stage: Brief Generation' },
+  { key: 'stage_seo_enrich', label: 'SEO Stage: Article Enrichment' },
+  { key: 'stage_seo_quality_gate', label: 'SEO Gate: Quality Evaluation' },
+  { key: 'stage_seo_retry', label: 'SEO Retry: Article Enrichment' },
+  { key: 'stage_seo_rollback', label: 'SEO Fallback: Restore Pre-SEO Article' },
+  { key: 'stage_editorial_gate', label: 'Editorial Gate' },
+  { key: 'stage_editorial_skip', label: 'Editorial Skip Decision' },
+  { key: 'stage_5_quality_gate', label: 'Stage 5 Gate: Title Quality' },
+  { key: 'stage_5_retry', label: 'Stage 5 Retry: Title Regeneration' },
+] as const
+
 export function DebugPanel({ showDebug, onToggleDebug, debugData }: DebugPanelProps) {
   const stage0 = getStage0Data(debugData)
   const stage2 = getStage2Data(debugData)
   const stage3 = getStage3Data(debugData)
   const stageEditorial = getStageEditorialAugmentationData(debugData)
   const stage4 = getStage4Data(debugData)
+  const stages = debugData?.stages ?? {}
 
   return (
     <section className="panel debug">
@@ -36,8 +58,20 @@ export function DebugPanel({ showDebug, onToggleDebug, debugData }: DebugPanelPr
           </div>
           <div className="stage-box">
             <h3>Stage 1: Transcript cleaned</h3>
-            <pre>{JSON.stringify(debugData.stages?.['stage_1'] ?? {}, null, 2)}</pre>
+            <pre>{JSON.stringify(stages['stage_1'] ?? {}, null, 2)}</pre>
           </div>
+          {BRANCH_DEBUG_STAGES.map((stage) => {
+            const payload = stages[stage.key]
+            if (!payload) {
+              return null
+            }
+            return (
+              <div className="stage-box" key={stage.key}>
+                <h3>{stage.label}</h3>
+                <pre>{JSON.stringify(payload, null, 2)}</pre>
+              </div>
+            )
+          })}
           <div className="stage-box">
             <h3>Stage 2: Request to Vertex AI</h3>
             <pre>{stage2?.debug_prompt ?? 'No prompt captured'}</pre>

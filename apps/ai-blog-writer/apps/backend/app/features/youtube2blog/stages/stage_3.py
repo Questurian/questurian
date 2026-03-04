@@ -7,19 +7,31 @@ This stage:
 3. Generates supplemental content if coverage is insufficient
 4. Composes the final article in markdown format
 """
+
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from app.core import get_article_type_by_name
+from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
 from shared import Stage1Output, Stage2Output, Stage3Output
-from utils import LLMPresets, parse_json_response
+from utils import get_vertex_llm, parse_json_response
 
 logger = logging.getLogger(__name__)
 
 # Path to general guidelines file
 GENERAL_GUIDELINES_PATH = Path(__file__).parent.parent.parent.parent / "data" / "general.md"
+
+
+def _stage3_llm():
+    return get_vertex_llm(
+        temperature=0.3,
+        max_tokens=8192,
+        model_name=Y2B_PRIMARY_MODEL,
+    )
 
 
 def _load_general_guidelines() -> str:
@@ -296,6 +308,83 @@ Use proper markdown formatting throughout.
     return result.strip(), full_prompt, result
 
 
+def stage_3_retrieve_guideline(article_type: str) -> str:
+    """Public helper used by graph node to fetch article guideline."""
+    guideline = _retrieve_guideline(article_type)
+    if guideline:
+        return guideline
+    return f"Write a {article_type} article based on the provided content."
+
+
+def stage_3_coverage_check(
+    *,
+    transcript: str,
+    guideline: str,
+) -> dict[str, object]:
+    """Run coverage analysis as an explicit graph branch node."""
+    llm = _stage3_llm()
+    (
+        coverage_sufficient,
+        analysis,
+        missing_sections,
+        coverage_prompt,
+        coverage_response,
+    ) = _check_coverage(transcript, guideline, llm)
+    return {
+        "coverage_sufficient": bool(coverage_sufficient),
+        "coverage_analysis": analysis,
+        "missing_sections": list(missing_sections),
+        "debug_coverage_prompt": coverage_prompt,
+        "debug_coverage_response": coverage_response,
+    }
+
+
+def stage_3_generate_supplement(
+    *,
+    transcript: str,
+    missing_sections: list[str],
+    article_type: str,
+) -> dict[str, str]:
+    """Generate supplemental markdown for missing sections."""
+    llm = _stage3_llm()
+    supplemental_content, supplement_prompt, supplement_response = _gather_missing_info(
+        transcript,
+        missing_sections,
+        article_type,
+        llm,
+    )
+    return {
+        "supplemental_content": supplemental_content or "",
+        "debug_supplement_prompt": supplement_prompt or "",
+        "debug_supplement_response": supplement_response or "",
+    }
+
+
+def stage_3_compose_from_parts(
+    *,
+    transcript: str,
+    supplemental: str | None,
+    guideline: str,
+    article_type: str,
+    title: str,
+) -> dict[str, str]:
+    """Compose article from explicit inputs used by branch nodes."""
+    llm = _stage3_llm()
+    final_article, composition_prompt, composition_response = _compose_article(
+        transcript,
+        supplemental,
+        guideline,
+        article_type,
+        title,
+        llm,
+    )
+    return {
+        "final_article": final_article,
+        "debug_composition_prompt": composition_prompt,
+        "debug_composition_response": composition_response,
+    }
+
+
 def stage_3_compose_article(stage1: Stage1Output, stage2: Stage2Output) -> Stage3Output:
     """
     Stage 3: Compose the final article using guidelines and coverage analysis.
@@ -312,8 +401,7 @@ def stage_3_compose_article(stage1: Stage1Output, stage2: Stage2Output) -> Stage
     logger.info(f"  Article Type: {stage2.classification}")
     logger.info(f"  Transcript length: {len(stage1.cleaned_transcript)} chars")
 
-    # Initialize Vertex AI using shared preset
-    llm = LLMPresets.article_composition()
+    llm = _stage3_llm()
 
     # Step 1: Retrieve guideline
     logger.info("  Step 1: Retrieving guideline...")

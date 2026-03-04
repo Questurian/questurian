@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import payloadLogoUrl from '../../assets/payload-logo.svg?url'
 import {
+  fetchLatestStatus,
+  fetchStatus,
   runUrl2BlogPipelineV2,
   type Url2BlogExecutionProfile,
   type Url2BlogModel,
   type Url2BlogPipelineV2Response,
   type Url2BlogStageTrace,
+  type Url2BlogStatusResponse,
 } from './api'
 import './styles.css'
 
@@ -17,6 +20,221 @@ type TracePhase = {
   key: string
   title: string
   description: string
+}
+
+type NarrativeFocusPreset = {
+  id: string
+  label: string
+  prompt: string
+}
+
+type ProgressItemState = 'pending' | 'running' | 'done' | 'failed'
+type Url2BlogProgressStep = {
+  key: string
+  stage: string | null
+  label: string
+}
+
+const NARRATIVE_FOCUS_PRESETS: NarrativeFocusPreset[] = [
+  {
+    id: 'practical_trip_planner',
+    label: 'Practical Trip Planner',
+    prompt:
+      'Prioritize decision-ready guidance for planning: where to go, what to book, and how to avoid common mistakes.',
+  },
+  {
+    id: 'beginner_friendly_explainer',
+    label: 'Beginner-Friendly Explainer',
+    prompt:
+      'Write for first-timers. Define jargon, explain why each point matters, and keep instructions clear and confidence-building.',
+  },
+  {
+    id: 'expert_depth',
+    label: 'Expert Depth',
+    prompt:
+      'Assume informed readers. Emphasize nuance, tradeoffs, and advanced context instead of generic introductory advice.',
+  },
+  {
+    id: 'executive_summary',
+    label: 'Executive Summary',
+    prompt:
+      'Front-load key takeaways and high-impact recommendations for readers with limited time.',
+  },
+  {
+    id: 'budget_maximizer',
+    label: 'Budget Maximizer',
+    prompt:
+      'Focus on affordability, value-for-money options, and practical cost-saving decisions without sacrificing quality.',
+  },
+  {
+    id: 'luxury_premium',
+    label: 'Luxury Premium',
+    prompt:
+      'Target premium travelers seeking high-end comfort, service quality, and elevated experiences.',
+  },
+  {
+    id: 'family_friendly',
+    label: 'Family-Friendly',
+    prompt:
+      'Optimize recommendations for families with children, including safety, convenience, and age-appropriate choices.',
+  },
+  {
+    id: 'solo_traveler',
+    label: 'Solo Traveler',
+    prompt:
+      'Write for solo readers who need confidence, situational awareness, and independent planning guidance.',
+  },
+  {
+    id: 'safety_first',
+    label: 'Safety-First',
+    prompt:
+      'Prioritize safety and risk-reduction details, including practical precautions and common pitfalls to avoid.',
+  },
+  {
+    id: 'sustainable_responsible',
+    label: 'Sustainable & Responsible',
+    prompt:
+      'Emphasize environmentally responsible and culturally respectful choices with practical alternatives.',
+  },
+  {
+    id: 'local_culture',
+    label: 'Local Culture Lens',
+    prompt:
+      'Highlight local context, cultural etiquette, and authentic experiences rather than surface-level tourist framing.',
+  },
+  {
+    id: 'myth_busting',
+    label: 'Myth-Busting Angle',
+    prompt:
+      'Challenge common misconceptions and replace them with evidence-based guidance and balanced reasoning.',
+  },
+  {
+    id: 'step_by_step',
+    label: 'Step-by-Step Playbook',
+    prompt:
+      'Structure advice into clear, actionable steps that readers can follow in sequence.',
+  },
+  {
+    id: 'comparison_framework',
+    label: 'Comparison Framework',
+    prompt:
+      'Present options with pros, cons, and decision criteria so readers can choose based on their priorities.',
+  },
+  {
+    id: 'human_story',
+    label: 'Human Story',
+    prompt:
+      'Lean into narrative clarity and human moments while preserving factual usefulness and trust.',
+  },
+  {
+    id: 'data_evidence',
+    label: 'Data & Evidence',
+    prompt:
+      'Ground claims with verifiable facts, concrete examples, and explicit reasoning to reduce fluff.',
+  },
+  {
+    id: 'problem_solution',
+    label: 'Problem-Solution',
+    prompt:
+      'Frame content around reader pain points and practical solutions with direct implementation advice.',
+  },
+  {
+    id: 'checklist_ready',
+    label: 'Checklist-Ready',
+    prompt:
+      'Organize material into concise, scannable checklist logic without losing depth where needed.',
+  },
+  {
+    id: 'journalistic_neutral',
+    label: 'Journalistic Neutral',
+    prompt:
+      'Keep tone balanced and credible, separating claims from interpretation while maintaining readability.',
+  },
+  {
+    id: 'conversion_oriented',
+    label: 'Conversion-Oriented',
+    prompt:
+      'Prioritize clarity that helps readers confidently take next actions such as booking, comparing, or planning.',
+  },
+]
+
+const URL2BLOG_PROGRESS_STEPS: Url2BlogProgressStep[] = [
+  { key: 'submitted', stage: null, label: 'URL submitted' },
+  { key: 'stage_1', stage: 'stage_1', label: 'Stage 1: Extract article' },
+  { key: 'stage_2', stage: 'stage_2', label: 'Stage 2: Classify article type' },
+  {
+    key: 'editorial_blueprint',
+    stage: 'editorial_blueprint',
+    label: 'Plan editorial blueprint',
+  },
+  { key: 'rewrite_quality', stage: 'rewrite_quality', label: 'Rewrite + quality checks' },
+  { key: 'fact_length', stage: 'fact_length', label: 'Fact retention + length checks' },
+  {
+    key: 'editorial_augmentation',
+    stage: 'editorial_augmentation',
+    label: 'Editorial augmentation',
+  },
+  {
+    key: 'editorial_post_recheck',
+    stage: 'editorial_post_recheck',
+    label: 'Post-editorial recheck',
+  },
+  { key: 'complete', stage: 'complete', label: 'Finalize output' },
+]
+
+const URL2BLOG_PROGRESS_STAGE_ORDER = URL2BLOG_PROGRESS_STEPS
+  .map((step) => step.stage)
+  .filter((stage): stage is string => Boolean(stage))
+
+function createRunId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `url2blog-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function getStageLabel(stage: string | null): string {
+  if (stage === 'stage_1') return 'Stage 1: Extract article'
+  if (stage === 'stage_2') return 'Stage 2: Classify article type'
+  if (stage === 'editorial_blueprint') return 'Plan editorial blueprint'
+  if (stage === 'rewrite_quality') return 'Rewrite + quality checks'
+  if (stage === 'fact_length') return 'Fact retention + length checks'
+  if (stage === 'editorial_augmentation') return 'Editorial augmentation'
+  if (stage === 'editorial_post_recheck') return 'Post-editorial recheck'
+  if (stage === 'complete') return 'Finalize output'
+  return 'Preparing pipeline'
+}
+
+function getProgressItemState(
+  step: Url2BlogProgressStep,
+  status: Url2BlogStatusResponse | null | undefined
+): ProgressItemState {
+  if (step.stage === null) {
+    return 'done'
+  }
+
+  const activeStage = typeof status?.stage === 'string' ? status.stage : null
+  const activeIndex = activeStage ? URL2BLOG_PROGRESS_STAGE_ORDER.indexOf(activeStage) : -1
+  const itemIndex = URL2BLOG_PROGRESS_STAGE_ORDER.indexOf(step.stage)
+
+  if (status?.state === 'completed') {
+    return 'done'
+  }
+
+  if (status?.state === 'failed') {
+    if (activeStage === step.stage) {
+      return 'failed'
+    }
+    return activeIndex > itemIndex ? 'done' : 'pending'
+  }
+
+  if (activeIndex === -1) {
+    return 'pending'
+  }
+
+  if (activeIndex > itemIndex) return 'done'
+  if (activeIndex === itemIndex) return 'running'
+  return 'pending'
 }
 
 function toTitleCase(value: string): string {
@@ -37,6 +255,7 @@ function getTraceCallLabel(stage: string): string {
     stage1_extract_article: 'Extract article from URL',
     stage1_translate_article: 'Translate article to English',
     stage2_classification: 'Classify article type',
+    editorial_blueprint: 'Plan editorial blueprint',
     short_article_enrichment: 'Collect grounded context',
     source_facts_extraction: 'Extract source facts',
     guideline_rewrite_initial: 'Initial guideline rewrite',
@@ -51,6 +270,9 @@ function getTraceCallLabel(stage: string): string {
     quality_audit_after_length_expansion: 'Quality audit after length expansion',
     fact_coverage_audit_after_length_expansion: 'Fact-coverage audit after length expansion',
     editorial_augmentation: 'Editorial augmentation',
+    editorial_post_recheck: 'Post-editorial recheck',
+    editorial_post_recheck_quality_audit: 'Post-editorial quality audit',
+    editorial_post_recheck_fact_coverage: 'Post-editorial fact-coverage audit',
     finalize_output: 'Finalize output',
   }
 
@@ -86,45 +308,63 @@ function getTracePhase(stage: string): TracePhase {
       description: 'Extract key source facts used for retention and audits.',
     }
   }
+  if (stage === 'editorial_blueprint') {
+    return {
+      key: 'phase_5_editorial_blueprint',
+      title: 'Phase 5: Editorial Blueprint',
+      description: 'Plan editorial components before drafting the article.',
+    }
+  }
   if (stage === 'guideline_rewrite_initial' || stage === 'rewrite_repair_second_pass') {
     return {
-      key: 'phase_5_rewrite',
-      title: 'Phase 5: Guideline Rewrite',
+      key: 'phase_6_rewrite',
+      title: 'Phase 6: Guideline Rewrite',
       description: 'Produce and optionally repair the rewritten draft.',
     }
   }
   if (stage.startsWith('quality_audit_') || stage === 'quality_audit_initial') {
     return {
-      key: 'phase_6_quality',
-      title: 'Phase 6: Quality Audits',
+      key: 'phase_7_quality',
+      title: 'Phase 7: Quality Audits',
       description: 'Evaluate guideline alignment, informativeness, and originality.',
     }
   }
   if (stage.startsWith('fact_coverage_') || stage === 'fact_repair') {
     return {
-      key: 'phase_7_fact_retention',
-      title: 'Phase 7: Fact Retention',
+      key: 'phase_8_fact_retention',
+      title: 'Phase 8: Fact Retention',
       description: 'Audit factual coverage and repair missing high-priority facts.',
     }
   }
   if (stage.startsWith('length_expansion')) {
     return {
-      key: 'phase_8_length_expansion',
-      title: 'Phase 8: Length Expansion',
+      key: 'phase_9_length_expansion',
+      title: 'Phase 9: Length Expansion',
       description: 'Expand article depth to satisfy minimum length targets.',
     }
   }
   if (stage === 'editorial_augmentation') {
     return {
-      key: 'phase_9_editorial_augmentation',
-      title: 'Phase 9: Editorial Augmentation',
+      key: 'phase_10_editorial_augmentation',
+      title: 'Phase 10: Editorial Augmentation',
       description: 'Optionally add editorial components for readability.',
+    }
+  }
+  if (
+    stage === 'editorial_post_recheck' ||
+    stage === 'editorial_post_recheck_quality_audit' ||
+    stage === 'editorial_post_recheck_fact_coverage'
+  ) {
+    return {
+      key: 'phase_11_editorial_recheck',
+      title: 'Phase 11: Editorial Recheck',
+      description: 'Validate post-editorial quality/fact integrity with rollback fallback.',
     }
   }
   if (stage === 'finalize_output') {
     return {
-      key: 'phase_10_finalize',
-      title: 'Phase 10: Finalization',
+      key: 'phase_12_finalize',
+      title: 'Phase 12: Finalization',
       description: 'Assemble final markdown and response payload.',
     }
   }
@@ -184,19 +424,43 @@ function groupPipelineTrace(trace: Url2BlogStageTrace[]) {
 
 export default function Url2BlogPage() {
   const [url, setUrl] = useState('')
-  const [narrativeFocus, setNarrativeFocus] = useState('')
+  const [activeRunId, setActiveRunId] = useState<string | null>(null)
+  const [selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId] = useState('')
+  const [customNarrativeFocus, setCustomNarrativeFocus] = useState('')
   const [includeDebug, setIncludeDebug] = useState(true)
   const [modelName, setModelName] = useState<Url2BlogModel>('gemini-2.5-flash')
   const [executionProfile, setExecutionProfile] =
     useState<Url2BlogExecutionProfile>('standard')
+  const [runSubmittedAt, setRunSubmittedAt] = useState<number | null>(null)
   const [result, setResult] = useState<Url2BlogPipelineV2Response | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
   const [showTrace, setShowTrace] = useState(false)
 
-  const pipelineMutation = useMutation<Url2BlogPipelineV2Response, Error, void>({
-    mutationFn: async () => {
+  const selectedNarrativeFocusPreset = useMemo(
+    () =>
+      NARRATIVE_FOCUS_PRESETS.find((preset) => preset.id === selectedNarrativeFocusPresetId) ?? null,
+    [selectedNarrativeFocusPresetId]
+  )
+
+  const narrativeFocus = useMemo(() => {
+    const parts: string[] = []
+    if (selectedNarrativeFocusPreset) {
+      parts.push(selectedNarrativeFocusPreset.prompt)
+    }
+
+    const customFocus = customNarrativeFocus.trim()
+    if (customFocus) {
+      parts.push(customFocus)
+    }
+
+    return parts.join('\n\n')
+  }, [selectedNarrativeFocusPreset, customNarrativeFocus])
+
+  const pipelineMutation = useMutation<Url2BlogPipelineV2Response, Error, string>({
+    mutationFn: async (runId: string) => {
       return runUrl2BlogPipelineV2({
+        run_id: runId,
         url: url.trim(),
         include_debug: includeDebug,
         narrative_focus: narrativeFocus.trim() || undefined,
@@ -205,9 +469,81 @@ export default function Url2BlogPage() {
       })
     },
     onSuccess: (data) => {
+      if (data.run_id) {
+        setActiveRunId(data.run_id)
+      }
       setResult(data)
     },
   })
+
+  const statusQuery = useQuery({
+    queryKey: ['url2blog-status', activeRunId],
+    queryFn: async () => {
+      const now = Date.now()
+      const allowNotFoundBootstrap =
+        pipelineMutation.isPending && runSubmittedAt !== null && now - runSubmittedAt < 12_000
+      try {
+        return await fetchStatus(activeRunId as string, {
+          allowNotFound: allowNotFoundBootstrap,
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : ''
+        const shouldTryLatest =
+          pipelineMutation.isPending &&
+          message.includes('Run not found for') &&
+          !allowNotFoundBootstrap
+        if (!shouldTryLatest) {
+          throw error
+        }
+        const latest = await fetchLatestStatus()
+        if (!latest || !latest.run_id) {
+          throw error
+        }
+        const updatedAtMs = Date.parse(latest.updated_at)
+        if (!Number.isFinite(updatedAtMs) || now - updatedAtMs > 120_000) {
+          throw error
+        }
+        if (!['running', 'completed', 'failed'].includes(latest.state)) {
+          throw error
+        }
+        return latest
+      }
+    },
+    enabled: Boolean(activeRunId),
+    refetchInterval: (query) => {
+      const current = query.state.data as Url2BlogStatusResponse | null | undefined
+      if (!pipelineMutation.isPending) {
+        return false
+      }
+      if (current && (current.state === 'completed' || current.state === 'failed')) {
+        return false
+      }
+      return 1000
+    },
+  })
+
+  const activeStatus = statusQuery.data ?? null
+  useEffect(() => {
+    if (!activeStatus?.run_id || !activeRunId) return
+    if (activeStatus.run_id === activeRunId) return
+    setActiveRunId(activeStatus.run_id)
+  }, [activeStatus?.run_id, activeRunId])
+  const activeStage = typeof activeStatus?.stage === 'string' ? activeStatus.stage : null
+  const liveStageLabel = getStageLabel(activeStage)
+  const processingSteps = useMemo(
+    () =>
+      URL2BLOG_PROGRESS_STEPS.map((step) => ({
+        ...step,
+        state: getProgressItemState(step, activeStatus),
+      })),
+    [activeStatus]
+  )
+  const statusErrorMessage =
+    activeStatus?.state === 'failed' && activeStatus.error
+      ? activeStatus.error
+      : null
+  const mutationErrorMessage =
+    pipelineMutation.error instanceof Error ? pipelineMutation.error.message : null
 
   const currentStep = useMemo((): WizardStep => {
     if (pipelineMutation.isPending) return 'processing'
@@ -223,18 +559,24 @@ export default function Url2BlogPage() {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     if (!url.trim()) return
+    const runId = createRunId()
 
+    setActiveRunId(runId)
+    setRunSubmittedAt(Date.now())
     setResult(null)
     setShowDetails(false)
     setShowRaw(false)
     setShowTrace(false)
     pipelineMutation.reset()
-    pipelineMutation.mutate()
+    pipelineMutation.mutate(runId)
   }
 
   const handleStartOver = () => {
     setUrl('')
-    setNarrativeFocus('')
+    setActiveRunId(null)
+    setRunSubmittedAt(null)
+    setSelectedNarrativeFocusPresetId('')
+    setCustomNarrativeFocus('')
     setIncludeDebug(true)
     setModelName('gemini-2.5-flash')
     setExecutionProfile('standard')
@@ -302,15 +644,48 @@ export default function Url2BlogPage() {
                 />
               </div>
               <div className="url2blog-url-input">
-                <label htmlFor="narrative-focus">Narrative / Audience Focus (Optional)</label>
+                <label htmlFor="narrative-focus-preset">Narrative / Audience Focus (Optional)</label>
+                <select
+                  id="narrative-focus-preset"
+                  value={selectedNarrativeFocusPresetId}
+                  onChange={(event) => setSelectedNarrativeFocusPresetId(event.target.value)}
+                  className="url2blog-url-field"
+                >
+                  <option value="">No preset (pipeline default)</option>
+                  {NARRATIVE_FOCUS_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="url2blog-focus-grid" role="listbox" aria-label="Narrative focus quick picks">
+                  {NARRATIVE_FOCUS_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setSelectedNarrativeFocusPresetId(preset.id)}
+                      className={`url2blog-focus-chip${
+                        selectedNarrativeFocusPresetId === preset.id ? ' active' : ''
+                      }`}
+                      aria-selected={selectedNarrativeFocusPresetId === preset.id}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
                 <input
-                  id="narrative-focus"
+                  id="narrative-focus-custom"
                   type="text"
-                  placeholder="Example: Reframe for travelers planning where to eat and book."
-                  value={narrativeFocus}
-                  onChange={(event) => setNarrativeFocus(event.target.value)}
+                  placeholder="Optional custom add-on. Example: Keep tone grounded and avoid hype language."
+                  value={customNarrativeFocus}
+                  onChange={(event) => setCustomNarrativeFocus(event.target.value)}
                   className="url2blog-url-field"
                 />
+                <p className="url2blog-focus-preview">
+                  {narrativeFocus
+                    ? `Applied focus: ${narrativeFocus}`
+                    : 'Applied focus: none (pipeline will use default editorial judgment).'}
+                </p>
               </div>
               <div className="url2blog-url-input">
                 <label htmlFor="model-name">Writing Model</label>
@@ -362,9 +737,7 @@ export default function Url2BlogPage() {
               </div>
               {pipelineMutation.isError ? (
                 <p className="url2blog-error">
-                  {pipelineMutation.error instanceof Error
-                    ? pipelineMutation.error.message
-                    : 'Pipeline failed. Check backend logs.'}
+                  {statusErrorMessage || mutationErrorMessage || 'Pipeline failed. Check backend logs.'}
                 </p>
               ) : null}
             </form>
@@ -376,26 +749,25 @@ export default function Url2BlogPage() {
             <div className="u2b-processing-content">
               <div className="u2b-pipeline-progress-centered">
                 <h3>Pipeline Progress</h3>
+                <p className={`u2b-live-status ${activeStatus?.state ?? 'running'}`}>
+                  {activeStatus?.state ?? 'running'}{activeRunId ? ` • ${activeRunId}` : ''}
+                </p>
                 <div className="u2b-stage-checklist">
-                  <div className="u2b-stage-item done">
-                    <div className="u2b-stage-dot" />
-                    <span>URL submitted</span>
-                  </div>
-                  <div className="u2b-stage-item running">
-                    <div className="u2b-stage-dot" />
-                    <span>Stage 1: Extract article</span>
-                  </div>
-                  <div className="u2b-stage-item running">
-                    <div className="u2b-stage-dot" />
-                    <span>Stage 2: Classify article type</span>
-                  </div>
-                  <div className="u2b-stage-item running">
-                    <div className="u2b-stage-dot" />
-                    <span>Rewrite to match guideline</span>
-                  </div>
+                  {processingSteps.map((step) => (
+                    <div key={step.key} className={`u2b-stage-item ${step.state}`}>
+                      <div className="u2b-stage-dot" />
+                      <span>{step.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <p className="u2b-processing-message">Running simplified URL2Blog pipeline...</p>
+              <p className="u2b-processing-message">Current step: {liveStageLabel}</p>
+              {statusQuery.isError ? (
+                <p className="url2blog-error">
+                  Live status polling failed. {statusQuery.error instanceof Error ? statusQuery.error.message : ''}
+                </p>
+              ) : null}
+              {statusErrorMessage ? <p className="url2blog-error">{statusErrorMessage}</p> : null}
             </div>
           </section>
         )}
@@ -712,6 +1084,16 @@ export default function Url2BlogPage() {
                 <Link to="/url2blog/articles" className="url2blog-clear-btn">
                   Saved Articles
                 </Link>
+                {result.langsmith_trace_url && (
+                  <a
+                    href={result.langsmith_trace_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="url2blog-submit-btn"
+                  >
+                    View LangSmith Trace
+                  </a>
+                )}
                 {result.run_id && (
                   <Link
                     to={`/url2blog/stage-article?${new URLSearchParams({

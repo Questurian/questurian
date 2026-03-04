@@ -54,6 +54,8 @@ export type Prompt2BlogStageTrace = {
 export type Prompt2BlogPipelinePayload = {
   message: string
   run_id: string
+  langsmith_trace_url?: string
+  langsmith_trace_run_id?: string
   pipeline_status: 'ready_for_staging' | 'needs_revision'
   article_type: {
     id: number
@@ -128,6 +130,8 @@ export type Prompt2BlogPipelinePayload = {
 
 export type Prompt2BlogResultResponse = {
   run_id: string
+  langsmith_trace_url?: string
+  langsmith_trace_run_id?: string
   markdown: string
   artifact: {
     pipeline_v2?: Prompt2BlogPipelinePayload

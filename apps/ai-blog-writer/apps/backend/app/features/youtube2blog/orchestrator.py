@@ -30,6 +30,7 @@ from app.core import (
     write_stage_result,
     write_status,
 )
+from .graph import run_youtube2blog_graph
 from .stages import (
     stage_1_clean_transcript,
     stage_2_classify_article_type,
@@ -108,7 +109,7 @@ def initialize_run(
     return meta
 
 
-def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
+def _process_run_stages(record: RawVideoRecord, meta: PipelineMeta) -> str:
     """
     Run the YouTube2Blog pipeline.
 
@@ -314,3 +315,10 @@ def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
             feature=FEATURE_NAME,
         )
         raise
+
+
+def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
+    """
+    Run YouTube2Blog through LangGraph orchestration.
+    """
+    return run_youtube2blog_graph(record, meta)

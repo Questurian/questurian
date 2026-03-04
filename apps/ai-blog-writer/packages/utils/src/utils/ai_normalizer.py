@@ -3,9 +3,8 @@ import os
 import time
 from typing import Dict, Any
 
-from langchain.callbacks.base import BaseCallbackHandler
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
+from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_core.prompts import PromptTemplate
 from langchain_google_vertexai import VertexAI
 
 
@@ -64,7 +63,14 @@ Return only the cleaned transcript, no explanations or metadata:
 {transcript}"""
         )
 
-        self.chain = LLMChain(llm=self.llm, prompt=self.prompt)
+    @staticmethod
+    def _extract_text(response: Any) -> str:
+        if isinstance(response, str):
+            return response
+        content = getattr(response, "content", None)
+        if isinstance(content, str):
+            return content
+        return str(response)
 
     def normalize(self, text: str) -> str:
         """Normalize transcript using AI with comprehensive logging."""
@@ -83,8 +89,9 @@ Return only the cleaned transcript, no explanations or metadata:
             api_start = time.time()
             self.logger.info("📤 Sending to Vertex AI...")
 
-            result = self.chain.run(transcript=text)
-            cleaned = result.strip()
+            prompt = self.prompt.format(transcript=text)
+            result = self.llm.invoke(prompt)
+            cleaned = self._extract_text(result).strip()
 
             api_duration = time.time() - api_start
 

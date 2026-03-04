@@ -36,6 +36,18 @@ Comprehensive route list for this workspace.
 | POST | `/url2blog/extract` | Extract and optionally translate article content from a URL |
 | POST | `/url2blog/pipeline-v2` | Simplified one-call pipeline (extract + classify + strict guideline rewrite + quality gate + fact-retention audit/repair) returning lean JSON and `final_markdown` (`include_debug=true` adds raw internals, optional `narrative_focus` steers framing, optional `model_name` selects Gemini model, short articles use capped Google-grounded enrichment) |
 
+### Prompt2Blog (`/prompt2blog`)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/prompt2blog/pipeline-v2` | Queue the structured Prompt2Blog pipeline run |
+| POST | `/prompt2blog/run` | Queue the full Prompt2Blog run flow |
+| GET | `/prompt2blog/status/{run_id}` | Get run status |
+| GET | `/prompt2blog/result/{run_id}` | Get run output (`markdown` + `artifact`) |
+| GET | `/prompt2blog/articles` | List completed Prompt2Blog articles |
+| POST | `/prompt2blog/articles/{run_id}/sync` | Mark article as synced to Payload |
+| GET | `/prompt2blog/articles/{run_id}/sync` | Get Payload sync status for article |
+
 ### Review2Blog (`/review2blog`)
 
 | Method | Path | Description |
@@ -43,10 +55,18 @@ Comprehensive route list for this workspace.
 | POST | `/review2blog/upload` | Process uploaded review JSON (phase 1) |
 | POST | `/review2blog/phase2` | Aggregate phase 1 signals into profile |
 | POST | `/review2blog/phase3` | Generate listicle blurb from profile/context |
-| GET | `/review2blog/status/{run_id}` | Pipeline status placeholder (currently returns 501) |
-| GET | `/review2blog/result/{run_id}` | Pipeline result placeholder (currently returns 501) |
+| POST | `/review2blog/run` | Queue full Review2Blog pipeline run |
+| GET | `/review2blog/status/{run_id}` | Get pipeline run status |
+| GET | `/review2blog/result/{run_id}` | Get pipeline output (`markdown` + `artifact`) |
 | POST | `/review2blog/clear` | Clear Review2Blog run data |
 | GET | `/review2blog/articles` | List completed Review2Blog articles |
+
+### Editor Assist (`/editor-assist`)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/editor-assist/rewrite-block` | Rewrite one markdown block using editor instruction |
+| POST | `/editor-assist/generate-title` | Improve an existing article title using editor instruction |
 
 ### Images (`/images`)
 

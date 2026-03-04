@@ -1,18 +1,28 @@
 """
-Stage 4: Article title generation.
+Stage 4/5: Article title generation and quality evaluation helpers.
 
-This stage:
-1. Retrieves the title_guideline for the classified article type
-2. Uses the article draft from Stage 3 and the title guideline
-3. Generates an optimized title following editorial guidelines
+This module now supports:
+1. Primary title generation
+2. Retry title generation with quality feedback
+3. Deterministic title quality scoring for graph gates
 """
-import logging
 
-from langchain.prompts import PromptTemplate
+from __future__ import annotations
+
+import logging
+import re
+from typing import Any
+
+from langchain_core.prompts import PromptTemplate
 
 from app.core import get_article_type_by_name
+from app.features.youtube2blog.config import (
+    Y2B_PRIMARY_MODEL,
+    Y2B_STAGE5_MAX_TITLE_CHARS,
+    Y2B_STAGE5_MIN_TITLE_CHARS,
+)
 from shared import Stage3Output, Stage4Output
-from utils import LLMPresets
+from utils import get_vertex_llm
 
 logger = logging.getLogger(__name__)
 
@@ -55,74 +65,186 @@ Use this original title as a baseline and starting point. Preserve the core subj
 - The title should accurately reflect the key points of the article and avoid any hallucinations or inaccuracies.
 """
 
+TITLE_RETRY_FEEDBACK_SUFFIX = """
+
+Previous attempt feedback:
+{feedback}
+
+Rewrite the title to satisfy this feedback while still following all original rules.
+Return only one final title.
+"""
+
 
 def _retrieve_title_guideline(article_type: str) -> str:
     """Fetch title_guideline from article_types table."""
     article_type_data = get_article_type_by_name(article_type)
     if not article_type_data:
-        logger.warning(f"No article type found for: {article_type}")
+        logger.warning("No article type found for: %s", article_type)
         return ""
     return article_type_data.get("title_guideline", "") or ""
 
 
-def stage_4_generate_title(stage3: Stage3Output) -> Stage4Output:
+def _sanitize_title(raw_text: str) -> str:
+    generated_title = raw_text.strip()
+    generated_title = generated_title.strip("\"'")
+    generated_title = generated_title.lstrip("#").strip()
+    generated_title = re.sub(r"\s+", " ", generated_title).strip()
+    return generated_title
+
+
+def _title_word_count(title: str) -> int:
+    words = [word for word in re.split(r"\s+", title.strip()) if word]
+    return len(words)
+
+
+def _title_guideline_keywords(guideline: str) -> list[str]:
+    candidates = re.findall(r"[A-Za-z][A-Za-z\-]{3,}", guideline.lower())
+    deduped: list[str] = []
+    for token in candidates:
+        if token not in deduped:
+            deduped.append(token)
+    return deduped[:20]
+
+
+def _article_terms(article: str) -> set[str]:
+    tokens = re.findall(r"[A-Za-z][A-Za-z\-]{3,}", article.lower())
+    return set(tokens)
+
+
+def stage_5_evaluate_title_quality(
+    *,
+    title: str,
+    article: str,
+    guideline: str,
+    baseline_title: str,
+) -> dict[str, Any]:
     """
-    Stage 4: Generate an optimized article title.
+    Deterministic title-quality score used by the graph gate.
 
-    1. Retrieve title_guideline for the classified article type
-    2. Use the article draft and guideline to generate a title
-    3. Return the generated title along with the article content
+    Returns:
+      {
+        "score": float,
+        "checks": {...},
+        "feedback": "string",
+      }
     """
-    logger.info("=" * 60)
-    logger.info("STAGE 4: Generating article title")
-    logger.info("=" * 60)
-    logger.info(f"  Video: {stage3.title}")
-    logger.info(f"  Article Type: {stage3.article_type}")
-    logger.info(f"  Article length: {len(stage3.final_article)} chars")
+    clean_title = title.strip()
+    title_len = len(clean_title)
+    word_count = _title_word_count(clean_title)
 
-    # Initialize Vertex AI using shared preset
-    llm = LLMPresets.title_generation()
+    checks: dict[str, bool] = {
+        "length_range": Y2B_STAGE5_MIN_TITLE_CHARS <= title_len <= Y2B_STAGE5_MAX_TITLE_CHARS,
+        "word_count_range": 6 <= word_count <= 16,
+        "has_letters": bool(re.search(r"[A-Za-z]", clean_title)),
+        "no_markup": "#" not in clean_title and "`" not in clean_title and "\n" not in clean_title,
+        "not_all_caps": clean_title != clean_title.upper(),
+        "not_question_spam": clean_title.count("?") <= 1,
+    }
 
-    # Step 1: Retrieve title guideline
+    baseline_tokens = set(re.findall(r"[A-Za-z][A-Za-z\-]{3,}", baseline_title.lower()))
+    title_tokens = set(re.findall(r"[A-Za-z][A-Za-z\-]{3,}", clean_title.lower()))
+    overlap_baseline = bool(title_tokens.intersection(baseline_tokens))
+    checks["preserves_subject_terms"] = overlap_baseline
+
+    guideline_tokens = _title_guideline_keywords(guideline)
+    guideline_overlap = bool(title_tokens.intersection(set(guideline_tokens)))
+    checks["aligns_with_guideline_terms"] = guideline_overlap or not guideline_tokens
+
+    article_token_set = _article_terms(article)
+    article_overlap = len(title_tokens.intersection(article_token_set)) >= 2
+    checks["grounded_in_article_terms"] = article_overlap
+
+    weights = {
+        "length_range": 2.5,
+        "word_count_range": 1.5,
+        "has_letters": 0.5,
+        "no_markup": 1.0,
+        "not_all_caps": 0.5,
+        "not_question_spam": 0.5,
+        "preserves_subject_terms": 1.5,
+        "aligns_with_guideline_terms": 1.0,
+        "grounded_in_article_terms": 1.0,
+    }
+    weighted_total = sum(weights.values())
+    weighted_score = sum(weight for key, weight in weights.items() if checks[key])
+    score = round((weighted_score / weighted_total) * 10.0, 2)
+
+    failures = [name for name, passed in checks.items() if not passed]
+    if failures:
+        feedback = "Improve title quality by fixing: " + ", ".join(failures) + "."
+    else:
+        feedback = "Title quality checks passed."
+
+    return {
+        "score": score,
+        "checks": checks,
+        "feedback": feedback,
+        "metrics": {
+            "title_length": title_len,
+            "word_count": word_count,
+        },
+    }
+
+
+def _generate_title_impl(
+    *,
+    stage3: Stage3Output,
+    mode: str,
+    retry_feedback: str | None = None,
+) -> Stage4Output:
+    if mode not in {"primary", "retry"}:
+        raise ValueError(f"Unsupported title generation mode: {mode}")
+
+    logger.info("=" * 60)
+    logger.info("STAGE 4/5: Generating article title (%s mode)", mode)
+    logger.info("=" * 60)
+    logger.info("  Video: %s", stage3.title)
+    logger.info("  Article Type: %s", stage3.article_type)
+    logger.info("  Article length: %d chars", len(stage3.final_article))
+
+    llm = get_vertex_llm(
+        temperature=0.1,
+        max_tokens=1024,
+        model_name=Y2B_PRIMARY_MODEL,
+    )
+
     logger.info("  Step 1: Retrieving title guideline...")
     title_guideline = _retrieve_title_guideline(stage3.article_type)
     if not title_guideline:
-        logger.warning(f"  No title guideline found for article type: {stage3.article_type}")
-        title_guideline = "Create a clear, descriptive title that accurately reflects the article content."
+        logger.warning("  No title guideline found for article type: %s", stage3.article_type)
+        title_guideline = (
+            "Create a clear, descriptive title that accurately reflects the article content."
+        )
 
-    logger.info(f"  Title guideline length: {len(title_guideline)} chars")
+    prompt_template = TITLE_GENERATION_PROMPT
+    input_variables = ["original_title", "article", "guideline"]
+    if mode == "retry":
+        prompt_template += TITLE_RETRY_FEEDBACK_SUFFIX
+        input_variables.append("feedback")
 
-    # Step 2: Generate title
-    logger.info("  Step 2: Generating title...")
-    logger.info(f"  Original title (baseline): {stage3.title}")
     prompt = PromptTemplate(
-        input_variables=["original_title", "article", "guideline"],
-        template=TITLE_GENERATION_PROMPT,
+        input_variables=input_variables,
+        template=prompt_template,
     )
-
-    full_prompt = prompt.format(
-        original_title=stage3.title,
-        article=stage3.final_article,
-        guideline=title_guideline,
-    )
-    logger.info(f"  Title generation prompt length: {len(full_prompt)} chars")
+    prompt_kwargs = {
+        "original_title": stage3.title,
+        "article": stage3.final_article,
+        "guideline": title_guideline,
+    }
+    if mode == "retry":
+        prompt_kwargs["feedback"] = retry_feedback or "No additional feedback."
+    full_prompt = prompt.format(**prompt_kwargs)
+    logger.info("  Title generation prompt length: %d chars", len(full_prompt))
 
     result = llm.invoke(full_prompt)
-    logger.info(f"  Title generation response length: {len(result) if result else 0} chars")
-
+    logger.info("  Title generation response length: %d chars", len(result) if result else 0)
     if not result or not result.strip():
         raise RuntimeError("Title generation failed: LLM returned empty response")
 
-    # Clean up the generated title - minimal processing to avoid truncation
-    generated_title = result.strip()
-    # Remove any quotes that might have been added
-    generated_title = generated_title.strip('"\'')
-    # Remove markdown formatting if present
-    generated_title = generated_title.lstrip('#').strip()
+    generated_title = _sanitize_title(result)
+    logger.info("  Generated title: %s", generated_title)
 
-    logger.info(f"  Generated title: {generated_title}")
-
-    output = Stage4Output(
+    return Stage4Output(
         video_id=stage3.video_id,
         title=generated_title,
         content=stage3.final_article,
@@ -132,8 +254,20 @@ def stage_4_generate_title(stage3: Stage3Output) -> Stage4Output:
         debug_raw_response=result,
     )
 
-    logger.info("=" * 60)
-    logger.info("  Stage 4 complete!")
-    logger.info("=" * 60)
 
-    return output
+def stage_4_generate_title(stage3: Stage3Output) -> Stage4Output:
+    """Primary title generation pass."""
+    return _generate_title_impl(stage3=stage3, mode="primary")
+
+
+def stage_5_generate_title_retry(
+    stage3: Stage3Output,
+    *,
+    feedback: str,
+) -> Stage4Output:
+    """Retry title generation with explicit quality feedback."""
+    return _generate_title_impl(
+        stage3=stage3,
+        mode="retry",
+        retry_feedback=feedback,
+    )

@@ -204,3 +204,40 @@ def test_prompt2blog_persists_result_articles_and_sync_endpoints(monkeypatch):
     assert sync_status_after.json()["payload_article_id"] == 8883
 
     clear_all_runs(feature="prompt2blog")
+
+
+def test_prompt2blog_pipeline_v2_uses_langgraph_runner(monkeypatch):
+    app = FastAPI()
+    app.include_router(prompt2blog_routes.router)
+    client = TestClient(app)
+
+    clear_all_runs(feature="prompt2blog")
+    captured: dict[str, str] = {}
+
+    def _fake_graph_runner(*, run_id: str, pipeline_runner):
+        del pipeline_runner
+        captured["run_id"] = run_id
+
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "run_prompt2blog_pipeline_v2_graph",
+        _fake_graph_runner,
+    )
+
+    response = client.post(
+        "/prompt2blog/pipeline-v2",
+        json={
+            "cleaned_data": "Short cleaned source.",
+            "article_type_id": 1,
+            "raw_sources": ["One source blob."],
+            "writing_brief": {},
+            "include_debug": False,
+            "enable_editorial_augmentation": False,
+        },
+    )
+
+    assert response.status_code == 200
+    run_id = response.json()["run_id"]
+    assert captured["run_id"] == run_id
+
+    clear_all_runs(feature="prompt2blog")

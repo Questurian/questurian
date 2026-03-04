@@ -1,18 +1,27 @@
 """
 Stage 2: Classify article type using AI.
 """
+
+from __future__ import annotations
+
 import logging
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from app.core import read_article_definitions
+from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
 from shared import Stage1Output, Stage2Output
-from utils import LLMPresets, parse_json_response
+from utils import get_vertex_llm, parse_json_response
 
 logger = logging.getLogger(__name__)
 
 
-def stage_2_classify_article_type(stage1: Stage1Output, allowed_article_types: list[str]) -> Stage2Output:
+def stage_2_classify_article_type(
+    stage1: Stage1Output,
+    allowed_article_types: list[str],
+    *,
+    classification_mode: str = "primary",
+) -> Stage2Output:
     """
     Stage 2: Classify the cleaned transcript into one of 42 article types.
 
@@ -25,15 +34,25 @@ def stage_2_classify_article_type(stage1: Stage1Output, allowed_article_types: l
     logger.info(f"  Video: {stage1.title}")
     logger.info(f"  Transcript length: {len(stage1.cleaned_transcript)} chars")
 
-    # Truncate very long transcripts for classification (15k chars is enough)
-    MAX_CLASSIFICATION_CHARS = 15000
-    transcript_for_classification = stage1.cleaned_transcript
-    if len(transcript_for_classification) > MAX_CLASSIFICATION_CHARS:
-        transcript_for_classification = transcript_for_classification[:MAX_CLASSIFICATION_CHARS]
-        logger.info(f"  Truncated transcript to {MAX_CLASSIFICATION_CHARS} chars for classification")
+    if classification_mode not in {"primary", "retry"}:
+        raise ValueError(f"Unsupported classification mode: {classification_mode}")
 
-    # Initialize Vertex AI using shared preset
-    llm = LLMPresets.classification()
+    # Retry pass gets a longer context window for borderline cases.
+    max_classification_chars = 15000 if classification_mode == "primary" else 30000
+    transcript_for_classification = stage1.cleaned_transcript
+    if len(transcript_for_classification) > max_classification_chars:
+        transcript_for_classification = transcript_for_classification[:max_classification_chars]
+        logger.info(
+            "  Truncated transcript to %d chars for %s classification",
+            max_classification_chars,
+            classification_mode,
+        )
+
+    llm = get_vertex_llm(
+        temperature=0.1,
+        max_tokens=2048,
+        model_name=Y2B_PRIMARY_MODEL,
+    )
 
     # Build the article types list for the prompt
     article_types_list = "\n".join(f"- {t}" for t in allowed_article_types)
@@ -82,6 +101,7 @@ ANALYSIS RULES:
 3. Ignore intros, ads, or calls-to-action unless they dominate the transcript.
 4. Do NOT assume the creator's intent — infer from language and structure.
 5. Choose the classification that best represents the majority of the transcript.
+6. If classification seems ambiguous, still choose the most defensible best-fit type.
 
 ---
 
@@ -159,7 +179,11 @@ TRANSCRIPT:
         title=stage1.title,
         classification=classification,
         confidence=confidence,
-        reasoning=reasoning,
+        reasoning=(
+            f"{reasoning} (mode={classification_mode})"
+            if reasoning
+            else f"mode={classification_mode}"
+        ),
         debug_prompt=full_prompt,
         debug_raw_response=result,
     )
