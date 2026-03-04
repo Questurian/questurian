@@ -30,6 +30,10 @@ function getRunningPhaseLabel(stage: string): string {
       return 'Generate Supplement'
     case 'stage_3':
       return 'Compose Article'
+    case 'stage_3_quality_gate':
+      return 'Evaluate Article Quality'
+    case 'stage_3_improve':
+      return 'Rewrite Article for Quality'
     case 'stage_editorial_gate':
       return 'Evaluate Editorial Gate'
     case 'stage_editorial_augmentation':

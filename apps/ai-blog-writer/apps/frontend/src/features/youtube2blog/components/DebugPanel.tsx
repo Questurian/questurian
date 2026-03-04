@@ -21,6 +21,8 @@ const BRANCH_DEBUG_STAGES = [
   { key: 'stage_3_guideline', label: 'Stage 3A: Guideline Retrieval' },
   { key: 'stage_3_coverage', label: 'Stage 3B: Coverage Analysis' },
   { key: 'stage_3_supplement', label: 'Stage 3C: Supplement Generation' },
+  { key: 'stage_3_quality_gate', label: 'Stage 3 Gate: Article Quality' },
+  { key: 'stage_3_improve', label: 'Stage 3 Retry: Article Rewrite' },
   { key: 'stage_editorial_gate', label: 'Editorial Gate' },
   { key: 'stage_editorial_skip', label: 'Editorial Skip Decision' },
   { key: 'stage_5_quality_gate', label: 'Stage 5 Gate: Title Quality' },

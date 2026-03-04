@@ -39,6 +39,8 @@ Y2B_DEBUG_STAGE_ORDER = [
     "stage_3_coverage",
     "stage_3_supplement",
     "stage_3",
+    "stage_3_quality_gate",
+    "stage_3_improve",
     "stage_editorial_gate",
     "stage_editorial_augmentation",
     "stage_editorial_skip",

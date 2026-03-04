@@ -35,6 +35,10 @@ from app.features.youtube2blog.config import (
     Y2B_STAGE1_REPAIR_MAX_RETRIES,
     Y2B_STAGE2_CLASSIFICATION_MAX_RETRIES,
     Y2B_STAGE2_MIN_CONFIDENCE,
+    Y2B_STAGE3_MIN_CRITICAL_DIMENSION_SCORE,
+    Y2B_STAGE3_NEAR_PASS_MARGIN,
+    Y2B_STAGE3_MIN_QUALITY_SCORE,
+    Y2B_STAGE3_QUALITY_MAX_RETRIES,
     Y2B_STAGE5_MIN_TITLE_SCORE,
     Y2B_STAGE5_TITLE_MAX_RETRIES,
 )
@@ -42,9 +46,13 @@ from app.features.youtube2blog.stages import (
     stage_1_clean_transcript,
     stage_1_repair_transcript,
     stage_2_classify_article_type,
+    stage_3_assess_article_quality,
+    stage_3_build_targeted_feedback,
     stage_3_compose_from_parts,
     stage_3_coverage_check,
     stage_3_generate_supplement,
+    stage_3_improve_article,
+    stage_3_pick_improvement_mode,
     stage_3_retrieve_guideline,
     stage_4_generate_title,
     stage_5_evaluate_title_quality,
@@ -109,6 +117,10 @@ class YouTube2BlogGraphState(TypedDict, total=False):
     stage3_coverage: dict[str, Any]
     stage3_supplement: dict[str, str]
     stage3: dict[str, Any]
+    stage3_quality_retry_count: int
+    stage3_quality_gate: dict[str, Any]
+    stage3_quality_feedback: dict[str, Any]
+    stage3_quality_gate_decision: str
 
     stage_editorial_gate: dict[str, Any]
     stage_editorial_decision: str
@@ -504,6 +516,178 @@ def run_youtube2blog_graph(
             "stage_results": stage_results,
         }
 
+    def stage_3_quality_gate_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
+        _write_running_status("stage_3_quality_gate")
+        stage3 = Stage3Output.model_validate(state["stage3"])
+        retry_count = int(state.get("stage3_quality_retry_count", 0))
+        assessment = stage_3_assess_article_quality(stage3=stage3)
+        dimension_scores_raw = assessment.get("dimension_scores")
+        dimension_scores = (
+            dict(dimension_scores_raw)
+            if isinstance(dimension_scores_raw, dict)
+            else {}
+        )
+        overall_quality_score = float(assessment.get("overall_quality_score", 0.0))
+
+        critical_dimensions = (
+            "clarity",
+            "structure_coherence",
+            "usefulness_actionability",
+        )
+        critical_failed = [
+            key
+            for key in critical_dimensions
+            if float(dimension_scores.get(key, 0.0))
+            < Y2B_STAGE3_MIN_CRITICAL_DIMENSION_SCORE
+        ]
+
+        strict_pass = (
+            overall_quality_score >= Y2B_STAGE3_MIN_QUALITY_SCORE
+            and not critical_failed
+        )
+        near_pass = (
+            not critical_failed
+            and overall_quality_score
+            >= (Y2B_STAGE3_MIN_QUALITY_SCORE - Y2B_STAGE3_NEAR_PASS_MARGIN)
+        )
+        if strict_pass:
+            decision = "pass"
+            pass_mode = "strict"
+        elif retry_count < Y2B_STAGE3_QUALITY_MAX_RETRIES:
+            decision = "retry"
+            pass_mode = "retry_required"
+        elif near_pass:
+            decision = "pass"
+            pass_mode = "near_pass"
+        else:
+            raise RuntimeError(
+                "Stage 3 quality gate failed after retries; "
+                f"score={overall_quality_score:.2f}, "
+                f"threshold={Y2B_STAGE3_MIN_QUALITY_SCORE:.2f}, "
+                f"critical_failed={critical_failed}"
+            )
+
+        gate_data = {
+            **assessment,
+            "decision": decision,
+            "passed": decision == "pass",
+            "pass_mode": pass_mode,
+            "retry_count": retry_count,
+            "max_retries": Y2B_STAGE3_QUALITY_MAX_RETRIES,
+            "score_threshold": Y2B_STAGE3_MIN_QUALITY_SCORE,
+            "near_pass_margin": Y2B_STAGE3_NEAR_PASS_MARGIN,
+            "critical_dimension_threshold": Y2B_STAGE3_MIN_CRITICAL_DIMENSION_SCORE,
+            "critical_dimensions": list(critical_dimensions),
+            "critical_failed": critical_failed,
+        }
+        stage_results = _record_stage_result(
+            state,
+            stage_name="stage_3_quality_gate",
+            input_refs={"stage_3": _stage_ref(run_id, "stage_3")},
+            data=gate_data,
+        )
+        return {
+            "stage3_quality_gate": gate_data,
+            "stage3_quality_feedback": gate_data,
+            "stage3_quality_gate_decision": decision,
+            "stage_results": stage_results,
+        }
+
+    def stage_3_improve_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
+        _write_running_status("stage_3_improve")
+        stage3 = Stage3Output.model_validate(state["stage3"])
+        feedback_raw = state.get("stage3_quality_feedback")
+        feedback = dict(feedback_raw) if isinstance(feedback_raw, dict) else {}
+        top_issues_raw = feedback.get("top_issues")
+        rewrite_brief_raw = feedback.get("rewrite_brief")
+        top_issues = (
+            [str(item).strip() for item in top_issues_raw if str(item).strip()]
+            if isinstance(top_issues_raw, list)
+            else []
+        )
+        rewrite_brief = (
+            [str(item).strip() for item in rewrite_brief_raw if str(item).strip()]
+            if isinstance(rewrite_brief_raw, list)
+            else []
+        )
+        dimension_scores_raw = feedback.get("dimension_scores")
+        dimension_scores: dict[str, float] = {}
+        if isinstance(dimension_scores_raw, dict):
+            for key, value in dimension_scores_raw.items():
+                if not isinstance(key, str):
+                    continue
+                try:
+                    dimension_scores[key] = float(value)
+                except (TypeError, ValueError):
+                    continue
+        targeted_feedback = stage_3_build_targeted_feedback(
+            dimension_scores=dimension_scores,
+            top_issues=top_issues,
+            rewrite_brief=rewrite_brief,
+        )
+        retry_count = int(state.get("stage3_quality_retry_count", 0)) + 1
+        overall_quality_score = float(feedback.get("overall_quality_score", 0.0))
+        mode = stage_3_pick_improvement_mode(
+            overall_quality_score=overall_quality_score,
+            retry_count=retry_count,
+        )
+        improved = stage_3_improve_article(
+            stage3=stage3,
+            top_issues=list(targeted_feedback.get("top_issues") or top_issues),
+            rewrite_brief=list(targeted_feedback.get("rewrite_brief") or rewrite_brief),
+            mode=mode,
+            focus_dimensions=list(targeted_feedback.get("focus_dimensions") or []),
+        )
+
+        improve_prompt = str(improved.get("debug_improve_prompt") or "")
+        improve_response = str(improved.get("debug_improve_response") or "")
+        existing_comp_prompt = stage3.debug_composition_prompt or ""
+        existing_comp_response = stage3.debug_composition_response or ""
+
+        updated_stage3 = stage3.model_copy(
+            update={
+                "final_article": str(improved.get("improved_article") or stage3.final_article),
+                "debug_composition_prompt": (
+                    f"{existing_comp_prompt}\n\n---\n\n"
+                    f"[stage_3_improve mode={mode}]\n{improve_prompt}"
+                ).strip(),
+                "debug_composition_response": (
+                    f"{existing_comp_response}\n\n---\n\n"
+                    f"[stage_3_improve mode={mode}]\n{improve_response}"
+                ).strip(),
+            }
+        )
+
+        stage_results = _record_stage_result(
+            state,
+            stage_name="stage_3_improve",
+            input_refs={"stage_3_quality_gate": _stage_ref(run_id, "stage_3_quality_gate")},
+            data={
+                "mode": mode,
+                "retry_count": retry_count,
+                "overall_quality_score_before": overall_quality_score,
+                "focus_dimensions": targeted_feedback.get("focus_dimensions") or [],
+                "top_issues": targeted_feedback.get("top_issues") or top_issues,
+                "rewrite_brief": targeted_feedback.get("rewrite_brief") or rewrite_brief,
+                "word_count_before": improved.get("word_count_before"),
+                "word_count_after": improved.get("word_count_after"),
+                "debug_improve_prompt": improve_prompt,
+                "debug_improve_response": improve_response,
+                "debug_improve_first_response": improved.get("debug_improve_first_response"),
+            },
+        )
+        stage_results = _record_stage_result(
+            {"stage_results": stage_results},
+            stage_name="stage_3",
+            input_refs={"stage_3_improve": _stage_ref(run_id, "stage_3_improve")},
+            data=updated_stage3.model_dump(),
+        )
+        return {
+            "stage3": updated_stage3.model_dump(),
+            "stage3_quality_retry_count": retry_count,
+            "stage_results": stage_results,
+        }
+
     def stage_editorial_gate_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_editorial_gate")
         stage3 = Stage3Output.model_validate(state["stage3"])
@@ -764,6 +948,9 @@ def run_youtube2blog_graph(
             return "compose"
         return "supplement"
 
+    def route_stage_3_quality_gate(state: YouTube2BlogGraphState) -> str:
+        return str(state.get("stage3_quality_gate_decision") or "pass")
+
     def route_editorial_gate(state: YouTube2BlogGraphState) -> str:
         return str(state.get("stage_editorial_decision") or "skip")
 
@@ -783,6 +970,8 @@ def run_youtube2blog_graph(
     builder.add_node("stage_3_coverage", stage_3_coverage_node)
     builder.add_node("stage_3_supplement", stage_3_supplement_node)
     builder.add_node("stage_3", stage_3_compose_node)
+    builder.add_node("stage_3_quality_gate", stage_3_quality_gate_node)
+    builder.add_node("stage_3_improve", stage_3_improve_node)
 
     builder.add_node("stage_editorial_gate", stage_editorial_gate_node)
     builder.add_node("stage_editorial_augmentation", stage_editorial_node)
@@ -827,7 +1016,17 @@ def run_youtube2blog_graph(
     )
     builder.add_edge("stage_3_supplement", "stage_3")
 
-    builder.add_edge("stage_3", "stage_editorial_gate")
+    builder.add_edge("stage_3", "stage_3_quality_gate")
+    builder.add_conditional_edges(
+        "stage_3_quality_gate",
+        route_stage_3_quality_gate,
+        {
+            "pass": "stage_editorial_gate",
+            "retry": "stage_3_improve",
+        },
+    )
+    builder.add_edge("stage_3_improve", "stage_3_quality_gate")
+
     builder.add_conditional_edges(
         "stage_editorial_gate",
         route_editorial_gate,
@@ -870,6 +1069,7 @@ def run_youtube2blog_graph(
                         "run_id": run_id,
                         "stage1_retry_count": 0,
                         "stage2_retry_count": 0,
+                        "stage3_quality_retry_count": 0,
                         "stage5_retry_count": 0,
                         "stage_results": {},
                     },

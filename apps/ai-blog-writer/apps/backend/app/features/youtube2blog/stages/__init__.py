@@ -8,6 +8,12 @@ from .stage_3 import (
     stage_3_generate_supplement,
     stage_3_retrieve_guideline,
 )
+from .stage_3_quality import (
+    stage_3_assess_article_quality,
+    stage_3_build_targeted_feedback,
+    stage_3_improve_article,
+    stage_3_pick_improvement_mode,
+)
 from .stage_editorial_augmentation import stage_editorial_augmentation
 from .stage_4 import (
     stage_4_generate_title,
@@ -24,6 +30,10 @@ __all__ = [
     "stage_3_coverage_check",
     "stage_3_generate_supplement",
     "stage_3_compose_from_parts",
+    "stage_3_assess_article_quality",
+    "stage_3_build_targeted_feedback",
+    "stage_3_pick_improvement_mode",
+    "stage_3_improve_article",
     "stage_editorial_augmentation",
     "stage_4_generate_title",
     "stage_5_generate_title_retry",
