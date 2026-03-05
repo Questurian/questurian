@@ -40,13 +40,22 @@ Comprehensive route list for this workspace.
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/prompt2blog/pipeline-v2` | Queue the structured Prompt2Blog pipeline run |
-| POST | `/prompt2blog/run` | Queue the full Prompt2Blog run flow |
+| POST | `/prompt2blog/pipeline-v2` | Queue the structured Prompt2Blog run (full LangGraph path) |
+| POST | `/prompt2blog/run` | Queue the one-click Prompt2Blog run (same structured schema as `pipeline-v2`) |
+| GET | `/prompt2blog/input-options` | Load input dropdown catalogs (`article_types`, `tones`, `lengths`, `brand_voices`, defaults) |
+| GET | `/prompt2blog/article-types/{article_type_id}/guideline-preview` | Preview resolved guideline + title guideline markdown for selected article type |
 | GET | `/prompt2blog/status/{run_id}` | Get run status |
 | GET | `/prompt2blog/result/{run_id}` | Get run output (`markdown` + `artifact`) |
 | GET | `/prompt2blog/articles` | List completed Prompt2Blog articles |
 | POST | `/prompt2blog/articles/{run_id}/sync` | Mark article as synced to Payload |
 | GET | `/prompt2blog/articles/{run_id}/sync` | Get Payload sync status for article |
+
+Structured Prompt2Blog run input now uses:
+- `article_type_id` (required), `source_material` (required array of raw text blocks)
+- `article_goal`, `target_reader`, `destination_context` (required)
+- `tone_id`, `length_id` (required; loaded from `/prompt2blog/input-options`)
+- `brand_voice_id`, `primary_keyword`, `secondary_keywords`, `must_include`, `audience_profile`, `negative_instructions` (optional)
+- `prompt_enhance`, `creativity_level`, `include_debug`, `enable_editorial_augmentation`, `model_name` (optional controls)
 
 ### Review2Blog (`/review2blog`)
 
@@ -113,4 +122,8 @@ Comprehensive route list for this workspace.
 | `/youtube2blog/stage` | Auth required | Stage workflow page |
 | `/youtube2blog/stage-article` | Auth required | Stage article editor page |
 | `/review2blog` | Auth required | Review2Blog page |
+| `/prompt2blog` | Auth required | Prompt2Blog main page |
+| `/prompt2blog/articles` | Auth required | Prompt2Blog saved articles page |
+| `/prompt2blog/stage` | Auth required | Prompt2Blog stage workflow page |
+| `/prompt2blog/stage-article` | Auth required | Prompt2Blog stage article editor page |
 | `/url2blog` | Auth required | URL2Blog page |

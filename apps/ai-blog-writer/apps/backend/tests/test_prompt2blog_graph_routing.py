@@ -24,11 +24,12 @@ def test_prompt2blog_pipeline_v2_routes_through_graph_runner(monkeypatch):
         _fake_graph_runner,
     )
 
-    request = prompt2blog_routes.PipelineV2Request(
+    request = prompt2blog_routes.PipelineV2RuntimeRequest(
         cleaned_data="Cleaned source",
         article_type_id=3,
         raw_sources=["source"],
         writing_brief={},
+        option_context={},
         include_debug=False,
         enable_editorial_augmentation=False,
     )
@@ -53,9 +54,14 @@ def test_prompt2blog_full_run_routes_through_graph_runner(monkeypatch):
         _fake_graph_runner,
     )
 
-    request = prompt2blog_routes.RunRequest(
-        raw_sources=["raw source"],
-        writing_brief={},
+    request = prompt2blog_routes.Prompt2BlogInputRequest(
+        article_type_id=3,
+        source_material=["raw source"],
+        article_goal="Draft a practical article.",
+        target_reader="General traveler",
+        destination_context="Kyoto, Japan",
+        tone_id="practical",
+        length_id="medium",
         include_debug=False,
         enable_editorial_augmentation=False,
     )

@@ -2,11 +2,60 @@ export type SynthesizeResponse = {
   synthesized: string
 }
 
+export type Prompt2BlogInputOption = {
+  id: string
+  label: string
+  description?: string
+  instructions?: string
+  default?: boolean
+  order?: number
+  paragraph_length?: string
+  target_word_count?: number
+}
+
+export type Prompt2BlogArticleTypeOption = {
+  id: number
+  name: string
+  definition: string
+}
+
+export type Prompt2BlogInputOptionsResponse = {
+  article_types: Prompt2BlogArticleTypeOption[]
+  tones: Prompt2BlogInputOption[]
+  lengths: Prompt2BlogInputOption[]
+  brand_voices: Prompt2BlogInputOption[]
+  defaults: {
+    tone_id: string
+    length_id: string
+    brand_voice_id: string
+  }
+}
+
+export type Prompt2BlogGuidelinePreviewResponse = {
+  id: number
+  name: string
+  guideline: string
+  title_guideline: string
+  guideline_file?: string | null
+  title_guideline_file?: string | null
+}
+
 export type Prompt2BlogPipelineStartRequest = {
-  cleaned_data: string
-  raw_sources: string[]
-  writing_brief: Record<string, unknown>
   article_type_id: number
+  source_material: string[]
+  article_goal: string
+  target_reader: string
+  destination_context: string
+  tone_id: string
+  length_id: string
+  brand_voice_id?: string
+  primary_keyword?: string
+  secondary_keywords?: string[]
+  must_include?: string[]
+  audience_profile?: string
+  prompt_enhance?: boolean
+  creativity_level?: 'low' | 'medium' | 'high'
+  negative_instructions?: string[]
   include_debug?: boolean
   enable_editorial_augmentation?: boolean
   model_name?: string
@@ -18,8 +67,21 @@ export type Prompt2BlogPipelineStartResponse = {
 }
 
 export type Prompt2BlogRunRequest = {
-  raw_sources: string[]
-  writing_brief: Record<string, unknown>
+  article_type_id: number
+  source_material: string[]
+  article_goal: string
+  target_reader: string
+  destination_context: string
+  tone_id: string
+  length_id: string
+  brand_voice_id?: string
+  primary_keyword?: string
+  secondary_keywords?: string[]
+  must_include?: string[]
+  audience_profile?: string
+  prompt_enhance?: boolean
+  creativity_level?: 'low' | 'medium' | 'high'
+  negative_instructions?: string[]
   include_debug?: boolean
   enable_editorial_augmentation?: boolean
   model_name?: string
@@ -65,6 +127,14 @@ export type Prompt2BlogPipelinePayload = {
   guideline_meta: {
     guideline: string
     title_guideline: string
+    guideline_file?: string | null
+    title_guideline_file?: string | null
+  }
+  input_profiles?: {
+    tone?: Record<string, unknown>
+    length?: Record<string, unknown>
+    brand_voice?: Record<string, unknown>
+    creativity_level?: string
   }
   improved_article: {
     title: string

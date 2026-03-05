@@ -2,9 +2,9 @@
 Prompt2Blog API routes.
 
 Flow:
-1) Synthesize raw sources into a cleaned overview.
-2) Classify article type from synthesized overview.
-3) Run pipeline-v2 (guideline-aware generation) as a tracked background run.
+1) Validate user-selected article type and structured inputs.
+2) Clean messy pasted source material and synthesize a working overview.
+3) Run guideline-aware generation pipeline as a tracked background run.
 """
 
 from __future__ import annotations
@@ -12,7 +12,11 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime
+import unicodedata
+from functools import lru_cache
+from html import unescape
+from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any, List
 from uuid import uuid4
 
@@ -52,6 +56,36 @@ EDITORIAL_COMPONENT_LABELS = {
     "key_takeaways_box": "Key Takeaways",
     "highlight_callout": "Highlight Callout",
     "faq_block": "FAQ Block",
+}
+PROMPT2BLOG_DATA_DIR = Path(__file__).resolve().parents[3] / "data"
+PROMPT2BLOG_GUIDELINES_DIR = PROMPT2BLOG_DATA_DIR / "guidelines"
+PROMPT2BLOG_TITLE_GUIDELINES_DIR = PROMPT2BLOG_DATA_DIR / "title"
+PROMPT2BLOG_OPTIONS_DIR = PROMPT2BLOG_DATA_DIR / "prompt2blog"
+PROMPT2BLOG_TONES_DIR = PROMPT2BLOG_OPTIONS_DIR / "tones"
+PROMPT2BLOG_LENGTHS_DIR = PROMPT2BLOG_OPTIONS_DIR / "lengths"
+PROMPT2BLOG_BRAND_VOICES_DIR = PROMPT2BLOG_OPTIONS_DIR / "brand-voices"
+PROMPT2BLOG_CREATIVITY_LEVELS = {"low", "medium", "high"}
+PROMPT2BLOG_NOISE_PATTERNS = (
+    "cookie",
+    "privacy policy",
+    "terms of service",
+    "advertisement",
+    "sponsored",
+    "subscribe",
+    "sign up",
+    "all rights reserved",
+    "share this",
+    "follow us",
+    "related articles",
+    "accept all",
+)
+PROMPT2BLOG_GUIDELINE_FILE_ALIASES = {
+    "opinionpiece": "opinionpieces",
+    "interview": "interviewarticles",
+    "comparisonarticle": "comparisonarticleavsb",
+}
+PROMPT2BLOG_TITLE_FILE_ALIASES = {
+    "disqualifiers": "disqualifiersegnolistarticles",
 }
 
 SYNTHESIZE_PROMPT = (
@@ -524,26 +558,40 @@ class ClassifyResponse(BaseModel):
     classification: ClassificationResult
 
 
-class PipelineV2Request(BaseModel):
+class PipelineV2RuntimeRequest(BaseModel):
     cleaned_data: str
     raw_sources: List[str] = Field(default_factory=list)
     writing_brief: dict[str, Any] = Field(default_factory=dict)
     article_type_id: int
+    option_context: dict[str, Any] = Field(default_factory=dict)
     include_debug: bool = True
     enable_editorial_augmentation: bool = True
     model_name: str | None = None
 
 
-class RunRequest(BaseModel):
-    raw_sources: List[str] = Field(default_factory=list)
-    writing_brief: dict[str, Any] = Field(default_factory=dict)
+class Prompt2BlogInputRequest(BaseModel):
+    article_type_id: int
+    source_material: List[str] = Field(default_factory=list)
+    article_goal: str
+    target_reader: str
+    destination_context: str
+    tone_id: str
+    length_id: str
+    brand_voice_id: str | None = None
+    primary_keyword: str | None = None
+    secondary_keywords: List[str] = Field(default_factory=list)
+    must_include: List[str] = Field(default_factory=list)
+    audience_profile: str | None = None
+    prompt_enhance: bool = True
+    creativity_level: str = "medium"
+    negative_instructions: List[str] = Field(default_factory=list)
     include_debug: bool = True
     enable_editorial_augmentation: bool = True
     model_name: str | None = None
 
 
 def _now_iso() -> str:
-    return datetime.utcnow().isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _read_langgraph_trace(run_id: str) -> dict[str, str]:
@@ -616,17 +664,24 @@ def _normalize_text(value: str) -> str:
 
 
 def _normalize_article_type_name(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "", value.lower())
+    normalized = unicodedata.normalize("NFKD", value or "")
+    normalized = (
+        normalized.replace("’", "'")
+        .replace("‘", "'")
+        .replace("‑", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("\xa0", " ")
+    )
+    return re.sub(r"[^a-z0-9]+", "", normalized.lower())
 
 
-def _format_raw_sources(raw_sources: list[str], max_chars_each: int = 5000) -> str:
+def _format_raw_sources(raw_sources: list[str]) -> str:
     cleaned = []
     for index, source in enumerate(raw_sources, start=1):
         text = _safe_str(source)
         if not text:
             continue
-        if len(text) > max_chars_each:
-            text = f"{text[:max_chars_each]}\n\n[TRUNCATED]"
         cleaned.append(f"Source {index}:\n{text}")
 
     if not cleaned:
@@ -634,37 +689,227 @@ def _format_raw_sources(raw_sources: list[str], max_chars_each: int = 5000) -> s
     return "\n\n---\n\n".join(cleaned)
 
 
-def _extract_raw_sources_from_brief(
-    explicit_raw_sources: list[str],
-    writing_brief: dict[str, Any],
-) -> list[str]:
-    """Resolve raw sources from explicit payload first, then writing_brief.raw_input."""
-    resolved: list[str] = []
+def _coerce_frontmatter_value(value: str) -> Any:
+    raw = value.strip()
+    lower = raw.lower()
+    if lower in {"true", "false"}:
+        return lower == "true"
+    if re.fullmatch(r"-?\d+", raw):
+        return int(raw)
+    if re.fullmatch(r"-?\d+\.\d+", raw):
+        try:
+            return float(raw)
+        except ValueError:
+            return raw
+    return raw
 
-    for source in explicit_raw_sources:
-        text = _safe_str(source)
-        if text:
-            resolved.append(text)
 
-    if resolved:
-        return resolved
+def _parse_markdown_frontmatter(content: str) -> tuple[dict[str, Any], str]:
+    stripped = content.lstrip()
+    if not stripped.startswith("---"):
+        return {}, content.strip()
 
-    raw_input = writing_brief.get("raw_input")
-    if not isinstance(raw_input, dict):
-        return resolved
+    match = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", stripped, flags=re.S)
+    if not match:
+        return {}, content.strip()
 
-    blobs = raw_input.get("blobs")
-    if not isinstance(blobs, list):
-        return resolved
-
-    for blob in blobs:
-        if not isinstance(blob, dict):
+    frontmatter_raw, body = match.groups()
+    metadata: dict[str, Any] = {}
+    for line in frontmatter_raw.splitlines():
+        if ":" not in line:
             continue
-        text = _safe_str(blob.get("content"))
-        if text:
-            resolved.append(text)
+        key, raw_value = line.split(":", 1)
+        metadata[key.strip()] = _coerce_frontmatter_value(raw_value)
+    return metadata, body.strip()
 
-    return resolved
+
+def _markdown_heading_label(body: str, fallback: str) -> str:
+    for line in body.splitlines():
+        trimmed = line.strip()
+        if trimmed.startswith("#"):
+            return trimmed.lstrip("#").strip() or fallback
+    return fallback
+
+
+def _read_markdown_option_files(directory: Path) -> list[dict[str, Any]]:
+    options: list[dict[str, Any]] = []
+    if not directory.exists():
+        return options
+
+    for path in sorted(directory.glob("*.md")):
+        try:
+            content = path.read_text(encoding="utf-8")
+        except Exception:
+            logger.warning("Unable to read Prompt2Blog option file: %s", path)
+            continue
+
+        metadata, body = _parse_markdown_frontmatter(content)
+        default_id = _normalize_article_type_name(path.stem)
+        option_id = _safe_str(metadata.get("id")) or default_id
+        if not option_id:
+            continue
+
+        label = _safe_str(metadata.get("label")) or _markdown_heading_label(
+            body, path.stem
+        )
+        description = _safe_str(metadata.get("description"))
+        option = {
+            "id": option_id,
+            "label": label or option_id,
+            "description": description,
+            "instructions": body,
+            "default": _safe_bool(metadata.get("default"), default=False),
+            "order": _safe_int(metadata.get("order"), default=9999),
+        }
+        if "target_word_count" in metadata:
+            option["target_word_count"] = _safe_int(
+                metadata.get("target_word_count"), default=0
+            )
+        if "paragraph_length" in metadata:
+            option["paragraph_length"] = _safe_str(metadata.get("paragraph_length"))
+        options.append(option)
+
+    options.sort(key=lambda item: (item.get("order", 9999), item["label"].lower()))
+    return options
+
+
+def _default_prompt2blog_options() -> dict[str, list[dict[str, Any]]]:
+    return {
+        "tones": [
+            {
+                "id": "practical",
+                "label": "Practical",
+                "description": "Actionable and direct guidance.",
+                "instructions": "Prioritize practical guidance and clear steps.",
+                "default": True,
+                "order": 1,
+            }
+        ],
+        "lengths": [
+            {
+                "id": "medium",
+                "label": "Medium",
+                "description": "Balanced depth.",
+                "instructions": "Target balanced depth and readability.",
+                "paragraph_length": "Medium (3–5 sentences per paragraph)",
+                "target_word_count": 900,
+                "default": True,
+                "order": 1,
+            }
+        ],
+        "brand_voices": [
+            {
+                "id": "questurian-default",
+                "label": "Questurian Default",
+                "description": "Clear, globally minded editorial voice.",
+                "instructions": "Maintain polished, globally minded editorial voice.",
+                "default": True,
+                "order": 1,
+            }
+        ],
+    }
+
+
+@lru_cache(maxsize=1)
+def _load_prompt2blog_option_catalog() -> dict[str, list[dict[str, Any]]]:
+    defaults = _default_prompt2blog_options()
+    tones = _read_markdown_option_files(PROMPT2BLOG_TONES_DIR) or defaults["tones"]
+    lengths = _read_markdown_option_files(PROMPT2BLOG_LENGTHS_DIR) or defaults["lengths"]
+    brand_voices = _read_markdown_option_files(PROMPT2BLOG_BRAND_VOICES_DIR) or defaults["brand_voices"]
+    return {
+        "tones": tones,
+        "lengths": lengths,
+        "brand_voices": brand_voices,
+    }
+
+
+def _find_option_or_raise(
+    options: list[dict[str, Any]],
+    option_id: str,
+    *,
+    field_name: str,
+) -> dict[str, Any]:
+    normalized = _normalize_article_type_name(option_id)
+    for option in options:
+        if _normalize_article_type_name(_safe_str(option.get("id"))) == normalized:
+            return option
+    raise RuntimeError(f"Unsupported {field_name}: '{option_id}'")
+
+
+def _default_option(options: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for option in options:
+        if _safe_bool(option.get("default"), default=False):
+            return option
+    return options[0] if options else None
+
+
+def _read_article_type_markdown(
+    *,
+    article_type_name: str,
+    directory: Path,
+    fallback: str,
+    aliases: dict[str, str],
+) -> tuple[str, str | None]:
+    if not directory.exists():
+        return fallback, None
+
+    normalized_target = _normalize_article_type_name(article_type_name)
+    files_by_key: dict[str, Path] = {}
+    for file_path in directory.glob("*.md"):
+        files_by_key[_normalize_article_type_name(file_path.stem)] = file_path
+
+    lookup_keys = [normalized_target]
+    alias_value = aliases.get(normalized_target)
+    if alias_value:
+        lookup_keys.append(alias_value)
+
+    for key in lookup_keys:
+        file_path = files_by_key.get(key)
+        if not file_path:
+            continue
+        try:
+            return file_path.read_text(encoding="utf-8").strip(), file_path.name
+        except Exception:
+            logger.warning("Failed to read guideline markdown file: %s", file_path)
+            break
+
+    return fallback, None
+
+
+def _cleanup_source_text(raw_text: str) -> tuple[str, dict[str, int]]:
+    text = unescape(raw_text or "")
+    text = re.sub(r"(?is)<script.*?>.*?</script>", " ", text)
+    text = re.sub(r"(?is)<style.*?>.*?</style>", " ", text)
+    text = re.sub(r"(?is)<noscript.*?>.*?</noscript>", " ", text)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    removed_lines = 0
+    cleaned_lines: list[str] = []
+    for line in text.split("\n"):
+        normalized = re.sub(r"\s+", " ", line).strip()
+        if not normalized:
+            cleaned_lines.append("")
+            continue
+        lower = normalized.lower()
+        if any(pattern in lower for pattern in PROMPT2BLOG_NOISE_PATTERNS):
+            removed_lines += 1
+            continue
+        if re.fullmatch(r"https?://\S+", normalized):
+            removed_lines += 1
+            continue
+        cleaned_lines.append(normalized)
+
+    cleaned = "\n".join(cleaned_lines)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned).strip()
+
+    stats = {
+        "input_chars": len(raw_text or ""),
+        "output_chars": len(cleaned),
+        "removed_lines": removed_lines,
+    }
+    return cleaned, stats
 
 
 def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
@@ -1379,7 +1624,7 @@ def _classify_cleaned_material(
         for item in article_types
     )
     prompt = CLASSIFY_PROMPT.format(
-        cleaned_data=cleaned_data[:20_000],
+        cleaned_data=cleaned_data,
         article_types=types_text,
         writing_brief_json=_json(writing_brief),
     )
@@ -1437,14 +1682,232 @@ def _classify_cleaned_material(
     return classification, result_text, parsed, raw_response
 
 
-def _prepare_full_pipeline_request(run_id: str, request: RunRequest) -> PipelineV2Request:
-    """Prepare synthesized + classified inputs for Prompt2Blog pipeline-v2."""
+def _clean_string_list(items: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    for item in items:
+        text = _safe_str(item)
+        if text:
+            cleaned.append(text)
+    return cleaned
+
+
+def _resolve_input_options(request: Prompt2BlogInputRequest) -> dict[str, Any]:
+    catalog = _load_prompt2blog_option_catalog()
+    tones = catalog.get("tones", [])
+    lengths = catalog.get("lengths", [])
+    brand_voices = catalog.get("brand_voices", [])
+
+    tone = _find_option_or_raise(tones, request.tone_id, field_name="tone_id")
+    length = _find_option_or_raise(lengths, request.length_id, field_name="length_id")
+    if request.brand_voice_id:
+        brand_voice = _find_option_or_raise(
+            brand_voices,
+            request.brand_voice_id,
+            field_name="brand_voice_id",
+        )
+    else:
+        brand_voice = _default_option(brand_voices)
+        if not brand_voice:
+            raise RuntimeError("No brand voice options are configured.")
+
+    creativity_level = _safe_str(request.creativity_level).lower() or "medium"
+    if creativity_level not in PROMPT2BLOG_CREATIVITY_LEVELS:
+        raise RuntimeError(
+            "creativity_level must be one of: "
+            f"{', '.join(sorted(PROMPT2BLOG_CREATIVITY_LEVELS))}"
+        )
+
+    return {
+        "tone": tone,
+        "length": length,
+        "brand_voice": brand_voice,
+        "creativity_level": creativity_level,
+    }
+
+
+def _build_writing_brief_from_input(
+    request: Prompt2BlogInputRequest,
+    *,
+    option_context: dict[str, Any],
+    cleaned_sources: list[str],
+) -> dict[str, Any]:
+    tone = _safe_dict(option_context.get("tone"))
+    length = _safe_dict(option_context.get("length"))
+    brand_voice = _safe_dict(option_context.get("brand_voice"))
+    creativity_level = _safe_str(option_context.get("creativity_level")) or "medium"
+
+    secondary_keywords = _clean_string_list(request.secondary_keywords)
+    must_include = _clean_string_list(request.must_include)
+    negative_instructions = _clean_string_list(request.negative_instructions)
+
+    profile_lines = [
+        f"Tone profile ({_safe_str(tone.get('label'))}):",
+        _safe_str(tone.get("instructions")),
+        "",
+        f"Length profile ({_safe_str(length.get('label'))}):",
+        _safe_str(length.get("instructions")),
+        "",
+        f"Brand voice ({_safe_str(brand_voice.get('label'))}):",
+        _safe_str(brand_voice.get("instructions")),
+        "",
+        f"Destination context: {_safe_str(request.destination_context)}",
+        f"Audience intent: {_safe_str(request.target_reader)}",
+        f"Creativity level: {creativity_level}",
+    ]
+    if must_include:
+        profile_lines.extend(
+            [
+                "",
+                "Must include:",
+                *[f"- {item}" for item in must_include],
+            ]
+        )
+    if negative_instructions:
+        profile_lines.extend(
+            [
+                "",
+                "Avoid:",
+                *[f"- {item}" for item in negative_instructions],
+            ]
+        )
+    if request.prompt_enhance:
+        profile_lines.append(
+            "\nPrompt enhancement enabled: prefer stronger transitions and clearer sections."
+        )
+    if request.audience_profile:
+        profile_lines.append(f"Audience profile: {_safe_str(request.audience_profile)}")
+
+    paragraph_length = _safe_str(length.get("paragraph_length"))
+    if not paragraph_length:
+        paragraph_length = _safe_str(length.get("label")) or "Medium"
+    target_word_count = _safe_int(length.get("target_word_count"), default=0)
+    if target_word_count <= 0:
+        target_word_count = 900
+
+    writing_brief: dict[str, Any] = {
+        "topic": _safe_str(request.article_goal),
+        "goal": _safe_str(request.article_goal),
+        "audience": _safe_str(request.target_reader),
+        "perspective": _safe_str(request.destination_context),
+        "audience_profile": _safe_str(request.audience_profile),
+        "voice": {
+            "publication_style_reference": _safe_str(brand_voice.get("label")),
+            "tone": _safe_str(tone.get("label")),
+            "brand_identity": _safe_str(brand_voice.get("label")),
+        },
+        "formatting": {
+            "paragraph_length": paragraph_length,
+            "target_word_count": target_word_count,
+        },
+        "call_to_action": "",
+        "seo": {
+            "primary_keyword": _safe_str(request.primary_keyword),
+            "secondary_keywords": secondary_keywords,
+        },
+        "editorial_instructions": "\n".join(
+            line for line in profile_lines if _safe_str(line)
+        ).strip(),
+        "must_include": must_include,
+        "negative_instructions": negative_instructions,
+        "raw_input": {
+            "blobs": [{"content": source} for source in cleaned_sources],
+        },
+    }
+    return writing_brief
+
+
+def _prepare_full_pipeline_request(
+    run_id: str,
+    request: Prompt2BlogInputRequest,
+) -> PipelineV2RuntimeRequest:
+    """Prepare cleaned + synthesized inputs for Prompt2Blog pipeline-v2."""
     model_name = request.model_name or DEFAULT_MODEL
     include_debug = request.include_debug
-    writing_brief = request.writing_brief if isinstance(request.writing_brief, dict) else {}
-    raw_sources = _extract_raw_sources_from_brief(request.raw_sources, writing_brief)
-    if not raw_sources:
-        raise RuntimeError("At least one raw source is required.")
+
+    current_stage = "stage_input_validate"
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": current_stage,
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
+    if request.article_type_id <= 0:
+        raise RuntimeError("article_type_id is required")
+
+    source_material = _clean_string_list(request.source_material)
+    if not source_material:
+        raise RuntimeError("At least one source_material item is required.")
+
+    required_text_fields = {
+        "article_goal": request.article_goal,
+        "target_reader": request.target_reader,
+        "destination_context": request.destination_context,
+        "tone_id": request.tone_id,
+        "length_id": request.length_id,
+    }
+    for field_name, value in required_text_fields.items():
+        if not _safe_str(value):
+            raise RuntimeError(f"{field_name} is required")
+
+    option_context = _resolve_input_options(request)
+    write_stage_result(
+        run_id,
+        current_stage,
+        {
+            "created_at": _now_iso(),
+            "data": {
+                "article_type_id": request.article_type_id,
+                "source_material_count": len(source_material),
+                "tone_id": _safe_str(option_context["tone"].get("id")),
+                "length_id": _safe_str(option_context["length"].get("id")),
+                "brand_voice_id": _safe_str(option_context["brand_voice"].get("id")),
+                "creativity_level": option_context["creativity_level"],
+            },
+        },
+    )
+
+    current_stage = "stage_input_cleanup"
+    write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "running",
+            "stage": current_stage,
+            "error": None,
+            "updated_at": _now_iso(),
+        },
+        feature=FEATURE_NAME,
+    )
+
+    cleaned_sources: list[str] = []
+    cleanup_stats: list[dict[str, int]] = []
+    for source in source_material:
+        cleaned_text, stats = _cleanup_source_text(source)
+        cleanup_stats.append(stats)
+        if cleaned_text:
+            cleaned_sources.append(cleaned_text)
+
+    if not cleaned_sources:
+        raise RuntimeError("All source_material entries were empty after cleanup.")
+
+    write_stage_result(
+        run_id,
+        current_stage,
+        {
+            "created_at": _now_iso(),
+            "data": {
+                "source_material_count": len(source_material),
+                "cleaned_sources_count": len(cleaned_sources),
+                "cleanup_stats": cleanup_stats,
+            },
+        },
+    )
 
     current_stage = "stage_synthesize_sources"
     write_status(
@@ -1459,11 +1922,11 @@ def _prepare_full_pipeline_request(run_id: str, request: RunRequest) -> Pipeline
         feature=FEATURE_NAME,
     )
 
-    combined = "\n\n---\n\n".join(raw_sources)
+    combined = "\n\n---\n\n".join(cleaned_sources)
     synth_prompt = SYNTHESIZE_PROMPT + combined
     synthesized_text = _invoke_text_llm(
         prompt=synth_prompt,
-        max_tokens=4096,
+        max_tokens=8192,
         temperature=0.3,
         model_name=model_name,
     ).strip()
@@ -1476,61 +1939,34 @@ def _prepare_full_pipeline_request(run_id: str, request: RunRequest) -> Pipeline
         {
             "created_at": _now_iso(),
             "data": {
-                "raw_sources_count": len(raw_sources),
+                "source_material_count": len(cleaned_sources),
                 "synthesized_text": synthesized_text,
             },
         },
     )
 
-    current_stage = "stage_classify_article_type"
-    write_status(
-        run_id,
-        {
-            "run_id": run_id,
-            "state": "running",
-            "stage": current_stage,
-            "error": None,
-            "updated_at": _now_iso(),
-        },
-        feature=FEATURE_NAME,
+    writing_brief = _build_writing_brief_from_input(
+        request,
+        option_context=option_context,
+        cleaned_sources=cleaned_sources,
     )
 
-    article_types = read_article_type_name_definitions()
-    classification, result_text, parsed, raw_response = _classify_cleaned_material(
+    return PipelineV2RuntimeRequest(
         cleaned_data=synthesized_text,
-        article_types=article_types,
+        raw_sources=cleaned_sources,
         writing_brief=writing_brief,
-        model_name=model_name,
-    )
-    write_stage_result(
-        run_id,
-        current_stage,
-        {
-            "created_at": _now_iso(),
-            "data": {
-                "classification": classification.model_dump(),
-                "result": result_text,
-                "raw_response": raw_response,
-                "parsed": parsed,
-            },
-        },
-    )
-
-    return PipelineV2Request(
-        cleaned_data=synthesized_text,
-        raw_sources=raw_sources,
-        writing_brief=writing_brief,
-        article_type_id=classification.id,
+        article_type_id=request.article_type_id,
+        option_context=option_context,
         include_debug=include_debug,
         enable_editorial_augmentation=request.enable_editorial_augmentation,
         model_name=model_name,
     )
 
 
-def _run_full_pipeline_impl(run_id: str, request: RunRequest) -> None:
-    """Run one-click Prompt2Blog flow from raw sources to final article."""
+def _run_full_pipeline_impl(run_id: str, request: Prompt2BlogInputRequest) -> None:
+    """Run one-click Prompt2Blog flow from source material to final article."""
     include_debug = request.include_debug
-    current_stage = "stage_synthesize_sources"
+    current_stage = "stage_input_validate"
 
     try:
         pipeline_request = _prepare_full_pipeline_request(run_id, request)
@@ -1564,13 +2000,14 @@ def _run_full_pipeline_impl(run_id: str, request: RunRequest) -> None:
             )
 
 
-def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
+def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> None:
     model_name = request.model_name or DEFAULT_MODEL
     cleaned_data = _safe_str(request.cleaned_data)
     raw_sources = [_safe_str(source) for source in request.raw_sources if _safe_str(source)]
     include_debug = request.include_debug
     enable_editorial_augmentation = request.enable_editorial_augmentation
     writing_brief = request.writing_brief if isinstance(request.writing_brief, dict) else {}
+    option_context = request.option_context if isinstance(request.option_context, dict) else {}
     current_stage = "stage_guideline_fetch"
     trace: list[dict[str, Any]] = []
 
@@ -1595,12 +2032,27 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
         if not article_type:
             raise RuntimeError(f"Article type {request.article_type_id} not found")
 
+        guideline_text, guideline_file = _read_article_type_markdown(
+            article_type_name=_safe_str(article_type.get("name")),
+            directory=PROMPT2BLOG_GUIDELINES_DIR,
+            fallback=_safe_str(article_type.get("guideline")),
+            aliases=PROMPT2BLOG_GUIDELINE_FILE_ALIASES,
+        )
+        title_guideline_text, title_guideline_file = _read_article_type_markdown(
+            article_type_name=_safe_str(article_type.get("name")),
+            directory=PROMPT2BLOG_TITLE_GUIDELINES_DIR,
+            fallback=_safe_str(article_type.get("title_guideline")),
+            aliases=PROMPT2BLOG_TITLE_FILE_ALIASES,
+        )
+
         guideline_payload = {
             "id": article_type["id"],
             "name": article_type["name"],
             "definition": article_type.get("definition") or "",
-            "guideline": article_type.get("guideline") or "",
-            "title_guideline": article_type.get("title_guideline") or "",
+            "guideline": guideline_text,
+            "title_guideline": title_guideline_text,
+            "guideline_file": guideline_file,
+            "title_guideline_file": title_guideline_file,
         }
         write_stage_result(
             run_id,
@@ -1632,7 +2084,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
         )
         coverage_prompt = P2B_COVERAGE_CHECK_PROMPT.format(
             raw_sources=raw_sources_text,
-            cleaned_data=cleaned_data[:30_000],
+            cleaned_data=cleaned_data,
             article_type_name=guideline_payload["name"],
             article_type_definition=guideline_payload["definition"],
             guideline=guideline_payload["guideline"] or "No guideline provided.",
@@ -1711,7 +2163,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
             )
             supplement_prompt = P2B_SUPPLEMENT_PROMPT.format(
                 raw_sources=raw_sources_text,
-                cleaned_data=cleaned_data[:30_000],
+                cleaned_data=cleaned_data,
                 article_type_name=guideline_payload["name"],
                 missing_sections=missing_sections_text,
                 writing_brief_json=_json(writing_brief),
@@ -1768,7 +2220,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
 
         compose_prompt = P2B_COMPOSE_PROMPT.format(
             raw_sources=raw_sources_text,
-            cleaned_data=cleaned_data[:30_000],
+            cleaned_data=cleaned_data,
             supplemental_content=supplemental_content
             or "No supplemental material generated.",
             article_type_name=guideline_payload["name"],
@@ -1832,9 +2284,9 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
         )
         quality_prompt = P2B_QUALITY_AUDIT_PROMPT.format(
             raw_sources=raw_sources_text,
-            cleaned_data=cleaned_data[:30_000],
+            cleaned_data=cleaned_data,
             rewritten_title=rewrite["improved_title"],
-            rewritten_content=rewrite["improved_content"][:30_000],
+            rewritten_content=rewrite["improved_content"],
             article_type_name=guideline_payload["name"],
             guideline=guideline_payload["guideline"] or "No guideline provided.",
             title_guideline=guideline_payload["title_guideline"]
@@ -1903,9 +2355,9 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
         if repair_applied:
             repair_prompt = P2B_REPAIR_PROMPT.format(
                 raw_sources=raw_sources_text,
-                cleaned_data=cleaned_data[:30_000],
+                cleaned_data=cleaned_data,
                 previous_title=rewrite["improved_title"],
-                previous_content=rewrite["improved_content"][:30_000],
+                previous_content=rewrite["improved_content"],
                 required_revisions=_json(quality.get("required_revisions", [])),
                 article_type_name=guideline_payload["name"],
                 guideline=guideline_payload["guideline"] or "No guideline provided.",
@@ -1929,9 +2381,9 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
 
             quality_prompt_after_repair = P2B_QUALITY_AUDIT_PROMPT.format(
                 raw_sources=raw_sources_text,
-                cleaned_data=cleaned_data[:30_000],
+                cleaned_data=cleaned_data,
                 rewritten_title=rewrite["improved_title"],
-                rewritten_content=rewrite["improved_content"][:30_000],
+                rewritten_content=rewrite["improved_content"],
                 article_type_name=guideline_payload["name"],
                 guideline=guideline_payload["guideline"] or "No guideline provided.",
                 title_guideline=guideline_payload["title_guideline"]
@@ -2021,8 +2473,8 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
 
         if enable_editorial_augmentation:
             augmentation_prompt = P2B_EDITORIAL_AUGMENTATION_PROMPT.format(
-                article_title=rewrite["improved_title"][:500],
-                article_content=rewrite["improved_content"][:20_000],
+                article_title=rewrite["improved_title"],
+                article_content=rewrite["improved_content"],
                 article_type_json=_json(
                     {
                         "id": guideline_payload["id"],
@@ -2049,7 +2501,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
                     stage=current_stage,
                     model_name=model_name,
                     input_payload={
-                        "article_title": rewrite["improved_title"][:500],
+                        "article_title": rewrite["improved_title"],
                         "article_type": {
                             "id": guideline_payload["id"],
                             "name": guideline_payload["name"],
@@ -2069,7 +2521,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
                     stage=current_stage,
                     model_name=model_name,
                     input_payload={
-                        "article_title": rewrite["improved_title"][:500],
+                        "article_title": rewrite["improved_title"],
                         "article_type": {
                             "id": guideline_payload["id"],
                             "name": guideline_payload["name"],
@@ -2121,7 +2573,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
         )
         title_prompt = P2B_TITLE_PROMPT.format(
             previous_title=rewrite["improved_title"],
-            rewritten_content=rewrite["improved_content"][:30_000],
+            rewritten_content=rewrite["improved_content"],
             title_guideline=guideline_payload["title_guideline"]
             or "No title guideline provided.",
             writing_brief_json=_json(writing_brief),
@@ -2203,12 +2655,20 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
             "guideline_meta": {
                 "guideline": guideline_payload["guideline"],
                 "title_guideline": guideline_payload["title_guideline"],
+                "guideline_file": guideline_payload.get("guideline_file"),
+                "title_guideline_file": guideline_payload.get("title_guideline_file"),
             },
             "improved_article": {
                 "title": final_title,
                 "content": rewrite["improved_content"],
             },
             "final_markdown": final_markdown,
+            "input_profiles": {
+                "tone": _safe_dict(option_context.get("tone")),
+                "length": _safe_dict(option_context.get("length")),
+                "brand_voice": _safe_dict(option_context.get("brand_voice")),
+                "creativity_level": _safe_str(option_context.get("creativity_level")),
+            },
             "quality_review": {
                 "alignment_summary": rewrite["guideline_alignment_summary"],
                 "improvements_applied": rewrite["improvements_applied"],
@@ -2259,6 +2719,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
                     "include_debug": include_debug,
                     "enable_editorial_augmentation": enable_editorial_augmentation,
                     "raw_sources_count": len(raw_sources),
+                    "input_profiles": option_context,
                 },
                 "writing_brief": writing_brief,
                 "pipeline_trace": trace,
@@ -2330,7 +2791,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2Request) -> None:
             )
 
 
-def _run_pipeline_v2(run_id: str, request: PipelineV2Request) -> None:
+def _run_pipeline_v2(run_id: str, request: PipelineV2RuntimeRequest) -> None:
     try:
         run_prompt2blog_pipeline_v2_graph(
             run_id=run_id,
@@ -2351,14 +2812,14 @@ def _run_pipeline_v2(run_id: str, request: PipelineV2Request) -> None:
         )
 
 
-def _run_full_pipeline(run_id: str, request: RunRequest) -> None:
+def _run_full_pipeline(run_id: str, request: Prompt2BlogInputRequest) -> None:
     try:
         run_prompt2blog_full_graph(
             run_id=run_id,
             prepare_runner=lambda: _prepare_full_pipeline_request(run_id, request).model_dump(),
             pipeline_runner=lambda payload: _run_pipeline_v2_impl(
                 run_id,
-                PipelineV2Request.model_validate(payload),
+                PipelineV2RuntimeRequest.model_validate(payload),
             ),
         )
     except Exception as exc:  # noqa: BLE001
@@ -2424,16 +2885,109 @@ async def classify_article_type(req: ClassifyRequest) -> ClassifyResponse:
         raise HTTPException(status_code=500, detail=f"Classification failed: {exc}") from exc
 
 
-@router.post("/pipeline-v2")
-async def start_pipeline_v2(
-    request: PipelineV2Request,
-    background_tasks: BackgroundTasks,
-) -> JSONResponse:
-    """Start Prompt2Blog pipeline-v2 as a tracked background run."""
-    if not _safe_str(request.cleaned_data):
-        raise HTTPException(status_code=400, detail="cleaned_data is required")
+@router.get("/input-options")
+async def get_input_options() -> JSONResponse:
+    """Return Prompt2Blog dropdown options sourced from DB + markdown catalogs."""
+    article_types = []
+    for item in read_article_type_name_definitions():
+        article_type_row = get_article_type_by_name(_safe_str(item.get("name")))
+        if not article_type_row:
+            continue
+        article_types.append(
+            {
+                "id": article_type_row["id"],
+                "name": article_type_row["name"],
+                "definition": article_type_row["definition"],
+            }
+        )
+
+    catalog = _load_prompt2blog_option_catalog()
+    tones = catalog.get("tones", [])
+    lengths = catalog.get("lengths", [])
+    brand_voices = catalog.get("brand_voices", [])
+    default_tone = _default_option(tones)
+    default_length = _default_option(lengths)
+    default_brand_voice = _default_option(brand_voices)
+
+    return JSONResponse(
+        {
+            "article_types": article_types,
+            "tones": tones,
+            "lengths": lengths,
+            "brand_voices": brand_voices,
+            "defaults": {
+                "tone_id": _safe_str(default_tone.get("id")) if default_tone else "",
+                "length_id": _safe_str(default_length.get("id")) if default_length else "",
+                "brand_voice_id": _safe_str(default_brand_voice.get("id"))
+                if default_brand_voice
+                else "",
+            },
+        }
+    )
+
+
+@router.get("/article-types/{article_type_id}/guideline-preview")
+async def get_article_type_guideline_preview(article_type_id: int) -> JSONResponse:
+    """Return resolved guideline markdown for the selected article type."""
+    article_type = get_article_type_by_id(article_type_id)
+    if not article_type:
+        raise HTTPException(status_code=404, detail="Article type not found")
+
+    guideline_text, guideline_file = _read_article_type_markdown(
+        article_type_name=_safe_str(article_type.get("name")),
+        directory=PROMPT2BLOG_GUIDELINES_DIR,
+        fallback=_safe_str(article_type.get("guideline")),
+        aliases=PROMPT2BLOG_GUIDELINE_FILE_ALIASES,
+    )
+    title_guideline_text, title_guideline_file = _read_article_type_markdown(
+        article_type_name=_safe_str(article_type.get("name")),
+        directory=PROMPT2BLOG_TITLE_GUIDELINES_DIR,
+        fallback=_safe_str(article_type.get("title_guideline")),
+        aliases=PROMPT2BLOG_TITLE_FILE_ALIASES,
+    )
+
+    return JSONResponse(
+        {
+            "id": article_type["id"],
+            "name": article_type["name"],
+            "guideline": guideline_text,
+            "title_guideline": title_guideline_text,
+            "guideline_file": guideline_file,
+            "title_guideline_file": title_guideline_file,
+        }
+    )
+
+
+def _validate_prompt2blog_input_request(request: Prompt2BlogInputRequest) -> None:
     if request.article_type_id <= 0:
         raise HTTPException(status_code=400, detail="article_type_id is required")
+
+    source_material = _clean_string_list(request.source_material)
+    if not source_material:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one source_material item is required",
+        )
+
+    required_text_fields = {
+        "article_goal": request.article_goal,
+        "target_reader": request.target_reader,
+        "destination_context": request.destination_context,
+        "tone_id": request.tone_id,
+        "length_id": request.length_id,
+    }
+    for field_name, value in required_text_fields.items():
+        if not _safe_str(value):
+            raise HTTPException(status_code=400, detail=f"{field_name} is required")
+
+
+@router.post("/pipeline-v2")
+async def start_pipeline_v2(
+    request: Prompt2BlogInputRequest,
+    background_tasks: BackgroundTasks,
+) -> JSONResponse:
+    """Start Prompt2Blog pipeline-v2 from structured source input."""
+    _validate_prompt2blog_input_request(request)
 
     run_id = str(uuid4())
 
@@ -2456,15 +3010,18 @@ async def start_pipeline_v2(
             "created_at": _now_iso(),
             "data": {
                 "article_type_id": request.article_type_id,
+                "source_material_count": len(_clean_string_list(request.source_material)),
+                "tone_id": _safe_str(request.tone_id),
+                "length_id": _safe_str(request.length_id),
+                "brand_voice_id": _safe_str(request.brand_voice_id),
                 "include_debug": request.include_debug,
                 "enable_editorial_augmentation": request.enable_editorial_augmentation,
                 "model_name": request.model_name or DEFAULT_MODEL,
-                "raw_sources_count": len(request.raw_sources),
             },
         },
     )
 
-    background_tasks.add_task(_run_pipeline_v2, run_id, request)
+    background_tasks.add_task(_run_full_pipeline, run_id, request)
 
     return JSONResponse(
         {
@@ -2476,14 +3033,11 @@ async def start_pipeline_v2(
 
 @router.post("/run")
 async def start_full_run(
-    request: RunRequest,
+    request: Prompt2BlogInputRequest,
     background_tasks: BackgroundTasks,
 ) -> JSONResponse:
-    """Start one-click Prompt2Blog run from raw sources through final article."""
-    writing_brief = request.writing_brief if isinstance(request.writing_brief, dict) else {}
-    raw_sources = _extract_raw_sources_from_brief(request.raw_sources, writing_brief)
-    if not raw_sources:
-        raise HTTPException(status_code=400, detail="At least one raw source is required")
+    """Start one-click Prompt2Blog run from source material through final article."""
+    _validate_prompt2blog_input_request(request)
 
     run_id = str(uuid4())
 
@@ -2505,11 +3059,15 @@ async def start_full_run(
         {
             "created_at": _now_iso(),
             "data": {
-                "mode": "full_auto",
+                "mode": "structured_v2",
+                "article_type_id": request.article_type_id,
+                "source_material_count": len(_clean_string_list(request.source_material)),
+                "tone_id": _safe_str(request.tone_id),
+                "length_id": _safe_str(request.length_id),
+                "brand_voice_id": _safe_str(request.brand_voice_id),
                 "include_debug": request.include_debug,
                 "enable_editorial_augmentation": request.enable_editorial_augmentation,
                 "model_name": request.model_name or DEFAULT_MODEL,
-                "raw_sources_count": len(raw_sources),
             },
         },
     )
@@ -2573,6 +3131,8 @@ async def debug_run(run_id: str) -> JSONResponse:
     stages = {}
     for stage_name in [
         "pipeline_input",
+        "stage_input_validate",
+        "stage_input_cleanup",
         "stage_synthesize_sources",
         "stage_classify_article_type",
         "stage_guideline_fetch",
