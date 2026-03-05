@@ -3,35 +3,18 @@ import { Link } from 'react-router-dom'
 import payloadLogoUrl from '../../assets/payload-logo.svg?url'
 import {
   getPrompt2BlogDebug,
+  getPrompt2BlogGuidelinePreview,
+  getPrompt2BlogInputOptions,
   getPrompt2BlogResult,
   getPrompt2BlogStatus,
   startPrompt2BlogRun,
+  type Prompt2BlogGuidelinePreviewResponse,
+  type Prompt2BlogInputOption,
+  type Prompt2BlogInputOptionsResponse,
   type Prompt2BlogPipelinePayload,
   type Prompt2BlogStatusResponse,
 } from './api'
 import './styles.css'
-
-interface LocationFields {
-  country: string
-  city: string
-  neighborhood: string
-}
-
-interface VoiceFields {
-  publication_style_reference: string
-  tone: string
-  brand_identity: string
-}
-
-interface FormattingFields {
-  paragraph_length: string
-  target_word_count: number
-}
-
-interface SeoFields {
-  primary_keyword: string
-  secondary_keywords: string
-}
 
 interface RawBlob {
   id: number
@@ -39,16 +22,20 @@ interface RawBlob {
 }
 
 interface P2BFormState {
-  location: LocationFields
-  topic: string
-  audience: string
-  goal: string
-  perspective: string
-  voice: VoiceFields
-  formatting: FormattingFields
-  callToAction: string
-  seo: SeoFields
-  editorialInstructions: string
+  articleTypeId: number | null
+  articleGoal: string
+  targetReader: string
+  destinationContext: string
+  toneId: string
+  lengthId: string
+  brandVoiceId: string
+  primaryKeyword: string
+  secondaryKeywords: string
+  mustInclude: string
+  audienceProfile: string
+  creativityLevel: 'low' | 'medium' | 'high'
+  negativeInstructions: string
+  promptEnhance: boolean
   enableEditorialAugmentation: boolean
   blobs: RawBlob[]
 }
@@ -57,16 +44,20 @@ const STORAGE_KEY = 'p2b-form-draft'
 const RUN_STORAGE_KEY = 'p2b-run-state'
 
 const DEFAULT_STATE: P2BFormState = {
-  location: { country: '', city: '', neighborhood: '' },
-  topic: '',
-  audience: '',
-  goal: '',
-  perspective: '',
-  voice: { publication_style_reference: '', tone: '', brand_identity: '' },
-  formatting: { paragraph_length: 'Medium (3–5 sentences per paragraph)', target_word_count: 500 },
-  callToAction: '',
-  seo: { primary_keyword: '', secondary_keywords: '' },
-  editorialInstructions: '',
+  articleTypeId: null,
+  articleGoal: '',
+  targetReader: '',
+  destinationContext: '',
+  toneId: '',
+  lengthId: '',
+  brandVoiceId: '',
+  primaryKeyword: '',
+  secondaryKeywords: '',
+  mustInclude: '',
+  audienceProfile: '',
+  creativityLevel: 'medium',
+  negativeInstructions: '',
+  promptEnhance: true,
   enableEditorialAugmentation: true,
   blobs: [{ id: 1, content: '' }],
 }
@@ -76,7 +67,15 @@ function loadSavedState(): P2BFormState {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return DEFAULT_STATE
     const parsed = JSON.parse(raw) as Partial<P2BFormState>
-    return { ...DEFAULT_STATE, ...parsed }
+    return {
+      ...DEFAULT_STATE,
+      ...parsed,
+      blobs: Array.isArray(parsed.blobs) && parsed.blobs.length ? parsed.blobs : DEFAULT_STATE.blobs,
+      creativityLevel:
+        parsed.creativityLevel === 'low' || parsed.creativityLevel === 'high'
+          ? parsed.creativityLevel
+          : 'medium',
+    }
   } catch {
     return DEFAULT_STATE
   }
@@ -132,8 +131,9 @@ type PipelineLogEntry = {
 
 const PIPELINE_STAGE_ORDER = [
   'queued',
+  'stage_input_validate',
+  'stage_input_cleanup',
   'stage_synthesize_sources',
-  'stage_classify_article_type',
   'stage_guideline_fetch',
   'stage_coverage_check',
   'stage_supplement',
@@ -148,8 +148,9 @@ const PIPELINE_STAGE_ORDER = [
 
 const PIPELINE_STAGE_LABELS: Record<string, string> = {
   queued: 'Queued',
-  stage_synthesize_sources: 'Synthesize raw sources',
-  stage_classify_article_type: 'Classify article type',
+  stage_input_validate: 'Validate inputs',
+  stage_input_cleanup: 'Clean source material',
+  stage_synthesize_sources: 'Synthesize source material',
   stage_guideline_fetch: 'Fetch article guidelines',
   stage_coverage_check: 'Check coverage against brief + guideline',
   stage_supplement: 'Generate supplemental sections (if needed)',
@@ -186,46 +187,161 @@ function getPipelineStepStatus(
   return stepIndex < activeIndex ? 'done' : 'pending'
 }
 
+function splitCommaSeparated(value: string): string[] {
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function splitLineSeparated(value: string): string[] {
+  return value
+    .split('\n')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function findDefaultOption(options: Prompt2BlogInputOption[]): string {
+  const preferred = options.find(option => option.default)
+  if (preferred?.id) return preferred.id
+  return options[0]?.id || ''
+}
+
 export default function Prompt2BlogPage() {
   const saved = useRef(loadSavedState())
   const savedRun = useRef(loadSavedRunState())
 
-  const [location, setLocation] = useState<LocationFields>(saved.current.location)
-  const [topic, setTopic] = useState(saved.current.topic)
-  const [audience, setAudience] = useState(saved.current.audience)
-  const [goal, setGoal] = useState(saved.current.goal)
-  const [perspective, setPerspective] = useState(saved.current.perspective)
-  const [voice, setVoice] = useState<VoiceFields>(saved.current.voice)
-  const [formatting, setFormatting] = useState<FormattingFields>(saved.current.formatting)
-  const [callToAction, setCallToAction] = useState(saved.current.callToAction)
-  const [seo, setSeo] = useState<SeoFields>(saved.current.seo)
-  const [editorialInstructions, setEditorialInstructions] = useState(saved.current.editorialInstructions)
+  const [articleTypeId, setArticleTypeId] = useState<number | null>(saved.current.articleTypeId)
+  const [articleGoal, setArticleGoal] = useState(saved.current.articleGoal)
+  const [targetReader, setTargetReader] = useState(saved.current.targetReader)
+  const [destinationContext, setDestinationContext] = useState(saved.current.destinationContext)
+  const [toneId, setToneId] = useState(saved.current.toneId)
+  const [lengthId, setLengthId] = useState(saved.current.lengthId)
+  const [brandVoiceId, setBrandVoiceId] = useState(saved.current.brandVoiceId)
+  const [primaryKeyword, setPrimaryKeyword] = useState(saved.current.primaryKeyword)
+  const [secondaryKeywords, setSecondaryKeywords] = useState(saved.current.secondaryKeywords)
+  const [mustInclude, setMustInclude] = useState(saved.current.mustInclude)
+  const [audienceProfile, setAudienceProfile] = useState(saved.current.audienceProfile)
+  const [creativityLevel, setCreativityLevel] = useState<'low' | 'medium' | 'high'>(
+    saved.current.creativityLevel,
+  )
+  const [negativeInstructions, setNegativeInstructions] = useState(saved.current.negativeInstructions)
+  const [promptEnhance, setPromptEnhance] = useState(saved.current.promptEnhance)
   const [enableEditorialAugmentation, setEnableEditorialAugmentation] = useState(
-    saved.current.enableEditorialAugmentation ?? true,
+    saved.current.enableEditorialAugmentation,
   )
   const [blobs, setBlobs] = useState<RawBlob[]>(saved.current.blobs)
 
-  // Persist to localStorage on every change
+  const [inputOptions, setInputOptions] = useState<Prompt2BlogInputOptionsResponse | null>(null)
+  const [guidelinePreview, setGuidelinePreview] =
+    useState<Prompt2BlogGuidelinePreviewResponse | null>(null)
+  const [guidelineLoading, setGuidelineLoading] = useState(false)
+
   useEffect(() => {
     const state: P2BFormState = {
-      location, topic, audience, goal, perspective,
-      voice, formatting, callToAction, seo, editorialInstructions, enableEditorialAugmentation, blobs,
+      articleTypeId,
+      articleGoal,
+      targetReader,
+      destinationContext,
+      toneId,
+      lengthId,
+      brandVoiceId,
+      primaryKeyword,
+      secondaryKeywords,
+      mustInclude,
+      audienceProfile,
+      creativityLevel,
+      negativeInstructions,
+      promptEnhance,
+      enableEditorialAugmentation,
+      blobs,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [
-    location,
-    topic,
-    audience,
-    goal,
-    perspective,
-    voice,
-    formatting,
-    callToAction,
-    seo,
-    editorialInstructions,
+    articleTypeId,
+    articleGoal,
+    targetReader,
+    destinationContext,
+    toneId,
+    lengthId,
+    brandVoiceId,
+    primaryKeyword,
+    secondaryKeywords,
+    mustInclude,
+    audienceProfile,
+    creativityLevel,
+    negativeInstructions,
+    promptEnhance,
     enableEditorialAugmentation,
     blobs,
   ])
+
+  useEffect(() => {
+    let cancelled = false
+    getPrompt2BlogInputOptions()
+      .then((options) => {
+        if (cancelled) return
+        setInputOptions(options)
+        if (!toneId) {
+          setToneId(options.defaults.tone_id || findDefaultOption(options.tones))
+        }
+        if (!lengthId) {
+          setLengthId(options.defaults.length_id || findDefaultOption(options.lengths))
+        }
+        if (!brandVoiceId) {
+          setBrandVoiceId(options.defaults.brand_voice_id || findDefaultOption(options.brand_voices))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setInputOptions({
+            article_types: [],
+            tones: [],
+            lengths: [],
+            brand_voices: [],
+            defaults: {
+              tone_id: '',
+              length_id: '',
+              brand_voice_id: '',
+            },
+          })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [brandVoiceId, lengthId, toneId])
+
+  useEffect(() => {
+    if (!articleTypeId) {
+      setGuidelinePreview(null)
+      return
+    }
+
+    let cancelled = false
+    setGuidelineLoading(true)
+    getPrompt2BlogGuidelinePreview(articleTypeId)
+      .then((payload) => {
+        if (!cancelled) {
+          setGuidelinePreview(payload)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGuidelinePreview(null)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setGuidelineLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [articleTypeId])
 
   const addBlob = () => {
     setBlobs(prev => [...prev, { id: Date.now(), content: '' }])
@@ -257,8 +373,6 @@ export default function Prompt2BlogPage() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const hasBlobs = blobs.some(b => b.content.trim())
-
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
     setPipelineLogs(prev => [
       ...prev,
@@ -271,39 +385,48 @@ export default function Prompt2BlogPage() {
     ])
   }, [])
 
-  const buildJson = useMemo(() => ({
-    location: {
-      country: location.country || null,
-      city: location.city || null,
-      neighborhood: location.neighborhood || null,
-    },
-    topic: topic || null,
-    audience: audience || null,
-    goal: goal || null,
-    perspective: perspective || null,
-    voice: {
-      publication_style_reference: voice.publication_style_reference || null,
-      tone: voice.tone || null,
-      brand_identity: voice.brand_identity || null,
-    },
-    formatting: {
-      paragraph_length: formatting.paragraph_length,
-      target_word_count: formatting.target_word_count,
-    },
-    call_to_action: callToAction || null,
-    seo: {
-      primary_keyword: seo.primary_keyword || null,
-      secondary_keywords: seo.secondary_keywords
-        ? seo.secondary_keywords.split(',').map(k => k.trim()).filter(Boolean)
-        : [],
-    },
-    editorial_instructions: editorialInstructions || null,
-    raw_input: {
-      blobs: blobs
-        .filter(b => b.content.trim())
-        .map(b => ({ content: b.content })),
-    },
-  }), [location, topic, audience, goal, perspective, voice, formatting, callToAction, seo, editorialInstructions, blobs])
+  const buildPayload = useMemo(() => {
+    const sourceMaterial = blobs
+      .map(blob => blob.content.trim())
+      .filter(Boolean)
+
+    return {
+      article_type_id: articleTypeId || 0,
+      source_material: sourceMaterial,
+      article_goal: articleGoal,
+      target_reader: targetReader,
+      destination_context: destinationContext,
+      tone_id: toneId,
+      length_id: lengthId,
+      brand_voice_id: brandVoiceId || undefined,
+      primary_keyword: primaryKeyword || undefined,
+      secondary_keywords: splitCommaSeparated(secondaryKeywords),
+      must_include: splitLineSeparated(mustInclude),
+      audience_profile: audienceProfile || undefined,
+      prompt_enhance: promptEnhance,
+      creativity_level: creativityLevel,
+      negative_instructions: splitLineSeparated(negativeInstructions),
+      include_debug: true,
+      enable_editorial_augmentation: enableEditorialAugmentation,
+    }
+  }, [
+    articleTypeId,
+    blobs,
+    articleGoal,
+    targetReader,
+    destinationContext,
+    toneId,
+    lengthId,
+    brandVoiceId,
+    primaryKeyword,
+    secondaryKeywords,
+    mustInclude,
+    audienceProfile,
+    promptEnhance,
+    creativityLevel,
+    negativeInstructions,
+    enableEditorialAugmentation,
+  ])
 
   const stageArticleUrl = useMemo(() => {
     if (!pipelineResult) return null
@@ -318,18 +441,29 @@ export default function Prompt2BlogPage() {
   }, [pipelineResult, pipelineRunId])
 
   const handleCopyJson = useCallback(() => {
-    navigator.clipboard.writeText(JSON.stringify(buildJson, null, 2)).then(() => {
+    navigator.clipboard.writeText(JSON.stringify(buildPayload, null, 2)).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }).catch(() => {
       setError('Unable to copy JSON to clipboard.')
     })
-  }, [buildJson])
+  }, [buildPayload])
 
   const handleRunPipeline = useCallback(async () => {
-    const rawSources = blobs.map(blob => blob.content.trim()).filter(Boolean)
-    if (!rawSources.length) {
-      setError('At least one raw source is required before running the pipeline.')
+    if (!buildPayload.article_type_id) {
+      setError('Article type is required.')
+      return
+    }
+    if (!buildPayload.source_material.length) {
+      setError('At least one source material entry is required.')
+      return
+    }
+    if (!buildPayload.article_goal.trim() || !buildPayload.target_reader.trim() || !buildPayload.destination_context.trim()) {
+      setError('Article goal, target reader, and destination context are required.')
+      return
+    }
+    if (!buildPayload.tone_id || !buildPayload.length_id) {
+      setError('Tone and length are required.')
       return
     }
 
@@ -345,17 +479,8 @@ export default function Prompt2BlogPage() {
     resumedRunLoggedRef.current = false
 
     try {
-      const startResponse = await startPrompt2BlogRun({
-        raw_sources: rawSources,
-        writing_brief: buildJson as Record<string, unknown>,
-        include_debug: true,
-        enable_editorial_augmentation: enableEditorialAugmentation,
-      })
-
+      const startResponse = await startPrompt2BlogRun(buildPayload)
       appendPipelineLog(`Pipeline started. Run ID: ${startResponse.run_id}`)
-      appendPipelineLog(
-        `Editorial blocks ${enableEditorialAugmentation ? 'enabled' : 'disabled'} for this run.`,
-      )
       setLoadingLabel('Running final article pipeline...')
       setPipelineRunId(startResponse.run_id)
       setSourceStep('pipeline_running')
@@ -365,7 +490,7 @@ export default function Prompt2BlogPage() {
       appendPipelineLog(`Pipeline start failed: ${message}`, 'error')
       setIsLoading(false)
     }
-  }, [appendPipelineLog, blobs, buildJson, enableEditorialAugmentation])
+  }, [appendPipelineLog, buildPayload])
 
   const handleResetRun = useCallback(() => {
     setSourceStep('edit')
@@ -383,16 +508,20 @@ export default function Prompt2BlogPage() {
   }, [])
 
   const handleClear = useCallback(() => {
-    setLocation(DEFAULT_STATE.location)
-    setTopic(DEFAULT_STATE.topic)
-    setAudience(DEFAULT_STATE.audience)
-    setGoal(DEFAULT_STATE.goal)
-    setPerspective(DEFAULT_STATE.perspective)
-    setVoice(DEFAULT_STATE.voice)
-    setFormatting(DEFAULT_STATE.formatting)
-    setCallToAction(DEFAULT_STATE.callToAction)
-    setSeo(DEFAULT_STATE.seo)
-    setEditorialInstructions(DEFAULT_STATE.editorialInstructions)
+    setArticleTypeId(DEFAULT_STATE.articleTypeId)
+    setArticleGoal(DEFAULT_STATE.articleGoal)
+    setTargetReader(DEFAULT_STATE.targetReader)
+    setDestinationContext(DEFAULT_STATE.destinationContext)
+    setToneId(DEFAULT_STATE.toneId)
+    setLengthId(DEFAULT_STATE.lengthId)
+    setBrandVoiceId(DEFAULT_STATE.brandVoiceId)
+    setPrimaryKeyword(DEFAULT_STATE.primaryKeyword)
+    setSecondaryKeywords(DEFAULT_STATE.secondaryKeywords)
+    setMustInclude(DEFAULT_STATE.mustInclude)
+    setAudienceProfile(DEFAULT_STATE.audienceProfile)
+    setCreativityLevel(DEFAULT_STATE.creativityLevel)
+    setNegativeInstructions(DEFAULT_STATE.negativeInstructions)
+    setPromptEnhance(DEFAULT_STATE.promptEnhance)
     setEnableEditorialAugmentation(DEFAULT_STATE.enableEditorialAugmentation)
     setBlobs(DEFAULT_STATE.blobs)
     localStorage.removeItem(STORAGE_KEY)
@@ -519,9 +648,12 @@ export default function Prompt2BlogPage() {
       <header className="p2b-hero">
         <div>
           <p className="p2b-eyebrow">Questurian Studio</p>
-          <h1>Craft articles from a <span className="p2b-underline-text">prompt</span><span className="p2b-dot">.</span></h1>
+          <h1>
+            Craft articles from <span className="p2b-underline-text">structured input</span>
+            <span className="p2b-dot">.</span>
+          </h1>
           <p className="p2b-lede">
-            Fill out content parameters and let AI generate polished, publish-ready articles from your raw material.
+            Choose article type, set voice controls, paste source material, and run the full guideline-aware pipeline.
           </p>
         </div>
         <div className="p2b-badge-row">
@@ -541,360 +673,302 @@ export default function Prompt2BlogPage() {
       </header>
 
       <main className="p2b-form-container">
-        <form className="p2b-form" onSubmit={(e) => e.preventDefault()}>
-
-          {/* Location */}
+        <form className="p2b-form" onSubmit={(event) => event.preventDefault()}>
           <section className="p2b-panel">
             <div className="p2b-panel-header">
-              <h2>Location</h2>
-              <p>Where is this article set? City and neighborhood are optional.</p>
+              <h2>Core Inputs</h2>
+              <p>Select article type and provide intent/context.</p>
+            </div>
+            <div className="p2b-panel-body">
+              <div className="p2b-field">
+                <label htmlFor="p2b-article-type">Article Type</label>
+                <select
+                  id="p2b-article-type"
+                  className="p2b-select"
+                  value={articleTypeId ?? ''}
+                  onChange={(event) => setArticleTypeId(event.target.value ? Number(event.target.value) : null)}
+                >
+                  <option value="">Select article type</option>
+                  {(inputOptions?.article_types || []).map(option => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="p2b-field">
+                <label htmlFor="p2b-goal">Article Goal</label>
+                <textarea
+                  id="p2b-goal"
+                  className="p2b-textarea"
+                  rows={2}
+                  value={articleGoal}
+                  onChange={(event) => setArticleGoal(event.target.value)}
+                  placeholder="What this article should help the reader accomplish"
+                />
+              </div>
+
+              <div className="p2b-field-row p2b-field-row--2">
+                <div className="p2b-field">
+                  <label htmlFor="p2b-target-reader">Target Reader</label>
+                  <input
+                    id="p2b-target-reader"
+                    type="text"
+                    className="p2b-input"
+                    value={targetReader}
+                    onChange={(event) => setTargetReader(event.target.value)}
+                    placeholder="Who this is written for"
+                  />
+                </div>
+                <div className="p2b-field">
+                  <label htmlFor="p2b-destination">Destination Context</label>
+                  <input
+                    id="p2b-destination"
+                    type="text"
+                    className="p2b-input"
+                    value={destinationContext}
+                    onChange={(event) => setDestinationContext(event.target.value)}
+                    placeholder="City / region / country context"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="p2b-panel">
+            <div className="p2b-panel-header">
+              <h2>Prompt Profiles</h2>
+              <p>These dropdowns are loaded from markdown option catalogs.</p>
             </div>
             <div className="p2b-panel-body">
               <div className="p2b-field-row p2b-field-row--3">
                 <div className="p2b-field">
-                  <label htmlFor="p2b-country">Country</label>
-                  <input
-                    id="p2b-country"
-                    type="text"
-                    placeholder="e.g., Japan"
-                    value={location.country}
-                    onChange={(e) => setLocation(prev => ({ ...prev, country: e.target.value }))}
-                    className="p2b-input"
-                  />
+                  <label htmlFor="p2b-tone">Tone</label>
+                  <select
+                    id="p2b-tone"
+                    className="p2b-select"
+                    value={toneId}
+                    onChange={(event) => setToneId(event.target.value)}
+                  >
+                    {(inputOptions?.tones || []).map(option => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="p2b-field">
-                  <label htmlFor="p2b-city">City</label>
-                  <input
-                    id="p2b-city"
-                    type="text"
-                    placeholder="e.g., Tokyo"
-                    value={location.city}
-                    onChange={(e) => setLocation(prev => ({ ...prev, city: e.target.value }))}
-                    className="p2b-input"
-                  />
+                  <label htmlFor="p2b-length">Length</label>
+                  <select
+                    id="p2b-length"
+                    className="p2b-select"
+                    value={lengthId}
+                    onChange={(event) => setLengthId(event.target.value)}
+                  >
+                    {(inputOptions?.lengths || []).map(option => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="p2b-field">
-                  <label htmlFor="p2b-neighborhood">Neighborhood</label>
-                  <input
-                    id="p2b-neighborhood"
-                    type="text"
-                    placeholder="e.g., Shibuya"
-                    value={location.neighborhood}
-                    onChange={(e) => setLocation(prev => ({ ...prev, neighborhood: e.target.value }))}
-                    className="p2b-input"
-                  />
+                  <label htmlFor="p2b-brand-voice">Brand Voice</label>
+                  <select
+                    id="p2b-brand-voice"
+                    className="p2b-select"
+                    value={brandVoiceId}
+                    onChange={(event) => setBrandVoiceId(event.target.value)}
+                  >
+                    {(inputOptions?.brand_voices || []).map(option => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            </div>
-          </section>
 
-          {/* Topic & Audience */}
-          <section className="p2b-panel">
-            <div className="p2b-panel-header">
-              <h2>Topic & Audience</h2>
-              <p>Define what the article is about and who it's for.</p>
-            </div>
-            <div className="p2b-panel-body">
-              <div className="p2b-field">
-                <label htmlFor="p2b-topic">Topic</label>
-                <input
-                  id="p2b-topic"
-                  type="text"
-                  placeholder="e.g., Japan Expands Visa-Free Travel to Additional Countries"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="p2b-input"
-                />
+              <div className="p2b-field-row p2b-field-row--2">
+                <div className="p2b-field">
+                  <label htmlFor="p2b-creativity">Creativity Level</label>
+                  <select
+                    id="p2b-creativity"
+                    className="p2b-select"
+                    value={creativityLevel}
+                    onChange={(event) => setCreativityLevel(event.target.value as 'low' | 'medium' | 'high')}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div className="p2b-field">
+                  <label htmlFor="p2b-audience-profile">Audience Profile (Optional)</label>
+                  <input
+                    id="p2b-audience-profile"
+                    type="text"
+                    className="p2b-input"
+                    value={audienceProfile}
+                    onChange={(event) => setAudienceProfile(event.target.value)}
+                    placeholder="Extra reader detail"
+                  />
+                </div>
               </div>
+
               <div className="p2b-field">
-                <label htmlFor="p2b-audience">Audience</label>
-                <input
-                  id="p2b-audience"
-                  type="text"
-                  placeholder="e.g., International travelers, frequent flyers, digital nomads"
-                  value={audience}
-                  onChange={(e) => setAudience(e.target.value)}
-                  className="p2b-input"
-                />
-              </div>
-              <div className="p2b-field">
-                <label htmlFor="p2b-goal">Goal</label>
+                <label htmlFor="p2b-negative">Negative Instructions (one per line)</label>
                 <textarea
-                  id="p2b-goal"
-                  placeholder="e.g., Inform readers about Japan's updated visa-free travel policy and its impact on tourism"
-                  value={goal}
-                  onChange={(e) => setGoal(e.target.value)}
-                  rows={2}
+                  id="p2b-negative"
                   className="p2b-textarea"
+                  rows={3}
+                  value={negativeInstructions}
+                  onChange={(event) => setNegativeInstructions(event.target.value)}
+                  placeholder="What to avoid"
                 />
               </div>
-              <div className="p2b-field">
-                <label htmlFor="p2b-perspective">Perspective</label>
+
+              <label className="p2b-debug-checkbox" htmlFor="p2b-prompt-enhance">
                 <input
-                  id="p2b-perspective"
-                  type="text"
-                  placeholder="e.g., Travel journalist reporting on official policy changes"
-                  value={perspective}
-                  onChange={(e) => setPerspective(e.target.value)}
-                  className="p2b-input"
+                  id="p2b-prompt-enhance"
+                  type="checkbox"
+                  checked={promptEnhance}
+                  onChange={(event) => setPromptEnhance(event.target.checked)}
                 />
-              </div>
+                Prompt Enhance
+              </label>
+
+              <label className="p2b-debug-checkbox" htmlFor="p2b-editorial-toggle">
+                <input
+                  id="p2b-editorial-toggle"
+                  type="checkbox"
+                  checked={enableEditorialAugmentation}
+                  onChange={(event) => setEnableEditorialAugmentation(event.target.checked)}
+                />
+                Enable editorial augmentation
+              </label>
             </div>
           </section>
 
-          {/* Voice */}
           <section className="p2b-panel">
             <div className="p2b-panel-header">
-              <h2>Voice & Tone</h2>
-              <p>Set the style, tone, and brand identity for the article.</p>
-            </div>
-            <div className="p2b-panel-body">
-              <div className="p2b-field">
-                <label htmlFor="p2b-style-ref">Publication Style Reference</label>
-                <input
-                  id="p2b-style-ref"
-                  type="text"
-                  placeholder="e.g., High-end global travel journalism with cultural context"
-                  value={voice.publication_style_reference}
-                  onChange={(e) => setVoice(prev => ({ ...prev, publication_style_reference: e.target.value }))}
-                  className="p2b-input"
-                />
-              </div>
-              <div className="p2b-field">
-                <label htmlFor="p2b-tone">Tone</label>
-                <input
-                  id="p2b-tone"
-                  type="text"
-                  placeholder="e.g., Informative, polished, globally minded, optimistic"
-                  value={voice.tone}
-                  onChange={(e) => setVoice(prev => ({ ...prev, tone: e.target.value }))}
-                  className="p2b-input"
-                />
-              </div>
-              <div className="p2b-field">
-                <label htmlFor="p2b-brand">Brand Identity</label>
-                <input
-                  id="p2b-brand"
-                  type="text"
-                  placeholder="e.g., Premium travel publication with authority, clarity, and global perspective"
-                  value={voice.brand_identity}
-                  onChange={(e) => setVoice(prev => ({ ...prev, brand_identity: e.target.value }))}
-                  className="p2b-input"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Formatting */}
-          <section className="p2b-panel">
-            <div className="p2b-panel-header">
-              <h2>Formatting</h2>
-              <p>Control paragraph length and target word count.</p>
+              <h2>SEO + Constraints</h2>
             </div>
             <div className="p2b-panel-body">
               <div className="p2b-field-row p2b-field-row--2">
                 <div className="p2b-field">
-                  <label htmlFor="p2b-para-length">Paragraph Length</label>
-                  <select
-                    id="p2b-para-length"
-                    value={formatting.paragraph_length}
-                    onChange={(e) => setFormatting(prev => ({ ...prev, paragraph_length: e.target.value }))}
-                    className="p2b-select"
-                  >
-                    <option value="Short (1–2 sentences per paragraph)">Short (1-2 sentences)</option>
-                    <option value="Medium (3–5 sentences per paragraph)">Medium (3-5 sentences)</option>
-                    <option value="Long (5–8 sentences per paragraph)">Long (5-8 sentences)</option>
-                  </select>
+                  <label htmlFor="p2b-primary-kw">Primary Keyword</label>
+                  <input
+                    id="p2b-primary-kw"
+                    type="text"
+                    className="p2b-input"
+                    value={primaryKeyword}
+                    onChange={(event) => setPrimaryKeyword(event.target.value)}
+                  />
                 </div>
                 <div className="p2b-field">
-                  <label htmlFor="p2b-word-count">Target Word Count</label>
+                  <label htmlFor="p2b-secondary-kws">Secondary Keywords (comma-separated)</label>
                   <input
-                    id="p2b-word-count"
-                    type="number"
-                    min={100}
-                    max={5000}
-                    step={50}
-                    value={formatting.target_word_count}
-                    onChange={(e) => setFormatting(prev => ({ ...prev, target_word_count: Number(e.target.value) }))}
+                    id="p2b-secondary-kws"
+                    type="text"
                     className="p2b-input"
+                    value={secondaryKeywords}
+                    onChange={(event) => setSecondaryKeywords(event.target.value)}
                   />
                 </div>
               </div>
-            </div>
-          </section>
 
-          {/* SEO */}
-          <section className="p2b-panel">
-            <div className="p2b-panel-header">
-              <h2>SEO</h2>
-              <p>Optimize the article for search engines.</p>
-            </div>
-            <div className="p2b-panel-body">
               <div className="p2b-field">
-                <label htmlFor="p2b-primary-kw">Primary Keyword</label>
-                <input
-                  id="p2b-primary-kw"
-                  type="text"
-                  placeholder="e.g., Japan visa-free travel update"
-                  value={seo.primary_keyword}
-                  onChange={(e) => setSeo(prev => ({ ...prev, primary_keyword: e.target.value }))}
-                  className="p2b-input"
-                />
-              </div>
-              <div className="p2b-field">
-                <label htmlFor="p2b-secondary-kws">Secondary Keywords</label>
-                <input
-                  id="p2b-secondary-kws"
-                  type="text"
-                  placeholder="Comma-separated, e.g., Japan travel policy, visa-free entry Japan"
-                  value={seo.secondary_keywords}
-                  onChange={(e) => setSeo(prev => ({ ...prev, secondary_keywords: e.target.value }))}
-                  className="p2b-input"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Call to Action & Editorial Instructions */}
-          <section className="p2b-panel">
-            <div className="p2b-panel-header">
-              <h2>Editorial</h2>
-              <p>Provide a call to action and any editorial instructions for the AI.</p>
-            </div>
-            <div className="p2b-panel-body">
-              <div className="p2b-field">
-                <label htmlFor="p2b-cta">Call to Action</label>
+                <label htmlFor="p2b-must-include">Must Include (one per line)</label>
                 <textarea
-                  id="p2b-cta"
-                  placeholder="e.g., Encourage readers to monitor official announcements and begin planning future trips"
-                  value={callToAction}
-                  onChange={(e) => setCallToAction(e.target.value)}
-                  rows={2}
+                  id="p2b-must-include"
                   className="p2b-textarea"
-                />
-              </div>
-              <div className="p2b-field">
-                <label htmlFor="p2b-editorial">Editorial Instructions</label>
-                <textarea
-                  id="p2b-editorial"
-                  placeholder="e.g., Synthesize the raw source material into a coherent, professionally written article. Ignore formatting artifacts..."
-                  value={editorialInstructions}
-                  onChange={(e) => setEditorialInstructions(e.target.value)}
                   rows={3}
-                  className="p2b-textarea"
+                  value={mustInclude}
+                  onChange={(event) => setMustInclude(event.target.value)}
                 />
               </div>
             </div>
           </section>
 
-          {/* Raw Source Material and one-button pipeline */}
-          <section className="p2b-panel p2b-panel--source">
+          <section className="p2b-panel">
             <div className="p2b-panel-header">
-              <h2>Raw Source Material</h2>
-              <p>
-                Paste raw text blobs. One click will synthesize, classify, fetch guidelines, and generate the
-                final article.
-              </p>
+              <h2>Source Material</h2>
+              <p>Paste source text blocks. Messy copy-paste is cleaned in pipeline.</p>
             </div>
-
             <div className="p2b-panel-body">
               {blobs.map((blob, index) => (
-                <div key={blob.id} className="p2b-blob-field">
-                  <div className="p2b-blob-header">
-                    <label>Source {index + 1}</label>
-                    {blobs.length > 1 && (
-                      <button
-                        type="button"
-                        className="p2b-blob-remove"
-                        onClick={() => removeBlob(blob.id)}
-                        aria-label="Remove source"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    )}
-                  </div>
+                <div key={blob.id} className="p2b-source-block">
+                  <label htmlFor={`p2b-blob-${blob.id}`}>Source Block {index + 1}</label>
                   <textarea
-                    placeholder="Paste raw text, article excerpt, social post, HTML, or notes..."
-                    value={blob.content}
-                    onChange={(e) => updateBlob(blob.id, e.target.value)}
-                    rows={4}
+                    id={`p2b-blob-${blob.id}`}
                     className="p2b-textarea"
+                    rows={6}
+                    value={blob.content}
+                    onChange={(event) => updateBlob(blob.id, event.target.value)}
+                    placeholder="Paste raw text, copied article sections, notes, etc."
                   />
+                  <div className="p2b-button-row">
+                    <button type="button" className="p2b-clear-btn" onClick={() => removeBlob(blob.id)}>
+                      Remove Block
+                    </button>
+                  </div>
                 </div>
               ))}
 
-              <button type="button" className="p2b-add-blob-btn" onClick={addBlob}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Add Another Source
-              </button>
+              <div className="p2b-button-row">
+                <button type="button" className="p2b-rerun-btn" onClick={addBlob}>Add Source Block</button>
+              </div>
+            </div>
+          </section>
 
-              <label className="p2b-toggle-row">
-                <input
-                  type="checkbox"
-                  checked={enableEditorialAugmentation}
-                  disabled={isLoading}
-                  onChange={(e) => setEnableEditorialAugmentation(e.target.checked)}
-                />
-                <span>Enable editorial blocks augmentation</span>
-              </label>
+          <section className="p2b-panel">
+            <div className="p2b-panel-header">
+              <h2>Guideline Preview</h2>
+              <p>Loaded from selected article type guideline markdown.</p>
+            </div>
+            <div className="p2b-panel-body">
+              {guidelineLoading && <p>Loading guideline preview...</p>}
+              {!guidelineLoading && !guidelinePreview && (
+                <p className="p2b-guideline-hint">Select an article type to view guideline details.</p>
+              )}
+              {guidelinePreview && (
+                <>
+                  <p>
+                    <strong>{guidelinePreview.name}</strong>
+                    {guidelinePreview.guideline_file ? ` (${guidelinePreview.guideline_file})` : ''}
+                  </p>
+                  <div className="p2b-raw-json">
+                    <pre>{guidelinePreview.guideline}</pre>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
 
-              <div className="p2b-panel-actions">
-                <button
-                  type="button"
-                  className="p2b-synthesize-btn"
-                  disabled={!hasBlobs || isLoading}
-                  onClick={handleRunPipeline}
-                >
-                  {sourceStep === 'pipeline_running' ? 'Running Final Pipeline...' : 'Generate Final Article'}
+          <section className="p2b-panel">
+            <div className="p2b-panel-header">
+              <h2>Pipeline</h2>
+              <p>Run status and logs.</p>
+            </div>
+            <div className="p2b-panel-body">
+              <div className="p2b-button-row">
+                <button type="button" className="p2b-synthesize-btn" onClick={handleRunPipeline}>
+                  Run Prompt2Blog Pipeline
                 </button>
-                {(pipelineRunId || pipelineResult) && (
-                  <button
-                    type="button"
-                    className="p2b-rerun-btn"
-                    onClick={handleResetRun}
-                    disabled={isLoading}
-                  >
-                    Reset Run State
-                  </button>
-                )}
+                <button type="button" className="p2b-rerun-btn" onClick={handleResetRun}>Reset Run</button>
               </div>
 
-              {(pipelineRunId || sourceStep !== 'edit' || pipelineLogs.length > 0) && (
-                <div className="p2b-pipeline-progress">
-                  <h3>Final Pipeline Progress</h3>
-                  <div className="p2b-stage-checklist">
-                    {PIPELINE_STAGE_ORDER.map(step => {
-                      const status = getPipelineStepStatus(step, pipelineStatus)
-                      return (
-                        <div key={step} className={`p2b-stage-item ${status}`}>
-                          <div className="p2b-stage-dot" />
-                          <span>{PIPELINE_STAGE_LABELS[step] || step}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {pipelineRunId && (
-                    <p className="p2b-pipeline-runid">
-                      <strong>Run ID:</strong> {pipelineRunId}
-                    </p>
-                  )}
-
-                  {pipelineLogs.length > 0 && (
-                    <div className="p2b-pipeline-log">
-                      <h4>Process Log</h4>
-                      {pipelineLogs.map(entry => (
-                        <div key={entry.id} className={`p2b-log-line p2b-log-line--${entry.level}`}>
-                          <span className="p2b-log-time">{entry.at}</span>
-                          <span>{entry.message}</span>
-                        </div>
-                      ))}
+              <div className="p2b-progress-grid">
+                {PIPELINE_STAGE_ORDER.map((step) => {
+                  const status = getPipelineStepStatus(step, pipelineStatus)
+                  return (
+                    <div key={step} className={`p2b-progress-item p2b-progress-item--${status}`}>
+                      <strong>{PIPELINE_STAGE_LABELS[step] || step}</strong>
+                      <span>{status}</span>
                     </div>
-                  )}
+                  )
+                })}
+              </div>
+
+              {pipelineLogs.length > 0 && (
+                <div className="p2b-raw-json">
+                  <pre>{pipelineLogs.map(log => `[${log.at}] ${log.level.toUpperCase()}: ${log.message}`).join('\n')}</pre>
                 </div>
               )}
 
@@ -927,65 +1001,14 @@ export default function Prompt2BlogPage() {
                       View Saved Articles
                     </Link>
                   </div>
-                  <p>
-                    <strong>Status:</strong> {pipelineResult.pipeline_status}
-                  </p>
-                  <p>
-                    <strong>Article Type:</strong> {pipelineResult.article_type.name}
-                  </p>
-                  <p>
-                    <strong>Title:</strong> {pipelineResult.improved_article.title}
-                  </p>
-                  <p>
-                    <strong>Quality Summary:</strong> {pipelineResult.quality_review.quality_summary}
-                  </p>
-                  <p>
-                    <strong>Editorial Augmentation:</strong>{' '}
-                    {pipelineResult.quality_review.editorial_augmentation_applied ?? false
-                      ? 'Applied'
-                      : 'Not applied'}
-                  </p>
-                  <p>
-                    <strong>Editorial Summary:</strong>{' '}
-                    {pipelineResult.quality_review.editorial_augmentation_summary
-                      || 'No editorial summary available.'}
-                  </p>
-                  <p>
-                    <strong>Editorial Components:</strong>{' '}
-                    {(pipelineResult.quality_review.editorial_components_added || []).length
-                      ? (pipelineResult.quality_review.editorial_components_added || [])
-                        .map(component => component.component)
-                        .join(', ')
-                      : 'None'}
-                  </p>
-                  <p>
-                    <strong>Editorial Diagnostic:</strong>{' '}
-                    {Object.entries(pipelineResult.quality_review.editorial_diagnostic || {}).length
-                      ? Object.entries(pipelineResult.quality_review.editorial_diagnostic || {})
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(' | ')
-                      : 'Not available'}
-                  </p>
-
-                  {(pipelineResult.quality_review.editorial_components_added || []).length > 0 && (
-                    <div className="p2b-guideline-card">
-                      <div className="p2b-guideline-card-header">
-                        <h3>Editorial Component Details</h3>
-                      </div>
-                      {(pipelineResult.quality_review.editorial_components_added || []).map((component, index) => (
-                        <p key={`${component.component}-${index}`}>
-                          <strong>{component.component}</strong>
-                          {' - '}
-                          {component.justification || 'No justification provided.'}
-                          {component.placement ? ` (${component.placement})` : ''}
-                        </p>
-                      ))}
-                    </div>
-                  )}
+                  <p><strong>Status:</strong> {pipelineResult.pipeline_status}</p>
+                  <p><strong>Article Type:</strong> {pipelineResult.article_type.name}</p>
+                  <p><strong>Title:</strong> {pipelineResult.improved_article.title}</p>
+                  <p><strong>Quality Summary:</strong> {pipelineResult.quality_review.quality_summary}</p>
 
                   <div className="p2b-synthesized-text">
-                    {pipelineResult.final_markdown.split('\n').map((line, i) => (
-                      <p key={i}>{line || '\u00A0'}</p>
+                    {pipelineResult.final_markdown.split('\n').map((line, index) => (
+                      <p key={index}>{line || '\u00A0'}</p>
                     ))}
                   </div>
 
@@ -1009,14 +1032,7 @@ export default function Prompt2BlogPage() {
               )}
             </div>
 
-            {/* Error — inside the panel */}
-            {error && (
-              <div className="p2b-error">
-                {error}
-              </div>
-            )}
-
-            {/* Loading — inside the panel */}
+            {error && <div className="p2b-error">{error}</div>}
             {isLoading && (
               <div className="p2b-loading">
                 <div className="p2b-spinner" />
@@ -1025,20 +1041,14 @@ export default function Prompt2BlogPage() {
             )}
           </section>
 
-          {/* Utility buttons */}
           <div className="p2b-submit-row">
             <button type="button" className="p2b-copy-json-btn" onClick={handleCopyJson}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="2"/>
-              </svg>
               {copied ? 'Copied!' : 'Copy JSON'}
             </button>
             <button type="button" className="p2b-clear-btn" onClick={handleClear}>
               Clear All
             </button>
           </div>
-
         </form>
       </main>
     </div>

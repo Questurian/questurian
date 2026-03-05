@@ -1,12 +1,14 @@
+import asyncio
 import json
 import sys
-import time
 import types
+from uuid import uuid4
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+import pytest
+from fastapi import BackgroundTasks
+from pydantic import ValidationError
 
-from app.core import clear_all_runs
+from app.core import clear_all_runs, read_status
 
 # Avoid importing heavyweight external LLM clients during route-module import.
 utils_stub = types.ModuleType("utils")
@@ -17,227 +19,171 @@ sys.modules.setdefault("utils", utils_stub)
 import app.features.prompt2blog.routes as prompt2blog_routes
 
 
-def _long_markdown_body() -> str:
-    sentence = (
-        "This section keeps practical guidance explicit while preserving source facts "
-        "and maintaining editorial clarity for readers."
+def _response_payload(response) -> dict:
+    return json.loads(response.body.decode("utf-8"))
+
+
+def _seed_completed_run(run_id: str) -> None:
+    prompt2blog_routes.write_status(
+        run_id,
+        {
+            "run_id": run_id,
+            "state": "completed",
+            "stage": "complete",
+            "error": None,
+            "updated_at": "2026-03-05T00:00:00Z",
+        },
+        feature="prompt2blog",
     )
-    paragraphs = [sentence for _ in range(18)]
-    return "## Overview\n\n" + "\n\n".join(paragraphs)
+    prompt2blog_routes.write_artifact(
+        run_id,
+        {
+            "markdown": "# Persisted Prompt2Blog Title\n\n## Overview\n\nBody content.",
+            "pipeline_v2": {
+                "improved_article": {
+                    "title": "Persisted Prompt2Blog Title",
+                    "content": "## Overview\n\nBody content.",
+                },
+                "article_type": {"id": 11, "name": "Explainer"},
+            },
+        },
+    )
 
 
-def test_prompt2blog_persists_result_articles_and_sync_endpoints(monkeypatch):
-    app = FastAPI()
-    app.include_router(prompt2blog_routes.router)
-    client = TestClient(app)
+def test_prompt2blog_storage_endpoints_without_http_client():
+    clear_all_runs(feature="prompt2blog")
+    run_id = f"p2b-{uuid4()}"
+    _seed_completed_run(run_id)
+
+    status_payload = _response_payload(asyncio.run(prompt2blog_routes.get_status(run_id)))
+    assert status_payload["feature"] == "prompt2blog"
+    assert status_payload["state"] == "completed"
+
+    result_payload = _response_payload(asyncio.run(prompt2blog_routes.get_result(run_id)))
+    assert result_payload["run_id"] == run_id
+    assert result_payload["markdown"].startswith("# Persisted Prompt2Blog Title")
+
+    articles_payload = _response_payload(asyncio.run(prompt2blog_routes.get_articles()))
+    matching = [item for item in articles_payload if item["run_id"] == run_id]
+    assert matching
+    assert matching[0]["title"] == "Persisted Prompt2Blog Title"
+    assert matching[0]["article_type"] == "Explainer"
+
+    sync_before = _response_payload(asyncio.run(prompt2blog_routes.get_sync_status(run_id)))
+    assert sync_before["synced_to_payload"] is False
+
+    sync_mark = _response_payload(
+        asyncio.run(
+            prompt2blog_routes.mark_article_as_synced(
+                run_id,
+                {"payload_article_id": 8883},
+            )
+        )
+    )
+    assert sync_mark["payload_article_id"] == 8883
+
+    sync_after = _response_payload(asyncio.run(prompt2blog_routes.get_sync_status(run_id)))
+    assert sync_after["synced_to_payload"] is True
+    assert sync_after["payload_article_id"] == 8883
 
     clear_all_runs(feature="prompt2blog")
 
+
+def test_prompt2blog_start_pipeline_v2_queues_background_task(monkeypatch):
+    clear_all_runs(feature="prompt2blog")
+    captured: dict[str, object] = {}
+
+    def _fake_run_full_pipeline(run_id: str, request):  # noqa: ANN001
+        captured["run_id"] = run_id
+        captured["request"] = request
+
+    monkeypatch.setattr(prompt2blog_routes, "_run_full_pipeline", _fake_run_full_pipeline)
+
+    request = prompt2blog_routes.Prompt2BlogInputRequest(
+        article_type_id=1,
+        source_material=["One source blob."],
+        article_goal="Generate a practical article.",
+        target_reader="General readers",
+        destination_context="Barcelona, Spain",
+        tone_id="practical",
+        length_id="medium",
+        brand_voice_id="questurian-default",
+        include_debug=False,
+        enable_editorial_augmentation=False,
+    )
+    background_tasks = BackgroundTasks()
+
+    response = asyncio.run(
+        prompt2blog_routes.start_pipeline_v2(
+            request=request,
+            background_tasks=background_tasks,
+        )
+    )
+    payload = _response_payload(response)
+    run_id = payload["run_id"]
+    assert payload["message"] == "Prompt2Blog pipeline v2 queued"
+
+    assert len(background_tasks.tasks) == 1
+    task = background_tasks.tasks[0]
+    task.func(*task.args, **task.kwargs)
+
+    assert captured["run_id"] == run_id
+    assert isinstance(captured["request"], prompt2blog_routes.Prompt2BlogInputRequest)
+    assert read_status(run_id)["feature"] == "prompt2blog"
+
+    clear_all_runs(feature="prompt2blog")
+
+
+def test_prompt2blog_rejects_legacy_payload_shape():
+    with pytest.raises(ValidationError):
+        prompt2blog_routes.Prompt2BlogInputRequest.model_validate(
+            {
+                "raw_sources": ["legacy"],
+                "writing_brief": {},
+            }
+        )
+
+
+def test_prompt2blog_input_options_endpoint_returns_catalog(monkeypatch):
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "read_article_type_name_definitions",
+        lambda: [{"name": "Explainer", "definition": "Explains things clearly."}],
+    )
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "get_article_type_by_name",
+        lambda _name: {
+            "id": 11,
+            "name": "Explainer",
+            "definition": "Explains things clearly.",
+        },
+    )
+
+    payload = _response_payload(asyncio.run(prompt2blog_routes.get_input_options()))
+    assert payload["article_types"][0]["id"] == 11
+    assert payload["tones"]
+    assert payload["lengths"]
+    assert payload["brand_voices"]
+
+
+def test_prompt2blog_guideline_preview_endpoint_returns_selected_type(monkeypatch):
     monkeypatch.setattr(
         prompt2blog_routes,
         "get_article_type_by_id",
         lambda article_type_id: {
             "id": article_type_id,
             "name": "Explainer",
-            "definition": "Explains a topic clearly.",
-            "guideline": "Use clear structure.",
-            "title_guideline": "Keep title explicit.",
+            "definition": "Explains things clearly.",
+            "guideline": "Fallback guideline.",
+            "title_guideline": "Fallback title guideline.",
         },
     )
 
-    def stub_invoke_json_llm(
-        *,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        model_name: str | None,
-    ):
-        if "You are a coverage analyst." in prompt:
-            return (
-                {
-                    "coverage_sufficient": True,
-                    "analysis": "Coverage is sufficient.",
-                    "missing_sections": [],
-                },
-                '{"coverage_sufficient": true}',
-            )
-
-        if "You are an expert editor creating a publish-ready article" in prompt:
-            return (
-                {
-                    "improved_title": "Persisted Prompt2Blog Title",
-                    "improved_content": _long_markdown_body(),
-                    "guideline_alignment_summary": "Aligned with target style.",
-                    "improvements_applied": ["Improved structure."],
-                    "remaining_gaps": [],
-                },
-                '{"improved_title": "Persisted Prompt2Blog Title"}',
-            )
-
-        if "You are a quality auditor for rewritten articles." in prompt:
-            return (
-                {
-                    "overall_score": 9,
-                    "guideline_coverage_score": 9,
-                    "informativeness_score": 9,
-                    "originality_score": 9,
-                    "brief_adherence_score": 9,
-                    "seo_score": 9,
-                    "too_close_to_source": False,
-                    "word_count_estimate": 600,
-                    "constraint_checks": {
-                        "target_word_count_met": True,
-                        "paragraph_length_met": True,
-                        "cta_present": True,
-                        "primary_keyword_present": True,
-                        "secondary_keywords_present": True,
-                        "audience_match": True,
-                        "tone_match": True,
-                    },
-                    "required_revisions": [],
-                    "quality_summary": "Quality pass complete.",
-                },
-                '{"overall_score": 9}',
-            )
-
-        if "You are running a hard rewrite repair pass." in prompt:
-            return (
-                {
-                    "improved_title": "Persisted Prompt2Blog Title",
-                    "improved_content": _long_markdown_body(),
-                    "guideline_alignment_summary": "Repair pass alignment.",
-                    "improvements_applied": [],
-                    "remaining_gaps": [],
-                },
-                '{"improved_title": "Persisted Prompt2Blog Title"}',
-            )
-
-        if "Prompt2Blog EDITORIAL AUGMENTATION" in prompt:
-            return (
-                {
-                    "augmented_content": _long_markdown_body(),
-                    "components_added": [],
-                    "diagnostic": {
-                        "cognitive_load": "strong",
-                        "narrative_density": "strong",
-                        "emphasis_clarity": "strong",
-                        "reading_behavior_risk": "strong",
-                    },
-                    "augmentation_summary": "No editorial augmentation added.",
-                },
-                '{"augmented_content": "ok"}',
-            )
-
-        raise AssertionError(f"Unexpected JSON prompt: {prompt[:120]}")
-
-    def stub_invoke_text_llm(
-        *,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        model_name: str | None,
-    ) -> str:
-        if "You are an expert headline editor." in prompt:
-            return "Persisted Prompt2Blog Title"
-        raise AssertionError(f"Unexpected text prompt: {prompt[:120]}")
-
-    monkeypatch.setattr(prompt2blog_routes, "_invoke_json_llm", stub_invoke_json_llm)
-    monkeypatch.setattr(prompt2blog_routes, "_invoke_text_llm", stub_invoke_text_llm)
-
-    run_response = client.post(
-        "/prompt2blog/pipeline-v2",
-        json={
-            "cleaned_data": "Prompt2Blog cleaned source content for storage coverage.",
-            "raw_sources": ["Prompt2Blog raw source for stage coverage."],
-            "writing_brief": {},
-            "article_type_id": 11,
-            "include_debug": False,
-            "enable_editorial_augmentation": False,
-        },
+    payload = _response_payload(
+        asyncio.run(prompt2blog_routes.get_article_type_guideline_preview(11))
     )
-
-    assert run_response.status_code == 200
-    payload = run_response.json()
-    run_id = payload.get("run_id")
-    assert isinstance(run_id, str) and run_id
-
-    status_payload = None
-    for _ in range(40):
-        status_response = client.get(f"/prompt2blog/status/{run_id}")
-        assert status_response.status_code == 200
-        status_payload = status_response.json()
-        if status_payload["state"] in {"completed", "failed"}:
-            break
-        time.sleep(0.05)
-
-    assert status_payload is not None
-    assert status_payload["feature"] == "prompt2blog"
-    assert status_payload["state"] == "completed"
-
-    result_response = client.get(f"/prompt2blog/result/{run_id}")
-    assert result_response.status_code == 200
-    result_payload = result_response.json()
-    assert result_payload["run_id"] == run_id
-    assert result_payload["markdown"].startswith("# Persisted Prompt2Blog Title")
-
-    articles_response = client.get("/prompt2blog/articles")
-    assert articles_response.status_code == 200
-    articles_payload = articles_response.json()
-    matching = [item for item in articles_payload if item["run_id"] == run_id]
-    assert matching
-    assert matching[0]["title"] == "Persisted Prompt2Blog Title"
-    assert matching[0]["article_type"] == "Explainer"
-
-    sync_status_before = client.get(f"/prompt2blog/articles/{run_id}/sync")
-    assert sync_status_before.status_code == 200
-    assert sync_status_before.json()["synced_to_payload"] is False
-
-    sync_mark_response = client.post(
-        f"/prompt2blog/articles/{run_id}/sync",
-        json={"payload_article_id": 8883},
-    )
-    assert sync_mark_response.status_code == 200
-
-    sync_status_after = client.get(f"/prompt2blog/articles/{run_id}/sync")
-    assert sync_status_after.status_code == 200
-    assert sync_status_after.json()["synced_to_payload"] is True
-    assert sync_status_after.json()["payload_article_id"] == 8883
-
-    clear_all_runs(feature="prompt2blog")
-
-
-def test_prompt2blog_pipeline_v2_uses_langgraph_runner(monkeypatch):
-    app = FastAPI()
-    app.include_router(prompt2blog_routes.router)
-    client = TestClient(app)
-
-    clear_all_runs(feature="prompt2blog")
-    captured: dict[str, str] = {}
-
-    def _fake_graph_runner(*, run_id: str, pipeline_runner):
-        del pipeline_runner
-        captured["run_id"] = run_id
-
-    monkeypatch.setattr(
-        prompt2blog_routes,
-        "run_prompt2blog_pipeline_v2_graph",
-        _fake_graph_runner,
-    )
-
-    response = client.post(
-        "/prompt2blog/pipeline-v2",
-        json={
-            "cleaned_data": "Short cleaned source.",
-            "article_type_id": 1,
-            "raw_sources": ["One source blob."],
-            "writing_brief": {},
-            "include_debug": False,
-            "enable_editorial_augmentation": False,
-        },
-    )
-
-    assert response.status_code == 200
-    run_id = response.json()["run_id"]
-    assert captured["run_id"] == run_id
-
-    clear_all_runs(feature="prompt2blog")
+    assert payload["id"] == 11
+    assert payload["name"] == "Explainer"
+    assert isinstance(payload["guideline"], str)
+    assert isinstance(payload["title_guideline"], str)

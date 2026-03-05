@@ -441,6 +441,105 @@
   padding-top: var(--space-3);
 }
 
+.p2b-button-row {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.p2b-source-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: white;
+  padding: var(--space-4);
+}
+
+.p2b-source-block label {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+
+.p2b-debug-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.p2b-debug-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--p2b-accent);
+}
+
+.p2b-progress-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.p2b-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.p2b-progress-item strong {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.p2b-progress-item span {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.p2b-progress-item--running {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.p2b-progress-item--running span {
+  color: #1d4ed8;
+}
+
+.p2b-progress-item--done {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.p2b-progress-item--done span {
+  color: #166534;
+}
+
+.p2b-progress-item--error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.p2b-progress-item--error span {
+  color: #b91c1c;
+}
+
+.p2b-progress-item--pending {
+  opacity: 0.9;
+}
+
 .p2b-toggle-row {
   display: inline-flex;
   align-items: center;
@@ -491,6 +590,12 @@
   background: #151515;
   border-color: #151515;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
+.payload-action-btn-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 /* Classify button (green accent) */

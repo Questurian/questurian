@@ -7,6 +7,8 @@ export type {
 export type { Prompt2BlogSavedArticle, Prompt2BlogSyncStatusResponse } from './types/articles.types'
 export type {
   Prompt2BlogDebugResponse,
+  Prompt2BlogGuidelinePreviewResponse,
+  Prompt2BlogInputOptionsResponse,
   Prompt2BlogPipelinePayload,
   Prompt2BlogPipelineStartRequest,
   Prompt2BlogPipelineStartResponse,
@@ -27,6 +29,8 @@ export { fetchArticles } from './api/articles.api'
 export {
   fetchResult,
   getPrompt2BlogDebug,
+  getPrompt2BlogGuidelinePreview,
+  getPrompt2BlogInputOptions,
   getPrompt2BlogResult,
   getPrompt2BlogStatus,
   startPrompt2BlogPipelineV2,
