@@ -1,6 +1,9 @@
 // Common types
 export type { Category, SuccessResponse, TypeOption } from "./common.types";
 
+// AI generation types
+export type { NeighborhoodDescriptionGenerationResponse } from "./ai.types";
+
 // Location types
 export type {
   ContactInfo,

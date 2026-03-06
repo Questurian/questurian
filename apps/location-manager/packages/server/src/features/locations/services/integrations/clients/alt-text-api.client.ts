@@ -1,9 +1,20 @@
 /**
- * Alt Text API Client
+ * AI Generation API Client
  *
- * External API client for Python AI alt text generation service.
- * Used to automatically generate descriptive alt text for uploaded images.
+ * External API client for the Python AI generation service.
+ * Used for image alt text and short editorial copy generation.
  */
+
+export interface NeighborhoodDescriptionGenerationInput {
+  location_name?: string | null;
+  category?: string | null;
+  location_type?: string | null;
+  district?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  country?: string | null;
+  address?: string | null;
+}
 
 export class AltTextApiClient {
   private baseUrl: string;
@@ -48,5 +59,33 @@ export class AltTextApiClient {
 
     const result = await response.json() as { alt: string };
     return result.alt;
+  }
+
+  /**
+   * Generate a short neighborhood description using AI
+   * @param input - Location context used to anchor the generated copy
+   * @returns Generated neighborhood description
+   */
+  async generateNeighborhoodDescription(
+    input: NeighborhoodDescriptionGenerationInput
+  ): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/neighborhood-description`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const errorDetail = (await response.text().catch(() => "")).trim();
+      const errorMessage = errorDetail || response.statusText;
+      throw new Error(
+        `Neighborhood description generation failed (${response.status}): ${errorMessage}`
+      );
+    }
+
+    const result = await response.json() as { description: string };
+    return result.description;
   }
 }

@@ -1,9 +1,11 @@
+import asyncio
 import logging
 import os
 import threading
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel
 from vertexai import init as vertex_init
 from vertexai.generative_models import GenerativeModel, Part
 
@@ -13,6 +15,7 @@ logger = logging.getLogger("vertex_alt_text")
 app = FastAPI()
 
 DEFAULT_MODEL = "gemini-2.5-pro"
+DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL = "gemini-2.5-flash"
 DEFAULT_LOCATION = "us-central1"
 
 
@@ -43,9 +46,27 @@ def load_local_env_files() -> None:
 load_local_env_files()
 
 ALT_TEXT_MODEL = os.getenv("ALT_TEXT_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+NEIGHBORHOOD_DESCRIPTION_MODEL = (
+    os.getenv(
+        "NEIGHBORHOOD_DESCRIPTION_MODEL",
+        DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL,
+    ).strip()
+    or DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL
+)
 
 _vertex_initialized = False
 _vertex_init_lock = threading.Lock()
+
+
+class NeighborhoodDescriptionRequest(BaseModel):
+    location_name: str | None = None
+    category: str | None = None
+    location_type: str | None = None
+    district: str | None = None
+    neighborhood: str | None = None
+    city: str | None = None
+    country: str | None = None
+    address: str | None = None
 
 
 def ensure_vertex_initialized() -> None:
@@ -81,6 +102,41 @@ def build_alt_text_prompt() -> str:
     )
 
 
+def build_neighborhood_description_prompt(
+    request: NeighborhoodDescriptionRequest,
+) -> str:
+    area_name = (
+        request.district
+        or request.neighborhood
+        or request.city
+        or "the area"
+    )
+    context_lines = [
+        f"Area focus: {area_name}",
+        f"Neighborhood: {request.neighborhood or 'Unknown'}",
+        f"District: {request.district or 'Unknown'}",
+        f"City: {request.city or 'Unknown'}",
+        f"Country: {request.country or 'Unknown'}",
+        f"Venue name: {request.location_name or 'Unknown'}",
+        f"Venue category: {request.category or 'Unknown'}",
+        f"Venue type: {request.location_type or 'Unknown'}",
+        f"Venue address: {request.address or 'Unknown'}",
+    ]
+
+    return (
+        "You are writing a short neighborhood overview for a travel and location database.\n\n"
+        "Write exactly 2 sentences in a neutral, editorial tone.\n"
+        "Keep it concise, around 45 to 80 words total.\n"
+        "Describe the surrounding area, atmosphere, and visitor context around the venue.\n"
+        "Do not describe the venue itself except as light context.\n"
+        "Do not invent landmarks, transit claims, safety claims, prices, or superlatives.\n"
+        "If details are uncertain, stay broad and generic rather than making specifics up.\n"
+        "Return ONLY the neighborhood description.\n\n"
+        "Context:\n"
+        + "\n".join(context_lines)
+    )
+
+
 def generate_alt_text_from_data(image_data: bytes, content_type: str) -> str:
     ensure_vertex_initialized()
 
@@ -91,6 +147,21 @@ def generate_alt_text_from_data(image_data: bytes, content_type: str) -> str:
     text = (response.text or "").strip().strip('"').strip("'")
     if not text:
         raise RuntimeError("Vertex AI returned empty alt text.")
+
+    return text
+
+
+def generate_text_from_prompt(
+    prompt: str, model_name: str | None = None
+) -> str:
+    ensure_vertex_initialized()
+
+    model = GenerativeModel(model_name or ALT_TEXT_MODEL)
+    response = model.generate_content(prompt)
+
+    text = (response.text or "").strip().strip('"').strip("'")
+    if not text:
+        raise RuntimeError("Vertex AI returned empty text.")
 
     return text
 
@@ -111,6 +182,7 @@ async def test_endpoint():
         "message": "Server is working",
         "provider": "vertex-gemini",
         "model": ALT_TEXT_MODEL,
+        "neighborhood_description_model": NEIGHBORHOOD_DESCRIPTION_MODEL,
     }
 
 
@@ -125,13 +197,40 @@ async def alt_only(image: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="empty file")
 
     try:
-        alt_text = generate_alt_text_from_data(image_data, image.content_type)
+        alt_text = await asyncio.to_thread(
+            generate_alt_text_from_data, image_data, image.content_type
+        )
         logger.info("Generated alt text: %s", alt_text)
         return {"alt": alt_text}
     except HTTPException:
         raise
     except Exception as exc:
         logger.exception("Vertex alt text generation failed")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/neighborhood-description")
+async def neighborhood_description(
+    request: NeighborhoodDescriptionRequest,
+):
+    if not (request.district or request.neighborhood):
+        raise HTTPException(
+            status_code=400,
+            detail="district or neighborhood is required",
+        )
+
+    try:
+        description = await asyncio.to_thread(
+            generate_text_from_prompt,
+            build_neighborhood_description_prompt(request),
+            NEIGHBORHOOD_DESCRIPTION_MODEL,
+        )
+        logger.info("Generated neighborhood description: %s", description)
+        return {"description": description}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Vertex neighborhood description generation failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

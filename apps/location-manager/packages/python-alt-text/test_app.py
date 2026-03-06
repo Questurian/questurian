@@ -55,6 +55,25 @@ class AltTextServiceTests(unittest.TestCase):
         self.assertEqual(raised.exception.status_code, 500)
         self.assertIn("GOOGLE_CLOUD_PROJECT", str(raised.exception.detail))
 
+    def test_neighborhood_description_endpoint_returns_generated_text(self) -> None:
+        request = app.NeighborhoodDescriptionRequest(
+            district="Miraflores",
+            city="Lima",
+            country="Peru",
+            category="dining",
+        )
+        with patch(
+            "app.generate_text_from_prompt",
+            return_value=(
+                "Miraflores mixes leafy residential streets with cafes and restaurants, making it an easy neighborhood to explore on foot. "
+                "It feels polished and visitor-friendly while still serving as a lived-in part of Lima."
+            ),
+        ) as mocked_generate:
+            result = asyncio.run(app.neighborhood_description(request=request))
+
+        self.assertIn("Miraflores mixes leafy residential streets", result["description"])
+        mocked_generate.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

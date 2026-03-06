@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@client/components/ui/dialog";
 import { Button } from "@client/components/ui/button";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft } from "lucide-react";
 import { type ImageVariantType, VARIANT_SPECS } from "@questurian/lm-shared";
 import { useToast } from "@client/shared/hooks/useToast";
 import { createMultiVariantImages } from "@client/shared/lib/image-processing";
@@ -96,29 +96,40 @@ export function MultiVariantCropperModal({
     updateVariantState(currentVariantType, { croppedAreaPixels, completed: true });
   }, [currentVariantType, updateVariantState]);
 
+  const saveCurrentCrop = () => {
+    if (!currentState.croppedAreaPixels) {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast("Please adjust the crop area before continuing", centerPosition);
+      return false;
+    }
+
+    updateVariantState(currentVariantType, { completed: true });
+    return true;
+  };
+
   // Navigate to previous variant
   const handlePrevious = () => {
-    if (currentVariantIndex > 0) {
-      // Mark current as completed before moving
-      updateVariantState(currentVariantType, { completed: true });
+    if (currentVariantIndex > 0 && saveCurrentCrop()) {
       setCurrentVariantIndex((prev) => prev - 1);
     }
   };
 
   // Navigate to next variant
   const handleNext = () => {
-    if (currentVariantIndex < variantSequence.length - 1) {
-      // Mark current as completed before moving
-      updateVariantState(currentVariantType, { completed: true });
+    if (currentVariantIndex < variantSequence.length - 1 && saveCurrentCrop()) {
       setCurrentVariantIndex((prev) => prev + 1);
     }
   };
 
   // Jump to specific variant
   const jumpToVariant = (index: number) => {
-    // Mark current as completed before jumping
-    updateVariantState(currentVariantType, { completed: true });
-    setCurrentVariantIndex(index);
+    if (index === currentVariantIndex) {
+      return;
+    }
+
+    if (saveCurrentCrop()) {
+      setCurrentVariantIndex(index);
+    }
   };
 
   // Check if all crops have been defined
@@ -128,15 +139,9 @@ export function MultiVariantCropperModal({
 
   // Process all crops and return variant files
   const handleConfirmAll = async () => {
-    // Ensure current crop is saved
-    if (!currentState.croppedAreaPixels) {
-      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast("Please adjust the crop area before confirming", centerPosition);
+    if (!saveCurrentCrop()) {
       return;
     }
-
-    // Mark current as completed
-    updateVariantState(currentVariantType, { completed: true });
 
     if (!allCropsComplete()) {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -166,52 +171,68 @@ export function MultiVariantCropperModal({
   };
 
   const completedCount = variantSequence.filter(type => cropStates[type].completed).length;
+  const isLastVariant = currentVariantIndex === variantSequence.length - 1;
+
+  const handlePrimaryAction = async () => {
+    if (isLastVariant) {
+      await handleConfirmAll();
+      return;
+    }
+
+    handleNext();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl w-full h-[90vh] md:h-auto p-0">
+      <DialogContent className="max-w-4xl w-full h-[90vh] md:h-auto p-0">
         <DialogHeader className="p-6 pb-0">
-          <DialogTitle>
-            Crop Image: {currentSpec.label} - {currentVariantType.charAt(0).toUpperCase() + currentVariantType.slice(1)}
-          </DialogTitle>
+          <DialogTitle>Review Image Crop</DialogTitle>
           <p className="text-sm text-muted-foreground mt-2">
-            Step {currentVariantIndex + 1} of {totalVariants} • Target: {currentSpec.width}×{currentSpec.height}px
+            Step {currentVariantIndex + 1} of {totalVariants} • {currentSpec.label} • Target: {currentSpec.width}×{currentSpec.height}px
           </p>
         </DialogHeader>
 
-        {/* Cropper area */}
-        <div className="relative h-[50vh] md:h-[500px] bg-black">
-          {previewUrl && (
-            <Cropper
-              key={`${fileIdentity}:${currentVariantType}`}
-              image={previewUrl}
-              crop={currentState.crop}
-              zoom={currentState.zoom}
-              aspect={currentSpec.ratio}
-              onCropChange={onCropChange}
-              onZoomChange={onZoomChange}
-              onCropComplete={onCropAreaChange}
-              onCropAreaChange={onCropAreaChange}
-              restrictPosition={true}
-              cropShape="rect"
-              showGrid={true}
-            />
-          )}
-        </div>
+        <div className="space-y-4 p-6 pt-4">
+          {/* Cropper area */}
+          <div className="overflow-hidden rounded-xl border border-border bg-black">
+            <div className="relative h-[48vh] md:h-[460px]">
+              {previewUrl && (
+                <Cropper
+                  key={`${fileIdentity}:${currentVariantType}`}
+                  image={previewUrl}
+                  crop={currentState.crop}
+                  zoom={currentState.zoom}
+                  aspect={currentSpec.ratio}
+                  onCropChange={onCropChange}
+                  onZoomChange={onZoomChange}
+                  onCropComplete={onCropAreaChange}
+                  onCropAreaChange={onCropAreaChange}
+                  restrictPosition={true}
+                  cropShape="rect"
+                  showGrid={true}
+                />
+              )}
+            </div>
+          </div>
 
-        {/* Variant progress badges */}
-        <div className="px-6 py-3 border-t border-b bg-muted/30">
-          <div className="flex gap-2 flex-wrap">
-            {variantSequence.map((type, idx) => {
-              const isActive = idx === currentVariantIndex;
-              const isCompleted = cropStates[type].completed || cropStates[type].croppedAreaPixels !== null;
-              const spec = VARIANT_SPECS[type];
+          {/* Variant progress badges */}
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>Crop Progress</span>
+              <span>{completedCount}/{totalVariants} complete</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {variantSequence.map((type, idx) => {
+                const isActive = idx === currentVariantIndex;
+                const isCompleted = cropStates[type].completed || cropStates[type].croppedAreaPixels !== null;
+                const spec = VARIANT_SPECS[type];
 
-              return (
-                <button
-                  key={type}
-                  onClick={() => jumpToVariant(idx)}
-                  className={`
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => jumpToVariant(idx)}
+                    className={`
                     flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
                     ${isActive
                       ? 'bg-blue-600 text-white'
@@ -220,23 +241,35 @@ export function MultiVariantCropperModal({
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     }
                   `}
-                >
-                  {isCompleted && <Check className="h-3 w-3" />}
-                  <span className="capitalize">{type}</span>
-                  <span className="text-[10px] opacity-70">({spec.label})</span>
-                </button>
-              );
-            })}
+                  >
+                    {isCompleted && <Check className="h-3 w-3" />}
+                    <span className="capitalize">{type}</span>
+                    <span className="text-[10px] opacity-70">({spec.label})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Zoom: {Math.round(currentState.zoom * 100)}%</span>
+            <span>Use scroll wheel or pinch to adjust</span>
+          </div>
+
+          <div className="rounded-lg bg-blue-500/10 p-3">
+            <h4 className="mb-1 text-sm font-medium text-blue-300">
+              Crop Tips
+            </h4>
+            <ul className="space-y-1 text-xs text-blue-400">
+              <li>• Keep the main subject centered inside the target frame</li>
+              <li>• Use Previous or the progress pills to adjust an earlier crop</li>
+              <li>• The primary button advances one crop at a time until final confirmation</li>
+            </ul>
           </div>
         </div>
 
-        {/* Zoom info */}
-        <div className="px-6 py-2 text-xs text-muted-foreground">
-          Zoom: {Math.round(currentState.zoom * 100)}% • Use scroll wheel or pinch to adjust
-        </div>
-
-        <DialogFooter className="p-6 pt-0 gap-2">
-          <div className="flex items-center gap-2 mr-auto">
+        <DialogFooter className="gap-2 p-6 pt-0">
+          <div className="mr-auto flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -247,16 +280,6 @@ export function MultiVariantCropperModal({
               <ChevronLeft className="h-4 w-4 mr-1" />
               Previous
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleNext}
-              disabled={currentVariantIndex === variantSequence.length - 1 || isProcessing}
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
           </div>
 
           <Button
@@ -266,21 +289,19 @@ export function MultiVariantCropperModal({
             disabled={isProcessing}
             size="sm"
           >
-            Cancel
+            Cancel Upload
           </Button>
-
           <Button
             type="button"
-            onClick={handleConfirmAll}
-            disabled={isProcessing || !allCropsComplete()}
+            onClick={() => void handlePrimaryAction()}
+            disabled={isProcessing || !currentState.croppedAreaPixels}
             size="sm"
           >
             {isProcessing
               ? "Processing..."
-              : allCropsComplete()
-                ? `Confirm All (${completedCount}/${totalVariants})`
-                : `Crop All (${completedCount}/${totalVariants})`
-            }
+              : isLastVariant
+                ? `Confirm Crops (${completedCount}/${totalVariants})`
+                : `Use Crop & Continue (${currentVariantIndex + 1}/${totalVariants})`}
           </Button>
         </DialogFooter>
       </DialogContent>

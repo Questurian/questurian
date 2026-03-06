@@ -21,11 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@client/components/ui/select";
+import { useGenerateNeighborhoodDescription } from "@client/shared/services/api/hooks/useGenerateNeighborhoodDescription";
 import { useUpdateLocation } from "@client/shared/services/api/hooks/useUpdateLocation";
 import { useToast } from "@client/shared/hooks/useToast";
+import { formatLocationHierarchy } from "@client/shared/lib/utils";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
 import { getIdealForGroups } from "@shared/types/location-ideal-for";
-import { Copy, Plus, Trash2, X } from "lucide-react";
+import { Copy, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { isValidLocationKey } from "@client/shared/lib/taxonomy-location";
 import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
 import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy";
@@ -345,6 +347,37 @@ export function CompletenessFieldEditModal({
   const [dayEntries, setDayEntries] = useState<DayEntry[]>(() =>
     DAYS.map((day) => ({ day, closed: true, slots: [] }))
   );
+  const locationHierarchyLabel = locationDetail.locationKey?.trim()
+    ? formatLocationHierarchy(locationDetail.locationKey.trim())
+    : null;
+  const canGenerateNeighborhoodDescription = Boolean(
+    locationDetail.district?.trim() || locationDetail.locationKey?.split("|")[2]?.trim()
+  );
+
+  const {
+    mutate: generateNeighborhoodDescription,
+    isPending: isGeneratingNeighborhoodDescription,
+  } = useGenerateNeighborhoodDescription({
+    category: locationDetail.category,
+    locationId: locationDetail.id,
+    onSuccess: (data) => {
+      setValue(data.description);
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(
+        data.source === "fallback"
+          ? "AI was slow, so a contextual draft was generated. Review it and save when you're done."
+          : "AI draft ready. Review it and save when you're done.",
+        centerPosition
+      );
+    },
+    onError: (error) => {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast(
+        error.message || "Failed to generate neighborhood description",
+        centerPosition
+      );
+    },
+  });
 
   useEffect(() => {
     if (open && field) {
@@ -883,13 +916,41 @@ export function CompletenessFieldEditModal({
         );
       case "neighborhoodDescription":
         return (
-          <Textarea
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="Describe the neighborhood..."
-            rows={3}
-            className="resize-none"
-          />
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {canGenerateNeighborhoodDescription
+                  ? `AI uses the current district/location context${locationHierarchyLabel ? `: ${locationHierarchyLabel}` : "."}`
+                  : "Add a district or neighborhood in Location Key to generate an AI draft."}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() => generateNeighborhoodDescription()}
+                disabled={
+                  isPending ||
+                  isGeneratingNeighborhoodDescription ||
+                  !canGenerateNeighborhoodDescription
+                }
+              >
+                {isGeneratingNeighborhoodDescription ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                {value.trim() ? "Regenerate with AI" : "Generate with AI"}
+              </Button>
+            </div>
+            <Textarea
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Describe the neighborhood..."
+              rows={5}
+              className="resize-none"
+            />
+          </div>
         );
       case "idealFor":
         return (
@@ -1141,6 +1202,8 @@ export function CompletenessFieldEditModal({
           ? "Venue format only. Use cuisines for food identity and dishes."
           : field.key === "cuisines"
             ? "Food identity only. Choose cuisine, dish, or food style tags."
+        : field.key === "neighborhoodDescription"
+          ? "Write a short neighborhood overview, or use AI to draft one from the current district and location context before saving."
         : field.key === "locationKey" || field.key === "district"
           ? "Use the builder to set country, city, and barrio/district. New taxonomy keys save as approved."
         : field.key === "operationHours"
@@ -1155,7 +1218,13 @@ export function CompletenessFieldEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={field.key === "operationHours" ? "max-w-2xl max-h-[90vh] overflow-y-auto" : "sm:max-w-md"}>
+      <DialogContent className={
+        field.key === "operationHours"
+          ? "max-w-2xl max-h-[90vh] overflow-y-auto"
+          : field.key === "neighborhoodDescription"
+            ? "sm:max-w-lg"
+            : "sm:max-w-md"
+      }>
         <DialogHeader>
           <DialogTitle>Edit {field.label}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

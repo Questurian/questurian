@@ -26,7 +26,7 @@ import {
 
   // Content
   postAddInstagram, deleteInstagramEmbed,
-  postAddUpload, postAddUploadImageSet, postGenerateAltText, deleteUpload, patchUploadPhotographerCredit, postReprocessUploadVariants, postReplaceUploadVariants,
+  postAddUpload, postAddUploadImageSet, postGenerateAltText, postGenerateNeighborhoodDescription, deleteUpload, patchUploadPhotographerCredit, postReprocessUploadVariants, postReplaceUploadVariants,
   serveImage,
   fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
   fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
@@ -108,6 +108,12 @@ for (const category of CATEGORY_ROUTES) {
     routeCategory,
     validateParams(addUploadParamsSchema),
     postAddUploadImageSet
+  );
+  app.post(
+    `/api/${category}/:id/neighborhood-description/generate`,
+    routeCategory,
+    validateParams(deleteLocationIdSchema),
+    postGenerateNeighborhoodDescription
   );
 
   // Google Reviews
