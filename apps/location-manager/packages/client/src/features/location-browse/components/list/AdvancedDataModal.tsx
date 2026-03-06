@@ -88,11 +88,7 @@ export function AdvancedDataModal({
     enabled: isOpen && Boolean(locationDetail?.id) && hasCategory,
   });
   const downloadTripAdvisorPlace = useDownloadTripAdvisorPlace();
-  const canDownloadAiJson = Boolean(
-    tripAdvisorPlaceStatusQuery.data?.hasPlaceData &&
-      mergedReviewsStatusQuery.data?.hasMergedReviews &&
-      locationDetail?.neighborhoodDescription?.trim()
-  );
+  const canDownloadAiJson = Boolean(mergedReviewsStatusQuery.data?.hasMergedReviews);
 
   const refetchPlaceIdMutation = useRefetchPlaceId({
     category: category as Category,
@@ -439,8 +435,8 @@ export function AdvancedDataModal({
                   disabled={!canDownloadAiJson || !hasCategory}
                   title={
                     canDownloadAiJson
-                      ? "Download AI-JSON (core TripAdvisor fields + filtered reviews)"
-                      : "Requires TripAdvisor place data, merged reviews, and neighborhood description"
+                      ? "Download review2blog export JSON (category facts + normalized reviews)"
+                      : "Requires merged reviews"
                   }
                 >
                   AI-JSON

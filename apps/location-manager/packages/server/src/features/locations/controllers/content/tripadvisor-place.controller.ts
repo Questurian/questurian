@@ -104,7 +104,7 @@ export async function downloadLocationExport(c: Context) {
 
 /**
  * GET /api/{category}/:id/ai-json/download
- * Download AI-ready JSON (core TripAdvisor fields + filtered reviews)
+ * Download category-specific review2blog export JSON
  */
 export async function downloadAiJson(c: Context) {
   const parsed = parseLocationIdOrError(c);

@@ -1,5 +1,5 @@
 import { resolve } from 'path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
@@ -13,5 +13,16 @@ export default defineConfig({
   server: {
     host: true,
     port: 3003
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    css: true,
+    setupFiles: resolve(__dirname, 'src/test/setup.ts'),
+    include: [],
+    includeSource: [
+      'src/features/review2blog/api.ts',
+      'src/features/review2blog/Review2BlogPage.tsx',
+    ],
   }
 })

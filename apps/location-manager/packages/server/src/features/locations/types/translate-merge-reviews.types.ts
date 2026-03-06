@@ -94,6 +94,14 @@ export interface MinimalReview {
   date: string;
 }
 
+export interface Review2BlogExportReview {
+  reviewId: string;
+  source: ReviewSource;
+  date: string;
+  rating: number;
+  text: string;
+}
+
 export interface ReviewFileReference {
   filename: string;
   filepath: string;

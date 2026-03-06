@@ -5,7 +5,7 @@ import {
   TRIPADVISOR_PLACE_DOWNLOAD_SUFFIXES,
   TRIPADVISOR_PLACE_MESSAGES,
 } from "../../constants/tripadvisor-place.constants";
-import { getLatestMinimalMergedReviews } from "../../repositories/content/merged-reviews.repository";
+import { getLatestReview2BlogReviews } from "../../repositories/content/merged-reviews.repository";
 import {
   getTripAdvisorPlaceByLocationId,
   saveTripAdvisorPlace,
@@ -161,17 +161,12 @@ export async function getAiJsonDownloadPayload(
   locationId: number
 ): Promise<JsonDownloadPayload> {
   const location = getLocationOrThrow(locationId);
-  const placeData = await resolveStoredPlaceData(locationId);
-  if (!placeData) {
-    throw new TripAdvisorPlaceError(TRIPADVISOR_PLACE_MESSAGES.noPlaceDataFound, 404);
-  }
-
-  const reviews = await getLatestMinimalMergedReviews(locationId);
+  const reviews = await getLatestReview2BlogReviews(locationId);
   if (!reviews) {
     throw new TripAdvisorPlaceError(TRIPADVISOR_PLACE_MESSAGES.noMergedReviewsFound, 404);
   }
 
-  const payload = buildAiJsonPayload(location, placeData.placeData, reviews);
+  const payload = buildAiJsonPayload(location, reviews);
   const filename = `${sanitizeFilename(payload.name ?? `location-${locationId}`)}-${TRIPADVISOR_PLACE_DOWNLOAD_SUFFIXES.aiJson}`;
 
   return {

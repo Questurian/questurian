@@ -41,6 +41,7 @@ def get_all_completed_articles() -> List[Dict[str, Any]]:
 
             title = (
                 listicle.get("listicle_title")
+                or review_payload.get("location_name")
                 or review_payload.get("restaurant_name")
                 or "Review2Blog Draft"
             )

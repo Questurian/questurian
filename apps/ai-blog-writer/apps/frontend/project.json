@@ -24,7 +24,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "echo 'No frontend tests configured yet.'"
+        "command": "vitest run --config apps/frontend/vite.config.ts"
       }
     },
     "docker-build": {

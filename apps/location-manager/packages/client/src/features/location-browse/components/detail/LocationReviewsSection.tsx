@@ -69,7 +69,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
   });
   const hasNeighborhoodDescription = Boolean(locationDetail.neighborhoodDescription?.trim());
 
-  const aiJsonPrerequisites = useMemo(
+  const reviewSupportFields = useMemo(
     () => [
       {
         key: "tripadvisorPlaceData",
@@ -93,7 +93,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
       tripAdvisorPlaceStatusQuery.data?.hasPlaceData,
     ]
   );
-  const canDownloadAiJson = aiJsonPrerequisites.every((field) => field.present);
+  const canDownloadAiJson = hasMergedReviews;
 
   const sources = useMemo<FetchReviewsPipelineRequest["sources"]>(() => {
     if (!reviewsEnabled) {
@@ -253,8 +253,8 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
               disabled={fetchReviewsPipelineMutation.isPending || !canDownloadAiJson}
               title={
                 canDownloadAiJson
-                  ? "Download AI-JSON (requires place data, merged reviews, and neighborhood description)"
-                  : "Missing prerequisites: TripAdvisor place data, merged reviews, or neighborhood description"
+                  ? "Download review2blog export JSON (category facts + normalized reviews)"
+                  : "Requires merged reviews"
               }
             >
               AI-JSON
@@ -264,7 +264,7 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
       </div>
       {!isReviewsDisabled && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {aiJsonPrerequisites.map((field) => {
+          {reviewSupportFields.map((field) => {
             const isTripAdvisorField = field.key === "tripadvisorPlaceData";
             const isMergedField = field.key === "mergedReviews";
             const isNeighborhoodField = field.key === "neighborhoodDescription";

@@ -59,14 +59,17 @@ Structured Prompt2Blog run input now uses:
 
 ### Review2Blog (`/review2blog`)
 
+Primary flow: upload one Location Manager export JSON per run. The export must include `category`, core location fields, a required `editorial` block, and normalized `reviews`. The main pipeline is now category-aware across `dining`, `accommodations`, `attractions`, `nightlife`, and `key_locations`. Review evidence is extracted first, ranked deterministically in phase 2, then written into a short final blurb. The main `/run` path no longer expects separate listicle inputs.
+
 | Method | Path | Description |
 |---|---|---|
-| POST | `/review2blog/upload` | Process uploaded review JSON (phase 1) |
-| POST | `/review2blog/phase2` | Aggregate phase 1 signals into profile |
-| POST | `/review2blog/phase3` | Generate listicle blurb from profile/context |
-| POST | `/review2blog/run` | Queue full Review2Blog pipeline run |
-| GET | `/review2blog/status/{run_id}` | Get pipeline run status |
-| GET | `/review2blog/result/{run_id}` | Get pipeline output (`markdown` + `artifact`) |
+| POST | `/review2blog/upload` | Legacy/debug endpoint: process uploaded review JSON through phase 1 |
+| POST | `/review2blog/phase2` | Legacy/debug endpoint: aggregate phase 1 signals |
+| POST | `/review2blog/phase3` | Legacy/debug endpoint: generate the old restaurant/listicle blurb |
+| POST | `/review2blog/run` | Queue the category-aware JSON-only Review2Blog graph using `{ review_payload, max_tokens? }` |
+| POST | `/review2blog/run/{run_id}/resume` | Legacy fallback for previously paused runs that still need extra input |
+| GET | `/review2blog/status/{run_id}` | Get pipeline run status (`running`, `awaiting_input`, `completed`, `failed`) |
+| GET | `/review2blog/result/{run_id}` | Get the current pipeline artifact. Completed runs return `location_context`, `editorial_intent`, phase outputs, final blurb, and markdown |
 | POST | `/review2blog/clear` | Clear Review2Blog run data |
 | GET | `/review2blog/articles` | List completed Review2Blog articles |
 
