@@ -10,6 +10,7 @@ import {
   getArticleSyncStatus as getArticleSyncStatusForFeature,
   markArticleSynced as markArticleSyncedForFeature,
   rewriteBlockWithAi,
+  updateArticle,
   type CreateArticlePayload,
   type Location,
   type MediaAsset,
@@ -435,4 +436,5 @@ export {
   searchUnsplashImages,
   createArticle,
   rewriteBlockWithAi,
+  updateArticle,
 }

@@ -1,16 +1,18 @@
-import EditorialStageArticlePage from '../../staging/components/EditorialStageArticlePage'
+import { StandardArticleStageBuilder } from '../../staging/components/StandardArticleStageBuilder'
 import {
+  convertMarkdownToLexical,
+  createArticle,
+  fetchExternalImageSource,
   fetchLocations,
   fetchMediaAssets,
-  createArticle,
-  convertMarkdownToLexical,
-  fetchExternalImageSource,
   fetchResult,
+  getArticleSyncStatus,
   importExternalImage,
   markArticleSynced,
+  rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
-  rewriteBlockWithAi,
+  updateArticle,
 } from '../api'
 
 export type {
@@ -21,7 +23,7 @@ export type {
 
 export default function StageArticlePage() {
   return (
-    <EditorialStageArticlePage
+    <StandardArticleStageBuilder
       storageKey="url2blog_staged_articles"
       routes={{
         stagePath: '/url2blog/stage',
@@ -32,15 +34,20 @@ export default function StageArticlePage() {
         fetchLocations,
         fetchMediaAssets,
         createArticle,
+        updateArticle,
         convertMarkdownToLexical,
         fetchExternalImageSource,
         fetchResult,
         importExternalImage,
         markArticleSynced,
+        getArticleSyncStatus,
         searchPexelsImages,
         searchUnsplashImages,
         rewriteBlockWithAi,
       }}
+      featureLabel="URL2Blog"
+      heroDescription="Step through setup, featured image selection, article content blocks, and SEO before syncing a draft article to Payload."
+      syncBehavior="draft-sync"
     />
   )
 }
