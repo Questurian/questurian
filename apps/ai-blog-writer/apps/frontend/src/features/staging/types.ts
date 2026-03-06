@@ -1,3 +1,5 @@
+import type { SeoSection } from '../shared/seo/types'
+
 export type ContentBlock = {
   id: string
   type: 'text' | 'pullquote' | 'image' | 'img-pair' | 'img-trio'
@@ -37,10 +39,18 @@ export type StagedArticle = {
   title: string
   content: string
   blocks: ContentBlock[]
-  editorialBlocks?: EditorialBlock[]
+  editorialBlocks: EditorialBlock[]
   locationId?: number
   editorModelName?: string
   featuredImageId?: number
+  step1_complete?: boolean
+  in_update_mode?: boolean
+  step2_complete?: boolean
+  step2_in_update_mode?: boolean
+  step3_complete?: boolean
+  step3_in_update_mode?: boolean
+  seoSection?: SeoSection
+  syncBehavior?: 'finalize' | 'draft-sync'
   lexicalConverted: boolean
   lexicalData?: object
   publishedToPayload: boolean

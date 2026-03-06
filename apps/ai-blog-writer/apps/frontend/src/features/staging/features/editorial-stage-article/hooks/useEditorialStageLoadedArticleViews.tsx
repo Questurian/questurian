@@ -401,7 +401,7 @@ export function useEditorialStageLoadedArticleViews(
   })
 
   const blockModalProps = buildBlockModalView({
-    stagedPublishedToPayload: params.stagedArticle.publishedToPayload,
+    stagedArticle: params.stagedArticle,
     blockImageModal: params.blockImageModal,
     closeBlockImageModal: params.closeBlockImageModalTracked,
     blockImageSource: params.blockImageSource,

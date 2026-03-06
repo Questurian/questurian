@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import type { Location, MediaAsset } from '../../../api'
+import type { CreateArticlePayload } from '../../../api'
 import type { StagedArticle } from '../../../types'
+import { buildSeoPayload } from '../../../../shared/seo/services/seo-section.service'
 import type { EditorialPublishAnalysis } from '../editorial-markdown.service'
 import { FEATURED_IMAGE_VARIANT } from '../constants'
 import { buildPayloadContentBlocks } from '../services/editorial-stage-publish.service'
@@ -22,18 +24,8 @@ type UseEditorialStagePublishWorkflowParams = {
     data?: object
     error?: string
   }>
-  createArticle: (
-    payload: {
-      title: string
-      location: string
-      locationRef: number
-      step1_complete: boolean
-      status: 'draft' | 'published'
-      headerSection: { featuredImage: number }
-      contentBlocks: object[]
-    },
-    token: string
-  ) => Promise<{ id: number; title: string; slug: string }>
+  createArticle: (payload: CreateArticlePayload, token: string) => Promise<{ id: number; title: string; slug: string }>
+  updateArticle?: (id: number, payload: CreateArticlePayload, token: string) => Promise<{ id: number; title: string; slug: string }>
   markArticleSynced: (
     runId: string,
     payloadArticleId: number
@@ -54,6 +46,7 @@ export function useEditorialStagePublishWorkflow({
   editorialPublishAnalysis,
   convertMarkdownToLexical,
   createArticle,
+  updateArticle,
   markArticleSynced,
   findPreferredVariantAsset,
   updateStagedArticle,
@@ -126,19 +119,43 @@ export function useEditorialStagePublishWorkflow({
 
       dispatchUi({ type: 'PUBLISH_SUBMITTING' })
 
-      const result = await createArticle(
-        {
-          title: trimmedTitle,
-          location: location.locationKey,
-          locationRef: location.id,
-          step1_complete: true,
-          status: 'draft',
-          headerSection: {
-            featuredImage: featuredImageId,
-          },
-          contentBlocks,
+      const payload: CreateArticlePayload = {
+        title: trimmedTitle,
+        location: location.locationKey,
+        locationRef: location.id,
+        step1_complete: true,
+        status: 'draft',
+        headerSection: {
+          featuredImage: featuredImageId,
         },
-        token
+        contentBlocks,
+        seoSection: buildSeoPayload(stagedArticle.seoSection ?? {
+          seoTitle: '',
+          metaDescription: '',
+          openGraph: {
+            title: '',
+            description: '',
+            imageUrl: '',
+            url: '',
+          },
+          twitterCard: {
+            card: 'summary',
+            title: '',
+            description: '',
+            imageUrl: '',
+          },
+          structuredData: '',
+          robots: {
+            index: 'index',
+            follow: 'follow',
+          },
+        }),
+      }
+
+      const result = (
+        stagedArticle.payloadArticleId && updateArticle
+          ? await updateArticle(stagedArticle.payloadArticleId, payload, token)
+          : await createArticle(payload, token)
       )
 
       await markArticleSynced(stagedArticle.runId, result.id)
@@ -151,12 +168,12 @@ export function useEditorialStagePublishWorkflow({
 
       dispatchUi({
         type: 'PUBLISH_SUCCESS',
-        message: `Published! Article ID: ${result.id}`,
+        message: `Synced draft article #${result.id}`,
       })
     } catch (error) {
       dispatchUi({
         type: 'PUBLISH_FAILURE',
-        message: error instanceof Error ? error.message : 'Failed to publish',
+        message: error instanceof Error ? error.message : 'Failed to sync article',
       })
     }
   }, [
@@ -168,6 +185,7 @@ export function useEditorialStagePublishWorkflow({
     mediaAssets,
     convertMarkdownToLexical,
     createArticle,
+    updateArticle,
     editorialPublishAnalysis,
     markArticleSynced,
     timelineItems,

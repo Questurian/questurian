@@ -27,6 +27,32 @@ export async function createArticle(
   return result.doc
 }
 
+export async function updateArticle(
+  id: number,
+  article: CreateArticlePayload,
+  token: string,
+): Promise<{ id: number; title: string; slug: string }> {
+  const response = await fetch(`${PAYLOAD_API_URL}/api/articles/${id}`, {
+    method: 'PATCH',
+    mode: 'cors',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(article),
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, `Failed to update article: ${response.status}`, { message: 'Unknown error' })
+    throw new Error(message)
+  }
+
+  const result = await response.json()
+  return result.doc
+}
+
 export async function markArticleSynced(
   featurePrefix: string,
   runId: string,

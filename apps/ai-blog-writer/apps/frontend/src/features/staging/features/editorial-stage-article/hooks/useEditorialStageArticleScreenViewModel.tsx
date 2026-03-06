@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { ExternalImageCropEditor } from '../../../components/editorial-stage/ExternalImageCropEditor'
 import type { StagedArticle } from '../../../types'
+import { createEmptySeoSection } from '../../../../shared/seo/services/seo-section.service'
 import {
   createInitialEditorialStageUiState,
   editorialStageUiReducer,
@@ -42,6 +43,8 @@ const EMPTY_STAGED_ARTICLE: StagedArticle = {
   content: '',
   blocks: [],
   editorialBlocks: [],
+  seoSection: createEmptySeoSection(),
+  syncBehavior: 'finalize',
   lexicalConverted: false,
   publishedToPayload: false,
   createdAt: '',
@@ -65,14 +68,17 @@ export function useEditorialStageArticleScreenViewModel({
   routes,
   api,
   token,
+  syncBehavior,
 }: UseEditorialStageArticleScreenViewModelParams): EditorialStageArticleScreenViewModel {
   const {
     fetchLocations,
     fetchMediaAssets,
     createArticle,
+    updateArticle,
     convertMarkdownToLexical,
     fetchResult,
     markArticleSynced,
+    getArticleSyncStatus,
     fetchExternalImageSource,
     searchPexelsImages,
     searchUnsplashImages,
@@ -96,10 +102,12 @@ export function useEditorialStageArticleScreenViewModel({
     stageArticlePath: routes.stageArticlePath,
     stagePath: routes.stagePath,
     token,
+    syncBehavior,
     api: {
       fetchResult,
       fetchLocations,
       fetchMediaAssets,
+      getArticleSyncStatus,
     },
   })
 
@@ -352,6 +360,7 @@ export function useEditorialStageArticleScreenViewModel({
     editorialPublishAnalysis,
     convertMarkdownToLexical,
     createArticle,
+    updateArticle,
     markArticleSynced,
     findPreferredVariantAsset,
     updateStagedArticle,

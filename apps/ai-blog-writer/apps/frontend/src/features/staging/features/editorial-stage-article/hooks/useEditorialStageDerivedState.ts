@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { StagedArticle } from '../../types'
+import type { StagedArticle } from '../../../types'
 import type {
   BlockImageModalState,
   ImgTrioFormat,
@@ -28,7 +28,7 @@ import {
   hasExactImgTrioDimensions,
 } from '../media-utils'
 import type { TimelineItem } from '../workflow.service'
-import type { Location, MediaAsset } from '../../api'
+import type { Location, MediaAsset } from '../../../api'
 
 type UseEditorialStageDerivedStateParams = {
   stagedArticle: StagedArticle

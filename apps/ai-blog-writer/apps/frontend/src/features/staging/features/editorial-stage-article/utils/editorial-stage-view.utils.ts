@@ -1,4 +1,4 @@
-import type { Location, MediaAsset } from '../../api'
+import type { Location, MediaAsset } from '../../../api'
 
 export const getLocationDisplayName = (loc?: Location) => {
   if (!loc) return ''

@@ -1,0 +1,146 @@
+.p2b-stage-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.p2b-stage-hero {
+  margin-bottom: 1.1rem;
+}
+
+.p2b-stage-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.p2b-stage-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--stl-border);
+  background: #eef3fb;
+  color: #39547f;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.p2b-stage-panel {
+  gap: 1rem;
+}
+
+.p2b-stage-panel-content {
+  padding-bottom: 0.9rem;
+}
+
+.p2b-stage-summary {
+  margin: 0;
+  color: var(--stl-muted);
+  font-size: 0.9rem;
+}
+
+.p2b-stage-field-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.p2b-stage-featured-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.p2b-stage-featured-preview {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.p2b-stage-featured-preview img {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--stl-border);
+  object-fit: cover;
+  box-shadow: var(--stl-shadow);
+}
+
+.p2b-stage-featured-copy {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.p2b-stage-featured-title {
+  margin: 0;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1rem;
+}
+
+.p2b-stage-featured-note {
+  margin: 0;
+  color: var(--stl-muted);
+}
+
+.p2b-stage-featured-empty {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+  padding: 1rem;
+  border: 1px dashed var(--stl-border-strong);
+  border-radius: 14px;
+  background: #f8fbff;
+  color: var(--stl-ink);
+  cursor: pointer;
+}
+
+.p2b-stage-featured-empty small {
+  color: var(--stl-muted);
+}
+
+.p2b-stage-content-shell {
+  border-top: 1px solid #edf1f6;
+  padding-top: 1rem;
+}
+
+.p2b-stage-content-shell .stage-article-section {
+  margin: 0;
+  max-width: none;
+  padding: 0;
+}
+
+.p2b-stage-sync-result {
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.p2b-stage-sync-result.success {
+  background: #edf8f1;
+  color: #27543c;
+  border: 1px solid #cfe7d8;
+}
+
+.p2b-stage-sync-result.error {
+  background: #fff1f1;
+  color: #8a3030;
+  border: 1px solid #f0cfcf;
+}
+
+.p2b-stage-meta-list {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--stl-muted);
+  font-size: 0.9rem;
+}
+
+.p2b-stage-meta-list p {
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .p2b-stage-featured-preview {
+    grid-template-columns: 1fr;
+  }
+}

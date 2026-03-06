@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction, ReactNode } from 'react'
 import type { UploadImageResponse } from '../../../../../features/images'
 import type { Location, MediaAsset, PexelsPhoto, UnsplashPhoto } from '../../../api'
+import { isStagedArticleEditingLocked } from '../../../utils/staged-article-sync'
 import type {
   BlockImageModalState,
   ExternalImageCropDraft,
@@ -12,7 +13,10 @@ import type {
 import type { BlockModalViewProps, PublishResult } from './editorial-stage-view.types'
 
 type BuildBlockModalViewInput = {
-  stagedPublishedToPayload: boolean
+  stagedArticle: {
+    publishedToPayload: boolean
+    syncBehavior?: 'finalize' | 'draft-sync'
+  }
   blockImageModal: BlockImageModalState | null
   closeBlockImageModal: () => void
   blockImageSource: ImageSourceOption
@@ -97,7 +101,7 @@ export function buildBlockModalView(input: BuildBlockModalViewInput): BlockModal
   return {
     base: {
       show: Boolean(input.blockImageModal?.show),
-      publishedToPayload: input.stagedPublishedToPayload,
+      publishedToPayload: isStagedArticleEditingLocked(input.stagedArticle),
       onClose: input.closeBlockImageModal,
       blockImageModal: input.blockImageModal,
       isImgBlockModal: input.isImgBlockModal,

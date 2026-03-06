@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import type { StagedArticle } from '../../../types'
+import { isStagedArticleEditingLocked } from '../../../utils/staged-article-sync'
 import {
   applyTimelineItemsToDraft,
   buildTimelineItems,
@@ -33,10 +34,10 @@ export function useEditorialStageTimeline({
   }, [timelineItems, activeEditingTimelineItemId])
 
   useEffect(() => {
-    if (!stagedArticle?.publishedToPayload) return
+    if (!stagedArticle || !isStagedArticleEditingLocked(stagedArticle)) return
     if (!activeEditingTimelineItemId) return
     setActiveEditingTimelineItemId(null)
-  }, [stagedArticle?.publishedToPayload, activeEditingTimelineItemId])
+  }, [stagedArticle, activeEditingTimelineItemId])
 
   const toggleTimelineItemEdit = useCallback((timelineItemId: string) => {
     setActiveEditingTimelineItemId((current) => (

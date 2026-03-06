@@ -9,4 +9,5 @@ export {
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
+  updateArticle,
 } from '../../staging/api'

@@ -238,7 +238,7 @@ export function renderEditorialBlockCard(
                   type="text"
                   className="editorial-field-input"
                   value={keyTakeawaysLabel}
-                  onChange={(event) => options.onChangeMarkdown?.(
+                  onChange={(event) => options?.onChangeMarkdown?.(
                     buildCanonicalKeyTakeawaysMarkdown(
                       event.target.value,
                       keyTakeawaysDraftItems,
@@ -269,7 +269,7 @@ export function renderEditorialBlockCard(
                         onChange={(event) => {
                           const nextItems = [...keyTakeawaysDraftItems]
                           nextItems[itemIndex] = event.target.value
-                          options.onChangeMarkdown?.(
+                          options?.onChangeMarkdown?.(
                             buildCanonicalKeyTakeawaysMarkdown(
                               keyTakeawaysLabel,
                               nextItems,
@@ -284,7 +284,7 @@ export function renderEditorialBlockCard(
                         className="editorial-inline-btn danger"
                         onClick={() => {
                           const nextItems = keyTakeawaysDraftItems.filter((_, index) => index !== itemIndex)
-                          options.onChangeMarkdown?.(
+                          options?.onChangeMarkdown?.(
                             buildCanonicalKeyTakeawaysMarkdown(
                               keyTakeawaysLabel,
                               nextItems.length ? nextItems : [''],
@@ -304,7 +304,7 @@ export function renderEditorialBlockCard(
                   <button
                     type="button"
                     className="editorial-inline-btn"
-                    onClick={() => options.onChangeMarkdown?.(
+                    onClick={() => options?.onChangeMarkdown?.(
                       buildCanonicalKeyTakeawaysMarkdown(
                         keyTakeawaysLabel,
                         [...keyTakeawaysDraftItems, ''],
@@ -328,7 +328,7 @@ export function renderEditorialBlockCard(
                   type="text"
                   className="editorial-field-input"
                   value={pullQuoteLabel}
-                  onChange={(event) => options.onChangeMarkdown?.(
+                  onChange={(event) => options?.onChangeMarkdown?.(
                     buildCanonicalPullQuoteMarkdown(
                       event.target.value,
                       pullQuoteText,
@@ -344,7 +344,7 @@ export function renderEditorialBlockCard(
                 <textarea
                   className="editorial-field-textarea"
                   value={pullQuoteText}
-                  onChange={(event) => options.onChangeMarkdown?.(
+                  onChange={(event) => options?.onChangeMarkdown?.(
                     buildCanonicalPullQuoteMarkdown(
                       pullQuoteLabel,
                       event.target.value,
@@ -366,7 +366,7 @@ export function renderEditorialBlockCard(
                   type="text"
                   className="editorial-field-input"
                   value={inTheKnowLabel}
-                  onChange={(event) => options.onChangeMarkdown?.(
+                  onChange={(event) => options?.onChangeMarkdown?.(
                     buildCanonicalInTheKnowMarkdown(
                       event.target.value,
                       inTheKnowText,
@@ -382,7 +382,7 @@ export function renderEditorialBlockCard(
                 <textarea
                   className="editorial-field-textarea"
                   value={inTheKnowText}
-                  onChange={(event) => options.onChangeMarkdown?.(
+                  onChange={(event) => options?.onChangeMarkdown?.(
                     buildCanonicalInTheKnowMarkdown(
                       inTheKnowLabel,
                       event.target.value,
@@ -404,7 +404,7 @@ export function renderEditorialBlockCard(
         <div style={{ marginTop: '0.35rem' }}>
           <textarea
             value={block.markdown}
-            onChange={(event) => options.onChangeMarkdown?.(event.target.value)}
+            onChange={(event) => options?.onChangeMarkdown?.(event.target.value)}
             onInput={(event) => resizeTextareaToContent(event.currentTarget)}
             ref={(element) => {
               if (element) resizeTextareaToContent(element)

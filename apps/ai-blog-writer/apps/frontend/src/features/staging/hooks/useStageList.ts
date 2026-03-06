@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { StagedArticle } from '../types'
+import { getAllStagedArticles } from '../features/editorial-stage-article/services/editorial-stage-storage.service'
 
 function parseStagedArticles(storageKey: string): StagedArticle[] {
-  const stored = localStorage.getItem(storageKey)
-  if (!stored) return []
-
-  try {
-    const parsed: StagedArticle[] = JSON.parse(stored)
-    return parsed.sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
-  } catch {
-    return []
-  }
+  return getAllStagedArticles(storageKey).sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  )
 }
 
 export function useStageList(storageKey: string) {

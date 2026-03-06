@@ -8,6 +8,7 @@ export type { Prompt2BlogSavedArticle, Prompt2BlogSyncStatusResponse } from './t
 export type {
   Prompt2BlogDebugResponse,
   Prompt2BlogGuidelinePreviewResponse,
+  Prompt2BlogInputOption,
   Prompt2BlogInputOptionsResponse,
   Prompt2BlogPipelinePayload,
   Prompt2BlogPipelineStartRequest,
@@ -49,4 +50,5 @@ export {
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
+  updateArticle,
 } from './api/staging-bridge'

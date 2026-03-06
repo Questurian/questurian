@@ -7,6 +7,7 @@ import type { BlockImageModalMode, OpenBlockImageModalOptions, SupportedEditoria
 import type { TimelineItem } from '../../features/editorial-stage-article/workflow.service'
 import { getMediaAssetAltText } from '../../features/editorial-stage-article/media-utils'
 import { MarkdownBlockEditor } from '../../features/markdown-editor'
+import { isStagedArticleEditingLocked } from '../../utils/staged-article-sync'
 import { BlockActionZone } from './BlockActionZone'
 import { renderEditorialBlockCard } from './renderEditorialBlockCard'
 
@@ -148,6 +149,7 @@ export function EditorialTimelineList({
     removeImgPairAfterBlock,
     removeImageAfterBlock,
   } = media
+  const isEditingLocked = isStagedArticleEditingLocked(stagedArticle)
 
   return (
     <div className="stage-article-section">
@@ -168,7 +170,7 @@ export function EditorialTimelineList({
       <div className="block-editor">
         {timelineItems.map((timelineItem) => {
           const timelineIndex = timelineIndexMap.get(timelineItem.id) ?? 0
-          const canReorder = !stagedArticle.publishedToPayload && !activeEditingTimelineItemId
+          const canReorder = !isEditingLocked && !activeEditingTimelineItemId
           const isFirstTimelineItem = timelineIndex === 0
           const isLastTimelineItem = timelineIndex === timelineItems.length - 1
           const hasNextTimelineItem = timelineIndex < timelineItems.length - 1
@@ -204,15 +206,15 @@ export function EditorialTimelineList({
                   {
                     validation: editorialPublishAnalysis.byId[editorialBlock.id],
                     onFixBlock: () => fixEditorialBlock(editorialBlock.id),
-                    disableFix: stagedArticle.publishedToPayload,
-                    canEdit: isEditingThisEditorialBlock && !stagedArticle.publishedToPayload,
-                    onToggleEdit: stagedArticle.publishedToPayload
+                    disableFix: isEditingLocked,
+                    canEdit: isEditingThisEditorialBlock && !isEditingLocked,
+                    onToggleEdit: isEditingLocked
                       ? undefined
                       : () => toggleTimelineItemEdit(timelineItem.id),
                     onChangeMarkdown: (nextMarkdown) =>
                       updateEditorialBlockMarkdown(editorialBlock.id, nextMarkdown),
                     onRemoveBlock: () => removeEditorialBlock(editorialBlock.id),
-                    disableRemove: stagedArticle.publishedToPayload,
+                    disableRemove: isEditingLocked,
                     canReorder,
                     onMoveUp: () => moveTimelineItem(timelineItem.id, 'up'),
                     onMoveDown: () => moveTimelineItem(timelineItem.id, 'down'),
@@ -220,13 +222,13 @@ export function EditorialTimelineList({
                     disableMoveDown: isLastTimelineItem,
                   }
                 )}
-                {!stagedArticle.publishedToPayload
+                {!isEditingLocked
                   && hasNextTimelineItem
                   && anchorBlock
                   && (
                     <BlockActionZone
                       block={anchorBlock}
-                      publishedToPayload={stagedArticle.publishedToPayload}
+                      publishedToPayload={isEditingLocked}
                       showFuse={false}
                       pickerKey={pickerKey}
                       placeAfterImage={editorialBlock.placeAfterImage === true}
@@ -320,7 +322,7 @@ export function EditorialTimelineList({
                             </button>
                           </div>
                         )}
-                        {!stagedArticle.publishedToPayload && (
+                        {!isEditingLocked && (
                           <button
                             type="button"
                             className="block-edit-btn"
@@ -330,7 +332,7 @@ export function EditorialTimelineList({
                             {isEditingThisImageBlock ? 'Done' : 'Caption'}
                           </button>
                         )}
-                        {!stagedArticle.publishedToPayload && (block.imageAfter || block.imgPairAfter || block.imgTrioAfter) && (
+                        {!isEditingLocked && (block.imageAfter || block.imgPairAfter || block.imgTrioAfter) && (
                           <button
                             type="button"
                             className="block-edit-btn"
@@ -380,7 +382,7 @@ export function EditorialTimelineList({
                             Edit
                           </button>
                         )}
-                        {!stagedArticle.publishedToPayload && (
+                        {!isEditingLocked && (
                           <button
                             type="button"
                             className="block-delete-btn"
@@ -432,7 +434,7 @@ export function EditorialTimelineList({
                                   alt={getMediaAssetAltText(imageThree) || ''}
                                 />
                               </div>
-                              {isEditingThisImageBlock && !stagedArticle.publishedToPayload ? (
+                              {isEditingThisImageBlock && !isEditingLocked ? (
                                 <input
                                   type="text"
                                   className="stage-article-modal-search-input"
@@ -470,7 +472,7 @@ export function EditorialTimelineList({
                                   alt={getMediaAssetAltText(imageTwo) || ''}
                                 />
                               </div>
-                              {isEditingThisImageBlock && !stagedArticle.publishedToPayload ? (
+                              {isEditingThisImageBlock && !isEditingLocked ? (
                                 <input
                                   type="text"
                                   className="stage-article-modal-search-input"
@@ -500,12 +502,12 @@ export function EditorialTimelineList({
                     </div>
                   </div>
                 </div>
-                {!stagedArticle.publishedToPayload
+                {!isEditingLocked
                   && hasNextTimelineItem
                   && (
                     <BlockActionZone
                       block={block}
-                      publishedToPayload={stagedArticle.publishedToPayload}
+                      publishedToPayload={isEditingLocked}
                       showFuse={false}
                       pickerKey={pickerKey}
                       placeAfterImage={false}
@@ -530,7 +532,7 @@ export function EditorialTimelineList({
           const contentBlockNumber = contentTimelineNumberMap.get(block.id) ?? (contentIndex + 1)
           const isEditingThisContentBlock =
             activeEditingTimelineItemId === timelineItem.id
-            && !stagedArticle.publishedToPayload
+            && !isEditingLocked
 
           return (
             <div
@@ -591,7 +593,7 @@ export function EditorialTimelineList({
                         </button>
                       </div>
                     )}
-                    {!stagedArticle.publishedToPayload && (
+                    {!isEditingLocked && (
                       <button
                         type="button"
                         className="block-edit-btn"
@@ -601,7 +603,7 @@ export function EditorialTimelineList({
                         {isEditingThisContentBlock ? 'Done' : 'Edit'}
                       </button>
                     )}
-                    {!stagedArticle.publishedToPayload && (
+                    {!isEditingLocked && (
                       <button
                         type="button"
                         className="block-delete-btn"
@@ -653,7 +655,7 @@ export function EditorialTimelineList({
                   <div className="block-preview">
                     {(() => {
                       const splitPoints = findHeaderSplitPoints(block.content)
-                      if (splitPoints.length === 0 || stagedArticle.publishedToPayload) {
+                      if (splitPoints.length === 0 || isEditingLocked) {
                         return (
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {block.content}
@@ -703,12 +705,12 @@ export function EditorialTimelineList({
                   </div>
                 )}
               </div>
-              {!stagedArticle.publishedToPayload
+              {!isEditingLocked
                 && hasNextTimelineItem
                 && (
                   <BlockActionZone
                     block={block}
-                    publishedToPayload={stagedArticle.publishedToPayload}
+                    publishedToPayload={isEditingLocked}
                     showFuse={nextTimelineItem?.type === 'content'}
                     pickerKey={pickerKey}
                     placeAfterImage={false}
@@ -726,10 +728,10 @@ export function EditorialTimelineList({
           )
         })}
 
-        {!stagedArticle.publishedToPayload && lastContentBlock && (
+        {!isEditingLocked && lastContentBlock && (
           <BlockActionZone
             block={lastContentBlock}
-            publishedToPayload={stagedArticle.publishedToPayload}
+            publishedToPayload={isEditingLocked}
             showFuse={false}
             pickerKey="end"
             placeAfterImage={false}

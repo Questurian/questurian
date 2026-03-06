@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Location, MediaAsset } from '../../../api'
 import type { StagedArticle } from '../../../types'
+import { createEmptySeoSection } from '../../../../shared/seo/services/seo-section.service'
 import type { EditorialStageArticleApi } from '../types'
 import { DEFAULT_EDITOR_MODEL_NAME, resolveEditorModelName } from '../constants'
 import { extractEditorialBlocks } from '../editorial-markdown.service'
@@ -27,7 +28,8 @@ type UseEditorialStagePageDataParams = {
   stageArticlePath: string
   stagePath: string
   token: string | null | undefined
-  api: Pick<EditorialStageArticleApi, 'fetchResult' | 'fetchLocations' | 'fetchMediaAssets'>
+  syncBehavior?: 'finalize' | 'draft-sync'
+  api: Pick<EditorialStageArticleApi, 'fetchResult' | 'fetchLocations' | 'fetchMediaAssets' | 'getArticleSyncStatus'>
 }
 
 export function useEditorialStagePageData({
@@ -35,9 +37,10 @@ export function useEditorialStagePageData({
   stageArticlePath,
   stagePath,
   token,
+  syncBehavior = 'finalize',
   api,
 }: UseEditorialStagePageDataParams) {
-  const { fetchResult, fetchLocations, fetchMediaAssets } = api
+  const { fetchResult, fetchLocations, fetchMediaAssets, getArticleSyncStatus } = api
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -53,6 +56,59 @@ export function useEditorialStagePageData({
   const [error, setError] = useState<string | null>(null)
   const [stagedArticle, setStagedArticle] = useState<StagedArticle | null>(null)
 
+  const normalizeLoadedArticle = useCallback(async (existing: StagedArticle): Promise<StagedArticle> => {
+    const extractedFromContent = extractEditorialBlocks(existing.content)
+    const extractedFromOriginal = extractEditorialBlocks(existing.originalContent || existing.content)
+    const contentForParsing = extractedFromContent.bodyMarkdown || existing.content
+    const originalContentForReset = extractedFromOriginal.bodyMarkdown || contentForParsing
+    const parsedDetails = parseMarkdownToBlocksDetailed(contentForParsing)
+    const normalizedBlocksResult =
+      existing.blocks?.length
+        ? normalizeBlocks(existing.blocks, contentForParsing)
+        : {
+            blocks: parsedDetails.blocks,
+            mediaBlockIdByLegacyAnchorId: new Map<string, string>(),
+          }
+    const normalizedBlocks = normalizedBlocksResult.blocks
+    const existingEditorialBlocks = migrateEditorialBlocksForStandaloneMedia(
+      existing.editorialBlocks || [],
+      normalizedBlocksResult.mediaBlockIdByLegacyAnchorId
+    )
+    const hasMeaningfulExistingPlacement = hasMeaningfulEditorialPlacement(
+      existingEditorialBlocks,
+      normalizedBlocks
+    )
+    let fallbackEditorialBlocks = extractedFromContent.editorialBlocks
+
+    if (!hasMeaningfulExistingPlacement && existing.runId) {
+      const runEditorialBlocks = await fetchEditorialBlocksFromRun(
+        existing.runId,
+        fetchResult
+      )
+      if (runEditorialBlocks.length > 0) {
+        fallbackEditorialBlocks = runEditorialBlocks
+      }
+    }
+
+    const normalizedEditorialBlocks = attachEditorialBlocksToContentBlocks(
+      normalizedBlocks,
+      parsedDetails.ranges,
+      hasMeaningfulExistingPlacement
+        ? existingEditorialBlocks
+        : fallbackEditorialBlocks
+    )
+
+    return {
+      ...existing,
+      originalContent: originalContentForReset,
+      blocks: normalizedBlocks,
+      content: composeArticleMarkdown(normalizedBlocks, normalizedEditorialBlocks),
+      editorialBlocks: normalizedEditorialBlocks,
+      editorModelName: resolveEditorModelName(existing.editorModelName),
+      syncBehavior,
+    }
+  }, [fetchResult, syncBehavior])
+
   useEffect(() => {
     if (!urlRunId && !stagedId) return
 
@@ -66,64 +122,18 @@ export function useEditorialStagePageData({
           const existingIndex = allStaged.findIndex((candidate) => candidate.id === stagedId)
           const existing = existingIndex >= 0 ? allStaged[existingIndex] : null
           if (existing) {
-            const extractedFromContent = extractEditorialBlocks(existing.content)
-            const extractedFromOriginal = extractEditorialBlocks(existing.originalContent || existing.content)
-            const contentForParsing = extractedFromContent.bodyMarkdown || existing.content
-            const originalContentForReset = extractedFromOriginal.bodyMarkdown || contentForParsing
-            const parsedDetails = parseMarkdownToBlocksDetailed(contentForParsing)
-            const normalizedBlocksResult =
-              existing.blocks?.length
-                ? normalizeBlocks(existing.blocks, contentForParsing)
-                : {
-                    blocks: parsedDetails.blocks,
-                    mediaBlockIdByLegacyAnchorId: new Map<string, string>(),
-                  }
-            const normalizedBlocks = normalizedBlocksResult.blocks
-            const existingEditorialBlocks = migrateEditorialBlocksForStandaloneMedia(
-              existing.editorialBlocks || [],
-              normalizedBlocksResult.mediaBlockIdByLegacyAnchorId
-            )
-            const hasMeaningfulExistingPlacement = hasMeaningfulEditorialPlacement(
-              existingEditorialBlocks,
-              normalizedBlocks
-            )
-            let fallbackEditorialBlocks = extractedFromContent.editorialBlocks
-
-            if (!hasMeaningfulExistingPlacement && existing.runId) {
-              const runEditorialBlocks = await fetchEditorialBlocksFromRun(
-                existing.runId,
-                fetchResult
-              )
-              if (runEditorialBlocks.length > 0) {
-                fallbackEditorialBlocks = runEditorialBlocks
-              }
-            }
-
-            const normalizedEditorialBlocks = attachEditorialBlocksToContentBlocks(
-              normalizedBlocks,
-              parsedDetails.ranges,
-              hasMeaningfulExistingPlacement
-                ? existingEditorialBlocks
-                : fallbackEditorialBlocks
-            )
-            const normalizedExisting = {
-              ...existing,
-              originalContent: originalContentForReset,
-              blocks: normalizedBlocks,
-              content: composeArticleMarkdown(normalizedBlocks, normalizedEditorialBlocks),
-              editorialBlocks: normalizedEditorialBlocks,
-              editorModelName: resolveEditorModelName(existing.editorModelName),
-            }
+            const normalizedExisting = await normalizeLoadedArticle(existing)
 
             if (!isCancelled) {
               setStagedArticle(normalizedExisting)
             }
 
-            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedBlocks)
-            const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedEditorialBlocks)
+            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedExisting.blocks)
+            const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedExisting.editorialBlocks || [])
             const contentChanged = existing.content !== normalizedExisting.content
             const modelChanged = existing.editorModelName !== normalizedExisting.editorModelName
-            if (blocksChanged || editorialChanged || contentChanged || modelChanged) {
+            const syncBehaviorChanged = existing.syncBehavior !== normalizedExisting.syncBehavior
+            if (blocksChanged || editorialChanged || contentChanged || modelChanged || syncBehaviorChanged) {
               allStaged[existingIndex] = normalizedExisting
               saveAllStagedArticles(storageKey, allStaged)
             }
@@ -134,64 +144,18 @@ export function useEditorialStagePageData({
           const existingIndex = allStaged.findIndex((candidate) => candidate.runId === urlRunId)
           const existing = existingIndex >= 0 ? allStaged[existingIndex] : null
           if (existing) {
-            const extractedFromContent = extractEditorialBlocks(existing.content)
-            const extractedFromOriginal = extractEditorialBlocks(existing.originalContent || existing.content)
-            const contentForParsing = extractedFromContent.bodyMarkdown || existing.content
-            const originalContentForReset = extractedFromOriginal.bodyMarkdown || contentForParsing
-            const parsedDetails = parseMarkdownToBlocksDetailed(contentForParsing)
-            const normalizedBlocksResult =
-              existing.blocks?.length
-                ? normalizeBlocks(existing.blocks, contentForParsing)
-                : {
-                    blocks: parsedDetails.blocks,
-                    mediaBlockIdByLegacyAnchorId: new Map<string, string>(),
-                  }
-            const normalizedBlocks = normalizedBlocksResult.blocks
-            const existingEditorialBlocks = migrateEditorialBlocksForStandaloneMedia(
-              existing.editorialBlocks || [],
-              normalizedBlocksResult.mediaBlockIdByLegacyAnchorId
-            )
-            const hasMeaningfulExistingPlacement = hasMeaningfulEditorialPlacement(
-              existingEditorialBlocks,
-              normalizedBlocks
-            )
-            let fallbackEditorialBlocks = extractedFromContent.editorialBlocks
-
-            if (!hasMeaningfulExistingPlacement && existing.runId) {
-              const runEditorialBlocks = await fetchEditorialBlocksFromRun(
-                existing.runId,
-                fetchResult
-              )
-              if (runEditorialBlocks.length > 0) {
-                fallbackEditorialBlocks = runEditorialBlocks
-              }
-            }
-
-            const normalizedEditorialBlocks = attachEditorialBlocksToContentBlocks(
-              normalizedBlocks,
-              parsedDetails.ranges,
-              hasMeaningfulExistingPlacement
-                ? existingEditorialBlocks
-                : fallbackEditorialBlocks
-            )
-            const normalizedExisting = {
-              ...existing,
-              originalContent: originalContentForReset,
-              blocks: normalizedBlocks,
-              content: composeArticleMarkdown(normalizedBlocks, normalizedEditorialBlocks),
-              editorialBlocks: normalizedEditorialBlocks,
-              editorModelName: resolveEditorModelName(existing.editorModelName),
-            }
+            const normalizedExisting = await normalizeLoadedArticle(existing)
 
             if (!isCancelled) {
               setStagedArticle(normalizedExisting)
             }
 
-            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedBlocks)
-            const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedEditorialBlocks)
+            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedExisting.blocks)
+            const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedExisting.editorialBlocks || [])
             const contentChanged = existing.content !== normalizedExisting.content
             const modelChanged = existing.editorModelName !== normalizedExisting.editorModelName
-            if (blocksChanged || editorialChanged || contentChanged || modelChanged) {
+            const syncBehaviorChanged = existing.syncBehavior !== normalizedExisting.syncBehavior
+            if (blocksChanged || editorialChanged || contentChanged || modelChanged || syncBehaviorChanged) {
               allStaged[existingIndex] = normalizedExisting
               saveAllStagedArticles(storageKey, allStaged)
             }
@@ -232,6 +196,14 @@ export function useEditorialStagePageData({
               blocks,
               editorialBlocks,
               editorModelName: DEFAULT_EDITOR_MODEL_NAME,
+              step1_complete: false,
+              in_update_mode: false,
+              step2_complete: false,
+              step2_in_update_mode: false,
+              step3_complete: false,
+              step3_in_update_mode: false,
+              seoSection: createEmptySeoSection(),
+              syncBehavior,
               lexicalConverted: false,
               publishedToPayload: false,
               createdAt: new Date().toISOString(),
@@ -269,7 +241,47 @@ export function useEditorialStagePageData({
     storageKey,
     stageArticlePath,
     fetchResult,
+    normalizeLoadedArticle,
+    syncBehavior,
   ])
+
+  useEffect(() => {
+    if (!getArticleSyncStatus || !stagedArticle?.runId) return
+
+    let isCancelled = false
+
+    const hydrateSyncStatus = async () => {
+      try {
+        const syncStatus = await getArticleSyncStatus(stagedArticle.runId)
+        if (isCancelled || !syncStatus.synced_to_payload || !syncStatus.payload_article_id) return
+
+        setStagedArticle((previous) => {
+          if (!previous) return previous
+          if (previous.payloadArticleId === syncStatus.payload_article_id && previous.publishedToPayload) {
+            return previous
+          }
+
+          const updated = {
+            ...previous,
+            payloadArticleId: syncStatus.payload_article_id ?? undefined,
+            publishedToPayload: true,
+            updatedAt: previous.updatedAt,
+          }
+
+          upsertStagedArticle(storageKey, updated)
+          return updated
+        })
+      } catch {
+        // Ignore sync-status bootstrap errors so staging still loads offline/local state.
+      }
+    }
+
+    void hydrateSyncStatus()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [getArticleSyncStatus, stagedArticle?.runId, storageKey])
 
   useEffect(() => {
     if (!token) {

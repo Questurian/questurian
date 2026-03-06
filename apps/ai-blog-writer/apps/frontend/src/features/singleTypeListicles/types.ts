@@ -1,4 +1,5 @@
 import type { EditorAssistModelName } from '../staging/api'
+import type { SeoSection, SeoTwitterCardType } from '../shared/seo/types'
 
 export type ListicleType = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
 
@@ -12,29 +13,7 @@ export type MediaMode = 'photos' | 'instagram' | 'both'
 
 export type PayloadRichText = Record<string, unknown>
 
-export type SeoTwitterCardType = 'summary' | 'summary_large_image'
-
-export type SeoSection = {
-  seoTitle: string
-  metaDescription: string
-  openGraph: {
-    title: string
-    description: string
-    imageUrl: string
-    url: string
-  }
-  twitterCard: {
-    card: SeoTwitterCardType
-    title: string
-    description: string
-    imageUrl: string
-  }
-  structuredData: string
-  robots: {
-    index: 'index' | 'noindex'
-    follow: 'follow' | 'nofollow'
-  }
-}
+export type { SeoSection, SeoTwitterCardType } from '../shared/seo/types'
 
 export type ListicleItemBlock = {
   id: string

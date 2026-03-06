@@ -55,6 +55,16 @@ export type EditorialStageArticleApi = {
     runId: string,
     payloadArticleId: number
   ) => Promise<{ message: string; run_id: string; payload_article_id: number }>
+  updateArticle?: (
+    id: number,
+    payload: CreateArticlePayload,
+    token: string
+  ) => Promise<{ id: number; title: string; slug: string }>
+  getArticleSyncStatus?: (runId: string) => Promise<{
+    synced_to_payload: boolean
+    payload_article_id: number | null
+    synced_at: string | null
+  }>
   searchPexelsImages: (
     query: string,
     params?: {
@@ -120,6 +130,7 @@ export type EditorialStageArticlePageProps = {
   storageKey: string
   routes: EditorialStageRoutes
   api: EditorialStageArticleApi
+  syncBehavior?: 'finalize' | 'draft-sync'
 }
 
 export type BlockImageModalState = {

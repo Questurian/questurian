@@ -2,6 +2,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import type { UploadImageResponse } from '../../../../../features/images'
 import type { Location, MediaAsset, PexelsPhoto, UnsplashPhoto } from '../../../api'
 import type { StagedArticle } from '../../../types'
+import { isStagedArticleEditingLocked } from '../../../utils/staged-article-sync'
 import type {
   ExternalImageCropDraft,
   ImageSourceOption,
@@ -65,7 +66,7 @@ export function buildFeaturedModalView(input: BuildFeaturedModalViewInput): Feat
   return {
     base: {
       show: input.showImageModal,
-      publishedToPayload: input.stagedArticle.publishedToPayload,
+      publishedToPayload: isStagedArticleEditingLocked(input.stagedArticle),
       onClose: () => input.setShowImageModal(false),
       featuredImageRequirementLabel: input.featuredImageRequirementLabel,
     },
