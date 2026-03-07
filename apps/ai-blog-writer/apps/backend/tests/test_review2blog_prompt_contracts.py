@@ -4,7 +4,7 @@ import types
 # Avoid importing heavyweight external LLM clients during route-module import.
 utils_stub = types.ModuleType("utils")
 utils_stub.get_vertex_llm = lambda *args, **kwargs: None
-sys.modules.setdefault("utils", utils_stub)
+sys.modules["utils"] = utils_stub
 
 from fastapi import HTTPException
 
@@ -234,6 +234,7 @@ def test_build_writer_prompt_excludes_ignored_prose_fields():
         evidence_profile=profile,
         location_context=normalized["location_context"],
         editorial_intent=normalized["editorial_intent"],
+        listicle={"listicle_title": "Best Seafood Spots in Barranco", "blurb_length": "long"},
     )
     prompt = category_pipeline.build_writer_prompt(brief)
 
@@ -241,6 +242,10 @@ def test_build_writer_prompt_excludes_ignored_prose_fields():
     assert "Ignored description" not in prompt
     assert "Ignored neighborhood note" not in prompt
     assert "Ignored review summary" not in prompt
+    assert 'Title: Best Seafood Spots in Barranco' in prompt
+    assert "6 to 7 sentences" in prompt
+    assert "Questurian's own expert editorial voice" in prompt
+    assert "Never mention reviews, reviewers" in prompt
 
 
 def test_evidence_profile_tracks_recent_support_and_supported_named_entities():
@@ -416,3 +421,99 @@ def test_validate_category_blurb_rejects_editorial_paraphrase_and_unsupported_na
 
     assert any("editorial framing" in error or "tracks too closely" in error for error in errors)
     assert any("unsupported named entities" in error for error in errors)
+
+
+def test_validate_category_blurb_uses_requested_sentence_range():
+    normalized = category_pipeline.validate_and_normalize_export(_build_export("dining"))
+    profile = category_pipeline.build_evidence_profile(
+        category="dining",
+        claims=[
+            _claim(
+                review_id="rev-1",
+                review_date="2025-02-01",
+                topic="food",
+                subject="ceviche",
+                polarity="positive",
+                quote="Amazing ceviche",
+                named_entity="ceviche",
+            ),
+            _claim(
+                review_id="rev-2",
+                review_date="2024-01-01",
+                topic="service",
+                subject="warm service",
+                polarity="positive",
+                quote="warm service",
+            ),
+        ],
+        reviews=normalized["reviews"],
+        location_context=normalized["location_context"],
+        editorial_intent=normalized["editorial_intent"],
+        recent_window_days=180,
+    )
+    brief = category_pipeline.build_writer_brief(
+        evidence_profile=profile,
+        location_context=normalized["location_context"],
+        editorial_intent=normalized["editorial_intent"],
+        listicle={"listicle_title": "Best Seafood Spots in Barranco", "blurb_length": "short"},
+    )
+
+    errors = category_pipeline.validate_category_blurb(
+        blurb=(
+            "Ceviche gets the strongest repeat praise here. "
+            "Warm service helps the room stay approachable. "
+            "The overall feel is lively without tipping chaotic. "
+            "It lands as a steady Barranco dinner option."
+        ),
+        brief=brief,
+    )
+
+    assert "Blurb must contain 2 to 3 sentences." in errors
+
+
+def test_validate_category_blurb_rejects_review_process_disclosure():
+    normalized = category_pipeline.validate_and_normalize_export(_build_export("dining"))
+    profile = category_pipeline.build_evidence_profile(
+        category="dining",
+        claims=[
+            _claim(
+                review_id="rev-1",
+                review_date="2025-02-01",
+                topic="food",
+                subject="ceviche",
+                polarity="positive",
+                quote="Amazing ceviche",
+                named_entity="ceviche",
+            ),
+            _claim(
+                review_id="rev-2",
+                review_date="2024-01-01",
+                topic="service",
+                subject="warm service",
+                polarity="positive",
+                quote="warm service",
+            ),
+        ],
+        reviews=normalized["reviews"],
+        location_context=normalized["location_context"],
+        editorial_intent=normalized["editorial_intent"],
+        recent_window_days=180,
+    )
+    brief = category_pipeline.build_writer_brief(
+        evidence_profile=profile,
+        location_context=normalized["location_context"],
+        editorial_intent=normalized["editorial_intent"],
+        listicle={"listicle_title": "Best Seafood Spots in Barranco", "blurb_length": "medium"},
+    )
+
+    errors = category_pipeline.validate_category_blurb(
+        blurb=(
+            "Reviewers say the ceviche is the standout order here. "
+            "People mention warm service and an easy dinner rhythm. "
+            "The room feels lively without turning chaotic. "
+            "It fits Barranco well."
+        ),
+        brief=brief,
+    )
+
+    assert any("review-mining process" in error for error in errors)

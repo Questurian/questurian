@@ -49,7 +49,7 @@ from .storage import (
 router = APIRouter(prefix="/prompt2blog", tags=["prompt2blog"])
 logger = logging.getLogger(__name__)
 FEATURE_NAME = "prompt2blog"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
     "in_the_know_box": "In The Know",

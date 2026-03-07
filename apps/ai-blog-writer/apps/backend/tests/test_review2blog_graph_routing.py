@@ -4,7 +4,7 @@ import types
 # Avoid importing heavyweight external LLM clients during route-module import.
 utils_stub = types.ModuleType("utils")
 utils_stub.get_vertex_llm = lambda *args, **kwargs: None
-sys.modules.setdefault("utils", utils_stub)
+sys.modules["utils"] = utils_stub
 
 import app.features.review2blog.routes as review2blog_routes
 
@@ -63,6 +63,7 @@ def test_review2blog_initial_pipeline_uses_langgraph_runner(monkeypatch):
     assert isinstance(initial_state, dict)
     assert initial_state["mode"] == "initial"
     assert isinstance(initial_state.get("review_payload"), dict)
+    assert initial_state["resolved_max_tokens"] == 2048
     assert "listicle" not in initial_state
     assert callable(captured["validate_input_runner"])
     assert callable(captured["route_phase1_mode_runner"])

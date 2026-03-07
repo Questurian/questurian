@@ -51,6 +51,7 @@ logger = logging.getLogger(__name__)
 FEATURE_NAME = "url2blog"
 
 URL2BLOG_ALLOWED_MODELS = (
+    "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
     "gemini-2.5-pro",
     "gemini-2.0-flash",
@@ -60,8 +61,8 @@ URL2BLOG_ALLOWED_EXECUTION_PROFILES = (
     "lean",
 )
 URL2BLOG_DEFAULT_EXECUTION_PROFILE = "standard"
-URL2BLOG_DEFAULT_MODEL = "gemini-2.5-flash"
-DEFAULT_GROUNDED_MODEL = "gemini-2.5-flash"
+URL2BLOG_DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_GROUNDED_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_VERTEX_LOCATION = "us-central1"
 SHORT_ARTICLE_WORD_THRESHOLD = 450
 DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS = 3
@@ -1739,7 +1740,7 @@ def _use_editorial_post_recheck() -> bool:
 def _resolve_grounded_model(model_name: str | None) -> str:
     """Resolve model used for grounded search enrichment."""
     resolved = _resolve_url2blog_model(model_name)
-    if resolved in {"gemini-2.5-flash", "gemini-2.5-pro"}:
+    if resolved in {"gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"}:
         return resolved
     return DEFAULT_GROUNDED_MODEL
 

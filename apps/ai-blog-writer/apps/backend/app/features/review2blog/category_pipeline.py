@@ -105,6 +105,22 @@ HYPE_WORD_PATTERN = re.compile(
     re.IGNORECASE,
 )
 EMOJI_PATTERN = re.compile(r"[\U0001F300-\U0001FAFF]")
+PROCESS_DISCLOSURE_PATTERN = re.compile(
+    r"\b(reviewers?|reviews?|guests?|diners?|visitors?|people)\s+(say|says|said|mention|mentions|mentioned|note|notes|noted|praise|praises|praised|report|reports|reported)\b",
+    re.IGNORECASE,
+)
+PROCESS_DISCLOSURE_PHRASES = (
+    "according to reviews",
+    "based on reviews",
+    "from the reviews",
+    "the reviews show",
+    "the reviews suggest",
+    "reviewers say",
+    "people say",
+    "guests say",
+    "diners say",
+    "visitors say",
+)
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 WORD_PATTERN = re.compile(r"[a-z0-9']+")
 STOPWORDS = {
@@ -246,10 +262,19 @@ Original prompt:
 Invalid response:
 {previous_response}
 """
-WRITER_PROMPT = """You are writing a short curated blurb for a {category} location.
+BLURB_LENGTH_RULES = {
+    "short": {"min_sentences": 2, "max_sentences": 3, "label": "short"},
+    "medium": {"min_sentences": 4, "max_sentences": 5, "label": "medium"},
+    "long": {"min_sentences": 6, "max_sentences": 7, "label": "long"},
+}
+
+
+WRITER_PROMPT = """You are writing a curated blurb for a {category} location.
 
 Reviews are the primary source of truth.
 The editorial block is a packaging constraint only. Do not copy or paraphrase placement_type or selection_angle.
+The listicle context is the framing context for the blurb. Make the blurb feel native to that listicle title.
+The final copy must read like Questurian's own expert editorial voice, not like a summary of what reviewers or other people said.
 
 CATEGORY GUIDANCE
 {category_guidance}
@@ -259,6 +284,9 @@ LOCATION FACTS
 
 EDITORIAL CONSTRAINTS
 {editorial_constraints}
+
+LISTICLE CONTEXT
+{listicle_context}
 
 TOP REVIEW-BACKED CLAIMS
 {top_claims}
@@ -270,13 +298,17 @@ APPROVED NAMED ENTITIES
 {approved_named_entities}
 
 RULES
-1. Write one paragraph with 4 to 6 sentences.
+1. Write one paragraph with exactly {target_sentences} sentences unless one extra sentence is necessary to stay natural and remain within {min_sentences} to {max_sentences}.
 2. Mention at least {minimum_claims} concrete review-backed details unless there is only one review.
 3. Only mention named entities from APPROVED NAMED ENTITIES.
 4. Do not restate placement_type or selection_angle.
-5. Avoid hype language, bullets, headings, emojis, and generic filler.
-6. Respect the requested tone and avoid list.
-7. Stay grounded in repeated reviewer evidence.
+5. Shape the blurb around the listicle title so the placement feels intentional, but do not copy the full title verbatim.
+6. Avoid hype language, bullets, headings, emojis, and generic filler.
+7. Respect the requested tone and avoid list.
+8. Use direct editorial authority. Prefer confident declarative sentences over hedging verbs like suggests, seems, or appears.
+9. Stay grounded in repeated reviewer evidence.
+10. Never mention reviews, reviewers, diners, guests, visitors, or what people say. Do not reveal the research process.
+11. Do not use meta phrases like according to reviews, based on reviews, people say, guests say, or reviewers mention.
 
 Return only the paragraph.
 """
@@ -294,6 +326,9 @@ LOCATION FACTS
 EDITORIAL CONSTRAINTS
 {editorial_constraints}
 
+LISTICLE CONTEXT
+{listicle_context}
+
 TOP REVIEW-BACKED CLAIMS
 {top_claims}
 
@@ -306,7 +341,7 @@ APPROVED NAMED ENTITIES
 CURRENT BLURB
 {current_blurb}
 
-Return only one corrected paragraph with 4 to 6 sentences.
+Return only one corrected paragraph with exactly {target_sentences} sentences unless one extra sentence is necessary to stay natural and remain within {min_sentences} to {max_sentences}.
 """
 
 
@@ -1150,9 +1185,15 @@ def build_writer_brief(
     evidence_profile: dict[str, Any],
     location_context: dict[str, Any],
     editorial_intent: dict[str, Any],
+    listicle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     category = _coerce_string(location_context.get("category"))
     review_count = int(evidence_profile.get("review_count") or 0)
+    normalized_listicle = listicle if isinstance(listicle, dict) else {}
+    requested_length = _coerce_string(normalized_listicle.get("blurb_length")).lower()
+    if requested_length not in BLURB_LENGTH_RULES:
+        requested_length = "medium"
+    length_rule = BLURB_LENGTH_RULES[requested_length]
     ranked_claims = [
         claim
         for claim in evidence_profile.get("ranked_claims", [])
@@ -1182,6 +1223,22 @@ def build_writer_brief(
         "minimum_claims": 1 if review_count <= 1 else 2,
         "location_context": location_context,
         "editorial_intent": editorial_intent,
+        "listicle": {
+            "listicle_type": _coerce_string(normalized_listicle.get("listicle_type")),
+            "listicle_title": _coerce_string(normalized_listicle.get("listicle_title")),
+            "listicle_goal": _coerce_string(normalized_listicle.get("listicle_goal")),
+            "blurb_length": requested_length,
+        },
+        "target_sentence_range": {
+            "min": length_rule["min_sentences"],
+            "max": length_rule["max_sentences"],
+            "label": length_rule["label"],
+        },
+        "target_sentence_count": (
+            length_rule["min_sentences"]
+            if length_rule["min_sentences"] == length_rule["max_sentences"]
+            else math.ceil((length_rule["min_sentences"] + length_rule["max_sentences"]) / 2)
+        ),
         "top_claims": positive_claims,
         "cautions": caution_claims,
         "contradictions": contradictions,
@@ -1233,6 +1290,20 @@ def _render_editorial_constraints(editorial_intent: dict[str, Any]) -> str:
         f"- Tone: {_coerce_string(editorial_intent.get('tone'))}",
         f"- Must mention: {', '.join(_normalize_string_list(editorial_intent.get('must_mention'), limit=8)) or 'None'}",
         f"- Avoid: {', '.join(_normalize_string_list(editorial_intent.get('avoid'), limit=12)) or 'None'}",
+    ]
+    return "\n".join(lines)
+
+
+def _render_listicle_context(listicle: dict[str, Any], sentence_range: dict[str, Any]) -> str:
+    lines = [
+        f"- Title: {_coerce_string(listicle.get('listicle_title')) or 'None provided'}",
+        f"- Goal or angle: {_coerce_string(listicle.get('listicle_goal')) or 'Use the title as the framing context'}",
+        f"- Type: {_coerce_string(listicle.get('listicle_type')) or 'curated listicle'}",
+        (
+            "- Target length: "
+            f"{_coerce_string(sentence_range.get('label'))} "
+            f"({int(sentence_range.get('min') or 4)} to {int(sentence_range.get('max') or 5)} sentences)"
+        ),
     ]
     return "\n".join(lines)
 
@@ -1289,6 +1360,11 @@ def _render_supported_named_entities(named_entities: list[dict[str, Any]]) -> st
 
 
 def build_writer_prompt(brief: dict[str, Any]) -> str:
+    sentence_range = (
+        brief.get("target_sentence_range")
+        if isinstance(brief.get("target_sentence_range"), dict)
+        else {}
+    )
     return WRITER_PROMPT.format(
         category=_coerce_string(brief.get("category")).replace("_", " "),
         category_guidance=_coerce_string(brief.get("category_guidance")),
@@ -1297,6 +1373,10 @@ def build_writer_prompt(brief: dict[str, Any]) -> str:
         ),
         editorial_constraints=_render_editorial_constraints(
             brief.get("editorial_intent") if isinstance(brief.get("editorial_intent"), dict) else {}
+        ),
+        listicle_context=_render_listicle_context(
+            brief.get("listicle") if isinstance(brief.get("listicle"), dict) else {},
+            sentence_range,
         ),
         top_claims=_render_claims(
             brief.get("top_claims") if isinstance(brief.get("top_claims"), list) else []
@@ -1311,6 +1391,9 @@ def build_writer_prompt(brief: dict[str, Any]) -> str:
             else []
         ),
         minimum_claims=int(brief.get("minimum_claims") or 1),
+        min_sentences=int(sentence_range.get("min") or 4),
+        max_sentences=int(sentence_range.get("max") or 5),
+        target_sentences=int(brief.get("target_sentence_count") or sentence_range.get("min") or 4),
     )
 
 
@@ -1320,6 +1403,11 @@ def _build_rewrite_prompt(
     current_blurb: str,
     validation_errors: list[str],
 ) -> str:
+    sentence_range = (
+        brief.get("target_sentence_range")
+        if isinstance(brief.get("target_sentence_range"), dict)
+        else {}
+    )
     return WRITER_REWRITE_PROMPT.format(
         validation_errors="\n".join(f"- {item}" for item in validation_errors),
         category_guidance=_coerce_string(brief.get("category_guidance")),
@@ -1328,6 +1416,10 @@ def _build_rewrite_prompt(
         ),
         editorial_constraints=_render_editorial_constraints(
             brief.get("editorial_intent") if isinstance(brief.get("editorial_intent"), dict) else {}
+        ),
+        listicle_context=_render_listicle_context(
+            brief.get("listicle") if isinstance(brief.get("listicle"), dict) else {},
+            sentence_range,
         ),
         top_claims=_render_claims(
             brief.get("top_claims") if isinstance(brief.get("top_claims"), list) else []
@@ -1342,6 +1434,9 @@ def _build_rewrite_prompt(
             else []
         ),
         current_blurb=current_blurb,
+        min_sentences=int(sentence_range.get("min") or 4),
+        max_sentences=int(sentence_range.get("max") or 5),
+        target_sentences=int(brief.get("target_sentence_count") or sentence_range.get("min") or 4),
     )
 
 
@@ -1394,15 +1489,28 @@ def validate_category_blurb(
     if any(line.lstrip().startswith(("-", "*", "#")) for line in stripped.splitlines()) or "\n\n" in stripped:
         errors.append("Blurb must be a single paragraph without bullets or headings.")
 
+    sentence_range = (
+        brief.get("target_sentence_range")
+        if isinstance(brief.get("target_sentence_range"), dict)
+        else {}
+    )
+    min_sentences = int(sentence_range.get("min") or 4)
+    max_sentences = int(sentence_range.get("max") or 5)
     sentence_count = _sentence_count(stripped)
-    if sentence_count < 4 or sentence_count > 6:
-        errors.append("Blurb must contain 4 to 6 sentences.")
+    if sentence_count < min_sentences or sentence_count > max_sentences:
+        errors.append(f"Blurb must contain {min_sentences} to {max_sentences} sentences.")
 
     if HYPE_WORD_PATTERN.search(stripped):
         errors.append("Blurb uses banned hype language.")
 
     if EMOJI_PATTERN.search(stripped):
         errors.append("Blurb contains emoji.")
+
+    lowered = stripped.casefold()
+    if PROCESS_DISCLOSURE_PATTERN.search(stripped) or any(
+        phrase in lowered for phrase in PROCESS_DISCLOSURE_PHRASES
+    ):
+        errors.append("Blurb exposes the review-mining process instead of using expert editorial voice.")
 
     editorial_intent = (
         brief.get("editorial_intent") if isinstance(brief.get("editorial_intent"), dict) else {}
@@ -1437,7 +1545,7 @@ def validate_category_blurb(
         )
         if isinstance(entity, dict)
     }
-    lower_blurb = stripped.casefold()
+    lower_blurb = lowered
     unsupported_mentions = [
         entity_name
         for key, entity_name in known_entities.items()
@@ -1532,6 +1640,7 @@ def build_run_artifact(
     run_id: str,
     location_context: dict[str, Any],
     editorial_intent: dict[str, Any],
+    listicle: dict[str, Any] | None = None,
     phase1_summary: dict[str, Any],
     phase2_profile: dict[str, Any],
     blurb: str | None,
@@ -1542,6 +1651,7 @@ def build_run_artifact(
         "location_name": _coerce_string(location_context.get("name")),
         "location_context": location_context,
         "editorial_intent": editorial_intent,
+        "listicle": listicle if isinstance(listicle, dict) else {},
         "phase_outputs": {
             "phase1_summary": phase1_summary,
             "phase2_profile": phase2_profile,

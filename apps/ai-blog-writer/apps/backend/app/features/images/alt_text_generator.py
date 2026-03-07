@@ -8,7 +8,7 @@ from vertexai.generative_models import GenerativeModel, Part
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-pro"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_LOCATION = "us-central1"
 
 _initialized = False

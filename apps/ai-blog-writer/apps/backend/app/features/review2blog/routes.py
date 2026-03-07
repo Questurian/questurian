@@ -15,7 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Body, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Body, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -38,8 +38,8 @@ router = APIRouter(prefix="/review2blog", tags=["review2blog"])
 logger = logging.getLogger(__name__)
 FEATURE_NAME = "review2blog"
 
-DEFAULT_REVIEW2BLOG_MAX_TOKENS = 65536
-MAX_REVIEW2BLOG_OUTPUT_TOKENS = 65536
+MAX_REVIEW2BLOG_OUTPUT_TOKENS = 65535
+DEFAULT_REVIEW2BLOG_MAX_TOKENS = 65535
 DEFAULT_REVIEW2BLOG_PHASE1_BATCH_SIZE = 50
 DEFAULT_REVIEW2BLOG_PHASE_RETRY_LIMIT = 1
 DEFAULT_REVIEW2BLOG_RECENT_WINDOW_DAYS = 180
@@ -347,6 +347,10 @@ LEGACY_INTENSITY_MAP = {0: "none", 1: "low", 2: "medium", 3: "high"}
 
 class Review2BlogRunRequest(BaseModel):
     review_payload: dict[str, Any] = Field(..., description="Original review JSON payload")
+    listicle: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Listicle framing context for the generated blurb.",
+    )
     max_tokens: int | None = Field(default=None)
 
 
@@ -1183,16 +1187,22 @@ def _normalize_listicle(value: Any) -> dict[str, str]:
             "listicle_type": "",
             "listicle_title": "",
             "listicle_goal": "",
+            "blurb_length": "",
         }
     return {
         "listicle_type": _coerce_string(value.get("listicle_type")),
         "listicle_title": _coerce_string(value.get("listicle_title")),
         "listicle_goal": _coerce_string(value.get("listicle_goal")),
+        "blurb_length": _coerce_string(value.get("blurb_length")).lower(),
     }
 
 
 def _listicle_is_complete(listicle: dict[str, str]) -> bool:
     return all(_coerce_string(listicle.get(field)) for field in ("listicle_type", "listicle_title", "listicle_goal"))
+
+
+def _run_listicle_is_complete(listicle: dict[str, str]) -> bool:
+    return all(_coerce_string(listicle.get(field)) for field in ("listicle_title", "blurb_length"))
 
 
 def _legacy_editorial_from_resume_request(request: Review2BlogResumeRequest) -> dict[str, Any]:
@@ -2016,6 +2026,7 @@ def _finalize_review2blog_run(
 
 def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> None:
     category_pipeline.validate_and_normalize_export(request.review_payload)
+    normalized_listicle = _normalize_listicle(request.listicle)
     resolved_max_tokens = _resolve_max_tokens(request.max_tokens)
     phase1_batch_size = _resolve_phase1_batch_size()
     phase_retry_limit = _resolve_phase_retry_limit()
@@ -2026,11 +2037,23 @@ def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> No
         payload = category_pipeline.validate_and_normalize_export(state.get("review_payload"))
         reviews = payload["reviews"]
         phase1_mode = "single" if len(reviews) <= int(state["phase1_batch_size"]) else "batch"
+        write_stage_result(
+            run_id,
+            "stage_validation",
+            {
+                "created_at": _now_iso(),
+                "data": {
+                    "category": payload["category"],
+                    "review_count": len(reviews),
+                },
+            },
+        )
         return {
             "category": payload["category"],
             "reviews": reviews,
             "location_context": payload["location_context"],
             "editorial_intent": payload["editorial_intent"],
+            "listicle": normalized_listicle,
             "phase1_mode": phase1_mode,
         }
 
@@ -2086,17 +2109,13 @@ def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> No
                 },
             },
         )
-        return {
-            "phase1_claims": phase1_claims,
-            "phase1_summary": phase1_summary,
-        }
+        return {"phase1_claims": phase1_claims, "phase1_summary": phase1_summary}
 
     def _phase1_batch_runner(state: dict[str, Any]) -> dict[str, Any]:
         _write_running_status(run_id, "stage_phase1_batch")
         chunks = _chunk_reviews(state["reviews"], int(state["phase1_batch_size"]))
-        chunk_results: list[list[dict[str, Any]]] = []
+        batch_results: list[list[dict[str, Any]]] = []
         chunk_payloads: list[dict[str, Any]] = []
-
         for index, chunk in enumerate(chunks):
             raw_response, parsed_chunk, attempt_meta = category_pipeline.extract_claim_signals(
                 reviews=chunk,
@@ -2104,7 +2123,7 @@ def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> No
                 max_tokens=int(state["resolved_max_tokens"]),
                 retry_limit=phase_retry_limit,
             )
-            chunk_results.append(parsed_chunk)
+            batch_results.append(parsed_chunk)
             chunk_payloads.append(
                 {
                     "chunk_index": index,
@@ -2129,10 +2148,7 @@ def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> No
             },
         )
 
-        return {
-            "phase1_batches": chunk_results,
-            "phase1_batch_count": len(chunks),
-        }
+        return {"phase1_batches": batch_results, "phase1_batch_count": len(chunks)}
 
     def _phase1_merge_runner(state: dict[str, Any]) -> dict[str, Any]:
         _write_running_status(run_id, "stage_phase1_merge")
@@ -2176,10 +2192,7 @@ def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> No
                 },
             },
         )
-        return {
-            "phase1_claims": phase1_claims,
-            "phase1_summary": phase1_summary,
-        }
+        return {"phase1_claims": phase1_claims, "phase1_summary": phase1_summary}
 
     def _phase2_runner(state: dict[str, Any]) -> dict[str, Any]:
         _write_running_status(run_id, "stage_phase2")
@@ -2214,6 +2227,7 @@ def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> No
             evidence_profile=state["phase2_profile"],
             location_context=state["location_context"],
             editorial_intent=state["editorial_intent"],
+            listicle=state.get("listicle") if isinstance(state.get("listicle"), dict) else {},
         )
         phase3_raw = category_pipeline.execute_category_writer(
             brief=writer_brief,
@@ -2245,16 +2259,14 @@ def _run_review2blog_pipeline(run_id: str, request: Review2BlogRunRequest) -> No
                 },
             },
         )
-        return {
-            "blurb": final_blurb,
-            "phase3_quality_meta": rewrite_meta,
-        }
+        return {"blurb": final_blurb, "phase3_quality_meta": rewrite_meta}
 
     def _finalize_runner(state: dict[str, Any]) -> dict[str, Any]:
         artifact_payload = category_pipeline.build_run_artifact(
             run_id=run_id,
             location_context=state["location_context"],
             editorial_intent=state["editorial_intent"],
+            listicle=state.get("listicle") if isinstance(state.get("listicle"), dict) else {},
             phase1_summary=state["phase1_summary"],
             phase2_profile=state["phase2_profile"],
             blurb=state["blurb"],
@@ -2613,6 +2625,12 @@ async def start_review2blog_run(
     background_tasks: BackgroundTasks,
 ) -> JSONResponse:
     normalized_payload = category_pipeline.validate_and_normalize_export(request.review_payload)
+    listicle = _normalize_listicle(request.listicle)
+    if not _run_listicle_is_complete(listicle):
+        raise HTTPException(
+            status_code=400,
+            detail="listicle_title and blurb_length are required for Review2Blog runs.",
+        )
     run_id = str(uuid4())
 
     write_status(
@@ -2636,6 +2654,7 @@ async def start_review2blog_run(
                 "review_count": len(normalized_payload.get("reviews", [])),
                 "location_context": normalized_payload["location_context"],
                 "editorial_intent": normalized_payload["editorial_intent"],
+                "listicle": listicle,
                 "max_tokens": request.max_tokens,
                 "phase1_batch_size": _resolve_phase1_batch_size(),
             },
@@ -2647,6 +2666,7 @@ async def start_review2blog_run(
         run_id,
         Review2BlogRunRequest(
             review_payload=request.review_payload,
+            listicle=listicle,
             max_tokens=request.max_tokens,
         ),
     )
@@ -2770,5 +2790,5 @@ async def clear_database() -> JSONResponse:
 
 
 @router.get("/articles")
-async def get_articles() -> JSONResponse:
-    return JSONResponse(get_all_completed_articles())
+async def get_articles(location_key: str | None = Query(default=None)) -> JSONResponse:
+    return JSONResponse(get_all_completed_articles(location_key=location_key))

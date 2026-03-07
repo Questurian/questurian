@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   getReview2BlogArtifact,
   getReview2BlogEditorialIntent,
@@ -18,6 +18,7 @@ import {
   type ListicleConfig,
   type RestaurantProfileV2,
   type Review2BlogArtifactPayload,
+  type Review2BlogBlurbLength,
   type Review2BlogCategory,
   type Review2BlogEvidenceClaim,
   type Review2BlogNamedEntitySupport,
@@ -116,6 +117,13 @@ function createEmptyLegacyListicle(): ListicleConfig {
     listicle_type: '',
     listicle_title: '',
     listicle_goal: '',
+  }
+}
+
+function createEmptyRunListicle() {
+  return {
+    listicle_title: '',
+    blurb_length: 'medium' as Review2BlogBlurbLength,
   }
 }
 
@@ -221,6 +229,7 @@ function formatDateRange(earliest: string | null, latest: string | null): string
   const latestLabel = formatDateLabel(latest)
   return earliestLabel === latestLabel ? earliestLabel : `${earliestLabel} to ${latestLabel}`
 }
+
 
 function formatBatchMode(summary: Review2BlogPhase1Summary | null | undefined): string {
   if (!summary) {
@@ -1354,17 +1363,19 @@ function LegacyResumePanel({
 
 export default function Review2BlogPage() {
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [reviewPayload, setReviewPayload] = useState<ReviewPayload | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isParsingFile, setIsParsingFile] = useState(false)
   const [fileParseError, setFileParseError] = useState<string | null>(null)
-  const [runId, setRunId] = useState<string | null>(null)
+  const [runId, setRunId] = useState<string | null>(() => searchParams.get('runId'))
   const [clipboardMessage, setClipboardMessage] = useState<string | null>(null)
   const [legacyListicleConfig, setLegacyListicleConfig] = useState<ListicleConfig>(
     createEmptyLegacyListicle(),
   )
+  const [runListicle, setRunListicle] = useState(createEmptyRunListicle)
 
   const clearTransientMessages = () => {
     setFileParseError(null)
@@ -1373,6 +1384,7 @@ export default function Review2BlogPage() {
 
   const resetRunState = () => {
     setRunId(null)
+    setSearchParams({})
     setClipboardMessage(null)
     setLegacyListicleConfig(createEmptyLegacyListicle())
     startRunMutation.reset()
@@ -1387,6 +1399,7 @@ export default function Review2BlogPage() {
     },
     onSuccess: (data) => {
       setRunId(data.run_id)
+      setSearchParams({ runId: data.run_id })
     },
   })
 
@@ -1476,6 +1489,13 @@ export default function Review2BlogPage() {
     })
   }, [artifact])
 
+  useEffect(() => {
+    const requestedRunId = searchParams.get('runId')
+    if (requestedRunId && requestedRunId !== runId) {
+      setRunId(requestedRunId)
+    }
+  }, [runId, searchParams])
+
   const hasRunStarted = startRunMutation.isPending || Boolean(runId)
   const currentStep = getWizardStep({
     hasRunStarted,
@@ -1525,7 +1545,18 @@ export default function Review2BlogPage() {
       return
     }
 
-    startRunMutation.mutate({ review_payload: reviewPayload })
+    if (!runListicle.listicle_title.trim()) {
+      setFileParseError('Add the listicle title before starting the run.')
+      return
+    }
+
+    startRunMutation.mutate({
+      review_payload: reviewPayload,
+      listicle: {
+        listicle_title: runListicle.listicle_title.trim(),
+        blurb_length: runListicle.blurb_length,
+      },
+    })
   }
 
   const handleResume = () => {
@@ -1548,7 +1579,9 @@ export default function Review2BlogPage() {
     setIsParsingFile(false)
     setFileParseError(null)
     setRunId(null)
+    setSearchParams({})
     setLegacyListicleConfig(createEmptyLegacyListicle())
+    setRunListicle(createEmptyRunListicle())
     setClipboardMessage(null)
     startRunMutation.reset()
     resumeMutation.reset()
@@ -1616,9 +1649,9 @@ export default function Review2BlogPage() {
           </p>
         </div>
         <div className="review2blog-badge-row">
-          <span className="review2blog-badge">JSON-only input</span>
-          <span className="review2blog-badge">5 supported location categories</span>
-          <span className="review2blog-badge">Evidence-first results</span>
+          <Link to="/review2blog/articles" className="review2blog-nav-link">
+            Saved blurbs
+          </Link>
           <Link to="/" className="review2blog-nav-link">
             ← Home
           </Link>
@@ -1632,8 +1665,9 @@ export default function Review2BlogPage() {
               <h2>Upload exported JSON</h2>
               <p>
                 Choose one exported Location Manager JSON file. The client validates the category,
-                editorial block, and normalized reviews locally, then sends only{' '}
-                <strong>review_payload</strong> to <strong>/review2blog/run</strong>.
+                editorial block, and normalized reviews locally, then sends the{' '}
+                <strong>review_payload</strong> plus your listicle title and target blurb length to{' '}
+                <strong>/review2blog/run</strong>.
               </p>
             </div>
 
@@ -1668,11 +1702,56 @@ export default function Review2BlogPage() {
 
               {primaryError ? <p className="review2blog-error">{primaryError}</p> : null}
 
+              <div className="review2blog-inline-fields">
+                <div className="review2blog-json-input">
+                  <label htmlFor="review2blog-listicle-title">Listicle title</label>
+                  <input
+                    id="review2blog-listicle-title"
+                    className="review2blog-text-input"
+                    type="text"
+                    placeholder="Best Seafood Spots in Barranco"
+                    value={runListicle.listicle_title}
+                    onChange={(event) => {
+                      clearTransientMessages()
+                      setRunListicle((current) => ({
+                        ...current,
+                        listicle_title: event.target.value,
+                      }))
+                    }}
+                  />
+                </div>
+
+                <div className="review2blog-json-input">
+                  <label htmlFor="review2blog-blurb-length">Blurb length</label>
+                  <select
+                    id="review2blog-blurb-length"
+                    className="review2blog-text-input"
+                    value={runListicle.blurb_length}
+                    onChange={(event) => {
+                      clearTransientMessages()
+                      setRunListicle((current) => ({
+                        ...current,
+                        blurb_length: event.target.value as Review2BlogBlurbLength,
+                      }))
+                    }}
+                  >
+                    <option value="short">Short (2-3 sentences)</option>
+                    <option value="medium">Medium (4-5 sentences)</option>
+                    <option value="long">Long (6-7 sentences)</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="review2blog-button-row">
                 <button
                   type="submit"
                   className="review2blog-submit-btn"
-                  disabled={!reviewPayload || isParsingFile || startRunMutation.isPending}
+                  disabled={
+                    !reviewPayload ||
+                    !runListicle.listicle_title.trim() ||
+                    isParsingFile ||
+                    startRunMutation.isPending
+                  }
                 >
                   {startRunMutation.isPending ? 'Starting run...' : 'Start Review2Blog run'}
                 </button>

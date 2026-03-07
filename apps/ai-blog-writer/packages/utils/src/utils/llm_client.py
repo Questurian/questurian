@@ -13,7 +13,7 @@ from langchain_google_vertexai import VertexAI
 logger = logging.getLogger(__name__)
 
 # Default model configuration
-DEFAULT_MODEL = "gemini-2.5-pro"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_LOCATION = "us-central1"
 
 
@@ -31,7 +31,7 @@ def get_vertex_llm(
         temperature: Sampling temperature (0.0-1.0). Lower = more deterministic.
                     Use 0.1 for structured output, 0.3 for creative tasks.
         max_tokens: Maximum tokens in response.
-        model_name: Model to use (default: gemini-2.5-pro)
+        model_name: Model to use (default: gemini-2.5-flash-lite)
         project: Google Cloud project ID (default: from GOOGLE_CLOUD_PROJECT env)
         location: Google Cloud location (default: from GOOGLE_CLOUD_LOCATION env or us-central1)
 

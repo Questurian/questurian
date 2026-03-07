@@ -36,7 +36,7 @@ class _StubLLMPresets:
 utils_stub.get_vertex_llm = lambda *args, **kwargs: _StubPresetLLM()
 utils_stub.parse_json_response = lambda *_args, **_kwargs: {}
 utils_stub.LLMPresets = _StubLLMPresets
-sys.modules.setdefault("utils", utils_stub)
+sys.modules["utils"] = utils_stub
 
 import app.features.review2blog.routes as review2blog_routes
 import app.features.youtube2blog.routes as youtube2blog_routes
@@ -117,7 +117,6 @@ def test_review2blog_invalid_max_tokens_env_falls_back(monkeypatch):
         review2blog_routes._resolve_max_tokens(None)
         == review2blog_routes.DEFAULT_REVIEW2BLOG_MAX_TOKENS
     )
-
 
 @pytest.mark.asyncio
 async def test_review2blog_upload_runtime_error_returns_502_with_cors(monkeypatch):

@@ -67,6 +67,14 @@ export type ListicleConfig = {
   listicle_type: string
   listicle_title: string
   listicle_goal: string
+  blurb_length?: string
+}
+
+export type Review2BlogBlurbLength = 'short' | 'medium' | 'long'
+
+export type Review2BlogRunListicle = {
+  listicle_title: string
+  blurb_length: Review2BlogBlurbLength
 }
 
 export type Review2BlogConfidence = 'low' | 'medium' | 'high'
@@ -295,6 +303,7 @@ export type Review2BlogStage =
 
 export type Review2BlogRunRequest = {
   review_payload: ReviewPayload
+  listicle: Review2BlogRunListicle
   max_tokens?: number
 }
 
@@ -332,6 +341,20 @@ export type Review2BlogResultResponse = {
   artifact: Review2BlogResultArtifact
   langsmith_trace_url?: string
   langsmith_trace_run_id?: string
+}
+
+export type Review2BlogSavedArticle = {
+  run_id: string
+  title: string
+  article_type: 'review2blog'
+  location_key?: string
+  location_name?: string
+  listicle_title?: string
+  blurb_length?: string
+  created_at: string
+  updated_at: string
+  markdown: string
+  markdown_length: number
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -609,6 +632,23 @@ export async function getReview2BlogResult(
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch Review2Blog result')
+  }
+
+  return response.json()
+}
+
+export async function getReview2BlogArticles(
+  locationKey?: string | null,
+): Promise<Review2BlogSavedArticle[]> {
+  const url = new URL(`${API_BASE_URL}${FEATURE_PREFIX}/articles`)
+  if (locationKey?.trim()) {
+    url.searchParams.set('location_key', locationKey.trim())
+  }
+
+  const response = await fetch(url.toString())
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to fetch saved Review2Blog blurbs')
   }
 
   return response.json()

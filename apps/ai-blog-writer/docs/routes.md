@@ -59,14 +59,14 @@ Structured Prompt2Blog run input now uses:
 
 ### Review2Blog (`/review2blog`)
 
-Primary flow: upload one Location Manager export JSON per run. The export must include `category`, core location fields, a required `editorial` block, and normalized `reviews`. The main pipeline is now category-aware across `dining`, `accommodations`, `attractions`, `nightlife`, and `key_locations`. Review evidence is extracted first, ranked deterministically in phase 2, then written into a short final blurb. The main `/run` path no longer expects separate listicle inputs.
+Primary flow: upload one Location Manager export JSON per run. The export must include `category`, core location fields, a required `editorial` block, and normalized `reviews`. The main pipeline is now category-aware across `dining`, `accommodations`, `attractions`, `nightlife`, and `key_locations`. Review evidence is extracted first, ranked deterministically in phase 2, then written into a final blurb shaped around a required listicle title and requested blurb length.
 
 | Method | Path | Description |
 |---|---|---|
 | POST | `/review2blog/upload` | Legacy/debug endpoint: process uploaded review JSON through phase 1 |
 | POST | `/review2blog/phase2` | Legacy/debug endpoint: aggregate phase 1 signals |
 | POST | `/review2blog/phase3` | Legacy/debug endpoint: generate the old restaurant/listicle blurb |
-| POST | `/review2blog/run` | Queue the category-aware JSON-only Review2Blog graph using `{ review_payload, max_tokens? }` |
+| POST | `/review2blog/run` | Queue the category-aware Review2Blog graph using `{ review_payload, listicle: { listicle_title, blurb_length }, max_tokens? }` |
 | POST | `/review2blog/run/{run_id}/resume` | Legacy fallback for previously paused runs that still need extra input |
 | GET | `/review2blog/status/{run_id}` | Get pipeline run status (`running`, `awaiting_input`, `completed`, `failed`) |
 | GET | `/review2blog/result/{run_id}` | Get the current pipeline artifact. Completed runs return `location_context`, `editorial_intent`, phase outputs, final blurb, and markdown |

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 # Always-strong model policy for YouTube2Blog.
-Y2B_PRIMARY_MODEL = "gemini-2.5-pro"
+Y2B_PRIMARY_MODEL = "gemini-2.5-flash-lite"
 
 # Retry limits per branch gate.
 Y2B_STAGE1_REPAIR_MAX_RETRIES = 1

@@ -337,7 +337,7 @@ def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypat
         payload["guideline_review"]["narrative_focus_applied"]
         == "Prioritize practical insights for travelers."
     )
-    assert payload["guideline_review"]["model_used"] == "gemini-2.5-flash"
+    assert payload["guideline_review"]["model_used"] == "gemini-2.5-flash-lite"
     assert payload["guideline_review"]["execution_profile"] == "standard"
     assert payload["guideline_review"]["length_requirement_met"] is True
     assert payload["guideline_review"]["length_requirement_blocking_reason"] == ""

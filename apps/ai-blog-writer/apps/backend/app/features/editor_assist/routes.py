@@ -19,7 +19,7 @@ from .graph import (
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 MAX_PROMPT_CHARS = 10000
 MAX_BLOCK_CHARS = 24000
 MAX_ARTICLE_TITLE_CHARS = 300

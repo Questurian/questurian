@@ -117,8 +117,8 @@ def run_review2blog_graph(
     builder.add_edge("phase3_validate", "finalize")
     builder.add_edge("finalize", END)
 
-    trace_payload: dict[str, str] = {}
     checkpoint_thread_id = f"{run_id}:{initial_state.get('mode', 'initial')}"
+    trace_payload: dict[str, str] = {}
     try:
         with langgraph_trace(
             trace_name="review2blog.pipeline",

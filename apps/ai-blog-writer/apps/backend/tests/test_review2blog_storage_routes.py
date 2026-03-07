@@ -11,7 +11,7 @@ from app.core import clear_all_runs
 # Avoid importing heavyweight external LLM clients during route-module import.
 utils_stub = types.ModuleType("utils")
 utils_stub.get_vertex_llm = lambda *args, **kwargs: None
-sys.modules.setdefault("utils", utils_stub)
+sys.modules["utils"] = utils_stub
 
 import app.features.review2blog.routes as review2blog_routes
 
@@ -73,7 +73,7 @@ class _StubCategoryAwareLLM:
                     },
                 ]
             )
-        if "You are writing a short curated blurb" in prompt:
+        if "You are writing a curated blurb" in prompt:
             return (
                 "Mar y Sol stands out for repeated praise around ceviche, warm service, and a lively room "
                 "that still reads comfortable for dinner. Across the review set, ceviche is the clearest draw "
@@ -162,7 +162,14 @@ def test_review2blog_run_completes_with_category_aware_artifact(monkeypatch):
     client = _build_client()
     run_response = client.post(
         "/review2blog/run",
-        json={"review_payload": _build_dining_export(), "max_tokens": 4096},
+        json={
+            "review_payload": _build_dining_export(),
+            "listicle": {
+                "listicle_title": "Best Seafood Spots in Barranco",
+                "blurb_length": "medium",
+            },
+            "max_tokens": 4096,
+        },
     )
 
     assert run_response.status_code == 200
@@ -182,6 +189,8 @@ def test_review2blog_run_completes_with_category_aware_artifact(monkeypatch):
     artifact = result_payload["artifact"]["review2blog_run"]
     assert artifact["location_context"]["name"] == "Mar y Sol"
     assert artifact["editorial_intent"]["selection_angle"] == "review-backed seafood dinner pick"
+    assert artifact["listicle"]["listicle_title"] == "Best Seafood Spots in Barranco"
+    assert artifact["listicle"]["blurb_length"] == "medium"
     assert artifact["phase_outputs"]["phase1_summary"]["category"] == "dining"
     assert artifact["phase_outputs"]["phase1_summary"]["claim_count"] == 4
     assert artifact["phase_outputs"]["phase2_profile"]["category"] == "dining"
@@ -193,7 +202,7 @@ def test_review2blog_run_completes_with_category_aware_artifact(monkeypatch):
     articles = articles_response.json()
     matching = [item for item in articles if item["run_id"] == run_id]
     assert matching
-    assert matching[0]["title"] == "Mar y Sol"
+    assert matching[0]["title"] == "Best Seafood Spots in Barranco"
     assert matching[0]["article_type"] == "review2blog"
 
     clear_all_runs(feature="review2blog")
@@ -218,5 +227,81 @@ def test_review2blog_run_rejects_missing_category_specific_fields(monkeypatch):
 
     assert response.status_code == 400
     assert "tripadvisorCuisines" in response.json()["detail"]
+
+    clear_all_runs(feature="review2blog")
+
+
+def test_review2blog_run_requires_listicle_title_and_blurb_length(monkeypatch):
+    clear_all_runs(feature="review2blog")
+    monkeypatch.setattr(
+        review2blog_routes.category_pipeline,
+        "get_vertex_llm",
+        lambda **_kwargs: _StubCategoryAwareLLM(),
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/review2blog/run",
+        json={"review_payload": _build_dining_export()},
+    )
+
+    assert response.status_code == 400
+    assert "listicle_title and blurb_length are required" in response.json()["detail"]
+
+    clear_all_runs(feature="review2blog")
+
+
+def test_review2blog_articles_can_filter_multiple_blurbs_by_location(monkeypatch):
+    clear_all_runs(feature="review2blog")
+    monkeypatch.setattr(
+        review2blog_routes.category_pipeline,
+        "get_vertex_llm",
+        lambda **_kwargs: _StubCategoryAwareLLM(),
+    )
+
+    client = _build_client()
+
+    first_run = client.post(
+        "/review2blog/run",
+        json={
+            "review_payload": _build_dining_export(),
+            "listicle": {
+                "listicle_title": "Best Seafood Spots in Barranco",
+                "blurb_length": "medium",
+            },
+            "max_tokens": 4096,
+        },
+    )
+    assert first_run.status_code == 200
+    first_run_id = first_run.json()["run_id"]
+    assert _wait_for_status(client, first_run_id, {"completed", "failed"})["state"] == "completed"
+
+    second_run = client.post(
+        "/review2blog/run",
+        json={
+            "review_payload": _build_dining_export(),
+            "listicle": {
+                "listicle_title": "Where to Eat Ceviche in Barranco",
+                "blurb_length": "medium",
+            },
+            "max_tokens": 4096,
+        },
+    )
+    assert second_run.status_code == 200
+    second_run_id = second_run.json()["run_id"]
+    assert _wait_for_status(client, second_run_id, {"completed", "failed"})["state"] == "completed"
+
+    response = client.get("/review2blog/articles", params={"location_key": "peru|lima|barranco"})
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert len(payload) == 2
+    assert {item["run_id"] for item in payload} == {first_run_id, second_run_id}
+    assert {item["listicle_title"] for item in payload} == {
+        "Best Seafood Spots in Barranco",
+        "Where to Eat Ceviche in Barranco",
+    }
+    assert {item["location_key"] for item in payload} == {"peru|lima|barranco"}
+    assert {item["location_name"] for item in payload} == {"Mar y Sol"}
 
     clear_all_runs(feature="review2blog")
