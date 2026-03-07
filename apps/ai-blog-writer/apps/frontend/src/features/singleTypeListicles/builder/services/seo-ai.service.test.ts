@@ -39,6 +39,14 @@ function runPromptRulesTest() {
     prompt.includes('avoid marketing tone, keyword stuffing, and sales language'),
     'Expected prompt to include anti-marketing structured-data rule.',
   )
+  assert(
+    prompt.includes('preserve author, publisher, image, datePublished, dateModified, and mainEntityOfPage when present'),
+    'Expected prompt to preserve article metadata fields.',
+  )
+  assert(
+    prompt.includes('Preserve article metadata fields on BlogPosting when they already exist.'),
+    'Expected prompt to reinforce BlogPosting metadata preservation.',
+  )
 }
 
 function runStructuredDataSanitizerTest() {

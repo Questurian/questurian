@@ -11,7 +11,10 @@ import {
   resolveInstagramPermalink,
 } from '../utils/item-media.utils'
 import { formatMinutes, toMinutesFromMidnight } from '../../time'
-import type { ItinerarySchemaPublisherConfig } from './schema-config.service'
+import {
+  getItinerarySchemaPublisherConfig,
+  type ItinerarySchemaPublisherConfig,
+} from './schema-config.service'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -56,7 +59,29 @@ const toSchemaDate = (value: string | undefined): string | undefined => {
   if (!value) return undefined
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return undefined
+  return date.toISOString()
+}
+
+const toSchemaDay = (value: string | undefined): string | undefined => {
+  if (!value) return undefined
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return undefined
   return date.toISOString().slice(0, 10)
+}
+
+const toHumanReadableLocationName = (value: string | undefined): string | undefined => {
+  const normalized = normalizeText(value)
+  if (!normalized) return undefined
+  if (!normalized.includes('|')) return normalized
+
+  const parts = normalized
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length < 1) return undefined
+
+  return parts.reverse().join(', ')
 }
 
 const getNestedValue = (source: Record<string, unknown>, path: string[]): unknown => {
@@ -467,25 +492,38 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
   publisherConfig?: ItinerarySchemaPublisherConfig
 }): Record<string, unknown> {
-  const { draft, relatedByBlockType, publisherConfig } = input
+  const { draft, relatedByBlockType } = input
+  const publisherConfig = input.publisherConfig ?? getItinerarySchemaPublisherConfig()
   const canonicalUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.url)
-  const schemaDate = toSchemaDate(draft.updatedAt)
+  const blogPostingId = canonicalUrl
+    ? `${canonicalUrl}#listicle-itinerary-blog-posting`
+    : '#listicle-itinerary-blog-posting'
+  const resolvedStatus = draft.payloadStatus === 'published' || draft.status === 'published'
+    ? 'published'
+    : 'draft'
+  const schemaDateModified = toSchemaDate(draft.payloadUpdatedAt || draft.updatedAt)
+  const schemaDatePublished = resolvedStatus === 'published'
+    ? toSchemaDate(draft.payloadPublishedAt || draft.updatedAt)
+    : undefined
+  const tripDate = toSchemaDay(draft.payloadUpdatedAt || draft.updatedAt)
   const articleImageUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.imageUrl)
     || normalizeAbsoluteUrl(draft.seoSection.twitterCard.imageUrl)
   const tripId = canonicalUrl ? `${canonicalUrl}#listicle-itinerary-trip` : '#listicle-itinerary-trip'
   const itemListId = canonicalUrl ? `${canonicalUrl}#listicle-itinerary-stop-list` : '#listicle-itinerary-stop-list'
   const articleTitle = draft.title.trim() || 'AI_FILL_HEADLINE'
+  const contentLocationName = toHumanReadableLocationName(draft.location)
   const intro = toStructuredDescription(
     extractDraftText(draft.header.introMarkdown, draft.header.introJsonText),
   )
+  const authorName = normalizeText(draft.payloadAuthorName) || publisherConfig.defaultAuthorName
   const startTime = resolveTripTime({
-    date: schemaDate,
+    date: tripDate,
     hour: draft.itineraryStartHour,
     minute: draft.itineraryStartMinute,
     period: draft.itineraryStartPeriod,
   })
   const endTime = resolveTripTime({
-    date: schemaDate,
+    date: tripDate,
     hour: draft.itineraryEndHour,
     minute: draft.itineraryEndMinute,
     period: draft.itineraryEndPeriod,
@@ -534,15 +572,15 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
 
   const blogPostingNode: Record<string, unknown> = {
     '@type': 'BlogPosting',
-    '@id': '#listicle-itinerary-blog-posting',
+    '@id': blogPostingId,
     headline: articleTitle,
     name: articleTitle,
     description: intro || 'AI_FILL_ARTICLE_DESCRIPTION',
     articleSection: 'Itinerary',
-    contentLocation: draft.location.trim()
+    contentLocation: contentLocationName
       ? {
           '@type': 'Place',
-          name: draft.location.trim(),
+          name: contentLocationName,
         }
       : undefined,
     about: {
@@ -554,21 +592,21 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
     },
     url: canonicalUrl,
     image: articleImageUrl,
-    dateModified: schemaDate,
-    datePublished: draft.status === 'published' ? schemaDate : undefined,
+    dateModified: schemaDateModified,
+    datePublished: schemaDatePublished,
     mainEntityOfPage: canonicalUrl
       ? {
           '@type': 'WebPage',
           '@id': canonicalUrl,
         }
       : undefined,
-    author: publisherConfig?.defaultAuthorName
+    author: authorName
       ? {
           '@type': 'Person',
-          name: publisherConfig.defaultAuthorName,
+          name: authorName,
         }
       : undefined,
-    publisher: publisherConfig?.siteName
+    publisher: publisherConfig.siteName
       ? {
           '@type': 'Organization',
           name: publisherConfig.siteName,
@@ -618,9 +656,29 @@ const getReferenceId = (value: unknown): string | undefined => {
 export function validateListicleItineraryStructuredDataShape(input: {
   structuredData: Record<string, unknown>
   draft: ListicleItineraryDraft
+  targetStatus?: 'draft' | 'published'
 }): string[] {
   const { structuredData, draft } = input
   const issues: string[] = []
+  const targetStatus = input.targetStatus ?? (
+    draft.payloadStatus === 'published' || draft.status === 'published'
+      ? 'published'
+      : 'draft'
+  )
+  const publisherConfig = getItinerarySchemaPublisherConfig()
+  const canonicalUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.url)
+  const expectedBlogPostingId = canonicalUrl
+    ? `${canonicalUrl}#listicle-itinerary-blog-posting`
+    : '#listicle-itinerary-blog-posting'
+  const expectedTripId = canonicalUrl
+    ? `${canonicalUrl}#listicle-itinerary-trip`
+    : '#listicle-itinerary-trip'
+  const expectedItemListId = canonicalUrl
+    ? `${canonicalUrl}#listicle-itinerary-stop-list`
+    : '#listicle-itinerary-stop-list'
+  const shouldRequireAuthor = Boolean(
+    normalizeText(draft.payloadAuthorName) || publisherConfig.defaultAuthorName,
+  )
 
   const context = structuredData['@context']
   if (context !== 'https://schema.org' && context !== 'http://schema.org') {
@@ -652,6 +710,75 @@ export function validateListicleItineraryStructuredDataShape(input: {
   if (!itemListNode) {
     issues.push('Structured Data "@graph" must include an ItemList node.')
     return issues
+  }
+
+  if (blogPostingNode) {
+    if (normalizeText(blogPostingNode['@id']) !== expectedBlogPostingId) {
+      issues.push('Structured Data BlogPosting must use the canonical BlogPosting @id.')
+    }
+
+    const aboutRef = isRecord(blogPostingNode.about) ? normalizeText(blogPostingNode.about['@id']) : undefined
+    const mainEntityRef = isRecord(blogPostingNode.mainEntity) ? normalizeText(blogPostingNode.mainEntity['@id']) : undefined
+
+    if (aboutRef !== expectedTripId) {
+      issues.push('Structured Data BlogPosting.about must reference the Trip @id.')
+    }
+
+    if (mainEntityRef !== expectedTripId) {
+      issues.push('Structured Data BlogPosting.mainEntity must reference the Trip @id.')
+    }
+
+    if (targetStatus === 'published') {
+      if (!normalizeText(blogPostingNode.headline)) {
+        issues.push('Structured Data BlogPosting must include a headline.')
+      }
+
+      if (!normalizeText(blogPostingNode.image)) {
+        issues.push('Structured Data BlogPosting must include an image URL.')
+      }
+
+      const dateModified = normalizeText(blogPostingNode.dateModified)
+      if (!dateModified || Number.isNaN(new Date(dateModified).getTime())) {
+        issues.push('Structured Data BlogPosting must include a valid ISO dateModified.')
+      }
+
+      const datePublished = normalizeText(blogPostingNode.datePublished)
+      if (!datePublished || Number.isNaN(new Date(datePublished).getTime())) {
+        issues.push('Structured Data BlogPosting must include a valid ISO datePublished.')
+      }
+
+      if (canonicalUrl) {
+        const mainEntityOfPage = isRecord(blogPostingNode.mainEntityOfPage)
+          ? normalizeText(blogPostingNode.mainEntityOfPage['@id'])
+          : undefined
+
+        if (mainEntityOfPage !== canonicalUrl) {
+          issues.push('Structured Data BlogPosting.mainEntityOfPage must match the canonical URL.')
+        }
+      }
+
+      if (shouldRequireAuthor) {
+        const author = isRecord(blogPostingNode.author) ? normalizeText(blogPostingNode.author.name) : undefined
+        if (!author) {
+          issues.push('Structured Data BlogPosting must include an author name.')
+        }
+      }
+
+      if (publisherConfig.siteName) {
+        const publisher = isRecord(blogPostingNode.publisher) ? normalizeText(blogPostingNode.publisher.name) : undefined
+        if (!publisher) {
+          issues.push('Structured Data BlogPosting must include a publisher name.')
+        }
+      }
+    }
+  }
+
+  if (tripNode && normalizeText(tripNode['@id']) !== expectedTripId) {
+    issues.push('Structured Data Trip must use the canonical Trip @id.')
+  }
+
+  if (normalizeText(itemListNode['@id']) !== expectedItemListId) {
+    issues.push('Structured Data ItemList must use the canonical ItemList @id.')
   }
 
   const itemListId = getReferenceId(itemListNode)

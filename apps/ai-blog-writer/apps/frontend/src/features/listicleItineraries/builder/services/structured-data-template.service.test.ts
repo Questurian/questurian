@@ -11,9 +11,14 @@ const assert = (condition: unknown, message: string) => {
 function buildDraft(): ListicleItineraryDraft {
   return {
     draftId: 'draft-1',
+    payloadStatus: 'published',
+    payloadSlug: 'one-day-lima-itinerary',
+    payloadPublishedAt: '2026-03-03T09:15:00.000Z',
+    payloadUpdatedAt: '2026-03-03T10:30:00.000Z',
+    payloadAuthorName: 'Alan Malpartida',
     editorModelName: 'gemini-2.5-flash',
     title: 'One Day Lima Itinerary',
-    location: 'Lima|Lima|Barranco',
+    location: 'Peru|Lima|Barranco',
     locationRef: 1,
     dayAudience: 'anyday',
     itineraryStartHour: 9,
@@ -71,7 +76,7 @@ function buildDraft(): ListicleItineraryDraft {
       openGraph: {
         title: '',
         description: '',
-        imageUrl: '',
+        imageUrl: 'https://example.com/itinerary-og.jpg',
         url: 'https://example.com/one-day-lima-itinerary',
       },
       twitterCard: {
@@ -107,9 +112,17 @@ function run() {
   const structuredData = buildListicleItineraryStructuredDataTemplate({
     draft,
     relatedByBlockType: buildRelatedByType(),
+    publisherConfig: {
+      siteName: 'Questurian',
+      logoUrl: 'https://example.com/logo.png',
+      defaultAuthorName: 'Questurian Team',
+    },
   })
 
   const graph = Array.isArray(structuredData['@graph']) ? structuredData['@graph'] : []
+  const blogPostingNode = graph.find((node) => (
+    node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'BlogPosting'
+  )) as Record<string, unknown> | undefined
   const tripNode = graph.find((node) => (
     node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'Trip'
   )) as Record<string, unknown> | undefined
@@ -117,10 +130,42 @@ function run() {
     node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'ItemList'
   )) as Record<string, unknown> | undefined
 
+  assert(Boolean(blogPostingNode), 'Expected BlogPosting node in @graph.')
   assert(Boolean(tripNode), 'Expected Trip node in @graph.')
   assert(Boolean(itemListNode), 'Expected ItemList node in @graph.')
   assert(tripNode?.departureTime === '2026-03-03T09:00:00', 'Expected Trip departureTime from itinerary start.')
   assert(tripNode?.arrivalTime === '2026-03-03T18:00:00', 'Expected Trip arrivalTime from itinerary end.')
+  assert(
+    blogPostingNode?.['@id'] === 'https://example.com/one-day-lima-itinerary#listicle-itinerary-blog-posting',
+    'Expected BlogPosting @id to use the canonical URL.',
+  )
+  assert(
+    blogPostingNode?.datePublished === '2026-03-03T09:15:00.000Z',
+    'Expected BlogPosting datePublished from hydrated Payload publish time.',
+  )
+  assert(
+    blogPostingNode?.dateModified === '2026-03-03T10:30:00.000Z',
+    'Expected BlogPosting dateModified from hydrated Payload update time.',
+  )
+  const author = (blogPostingNode?.author && typeof blogPostingNode.author === 'object')
+    ? blogPostingNode.author as Record<string, unknown>
+    : undefined
+  assert(author?.name === 'Alan Malpartida', 'Expected BlogPosting author from hydrated Payload author.')
+  const publisher = (blogPostingNode?.publisher && typeof blogPostingNode.publisher === 'object')
+    ? blogPostingNode.publisher as Record<string, unknown>
+    : undefined
+  assert(publisher?.name === 'Questurian', 'Expected BlogPosting publisher from schema config.')
+  const contentLocation = (blogPostingNode?.contentLocation && typeof blogPostingNode.contentLocation === 'object')
+    ? blogPostingNode.contentLocation as Record<string, unknown>
+    : undefined
+  assert(contentLocation?.name === 'Barranco, Lima, Peru', 'Expected contentLocation.name to be human-readable.')
+  const mainEntityOfPage = (blogPostingNode?.mainEntityOfPage && typeof blogPostingNode.mainEntityOfPage === 'object')
+    ? blogPostingNode.mainEntityOfPage as Record<string, unknown>
+    : undefined
+  assert(
+    mainEntityOfPage?.['@id'] === 'https://example.com/one-day-lima-itinerary',
+    'Expected BlogPosting mainEntityOfPage to match the canonical URL.',
+  )
 
   const itemListElement = Array.isArray(itemListNode?.itemListElement) ? itemListNode.itemListElement : []
   const firstListItem = itemListElement[0] as Record<string, unknown> | undefined

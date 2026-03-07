@@ -152,6 +152,7 @@ export function validateSeoSection(
     issues.push(...validateSingleTypeListicleStructuredDataShape({
       structuredData: parsedStructuredData,
       draft,
+      targetStatus,
     }))
   }
 

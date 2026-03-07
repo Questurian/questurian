@@ -31,6 +31,11 @@ export type ListicleItemBlock = {
 export type SingleTypeListicleDraft = {
   draftId: string
   payloadId?: number
+  payloadStatus?: 'draft' | 'published'
+  payloadSlug?: string
+  payloadPublishedAt?: string
+  payloadUpdatedAt?: string
+  payloadAuthorName?: string
   editorModelName: EditorAssistModelName
   title: string
   location: string
@@ -58,9 +63,17 @@ export type SingleTypeListicleDraft = {
   updatedAt: string
 }
 
+export type PayloadListicleAuthor = {
+  id?: number
+  firstName?: string | null
+  lastName?: string | null
+  email?: string | null
+}
+
 export type PayloadListicleDoc = {
   id: number
   title?: string
+  slug?: string | null
   location?: string
   locationRef?: number | { id?: number }
   listicleType?: ListicleType
@@ -106,6 +119,8 @@ export type PayloadListicleDoc = {
       follow?: 'follow' | 'nofollow' | null
     } | null
   } | null
+  author?: number | PayloadListicleAuthor | null
+  publishedAt?: string | null
   status?: 'draft' | 'published'
   articleType?: 'single-type-listicle'
   updatedAt?: string

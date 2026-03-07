@@ -89,6 +89,7 @@ export function validateSeoSection(input: {
         const shapeIssues = validateListicleItineraryStructuredDataShape({
           structuredData: parsed as Record<string, unknown>,
           draft,
+          targetStatus,
         })
         issues.push(...shapeIssues)
       }

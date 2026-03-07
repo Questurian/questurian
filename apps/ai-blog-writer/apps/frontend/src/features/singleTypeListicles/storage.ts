@@ -31,6 +31,11 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
   return {
     draftId: typeof value.draftId === 'string' && value.draftId.trim() ? value.draftId : fallbackDraftId,
     payloadId: typeof value.payloadId === 'number' ? value.payloadId : undefined,
+    payloadStatus: value.payloadStatus === 'published' ? 'published' : value.payloadStatus === 'draft' ? 'draft' : undefined,
+    payloadSlug: typeof value.payloadSlug === 'string' && value.payloadSlug.trim() ? value.payloadSlug : undefined,
+    payloadPublishedAt: typeof value.payloadPublishedAt === 'string' && value.payloadPublishedAt.trim() ? value.payloadPublishedAt : undefined,
+    payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim() ? value.payloadUpdatedAt : undefined,
+    payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim() ? value.payloadAuthorName : undefined,
     editorModelName: typeof value.editorModelName === 'string'
       ? value.editorModelName as SingleTypeListicleDraft['editorModelName']
       : DEFAULT_EDITOR_ASSIST_MODEL,
@@ -129,6 +134,11 @@ export function findDraftByDraftId(draftId: string): SingleTypeListicleDraft | n
 export function createEmptyDraft(): SingleTypeListicleDraft {
   return {
     draftId: `stl_${Date.now()}`,
+    payloadStatus: undefined,
+    payloadSlug: undefined,
+    payloadPublishedAt: undefined,
+    payloadUpdatedAt: undefined,
+    payloadAuthorName: undefined,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: '',
     location: '',

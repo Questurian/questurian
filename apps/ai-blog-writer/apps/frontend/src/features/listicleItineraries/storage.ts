@@ -1,9 +1,79 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
-import { createEmptySeoSection } from './builder/services/seo-section.service'
+import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { ListicleItineraryDraft } from './types'
 import { DEFAULT_TRIP_INTENT, normalizeTripIntent } from '../trip-intent'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v3_inline_seo'
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+)
+
+function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryDraft | null {
+  if (!isRecord(value)) return null
+
+  const nowIso = new Date().toISOString()
+  const fallbackDraftId = `lit_migrated_${Date.now()}_${index}`
+  const header = isRecord(value.header) ? value.header : {}
+
+  return {
+    draftId: typeof value.draftId === 'string' && value.draftId.trim() ? value.draftId : fallbackDraftId,
+    payloadId: typeof value.payloadId === 'number' ? value.payloadId : undefined,
+    payloadStatus: value.payloadStatus === 'published' ? 'published' : value.payloadStatus === 'draft' ? 'draft' : undefined,
+    payloadSlug: typeof value.payloadSlug === 'string' && value.payloadSlug.trim() ? value.payloadSlug : undefined,
+    payloadPublishedAt: typeof value.payloadPublishedAt === 'string' && value.payloadPublishedAt.trim() ? value.payloadPublishedAt : undefined,
+    payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim() ? value.payloadUpdatedAt : undefined,
+    payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim() ? value.payloadAuthorName : undefined,
+    editorModelName: typeof value.editorModelName === 'string'
+      ? value.editorModelName as ListicleItineraryDraft['editorModelName']
+      : DEFAULT_EDITOR_ASSIST_MODEL,
+    title: typeof value.title === 'string' ? value.title : '',
+    location: typeof value.location === 'string' ? value.location : '',
+    locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,
+    dayAudience:
+      value.dayAudience === 'anyday'
+      || value.dayAudience === 'weekday'
+      || value.dayAudience === 'weekend'
+        ? value.dayAudience
+        : '',
+    itineraryStartHour: typeof value.itineraryStartHour === 'number' ? value.itineraryStartHour : 9,
+    itineraryStartMinute:
+      value.itineraryStartMinute === '00'
+      || value.itineraryStartMinute === '15'
+      || value.itineraryStartMinute === '30'
+      || value.itineraryStartMinute === '45'
+        ? value.itineraryStartMinute
+        : '00',
+    itineraryStartPeriod: value.itineraryStartPeriod === 'PM' ? 'PM' : 'AM',
+    itineraryEndHour: typeof value.itineraryEndHour === 'number' ? value.itineraryEndHour : 6,
+    itineraryEndMinute:
+      value.itineraryEndMinute === '00'
+      || value.itineraryEndMinute === '15'
+      || value.itineraryEndMinute === '30'
+      || value.itineraryEndMinute === '45'
+        ? value.itineraryEndMinute
+        : '00',
+    itineraryEndPeriod: value.itineraryEndPeriod === 'AM' ? 'AM' : 'PM',
+    tripIntent: normalizeTripIntent(value.tripIntent),
+    step1_complete: Boolean(value.step1_complete),
+    in_update_mode: Boolean(value.in_update_mode),
+    step2_complete: Boolean(value.step2_complete),
+    step2_in_update_mode: Boolean(value.step2_in_update_mode),
+    step3_complete: Boolean(value.step3_complete),
+    step3_in_update_mode: Boolean(value.step3_in_update_mode),
+    header: {
+      introMarkdown: typeof header.introMarkdown === 'string' ? header.introMarkdown : '',
+      introLexical: isRecord(header.introLexical) ? header.introLexical : undefined,
+      introJsonText: typeof header.introJsonText === 'string' ? header.introJsonText : '',
+      featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
+    },
+    items: Array.isArray(value.items) ? value.items as ListicleItineraryDraft['items'] : [],
+    seoSection: normalizeSeoSection(value.seoSection ?? createEmptySeoSection()),
+    status: value.status === 'published' ? 'published' : 'draft',
+    articleType: 'listicle-itinerary',
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : nowIso,
+  }
+}
 
 export function listDrafts(): ListicleItineraryDraft[] {
   try {
@@ -11,10 +81,9 @@ export function listDrafts(): ListicleItineraryDraft[] {
     if (!raw) return []
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.map((draft) => ({
-      ...draft,
-      tripIntent: normalizeTripIntent((draft as { tripIntent?: unknown }).tripIntent),
-    }))
+    return parsed
+      .map((draft, index) => normalizeStoredDraft(draft, index))
+      .filter((draft): draft is ListicleItineraryDraft => Boolean(draft))
   } catch {
     return []
   }
@@ -56,6 +125,11 @@ export function findDraftByDraftId(draftId: string): ListicleItineraryDraft | nu
 export function createEmptyDraft(): ListicleItineraryDraft {
   return {
     draftId: `lit_${Date.now()}`,
+    payloadStatus: undefined,
+    payloadSlug: undefined,
+    payloadPublishedAt: undefined,
+    payloadUpdatedAt: undefined,
+    payloadAuthorName: undefined,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: '',
     location: '',

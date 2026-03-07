@@ -29,6 +29,10 @@ function runPromptRulesTest() {
     'Expected prompt to include graph node preservation guidance.',
   )
   assert(
+    prompt.includes('preserve BlogPosting author, publisher, image, datePublished, dateModified, url, and mainEntityOfPage when present'),
+    'Expected prompt to preserve article-level BlogPosting metadata.',
+  )
+  assert(
     prompt.includes('Structured data stop count to preserve: 1'),
     'Expected prompt to include stop count summary.',
   )

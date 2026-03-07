@@ -1,12 +1,18 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
+import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
 import { isLocationWithinScope } from '../../../locationScope/scope'
 import { createItinerary, markdownToLexical, updateItinerary } from '../../api'
 import { saveDraft } from '../../storage'
 import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
 import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
+import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
 import { buildSeoPayload } from '../services/seo-section.service'
+import {
+  buildListicleItineraryStructuredDataTemplate,
+  serializeStructuredDataTemplate,
+} from '../services/structured-data-template.service'
 import { withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
 import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
@@ -49,6 +55,7 @@ export function useItinerarySubmit({
     setResult(null)
 
     const submitDraft = withEndAlignedToLastItem(draft)
+    const schemaPublisherConfig = getSchemaPublisherConfig()
 
     const stepIssues = validateStep1(submitDraft)
     if (stepIssues.length > 0) {
@@ -83,8 +90,28 @@ export function useItinerarySubmit({
       return
     }
 
+    const seoSectionForSubmit = targetStatus === 'published'
+      ? {
+          ...submitDraft.seoSection,
+          structuredData: serializeStructuredDataTemplate(
+            buildListicleItineraryStructuredDataTemplate({
+              draft: {
+                ...submitDraft,
+                status: 'published',
+              },
+              relatedByBlockType,
+              publisherConfig: schemaPublisherConfig,
+            }),
+          ),
+        }
+      : submitDraft.seoSection
+
     const seoIssues = validateSeoSection({
-      draft: submitDraft,
+      draft: {
+        ...submitDraft,
+        status: targetStatus,
+        seoSection: seoSectionForSubmit,
+      },
       targetStatus,
     })
     if (seoIssues.length > 0) {
@@ -156,7 +183,7 @@ export function useItinerarySubmit({
         itineraryEndPeriod: submitDraft.itineraryEndPeriod,
         step1_complete: true,
         in_update_mode: false,
-        tripIntent: normalizeTripIntent(draft.tripIntent),
+        tripIntent: normalizeTripIntent(submitDraft.tripIntent),
         step2_complete: submitDraft.step2_complete,
         step2_in_update_mode: false,
         step3_complete: submitDraft.step3_complete,
@@ -166,14 +193,42 @@ export function useItinerarySubmit({
           featuredImage: submitDraft.header.featuredImage || undefined,
         },
         items: payloadItems,
-        seoSection: buildSeoPayload(submitDraft.seoSection),
+        seoSection: buildSeoPayload(seoSectionForSubmit),
         status: targetStatus,
         articleType: 'listicle-itinerary',
       }
 
-      const doc = draft.payloadId
+      let doc = draft.payloadId
         ? await updateItinerary(draft.payloadId, body, token)
         : await createItinerary(body, token)
+
+      if (targetStatus === 'published') {
+        const publishedStructuredData = serializeStructuredDataTemplate(
+          buildListicleItineraryStructuredDataTemplate({
+            draft: {
+              ...submitDraft,
+              ...buildPayloadItineraryMetadataPatch({
+                doc,
+                fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
+              }),
+              status: 'published',
+              seoSection: seoSectionForSubmit,
+            },
+            relatedByBlockType,
+            publisherConfig: schemaPublisherConfig,
+          }),
+        )
+
+        if (publishedStructuredData !== seoSectionForSubmit.structuredData.trim()) {
+          doc = await updateItinerary(doc.id, {
+            ...body,
+            seoSection: buildSeoPayload({
+              ...seoSectionForSubmit,
+              structuredData: publishedStructuredData,
+            }),
+          }, token)
+        }
+      }
 
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
       nextDraft.editorModelName = draft.editorModelName

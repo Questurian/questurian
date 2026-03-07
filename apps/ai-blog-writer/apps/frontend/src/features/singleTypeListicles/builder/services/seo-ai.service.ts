@@ -159,6 +159,7 @@ export function buildSeoAiPrompt(input: {
     '- structuredData must be a JSON object (JSON-LD style).',
     '- If structuredData is requested, preserve the existing structuredData shape from input block content.',
     '- If structuredData is requested, only refine values and optional fields; do not remove required nodes.',
+    '- If structuredData is requested, preserve author, publisher, image, datePublished, dateModified, and mainEntityOfPage when present.',
     '- If structuredData is requested, keep every "description" concise and factual (max 220 chars).',
     '- If structuredData is requested, avoid marketing tone, keyword stuffing, and sales language.',
     '- robots should usually be index/follow unless context suggests otherwise.',
@@ -176,6 +177,7 @@ export function buildSeoAiPrompt(input: {
       lines.push(`Structured data item @type to preserve: ${templateSummary.itemType}`)
     }
     lines.push('Keep @graph with BlogPosting + ItemList.')
+    lines.push('Preserve article metadata fields on BlogPosting when they already exist.')
   }
 
   if (shouldIncludeStructuredTemplate && lines.join('\n').length > 1400) {
@@ -187,6 +189,7 @@ export function buildSeoAiPrompt(input: {
       '- Only generate the requested target. Omit unrelated keys.',
       '- If structuredData is requested, preserve existing structuredData shape from input block content.',
       '- Keep @graph with BlogPosting + ItemList and preserve ordered list positions.',
+      '- Preserve BlogPosting author, publisher, image, dates, and mainEntityOfPage when present.',
       '',
       `Article type: ${input.articleType}`,
       `Location: ${locationText}`,

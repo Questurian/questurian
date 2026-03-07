@@ -350,7 +350,7 @@ function buildTargetShape(target: SeoAiTarget): string {
     case 'twitterCardDescription':
       return '{"twitterCard":{"description":"string"}}'
     case 'structuredData':
-      return '{"structuredData":{"@context":"https://schema.org","@graph":[{"@type":"BlogPosting"},{"@type":"Trip"},{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"Place","name":"string"}}]}]}}'
+      return '{"structuredData":{"@context":"https://schema.org","@graph":[{"@type":"BlogPosting","headline":"string","description":"string","datePublished":"2026-03-07T21:54:32.290Z","dateModified":"2026-03-07T22:16:16.572Z","author":{"@type":"Person","name":"string"},"publisher":{"@type":"Organization","name":"string"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://example.com/path"}},{"@type":"Trip"},{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"Place","name":"string"}}]}]}}'
     case 'robots':
       return '{"robots":{"index":"index|noindex","follow":"follow|nofollow"}}'
     case 'robotsIndex':
@@ -432,6 +432,8 @@ export function buildSeoAiPrompt(input: {
       '- structuredData must be a JSON object (JSON-LD style).',
       '- If structuredData is requested, preserve the existing structuredData shape from input block content.',
       '- If structuredData is requested, keep @graph nodes for BlogPosting + Trip + ItemList and preserve stop order.',
+      '- If structuredData is requested, preserve BlogPosting author, publisher, image, datePublished, dateModified, url, and mainEntityOfPage when present.',
+      '- If structuredData is requested, preserve canonical @id relationships between BlogPosting, Trip, and ItemList.',
       '- If structuredData is requested, do not invent new stop entity types; keep existing item @type values unless explicitly required by context.',
       `- If structuredData is requested, keep every "description" concise and factual (max ${STRUCTURED_DATA_DESCRIPTION_MAX_LENGTH} chars).`,
       '- If structuredData is requested, avoid marketing tone, keyword stuffing, and sales language.',

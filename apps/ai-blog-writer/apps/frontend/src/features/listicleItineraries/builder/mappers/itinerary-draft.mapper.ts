@@ -1,9 +1,13 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
+import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
 import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import type { ItineraryItemBlock, ListicleItineraryDraft, PayloadItineraryDoc } from '../../types'
+import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
 import { getRelationshipId, normalizeDurationMinute, normalizePeriod, normalizeQuarterMinute } from '../utils/field-normalizers.utils'
 import { getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 import { normalizeTripIntent } from '../../../trip-intent'
+
+const schemaPublisherConfig = getSchemaPublisherConfig()
 
 export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: string): ListicleItineraryDraft {
   const items: ItineraryItemBlock[] = (doc.items || []).map((item, index) => ({
@@ -32,7 +36,10 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
 
   return {
     draftId: existingDraftId || `lit_payload_${doc.id}`,
-    payloadId: doc.id,
+    ...buildPayloadItineraryMetadataPatch({
+      doc,
+      fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
+    }),
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: doc.title || '',
     location: doc.location || '',

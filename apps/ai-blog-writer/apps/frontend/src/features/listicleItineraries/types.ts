@@ -64,6 +64,11 @@ export type ItineraryItemBlock = {
 export type ListicleItineraryDraft = {
   draftId: string
   payloadId?: number
+  payloadStatus?: 'draft' | 'published'
+  payloadSlug?: string
+  payloadPublishedAt?: string
+  payloadUpdatedAt?: string
+  payloadAuthorName?: string
   editorModelName: EditorAssistModelName
   title: string
   location: string
@@ -95,9 +100,17 @@ export type ListicleItineraryDraft = {
   updatedAt: string
 }
 
+export type PayloadItineraryAuthor = {
+  id?: number
+  firstName?: string | null
+  lastName?: string | null
+  email?: string | null
+}
+
 export type PayloadItineraryDoc = {
   id: number
   title?: string
+  slug?: string | null
   location?: string
   locationRef?: number | { id?: number }
   dayAudience?: DayAudience
@@ -153,6 +166,8 @@ export type PayloadItineraryDoc = {
       follow?: 'follow' | 'nofollow' | null
     } | null
   } | null
+  author?: number | PayloadItineraryAuthor | null
+  publishedAt?: string | null
   status?: 'draft' | 'published'
   articleType?: 'listicle-itinerary'
   updatedAt?: string

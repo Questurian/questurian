@@ -5,6 +5,10 @@ import type {
   SingleTypeListicleDraft,
 } from '../../types'
 import {
+  getSchemaPublisherConfig,
+  type SchemaPublisherConfig,
+} from '../../../shared/seo/services/schema-publisher-config.service'
+import {
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
   resolveImageUrl,
@@ -54,7 +58,7 @@ const toSchemaDate = (value: string | undefined): string | undefined => {
   if (!value) return undefined
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return undefined
-  return date.toISOString().slice(0, 10)
+  return date.toISOString()
 }
 
 const getNestedValue = (source: Record<string, unknown>, path: string[]): unknown => {
@@ -413,11 +417,22 @@ function buildRankedItemEntity(input: {
 export function buildSingleTypeListicleStructuredDataTemplate(input: {
   draft: SingleTypeListicleDraft
   relatedItems: RelatedItemOption[]
+  publisherConfig?: SchemaPublisherConfig
 }): Record<string, unknown> {
   const { draft, relatedItems } = input
+  const publisherConfig = input.publisherConfig ?? getSchemaPublisherConfig()
   const schemaType = getSchemaTypeForListicleType(draft.listicleType) || 'Place'
   const canonicalUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.url)
-  const schemaDate = toSchemaDate(draft.updatedAt)
+  const blogPostingId = canonicalUrl
+    ? `${canonicalUrl}#single-type-listicle-blog-posting`
+    : '#single-type-listicle-blog-posting'
+  const resolvedStatus = draft.payloadStatus === 'published' || draft.status === 'published'
+    ? 'published'
+    : 'draft'
+  const schemaDateModified = toSchemaDate(draft.payloadUpdatedAt || draft.updatedAt)
+  const schemaDatePublished = resolvedStatus === 'published'
+    ? toSchemaDate(draft.payloadPublishedAt || draft.updatedAt)
+    : undefined
   const articleImageUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.imageUrl)
     || normalizeAbsoluteUrl(draft.seoSection.twitterCard.imageUrl)
   const itemListId = canonicalUrl
@@ -428,6 +443,7 @@ export function buildSingleTypeListicleStructuredDataTemplate(input: {
     extractDraftText(draft.header.introMarkdown, draft.header.introJsonText),
   )
   const listicleLabel = getListicleTypeLabel(draft.listicleType)
+  const authorName = normalizeText(draft.payloadAuthorName) || publisherConfig.defaultAuthorName
 
   const relatedById = new Map<number, RelatedItemOption>(
     relatedItems.map((entry) => [entry.id, entry]),
@@ -463,7 +479,7 @@ export function buildSingleTypeListicleStructuredDataTemplate(input: {
 
   const blogPostingNode: Record<string, unknown> = {
     '@type': 'BlogPosting',
-    '@id': '#single-type-listicle-blog-posting',
+    '@id': blogPostingId,
     headline: articleTitle,
     name: articleTitle,
     description: intro || 'AI_FILL_ARTICLE_DESCRIPTION',
@@ -483,12 +499,30 @@ export function buildSingleTypeListicleStructuredDataTemplate(input: {
     },
     url: canonicalUrl,
     image: articleImageUrl,
-    dateModified: schemaDate,
-    datePublished: draft.status === 'published' ? schemaDate : undefined,
+    dateModified: schemaDateModified,
+    datePublished: schemaDatePublished,
     mainEntityOfPage: canonicalUrl
       ? {
           '@type': 'WebPage',
           '@id': canonicalUrl,
+        }
+      : undefined,
+    author: authorName
+      ? {
+          '@type': 'Person',
+          name: authorName,
+        }
+      : undefined,
+    publisher: publisherConfig.siteName
+      ? {
+          '@type': 'Organization',
+          name: publisherConfig.siteName,
+          logo: publisherConfig.logoUrl
+            ? {
+                '@type': 'ImageObject',
+                url: publisherConfig.logoUrl,
+              }
+            : undefined,
         }
       : undefined,
   }
@@ -516,9 +550,22 @@ const getNodeType = (value: unknown): string | null => {
 export function validateSingleTypeListicleStructuredDataShape(input: {
   structuredData: Record<string, unknown>
   draft: SingleTypeListicleDraft
+  targetStatus?: 'draft' | 'published'
 }): string[] {
   const { structuredData, draft } = input
   const issues: string[] = []
+  const targetStatus = input.targetStatus ?? draft.status
+  const publisherConfig = getSchemaPublisherConfig()
+  const canonicalUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.url)
+  const expectedBlogPostingId = canonicalUrl
+    ? `${canonicalUrl}#single-type-listicle-blog-posting`
+    : '#single-type-listicle-blog-posting'
+  const expectedItemListId = canonicalUrl
+    ? `${canonicalUrl}#single-type-listicle-item-list`
+    : '#single-type-listicle-item-list'
+  const shouldRequireAuthor = Boolean(
+    normalizeText(draft.payloadAuthorName) || publisherConfig.defaultAuthorName,
+  )
 
   const expectedItemType = getSchemaTypeForListicleType(draft.listicleType)
   if (!expectedItemType) {
@@ -551,6 +598,71 @@ export function validateSingleTypeListicleStructuredDataShape(input: {
   if (!itemListNode) {
     issues.push('Structured Data "@graph" must include an ItemList node.')
     return issues
+  }
+
+  if (blogPostingNode) {
+    if (normalizeText(blogPostingNode['@id']) !== expectedBlogPostingId) {
+      issues.push('Structured Data BlogPosting must use the canonical BlogPosting @id.')
+    }
+
+    const aboutRef = isRecord(blogPostingNode.about) ? normalizeText(blogPostingNode.about['@id']) : undefined
+    const mainEntityRef = isRecord(blogPostingNode.mainEntity) ? normalizeText(blogPostingNode.mainEntity['@id']) : undefined
+
+    if (aboutRef !== expectedItemListId) {
+      issues.push('Structured Data BlogPosting.about must reference the ItemList @id.')
+    }
+
+    if (mainEntityRef !== expectedItemListId) {
+      issues.push('Structured Data BlogPosting.mainEntity must reference the ItemList @id.')
+    }
+
+    if (targetStatus === 'published') {
+      if (!normalizeText(blogPostingNode.headline)) {
+        issues.push('Structured Data BlogPosting must include a headline.')
+      }
+
+      if (!normalizeText(blogPostingNode.image)) {
+        issues.push('Structured Data BlogPosting must include an image URL.')
+      }
+
+      const dateModified = normalizeText(blogPostingNode.dateModified)
+      if (!dateModified || Number.isNaN(new Date(dateModified).getTime())) {
+        issues.push('Structured Data BlogPosting must include a valid ISO dateModified.')
+      }
+
+      const datePublished = normalizeText(blogPostingNode.datePublished)
+      if (!datePublished || Number.isNaN(new Date(datePublished).getTime())) {
+        issues.push('Structured Data BlogPosting must include a valid ISO datePublished.')
+      }
+
+      if (canonicalUrl) {
+        const mainEntityOfPage = isRecord(blogPostingNode.mainEntityOfPage)
+          ? normalizeText(blogPostingNode.mainEntityOfPage['@id'])
+          : undefined
+
+        if (mainEntityOfPage !== canonicalUrl) {
+          issues.push('Structured Data BlogPosting.mainEntityOfPage must match the canonical URL.')
+        }
+      }
+
+      if (shouldRequireAuthor) {
+        const author = isRecord(blogPostingNode.author) ? normalizeText(blogPostingNode.author.name) : undefined
+        if (!author) {
+          issues.push('Structured Data BlogPosting must include an author name.')
+        }
+      }
+
+      if (publisherConfig.siteName) {
+        const publisher = isRecord(blogPostingNode.publisher) ? normalizeText(blogPostingNode.publisher.name) : undefined
+        if (!publisher) {
+          issues.push('Structured Data BlogPosting must include a publisher name.')
+        }
+      }
+    }
+  }
+
+  if (normalizeText(itemListNode['@id']) !== expectedItemListId) {
+    issues.push('Structured Data ItemList must use the canonical ItemList @id.')
   }
 
   const itemListElement = asArray(itemListNode.itemListElement)

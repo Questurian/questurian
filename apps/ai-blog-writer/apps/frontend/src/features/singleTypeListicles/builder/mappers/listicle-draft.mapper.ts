@@ -1,9 +1,13 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
+import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
 import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
+import { buildPayloadListicleMetadataPatch } from '../services/payload-listicle-metadata.service'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
 import { normalizeTripIntent } from '../../../trip-intent'
+
+const schemaPublisherConfig = getSchemaPublisherConfig()
 
 export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: string): SingleTypeListicleDraft {
   const items: ListicleItemBlock[] = (doc.items || []).map((item, index) => ({
@@ -28,7 +32,10 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
 
   return {
     draftId: existingDraftId || `stl_payload_${doc.id}`,
-    payloadId: doc.id,
+    ...buildPayloadListicleMetadataPatch({
+      doc,
+      fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
+    }),
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: doc.title || '',
     location: doc.location || '',
