@@ -17,6 +17,7 @@ import {
   seo,
   slug,
   status,
+  tripIntent,
   author,
   publishedAt,
   category,
@@ -74,9 +75,18 @@ export const Articles: CollectionConfig = {
       // Writers can only update their own articles
       if (user.role === 'writer') {
         return {
-          author: {
-            equals: user.id,
-          },
+          and: [
+            {
+              author: {
+                equals: user.id,
+              },
+            },
+            {
+              status: {
+                equals: 'draft',
+              },
+            },
+          ],
         }
       }
 
@@ -106,6 +116,7 @@ export const Articles: CollectionConfig = {
     // Sidebar / Meta fields
     slug,
     status,
+    tripIntent,
     author,
     publishedAt,
     category,

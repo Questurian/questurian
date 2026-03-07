@@ -3,6 +3,7 @@ import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-sect
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
+import { normalizeTripIntent } from '../../../trip-intent'
 
 export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: string): SingleTypeListicleDraft {
   const items: ListicleItemBlock[] = (doc.items || []).map((item, index) => ({
@@ -49,6 +50,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     items,
     seoSection: normalizedSeoSection,
     status: doc.status || 'draft',
+    tripIntent: normalizeTripIntent(doc.tripIntent),
     articleType: 'single-type-listicle',
     updatedAt: doc.updatedAt || new Date().toISOString(),
   }

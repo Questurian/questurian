@@ -1,9 +1,30 @@
+import type { TripIntent } from '../../../trip-intent'
+
+export type PayloadArticleAuthor = {
+  id?: number
+  firstName?: string | null
+  lastName?: string | null
+  email?: string | null
+}
+
+export type PayloadArticleDoc = {
+  id: number
+  title?: string
+  slug?: string | null
+  status?: 'draft' | 'published' | null
+  author?: number | PayloadArticleAuthor | null
+  publishedAt?: string | null
+  updatedAt?: string
+  createdAt?: string
+}
+
 export type CreateArticlePayload = {
   title: string
   location?: string
   locationRef?: number
   step1_complete: boolean
   status?: 'draft' | 'published'
+  tripIntent: TripIntent[]
   category?: number
   tags?: number[]
   headerSection?: {

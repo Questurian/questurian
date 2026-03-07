@@ -1,4 +1,5 @@
 import EditorialStageArticlePage from '../../staging/components/EditorialStageArticlePage'
+import { getArticleById, updateArticle } from '../../staging/api'
 import {
   fetchLocations,
   fetchMediaAssets,
@@ -6,6 +7,7 @@ import {
   convertMarkdownToLexical,
   fetchExternalImageSource,
   fetchResult,
+  getArticleSyncStatus,
   importExternalImage,
   markArticleSynced,
   searchPexelsImages,
@@ -32,15 +34,19 @@ export default function StageArticlePage() {
         fetchLocations,
         fetchMediaAssets,
         createArticle,
+        updateArticle,
+        getArticleById,
         convertMarkdownToLexical,
         fetchExternalImageSource,
         fetchResult,
+        getArticleSyncStatus,
         importExternalImage,
         markArticleSynced,
         searchPexelsImages,
         searchUnsplashImages,
         rewriteBlockWithAi,
       }}
+      syncBehavior="draft-sync"
     />
   )
 }

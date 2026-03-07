@@ -1,11 +1,11 @@
 import { API_BASE_URL, PAYLOAD_API_URL } from '../client/config'
 import { parseErrorResponse } from '../client/error-parser'
-import type { CreateArticlePayload } from './articles.types'
+import type { CreateArticlePayload, PayloadArticleDoc } from './articles.types'
 
 export async function createArticle(
   article: CreateArticlePayload,
   token: string,
-): Promise<{ id: number; title: string; slug: string }> {
+): Promise<PayloadArticleDoc> {
   const response = await fetch(`${PAYLOAD_API_URL}/api/articles`, {
     method: 'POST',
     mode: 'cors',
@@ -31,7 +31,7 @@ export async function updateArticle(
   id: number,
   article: CreateArticlePayload,
   token: string,
-): Promise<{ id: number; title: string; slug: string }> {
+): Promise<PayloadArticleDoc> {
   const response = await fetch(`${PAYLOAD_API_URL}/api/articles/${id}`, {
     method: 'PATCH',
     mode: 'cors',
@@ -46,6 +46,29 @@ export async function updateArticle(
 
   if (!response.ok) {
     const message = await parseErrorResponse(response, `Failed to update article: ${response.status}`, { message: 'Unknown error' })
+    throw new Error(message)
+  }
+
+  const result = await response.json()
+  return result.doc
+}
+
+export async function getArticleById(
+  id: number,
+  token: string,
+): Promise<PayloadArticleDoc> {
+  const response = await fetch(`${PAYLOAD_API_URL}/api/articles/${id}?depth=1`, {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, `Failed to fetch article: ${response.status}`, { message: 'Unknown error' })
     throw new Error(message)
   }
 

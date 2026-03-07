@@ -1,9 +1,15 @@
 import type { Location, MediaAsset } from '../../api'
 import type { StagedArticle } from '../../types'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
+import { useAuth } from '../../../../providers/useAuth'
 import { EDITOR_MODEL_OPTIONS, resolveEditorModelName } from '../../features/editorial-stage-article/constants'
 import { getMediaAssetAltText } from '../../features/editorial-stage-article/media-utils'
+import {
+  isSeoCoreComplete,
+  validateStandardArticleSeoSection,
+} from '../../features/editorial-stage-article/services/standard-article-seo.service'
 import { getLocationDisplayName } from '../../features/editorial-stage-article/utils/editorial-stage-view.utils'
+import { isStagedArticleEditingLocked } from '../../utils/staged-article-sync'
 
 type PublishResult = { success: boolean; message: string } | null
 
@@ -20,7 +26,7 @@ type EditorialSidebarProps = {
   onOpenFeaturedImageModal: () => void
   locations: Location[]
   onUpdateStagedArticle: (updates: Partial<StagedArticle>) => void
-  onPublish: () => void
+  onPublish: (targetStatus: 'draft' | 'published') => void
 }
 
 export function EditorialSidebar({
@@ -38,16 +44,82 @@ export function EditorialSidebar({
   onUpdateStagedArticle,
   onPublish,
 }: EditorialSidebarProps) {
+  const { user } = useAuth()
   const hasBlockingEditorial = editorialBlockingMessages.length > 0
-  const canPublish = allFieldsFilled && !hasBlockingEditorial
+  const isEditingLocked = isStagedArticleEditingLocked(stagedArticle)
+  const canManagePublished = user?.role === 'admin' || user?.role === 'editor'
+  const isPublished = stagedArticle.payloadStatus === 'published'
+  const isLinkedDraft = Boolean(stagedArticle.payloadArticleId) && !isPublished
+  const seoSection = stagedArticle.seoSection ?? {
+    seoTitle: '',
+    metaDescription: '',
+    openGraph: {
+      title: '',
+      description: '',
+      imageUrl: '',
+      url: '',
+    },
+    twitterCard: {
+      card: 'summary',
+      title: '',
+      description: '',
+      imageUrl: '',
+    },
+    structuredData: '',
+    robots: {
+      index: 'index',
+      follow: 'follow',
+    },
+  }
+  const publishBlockedReasons = [
+    ...(!allFieldsFilled ? missingPublishFields : []),
+    ...(!isSeoCoreComplete(seoSection) ? ['SEO title and meta description'] : []),
+    ...(!seoSection.structuredData.trim() ? ['Structured Data'] : []),
+    ...(!seoSection.openGraph.imageUrl.trim() ? ['Open Graph image URL'] : []),
+    ...validateStandardArticleSeoSection({
+      seoSection,
+      locationLabel: locations.find((location) => location.id === stagedArticle.locationId)?.locationKey,
+    }),
+  ]
+  const canSaveDraft = allFieldsFilled && !hasBlockingEditorial && !isEditingLocked
+  const canPublish = canSaveDraft && publishBlockedReasons.length === 0
+  const payloadStatusLabel = isPublished
+    ? `Published in Payload${stagedArticle.payloadArticleId ? ` · ID ${stagedArticle.payloadArticleId}` : ''}`
+    : isLinkedDraft
+      ? `Draft synced to Payload${stagedArticle.payloadArticleId ? ` · ID ${stagedArticle.payloadArticleId}` : ''}`
+      : null
 
   return (
     <aside className="stage-article-sidebar">
       <div className="stage-article-sidebar-inner">
         <div className="stage-article-sidebar-section stage-article-sidebar-publish">
-          {!stagedArticle.publishedToPayload ? (
+          {payloadStatusLabel ? (
+            <div className="stage-article-published-notice">{payloadStatusLabel}</div>
+          ) : null}
+
+          {!isPublished && (
             <button
-              onClick={onPublish}
+              onClick={() => onPublish('draft')}
+              disabled={isPublishing || !canSaveDraft}
+              className="stage-article-publish-btn payload-action-btn"
+            >
+              <img
+                src={payloadLogoUrl}
+                alt=""
+                aria-hidden="true"
+                className="payload-action-btn-icon"
+              />
+              {isPublishing ? 'Saving...' :
+               !allFieldsFilled ? 'Complete fields below' :
+               hasBlockingEditorial ? 'Fix editorial blocks' :
+               isLinkedDraft ? 'Update Draft in Payload' :
+               'Save Draft to Payload'}
+            </button>
+          )}
+
+          {canManagePublished ? (
+            <button
+              onClick={() => onPublish('published')}
               disabled={isPublishing || !canPublish}
               className="stage-article-publish-btn payload-action-btn"
             >
@@ -58,22 +130,23 @@ export function EditorialSidebar({
                 className="payload-action-btn-icon"
               />
               {isPublishing ? 'Publishing...' :
-               !allFieldsFilled ? 'Complete fields below' :
-               hasBlockingEditorial ? 'Fix editorial blocks' :
-               'Publish to Payload'}
+               !canSaveDraft ? 'Complete draft first' :
+               isPublished ? 'Update Published' :
+               'Publish'}
             </button>
+          ) : !isPublished ? (
+            <p className="stage-article-publish-checklist-more">Writers can save drafts only.</p>
           ) : (
-            <div className="stage-article-published-notice">
-              Published to Payload
-              {stagedArticle.payloadArticleId && (
-                <span> &middot; ID {stagedArticle.payloadArticleId}</span>
-              )}
-            </div>
+            <p className="stage-article-publish-checklist-more">Published articles can only be updated by editors or admins.</p>
           )}
 
-          {!stagedArticle.publishedToPayload && !canPublish && (
+          {!seoSection.openGraph.url.trim() ? (
+            <p className="stage-article-publish-checklist-more">Set-up urls later</p>
+          ) : null}
+
+          {(!canSaveDraft || (canManagePublished && !canPublish)) && (
             <div className="stage-article-publish-checklist">
-              {missingPublishFields.length > 0 && (
+              {!canSaveDraft && missingPublishFields.length > 0 && (
                 <>
                   <p className="stage-article-publish-checklist-title">Missing required fields:</p>
                   <ul className="stage-article-publish-checklist-list">
@@ -96,6 +169,16 @@ export function EditorialSidebar({
                       +{editorialBlockingMessages.length - 3} more block issues
                     </p>
                   )}
+                </>
+              )}
+              {canManagePublished && !canPublish && publishBlockedReasons.length > 0 && (
+                <>
+                  <p className="stage-article-publish-checklist-title">Publish requirements:</p>
+                  <ul className="stage-article-publish-checklist-list">
+                    {publishBlockedReasons.map((reason, index) => (
+                      <li key={`${reason}-${index}`}>{reason}</li>
+                    ))}
+                  </ul>
                 </>
               )}
             </div>
@@ -122,7 +205,7 @@ export function EditorialSidebar({
                 src={getImageUrl(selectedFeaturedImage)}
                 alt={getMediaAssetAltText(selectedFeaturedImage) || selectedFeaturedImage.filename}
               />
-              {!stagedArticle.publishedToPayload && (
+              {!isEditingLocked && (
                 <button
                   type="button"
                   onClick={onOpenFeaturedImageModal}
@@ -135,7 +218,7 @@ export function EditorialSidebar({
           ) : stagedArticle.featuredImageId ? (
             <div className="stage-article-featured-image-pending">
               <p>Featured image selected (ID {stagedArticle.featuredImageId}). Preview will load shortly.</p>
-              {!stagedArticle.publishedToPayload && (
+              {!isEditingLocked && (
                 <button
                   type="button"
                   onClick={onOpenFeaturedImageModal}
@@ -150,7 +233,7 @@ export function EditorialSidebar({
               type="button"
               onClick={onOpenFeaturedImageModal}
               className="stage-article-image-placeholder"
-              disabled={stagedArticle.publishedToPayload}
+              disabled={isEditingLocked}
             >
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -170,7 +253,7 @@ export function EditorialSidebar({
             value={stagedArticle.locationId || ''}
             onChange={(event) => onUpdateStagedArticle({ locationId: Number(event.target.value) || undefined })}
             className="stage-article-select"
-            disabled={stagedArticle.publishedToPayload}
+            disabled={isEditingLocked}
           >
             <option value="">-- Select --</option>
             {locations.map((location) => (
@@ -191,7 +274,7 @@ export function EditorialSidebar({
               editorModelName: resolveEditorModelName(event.target.value),
             })}
             className="stage-article-select"
-            disabled={stagedArticle.publishedToPayload}
+            disabled={isEditingLocked}
           >
             {EDITOR_MODEL_OPTIONS.map((modelOption) => (
               <option key={modelOption.value} value={modelOption.value}>

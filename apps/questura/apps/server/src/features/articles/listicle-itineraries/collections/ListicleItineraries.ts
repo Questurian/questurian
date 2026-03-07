@@ -32,6 +32,7 @@ import {
   items,
   seo,
   status,
+  tripIntent,
   author,
   publishedAt,
   articleType,
@@ -121,6 +122,7 @@ export const ListicleItineraries: CollectionConfig = {
     seo,
 
     status,
+    tripIntent,
     author,
     publishedAt,
     articleType,

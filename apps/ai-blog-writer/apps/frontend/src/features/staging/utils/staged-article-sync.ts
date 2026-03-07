@@ -5,7 +5,7 @@ export function allowsResyncEditing(article: Pick<StagedArticle, 'syncBehavior'>
 }
 
 export function isStagedArticleEditingLocked(
-  article: Pick<StagedArticle, 'publishedToPayload' | 'syncBehavior'>,
+  article: Pick<StagedArticle, 'publishedToPayload' | 'payloadStatus' | 'syncBehavior'>,
 ): boolean {
-  return article.publishedToPayload && !allowsResyncEditing(article)
+  return article.payloadStatus === 'published' && !allowsResyncEditing(article)
 }

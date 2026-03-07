@@ -1,4 +1,5 @@
 import { StandardArticleStageBuilder } from '../../staging/components/StandardArticleStageBuilder'
+import { getArticleById } from '../../staging/api'
 import {
   convertMarkdownToLexical,
   createArticle,
@@ -35,6 +36,7 @@ export default function StageArticlePage() {
         fetchMediaAssets,
         createArticle,
         updateArticle,
+        getArticleById,
         convertMarkdownToLexical,
         fetchExternalImageSource,
         fetchResult,
@@ -46,7 +48,7 @@ export default function StageArticlePage() {
         rewriteBlockWithAi,
       }}
       featureLabel="URL2Blog"
-      heroDescription="Step through setup, featured image selection, article content blocks, and SEO before syncing a draft article to Payload."
+      heroDescription="Step through setup, featured image selection, article content blocks, and SEO before saving drafts or publishing to Payload."
       syncBehavior="draft-sync"
     />
   )

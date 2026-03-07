@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Location, MediaAsset } from '../../../api'
 import type { StagedArticle } from '../../../types'
 import { createEmptySeoSection } from '../../../../shared/seo/services/seo-section.service'
+import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
+import { DEFAULT_TRIP_INTENT } from '../../../../trip-intent'
 import type { EditorialStageArticleApi } from '../types'
 import { DEFAULT_EDITOR_MODEL_NAME, resolveEditorModelName } from '../constants'
 import { extractEditorialBlocks } from '../editorial-markdown.service'
@@ -21,6 +23,7 @@ import {
   saveAllStagedArticles,
   upsertStagedArticle,
 } from '../services/editorial-stage-storage.service'
+import { buildPayloadArticleMetadataPatch } from '../services/payload-article-metadata.service'
 import { mergeMediaAssetLists } from '../media-utils'
 
 type UseEditorialStagePageDataParams = {
@@ -29,7 +32,7 @@ type UseEditorialStagePageDataParams = {
   stagePath: string
   token: string | null | undefined
   syncBehavior?: 'finalize' | 'draft-sync'
-  api: Pick<EditorialStageArticleApi, 'fetchResult' | 'fetchLocations' | 'fetchMediaAssets' | 'getArticleSyncStatus'>
+  api: Pick<EditorialStageArticleApi, 'fetchResult' | 'fetchLocations' | 'fetchMediaAssets' | 'getArticleSyncStatus' | 'getArticleById'>
 }
 
 export function useEditorialStagePageData({
@@ -40,7 +43,8 @@ export function useEditorialStagePageData({
   syncBehavior = 'finalize',
   api,
 }: UseEditorialStagePageDataParams) {
-  const { fetchResult, fetchLocations, fetchMediaAssets, getArticleSyncStatus } = api
+  const { fetchResult, fetchLocations, fetchMediaAssets, getArticleSyncStatus, getArticleById } = api
+  const schemaPublisherConfig = getSchemaPublisherConfig()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -98,8 +102,23 @@ export function useEditorialStagePageData({
         : fallbackEditorialBlocks
     )
 
+    let payloadMetadataPatch: Partial<StagedArticle> = {}
+
+    if (existing.payloadArticleId && token && getArticleById) {
+      try {
+        const payloadDoc = await getArticleById(existing.payloadArticleId, token)
+        payloadMetadataPatch = buildPayloadArticleMetadataPatch({
+          doc: payloadDoc,
+          fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
+        })
+      } catch {
+        // Ignore payload metadata hydration errors during bootstrap.
+      }
+    }
+
     return {
       ...existing,
+      ...payloadMetadataPatch,
       originalContent: originalContentForReset,
       blocks: normalizedBlocks,
       content: composeArticleMarkdown(normalizedBlocks, normalizedEditorialBlocks),
@@ -107,7 +126,7 @@ export function useEditorialStagePageData({
       editorModelName: resolveEditorModelName(existing.editorModelName),
       syncBehavior,
     }
-  }, [fetchResult, syncBehavior])
+  }, [fetchResult, getArticleById, schemaPublisherConfig.defaultAuthorName, syncBehavior, token])
 
   useEffect(() => {
     if (!urlRunId && !stagedId) return
@@ -196,6 +215,7 @@ export function useEditorialStagePageData({
               blocks,
               editorialBlocks,
               editorModelName: DEFAULT_EDITOR_MODEL_NAME,
+              tripIntent: [...DEFAULT_TRIP_INTENT],
               step1_complete: false,
               in_update_mode: false,
               step2_complete: false,
@@ -206,6 +226,11 @@ export function useEditorialStagePageData({
               syncBehavior,
               lexicalConverted: false,
               publishedToPayload: false,
+              payloadStatus: undefined,
+              payloadSlug: undefined,
+              payloadPublishedAt: undefined,
+              payloadUpdatedAt: undefined,
+              payloadAuthorName: undefined,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             }
@@ -255,16 +280,33 @@ export function useEditorialStagePageData({
         const syncStatus = await getArticleSyncStatus(stagedArticle.runId)
         if (isCancelled || !syncStatus.synced_to_payload || !syncStatus.payload_article_id) return
 
+        const payloadMetadataPatch = (
+          token && getArticleById
+            ? await getArticleById(syncStatus.payload_article_id, token)
+              .then((payloadDoc) => buildPayloadArticleMetadataPatch({
+                doc: payloadDoc,
+                fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
+              }))
+              .catch(() => ({}))
+            : {}
+        )
+
         setStagedArticle((previous) => {
           if (!previous) return previous
-          if (previous.payloadArticleId === syncStatus.payload_article_id && previous.publishedToPayload) {
+          if (
+            previous.payloadArticleId === syncStatus.payload_article_id
+            && previous.publishedToPayload
+            && Object.keys(payloadMetadataPatch).length === 0
+          ) {
             return previous
           }
 
           const updated = {
             ...previous,
+            ...payloadMetadataPatch,
             payloadArticleId: syncStatus.payload_article_id ?? undefined,
             publishedToPayload: true,
+            payloadStatus: payloadMetadataPatch.payloadStatus ?? previous.payloadStatus ?? 'draft',
             updatedAt: previous.updatedAt,
           }
 
@@ -281,7 +323,7 @@ export function useEditorialStagePageData({
     return () => {
       isCancelled = true
     }
-  }, [getArticleSyncStatus, stagedArticle?.runId, storageKey])
+  }, [getArticleById, getArticleSyncStatus, schemaPublisherConfig.defaultAuthorName, stagedArticle?.runId, storageKey, token])
 
   useEffect(() => {
     if (!token) {

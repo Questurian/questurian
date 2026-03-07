@@ -1,7 +1,8 @@
-import type { ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
+import type { ListicleType, LocationOption, SingleTypeListicleDraft, TripIntent } from '../../types'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import { LISTICLE_TYPE_OPTIONS } from '../constants/builder-options.constants'
+import { TRIP_INTENT_OPTIONS } from '../../../trip-intent'
 import { hasAnyWrittenItemData } from '../utils/item-target-count.utils'
 import { validateStep1 } from '../validators/setup.validators'
 
@@ -80,6 +81,21 @@ export function BuilderSetupPanel({
   const isSetupLocked = draft.step1_complete && !draft.in_update_mode
   const isTargetCountLocked = isSetupLocked || hasLockedItemData
   const selectedTargetCount = draft.targetItemCount > 0 ? draft.targetItemCount : null
+  const selectedTripIntent = draft.tripIntent || []
+  const canUnsetLastTripIntent = selectedTripIntent.length > 1
+
+  const handleTripIntentChange = (intent: TripIntent, nextChecked: boolean) => {
+    const nextTripIntent = nextChecked
+      ? [...new Set([...selectedTripIntent, intent])]
+      : selectedTripIntent.filter((value) => value !== intent)
+
+    if (nextTripIntent.length === 0) return
+    if (!nextChecked && !canUnsetLastTripIntent && selectedTripIntent.includes(intent)) return
+
+    updateDraft({
+      tripIntent: nextTripIntent as SingleTypeListicleDraft['tripIntent'],
+    })
+  }
 
   return (
     <section className="stl-panel stl-setup-panel">
@@ -142,6 +158,33 @@ export function BuilderSetupPanel({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="stl-field">
+          <span>Trip Intent *</span>
+          <div className="stl-trip-intent-options">
+            {TRIP_INTENT_OPTIONS.map((intent) => {
+              const isChecked = selectedTripIntent.includes(intent)
+              const isDisabled = isSetupLocked || (isChecked && !canUnsetLastTripIntent)
+
+              return (
+                <label
+                  key={intent}
+                  className={`stl-trip-intent-option${isChecked ? ' is-selected' : ''}${isDisabled ? ' is-disabled' : ''}`}
+                >
+                  <input
+                    className="stl-trip-intent-input"
+                    type="checkbox"
+                    checked={isChecked}
+                    disabled={isDisabled}
+                    aria-label={`Trip intent ${intent}`}
+                    onChange={(event) => handleTripIntentChange(intent, event.target.checked)}
+                  />
+                  <span className="stl-trip-intent-label">{intent}</span>
+                </label>
+              )
+            })}
+          </div>
         </label>
       </div>
 

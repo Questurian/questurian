@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { StagedArticle } from '../../types'
+import { isStagedArticleEditingLocked } from '../../utils/staged-article-sync'
 
 type EditorialStageLayoutProps = {
   stagedArticle: StagedArticle
@@ -25,6 +26,10 @@ export function EditorialStageLayout({
   mainContent,
   sidebarContent,
 }: EditorialStageLayoutProps) {
+  const isEditingLocked = isStagedArticleEditingLocked(stagedArticle)
+  const isPublished = stagedArticle.payloadStatus === 'published'
+  const isLinkedDraft = Boolean(stagedArticle.payloadArticleId) && !isPublished
+
   return (
     <div className="stage-article-page">
       <header className="stage-article-header">
@@ -37,12 +42,12 @@ export function EditorialStageLayout({
           </Link>
           <div className="stage-article-header-meta">
             <p className="stage-article-eyebrow">
-              {stagedArticle.publishedToPayload ? 'Published to Payload' : 'Staging for Payload'}
+              {isPublished ? 'Published to Payload' : isLinkedDraft ? 'Draft synced to Payload' : 'Staging for Payload'}
             </p>
             {stagedArticle.originalType && (
               <span className="stage-article-type-badge">{stagedArticle.originalType}</span>
             )}
-            {!stagedArticle.publishedToPayload && hasMissingFeaturedImage && (
+            {!isPublished && hasMissingFeaturedImage && (
               <span className="stage-article-badge missing">
                 Missing featured image
               </span>
@@ -53,14 +58,16 @@ export function EditorialStageLayout({
                 Converting...
               </span>
             )}
-            {stagedArticle.publishedToPayload && (
-              <span className="stage-article-badge published">Published #{stagedArticle.payloadArticleId}</span>
+            {stagedArticle.payloadArticleId && (
+              <span className="stage-article-badge published">
+                {isPublished ? 'Published' : 'Draft'} #{stagedArticle.payloadArticleId}
+              </span>
             )}
           </div>
         </div>
 
         <div className="stage-article-actions-bar">
-          {!stagedArticle.publishedToPayload && (
+          {!isEditingLocked && (
             <button
               type="button"
               className="stage-article-icon-btn"
@@ -89,7 +96,7 @@ export function EditorialStageLayout({
       </header>
 
       <div className="stage-article-title-area">
-        {!stagedArticle.publishedToPayload ? (
+        {!isEditingLocked ? (
           <input
             type="text"
             className="stage-article-title-input"

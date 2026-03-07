@@ -12,6 +12,7 @@ import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
+import { normalizeTripIntent } from '../../../trip-intent'
 
 type UseItinerarySubmitParams = {
   token?: string
@@ -155,6 +156,7 @@ export function useItinerarySubmit({
         itineraryEndPeriod: submitDraft.itineraryEndPeriod,
         step1_complete: true,
         in_update_mode: false,
+        tripIntent: normalizeTripIntent(draft.tripIntent),
         step2_complete: submitDraft.step2_complete,
         step2_in_update_mode: false,
         step3_complete: submitDraft.step3_complete,

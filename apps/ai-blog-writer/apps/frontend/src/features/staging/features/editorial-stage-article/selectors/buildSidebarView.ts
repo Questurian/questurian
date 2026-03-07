@@ -16,7 +16,7 @@ type BuildSidebarViewInput = {
   setShowImageModal: Dispatch<SetStateAction<boolean>>
   locations: Location[]
   updateStagedArticle: (updates: Partial<StagedArticle>) => void
-  onPublish: () => void
+  onPublish: (targetStatus: 'draft' | 'published') => void
 }
 
 export function buildSidebarView(input: BuildSidebarViewInput): SidebarViewProps {

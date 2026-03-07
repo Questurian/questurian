@@ -1,3 +1,4 @@
+import type { TripIntent } from '../trip-intent'
 import type { SeoSection } from '../shared/seo/types'
 
 export type ContentBlock = {
@@ -50,11 +51,17 @@ export type StagedArticle = {
   step3_complete?: boolean
   step3_in_update_mode?: boolean
   seoSection?: SeoSection
+  tripIntent?: TripIntent[]
   syncBehavior?: 'finalize' | 'draft-sync'
   lexicalConverted: boolean
   lexicalData?: object
   publishedToPayload: boolean
   payloadArticleId?: number
+  payloadStatus?: 'draft' | 'published'
+  payloadSlug?: string
+  payloadPublishedAt?: string
+  payloadUpdatedAt?: string
+  payloadAuthorName?: string
   createdAt: string
   updatedAt: string
 }

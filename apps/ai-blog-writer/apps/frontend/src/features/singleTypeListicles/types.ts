@@ -1,5 +1,6 @@
 import type { EditorAssistModelName } from '../staging/api'
 import type { SeoSection, SeoTwitterCardType } from '../shared/seo/types'
+import type { TripIntent } from '../trip-intent'
 
 export type ListicleType = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
 
@@ -37,6 +38,7 @@ export type SingleTypeListicleDraft = {
   listicleType: ListicleType | ''
   /** 0 means "unset"; valid configured range is 1..50 */
   targetItemCount: number
+  tripIntent?: TripIntent[]
   step1_complete: boolean
   in_update_mode: boolean
   step2_complete: boolean
@@ -63,6 +65,7 @@ export type PayloadListicleDoc = {
   locationRef?: number | { id?: number }
   listicleType?: ListicleType
   targetItemCount?: number
+  tripIntent?: TripIntent[]
   step1_complete?: boolean
   in_update_mode?: boolean
   step2_complete?: boolean

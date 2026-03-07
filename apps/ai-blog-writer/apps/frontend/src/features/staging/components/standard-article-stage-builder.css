@@ -41,6 +41,76 @@
   font-size: 0.9rem;
 }
 
+.sab-stage-trip-intent-options {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.stl-trip-intent-options {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.stl-trip-intent-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid #d5dce8;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--stl-ink);
+  font-size: 0.92rem;
+  font-weight: 500;
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 46px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.stl-trip-intent-option:hover:not(.is-disabled) {
+  border-color: #b7c3d9;
+  background: #f8faff;
+}
+
+.stl-trip-intent-option.is-selected {
+  border-color: #7d93bb;
+  background: #eef4ff;
+  color: #263a5f;
+}
+
+.stl-trip-intent-option input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2f4f8f;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.stl-trip-intent-label {
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+
+.stl-trip-intent-option.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stl-trip-intent-option:focus-within {
+  border-color: #7d93bb;
+  box-shadow: 0 0 0 3px rgba(47, 79, 143, 0.12);
+}
+
+@media (max-width: 760px) {
+  .sab-stage-trip-intent-options,
+  .stl-trip-intent-options {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sab-stage-field-grid {
   display: grid;
   gap: 0.9rem;

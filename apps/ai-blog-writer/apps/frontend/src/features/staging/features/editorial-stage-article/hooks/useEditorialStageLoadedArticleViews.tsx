@@ -198,7 +198,7 @@ type UseEditorialStageLoadedArticleViewsParams = {
   isUploadingExternalImageVariants: boolean
   mergeMediaAssetsIntoState: (newAssets: MediaAsset[]) => void
   findPreferredVariantAsset: (assetId: number, preferredVariant: MediaVariant) => MediaAsset | null
-  handlePublish: () => void
+  handlePublish: (targetStatus: 'draft' | 'published') => void
 }
 
 type UseEditorialStageLoadedArticleViewsResult = {

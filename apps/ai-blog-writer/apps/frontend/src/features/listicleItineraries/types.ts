@@ -1,4 +1,5 @@
 import type { EditorAssistModelName } from '../staging/api'
+import type { TripIntent } from '../trip-intent'
 
 export type DayAudience = 'anyday' | 'weekday' | 'weekend'
 
@@ -74,6 +75,7 @@ export type ListicleItineraryDraft = {
   itineraryEndHour: number
   itineraryEndMinute: QuarterMinute
   itineraryEndPeriod: Meridiem
+  tripIntent?: TripIntent[]
   step1_complete: boolean
   in_update_mode: boolean
   step2_complete: boolean
@@ -105,6 +107,7 @@ export type PayloadItineraryDoc = {
   itineraryEndHour?: number
   itineraryEndMinute?: QuarterMinute
   itineraryEndPeriod?: Meridiem
+  tripIntent?: TripIntent[]
   step1_complete?: boolean
   in_update_mode?: boolean
   step2_complete?: boolean

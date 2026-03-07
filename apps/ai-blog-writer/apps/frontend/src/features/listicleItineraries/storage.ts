@@ -1,6 +1,7 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import { createEmptySeoSection } from './builder/services/seo-section.service'
 import type { ListicleItineraryDraft } from './types'
+import { DEFAULT_TRIP_INTENT, normalizeTripIntent } from '../trip-intent'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v3_inline_seo'
 
@@ -10,7 +11,10 @@ export function listDrafts(): ListicleItineraryDraft[] {
     if (!raw) return []
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed
+    return parsed.map((draft) => ({
+      ...draft,
+      tripIntent: normalizeTripIntent((draft as { tripIntent?: unknown }).tripIntent),
+    }))
   } catch {
     return []
   }
@@ -63,6 +67,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     itineraryEndHour: 6,
     itineraryEndMinute: '00',
     itineraryEndPeriod: 'PM',
+    tripIntent: [...DEFAULT_TRIP_INTENT],
     step1_complete: false,
     in_update_mode: false,
     step2_complete: false,

@@ -12,8 +12,12 @@ type StageListPageProps = {
 }
 
 function renderStatusBadge(article: StagedArticle, showEditorialBlocking: boolean) {
-  if (article.publishedToPayload) {
+  if (article.payloadStatus === 'published') {
     return <span className="stage-list-badge published">✓ Published</span>
+  }
+
+  if (article.payloadArticleId || article.publishedToPayload) {
+    return <span className="stage-list-badge ready">Linked Draft</span>
   }
 
   if (showEditorialBlocking && article.editorialBlocks?.length) {
@@ -98,7 +102,7 @@ export default function StageListPage({
         </div>
         <div className="stage-stat-item">
           <span className="stage-stat-value">
-            {stagedArticles.filter((article) => article.publishedToPayload).length}
+            {stagedArticles.filter((article) => article.payloadStatus === 'published').length}
           </span>
           <span className="stage-stat-label">Published</span>
         </div>
@@ -124,7 +128,7 @@ export default function StageListPage({
               <Link
                 key={article.id}
                 to={`${stageArticlePath}?stagedId=${article.id}`}
-                className={`stage-list-item ${article.publishedToPayload ? 'published' : ''}`}
+                className={`stage-list-item ${article.payloadStatus === 'published' ? 'published' : ''}`}
               >
                 <div className="stage-list-content">
                   <div className="stage-list-header">
@@ -140,7 +144,7 @@ export default function StageListPage({
                     <span>Updated {new Date(article.updatedAt).toLocaleDateString()}</span>
                   </div>
 
-                  {missing.length > 0 && !article.publishedToPayload && (
+                  {missing.length > 0 && article.payloadStatus !== 'published' && !article.payloadArticleId && (
                     <div className="stage-list-missing">
                       Missing: {missing.join(', ')}
                     </div>

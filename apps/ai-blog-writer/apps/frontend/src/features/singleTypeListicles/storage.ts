@@ -1,6 +1,7 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { SingleTypeListicleDraft } from './types'
+import { DEFAULT_TRIP_INTENT, normalizeTripIntent } from '../trip-intent'
 
 const STORAGE_KEY = 'single_type_listicles_staged_v3_inline_seo'
 const LEGACY_STORAGE_KEYS = ['single_type_listicles_staged_v2_media', 'single_type_listicles_staged'] as const
@@ -44,6 +45,7 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
         ? value.listicleType
         : '',
     targetItemCount: typeof value.targetItemCount === 'number' ? value.targetItemCount : 0,
+    tripIntent: normalizeTripIntent(value.tripIntent),
     step1_complete: Boolean(value.step1_complete),
     in_update_mode: Boolean(value.in_update_mode),
     step2_complete: Boolean(value.step2_complete),
@@ -133,6 +135,7 @@ export function createEmptyDraft(): SingleTypeListicleDraft {
     locationRef: null,
     listicleType: '',
     targetItemCount: 0,
+    tripIntent: [...DEFAULT_TRIP_INTENT],
     step1_complete: false,
     in_update_mode: false,
     step2_complete: false,

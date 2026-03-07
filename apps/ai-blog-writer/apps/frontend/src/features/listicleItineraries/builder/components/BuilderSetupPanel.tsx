@@ -1,7 +1,8 @@
 import { DAY_AUDIENCE_OPTIONS, PERIOD_OPTIONS, QUARTER_MINUTE_OPTIONS } from '../constants/builder-options.constants'
-import type { DayAudience, ListicleItineraryDraft, Meridiem, QuarterMinute } from '../../types'
+import type { DayAudience, ListicleItineraryDraft, Meridiem, QuarterMinute, TripIntent } from '../../types'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
+import { TRIP_INTENT_OPTIONS } from '../../../trip-intent'
 
 type BuilderSetupPanelProps = {
   draft: ListicleItineraryDraft
@@ -32,6 +33,22 @@ export function BuilderSetupPanel({
   onTitleAiGenerate,
 }: BuilderSetupPanelProps) {
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
+  const isSetupLocked = draft.step1_complete && !draft.in_update_mode
+  const selectedTripIntent = draft.tripIntent || []
+  const canUnsetLastTripIntent = selectedTripIntent.length > 1
+
+  const handleTripIntentChange = (intent: TripIntent, nextChecked: boolean) => {
+    const nextTripIntent = nextChecked
+      ? [...new Set([...selectedTripIntent, intent])]
+      : selectedTripIntent.filter((value) => value !== intent)
+
+    if (nextTripIntent.length === 0) return
+    if (!nextChecked && !canUnsetLastTripIntent && selectedTripIntent.includes(intent)) return
+
+    updateDraft({
+      tripIntent: nextTripIntent,
+    })
+  }
 
   return (
     <section className="stl-panel">
@@ -40,10 +57,10 @@ export function BuilderSetupPanel({
           <span className="stl-kicker">Step 1</span> Setup
         </h2>
         <div className="stl-inline-actions">
-          {!draft.step1_complete ? (
-            <button type="button" className="stl-btn" onClick={onContinue}>
-              Continue
-            </button>
+            {!draft.step1_complete ? (
+              <button type="button" className="stl-btn" onClick={onContinue}>
+                Continue
+              </button>
           ) : null}
           {draft.step1_complete && !draft.in_update_mode ? (
             <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateSetup}>
@@ -106,7 +123,7 @@ export function BuilderSetupPanel({
           <span>Day Type *</span>
           <select
             value={draft.dayAudience}
-            disabled={draft.step1_complete && !draft.in_update_mode}
+            disabled={isSetupLocked}
             onChange={(event) => updateDraft({ dayAudience: event.target.value as DayAudience | '' })}
           >
             <option value="">Select day type</option>
@@ -116,6 +133,33 @@ export function BuilderSetupPanel({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="stl-field">
+          <span>Trip Intent *</span>
+          <div className="stl-trip-intent-options">
+            {TRIP_INTENT_OPTIONS.map((intent) => {
+              const isChecked = selectedTripIntent.includes(intent)
+              const isDisabled = isSetupLocked || (isChecked && !canUnsetLastTripIntent)
+
+              return (
+                <label
+                  key={intent}
+                  className={`stl-trip-intent-option${isChecked ? ' is-selected' : ''}${isDisabled ? ' is-disabled' : ''}`}
+                >
+                  <input
+                    className="stl-trip-intent-input"
+                    type="checkbox"
+                    checked={isChecked}
+                    disabled={isDisabled}
+                    aria-label={`Trip intent ${intent}`}
+                    onChange={(event) => handleTripIntentChange(intent, event.target.checked)}
+                  />
+                  <span className="stl-trip-intent-label">{intent}</span>
+                </label>
+              )
+            })}
+          </div>
         </label>
       </div>
 

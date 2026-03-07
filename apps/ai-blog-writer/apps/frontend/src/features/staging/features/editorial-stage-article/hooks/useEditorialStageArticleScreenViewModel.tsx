@@ -13,6 +13,7 @@ import {
   createInitialEditorialStageUiState,
   editorialStageUiReducer,
 } from '../state/editorialStageUiMachine'
+import { DEFAULT_TRIP_INTENT } from '../../../../trip-intent'
 import type {
   ExternalImageCropContext,
   EditorialStageArticlePageProps,
@@ -43,10 +44,16 @@ const EMPTY_STAGED_ARTICLE: StagedArticle = {
   content: '',
   blocks: [],
   editorialBlocks: [],
+  tripIntent: [...DEFAULT_TRIP_INTENT],
   seoSection: createEmptySeoSection(),
   syncBehavior: 'finalize',
   lexicalConverted: false,
   publishedToPayload: false,
+  payloadStatus: undefined,
+  payloadSlug: undefined,
+  payloadPublishedAt: undefined,
+  payloadUpdatedAt: undefined,
+  payloadAuthorName: undefined,
   createdAt: '',
   updatedAt: '',
 }
@@ -75,6 +82,7 @@ export function useEditorialStageArticleScreenViewModel({
     fetchMediaAssets,
     createArticle,
     updateArticle,
+    getArticleById,
     convertMarkdownToLexical,
     fetchResult,
     markArticleSynced,
@@ -108,6 +116,7 @@ export function useEditorialStageArticleScreenViewModel({
       fetchLocations,
       fetchMediaAssets,
       getArticleSyncStatus,
+      getArticleById,
     },
   })
 

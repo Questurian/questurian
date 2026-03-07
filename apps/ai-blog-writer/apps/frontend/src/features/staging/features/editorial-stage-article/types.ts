@@ -1,4 +1,5 @@
 import type { UploadImageResponse } from '../../../images'
+import type { PayloadArticleDoc } from '../../../api/articles/articles.types'
 import type {
   CreateArticlePayload,
   ExternalImageProvider,
@@ -44,7 +45,7 @@ export type EditorialStageArticleApi = {
   createArticle: (
     payload: CreateArticlePayload,
     token: string
-  ) => Promise<{ id: number; title: string; slug: string }>
+  ) => Promise<PayloadArticleDoc>
   convertMarkdownToLexical: (markdown: string) => Promise<{
     success: boolean
     data?: object
@@ -59,7 +60,11 @@ export type EditorialStageArticleApi = {
     id: number,
     payload: CreateArticlePayload,
     token: string
-  ) => Promise<{ id: number; title: string; slug: string }>
+  ) => Promise<PayloadArticleDoc>
+  getArticleById?: (
+    id: number,
+    token: string
+  ) => Promise<PayloadArticleDoc>
   getArticleSyncStatus?: (runId: string) => Promise<{
     synced_to_payload: boolean
     payload_article_id: number | null

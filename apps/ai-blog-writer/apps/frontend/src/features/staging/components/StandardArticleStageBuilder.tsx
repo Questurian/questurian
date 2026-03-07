@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import payloadLogoUrl from '../../../assets/payload-logo.svg?url'
 import { useAuth } from '../../../providers/useAuth'
+import type { TripIntent } from '../../trip-intent'
+import { TRIP_INTENT_OPTIONS } from '../../trip-intent'
 import {
   generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured,
   uploadSocialImage as requestUploadSocialImage,
 } from '../../images'
 import { SeoEditorPanel } from '../../shared/seo/components/SeoEditorPanel'
+import { getSchemaPublisherConfig } from '../../shared/seo/services/schema-publisher-config.service'
 import {
   applySeoAiPatch,
   buildSeoAiSeed,
@@ -21,7 +23,9 @@ import { EDITOR_MODEL_OPTIONS, resolveEditorModelName } from '../features/editor
 import { getLocationDisplayName } from '../features/editorial-stage-article/utils/editorial-stage-view.utils'
 import {
   buildStandardArticleContext,
+  buildLegacyStandardArticleStructuredDataTemplate,
   buildStandardArticleSeoAiPrompt,
+  shouldAutoManageStandardArticleStructuredData,
   buildStandardArticleStructuredDataTemplate,
   isSeoCoreComplete,
   serializeStandardArticleStructuredDataTemplate,
@@ -43,10 +47,11 @@ type StandardArticleStageBuilderProps = {
   syncBehavior?: 'finalize' | 'draft-sync'
 }
 
-function validateSetupStep(title: string, locationId?: number): string[] {
+function validateSetupStep(title: string, locationId?: number, tripIntent?: TripIntent[]): string[] {
   const issues: string[] = []
   if (!title.trim()) issues.push('Step 1 requires an article title.')
   if (!locationId) issues.push('Step 1 requires a location.')
+  if (!tripIntent || tripIntent.length === 0) issues.push('Step 1 requires at least one trip intent.')
   return issues
 }
 
@@ -68,6 +73,8 @@ function validateContentStep(input: {
   return issues
 }
 
+const schemaPublisherConfig = getSchemaPublisherConfig()
+
 export function StandardArticleStageBuilder({
   storageKey,
   routes,
@@ -77,7 +84,7 @@ export function StandardArticleStageBuilder({
   heroDescription,
   syncBehavior = 'draft-sync',
 }: StandardArticleStageBuilderProps) {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [localError, setLocalError] = useState<string | null>(null)
   const [localResult, setLocalResult] = useState<string | null>(null)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
@@ -110,8 +117,8 @@ export function StandardArticleStageBuilder({
   )
 
   const step1Issues = useMemo(
-    () => validateSetupStep(stagedArticle?.title || '', stagedArticle?.locationId),
-    [stagedArticle?.title, stagedArticle?.locationId],
+    () => validateSetupStep(stagedArticle?.title || '', stagedArticle?.locationId, stagedArticle?.tripIntent),
+    [stagedArticle?.title, stagedArticle?.locationId, stagedArticle?.tripIntent],
   )
   const step2Issues = useMemo(
     () => validateFeaturedImageStep(stagedArticle?.featuredImageId),
@@ -125,8 +132,11 @@ export function StandardArticleStageBuilder({
     [bodyMarkdown, sidebarProps?.editorialBlockingMessages],
   )
   const seoIssues = useMemo(
-    () => validateStandardArticleSeoSection(seoSection),
-    [seoSection],
+    () => validateStandardArticleSeoSection({
+      seoSection,
+      locationLabel: selectedLocationLabel || undefined,
+    }),
+    [seoSection, selectedLocationLabel],
   )
   const featuredImageId = stagedArticle?.featuredImageId
   const featuredImagePreviewUrl = sidebarProps?.selectedFeaturedImage
@@ -135,8 +145,11 @@ export function StandardArticleStageBuilder({
   const featuredImageTriggerLabel = featuredImageId
     ? sidebarProps?.selectedFeaturedImage?.filename || `Image #${featuredImageId} selected`
     : 'Select Featured Image...'
+  const selectedTripIntent = stagedArticle?.tripIntent || []
   const headerPreviewTitle = stagedArticle?.title.trim() || 'Your article headline will appear here'
   const isFeaturedImagePlaceholder = !featuredImageId
+  const canManagePublished = user?.role === 'admin' || user?.role === 'editor'
+  const isPublished = stagedArticle?.payloadStatus === 'published'
 
   const isStep1Locked = Boolean(stagedArticle?.step1_complete && !stagedArticle?.in_update_mode)
   const isStep2Locked = Boolean(stagedArticle?.step2_complete && !stagedArticle?.step2_in_update_mode)
@@ -181,17 +194,27 @@ export function StandardArticleStageBuilder({
           seoSection,
         },
         locationLabel: selectedLocationLabel || undefined,
+        publisherConfig: schemaPublisherConfig,
+      }),
+    )
+    const legacyStructuredData = serializeStandardArticleStructuredDataTemplate(
+      buildLegacyStandardArticleStructuredDataTemplate({
+        stagedArticle: {
+          ...stagedArticle,
+          seoSection,
+        },
+        locationLabel: selectedLocationLabel || undefined,
       }),
     )
 
     const existingStructuredData = seoSection.structuredData.trim()
     const lastAutoStructuredData = lastAutoStructuredDataRef.current.trim()
-    const hasAutoGeneratedBefore = Boolean(lastAutoStructuredData)
-    const isAutoManaged = (
-      (!existingStructuredData && !hasAutoGeneratedBefore)
-      || existingStructuredData === lastAutoStructuredData
-      || existingStructuredData === nextStructuredData
-    )
+    const isAutoManaged = shouldAutoManageStandardArticleStructuredData({
+      existingStructuredData,
+      lastAutoStructuredData,
+      nextStructuredData,
+      legacyStructuredData,
+    })
 
     if (!isAutoManaged) return
     if (existingStructuredData === nextStructuredData) {
@@ -259,6 +282,23 @@ export function StandardArticleStageBuilder({
       step3_in_update_mode: false,
     })
   }, [sidebarProps, step3Issues])
+
+  const handleTripIntentToggle = useCallback((intent: TripIntent, checked: boolean) => {
+    if (!stagedArticle || !sidebarProps) return
+    if (!checked && stagedArticle.tripIntent?.length === 1 && stagedArticle.tripIntent[0] === intent) return
+
+    const nextTripIntent = checked
+      ? stagedArticle.tripIntent?.includes(intent)
+        ? stagedArticle.tripIntent
+        : [...(stagedArticle.tripIntent || []), intent]
+      : (stagedArticle.tripIntent || []).filter((value) => value !== intent)
+
+    if (nextTripIntent.length === 0) return
+
+    sidebarProps.onUpdateStagedArticle({
+      tripIntent: nextTripIntent,
+    })
+  }, [stagedArticle, sidebarProps])
 
   const handleGenerateSeoWithAi = useCallback(async (target: SeoAiTarget = 'all') => {
     if (!stagedArticle) return
@@ -382,7 +422,7 @@ export function StandardArticleStageBuilder({
     }
   }, [featureLabel, stagedArticle?.locationId, stagedArticle?.title, token, updateSeoSection])
 
-  const handleSync = useCallback(() => {
+  const handlePayloadSubmit = useCallback((targetStatus: 'draft' | 'published') => {
     if (!sidebarProps) return
     if (syncIssues.length > 0) {
       setLocalError(syncIssues[0])
@@ -390,7 +430,7 @@ export function StandardArticleStageBuilder({
     }
     setLocalError(null)
     setLocalResult(null)
-    sidebarProps.onPublish()
+    sidebarProps.onPublish(targetStatus)
   }, [sidebarProps, syncIssues])
 
   if (status.isLoading || !stagedArticle || !layout || !timelineListProps || !sidebarProps || !featuredModalProps || !blockModalProps) {
@@ -495,11 +535,38 @@ export function StandardArticleStageBuilder({
                     ))}
                   </select>
                 </label>
+
+                <label className="stl-field">
+                  <span>Trip Intent *</span>
+                  <div className="sab-stage-trip-intent-options stl-trip-intent-options">
+                    {TRIP_INTENT_OPTIONS.map((intent) => {
+                      const isChecked = selectedTripIntent.includes(intent)
+                      const isDisabled = isStep1Locked || (isChecked && selectedTripIntent.length === 1)
+
+                      return (
+                        <label
+                          key={intent}
+                          className={`stl-trip-intent-option${isChecked ? ' is-selected' : ''}${isDisabled ? ' is-disabled' : ''}`}
+                        >
+                          <input
+                            className="stl-trip-intent-input"
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            aria-label={`Trip intent ${intent}`}
+                            onChange={(event) => handleTripIntentToggle(intent, event.target.checked)}
+                          />
+                          <span className="stl-trip-intent-label">{intent}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </label>
               </div>
 
               {isStep1Locked ? (
                 <p className="sab-stage-summary">
-                  Locked with title, location, and AI model. Updating setup will unlock later steps.
+                  Locked with title, location, trip intent, and AI model. Updating setup will unlock later steps.
                 </p>
               ) : null}
             </section>
@@ -649,22 +716,46 @@ export function StandardArticleStageBuilder({
             <section className="stl-summary-card stl-summary-card--quick-actions">
               <h3>Sync</h3>
               <div className="stl-summary-actions">
-                <button
-                  type="button"
-                  className="stl-btn stl-btn-success payload-action-btn"
-                  onClick={handleSync}
-                  disabled={sidebarProps.isPublishing || syncIssues.length > 0}
-                >
-                  <img src={payloadLogoUrl} alt="" aria-hidden="true" className="payload-action-btn-icon" />
-                  {sidebarProps.isPublishing ? 'Syncing...' : 'Sync to Payload'}
-                </button>
+                {!isPublished ? (
+                  <button
+                    type="button"
+                    className="stl-btn stl-btn-success"
+                    onClick={() => handlePayloadSubmit('draft')}
+                    disabled={sidebarProps.isPublishing || syncIssues.length > 0}
+                  >
+                    {sidebarProps.isPublishing ? 'Saving...' : 'Save Draft to Payload'}
+                  </button>
+                ) : null}
+
+                {canManagePublished ? (
+                  <button
+                    type="button"
+                    className="stl-btn"
+                    onClick={() => handlePayloadSubmit('published')}
+                    disabled={sidebarProps.isPublishing || syncIssues.length > 0}
+                  >
+                    {sidebarProps.isPublishing
+                      ? 'Publishing...'
+                      : isPublished
+                        ? 'Update Published'
+                        : 'Publish'}
+                  </button>
+                ) : null}
               </div>
 
               {stagedArticle.payloadArticleId ? (
-                <p className="stl-summary-note">Linked Payload article: #{stagedArticle.payloadArticleId}</p>
+                <p className="stl-summary-note">
+                  {isPublished
+                    ? `Published Payload article: #${stagedArticle.payloadArticleId}`
+                    : `Linked Payload draft: #${stagedArticle.payloadArticleId}`}
+                </p>
               ) : (
                 <p className="stl-summary-note">First sync will create a draft article in Payload.</p>
               )}
+
+              {!canManagePublished && !isPublished ? (
+                <p className="stl-summary-note">Writers can only save drafts to Payload.</p>
+              ) : null}
 
               {sidebarProps.publishResult ? (
                 <div className={`sab-stage-sync-result ${sidebarProps.publishResult.success ? 'success' : 'error'}`}>

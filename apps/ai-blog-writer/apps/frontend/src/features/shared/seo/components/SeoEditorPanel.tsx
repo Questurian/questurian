@@ -246,6 +246,7 @@ export function SeoEditorPanel({
               <div className="stl-seo-input-wrap">
                 <input
                   className="stl-seo-input-with-ai"
+                  placeholder="fix-this-url-after-frontend-urls-are-set"
                   value={seoSection.openGraph.url}
                   onChange={(event) =>
                     updateSeo((current) => ({
@@ -259,6 +260,9 @@ export function SeoEditorPanel({
                 />
                 <span className="stl-seo-ai-trigger-wrap">{renderAiButton('openGraphUrl')}</span>
               </div>
+              <p className="stl-legacy-note">
+                Placeholder only. Leave this blank until the real frontend article URL exists.
+              </p>
             </label>
           </section>
 

@@ -1,6 +1,7 @@
 import type { StagedArticle } from '../../../types'
 import { resolveEditorModelName } from '../constants'
 import { createEmptySeoSection, normalizeSeoSection } from '../../../../shared/seo/services/seo-section.service'
+import { normalizeTripIntent } from '../../../../trip-intent'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -44,6 +45,7 @@ export function normalizeStagedArticle(value: unknown): StagedArticle | null {
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined
     ),
     featuredImageId,
+    tripIntent: normalizeTripIntent(value.tripIntent),
     step1_complete: typeof value.step1_complete === 'boolean' ? value.step1_complete : derivedStep1Complete,
     in_update_mode: typeof value.in_update_mode === 'boolean' ? value.in_update_mode : false,
     step2_complete: typeof value.step2_complete === 'boolean' ? value.step2_complete : derivedStep2Complete,
@@ -57,6 +59,17 @@ export function normalizeStagedArticle(value: unknown): StagedArticle | null {
     publishedToPayload: Boolean(value.publishedToPayload),
     payloadArticleId: typeof value.payloadArticleId === 'number' && Number.isFinite(value.payloadArticleId)
       ? value.payloadArticleId
+      : undefined,
+    payloadStatus: value.payloadStatus === 'published' ? 'published' : value.payloadStatus === 'draft' ? 'draft' : undefined,
+    payloadSlug: typeof value.payloadSlug === 'string' && value.payloadSlug.trim() ? value.payloadSlug : undefined,
+    payloadPublishedAt: typeof value.payloadPublishedAt === 'string' && value.payloadPublishedAt.trim()
+      ? value.payloadPublishedAt
+      : undefined,
+    payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim()
+      ? value.payloadUpdatedAt
+      : undefined,
+    payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim()
+      ? value.payloadAuthorName
       : undefined,
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : nowIso,
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : nowIso,
