@@ -379,6 +379,22 @@ export type MediaSetOption = {
   alt_text?: string | null
   location?: string | null
   status?: string | null
+  variants?: {
+    thumbnail?: number | MediaSetVariantAsset | null
+    square?: number | MediaSetVariantAsset | null
+    wide?: number | MediaSetVariantAsset | null
+    portrait?: number | MediaSetVariantAsset | null
+    hero?: number | MediaSetVariantAsset | null
+    open_graph?: number | MediaSetVariantAsset | null
+    editorial?: number | MediaSetVariantAsset | null
+  } | null
+}
+
+export type MediaSetVariantAsset = {
+  id: number
+  filename?: string | null
+  url?: string | null
+  alt_text?: string | null
 }
 
 type FieldBase = {
@@ -403,6 +419,7 @@ export type RelationshipFieldDefinition = FieldBase & {
   optionSource: 'locations' | 'neighborhoods' | 'mediaSets'
   hintKey?: string
   hintLabel?: string
+  picker?: 'mediaSetLibrary'
 }
 
 export type GroupFieldDefinition = FieldBase & {

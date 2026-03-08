@@ -4,6 +4,7 @@ import type {
   LocationLevel,
   LocationOption,
   MediaSetOption,
+  MediaSetVariantAsset,
   ScalarFieldDefinition,
 } from './types'
 
@@ -142,6 +143,34 @@ export function formatLocationLabel(location: Pick<LocationOption, 'level' | 'co
 export function formatMediaSetLabel(option: Pick<MediaSetOption, 'title' | 'location' | 'alt_text'>): string {
   const parts = [option.title, option.location, option.alt_text].filter((value): value is string => Boolean(value?.trim()))
   return parts.join(' · ') || 'Untitled media set'
+}
+
+const PREFERRED_MEDIA_SET_VARIANTS = ['thumbnail', 'square', 'editorial', 'wide', 'portrait', 'hero', 'open_graph'] as const
+const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
+
+export function resolveMediaSetPreviewAsset(
+  option: Pick<MediaSetOption, 'variants'> | null | undefined,
+): MediaSetVariantAsset | null {
+  if (!option?.variants) return null
+
+  for (const key of PREFERRED_MEDIA_SET_VARIANTS) {
+    const variant = option.variants[key]
+    if (variant && typeof variant === 'object') {
+      return variant as MediaSetVariantAsset
+    }
+  }
+
+  return null
+}
+
+export function resolveMediaSetPreviewUrl(
+  option: Pick<MediaSetOption, 'variants'> | null | undefined,
+): string | undefined {
+  const previewAsset = resolveMediaSetPreviewAsset(option)
+  if (!previewAsset) return undefined
+  if (previewAsset.url) return previewAsset.url
+  if (previewAsset.filename) return `${PAYLOAD_API_URL}/api/media-assets/file/${previewAsset.filename}`
+  return undefined
 }
 
 function buildScalarDefault(field: ScalarFieldDefinition): string | number | null {

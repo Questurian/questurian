@@ -207,6 +207,26 @@ export async function fetchMediaSetOptions(token: string): Promise<MediaSetOptio
   return docs
 }
 
+export async function fetchMediaSetLibrary(
+  token: string,
+  params: {
+    limit?: number
+    id?: number
+  } = {},
+): Promise<MediaSetOption[]> {
+  const query = new URLSearchParams()
+  query.set('depth', '2')
+  query.set('limit', String(params.id ? 1 : (params.limit ?? 200)))
+  query.set('sort', '-updatedAt')
+
+  if (params.id) {
+    query.set('where[id][equals]', String(params.id))
+  }
+
+  const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(`/api/media-sets?${query.toString()}`, token)
+  return response.docs || []
+}
+
 async function aiRequest<TResponse>(endpoint: string, body: Record<string, unknown>, fallback: string): Promise<TResponse> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',

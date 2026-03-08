@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildPayloadLocationBody, createEmptyLocationDraft, getVisibleLocationSections } from './schema'
+import {
+  buildPayloadLocationBody,
+  createEmptyLocationDraft,
+  getVisibleLocationSections,
+  resolveLocationDraftRef,
+} from './schema'
 import type { LocationOption, MediaSetOption } from './types'
 
 describe('locationDocuments schema helpers', () => {
@@ -60,5 +65,31 @@ describe('locationDocuments schema helpers', () => {
     expect(payload.guide?.media?.coverImage).toBe(91)
     expect(payload.guide?.localShared?.headline).toBe('Living in Lima Overview')
     expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([44])
+  })
+
+  it('resolves the current payload location ref from payload id or a matching location key', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'city'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+
+    const locationOptions: LocationOption[] = [
+      {
+        id: 44,
+        level: 'city',
+        country: 'peru',
+        city: 'lima',
+        neighborhood: null,
+        countryName: 'Peru',
+        cityName: 'Lima',
+        neighborhoodName: null,
+        locationKey: 'peru|lima',
+      },
+    ]
+
+    expect(resolveLocationDraftRef(draft, locationOptions)).toBe(44)
+
+    draft.payloadId = 91
+    expect(resolveLocationDraftRef(draft, locationOptions)).toBe(91)
   })
 })

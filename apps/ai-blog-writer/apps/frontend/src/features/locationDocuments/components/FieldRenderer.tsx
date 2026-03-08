@@ -13,11 +13,14 @@ import {
   formatMediaSetLabel,
   getValueAtPath,
 } from '../utils'
+import { CoverImagePickerField } from './CoverImagePickerField'
 
 type FieldRendererProps = {
   fields: LocationFieldDefinition[]
   basePath: string[]
   draft: LocationDocumentDraft
+  token: string | null
+  locationRef: number | null
   locations: LocationOption[]
   mediaSets: MediaSetOption[]
   onChange: (path: string[], value: unknown) => void
@@ -291,6 +294,8 @@ export function FieldRenderer({
   fields,
   basePath,
   draft,
+  token,
+  locationRef,
   locations,
   mediaSets,
   onChange,
@@ -316,6 +321,8 @@ export function FieldRenderer({
                 fields={field.fields}
                 basePath={path}
                 draft={draft}
+                token={token}
+                locationRef={locationRef}
                 locations={locations}
                 mediaSets={mediaSets}
                 onChange={onChange}
@@ -365,6 +372,8 @@ export function FieldRenderer({
                         fields={field.fields}
                         basePath={[...path, String(index)]}
                         draft={draft}
+                        token={token}
+                        locationRef={locationRef}
                         locations={locations}
                         mediaSets={mediaSets}
                         onChange={onChange}
@@ -382,6 +391,7 @@ export function FieldRenderer({
         if (field.type === 'relationship') {
           const hintPath = field.hintKey ? [...basePath, field.hintKey] : null
           const hintValue = hintPath ? getValueAtPath(draft, hintPath) : undefined
+          const isCoverImagePicker = field.picker === 'mediaSetLibrary' && !field.hasMany
 
           return (
             <div key={path.join('.')} className={`ldb-field ${fieldWidthClass(field)}`}>
@@ -390,7 +400,16 @@ export function FieldRenderer({
               </div>
               {field.description ? <p className="ldb-field-description">{field.description}</p> : null}
 
-              {field.hasMany ? (
+              {isCoverImagePicker ? (
+                <CoverImagePickerField
+                  field={field}
+                  value={typeof value === 'number' ? value : null}
+                  token={token}
+                  locationRef={locationRef}
+                  mediaSets={mediaSets}
+                  onValueChange={(nextValue) => onChange(path, nextValue)}
+                />
+              ) : field.hasMany ? (
                 <RelationshipManyFieldInput
                   field={field}
                   value={Array.isArray(value) ? (value as number[]) : []}

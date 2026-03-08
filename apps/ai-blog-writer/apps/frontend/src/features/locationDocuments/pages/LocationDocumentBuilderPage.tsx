@@ -20,6 +20,7 @@ import {
   createEmptyLocationDocumentDraft,
   getVisibleLocationSections,
   resolveDraftHints,
+  resolveLocationDraftRef,
   validateDraft,
 } from '../schema'
 import { findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../storage'
@@ -221,6 +222,10 @@ export default function LocationDocumentBuilderPage() {
   }, [draft])
 
   const activeSection = visibleSections.find((section) => section.id === activeSectionId) || visibleSections[0]
+  const currentLocationRef = useMemo(() => {
+    if (!draft) return null
+    return resolveLocationDraftRef(draft, locations)
+  }, [draft, locations])
   const modeLabel = draft?.payloadId ? 'Editing Payload' : draftIdParam ? 'Draft' : 'New'
 
   const updateDraftValue = useCallback((path: string[], value: unknown) => {
@@ -553,6 +558,8 @@ export default function LocationDocumentBuilderPage() {
             fields={activeSection.fields}
             basePath={activeSection.path}
             draft={draft}
+            token={token}
+            locationRef={currentLocationRef}
             locations={locations}
             mediaSets={mediaSets}
             onChange={updateDraftValue}

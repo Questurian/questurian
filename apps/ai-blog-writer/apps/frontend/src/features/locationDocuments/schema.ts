@@ -17,6 +17,7 @@ import type {
   PayloadRelationshipList,
   ScalarFieldDefinition,
   UsefulAppDraft,
+  WeatherMonth,
 } from './types'
 import { cloneValue, mergeDefinedValues, pruneEmptyValues } from './utils'
 
@@ -40,6 +41,12 @@ export const MONTH_OPTIONS = [
   { value: 'nov', label: 'November' },
   { value: 'dec', label: 'December' },
 ] as const
+
+function coerceWeatherMonth(value: string): WeatherMonth | '' {
+  return MONTH_OPTIONS.some((option) => option.value === value)
+    ? value as WeatherMonth
+    : ''
+}
 
 export const TAP_WATER_STATUS_OPTIONS = [
   { value: '', label: 'Unknown' },
@@ -222,7 +229,9 @@ const locationSections: LocationSectionDefinition[] = [
     path: ['guide', 'media'],
     aiPath: 'guide.media',
     fields: [
-      relationshipField('coverImage', 'Cover Image', 'media-sets', 'mediaSets'),
+      relationshipField('coverImage', 'Cover Image', 'media-sets', 'mediaSets', {
+        picker: 'mediaSetLibrary',
+      }),
       numberField('mapCenterLat', 'Map Center Latitude'),
       numberField('mapCenterLng', 'Map Center Longitude'),
       numberField('mapZoom', 'Map Zoom'),
@@ -794,6 +803,26 @@ export function buildParentKeyPreview(draft: Pick<LocationDocumentDraft, 'level'
   return city ? `${country}|${city}` : country
 }
 
+export function resolveLocationDraftRef(
+  draft: Pick<LocationDocumentDraft, 'payloadId' | 'level' | 'country' | 'city' | 'neighborhood'>,
+  locationOptions: LocationOption[],
+): number | null {
+  if (typeof draft.payloadId === 'number' && Number.isFinite(draft.payloadId)) {
+    return draft.payloadId
+  }
+
+  const locationKey = buildLocationKeyPreview(draft)
+  if (!locationKey) return null
+
+  const normalizedLocationKey = locationKey.trim().toLowerCase()
+  const match = locationOptions.find((location) => (
+    location.level === draft.level
+      && location.locationKey.trim().toLowerCase() === normalizedLocationKey
+  ))
+
+  return match?.id ?? null
+}
+
 function extractRelationshipId(value: PayloadRelationship): number | null {
   if (typeof value === 'number') return value
   if (value && typeof value === 'object' && typeof value.id === 'number') return value.id
@@ -944,7 +973,7 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
     weather: {
       summary: trimText(doc.guide?.localShared?.weather?.summary),
       monthlyStats: (doc.guide?.localShared?.weather?.monthlyStats || []).map((row) => ({
-        month: trimText(row.month),
+        month: coerceWeatherMonth(trimText(row.month)),
         avgHighC: valueOrNull(row.avgHighC),
         avgLowC: valueOrNull(row.avgLowC),
         rainfallMm: valueOrNull(row.rainfallMm),
@@ -1142,6 +1171,7 @@ function buildPayloadUsefulApp(app: UsefulAppDraft) {
     category: app.category,
     name: app.name,
     logo: app.logo,
+    logoHint: app.logoHint,
     description: app.description,
     url: app.url,
   }
