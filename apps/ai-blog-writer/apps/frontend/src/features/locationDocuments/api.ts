@@ -24,6 +24,8 @@ export type LocationIndexFilters = {
   locationKey?: string
 }
 
+const PAYLOAD_REQUEST_TIMEOUT_MS = 12000
+
 function toAiDraftPayload(draft: LocationDocumentDraft): Record<string, unknown> {
   const payloadDraft: Record<string, unknown> = { ...draft }
   delete payloadDraft.draftId
@@ -35,22 +37,36 @@ function toAiDraftPayload(draft: LocationDocumentDraft): Record<string, unknown>
 }
 
 async function payloadRequest<T>(endpoint: string, token: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers || {}),
-    },
-  })
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), PAYLOAD_REQUEST_TIMEOUT_MS)
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ message: 'Payload request failed' }))
-    throw new Error(err.message || err.errors?.[0]?.message || `Payload request failed: ${response.status}`)
+  try {
+    const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(init?.headers || {}),
+      },
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Payload request failed' }))
+      throw new Error(err.message || err.errors?.[0]?.message || `Payload request failed: ${response.status}`)
+    }
+
+    return response.json()
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Payload request timed out after ${Math.round(PAYLOAD_REQUEST_TIMEOUT_MS / 1000)}s`)
+    }
+
+    throw err
+  } finally {
+    window.clearTimeout(timeoutId)
   }
-
-  return response.json()
 }
 
 function appendSelectParams(params: URLSearchParams, fields: string[]) {

@@ -88,6 +88,7 @@ export default function LocationDocumentBuilderPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [optionsError, setOptionsError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [activeSectionId, setActiveSectionId] = useState<LocationSectionDefinition['id']>('hierarchy')
   const [aiTarget, setAiTarget] = useState<AiTarget | null>(null)
@@ -106,15 +107,11 @@ export default function LocationDocumentBuilderPage() {
     setIsLoading(true)
     setError(null)
 
-    Promise.all([fetchLocationOptions(token), fetchMediaSetOptions(token)])
-      .then(async ([locationOptions, mediaOptions]) => {
-        if (cancelled) return
-
-        setLocations(locationOptions)
-        setMediaSets(mediaOptions)
-
+    const loadDraft = async () => {
+      try {
         if (draftIdParam) {
           const localDraft = findDraftByDraftId(draftIdParam)
+          if (cancelled) return
           setDraft(localDraft || createEmptyLocationDocumentDraft())
           return
         }
@@ -122,6 +119,7 @@ export default function LocationDocumentBuilderPage() {
         if (Number.isFinite(payloadId)) {
           const localDraft = findDraftByPayloadId(payloadId)
           if (localDraft) {
+            if (cancelled) return
             setDraft(localDraft)
             return
           }
@@ -132,21 +130,64 @@ export default function LocationDocumentBuilderPage() {
           return
         }
 
+        if (cancelled) return
         setDraft(createEmptyLocationDocumentDraft())
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (cancelled) return
         setError(err instanceof Error ? err.message : 'Failed to load builder data')
-      })
-      .finally(() => {
-        if (cancelled) return
-        setIsLoading(false)
-      })
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadDraft()
 
     return () => {
       cancelled = true
     }
   }, [draftIdParam, payloadId, token])
+
+  useEffect(() => {
+    if (!token) return
+
+    let cancelled = false
+    setOptionsError(null)
+
+    Promise.allSettled([fetchLocationOptions(token), fetchMediaSetOptions(token)])
+      .then(([locationResult, mediaResult]) => {
+        if (cancelled) return
+
+        if (locationResult.status === 'fulfilled') {
+          setLocations(locationResult.value)
+        } else {
+          setLocations([])
+        }
+
+        if (mediaResult.status === 'fulfilled') {
+          setMediaSets(mediaResult.value)
+        } else {
+          setMediaSets([])
+        }
+
+        const messages: string[] = []
+        if (locationResult.status === 'rejected') {
+          messages.push(locationResult.reason instanceof Error ? locationResult.reason.message : 'Failed to load location options')
+        }
+        if (mediaResult.status === 'rejected') {
+          messages.push(mediaResult.reason instanceof Error ? mediaResult.reason.message : 'Failed to load media set options')
+        }
+
+        if (messages.length > 0) {
+          setOptionsError(messages.join(' '))
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
   useEffect(() => {
     if (!draft) return
@@ -450,6 +491,7 @@ export default function LocationDocumentBuilderPage() {
       </header>
 
       {error ? <p className="ldb-error">{error}</p> : null}
+      {optionsError ? <p className="ldb-error">{optionsError}</p> : null}
       {result ? <p className="ldb-success">{result}</p> : null}
 
       <section className="ldb-panel ldb-tabs-panel">

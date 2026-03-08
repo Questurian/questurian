@@ -127,7 +127,6 @@ Hard rules:
 - Do not invent numeric Payload IDs for relationships.
 - Use the UI-only hint fields when you want to suggest media or neighborhood relationships:
   - guide.media.coverImageHint
-  - guide.media.mapImageHint
   - guide.localShared.usefulApps.apps[].logoHint
   - guide.explore/stay/move.highlights[].relatedNeighborhoodKeys
 - If a relationship ID is unknown, keep the real ID field null or [] and use the hint/key field instead.

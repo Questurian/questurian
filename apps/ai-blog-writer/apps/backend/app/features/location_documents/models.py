@@ -117,8 +117,6 @@ class MapBoundsDraft(StrictModel):
 class GuideMediaDraft(StrictModel):
     coverImage: int | None = None
     coverImageHint: str = ""
-    mapImage: int | None = None
-    mapImageHint: str = ""
     mapCenterLat: float | None = None
     mapCenterLng: float | None = None
     mapZoom: float | None = None
@@ -330,7 +328,6 @@ COMMON_FIELD_PATHS = {
     "country",
     "countryName",
     "guide.media.coverImageHint",
-    "guide.media.mapImageHint",
 }
 
 LOCAL_FIELD_PATHS = {

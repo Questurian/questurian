@@ -495,12 +495,6 @@ export const buildGuideField = (): Field => ({
                   type: 'relationship',
                   relationTo: 'media-sets',
                 },
-                {
-                  name: 'mapImage',
-                  label: 'Map Image',
-                  type: 'relationship',
-                  relationTo: 'media-sets',
-                },
                 numberField('mapCenterLat', 'Map Center Lat'),
                 numberField('mapCenterLng', 'Map Center Lng'),
                 numberField('mapZoom', 'Map Zoom'),

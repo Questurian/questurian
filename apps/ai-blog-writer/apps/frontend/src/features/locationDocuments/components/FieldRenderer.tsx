@@ -33,6 +33,10 @@ function shouldRenderField(field: LocationFieldDefinition, draft: LocationDocume
   return field.visibleWhen ? field.visibleWhen(draft) : true
 }
 
+function fieldWidthClass(field: LocationFieldDefinition): string {
+  return field.width === 'half' ? 'ldb-field--half' : ''
+}
+
 function RelationshipFieldInput({
   field,
   value,
@@ -216,7 +220,7 @@ function ScalarField({
   const aiEligible = field.aiEnabled && !isArrayRowPath(path)
 
   return (
-    <div className="ldb-field">
+    <div className={`ldb-field ${field.width === 'half' ? 'ldb-field--half' : ''}`}>
       <div className="ldb-field-header">
         <label className="ldb-label">{field.label}</label>
         {aiEligible ? (
@@ -380,7 +384,7 @@ export function FieldRenderer({
           const hintValue = hintPath ? getValueAtPath(draft, hintPath) : undefined
 
           return (
-            <div key={path.join('.')} className="ldb-field">
+            <div key={path.join('.')} className={`ldb-field ${fieldWidthClass(field)}`}>
               <div className="ldb-field-header">
                 <label className="ldb-label">{field.label}</label>
               </div>

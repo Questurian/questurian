@@ -219,12 +219,16 @@
 }
 
 .ldb-field-grid {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .ldb-filter-grid > *,
 .ldb-field-grid > * {
-  grid-column: span 12;
+  grid-column: 1 / -1;
+}
+
+.ldb-field--half {
+  grid-column: span 1;
 }
 
 .ldb-subgroup,
@@ -542,6 +546,14 @@
 }
 
 @media (max-width: 720px) {
+  .ldb-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ldb-field--half {
+    grid-column: 1 / -1;
+  }
+
   .ldb-panel,
   .ldb-sidebar-card {
     padding: var(--space-4);

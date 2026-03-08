@@ -749,7 +749,6 @@
 #### Relationship Fields
 
 - `guide.media.coverImage` → `media-sets`
-- `guide.media.mapImage` → `media-sets`
 - `guide.localShared.usefulApps.apps.logo` → `media-sets`
 - `guide.explore.highlights.relatedNeighborhoods` → `locations`
 - `guide.stay.highlights.relatedNeighborhoods` → `locations`

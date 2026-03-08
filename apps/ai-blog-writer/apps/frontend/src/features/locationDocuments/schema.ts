@@ -185,27 +185,32 @@ const locationSections: LocationSectionDefinition[] = [
     fields: [
       selectField('level', 'Level', LOCATION_LEVEL_OPTIONS),
       textField('country', 'Country Key', {
-        description: 'Normalized key segment, for example peru or colombia.',
-      }),
-      textField('city', 'City Key', {
-        description: 'Normalized city key segment.',
-        visibleWhen: isLocalLevel,
-      }),
-      textField('neighborhood', 'Neighborhood Key', {
-        description: 'Normalized neighborhood key segment.',
-        visibleWhen: isNeighborhoodLevel,
+        description: 'Normalized key.',
+        width: 'half',
       }),
       textField('countryName', 'Country Name', {
-        aiEnabled: true,
-        description: 'Display name shown in the UI.',
+        description: 'Display label.',
+        width: 'half',
+      }),
+      textField('city', 'City Key', {
+        description: 'Normalized key.',
+        visibleWhen: isLocalLevel,
+        width: 'half',
       }),
       textField('cityName', 'City Name', {
-        aiEnabled: true,
+        description: 'Display label.',
         visibleWhen: isLocalLevel,
+        width: 'half',
+      }),
+      textField('neighborhood', 'Neighborhood Key', {
+        description: 'Normalized key.',
+        visibleWhen: isNeighborhoodLevel,
+        width: 'half',
       }),
       textField('neighborhoodName', 'Neighborhood Name', {
-        aiEnabled: true,
+        description: 'Display label.',
         visibleWhen: isNeighborhoodLevel,
+        width: 'half',
       }),
     ],
   },
@@ -219,10 +224,6 @@ const locationSections: LocationSectionDefinition[] = [
     fields: [
       relationshipField('coverImage', 'Cover Image', 'media-sets', 'mediaSets', {
         hintKey: 'coverImageHint',
-        hintLabel: 'AI media hint',
-      }),
-      relationshipField('mapImage', 'Map Image', 'media-sets', 'mediaSets', {
-        hintKey: 'mapImageHint',
         hintLabel: 'AI media hint',
       }),
       numberField('mapCenterLat', 'Map Center Latitude'),
@@ -477,7 +478,6 @@ export const FIELD_AI_PATHS = [
   'cityName',
   'neighborhoodName',
   'guide.media.coverImageHint',
-  'guide.media.mapImageHint',
   'guide.countryData.currency.code',
   'guide.countryData.currency.name',
   'guide.countryData.currency.symbol',
@@ -536,8 +536,6 @@ function createEmptyMediaDraft(): MediaDraft {
   return {
     coverImage: null,
     coverImageHint: '',
-    mapImage: null,
-    mapImageHint: '',
     mapCenterLat: null,
     mapCenterLng: null,
     mapZoom: null,
@@ -734,7 +732,7 @@ export function buildLocationSchemaContract(): string {
     })),
     aiFieldPaths: [...FIELD_AI_PATHS],
     relationshipHints: {
-      media: ['guide.media.coverImageHint', 'guide.media.mapImageHint', 'guide.localShared.usefulApps.apps[].logoHint'],
+      media: ['guide.media.coverImageHint', 'guide.localShared.usefulApps.apps[].logoHint'],
       neighborhoods: [
         'guide.explore.highlights[].relatedNeighborhoodKeys',
         'guide.stay.highlights[].relatedNeighborhoodKeys',
@@ -843,8 +841,6 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
   next.guide.media = {
     coverImage: extractRelationshipId(doc.guide?.media?.coverImage),
     coverImageHint: '',
-    mapImage: extractRelationshipId(doc.guide?.media?.mapImage),
-    mapImageHint: '',
     mapCenterLat: valueOrNull(doc.guide?.media?.mapCenterLat),
     mapCenterLng: valueOrNull(doc.guide?.media?.mapCenterLng),
     mapZoom: valueOrNull(doc.guide?.media?.mapZoom),
@@ -1088,11 +1084,6 @@ export function resolveDraftRelationshipHints(
     next.guide.media.coverImage = coverImageId
   }
 
-  const mapImageId = resolveMediaHint(next.guide.media.mapImageHint, mediaOptions)
-  if (mapImageId !== null) {
-    next.guide.media.mapImage = mapImageId
-  }
-
   next.guide.localShared.usefulApps.apps = next.guide.localShared.usefulApps.apps.map((app) => {
     if (!app.logoHint.trim()) return app
     const resolvedId = resolveMediaHint(app.logoHint, mediaOptions)
@@ -1128,10 +1119,6 @@ export function collectUnresolvedHintWarnings(
 
   if (draft.guide.media.coverImageHint.trim() && resolveMediaHint(draft.guide.media.coverImageHint, mediaOptions) === null) {
     warnings.push(`Cover image hint "${draft.guide.media.coverImageHint}" could not be matched to a media set.`)
-  }
-
-  if (draft.guide.media.mapImageHint.trim() && resolveMediaHint(draft.guide.media.mapImageHint, mediaOptions) === null) {
-    warnings.push(`Map image hint "${draft.guide.media.mapImageHint}" could not be matched to a media set.`)
   }
 
   for (const app of draft.guide.localShared.usefulApps.apps) {
@@ -1216,7 +1203,6 @@ export function buildPayloadLocationBody(
   body.guide = {
     media: {
       coverImage: resolved.guide.media.coverImage,
-      mapImage: resolved.guide.media.mapImage,
       mapCenterLat: resolved.guide.media.mapCenterLat,
       mapCenterLng: resolved.guide.media.mapCenterLng,
       mapZoom: resolved.guide.media.mapZoom,

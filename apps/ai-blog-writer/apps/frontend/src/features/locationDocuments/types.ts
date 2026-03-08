@@ -209,8 +209,6 @@ export type MoveGuide = {
 export type MediaGuide = {
   coverImage: number | null
   coverImageHint: string
-  mapImage: number | null
-  mapImageHint: string
   mapCenterLat: number | null
   mapCenterLng: number | null
   mapZoom: number | null
@@ -263,7 +261,6 @@ export type LocationDocumentDraft = {
 export type PayloadLocationGuide = {
   media?: {
     coverImage?: number | { id?: number } | null
-    mapImage?: number | { id?: number } | null
     mapCenterLat?: number | null
     mapCenterLng?: number | null
     mapZoom?: number | null
@@ -390,6 +387,7 @@ type FieldBase = {
   label: string
   description?: string
   visibleWhen?: (draft: LocationDocumentDraft) => boolean
+  width?: 'full' | 'half'
 }
 
 export type ScalarFieldDefinition = FieldBase & {
