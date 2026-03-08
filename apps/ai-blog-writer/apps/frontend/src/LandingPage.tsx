@@ -107,6 +107,24 @@ export default function LandingPage() {
             </svg>
           </span>
         </Link>
+
+        <Link to="/location-documents" className="landing-card landing-card--locations">
+          <div className="landing-card-icon">
+            <svg className="landing-card-main-icon" aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 4h14v16H5V4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M14 2v4M10 2v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h2>Location Documents</h2>
+          <p>Compose and sync full Payload location hierarchy documents with shared guide sections, mode-specific content, and AI assist.</p>
+          <span className="landing-card-action">
+            Open Builder
+            <svg className="landing-card-action-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+        </Link>
       </main>
     </div>
   )

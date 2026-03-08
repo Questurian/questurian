@@ -1,0 +1,1286 @@
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api'
+import type {
+  CountryDataDraft,
+  HighlightDraft,
+  LocationDocumentDraft,
+  LocationFieldDefinition,
+  LocationGuideDraft,
+  LocationIndexRow,
+  LocationLevel,
+  LocationOption,
+  LocationSectionDefinition,
+  MediaDraft,
+  MediaSetOption,
+  PayloadLocationBody,
+  PayloadLocationDoc,
+  PayloadRelationship,
+  PayloadRelationshipList,
+  ScalarFieldDefinition,
+  UsefulAppDraft,
+} from './types'
+import { cloneValue, mergeDefinedValues, pruneEmptyValues } from './utils'
+
+export const LOCATION_LEVEL_OPTIONS: Array<{ value: LocationLevel; label: string }> = [
+  { value: 'country', label: 'Country' },
+  { value: 'city', label: 'City' },
+  { value: 'neighborhood', label: 'Neighborhood' },
+]
+
+export const MONTH_OPTIONS = [
+  { value: 'jan', label: 'January' },
+  { value: 'feb', label: 'February' },
+  { value: 'mar', label: 'March' },
+  { value: 'apr', label: 'April' },
+  { value: 'may', label: 'May' },
+  { value: 'jun', label: 'June' },
+  { value: 'jul', label: 'July' },
+  { value: 'aug', label: 'August' },
+  { value: 'sep', label: 'September' },
+  { value: 'oct', label: 'October' },
+  { value: 'nov', label: 'November' },
+  { value: 'dec', label: 'December' },
+] as const
+
+export const TAP_WATER_STATUS_OPTIONS = [
+  { value: '', label: 'Unknown' },
+  { value: 'drinkable', label: 'Drinkable' },
+  { value: 'not_drinkable', label: 'Not Drinkable' },
+  { value: 'varies_by_region', label: 'Varies by Region' },
+] as const
+
+const isLocalLevel = (draft: LocationDocumentDraft): boolean => draft.level === 'city' || draft.level === 'neighborhood'
+const isNeighborhoodLevel = (draft: LocationDocumentDraft): boolean => draft.level === 'neighborhood'
+
+function scalarField(
+  key: string,
+  label: string,
+  type: ScalarFieldDefinition['type'],
+  config: Partial<Omit<ScalarFieldDefinition, 'key' | 'label' | 'type'>> = {},
+): ScalarFieldDefinition {
+  return {
+    key,
+    label,
+    type,
+    ...config,
+  }
+}
+
+function textField(
+  key: string,
+  label: string,
+  config: Partial<Omit<ScalarFieldDefinition, 'key' | 'label' | 'type'>> = {},
+): ScalarFieldDefinition {
+  return scalarField(key, label, 'text', config)
+}
+
+function textareaField(
+  key: string,
+  label: string,
+  config: Partial<Omit<ScalarFieldDefinition, 'key' | 'label' | 'type'>> = {},
+): ScalarFieldDefinition {
+  return scalarField(key, label, 'textarea', config)
+}
+
+function numberField(
+  key: string,
+  label: string,
+  config: Partial<Omit<ScalarFieldDefinition, 'key' | 'label' | 'type'>> = {},
+): ScalarFieldDefinition {
+  return scalarField(key, label, 'number', config)
+}
+
+function selectField(
+  key: string,
+  label: string,
+  options: Array<{ value: string; label: string }>,
+  config: Partial<Omit<ScalarFieldDefinition, 'key' | 'label' | 'type' | 'options'>> = {},
+): ScalarFieldDefinition {
+  return scalarField(key, label, 'select', {
+    ...config,
+    options,
+  })
+}
+
+function groupField(
+  key: string,
+  label: string,
+  fields: LocationFieldDefinition[],
+  description?: string,
+): LocationFieldDefinition {
+  return {
+    key,
+    label,
+    type: 'group',
+    description,
+    fields,
+  }
+}
+
+function arrayField(
+  key: string,
+  label: string,
+  fields: LocationFieldDefinition[],
+  config: Partial<Extract<LocationFieldDefinition, { type: 'array' }>> = {},
+): LocationFieldDefinition {
+  return {
+    key,
+    label,
+    type: 'array',
+    fields,
+    ...config,
+  }
+}
+
+function relationshipField(
+  key: string,
+  label: string,
+  relationTo: 'locations' | 'media-sets',
+  optionSource: 'locations' | 'neighborhoods' | 'mediaSets',
+  config: Partial<Extract<LocationFieldDefinition, { type: 'relationship' }>> = {},
+): LocationFieldDefinition {
+  return {
+    key,
+    label,
+    type: 'relationship',
+    relationTo,
+    optionSource,
+    ...config,
+  }
+}
+
+const emergencyNumberFields: LocationFieldDefinition[] = [
+  textField('service', 'Service'),
+  textField('number', 'Number'),
+  textareaField('notes', 'Notes'),
+]
+
+const vaccinationFields: LocationFieldDefinition[] = [
+  textField('name', 'Name'),
+  textField('recommended', 'Recommended'),
+  textareaField('notes', 'Notes'),
+]
+
+const namedVaccinationFields: LocationFieldDefinition[] = [
+  textField('name', 'Name'),
+  textareaField('notes', 'Notes'),
+]
+
+const highlightFields: LocationFieldDefinition[] = [
+  textField('title', 'Title'),
+  textareaField('description', 'Description'),
+  relationshipField('relatedNeighborhoods', 'Related Neighborhoods', 'locations', 'neighborhoods', {
+    hasMany: true,
+    hintKey: 'relatedNeighborhoodKeys',
+    hintLabel: 'AI locationKey hints',
+  }),
+]
+
+const locationSections: LocationSectionDefinition[] = [
+  {
+    id: 'hierarchy',
+    label: 'Hierarchy',
+    description: 'Location level, key segments, and display names. Payload derives locationKey and parentKey from these fields.',
+    levels: ['country', 'city', 'neighborhood'],
+    path: [],
+    fields: [
+      selectField('level', 'Level', LOCATION_LEVEL_OPTIONS),
+      textField('country', 'Country Key', {
+        description: 'Normalized key segment, for example peru or colombia.',
+      }),
+      textField('city', 'City Key', {
+        description: 'Normalized city key segment.',
+        visibleWhen: isLocalLevel,
+      }),
+      textField('neighborhood', 'Neighborhood Key', {
+        description: 'Normalized neighborhood key segment.',
+        visibleWhen: isNeighborhoodLevel,
+      }),
+      textField('countryName', 'Country Name', {
+        aiEnabled: true,
+        description: 'Display name shown in the UI.',
+      }),
+      textField('cityName', 'City Name', {
+        aiEnabled: true,
+        visibleWhen: isLocalLevel,
+      }),
+      textField('neighborhoodName', 'Neighborhood Name', {
+        aiEnabled: true,
+        visibleWhen: isNeighborhoodLevel,
+      }),
+    ],
+  },
+  {
+    id: 'media',
+    label: 'Media',
+    description: 'Cover, map, and geo display metadata shared by the location guide.',
+    levels: ['country', 'city', 'neighborhood'],
+    path: ['guide', 'media'],
+    aiPath: 'guide.media',
+    fields: [
+      relationshipField('coverImage', 'Cover Image', 'media-sets', 'mediaSets', {
+        hintKey: 'coverImageHint',
+        hintLabel: 'AI media hint',
+      }),
+      relationshipField('mapImage', 'Map Image', 'media-sets', 'mediaSets', {
+        hintKey: 'mapImageHint',
+        hintLabel: 'AI media hint',
+      }),
+      numberField('mapCenterLat', 'Map Center Latitude'),
+      numberField('mapCenterLng', 'Map Center Longitude'),
+      numberField('mapZoom', 'Map Zoom'),
+      groupField('mapBounds', 'Map Bounds', [
+        numberField('north', 'North'),
+        numberField('south', 'South'),
+        numberField('east', 'East'),
+        numberField('west', 'West'),
+      ]),
+    ],
+  },
+  {
+    id: 'countryData',
+    label: 'Country Data',
+    description: 'Country-wide facts that can later be composed with city and neighborhood guides.',
+    levels: ['country'],
+    path: ['guide', 'countryData'],
+    aiPath: 'guide.countryData',
+    fields: [
+      groupField('currency', 'Currency', [
+        textField('code', 'Code', { aiEnabled: true }),
+        textField('name', 'Name', { aiEnabled: true }),
+        textField('symbol', 'Symbol', { aiEnabled: true }),
+        textareaField('cardUsageSummary', 'Card Usage Summary', { aiEnabled: true }),
+      ]),
+      groupField('timezone', 'Timezone', [
+        textField('primary', 'Primary', { aiEnabled: true }),
+        textareaField('notes', 'Notes', { aiEnabled: true }),
+      ]),
+      arrayField('emergencyNumbers', 'Emergency Numbers', emergencyNumberFields, {
+        addLabel: 'Add emergency number',
+        maxRows: 12,
+      }),
+      arrayField('vaccinations', 'Vaccinations', vaccinationFields, {
+        addLabel: 'Add vaccination',
+      }),
+      groupField('tapWater', 'Tap Water', [
+        selectField('status', 'Status', [...TAP_WATER_STATUS_OPTIONS]),
+        textareaField('notes', 'Notes'),
+      ]),
+      groupField('visaPolicy', 'Visa Policy', [
+        textField('touristVisaRequired', 'Tourist Visa Required'),
+        textareaField('touristVisaNotes', 'Tourist Visa Notes'),
+        arrayField('residencyPathways', 'Residency Pathways', [
+          textField('type', 'Type'),
+          textareaField('summary', 'Summary'),
+        ], {
+          addLabel: 'Add residency pathway',
+        }),
+        textareaField('residencyNotes', 'Residency Notes'),
+      ]),
+      textareaField('entryRequirements', 'Entry Requirements', { aiEnabled: true }),
+      textareaField('healthNotes', 'Health Notes', { aiEnabled: true }),
+      textareaField('moneyNotes', 'Money Notes', { aiEnabled: true }),
+    ],
+  },
+  {
+    id: 'localShared',
+    label: 'Shared Overview',
+    description: 'Cross-mode practical information shared by the explore, stay, and move experiences.',
+    levels: ['city', 'neighborhood'],
+    path: ['guide', 'localShared'],
+    aiPath: 'guide.localShared',
+    fields: [
+      textField('headline', 'Headline', { aiEnabled: true }),
+      textareaField('subheadline', 'Subheadline', { aiEnabled: true }),
+      groupField('timezone', 'Timezone', [
+        textField('label', 'Label', { aiEnabled: true }),
+        textareaField('notes', 'Notes', { aiEnabled: true }),
+      ]),
+      groupField('costs', 'Costs', [
+        arrayField('items', 'Cost Items', [
+          textField('label', 'Label'),
+          textField('amount', 'Amount'),
+          textareaField('notes', 'Notes'),
+        ], {
+          addLabel: 'Add cost item',
+          maxRows: 30,
+        }),
+      ]),
+      groupField('healthSafety', 'Health & Safety', [
+        arrayField('emergencyNumbers', 'Emergency Numbers', emergencyNumberFields, {
+          addLabel: 'Add emergency number',
+          maxRows: 12,
+        }),
+        arrayField('precautions', 'Precautions', [
+          textField('label', 'Label'),
+          textField('value', 'Value'),
+          textareaField('notes', 'Notes'),
+        ], {
+          addLabel: 'Add precaution',
+        }),
+        arrayField('vaccinations', 'Vaccinations', namedVaccinationFields, {
+          addLabel: 'Add vaccination',
+        }),
+        textareaField('hospitalsEmbed', 'Hospitals Embed', { aiEnabled: true }),
+        textareaField('airQualitySummary', 'Air Quality Summary', { aiEnabled: true }),
+        arrayField('mustHaveItems', 'Must Have Items', [
+          textField('name', 'Name'),
+          textareaField('notes', 'Notes'),
+        ], {
+          addLabel: 'Add item',
+        }),
+      ]),
+      groupField('moneyHandling', 'Money Handling', [
+        textField('currencyDisplay', 'Currency Display', { aiEnabled: true }),
+        textField('exchangeRateDisplay', 'Exchange Rate Display', { aiEnabled: true }),
+        textareaField('exchangeEmbed', 'Exchange Embed', { aiEnabled: true }),
+        textareaField('atmAvailability', 'ATM Availability', { aiEnabled: true }),
+        textField('maxWithdrawal', 'Max Withdrawal', { aiEnabled: true }),
+        textField('withdrawalFee', 'Withdrawal Fee', { aiEnabled: true }),
+        textField('cardUsage', 'Card Usage', { aiEnabled: true }),
+      ]),
+      groupField('usefulApps', 'Useful Apps', [
+        arrayField('apps', 'Apps', [
+          textField('category', 'Category'),
+          textField('name', 'Name'),
+          relationshipField('logo', 'Logo', 'media-sets', 'mediaSets', {
+            hintKey: 'logoHint',
+            hintLabel: 'AI logo hint',
+          }),
+          textareaField('description', 'Description'),
+          textField('url', 'URL'),
+        ], {
+          addLabel: 'Add app',
+          maxRows: 20,
+        }),
+      ]),
+      groupField('weather', 'Weather', [
+        textareaField('summary', 'Summary', { aiEnabled: true }),
+        arrayField('monthlyStats', 'Monthly Stats', [
+          selectField('month', 'Month', [...MONTH_OPTIONS]),
+          numberField('avgHighC', 'Average High (C)'),
+          numberField('avgLowC', 'Average Low (C)'),
+          numberField('rainfallMm', 'Rainfall (mm)'),
+          numberField('rainDays', 'Rain Days'),
+          numberField('sunshineHours', 'Sunshine Hours'),
+        ], {
+          addLabel: 'Add month',
+          maxRows: 12,
+        }),
+      ]),
+      groupField('localContext', 'Local Context', [
+        textField('vibe', 'Vibe', { aiEnabled: true }),
+        textareaField('walkability', 'Walkability', { aiEnabled: true }),
+        arrayField('bestFor', 'Best For', [
+          textField('label', 'Label'),
+        ], {
+          addLabel: 'Add best-for tag',
+        }),
+      ]),
+    ],
+  },
+  {
+    id: 'explore',
+    label: 'Explore',
+    description: 'Tourist framing, safety context, and explore-specific highlights.',
+    levels: ['city', 'neighborhood'],
+    path: ['guide', 'explore'],
+    aiPath: 'guide.explore',
+    fields: [
+      textareaField('intro', 'Intro', { aiEnabled: true }),
+      textField('touristVisaStatus', 'Tourist Visa Status', { aiEnabled: true }),
+      textareaField('touristVisaNotes', 'Tourist Visa Notes', { aiEnabled: true }),
+      textField('exchangeRateInfo', 'Exchange Rate Info', { aiEnabled: true }),
+      groupField('safety', 'Safety', [
+        textField('status', 'Status', { aiEnabled: true }),
+        textareaField('notes', 'Notes', { aiEnabled: true }),
+      ]),
+      textField('costOfLivingSummary', 'Cost of Living Summary', { aiEnabled: true }),
+      arrayField('highlights', 'Highlights', highlightFields, {
+        addLabel: 'Add highlight',
+        maxRows: 8,
+      }),
+    ],
+  },
+  {
+    id: 'stay',
+    label: 'Stay',
+    description: 'Digital nomad guidance, rental context, and medium-term stay highlights.',
+    levels: ['city', 'neighborhood'],
+    path: ['guide', 'stay'],
+    aiPath: 'guide.stay',
+    fields: [
+      textareaField('intro', 'Intro', { aiEnabled: true }),
+      textField('touristVisaDuration', 'Tourist Visa Duration', { aiEnabled: true }),
+      textareaField('touristVisaExtensionNotes', 'Tourist Visa Extension Notes', { aiEnabled: true }),
+      textareaField('timezoneOverlapNote', 'Timezone Overlap Note', { aiEnabled: true }),
+      textField('monthlyBudgetRange', 'Monthly Budget Range', { aiEnabled: true }),
+      textField('internetSpeed', 'Internet Speed', { aiEnabled: true }),
+      groupField('coworking', 'Coworking', [
+        textField('summary', 'Summary', { aiEnabled: true }),
+        textareaField('notes', 'Notes', { aiEnabled: true }),
+      ]),
+      textField('shortTermRent', 'Short-Term Rent', { aiEnabled: true }),
+      groupField('safety', 'Safety', [
+        textField('status', 'Status', { aiEnabled: true }),
+        textareaField('notes', 'Notes', { aiEnabled: true }),
+      ]),
+      arrayField('highlights', 'Highlights', highlightFields, {
+        addLabel: 'Add highlight',
+        maxRows: 8,
+      }),
+    ],
+  },
+  {
+    id: 'move',
+    label: 'Move',
+    description: 'Relocation-focused content for long-term residents, families, and work moves.',
+    levels: ['city', 'neighborhood'],
+    path: ['guide', 'move'],
+    aiPath: 'guide.move',
+    fields: [
+      textareaField('intro', 'Intro', { aiEnabled: true }),
+      textField('residencyVisa', 'Residency Visa', { aiEnabled: true }),
+      textareaField('residencyNotes', 'Residency Notes', { aiEnabled: true }),
+      textField('processingTime', 'Processing Time', { aiEnabled: true }),
+      textField('familyCostOfLivingRange', 'Family Cost of Living Range', { aiEnabled: true }),
+      textField('propertyPricesPerSqm', 'Property Prices Per Sqm', { aiEnabled: true }),
+      textField('incomeRequirements', 'Income Requirements', { aiEnabled: true }),
+      textField('safestDistricts', 'Safest Districts', { aiEnabled: true }),
+      textField('workPermits', 'Work Permits', { aiEnabled: true }),
+      arrayField('highlights', 'Highlights', highlightFields, {
+        addLabel: 'Add highlight',
+        maxRows: 8,
+      }),
+    ],
+  },
+]
+
+export const LOCATION_SECTION_DEFINITIONS = locationSections
+
+export const LOCATION_INDEX_SELECT_FIELDS = [
+  'level',
+  'country',
+  'city',
+  'neighborhood',
+  'countryName',
+  'cityName',
+  'neighborhoodName',
+  'locationKey',
+  'parentKey',
+  'updatedAt',
+] as const
+
+export const MEDIA_SET_SELECT_FIELDS = ['title', 'alt_text', 'location'] as const
+
+export const FIELD_AI_PATHS = [
+  'countryName',
+  'cityName',
+  'neighborhoodName',
+  'guide.media.coverImageHint',
+  'guide.media.mapImageHint',
+  'guide.countryData.currency.code',
+  'guide.countryData.currency.name',
+  'guide.countryData.currency.symbol',
+  'guide.countryData.currency.cardUsageSummary',
+  'guide.countryData.timezone.primary',
+  'guide.countryData.timezone.notes',
+  'guide.countryData.entryRequirements',
+  'guide.countryData.healthNotes',
+  'guide.countryData.moneyNotes',
+  'guide.localShared.headline',
+  'guide.localShared.subheadline',
+  'guide.localShared.timezone.label',
+  'guide.localShared.timezone.notes',
+  'guide.localShared.healthSafety.hospitalsEmbed',
+  'guide.localShared.healthSafety.airQualitySummary',
+  'guide.localShared.moneyHandling.currencyDisplay',
+  'guide.localShared.moneyHandling.exchangeRateDisplay',
+  'guide.localShared.moneyHandling.exchangeEmbed',
+  'guide.localShared.moneyHandling.atmAvailability',
+  'guide.localShared.moneyHandling.maxWithdrawal',
+  'guide.localShared.moneyHandling.withdrawalFee',
+  'guide.localShared.moneyHandling.cardUsage',
+  'guide.localShared.weather.summary',
+  'guide.localShared.localContext.vibe',
+  'guide.localShared.localContext.walkability',
+  'guide.explore.intro',
+  'guide.explore.touristVisaStatus',
+  'guide.explore.touristVisaNotes',
+  'guide.explore.exchangeRateInfo',
+  'guide.explore.safety.status',
+  'guide.explore.safety.notes',
+  'guide.explore.costOfLivingSummary',
+  'guide.stay.intro',
+  'guide.stay.touristVisaDuration',
+  'guide.stay.touristVisaExtensionNotes',
+  'guide.stay.timezoneOverlapNote',
+  'guide.stay.monthlyBudgetRange',
+  'guide.stay.internetSpeed',
+  'guide.stay.coworking.summary',
+  'guide.stay.coworking.notes',
+  'guide.stay.shortTermRent',
+  'guide.stay.safety.status',
+  'guide.stay.safety.notes',
+  'guide.move.intro',
+  'guide.move.residencyVisa',
+  'guide.move.residencyNotes',
+  'guide.move.processingTime',
+  'guide.move.familyCostOfLivingRange',
+  'guide.move.propertyPricesPerSqm',
+  'guide.move.incomeRequirements',
+  'guide.move.safestDistricts',
+  'guide.move.workPermits',
+] as const
+
+function createEmptyMediaDraft(): MediaDraft {
+  return {
+    coverImage: null,
+    coverImageHint: '',
+    mapImage: null,
+    mapImageHint: '',
+    mapCenterLat: null,
+    mapCenterLng: null,
+    mapZoom: null,
+    mapBounds: {
+      north: null,
+      south: null,
+      east: null,
+      west: null,
+    },
+  }
+}
+
+function createEmptyCountryDataDraft(): CountryDataDraft {
+  return {
+    currency: {
+      code: '',
+      name: '',
+      symbol: '',
+      cardUsageSummary: '',
+    },
+    timezone: {
+      primary: '',
+      notes: '',
+    },
+    emergencyNumbers: [],
+    vaccinations: [],
+    tapWater: {
+      status: '',
+      notes: '',
+    },
+    visaPolicy: {
+      touristVisaRequired: '',
+      touristVisaNotes: '',
+      residencyPathways: [],
+      residencyNotes: '',
+    },
+    entryRequirements: '',
+    healthNotes: '',
+    moneyNotes: '',
+  }
+}
+
+function createEmptyLocalSharedDraft(): LocationGuideDraft['localShared'] {
+  return {
+    headline: '',
+    subheadline: '',
+    timezone: {
+      label: '',
+      notes: '',
+    },
+    costs: {
+      items: [],
+    },
+    healthSafety: {
+      emergencyNumbers: [],
+      precautions: [],
+      vaccinations: [],
+      hospitalsEmbed: '',
+      airQualitySummary: '',
+      mustHaveItems: [],
+    },
+    moneyHandling: {
+      currencyDisplay: '',
+      exchangeRateDisplay: '',
+      exchangeEmbed: '',
+      atmAvailability: '',
+      maxWithdrawal: '',
+      withdrawalFee: '',
+      cardUsage: '',
+    },
+    usefulApps: {
+      apps: [],
+    },
+    weather: {
+      summary: '',
+      monthlyStats: [],
+    },
+    localContext: {
+      vibe: '',
+      walkability: '',
+      bestFor: [],
+    },
+  }
+}
+
+function createEmptyExploreDraft(): LocationGuideDraft['explore'] {
+  return {
+    intro: '',
+    touristVisaStatus: '',
+    touristVisaNotes: '',
+    exchangeRateInfo: '',
+    safety: {
+      status: '',
+      notes: '',
+    },
+    costOfLivingSummary: '',
+    highlights: [],
+  }
+}
+
+function createEmptyStayDraft(): LocationGuideDraft['stay'] {
+  return {
+    intro: '',
+    touristVisaDuration: '',
+    touristVisaExtensionNotes: '',
+    timezoneOverlapNote: '',
+    monthlyBudgetRange: '',
+    internetSpeed: '',
+    coworking: {
+      summary: '',
+      notes: '',
+    },
+    shortTermRent: '',
+    safety: {
+      status: '',
+      notes: '',
+    },
+    highlights: [],
+  }
+}
+
+function createEmptyMoveDraft(): LocationGuideDraft['move'] {
+  return {
+    intro: '',
+    residencyVisa: '',
+    residencyNotes: '',
+    processingTime: '',
+    familyCostOfLivingRange: '',
+    propertyPricesPerSqm: '',
+    incomeRequirements: '',
+    safestDistricts: '',
+    workPermits: '',
+    highlights: [],
+  }
+}
+
+export function createEmptyLocationDraft(): LocationDocumentDraft {
+  return {
+    draftId: `location_${Date.now()}`,
+    editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
+    updatedAt: new Date().toISOString(),
+    aiSourceNotes: '',
+    level: 'country',
+    country: '',
+    city: '',
+    neighborhood: '',
+    countryName: '',
+    cityName: '',
+    neighborhoodName: '',
+    guide: {
+      media: createEmptyMediaDraft(),
+      countryData: createEmptyCountryDataDraft(),
+      localShared: createEmptyLocalSharedDraft(),
+      explore: createEmptyExploreDraft(),
+      stay: createEmptyStayDraft(),
+      move: createEmptyMoveDraft(),
+    },
+  }
+}
+
+export function getVisibleSections(level: LocationLevel): LocationSectionDefinition[] {
+  return LOCATION_SECTION_DEFINITIONS.filter((section) => section.levels.includes(level))
+}
+
+export const getVisibleLocationSections = getVisibleSections
+export const createEmptyLocationDocumentDraft = createEmptyLocationDraft
+
+export function deriveLocationPreview(
+  draft: Pick<LocationDocumentDraft, 'level' | 'country' | 'city' | 'neighborhood'>,
+): {
+  locationKey: string
+  parentKey: string
+} {
+  return {
+    locationKey: buildLocationKeyPreview(draft),
+    parentKey: buildParentKeyPreview(draft),
+  }
+}
+
+export function buildLocationSchemaContract(): string {
+  const contract = {
+    collection: 'locations',
+    levels: {
+      country: ['hierarchy', 'media', 'countryData'],
+      city: ['hierarchy', 'media', 'localShared', 'explore', 'stay', 'move'],
+      neighborhood: ['hierarchy', 'media', 'localShared', 'explore', 'stay', 'move'],
+    },
+    sections: LOCATION_SECTION_DEFINITIONS.map((section) => ({
+      id: section.id,
+      label: section.label,
+      levels: section.levels,
+      path: section.id === 'hierarchy' ? 'identity' : section.aiPath || section.path.join('.'),
+      fields: section.fields,
+    })),
+    aiFieldPaths: [...FIELD_AI_PATHS],
+    relationshipHints: {
+      media: ['guide.media.coverImageHint', 'guide.media.mapImageHint', 'guide.localShared.usefulApps.apps[].logoHint'],
+      neighborhoods: [
+        'guide.explore.highlights[].relatedNeighborhoodKeys',
+        'guide.stay.highlights[].relatedNeighborhoodKeys',
+        'guide.move.highlights[].relatedNeighborhoodKeys',
+      ],
+    },
+    rules: [
+      'Return JSON only with no markdown or commentary.',
+      'Only include fields valid for the selected location level.',
+      'Do not invent Payload IDs for relationships.',
+      'Use relationship hint fields when you know a locationKey or media phrase but not an ID.',
+      'Leave unknown values empty instead of fabricating facts.',
+    ],
+  }
+
+  return JSON.stringify(contract, null, 2)
+}
+
+export function isFieldAiPathSupported(path: string): boolean {
+  return FIELD_AI_PATHS.includes(path as (typeof FIELD_AI_PATHS)[number])
+}
+
+export function normalizeKeyPart(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .replace(/[_\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+export function formatFallbackName(value: string): string {
+  if (!value) return ''
+
+  return value
+    .replace(/-/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+export function buildLocationKeyPreview(draft: Pick<LocationDocumentDraft, 'level' | 'country' | 'city' | 'neighborhood'>): string {
+  const country = normalizeKeyPart(draft.country)
+  const city = normalizeKeyPart(draft.city)
+  const neighborhood = normalizeKeyPart(draft.neighborhood)
+
+  if (!country) return ''
+  if (draft.level === 'country') return country
+  if (draft.level === 'city') return city ? `${country}|${city}` : country
+  if (!city) return country
+  return neighborhood ? `${country}|${city}|${neighborhood}` : `${country}|${city}`
+}
+
+export function buildParentKeyPreview(draft: Pick<LocationDocumentDraft, 'level' | 'country' | 'city'>): string {
+  const country = normalizeKeyPart(draft.country)
+  const city = normalizeKeyPart(draft.city)
+
+  if (!country) return ''
+  if (draft.level === 'country') return ''
+  if (draft.level === 'city') return country
+  return city ? `${country}|${city}` : country
+}
+
+function extractRelationshipId(value: PayloadRelationship): number | null {
+  if (typeof value === 'number') return value
+  if (value && typeof value === 'object' && typeof value.id === 'number') return value.id
+  return null
+}
+
+function extractRelationshipIds(value: PayloadRelationshipList): number[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((entry) => {
+    const id = extractRelationshipId(entry)
+    return id === null ? [] : [id]
+  })
+}
+
+function trimText(value: string | null | undefined): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function valueOrNull(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumentDraft {
+  const draft = createEmptyLocationDraft()
+
+  const next: LocationDocumentDraft = {
+    ...draft,
+    payloadId: doc.id,
+    level: doc.level,
+    country: trimText(doc.country),
+    city: trimText(doc.city),
+    neighborhood: trimText(doc.neighborhood),
+    countryName: trimText(doc.countryName),
+    cityName: trimText(doc.cityName),
+    neighborhoodName: trimText(doc.neighborhoodName),
+    updatedAt: doc.updatedAt || new Date().toISOString(),
+  }
+
+  next.guide.media = {
+    coverImage: extractRelationshipId(doc.guide?.media?.coverImage),
+    coverImageHint: '',
+    mapImage: extractRelationshipId(doc.guide?.media?.mapImage),
+    mapImageHint: '',
+    mapCenterLat: valueOrNull(doc.guide?.media?.mapCenterLat),
+    mapCenterLng: valueOrNull(doc.guide?.media?.mapCenterLng),
+    mapZoom: valueOrNull(doc.guide?.media?.mapZoom),
+    mapBounds: {
+      north: valueOrNull(doc.guide?.media?.mapBounds?.north),
+      south: valueOrNull(doc.guide?.media?.mapBounds?.south),
+      east: valueOrNull(doc.guide?.media?.mapBounds?.east),
+      west: valueOrNull(doc.guide?.media?.mapBounds?.west),
+    },
+  }
+
+  next.guide.countryData = {
+    currency: {
+      code: trimText(doc.guide?.countryData?.currency?.code),
+      name: trimText(doc.guide?.countryData?.currency?.name),
+      symbol: trimText(doc.guide?.countryData?.currency?.symbol),
+      cardUsageSummary: trimText(doc.guide?.countryData?.currency?.cardUsageSummary),
+    },
+    timezone: {
+      primary: trimText(doc.guide?.countryData?.timezone?.primary),
+      notes: trimText(doc.guide?.countryData?.timezone?.notes),
+    },
+    emergencyNumbers: (doc.guide?.countryData?.emergencyNumbers || []).map((row) => ({
+      service: trimText(row.service),
+      number: trimText(row.number),
+      notes: trimText(row.notes),
+    })),
+    vaccinations: (doc.guide?.countryData?.vaccinations || []).map((row) => ({
+      name: trimText(row.name),
+      recommended: trimText(row.recommended),
+      notes: trimText(row.notes),
+    })),
+    tapWater: {
+      status: doc.guide?.countryData?.tapWater?.status || '',
+      notes: trimText(doc.guide?.countryData?.tapWater?.notes),
+    },
+    visaPolicy: {
+      touristVisaRequired: trimText(doc.guide?.countryData?.visaPolicy?.touristVisaRequired),
+      touristVisaNotes: trimText(doc.guide?.countryData?.visaPolicy?.touristVisaNotes),
+      residencyPathways: (doc.guide?.countryData?.visaPolicy?.residencyPathways || []).map((row) => ({
+        type: trimText(row.type),
+        summary: trimText(row.summary),
+      })),
+      residencyNotes: trimText(doc.guide?.countryData?.visaPolicy?.residencyNotes),
+    },
+    entryRequirements: trimText(doc.guide?.countryData?.entryRequirements),
+    healthNotes: trimText(doc.guide?.countryData?.healthNotes),
+    moneyNotes: trimText(doc.guide?.countryData?.moneyNotes),
+  }
+
+  next.guide.localShared = {
+    headline: trimText(doc.guide?.localShared?.headline),
+    subheadline: trimText(doc.guide?.localShared?.subheadline),
+    timezone: {
+      label: trimText(doc.guide?.localShared?.timezone?.label),
+      notes: trimText(doc.guide?.localShared?.timezone?.notes),
+    },
+    costs: {
+      items: (doc.guide?.localShared?.costs?.items || []).map((row) => ({
+        label: trimText(row.label),
+        amount: trimText(row.amount),
+        notes: trimText(row.notes),
+      })),
+    },
+    healthSafety: {
+      emergencyNumbers: (doc.guide?.localShared?.healthSafety?.emergencyNumbers || []).map((row) => ({
+        service: trimText(row.service),
+        number: trimText(row.number),
+        notes: trimText(row.notes),
+      })),
+      precautions: (doc.guide?.localShared?.healthSafety?.precautions || []).map((row) => ({
+        label: trimText(row.label),
+        value: trimText(row.value),
+        notes: trimText(row.notes),
+      })),
+      vaccinations: (doc.guide?.localShared?.healthSafety?.vaccinations || []).map((row) => ({
+        name: trimText(row.name),
+        recommended: '',
+        notes: trimText(row.notes),
+      })),
+      hospitalsEmbed: trimText(doc.guide?.localShared?.healthSafety?.hospitalsEmbed),
+      airQualitySummary: trimText(doc.guide?.localShared?.healthSafety?.airQualitySummary),
+      mustHaveItems: (doc.guide?.localShared?.healthSafety?.mustHaveItems || []).map((row) => ({
+        name: trimText(row.name),
+        notes: trimText(row.notes),
+      })),
+    },
+    moneyHandling: {
+      currencyDisplay: trimText(doc.guide?.localShared?.moneyHandling?.currencyDisplay),
+      exchangeRateDisplay: trimText(doc.guide?.localShared?.moneyHandling?.exchangeRateDisplay),
+      exchangeEmbed: trimText(doc.guide?.localShared?.moneyHandling?.exchangeEmbed),
+      atmAvailability: trimText(doc.guide?.localShared?.moneyHandling?.atmAvailability),
+      maxWithdrawal: trimText(doc.guide?.localShared?.moneyHandling?.maxWithdrawal),
+      withdrawalFee: trimText(doc.guide?.localShared?.moneyHandling?.withdrawalFee),
+      cardUsage: trimText(doc.guide?.localShared?.moneyHandling?.cardUsage),
+    },
+    usefulApps: {
+      apps: (doc.guide?.localShared?.usefulApps?.apps || []).map((row) => ({
+        category: trimText(row.category),
+        name: trimText(row.name),
+        logo: extractRelationshipId(row.logo),
+        logoHint: '',
+        description: trimText(row.description),
+        url: trimText(row.url),
+      })),
+    },
+    weather: {
+      summary: trimText(doc.guide?.localShared?.weather?.summary),
+      monthlyStats: (doc.guide?.localShared?.weather?.monthlyStats || []).map((row) => ({
+        month: trimText(row.month),
+        avgHighC: valueOrNull(row.avgHighC),
+        avgLowC: valueOrNull(row.avgLowC),
+        rainfallMm: valueOrNull(row.rainfallMm),
+        rainDays: valueOrNull(row.rainDays),
+        sunshineHours: valueOrNull(row.sunshineHours),
+      })),
+    },
+    localContext: {
+      vibe: trimText(doc.guide?.localShared?.localContext?.vibe),
+      walkability: trimText(doc.guide?.localShared?.localContext?.walkability),
+      bestFor: (doc.guide?.localShared?.localContext?.bestFor || []).map((row) => ({
+        label: trimText(row.label),
+      })),
+    },
+  }
+
+  next.guide.explore = {
+    intro: trimText(doc.guide?.explore?.intro),
+    touristVisaStatus: trimText(doc.guide?.explore?.touristVisaStatus),
+    touristVisaNotes: trimText(doc.guide?.explore?.touristVisaNotes),
+    exchangeRateInfo: trimText(doc.guide?.explore?.exchangeRateInfo),
+    safety: {
+      status: trimText(doc.guide?.explore?.safety?.status),
+      notes: trimText(doc.guide?.explore?.safety?.notes),
+    },
+    costOfLivingSummary: trimText(doc.guide?.explore?.costOfLivingSummary),
+    highlights: (doc.guide?.explore?.highlights || []).map((row) => ({
+      title: trimText(row.title),
+      description: trimText(row.description),
+      relatedNeighborhoods: extractRelationshipIds(row.relatedNeighborhoods),
+      relatedNeighborhoodKeys: [],
+    })),
+  }
+
+  next.guide.stay = {
+    intro: trimText(doc.guide?.stay?.intro),
+    touristVisaDuration: trimText(doc.guide?.stay?.touristVisaDuration),
+    touristVisaExtensionNotes: trimText(doc.guide?.stay?.touristVisaExtensionNotes),
+    timezoneOverlapNote: trimText(doc.guide?.stay?.timezoneOverlapNote),
+    monthlyBudgetRange: trimText(doc.guide?.stay?.monthlyBudgetRange),
+    internetSpeed: trimText(doc.guide?.stay?.internetSpeed),
+    coworking: {
+      summary: trimText(doc.guide?.stay?.coworking?.summary),
+      notes: trimText(doc.guide?.stay?.coworking?.notes),
+    },
+    shortTermRent: trimText(doc.guide?.stay?.shortTermRent),
+    safety: {
+      status: trimText(doc.guide?.stay?.safety?.status),
+      notes: trimText(doc.guide?.stay?.safety?.notes),
+    },
+    highlights: (doc.guide?.stay?.highlights || []).map((row) => ({
+      title: trimText(row.title),
+      description: trimText(row.description),
+      relatedNeighborhoods: extractRelationshipIds(row.relatedNeighborhoods),
+      relatedNeighborhoodKeys: [],
+    })),
+  }
+
+  next.guide.move = {
+    intro: trimText(doc.guide?.move?.intro),
+    residencyVisa: trimText(doc.guide?.move?.residencyVisa),
+    residencyNotes: trimText(doc.guide?.move?.residencyNotes),
+    processingTime: trimText(doc.guide?.move?.processingTime),
+    familyCostOfLivingRange: trimText(doc.guide?.move?.familyCostOfLivingRange),
+    propertyPricesPerSqm: trimText(doc.guide?.move?.propertyPricesPerSqm),
+    incomeRequirements: trimText(doc.guide?.move?.incomeRequirements),
+    safestDistricts: trimText(doc.guide?.move?.safestDistricts),
+    workPermits: trimText(doc.guide?.move?.workPermits),
+    highlights: (doc.guide?.move?.highlights || []).map((row) => ({
+      title: trimText(row.title),
+      description: trimText(row.description),
+      relatedNeighborhoods: extractRelationshipIds(row.relatedNeighborhoods),
+      relatedNeighborhoodKeys: [],
+    })),
+  }
+
+  return next
+}
+
+export const buildDraftFromPayloadDoc = payloadLocationToDraft
+
+export function mergeDraftPatch(
+  current: LocationDocumentDraft,
+  patch: Partial<LocationDocumentDraft>
+): LocationDocumentDraft {
+  const merged = mergeDefinedValues(current, patch)
+  merged.draftId = current.draftId
+  merged.payloadId = current.payloadId
+  merged.updatedAt = new Date().toISOString()
+  return merged
+}
+
+function resolveMediaHint(hint: string, options: MediaSetOption[]): number | null {
+  const normalizedHint = hint.trim().toLowerCase()
+  if (!normalizedHint) return null
+
+  const exact = options.find((option) => {
+    const haystacks = [option.title, option.alt_text, option.location]
+    return haystacks.some((value) => value?.trim().toLowerCase() === normalizedHint)
+  })
+
+  return exact?.id ?? null
+}
+
+function resolveNeighborhoodKeys(keys: string[], options: LocationOption[]): number[] {
+  const ids = new Set<number>()
+  const neighborhoodOptions = options.filter((option) => option.level === 'neighborhood')
+
+  for (const key of keys) {
+    const normalizedKey = key.trim().toLowerCase()
+
+    const match = neighborhoodOptions.find(
+      (option) => option.locationKey.trim().toLowerCase() === normalizedKey
+    )
+
+    if (match) ids.add(match.id)
+  }
+
+  return [...ids]
+}
+
+export function resolveDraftRelationshipHints(
+  draft: LocationDocumentDraft,
+  locationOptions: LocationOption[],
+  mediaOptions: MediaSetOption[]
+): LocationDocumentDraft {
+  const next = cloneValue(draft)
+
+  const coverImageId = resolveMediaHint(next.guide.media.coverImageHint, mediaOptions)
+  if (coverImageId !== null) {
+    next.guide.media.coverImage = coverImageId
+  }
+
+  const mapImageId = resolveMediaHint(next.guide.media.mapImageHint, mediaOptions)
+  if (mapImageId !== null) {
+    next.guide.media.mapImage = mapImageId
+  }
+
+  next.guide.localShared.usefulApps.apps = next.guide.localShared.usefulApps.apps.map((app) => {
+    if (!app.logoHint.trim()) return app
+    const resolvedId = resolveMediaHint(app.logoHint, mediaOptions)
+    return resolvedId === null ? app : { ...app, logo: resolvedId }
+  })
+
+  const resolveHighlights = (highlights: HighlightDraft[]) =>
+    highlights.map((highlight) => {
+      if (!highlight.relatedNeighborhoodKeys.length) return highlight
+      const resolvedIds = resolveNeighborhoodKeys(highlight.relatedNeighborhoodKeys, locationOptions)
+      if (!resolvedIds.length) return highlight
+      return {
+        ...highlight,
+        relatedNeighborhoods: [...new Set([...highlight.relatedNeighborhoods, ...resolvedIds])],
+      }
+    })
+
+  next.guide.explore.highlights = resolveHighlights(next.guide.explore.highlights)
+  next.guide.stay.highlights = resolveHighlights(next.guide.stay.highlights)
+  next.guide.move.highlights = resolveHighlights(next.guide.move.highlights)
+
+  return next
+}
+
+export const resolveDraftHints = resolveDraftRelationshipHints
+
+export function collectUnresolvedHintWarnings(
+  draft: LocationDocumentDraft,
+  locationOptions: LocationOption[],
+  mediaOptions: MediaSetOption[]
+): string[] {
+  const warnings: string[] = []
+
+  if (draft.guide.media.coverImageHint.trim() && resolveMediaHint(draft.guide.media.coverImageHint, mediaOptions) === null) {
+    warnings.push(`Cover image hint "${draft.guide.media.coverImageHint}" could not be matched to a media set.`)
+  }
+
+  if (draft.guide.media.mapImageHint.trim() && resolveMediaHint(draft.guide.media.mapImageHint, mediaOptions) === null) {
+    warnings.push(`Map image hint "${draft.guide.media.mapImageHint}" could not be matched to a media set.`)
+  }
+
+  for (const app of draft.guide.localShared.usefulApps.apps) {
+    if (app.logoHint.trim() && resolveMediaHint(app.logoHint, mediaOptions) === null) {
+      warnings.push(`App logo hint "${app.logoHint}" could not be matched to a media set.`)
+    }
+  }
+
+  const unresolvedHighlightWarnings = (modeLabel: string, highlights: HighlightDraft[]) => {
+    for (const highlight of highlights) {
+      const unresolvedKeys = highlight.relatedNeighborhoodKeys.filter((key) => {
+        const normalized = key.trim().toLowerCase()
+        if (!normalized) return false
+        return !locationOptions.some(
+          (option) => option.level === 'neighborhood' && option.locationKey.trim().toLowerCase() === normalized
+        )
+      })
+
+      if (unresolvedKeys.length) {
+        warnings.push(
+          `${modeLabel} highlight "${highlight.title || 'Untitled'}" has unresolved neighborhood keys: ${unresolvedKeys.join(', ')}.`
+        )
+      }
+    }
+  }
+
+  unresolvedHighlightWarnings('Explore', draft.guide.explore.highlights)
+  unresolvedHighlightWarnings('Stay', draft.guide.stay.highlights)
+  unresolvedHighlightWarnings('Move', draft.guide.move.highlights)
+
+  return warnings
+}
+
+function buildPayloadUsefulApp(app: UsefulAppDraft) {
+  return {
+    category: app.category,
+    name: app.name,
+    logo: app.logo,
+    description: app.description,
+    url: app.url,
+  }
+}
+
+function buildPayloadHighlight(highlight: HighlightDraft) {
+  return {
+    title: highlight.title,
+    description: highlight.description,
+    relatedNeighborhoods: highlight.relatedNeighborhoods,
+  }
+}
+
+export function buildPayloadLocationBody(
+  draft: LocationDocumentDraft,
+  locationOptions: LocationOption[],
+  mediaOptions: MediaSetOption[]
+): PayloadLocationBody {
+  const resolved = resolveDraftRelationshipHints(draft, locationOptions, mediaOptions)
+  const country = normalizeKeyPart(resolved.country)
+  const city = normalizeKeyPart(resolved.city)
+  const neighborhood = normalizeKeyPart(resolved.neighborhood)
+
+  const countryName = resolved.countryName.trim() || formatFallbackName(country)
+  const cityName = resolved.cityName.trim() || formatFallbackName(city)
+  const neighborhoodName = resolved.neighborhoodName.trim() || formatFallbackName(neighborhood)
+
+  const body: PayloadLocationBody = {
+    level: resolved.level,
+    country,
+    countryName,
+  }
+
+  if (resolved.level !== 'country') {
+    body.city = city
+    body.cityName = cityName
+  }
+
+  if (resolved.level === 'neighborhood') {
+    body.neighborhood = neighborhood
+    body.neighborhoodName = neighborhoodName
+  }
+
+  body.guide = {
+    media: {
+      coverImage: resolved.guide.media.coverImage,
+      mapImage: resolved.guide.media.mapImage,
+      mapCenterLat: resolved.guide.media.mapCenterLat,
+      mapCenterLng: resolved.guide.media.mapCenterLng,
+      mapZoom: resolved.guide.media.mapZoom,
+      mapBounds: resolved.guide.media.mapBounds,
+    },
+  }
+
+  if (resolved.level === 'country') {
+    body.guide.countryData = resolved.guide.countryData
+  } else {
+    body.guide.localShared = {
+      ...resolved.guide.localShared,
+      usefulApps: {
+        apps: resolved.guide.localShared.usefulApps.apps.map(buildPayloadUsefulApp),
+      },
+    }
+    body.guide.explore = {
+      ...resolved.guide.explore,
+      highlights: resolved.guide.explore.highlights.map(buildPayloadHighlight),
+    }
+    body.guide.stay = {
+      ...resolved.guide.stay,
+      highlights: resolved.guide.stay.highlights.map(buildPayloadHighlight),
+    }
+    body.guide.move = {
+      ...resolved.guide.move,
+      highlights: resolved.guide.move.highlights.map(buildPayloadHighlight),
+    }
+  }
+
+  return (pruneEmptyValues(body) || body) as PayloadLocationBody
+}
+
+export function validateDraft(draft: LocationDocumentDraft): string | null {
+  if (!normalizeKeyPart(draft.country)) return 'Country key is required.'
+  if (!draft.countryName.trim() && !normalizeKeyPart(draft.country)) return 'Country name is required.'
+
+  if ((draft.level === 'city' || draft.level === 'neighborhood') && !normalizeKeyPart(draft.city)) {
+    return 'City key is required for city and neighborhood locations.'
+  }
+
+  if ((draft.level === 'city' || draft.level === 'neighborhood') && !draft.cityName.trim() && !normalizeKeyPart(draft.city)) {
+    return 'City name is required for city and neighborhood locations.'
+  }
+
+  if (draft.level === 'neighborhood' && !normalizeKeyPart(draft.neighborhood)) {
+    return 'Neighborhood key is required for neighborhood locations.'
+  }
+
+  if (draft.level === 'neighborhood' && !draft.neighborhoodName.trim() && !normalizeKeyPart(draft.neighborhood)) {
+    return 'Neighborhood name is required for neighborhood locations.'
+  }
+
+  return null
+}
+
+export function formatLocationLabel(location: Pick<LocationIndexRow, 'level' | 'countryName' | 'cityName' | 'neighborhoodName' | 'locationKey'>): string {
+  if (location.level === 'country') {
+    return location.countryName || location.locationKey
+  }
+
+  if (location.level === 'city') {
+    return location.cityName || location.locationKey
+  }
+
+  return location.neighborhoodName || location.locationKey
+}

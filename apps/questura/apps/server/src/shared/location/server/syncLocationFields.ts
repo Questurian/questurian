@@ -1,4 +1,5 @@
 import type { CollectionBeforeValidateHook, Payload } from 'payload'
+import { locationIdentitySelect } from '../constants'
 import type { LocationOption } from '../types'
 
 type LocationSyncOptions = {
@@ -29,6 +30,7 @@ const findLocationByKey = async (payload: Payload, locationKey: string) => {
     limit: 1,
     depth: 0,
     overrideAccess: true,
+    select: locationIdentitySelect,
   })
 
   return (result.docs?.[0] as LocationOption | undefined) ?? null
@@ -40,6 +42,7 @@ const findLocationById = async (payload: Payload, id: string | number) => {
     id,
     depth: 0,
     overrideAccess: true,
+    select: locationIdentitySelect,
   })
 
   return (result as LocationOption | undefined) ?? null

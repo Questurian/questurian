@@ -10,6 +10,7 @@ from app.features.url2blog import router as url2blog_router
 from app.features.article_types import router as article_types_router
 from app.features.prompt2blog import router as prompt2blog_router
 from app.features.editor_assist import router as editor_assist_router
+from app.features.location_documents import router as location_documents_router
 
 router = APIRouter()
 
@@ -28,3 +29,4 @@ router.include_router(url2blog_router)
 router.include_router(article_types_router)
 router.include_router(prompt2blog_router)
 router.include_router(editor_assist_router)
+router.include_router(location_documents_router)

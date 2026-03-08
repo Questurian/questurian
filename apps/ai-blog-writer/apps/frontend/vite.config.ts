@@ -19,7 +19,12 @@ export default defineConfig({
     globals: true,
     css: true,
     setupFiles: resolve(__dirname, 'src/test/setup.ts'),
-    include: [],
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'src/**/*.spec.ts',
+      'src/**/*.spec.tsx',
+    ],
     includeSource: [
       'src/features/review2blog/api.ts',
       'src/features/review2blog/Review2BlogPage.tsx',

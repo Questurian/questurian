@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { buildLocationOptionsQuery } from '../constants'
 import { LocationOption } from '../types'
 
 export const useLocationData = () => {
@@ -19,7 +20,7 @@ export const useLocationData = () => {
         const allDocs: LocationOption[] = []
 
         while (page <= totalPages) {
-          const response = await fetch(`/api/locations?limit=${limit}&page=${page}`)
+          const response = await fetch(buildLocationOptionsQuery(page, limit))
           if (!response.ok) {
             throw new Error(`Failed to fetch locations (page ${page})`)
           }

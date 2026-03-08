@@ -239,6 +239,12 @@
   --card-accent-softer: rgba(141, 59, 82, 0.06);
 }
 
+.landing-card--locations {
+  --card-accent: #264653;
+  --card-accent-soft: rgba(38, 70, 83, 0.14);
+  --card-accent-softer: rgba(38, 70, 83, 0.06);
+}
+
 /* Responsive: progressive enhancement */
 @media (min-width: 640px) {
   .landing-options {

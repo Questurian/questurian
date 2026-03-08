@@ -34,6 +34,10 @@ import {
   ListicleItinerariesPage,
   ListicleItineraryBuilderPage,
 } from './features/listicleItineraries'
+import {
+  LocationDocumentsPage,
+  LocationDocumentBuilderPage,
+} from './features/locationDocuments'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -83,6 +87,10 @@ export default function App() {
               {/* Listicle Itineraries */}
               <Route path="listicle-itineraries" element={<ListicleItinerariesPage />} />
               <Route path="listicle-itineraries/builder" element={<ListicleItineraryBuilderPage />} />
+
+              {/* Location Documents */}
+              <Route path="location-documents" element={<LocationDocumentsPage />} />
+              <Route path="location-documents/builder" element={<LocationDocumentBuilderPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -5,7 +5,9 @@
  */
 
 import type { CollectionConfig, Payload } from 'payload'
+import { locationIdentitySelect } from '@/shared/location/constants'
 import { findLocationReferences } from '@/shared/location/server/references'
+import { buildGuideField } from './guideFields'
 
 type LocationLevel = 'country' | 'city' | 'neighborhood'
 
@@ -57,6 +59,19 @@ const formatFallbackName = (value: string): string => {
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
+}
+
+const hasMeaningfulValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false
+  if (typeof value === 'string') return value.trim().length > 0
+  if (typeof value === 'number' || typeof value === 'boolean') return true
+  if (Array.isArray(value)) return value.some(hasMeaningfulValue)
+
+  if (typeof value === 'object') {
+    return Object.values(value).some(hasMeaningfulValue)
+  }
+
+  return false
 }
 
 const parseLocationKey = (locationKey: string) => {
@@ -133,6 +148,7 @@ const findLocationByKey = async (payload: Payload, locationKey: string) => {
     limit: 1,
     depth: 0,
     overrideAccess: true,
+    select: locationIdentitySelect,
   })
 
   return result.docs?.[0] ?? null
@@ -292,6 +308,7 @@ export const Locations: CollectionConfig = {
         description: 'Display name for UI (e.g., "Santa Teresita").',
       },
     },
+    buildGuideField(),
   ],
   hooks: {
     beforeValidate: [
@@ -414,6 +431,35 @@ export const Locations: CollectionConfig = {
         data.cityName = level === 'country' ? null : cityName
         data.neighborhoodName = level === 'neighborhood' ? neighborhoodName : null
 
+        const guide = (data.guide ?? originalDoc?.guide) as
+          | {
+              countryData?: unknown
+              localShared?: unknown
+              explore?: unknown
+              stay?: unknown
+              move?: unknown
+            }
+          | undefined
+
+        if (guide) {
+          const hasCountryData = hasMeaningfulValue(guide.countryData)
+          const hasLocalGuideData =
+            hasMeaningfulValue(guide.localShared) ||
+            hasMeaningfulValue(guide.explore) ||
+            hasMeaningfulValue(guide.stay) ||
+            hasMeaningfulValue(guide.move)
+
+          if (level === 'country' && hasLocalGuideData) {
+            throw new Error(
+              'country locations cannot store localShared, explore, stay, or move guide data'
+            )
+          }
+
+          if (level !== 'country' && hasCountryData) {
+            throw new Error('city and neighborhood locations cannot store countryData')
+          }
+        }
+
         return data
       },
     ],
@@ -444,6 +490,10 @@ export const Locations: CollectionConfig = {
               id,
               depth: 0,
               overrideAccess: true,
+              select: {
+                id: true,
+                locationKey: true,
+              },
             })
           : null
 
