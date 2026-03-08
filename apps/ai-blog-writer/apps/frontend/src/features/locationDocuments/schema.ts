@@ -222,10 +222,7 @@ const locationSections: LocationSectionDefinition[] = [
     path: ['guide', 'media'],
     aiPath: 'guide.media',
     fields: [
-      relationshipField('coverImage', 'Cover Image', 'media-sets', 'mediaSets', {
-        hintKey: 'coverImageHint',
-        hintLabel: 'AI media hint',
-      }),
+      relationshipField('coverImage', 'Cover Image', 'media-sets', 'mediaSets'),
       numberField('mapCenterLat', 'Map Center Latitude'),
       numberField('mapCenterLng', 'Map Center Longitude'),
       numberField('mapZoom', 'Map Zoom'),
@@ -477,7 +474,6 @@ export const FIELD_AI_PATHS = [
   'countryName',
   'cityName',
   'neighborhoodName',
-  'guide.media.coverImageHint',
   'guide.countryData.currency.code',
   'guide.countryData.currency.name',
   'guide.countryData.currency.symbol',
@@ -535,7 +531,6 @@ export const FIELD_AI_PATHS = [
 function createEmptyMediaDraft(): MediaDraft {
   return {
     coverImage: null,
-    coverImageHint: '',
     mapCenterLat: null,
     mapCenterLng: null,
     mapZoom: null,
@@ -732,7 +727,7 @@ export function buildLocationSchemaContract(): string {
     })),
     aiFieldPaths: [...FIELD_AI_PATHS],
     relationshipHints: {
-      media: ['guide.media.coverImageHint', 'guide.localShared.usefulApps.apps[].logoHint'],
+      media: ['guide.localShared.usefulApps.apps[].logoHint'],
       neighborhoods: [
         'guide.explore.highlights[].relatedNeighborhoodKeys',
         'guide.stay.highlights[].relatedNeighborhoodKeys',
@@ -743,7 +738,7 @@ export function buildLocationSchemaContract(): string {
       'Return JSON only with no markdown or commentary.',
       'Only include fields valid for the selected location level.',
       'Do not invent Payload IDs for relationships.',
-      'Use relationship hint fields when you know a locationKey or media phrase but not an ID.',
+      'Use relationship hint fields when you know a locationKey or app logo phrase but not an ID.',
       'Leave unknown values empty instead of fabricating facts.',
     ],
   }
@@ -840,7 +835,6 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
 
   next.guide.media = {
     coverImage: extractRelationshipId(doc.guide?.media?.coverImage),
-    coverImageHint: '',
     mapCenterLat: valueOrNull(doc.guide?.media?.mapCenterLat),
     mapCenterLng: valueOrNull(doc.guide?.media?.mapCenterLng),
     mapZoom: valueOrNull(doc.guide?.media?.mapZoom),
@@ -1079,11 +1073,6 @@ export function resolveDraftRelationshipHints(
 ): LocationDocumentDraft {
   const next = cloneValue(draft)
 
-  const coverImageId = resolveMediaHint(next.guide.media.coverImageHint, mediaOptions)
-  if (coverImageId !== null) {
-    next.guide.media.coverImage = coverImageId
-  }
-
   next.guide.localShared.usefulApps.apps = next.guide.localShared.usefulApps.apps.map((app) => {
     if (!app.logoHint.trim()) return app
     const resolvedId = resolveMediaHint(app.logoHint, mediaOptions)
@@ -1116,10 +1105,6 @@ export function collectUnresolvedHintWarnings(
   mediaOptions: MediaSetOption[]
 ): string[] {
   const warnings: string[] = []
-
-  if (draft.guide.media.coverImageHint.trim() && resolveMediaHint(draft.guide.media.coverImageHint, mediaOptions) === null) {
-    warnings.push(`Cover image hint "${draft.guide.media.coverImageHint}" could not be matched to a media set.`)
-  }
 
   for (const app of draft.guide.localShared.usefulApps.apps) {
     if (app.logoHint.trim() && resolveMediaHint(app.logoHint, mediaOptions) === null) {

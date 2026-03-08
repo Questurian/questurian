@@ -12,12 +12,12 @@ describe('locationDocuments schema helpers', () => {
     ])
   })
 
-  it('builds a city payload and resolves relationship hints without leaking country-only guide data', () => {
+  it('builds a city payload and resolves neighborhood relationship hints without leaking country-only guide data', () => {
     const draft = createEmptyLocationDraft()
     draft.level = 'city'
     draft.country = 'Peru'
     draft.city = 'Lima'
-    draft.guide.media.coverImageHint = 'Lima hero'
+    draft.guide.media.coverImage = 91
     draft.guide.countryData.healthNotes = 'country-only field should be stripped for city payloads'
     draft.guide.localShared.headline = 'Living in Lima Overview'
     draft.guide.explore.highlights = [

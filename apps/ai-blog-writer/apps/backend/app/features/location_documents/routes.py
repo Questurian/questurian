@@ -125,8 +125,7 @@ Hard rules:
 - Preserve existing user-provided values unless the instruction clearly asks for changes.
 - Unknown values must stay as empty strings, nulls, or empty arrays.
 - Do not invent numeric Payload IDs for relationships.
-- Use the UI-only hint fields when you want to suggest media or neighborhood relationships:
-  - guide.media.coverImageHint
+- Use the UI-only hint fields when you want to suggest app logo or neighborhood relationships:
   - guide.localShared.usefulApps.apps[].logoHint
   - guide.explore/stay/move.highlights[].relatedNeighborhoodKeys
 - If a relationship ID is unknown, keep the real ID field null or [] and use the hint/key field instead.

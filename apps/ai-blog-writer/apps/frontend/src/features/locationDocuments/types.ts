@@ -208,7 +208,6 @@ export type MoveGuide = {
 
 export type MediaGuide = {
   coverImage: number | null
-  coverImageHint: string
   mapCenterLat: number | null
   mapCenterLng: number | null
   mapZoom: number | null
