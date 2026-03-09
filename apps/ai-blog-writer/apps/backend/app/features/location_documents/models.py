@@ -169,6 +169,38 @@ class GuideDraft(StrictModel):
     move: MoveDraft = Field(default_factory=MoveDraft)
 
 
+def _strip_neighborhood_only_city_fields(guide: GuideDraft) -> None:
+    guide.core.timezone = LocalTimezoneDraft()
+    guide.core.healthSafety = HealthSafetyDraft()
+    guide.core.moneyHandling = MoneyHandlingDraft()
+    guide.core.weather = WeatherDraft()
+
+    guide.explore.touristVisaStatus = ""
+    guide.explore.touristVisaNotes = ""
+    guide.explore.exchangeRateInfo = ""
+    guide.explore.costOfLivingSummary = ""
+
+    guide.stay.touristVisaDuration = ""
+    guide.stay.touristVisaExtensionNotes = ""
+    guide.stay.timezoneOverlapNote = ""
+
+    guide.move.residencyVisa = ""
+    guide.move.residencyNotes = ""
+    guide.move.processingTime = ""
+    guide.move.incomeRequirements = ""
+    guide.move.safestDistricts = ""
+    guide.move.workPermits = ""
+
+    for highlights in (
+        guide.explore.highlights,
+        guide.stay.highlights,
+        guide.move.highlights,
+    ):
+        for highlight in highlights:
+            highlight.relatedNeighborhoods = []
+            highlight.relatedNeighborhoodKeys = []
+
+
 class LocationDocumentDraft(StrictModel):
     level: LocationLevel
     country: str | None = None
@@ -192,6 +224,8 @@ class LocationDocumentDraft(StrictModel):
                 raise ValueError(
                     "country locations cannot store core, explore, stay, or move guide data"
                 )
+        if self.level == "neighborhood":
+            _strip_neighborhood_only_city_fields(self.guide)
         return self
 
 

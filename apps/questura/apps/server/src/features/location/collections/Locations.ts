@@ -114,6 +114,46 @@ const stripNeighborhoodGuideRelationships = (guide: unknown): void => {
   stripHighlightNeighborhoodReferences(guideRecord.move)
 }
 
+const stripNeighborhoodGuideFields = (guide: unknown): void => {
+  if (!guide || typeof guide !== 'object') return
+
+  const guideRecord = guide as Record<string, unknown>
+  const core = guideRecord.core
+  if (core && typeof core === 'object') {
+    delete (core as Record<string, unknown>).timezone
+    delete (core as Record<string, unknown>).healthSafety
+    delete (core as Record<string, unknown>).moneyHandling
+    delete (core as Record<string, unknown>).weather
+  }
+
+  const explore = guideRecord.explore
+  if (explore && typeof explore === 'object') {
+    delete (explore as Record<string, unknown>).touristVisaStatus
+    delete (explore as Record<string, unknown>).touristVisaNotes
+    delete (explore as Record<string, unknown>).exchangeRateInfo
+    delete (explore as Record<string, unknown>).costOfLivingSummary
+  }
+
+  const stay = guideRecord.stay
+  if (stay && typeof stay === 'object') {
+    delete (stay as Record<string, unknown>).touristVisaDuration
+    delete (stay as Record<string, unknown>).touristVisaExtensionNotes
+    delete (stay as Record<string, unknown>).timezoneOverlapNote
+  }
+
+  const move = guideRecord.move
+  if (move && typeof move === 'object') {
+    delete (move as Record<string, unknown>).residencyVisa
+    delete (move as Record<string, unknown>).residencyNotes
+    delete (move as Record<string, unknown>).processingTime
+    delete (move as Record<string, unknown>).incomeRequirements
+    delete (move as Record<string, unknown>).safestDistricts
+    delete (move as Record<string, unknown>).workPermits
+  }
+
+  stripNeighborhoodGuideRelationships(guide)
+}
+
 const parseLocationKey = (locationKey: string) => {
   const parts = locationKey.split('|')
   if (parts.length < 1 || parts.length > 3) {
@@ -560,7 +600,7 @@ export const Locations: CollectionConfig = {
           | undefined
 
         if (level === 'neighborhood' && data.guide) {
-          stripNeighborhoodGuideRelationships(data.guide)
+          stripNeighborhoodGuideFields(data.guide)
         }
 
         if (guide) {

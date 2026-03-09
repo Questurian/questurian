@@ -132,6 +132,7 @@ Hard rules:
 - Level rules:
   - country documents may use only guide.media
   - city and neighborhood documents may use only guide.media, guide.core, guide.explore, guide.stay, and guide.move
+  - neighborhood documents are overlays only; do not fill city-wide practical facts such as timezone, emergency numbers, money handling, weather, tourist visa facts, residency/work permit facts, or other city-baseline logistics
 - Highlight count rule for city/neighborhood drafts:
   - guide.explore.highlights must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items
   - guide.stay.highlights must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items
@@ -146,6 +147,7 @@ Hard rules:
 - Preserve existing user-provided values unless the instruction clearly asks for changes.
 - Unknown values must stay as empty strings, nulls, or empty arrays.
 - Do not invent numeric Payload IDs.
+- For neighborhood drafts, only return neighborhood-specific overlays. Do not fill city-wide practical facts such as timezone, emergency numbers, money handling, weather, tourist visa facts, or residency/work permit facts.
 - If the target section path is guide.explore, guide.stay, or guide.move, the highlights array must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items."""
 
 

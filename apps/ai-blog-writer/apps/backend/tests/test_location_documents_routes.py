@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.api.router import router as api_router
 import app.features.location_documents.routes as location_document_routes
+from app.features.location_documents.models import LocationDocumentDraft
 
 
 class _StubLLM:
@@ -195,3 +196,68 @@ def test_fill_field_uses_langgraph_runner_and_returns_value(monkeypatch):
     assert payload["fieldPath"] == "countryName"
     assert payload["value"] == "Peru"
     assert called["graph"] is True
+
+
+def test_neighborhood_field_fill_rejects_city_wide_weather_field():
+    request = location_document_routes.FillFieldRequest.model_validate(
+        {
+            "draft": {
+                "level": "neighborhood",
+                "country": "peru",
+                "city": "lima",
+                "neighborhood": "barranco",
+                "countryName": "Peru",
+                "cityName": "Lima",
+                "neighborhoodName": "Barranco",
+            },
+            "fieldPath": "guide.core.weather.summary",
+            "currentValue": "",
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        location_document_routes._fill_field_impl(request)
+
+    assert exc_info.value.status_code == 400
+    assert "fieldPath must be one of" in exc_info.value.detail
+
+
+def test_neighborhood_model_strips_city_wide_practical_fields():
+    draft = LocationDocumentDraft.model_validate(
+        {
+            "level": "neighborhood",
+            "country": "peru",
+            "city": "lima",
+            "neighborhood": "barranco",
+            "countryName": "Peru",
+            "cityName": "Lima",
+            "neighborhoodName": "Barranco",
+            "guide": {
+                "core": {
+                    "headline": "Barranco",
+                    "weather": {
+                        "summary": "Cloudy",
+                    },
+                    "moneyHandling": {
+                        "cardUsage": "Cards accepted",
+                    },
+                },
+                "explore": {
+                    "intro": "Creative district",
+                    "touristVisaStatus": "90 days",
+                },
+                "move": {
+                    "propertyPricesPerSqm": "$2,100-$3,600",
+                    "residencyVisa": "Residence permit",
+                },
+            },
+        }
+    )
+
+    assert draft.guide.core.headline == "Barranco"
+    assert draft.guide.core.weather.summary == ""
+    assert draft.guide.core.moneyHandling.cardUsage == ""
+    assert draft.guide.explore.intro == "Creative district"
+    assert draft.guide.explore.touristVisaStatus == ""
+    assert draft.guide.move.propertyPricesPerSqm == "$2,100-$3,600"
+    assert draft.guide.move.residencyVisa == ""

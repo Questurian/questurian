@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildDraftFromPayloadDoc,
   buildLocationHierarchyTitle,
   buildPayloadLocationBody,
   collectUnresolvedHintWarnings,
@@ -36,6 +37,48 @@ describe('locationDocuments schema helpers', () => {
       'hierarchy',
       'media',
     ])
+  })
+
+  it('strips city-wide practical fields from neighborhood drafts during sanitization', () => {
+    const sanitized = sanitizeLocationDraftShape({
+      level: 'neighborhood',
+      country: 'peru',
+      city: 'lima',
+      neighborhood: 'barranco',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      neighborhoodName: 'Barranco',
+      guide: {
+        core: {
+          headline: 'Barranco',
+          moneyHandling: {
+            cardUsage: 'Cards accepted almost everywhere.',
+          },
+          weather: {
+            summary: 'Same weather as Lima.',
+          },
+          localContext: {
+            vibe: 'Creative and walkable.',
+          },
+        },
+        explore: {
+          touristVisaStatus: '90 days visa-free',
+          intro: 'Art-heavy coastal neighborhood.',
+        },
+        move: {
+          residencyVisa: 'Digital nomad visa',
+          propertyPricesPerSqm: '$2,100-$3,600',
+        },
+      },
+    })
+
+    expect(sanitized.guide.core.headline).toBe('Barranco')
+    expect(sanitized.guide.core.localContext.vibe).toBe('Creative and walkable.')
+    expect(sanitized.guide.core.moneyHandling.cardUsage).toBe('')
+    expect(sanitized.guide.core.weather.summary).toBe('')
+    expect(sanitized.guide.explore.touristVisaStatus).toBe('')
+    expect(sanitized.guide.move.residencyVisa).toBe('')
+    expect(sanitized.guide.move.propertyPricesPerSqm).toBe('$2,100-$3,600')
   })
 
   it('builds a city payload and resolves shorthand neighborhood hints within the current city without leaking country-only guide data', () => {
@@ -124,6 +167,34 @@ describe('locationDocuments schema helpers', () => {
     const payload = buildPayloadLocationBody(draft, [])
 
     expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([11, 12, 13, 14])
+  })
+
+  it('does not send city-wide practical fields for neighborhood payloads', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'neighborhood'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.neighborhood = 'Barranco'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.neighborhoodName = 'Barranco'
+    draft.guide.core.headline = 'Barranco'
+    draft.guide.core.moneyHandling.cardUsage = 'Mostly cards'
+    draft.guide.core.weather.summary = 'Cloudy'
+    draft.guide.stay.shortTermRent = '$900-$1,400'
+    draft.guide.stay.touristVisaDuration = '90 days'
+    draft.guide.move.propertyPricesPerSqm = '$2,100-$3,600'
+    draft.guide.move.residencyVisa = 'Temporary residence permit'
+
+    const payload = buildPayloadLocationBody(draft, [])
+
+    expect(payload.guide?.core?.headline).toBe('Barranco')
+    expect(payload.guide?.core?.moneyHandling).toBeUndefined()
+    expect(payload.guide?.core?.weather).toBeUndefined()
+    expect(payload.guide?.stay?.shortTermRent).toBe('$900-$1,400')
+    expect(payload.guide?.stay?.touristVisaDuration).toBeUndefined()
+    expect(payload.guide?.move?.propertyPricesPerSqm).toBe('$2,100-$3,600')
+    expect(payload.guide?.move?.residencyVisa).toBeUndefined()
   })
 
   it('resolves city-prefixed neighborhood hint slugs and preserves hint keys across save reloads', () => {
@@ -295,5 +366,47 @@ describe('locationDocuments schema helpers', () => {
     ])
 
     expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toBeUndefined()
+  })
+
+  it('drops old city-wide practical fields when loading a neighborhood payload doc', () => {
+    const draft = buildDraftFromPayloadDoc({
+      id: 31,
+      level: 'neighborhood',
+      country: 'peru',
+      city: 'lima',
+      neighborhood: 'barranco',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      neighborhoodName: 'Barranco',
+      locationKey: 'peru|lima|barranco',
+      guide: {
+        core: {
+          headline: 'Barranco',
+          weather: {
+            summary: 'Cloudy',
+            monthlyStats: [],
+          },
+          moneyHandling: {
+            cardUsage: 'Cards accepted',
+          },
+          localContext: {
+            vibe: 'Creative',
+            walkability: 'Very walkable',
+          },
+        },
+        explore: {
+          touristVisaStatus: '90 days',
+          intro: 'Creative district',
+          highlights: [],
+        },
+      },
+    })
+
+    expect(draft.guide.core.headline).toBe('Barranco')
+    expect(draft.guide.core.localContext.vibe).toBe('Creative')
+    expect(draft.guide.core.moneyHandling.cardUsage).toBe('')
+    expect(draft.guide.core.weather.summary).toBe('')
+    expect(draft.guide.explore.touristVisaStatus).toBe('')
+    expect(draft.guide.explore.intro).toBe('Creative district')
   })
 })

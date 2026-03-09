@@ -22,6 +22,17 @@ const isLocalLevel = (data: unknown): boolean => {
   return level === 'city' || level === 'neighborhood'
 }
 
+const isCityLevel = (data: unknown): boolean =>
+  (data as { level?: unknown } | null)?.level === 'city'
+
+const withAdminCondition = (field: Field, condition: (data: unknown) => boolean): Field => ({
+  ...field,
+  admin: {
+    ...('admin' in field && field.admin ? field.admin : {}),
+    condition,
+  },
+})
+
 const textField = (name: string, label: string, description?: string): Field => ({
   name,
   label,
@@ -199,25 +210,25 @@ const buildCoreField = (): Field => ({
   admin: {
     condition: (data) => isLocalLevel(data),
     description:
-      'Primary city guide content. Neighborhood docs can fill only the fields they want to override.',
+      'Primary city guide content. Neighborhood docs only keep localized overlays instead of repeating city-wide practical facts.',
   },
   fields: [
     textField('headline', 'Headline'),
     textareaField('subheadline', 'Subheadline'),
-    {
+    withAdminCondition({
       name: 'timezone',
       label: 'Timezone',
       type: 'group',
       fields: [textField('label', 'Label'), textareaField('notes', 'Notes')],
-    },
+    }, isCityLevel),
     buildSafetyFields(),
-    {
+    withAdminCondition({
       name: 'healthSafety',
       label: 'Health & Safety',
       type: 'group',
       fields: [buildEmergencyNumberFields()],
-    },
-    {
+    }, isCityLevel),
+    withAdminCondition({
       name: 'moneyHandling',
       label: 'Money Handling',
       type: 'group',
@@ -228,13 +239,13 @@ const buildCoreField = (): Field => ({
         textField('withdrawalFee', 'Withdrawal Fee'),
         textField('cardUsage', 'Card Usage'),
       ],
-    },
-    {
+    }, isCityLevel),
+    withAdminCondition({
       name: 'weather',
       label: 'Weather',
       type: 'group',
       fields: [textareaField('summary', 'Summary'), buildWeatherMonthlyStatsFields()],
-    },
+    }, isCityLevel),
     {
       name: 'localContext',
       label: 'Local Context',
@@ -258,10 +269,10 @@ const buildModeFields = (name: 'explore' | 'stay' | 'move'): Field => {
       },
       fields: [
         textareaField('intro', 'Intro'),
-        textField('touristVisaStatus', 'Tourist Visa Status'),
-        textareaField('touristVisaNotes', 'Tourist Visa Notes'),
-        textField('exchangeRateInfo', 'Exchange Rate Info'),
-        textField('costOfLivingSummary', 'Cost of Living Summary'),
+        withAdminCondition(textField('touristVisaStatus', 'Tourist Visa Status'), isCityLevel),
+        withAdminCondition(textareaField('touristVisaNotes', 'Tourist Visa Notes'), isCityLevel),
+        withAdminCondition(textField('exchangeRateInfo', 'Exchange Rate Info'), isCityLevel),
+        withAdminCondition(textField('costOfLivingSummary', 'Cost of Living Summary'), isCityLevel),
         buildHighlightFields(),
       ],
     }
@@ -277,9 +288,9 @@ const buildModeFields = (name: 'explore' | 'stay' | 'move'): Field => {
       },
       fields: [
         textareaField('intro', 'Intro'),
-        textField('touristVisaDuration', 'Tourist Visa Duration'),
-        textareaField('touristVisaExtensionNotes', 'Tourist Visa Extension Notes'),
-        textareaField('timezoneOverlapNote', 'Timezone Overlap Note'),
+        withAdminCondition(textField('touristVisaDuration', 'Tourist Visa Duration'), isCityLevel),
+        withAdminCondition(textareaField('touristVisaExtensionNotes', 'Tourist Visa Extension Notes'), isCityLevel),
+        withAdminCondition(textareaField('timezoneOverlapNote', 'Timezone Overlap Note'), isCityLevel),
         textField('monthlyBudgetRange', 'Monthly Budget Range'),
         textField('internetSpeed', 'Internet Speed'),
         {
@@ -303,14 +314,14 @@ const buildModeFields = (name: 'explore' | 'stay' | 'move'): Field => {
     },
     fields: [
       textareaField('intro', 'Intro'),
-      textField('residencyVisa', 'Residency Visa'),
-      textareaField('residencyNotes', 'Residency Notes'),
-      textField('processingTime', 'Processing Time'),
+      withAdminCondition(textField('residencyVisa', 'Residency Visa'), isCityLevel),
+      withAdminCondition(textareaField('residencyNotes', 'Residency Notes'), isCityLevel),
+      withAdminCondition(textField('processingTime', 'Processing Time'), isCityLevel),
       textField('familyCostOfLivingRange', 'Family Cost of Living Range'),
       textField('propertyPricesPerSqm', 'Property Prices Per Sqm'),
-      textField('incomeRequirements', 'Income Requirements'),
-      textField('safestDistricts', 'Safest Districts'),
-      textField('workPermits', 'Work Permits'),
+      withAdminCondition(textField('incomeRequirements', 'Income Requirements'), isCityLevel),
+      withAdminCondition(textField('safestDistricts', 'Safest Districts'), isCityLevel),
+      withAdminCondition(textField('workPermits', 'Work Permits'), isCityLevel),
       buildHighlightFields(),
     ],
   }

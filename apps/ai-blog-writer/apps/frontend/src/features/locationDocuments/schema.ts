@@ -246,50 +246,62 @@ const locationSections: LocationSectionDefinition[] = [
   {
     id: 'core',
     label: LOCATION_GUIDE_CONTRACT.sections.core.label,
-    description: 'Primary city guide content. Neighborhood drafts can fill only the fields they want to override.',
+    description: 'Primary city guide content. Neighborhood drafts only keep localized overlays instead of repeating city-wide facts.',
     levels: LOCATION_GUIDE_CONTRACT.sections.core.levels,
     path: ['guide', 'core'],
     aiPath: 'guide.core',
     fields: [
       textField('headline', 'Headline', { aiEnabled: true }),
       textareaField('subheadline', 'Subheadline', { aiEnabled: true }),
-      groupField('timezone', 'Timezone', [
-        textField('label', 'Label', { aiEnabled: true }),
-        textareaField('notes', 'Notes', { aiEnabled: true }),
-      ]),
+      {
+        ...groupField('timezone', 'Timezone', [
+          textField('label', 'Label', { aiEnabled: true }),
+          textareaField('notes', 'Notes', { aiEnabled: true }),
+        ], 'City-wide timezone baseline.'),
+        visibleWhen: isCityLevel,
+      },
       groupField('safety', 'Safety', [
         textField('status', 'Status', { aiEnabled: true }),
         textareaField('notes', 'Notes', { aiEnabled: true }),
       ]),
-      groupField('healthSafety', 'Health & Safety', [
-        arrayField('emergencyNumbers', 'Emergency Numbers', emergencyNumberFields, {
-          addLabel: 'Add emergency number',
-          maxRows: 12,
-          aiEnabled: true,
-        }),
-      ]),
-      groupField('moneyHandling', 'Money Handling', [
-        textField('exchangeRateDisplay', 'Exchange Rate Display', { aiEnabled: true }),
-        textareaField('atmAvailability', 'ATM Availability', { aiEnabled: true }),
-        textField('maxWithdrawal', 'Max Withdrawal', { aiEnabled: true }),
-        textField('withdrawalFee', 'Withdrawal Fee', { aiEnabled: true }),
-        textField('cardUsage', 'Card Usage', { aiEnabled: true }),
-      ]),
-      groupField('weather', 'Weather', [
-        textareaField('summary', 'Summary', { aiEnabled: true }),
-        arrayField('monthlyStats', 'Monthly Stats', [
-          selectField('month', 'Month', [...MONTH_OPTIONS]),
-          numberField('avgHighC', 'Average High (C)'),
-          numberField('avgLowC', 'Average Low (C)'),
-          numberField('rainfallMm', 'Rainfall (mm)'),
-          numberField('rainDays', 'Rain Days'),
-          numberField('sunshineHours', 'Sunshine Hours'),
-        ], {
-          addLabel: 'Add month',
-          maxRows: 12,
-          aiEnabled: true,
-        }),
-      ]),
+      {
+        ...groupField('healthSafety', 'Health & Safety', [
+          arrayField('emergencyNumbers', 'Emergency Numbers', emergencyNumberFields, {
+            addLabel: 'Add emergency number',
+            maxRows: 12,
+            aiEnabled: true,
+          }),
+        ]),
+        visibleWhen: isCityLevel,
+      },
+      {
+        ...groupField('moneyHandling', 'Money Handling', [
+          textField('exchangeRateDisplay', 'Exchange Rate Display', { aiEnabled: true }),
+          textareaField('atmAvailability', 'ATM Availability', { aiEnabled: true }),
+          textField('maxWithdrawal', 'Max Withdrawal', { aiEnabled: true }),
+          textField('withdrawalFee', 'Withdrawal Fee', { aiEnabled: true }),
+          textField('cardUsage', 'Card Usage', { aiEnabled: true }),
+        ]),
+        visibleWhen: isCityLevel,
+      },
+      {
+        ...groupField('weather', 'Weather', [
+          textareaField('summary', 'Summary', { aiEnabled: true }),
+          arrayField('monthlyStats', 'Monthly Stats', [
+            selectField('month', 'Month', [...MONTH_OPTIONS]),
+            numberField('avgHighC', 'Average High (C)'),
+            numberField('avgLowC', 'Average Low (C)'),
+            numberField('rainfallMm', 'Rainfall (mm)'),
+            numberField('rainDays', 'Rain Days'),
+            numberField('sunshineHours', 'Sunshine Hours'),
+          ], {
+            addLabel: 'Add month',
+            maxRows: 12,
+            aiEnabled: true,
+          }),
+        ]),
+        visibleWhen: isCityLevel,
+      },
       groupField('localContext', 'Local Context', [
         textField('vibe', 'Vibe', { aiEnabled: true }),
         textareaField('walkability', 'Walkability', { aiEnabled: true }),
@@ -305,10 +317,10 @@ const locationSections: LocationSectionDefinition[] = [
     aiPath: 'guide.explore',
     fields: [
       textareaField('intro', 'Intro', { aiEnabled: true }),
-      textField('touristVisaStatus', 'Tourist Visa Status', { aiEnabled: true }),
-      textareaField('touristVisaNotes', 'Tourist Visa Notes', { aiEnabled: true }),
-      textField('exchangeRateInfo', 'Exchange Rate Info', { aiEnabled: true }),
-      textField('costOfLivingSummary', 'Cost of Living Summary', { aiEnabled: true }),
+      textField('touristVisaStatus', 'Tourist Visa Status', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textareaField('touristVisaNotes', 'Tourist Visa Notes', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textField('exchangeRateInfo', 'Exchange Rate Info', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textField('costOfLivingSummary', 'Cost of Living Summary', { aiEnabled: true, visibleWhen: isCityLevel }),
       arrayField('highlights', 'Highlights', highlightFields, {
         addLabel: 'Add highlight',
         maxRows: 8,
@@ -324,9 +336,9 @@ const locationSections: LocationSectionDefinition[] = [
     aiPath: 'guide.stay',
     fields: [
       textareaField('intro', 'Intro', { aiEnabled: true }),
-      textField('touristVisaDuration', 'Tourist Visa Duration', { aiEnabled: true }),
-      textareaField('touristVisaExtensionNotes', 'Tourist Visa Extension Notes', { aiEnabled: true }),
-      textareaField('timezoneOverlapNote', 'Timezone Overlap Note', { aiEnabled: true }),
+      textField('touristVisaDuration', 'Tourist Visa Duration', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textareaField('touristVisaExtensionNotes', 'Tourist Visa Extension Notes', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textareaField('timezoneOverlapNote', 'Timezone Overlap Note', { aiEnabled: true, visibleWhen: isCityLevel }),
       textField('monthlyBudgetRange', 'Monthly Budget Range', { aiEnabled: true }),
       textField('internetSpeed', 'Internet Speed', { aiEnabled: true }),
       groupField('coworking', 'Coworking', [
@@ -349,14 +361,14 @@ const locationSections: LocationSectionDefinition[] = [
     aiPath: 'guide.move',
     fields: [
       textareaField('intro', 'Intro', { aiEnabled: true }),
-      textField('residencyVisa', 'Residency Visa', { aiEnabled: true }),
-      textareaField('residencyNotes', 'Residency Notes', { aiEnabled: true }),
-      textField('processingTime', 'Processing Time', { aiEnabled: true }),
+      textField('residencyVisa', 'Residency Visa', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textareaField('residencyNotes', 'Residency Notes', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textField('processingTime', 'Processing Time', { aiEnabled: true, visibleWhen: isCityLevel }),
       textField('familyCostOfLivingRange', 'Family Cost of Living Range', { aiEnabled: true }),
       textField('propertyPricesPerSqm', 'Property Prices Per Sqm', { aiEnabled: true }),
-      textField('incomeRequirements', 'Income Requirements', { aiEnabled: true }),
-      textField('safestDistricts', 'Safest Districts', { aiEnabled: true }),
-      textField('workPermits', 'Work Permits', { aiEnabled: true }),
+      textField('incomeRequirements', 'Income Requirements', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textField('safestDistricts', 'Safest Districts', { aiEnabled: true, visibleWhen: isCityLevel }),
+      textField('workPermits', 'Work Permits', { aiEnabled: true, visibleWhen: isCityLevel }),
       arrayField('highlights', 'Highlights', highlightFields, {
         addLabel: 'Add highlight',
         maxRows: 8,
@@ -464,6 +476,59 @@ function createEmptyMoveDraft(): LocationGuideDraft['move'] {
     workPermits: '',
     highlights: [],
   }
+}
+
+function stripNeighborhoodOnlyGuideFields(draft: LocationDocumentDraft): LocationDocumentDraft {
+  if (draft.level !== 'neighborhood') {
+    return draft
+  }
+
+  const next = cloneValue(draft)
+  const emptyCore = createEmptyCoreDraft()
+  const emptyExplore = createEmptyExploreDraft()
+  const emptyStay = createEmptyStayDraft()
+  const emptyMove = createEmptyMoveDraft()
+
+  next.guide.core.timezone = emptyCore.timezone
+  next.guide.core.healthSafety = emptyCore.healthSafety
+  next.guide.core.moneyHandling = emptyCore.moneyHandling
+  next.guide.core.weather = emptyCore.weather
+
+  next.guide.explore.touristVisaStatus = emptyExplore.touristVisaStatus
+  next.guide.explore.touristVisaNotes = emptyExplore.touristVisaNotes
+  next.guide.explore.exchangeRateInfo = emptyExplore.exchangeRateInfo
+  next.guide.explore.costOfLivingSummary = emptyExplore.costOfLivingSummary
+
+  next.guide.stay.touristVisaDuration = emptyStay.touristVisaDuration
+  next.guide.stay.touristVisaExtensionNotes = emptyStay.touristVisaExtensionNotes
+  next.guide.stay.timezoneOverlapNote = emptyStay.timezoneOverlapNote
+
+  next.guide.move.residencyVisa = emptyMove.residencyVisa
+  next.guide.move.residencyNotes = emptyMove.residencyNotes
+  next.guide.move.processingTime = emptyMove.processingTime
+  next.guide.move.incomeRequirements = emptyMove.incomeRequirements
+  next.guide.move.safestDistricts = emptyMove.safestDistricts
+  next.guide.move.workPermits = emptyMove.workPermits
+
+  const clearHighlightRelationships = (highlight: HighlightDraft): HighlightDraft => ({
+    ...highlight,
+    relatedNeighborhoods: [],
+    relatedNeighborhoodKeys: [],
+  })
+
+  next.guide.explore.highlights = next.guide.explore.highlights.map(clearHighlightRelationships)
+  next.guide.stay.highlights = next.guide.stay.highlights.map(clearHighlightRelationships)
+  next.guide.move.highlights = next.guide.move.highlights.map(clearHighlightRelationships)
+
+  return next
+}
+
+function normalizeDraftForLevel(draft: LocationDocumentDraft): LocationDocumentDraft {
+  if (draft.level === 'neighborhood') {
+    return stripNeighborhoodOnlyGuideFields(draft)
+  }
+
+  return draft
 }
 
 export function createEmptyLocationDraft(): LocationDocumentDraft {
@@ -631,7 +696,7 @@ export function sanitizeLocationDraftShape(input: unknown): LocationDocumentDraf
     sanitized.updatedAt = input.updatedAt
   }
 
-  return sanitized
+  return normalizeDraftForLevel(sanitized)
 }
 
 export function getVisibleSections(level: LocationLevel): LocationSectionDefinition[] {
@@ -911,7 +976,7 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
     })),
   }
 
-  return next
+  return normalizeDraftForLevel(next)
 }
 
 export const buildDraftFromPayloadDoc = payloadLocationToDraft
@@ -924,7 +989,7 @@ export function mergeDraftPatch(
   merged.draftId = current.draftId
   merged.payloadId = current.payloadId
   merged.updatedAt = new Date().toISOString()
-  return merged
+  return normalizeDraftForLevel(merged)
 }
 
 function buildNeighborhoodHintCandidates(
@@ -1156,7 +1221,9 @@ export function buildPayloadLocationBody(
   locationOptions: LocationOption[]
 ): PayloadLocationBody {
   const sanitizedDraft = sanitizeLocationDraftShape(draft)
-  const resolved = resolveDraftRelationshipHints(sanitizedDraft, locationOptions)
+  const resolved = normalizeDraftForLevel(
+    resolveDraftRelationshipHints(sanitizedDraft, locationOptions),
+  )
   const country = normalizeKeyPart(resolved.country)
   const city = normalizeKeyPart(resolved.city)
   const neighborhood = normalizeKeyPart(resolved.neighborhood)
