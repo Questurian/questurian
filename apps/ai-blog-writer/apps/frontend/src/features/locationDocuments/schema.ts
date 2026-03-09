@@ -1,6 +1,6 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api'
+import locationGuideContract from '@location-guide-contract'
 import type {
-  CountryDataDraft,
   HighlightDraft,
   LocationDocumentDraft,
   LocationFieldDefinition,
@@ -25,6 +25,23 @@ import {
   pruneEmptyValues,
   setValueAtPath,
 } from './utils'
+
+const LOCATION_GUIDE_CONTRACT = locationGuideContract as {
+  sectionOrder: LocationSectionDefinition['id'][]
+  sections: Record<
+    LocationSectionDefinition['id'],
+    {
+      label: string
+      path: string
+      levels: LocationLevel[]
+    }
+  >
+  sectionPathsByLevel: Record<LocationLevel, string[]>
+  aiFieldPaths: string[]
+  relationshipHints: {
+    neighborhoods: string[]
+  }
+}
 
 export const LOCATION_LEVEL_OPTIONS: Array<{ value: LocationLevel; label: string }> = [
   { value: 'country', label: 'Country' },
@@ -52,13 +69,6 @@ function coerceWeatherMonth(value: string): WeatherMonth | '' {
     ? value as WeatherMonth
     : ''
 }
-
-export const TAP_WATER_STATUS_OPTIONS = [
-  { value: '', label: 'Unknown' },
-  { value: 'drinkable', label: 'Drinkable' },
-  { value: 'not_drinkable', label: 'Not Drinkable' },
-  { value: 'varies_by_region', label: 'Varies by Region' },
-] as const
 
 const isLocalLevel = (draft: LocationDocumentDraft): boolean => draft.level === 'city' || draft.level === 'neighborhood'
 const isNeighborhoodLevel = (draft: LocationDocumentDraft): boolean => draft.level === 'neighborhood'
@@ -231,59 +241,21 @@ const locationSections: LocationSectionDefinition[] = [
     ],
   },
   {
-    id: 'countryData',
-    label: 'Country Data',
-    description: 'Country-wide facts that can later be composed with city and neighborhood guides.',
-    levels: ['country'],
-    path: ['guide', 'countryData'],
-    aiPath: 'guide.countryData',
-    fields: [
-      groupField('currency', 'Currency', [
-        textField('code', 'Code', { aiEnabled: true }),
-        textField('name', 'Name', { aiEnabled: true }),
-        textField('symbol', 'Symbol', { aiEnabled: true }),
-        textareaField('cardUsageSummary', 'Card Usage Summary', { aiEnabled: true }),
-      ]),
-      groupField('timezone', 'Timezone', [
-        textField('primary', 'Primary', { aiEnabled: true }),
-        textareaField('notes', 'Notes', { aiEnabled: true }),
-      ]),
-      arrayField('emergencyNumbers', 'Emergency Numbers', emergencyNumberFields, {
-        addLabel: 'Add emergency number',
-        maxRows: 12,
-      }),
-      groupField('tapWater', 'Tap Water', [
-        selectField('status', 'Status', [...TAP_WATER_STATUS_OPTIONS]),
-        textareaField('notes', 'Notes'),
-      ]),
-      groupField('visaPolicy', 'Visa Policy', [
-        textField('touristVisaRequired', 'Tourist Visa Required'),
-        textareaField('touristVisaNotes', 'Tourist Visa Notes'),
-        arrayField('residencyPathways', 'Residency Pathways', [
-          textField('type', 'Type'),
-          textareaField('summary', 'Summary'),
-        ], {
-          addLabel: 'Add residency pathway',
-        }),
-        textareaField('residencyNotes', 'Residency Notes'),
-      ]),
-      textareaField('entryRequirements', 'Entry Requirements', { aiEnabled: true }),
-      textareaField('healthNotes', 'Health Notes', { aiEnabled: true }),
-      textareaField('moneyNotes', 'Money Notes', { aiEnabled: true }),
-    ],
-  },
-  {
-    id: 'localShared',
-    label: 'Shared Overview',
-    description: 'Cross-mode practical information shared by the explore, stay, and move experiences.',
-    levels: ['city', 'neighborhood'],
-    path: ['guide', 'localShared'],
-    aiPath: 'guide.localShared',
+    id: 'core',
+    label: LOCATION_GUIDE_CONTRACT.sections.core.label,
+    description: 'Primary city guide content. Neighborhood drafts can fill only the fields they want to override.',
+    levels: LOCATION_GUIDE_CONTRACT.sections.core.levels,
+    path: ['guide', 'core'],
+    aiPath: 'guide.core',
     fields: [
       textField('headline', 'Headline', { aiEnabled: true }),
       textareaField('subheadline', 'Subheadline', { aiEnabled: true }),
       groupField('timezone', 'Timezone', [
         textField('label', 'Label', { aiEnabled: true }),
+        textareaField('notes', 'Notes', { aiEnabled: true }),
+      ]),
+      groupField('safety', 'Safety', [
+        textField('status', 'Status', { aiEnabled: true }),
         textareaField('notes', 'Notes', { aiEnabled: true }),
       ]),
       groupField('healthSafety', 'Health & Safety', [
@@ -294,7 +266,6 @@ const locationSections: LocationSectionDefinition[] = [
         }),
       ]),
       groupField('moneyHandling', 'Money Handling', [
-        textField('currencyDisplay', 'Currency Display', { aiEnabled: true }),
         textField('exchangeRateDisplay', 'Exchange Rate Display', { aiEnabled: true }),
         textareaField('atmAvailability', 'ATM Availability', { aiEnabled: true }),
         textField('maxWithdrawal', 'Max Withdrawal', { aiEnabled: true }),
@@ -333,10 +304,6 @@ const locationSections: LocationSectionDefinition[] = [
       textField('touristVisaStatus', 'Tourist Visa Status', { aiEnabled: true }),
       textareaField('touristVisaNotes', 'Tourist Visa Notes', { aiEnabled: true }),
       textField('exchangeRateInfo', 'Exchange Rate Info', { aiEnabled: true }),
-      groupField('safety', 'Safety', [
-        textField('status', 'Status', { aiEnabled: true }),
-        textareaField('notes', 'Notes', { aiEnabled: true }),
-      ]),
       textField('costOfLivingSummary', 'Cost of Living Summary', { aiEnabled: true }),
       arrayField('highlights', 'Highlights', highlightFields, {
         addLabel: 'Add highlight',
@@ -363,10 +330,6 @@ const locationSections: LocationSectionDefinition[] = [
         textareaField('notes', 'Notes', { aiEnabled: true }),
       ]),
       textField('shortTermRent', 'Short-Term Rent', { aiEnabled: true }),
-      groupField('safety', 'Safety', [
-        textField('status', 'Status', { aiEnabled: true }),
-        textareaField('notes', 'Notes', { aiEnabled: true }),
-      ]),
       arrayField('highlights', 'Highlights', highlightFields, {
         addLabel: 'Add highlight',
         maxRows: 8,
@@ -415,60 +378,7 @@ export const LOCATION_INDEX_SELECT_FIELDS = [
 
 export const MEDIA_SET_SELECT_FIELDS = ['title', 'alt_text', 'location'] as const
 
-export const FIELD_AI_PATHS = [
-  'countryName',
-  'cityName',
-  'neighborhoodName',
-  'guide.countryData.currency.code',
-  'guide.countryData.currency.name',
-  'guide.countryData.currency.symbol',
-  'guide.countryData.currency.cardUsageSummary',
-  'guide.countryData.timezone.primary',
-  'guide.countryData.timezone.notes',
-  'guide.countryData.entryRequirements',
-  'guide.countryData.healthNotes',
-  'guide.countryData.moneyNotes',
-  'guide.localShared.headline',
-  'guide.localShared.subheadline',
-  'guide.localShared.timezone.label',
-  'guide.localShared.timezone.notes',
-  'guide.localShared.moneyHandling.currencyDisplay',
-  'guide.localShared.moneyHandling.exchangeRateDisplay',
-  'guide.localShared.moneyHandling.atmAvailability',
-  'guide.localShared.moneyHandling.maxWithdrawal',
-  'guide.localShared.moneyHandling.withdrawalFee',
-  'guide.localShared.moneyHandling.cardUsage',
-  'guide.localShared.weather.summary',
-  'guide.localShared.localContext.vibe',
-  'guide.localShared.localContext.walkability',
-  'guide.explore.intro',
-  'guide.explore.touristVisaStatus',
-  'guide.explore.touristVisaNotes',
-  'guide.explore.exchangeRateInfo',
-  'guide.explore.safety.status',
-  'guide.explore.safety.notes',
-  'guide.explore.costOfLivingSummary',
-  'guide.stay.intro',
-  'guide.stay.touristVisaDuration',
-  'guide.stay.touristVisaExtensionNotes',
-  'guide.stay.timezoneOverlapNote',
-  'guide.stay.monthlyBudgetRange',
-  'guide.stay.internetSpeed',
-  'guide.stay.coworking.summary',
-  'guide.stay.coworking.notes',
-  'guide.stay.shortTermRent',
-  'guide.stay.safety.status',
-  'guide.stay.safety.notes',
-  'guide.move.intro',
-  'guide.move.residencyVisa',
-  'guide.move.residencyNotes',
-  'guide.move.processingTime',
-  'guide.move.familyCostOfLivingRange',
-  'guide.move.propertyPricesPerSqm',
-  'guide.move.incomeRequirements',
-  'guide.move.safestDistricts',
-  'guide.move.workPermits',
-] as const
+export const FIELD_AI_PATHS = LOCATION_GUIDE_CONTRACT.aiFieldPaths as readonly string[]
 
 function createEmptyMediaDraft(): MediaDraft {
   return {
@@ -476,36 +386,7 @@ function createEmptyMediaDraft(): MediaDraft {
   }
 }
 
-function createEmptyCountryDataDraft(): CountryDataDraft {
-  return {
-    currency: {
-      code: '',
-      name: '',
-      symbol: '',
-      cardUsageSummary: '',
-    },
-    timezone: {
-      primary: '',
-      notes: '',
-    },
-    emergencyNumbers: [],
-    tapWater: {
-      status: '',
-      notes: '',
-    },
-    visaPolicy: {
-      touristVisaRequired: '',
-      touristVisaNotes: '',
-      residencyPathways: [],
-      residencyNotes: '',
-    },
-    entryRequirements: '',
-    healthNotes: '',
-    moneyNotes: '',
-  }
-}
-
-function createEmptyLocalSharedDraft(): LocationGuideDraft['localShared'] {
+function createEmptyCoreDraft(): LocationGuideDraft['core'] {
   return {
     headline: '',
     subheadline: '',
@@ -513,11 +394,14 @@ function createEmptyLocalSharedDraft(): LocationGuideDraft['localShared'] {
       label: '',
       notes: '',
     },
+    safety: {
+      status: '',
+      notes: '',
+    },
     healthSafety: {
       emergencyNumbers: [],
     },
     moneyHandling: {
-      currencyDisplay: '',
       exchangeRateDisplay: '',
       atmAvailability: '',
       maxWithdrawal: '',
@@ -541,10 +425,6 @@ function createEmptyExploreDraft(): LocationGuideDraft['explore'] {
     touristVisaStatus: '',
     touristVisaNotes: '',
     exchangeRateInfo: '',
-    safety: {
-      status: '',
-      notes: '',
-    },
     costOfLivingSummary: '',
     highlights: [],
   }
@@ -563,10 +443,6 @@ function createEmptyStayDraft(): LocationGuideDraft['stay'] {
       notes: '',
     },
     shortTermRent: '',
-    safety: {
-      status: '',
-      notes: '',
-    },
     highlights: [],
   }
 }
@@ -601,8 +477,7 @@ export function createEmptyLocationDraft(): LocationDocumentDraft {
     neighborhoodName: '',
     guide: {
       media: createEmptyMediaDraft(),
-      countryData: createEmptyCountryDataDraft(),
-      localShared: createEmptyLocalSharedDraft(),
+      core: createEmptyCoreDraft(),
       explore: createEmptyExploreDraft(),
       stay: createEmptyStayDraft(),
       move: createEmptyMoveDraft(),
@@ -756,7 +631,19 @@ export function sanitizeLocationDraftShape(input: unknown): LocationDocumentDraf
 }
 
 export function getVisibleSections(level: LocationLevel): LocationSectionDefinition[] {
-  return LOCATION_SECTION_DEFINITIONS.filter((section) => section.levels.includes(level))
+  const visibleIds = LOCATION_GUIDE_CONTRACT.sectionPathsByLevel[level]
+    .map((path) => (
+      path === 'identity'
+        ? 'hierarchy'
+        : LOCATION_GUIDE_CONTRACT.sectionOrder.find(
+            (sectionId) => LOCATION_GUIDE_CONTRACT.sections[sectionId].path === path,
+          )
+    ))
+    .filter((sectionId): sectionId is LocationSectionDefinition['id'] => Boolean(sectionId))
+
+  return visibleIds
+    .map((sectionId) => LOCATION_SECTION_DEFINITIONS.find((section) => section.id === sectionId))
+    .filter((section): section is LocationSectionDefinition => Boolean(section))
 }
 
 export const getVisibleLocationSections = getVisibleSections
@@ -775,38 +662,7 @@ export function deriveLocationPreview(
 }
 
 export function buildLocationSchemaContract(): string {
-  const contract = {
-    collection: 'locations',
-    levels: {
-      country: ['hierarchy', 'media', 'countryData'],
-      city: ['hierarchy', 'media', 'localShared', 'explore', 'stay', 'move'],
-      neighborhood: ['hierarchy', 'media', 'localShared', 'explore', 'stay', 'move'],
-    },
-    sections: LOCATION_SECTION_DEFINITIONS.map((section) => ({
-      id: section.id,
-      label: section.label,
-      levels: section.levels,
-      path: section.id === 'hierarchy' ? 'identity' : section.aiPath || section.path.join('.'),
-      fields: section.fields,
-    })),
-    aiFieldPaths: [...FIELD_AI_PATHS],
-    relationshipHints: {
-      neighborhoods: [
-        'guide.explore.highlights[].relatedNeighborhoodKeys',
-        'guide.stay.highlights[].relatedNeighborhoodKeys',
-        'guide.move.highlights[].relatedNeighborhoodKeys',
-      ],
-    },
-    rules: [
-      'Return JSON only with no markdown or commentary.',
-      'Only include fields valid for the selected location level.',
-      'Do not invent Payload IDs for relationships.',
-      'Use relationship hint fields when you know a locationKey but not an ID.',
-      'Leave unknown values empty instead of fabricating facts.',
-    ],
-  }
-
-  return JSON.stringify(contract, null, 2)
+  return JSON.stringify(LOCATION_GUIDE_CONTRACT, null, 2)
 }
 
 export function isFieldAiPathSupported(path: string): boolean {
@@ -935,6 +791,10 @@ function valueOrNull(value: number | null | undefined): number | null {
 
 export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumentDraft {
   const draft = createEmptyLocationDraft()
+  const legacyGuide = (doc.guide as (PayloadLocationGuide & {
+    localShared?: PayloadLocationGuide['core']
+  }) | undefined)
+  const payloadCore = legacyGuide?.core ?? legacyGuide?.localShared
 
   const next: LocationDocumentDraft = {
     ...draft,
@@ -953,65 +813,34 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
     coverImage: extractRelationshipId(doc.guide?.media?.coverImage),
   }
 
-  next.guide.countryData = {
-    currency: {
-      code: trimText(doc.guide?.countryData?.currency?.code),
-      name: trimText(doc.guide?.countryData?.currency?.name),
-      symbol: trimText(doc.guide?.countryData?.currency?.symbol),
-      cardUsageSummary: trimText(doc.guide?.countryData?.currency?.cardUsageSummary),
-    },
+  next.guide.core = {
+    headline: trimText(payloadCore?.headline),
+    subheadline: trimText(payloadCore?.subheadline),
     timezone: {
-      primary: trimText(doc.guide?.countryData?.timezone?.primary),
-      notes: trimText(doc.guide?.countryData?.timezone?.notes),
+      label: trimText(payloadCore?.timezone?.label),
+      notes: trimText(payloadCore?.timezone?.notes),
     },
-    emergencyNumbers: (doc.guide?.countryData?.emergencyNumbers || []).map((row) => ({
-      service: trimText(row.service),
-      number: trimText(row.number),
-      notes: trimText(row.notes),
-    })),
-    tapWater: {
-      status: doc.guide?.countryData?.tapWater?.status || '',
-      notes: trimText(doc.guide?.countryData?.tapWater?.notes),
-    },
-    visaPolicy: {
-      touristVisaRequired: trimText(doc.guide?.countryData?.visaPolicy?.touristVisaRequired),
-      touristVisaNotes: trimText(doc.guide?.countryData?.visaPolicy?.touristVisaNotes),
-      residencyPathways: (doc.guide?.countryData?.visaPolicy?.residencyPathways || []).map((row) => ({
-        type: trimText(row.type),
-        summary: trimText(row.summary),
-      })),
-      residencyNotes: trimText(doc.guide?.countryData?.visaPolicy?.residencyNotes),
-    },
-    entryRequirements: trimText(doc.guide?.countryData?.entryRequirements),
-    healthNotes: trimText(doc.guide?.countryData?.healthNotes),
-    moneyNotes: trimText(doc.guide?.countryData?.moneyNotes),
-  }
-
-  next.guide.localShared = {
-    headline: trimText(doc.guide?.localShared?.headline),
-    subheadline: trimText(doc.guide?.localShared?.subheadline),
-    timezone: {
-      label: trimText(doc.guide?.localShared?.timezone?.label),
-      notes: trimText(doc.guide?.localShared?.timezone?.notes),
+    safety: {
+      status: trimText(payloadCore?.safety?.status),
+      notes: trimText(payloadCore?.safety?.notes),
     },
     healthSafety: {
-      emergencyNumbers: (doc.guide?.localShared?.healthSafety?.emergencyNumbers || []).map((row) => ({
+      emergencyNumbers: (payloadCore?.healthSafety?.emergencyNumbers || []).map((row) => ({
         service: trimText(row.service),
         number: trimText(row.number),
         notes: trimText(row.notes),
       })),
     },
     moneyHandling: {
-      currencyDisplay: trimText(doc.guide?.localShared?.moneyHandling?.currencyDisplay),
-      exchangeRateDisplay: trimText(doc.guide?.localShared?.moneyHandling?.exchangeRateDisplay),
-      atmAvailability: trimText(doc.guide?.localShared?.moneyHandling?.atmAvailability),
-      maxWithdrawal: trimText(doc.guide?.localShared?.moneyHandling?.maxWithdrawal),
-      withdrawalFee: trimText(doc.guide?.localShared?.moneyHandling?.withdrawalFee),
-      cardUsage: trimText(doc.guide?.localShared?.moneyHandling?.cardUsage),
+      exchangeRateDisplay: trimText(payloadCore?.moneyHandling?.exchangeRateDisplay),
+      atmAvailability: trimText(payloadCore?.moneyHandling?.atmAvailability),
+      maxWithdrawal: trimText(payloadCore?.moneyHandling?.maxWithdrawal),
+      withdrawalFee: trimText(payloadCore?.moneyHandling?.withdrawalFee),
+      cardUsage: trimText(payloadCore?.moneyHandling?.cardUsage),
     },
     weather: {
-      summary: trimText(doc.guide?.localShared?.weather?.summary),
-      monthlyStats: (doc.guide?.localShared?.weather?.monthlyStats || []).map((row) => ({
+      summary: trimText(payloadCore?.weather?.summary),
+      monthlyStats: (payloadCore?.weather?.monthlyStats || []).map((row) => ({
         month: coerceWeatherMonth(trimText(row.month)),
         avgHighC: valueOrNull(row.avgHighC),
         avgLowC: valueOrNull(row.avgLowC),
@@ -1021,8 +850,8 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
       })),
     },
     localContext: {
-      vibe: trimText(doc.guide?.localShared?.localContext?.vibe),
-      walkability: trimText(doc.guide?.localShared?.localContext?.walkability),
+      vibe: trimText(payloadCore?.localContext?.vibe),
+      walkability: trimText(payloadCore?.localContext?.walkability),
     },
   }
 
@@ -1031,10 +860,6 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
     touristVisaStatus: trimText(doc.guide?.explore?.touristVisaStatus),
     touristVisaNotes: trimText(doc.guide?.explore?.touristVisaNotes),
     exchangeRateInfo: trimText(doc.guide?.explore?.exchangeRateInfo),
-    safety: {
-      status: trimText(doc.guide?.explore?.safety?.status),
-      notes: trimText(doc.guide?.explore?.safety?.notes),
-    },
     costOfLivingSummary: trimText(doc.guide?.explore?.costOfLivingSummary),
     highlights: (doc.guide?.explore?.highlights || []).map((row) => ({
       title: trimText(row.title),
@@ -1056,10 +881,6 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
       notes: trimText(doc.guide?.stay?.coworking?.notes),
     },
     shortTermRent: trimText(doc.guide?.stay?.shortTermRent),
-    safety: {
-      status: trimText(doc.guide?.stay?.safety?.status),
-      notes: trimText(doc.guide?.stay?.safety?.notes),
-    },
     highlights: (doc.guide?.stay?.highlights || []).map((row) => ({
       title: trimText(row.title),
       description: trimText(row.description),
@@ -1102,18 +923,104 @@ export function mergeDraftPatch(
   return merged
 }
 
-function resolveNeighborhoodKeys(keys: string[], options: LocationOption[]): number[] {
-  const ids = new Set<number>()
+function buildNeighborhoodHintCandidates(
+  key: string,
+  draft: Pick<LocationDocumentDraft, 'country' | 'city'>,
+): string[] {
+  const normalizedSegments = key
+    .split('|')
+    .map((segment) => normalizeKeyPart(segment))
+    .filter(Boolean)
+  const normalizedCountry = normalizeKeyPart(draft.country)
+  const normalizedCity = normalizeKeyPart(draft.city)
+  const candidates = new Set<string>()
+
+  if (!normalizedSegments.length) return []
+
+  candidates.add(normalizedSegments.join('|'))
+  candidates.add(normalizedSegments[normalizedSegments.length - 1] || '')
+
+  if (normalizedSegments.length === 1 && normalizedCity) {
+    const cityPrefixes = normalizedCity
+      .split('-')
+      .filter(Boolean)
+      .map((_, index, parts) => parts.slice(0, index + 1).join('-'))
+
+    for (const prefix of cityPrefixes) {
+      const cityPrefixedValue = normalizedSegments[0] || ''
+      if (cityPrefixedValue.startsWith(`${prefix}-`)) {
+        candidates.add(cityPrefixedValue.slice(prefix.length + 1))
+      }
+    }
+  }
+
+  if (normalizedSegments.length === 1 && normalizedCountry && normalizedCity) {
+    candidates.add(`${normalizedCountry}|${normalizedCity}|${normalizedSegments[0]}`)
+  }
+
+  if (normalizedSegments.length === 2 && normalizedCountry) {
+    candidates.add(`${normalizedCountry}|${normalizedSegments.join('|')}`)
+  }
+
+  return [...candidates].filter(Boolean)
+}
+
+function normalizeLocationOptionPart(value: string | null | undefined): string {
+  return normalizeKeyPart(value ?? '')
+}
+
+function resolveNeighborhoodKeyId(
+  key: string,
+  draft: Pick<LocationDocumentDraft, 'country' | 'city'>,
+  options: LocationOption[],
+): number | null {
+  const candidates = buildNeighborhoodHintCandidates(key, draft)
+  if (!candidates.length) return null
+
   const neighborhoodOptions = options.filter((option) => option.level === 'neighborhood')
+  const normalizedCountry = normalizeKeyPart(draft.country)
+  const normalizedCity = normalizeKeyPart(draft.city)
+  const scopedNeighborhoodOptions = neighborhoodOptions.filter((option) => (
+    (!normalizedCountry || normalizeLocationOptionPart(option.country) === normalizedCountry)
+    && (!normalizedCity || normalizeLocationOptionPart(option.city) === normalizedCity)
+  ))
+
+  const findSingleMatch = (pool: LocationOption[]): LocationOption | null => {
+    for (const candidate of candidates) {
+      const locationKeyMatches = pool.filter(
+        (option) => normalizeKeyPart(option.locationKey) === candidate,
+      )
+      if (locationKeyMatches.length === 1) return locationKeyMatches[0] || null
+
+      const slugMatches = pool.filter(
+        (option) => normalizeLocationOptionPart(option.neighborhood) === candidate,
+      )
+      if (slugMatches.length === 1) return slugMatches[0] || null
+
+      const labelMatches = pool.filter(
+        (option) => normalizeLocationOptionPart(option.neighborhoodName) === candidate,
+      )
+      if (labelMatches.length === 1) return labelMatches[0] || null
+    }
+
+    return null
+  }
+
+  return findSingleMatch(scopedNeighborhoodOptions)?.id
+    ?? findSingleMatch(neighborhoodOptions)?.id
+    ?? null
+}
+
+function resolveNeighborhoodKeys(
+  keys: string[],
+  draft: Pick<LocationDocumentDraft, 'country' | 'city'>,
+  options: LocationOption[],
+): number[] {
+  const ids = new Set<number>()
 
   for (const key of keys) {
-    const normalizedKey = key.trim().toLowerCase()
-
-    const match = neighborhoodOptions.find(
-      (option) => option.locationKey.trim().toLowerCase() === normalizedKey
-    )
-
-    if (match) ids.add(match.id)
+    const resolvedId = resolveNeighborhoodKeyId(key, draft, options)
+    if (resolvedId !== null) ids.add(resolvedId)
   }
 
   return [...ids]
@@ -1124,6 +1031,10 @@ export function resolveDraftRelationshipHints(
   locationOptions: LocationOption[]
 ): LocationDocumentDraft {
   const next = cloneValue(draft)
+
+  if (next.level !== 'city') {
+    return next
+  }
 
   const resolveHighlights = (highlights: HighlightDraft[]) =>
     highlights.map((highlight) => {
@@ -1142,7 +1053,7 @@ export function resolveDraftRelationshipHints(
         }
       }
 
-      const resolvedIds = resolveNeighborhoodKeys(relatedNeighborhoodKeys, locationOptions)
+      const resolvedIds = resolveNeighborhoodKeys(relatedNeighborhoodKeys, next, locationOptions)
       if (!resolvedIds.length) {
         return {
           ...highlight,
@@ -1167,10 +1078,47 @@ export function resolveDraftRelationshipHints(
 
 export const resolveDraftHints = resolveDraftRelationshipHints
 
+export function preserveDraftRelationshipHints(
+  draft: LocationDocumentDraft,
+  sourceDraft: LocationDocumentDraft,
+): LocationDocumentDraft {
+  const next = cloneValue(draft)
+
+  const mergeHighlights = (
+    targetHighlights: HighlightDraft[],
+    sourceHighlights: HighlightDraft[],
+  ) =>
+    targetHighlights.map((highlight, index) => ({
+      ...highlight,
+      relatedNeighborhoodKeys: Array.isArray(sourceHighlights[index]?.relatedNeighborhoodKeys)
+        ? sourceHighlights[index]?.relatedNeighborhoodKeys ?? []
+        : [],
+    }))
+
+  next.guide.explore.highlights = mergeHighlights(
+    next.guide.explore.highlights,
+    sourceDraft.guide.explore.highlights,
+  )
+  next.guide.stay.highlights = mergeHighlights(
+    next.guide.stay.highlights,
+    sourceDraft.guide.stay.highlights,
+  )
+  next.guide.move.highlights = mergeHighlights(
+    next.guide.move.highlights,
+    sourceDraft.guide.move.highlights,
+  )
+
+  return next
+}
+
 export function collectUnresolvedHintWarnings(
   draft: LocationDocumentDraft,
   locationOptions: LocationOption[]
 ): string[] {
+  if (draft.level !== 'city') {
+    return []
+  }
+
   const warnings: string[] = []
 
   const unresolvedHighlightWarnings = (modeLabel: string, highlights: HighlightDraft[]) => {
@@ -1178,11 +1126,7 @@ export function collectUnresolvedHintWarnings(
       const unresolvedKeys = (Array.isArray(highlight.relatedNeighborhoodKeys)
         ? highlight.relatedNeighborhoodKeys
         : []).filter((key) => {
-        const normalized = key.trim().toLowerCase()
-        if (!normalized) return false
-        return !locationOptions.some(
-          (option) => option.level === 'neighborhood' && option.locationKey.trim().toLowerCase() === normalized
-        )
+        return resolveNeighborhoodKeyId(key, draft, locationOptions) === null
       })
 
       if (unresolvedKeys.length) {
@@ -1242,10 +1186,8 @@ export function buildPayloadLocationBody(
     },
   }
 
-  if (resolved.level === 'country') {
-    body.guide.countryData = resolved.guide.countryData
-  } else {
-    body.guide.localShared = resolved.guide.localShared
+  if (resolved.level !== 'country') {
+    body.guide.core = resolved.guide.core
     body.guide.explore = {
       ...resolved.guide.explore,
       highlights: resolved.guide.explore.highlights.map(buildPayloadHighlightForLevel),

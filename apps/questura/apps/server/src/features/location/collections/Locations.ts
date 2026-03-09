@@ -4,12 +4,19 @@
  * Managed by admins via the API or admin UI.
  */
 
-import type { CollectionConfig, Payload } from 'payload'
+import type { CollectionAfterReadHook, CollectionConfig, Payload } from 'payload'
 import { locationIdentitySelect } from '@/shared/location/constants'
 import { findLocationReferences } from '@/shared/location/server/references'
+import {
+  LOCATION_GUIDE_CONTRACT,
+  type LocationLevel,
+} from '@/shared/lib/locationGuideContract'
+import {
+  hasMeaningfulLocationGuideValue,
+  resolveLocationGuideForHierarchy,
+  type LocationGuideRecord,
+} from '@/shared/lib/locationGuideResolution'
 import { buildGuideField } from './guideFields'
-
-type LocationLevel = 'country' | 'city' | 'neighborhood'
 
 type LocationInput = {
   level?: LocationLevel
@@ -22,11 +29,35 @@ type LocationInput = {
   parentKey?: string | null
 }
 
+type LocationReadDoc = {
+  id?: string | number
+  level?: LocationLevel
+  locationKey?: string | null
+  parentKey?: string | null
+  guide?: LocationGuideRecord | null
+}
+
+const LOCATION_GUIDE_RESOLVE_CONTEXT_KEY = 'skipLocationGuideResolve'
+
 const levelOptions = [
   { label: 'Country', value: 'country' },
   { label: 'City', value: 'city' },
   { label: 'Neighborhood', value: 'neighborhood' },
 ]
+
+const countryGuideSectionKeys = new Set(
+  LOCATION_GUIDE_CONTRACT.sectionPathsByLevel.country
+    .filter((path) => path.startsWith('guide.'))
+    .map((path) => path.replace(/^guide\./, ''))
+    .filter((key) => key !== 'media'),
+)
+
+const localGuideSectionKeys = new Set(
+  LOCATION_GUIDE_CONTRACT.sectionPathsByLevel.city
+    .filter((path) => path.startsWith('guide.'))
+    .map((path) => path.replace(/^guide\./, ''))
+    .filter((key) => key !== 'media'),
+)
 
 const isLocationLevel = (value: unknown): value is LocationLevel =>
   value === 'country' || value === 'city' || value === 'neighborhood'
@@ -59,19 +90,6 @@ const formatFallbackName = (value: string): string => {
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
-}
-
-const hasMeaningfulValue = (value: unknown): boolean => {
-  if (value === null || value === undefined) return false
-  if (typeof value === 'string') return value.trim().length > 0
-  if (typeof value === 'number' || typeof value === 'boolean') return true
-  if (Array.isArray(value)) return value.some(hasMeaningfulValue)
-
-  if (typeof value === 'object') {
-    return Object.values(value).some(hasMeaningfulValue)
-  }
-
-  return false
 }
 
 const stripHighlightNeighborhoodReferences = (value: unknown): void => {
@@ -107,7 +125,7 @@ const parseLocationKey = (locationKey: string) => {
 }
 
 const resolveLevelFromKey = (
-  parts: ReturnType<typeof parseLocationKey>
+  parts: ReturnType<typeof parseLocationKey>,
 ): LocationLevel => {
   if (parts.neighborhood) return 'neighborhood'
   if (parts.city) return 'city'
@@ -116,7 +134,7 @@ const resolveLevelFromKey = (
 
 const buildKeyData = (
   level: LocationLevel,
-  parts: { country: string; city?: string; neighborhood?: string }
+  parts: { country: string; city?: string; neighborhood?: string },
 ) => {
   if (!parts.country) {
     throw new Error('country is required for all location levels')
@@ -176,10 +194,36 @@ const findLocationByKey = async (payload: Payload, locationKey: string) => {
   return result.docs?.[0] ?? null
 }
 
+const buildGuideResolveContext = (context?: Record<string, unknown>) => ({
+  ...(context ?? {}),
+  [LOCATION_GUIDE_RESOLVE_CONTEXT_KEY]: true,
+})
+
+const findLocationGuideByKey = async (
+  payload: Payload,
+  locationKey: string,
+  context?: Record<string, unknown>,
+): Promise<LocationReadDoc | null> => {
+  const result = await payload.find({
+    collection: 'locations',
+    where: {
+      locationKey: {
+        equals: locationKey,
+      },
+    },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+    context: buildGuideResolveContext(context),
+  } as any)
+
+  return (result.docs?.[0] as LocationReadDoc | undefined) ?? null
+}
+
 const createLocationIfMissing = async (
   payload: Payload,
   locationKey: string,
-  data: LocationInput
+  data: LocationInput,
 ) => {
   const existing = await findLocationByKey(payload, locationKey)
   if (existing) return existing
@@ -223,6 +267,61 @@ const ensureParentLocations = async (payload: Payload, data: LocationInput) => {
   }
 }
 
+const resolveLocationReadGuide = async (
+  payload: Payload,
+  doc: LocationReadDoc,
+  context?: Record<string, unknown>,
+): Promise<Record<string, unknown>> => {
+  if (!doc.level || !doc.locationKey) return {}
+
+  if (doc.level === 'country') {
+    return resolveLocationGuideForHierarchy({
+      level: 'country',
+      ownGuide: doc.guide,
+    })
+  }
+
+  const keyParts = parseLocationKey(doc.locationKey)
+  const countryDoc = await findLocationGuideByKey(payload, keyParts.country, context)
+
+  if (doc.level === 'city') {
+    return resolveLocationGuideForHierarchy({
+      level: 'city',
+      ownGuide: doc.guide,
+      countryGuide: countryDoc?.guide,
+    })
+  }
+
+  const cityKey = `${keyParts.country}|${keyParts.city}`
+  const cityDoc = await findLocationGuideByKey(payload, cityKey, context)
+
+  return resolveLocationGuideForHierarchy({
+    level: 'neighborhood',
+    ownGuide: doc.guide,
+    countryGuide: countryDoc?.guide,
+    cityGuide: cityDoc?.guide,
+  })
+}
+
+const afterReadResolveGuideHook: CollectionAfterReadHook = async ({ doc, req }) => {
+  if (!doc || !req) return doc
+
+  const context = (req.context as Record<string, unknown> | undefined) ?? {}
+  if (context[LOCATION_GUIDE_RESOLVE_CONTEXT_KEY] === true) return doc
+  if (!('guide' in doc)) return doc
+
+  const locationDoc = doc as LocationReadDoc & Record<string, unknown>
+  if (!isLocationLevel(locationDoc.level)) return doc
+
+  const resolvedGuide = await resolveLocationReadGuide(req.payload, locationDoc, context)
+
+  if (hasMeaningfulLocationGuideValue(resolvedGuide)) {
+    locationDoc.resolvedGuide = resolvedGuide
+  }
+
+  return locationDoc
+}
+
 export const Locations: CollectionConfig = {
   slug: 'locations',
   labels: {
@@ -261,7 +360,6 @@ export const Locations: CollectionConfig = {
         description: 'Normalized key segment (e.g., "colombia").',
       },
     },
-
     {
       name: 'city',
       type: 'text',
@@ -271,7 +369,6 @@ export const Locations: CollectionConfig = {
         description: 'Normalized key segment (e.g., "bogota").',
       },
     },
-
     {
       name: 'neighborhood',
       type: 'text',
@@ -280,7 +377,6 @@ export const Locations: CollectionConfig = {
         description: 'Normalized key segment (e.g., "santa-teresita").',
       },
     },
-
     {
       name: 'locationKey',
       type: 'text',
@@ -292,7 +388,6 @@ export const Locations: CollectionConfig = {
         description: 'Canonical key derived from the normalized segments.',
       },
     },
-
     {
       name: 'parentKey',
       type: 'text',
@@ -303,7 +398,6 @@ export const Locations: CollectionConfig = {
         description: 'Location key of the direct parent (null for countries).',
       },
     },
-
     {
       name: 'countryName',
       type: 'text',
@@ -312,7 +406,6 @@ export const Locations: CollectionConfig = {
         description: 'Display name for UI (e.g., "Colombia").',
       },
     },
-
     {
       name: 'cityName',
       type: 'text',
@@ -321,7 +414,6 @@ export const Locations: CollectionConfig = {
         description: 'Display name for UI (e.g., "Bogota").',
       },
     },
-
     {
       name: 'neighborhoodName',
       type: 'text',
@@ -331,6 +423,18 @@ export const Locations: CollectionConfig = {
       },
     },
     buildGuideField(),
+    {
+      name: 'resolvedGuide',
+      label: 'Resolved Guide',
+      type: 'json',
+      virtual: true,
+      admin: {
+        hidden: true,
+        readOnly: true,
+        description:
+          'Computed read-only guide surface used by frontend consumers after country/city/neighborhood resolution.',
+      },
+    },
   ],
   hooks: {
     beforeValidate: [
@@ -360,7 +464,7 @@ export const Locations: CollectionConfig = {
           }
 
           const normalizedCountryInput = normalizeKeyPart(
-            data.country ?? originalDoc?.country ?? keyParts.country
+            data.country ?? originalDoc?.country ?? keyParts.country,
           )
           const normalizedCountryExisting = normalizeKeyPart(keyParts.country)
 
@@ -370,7 +474,7 @@ export const Locations: CollectionConfig = {
 
           if (level !== 'country') {
             const normalizedCityInput = normalizeKeyPart(
-              data.city ?? originalDoc?.city ?? keyParts.city
+              data.city ?? originalDoc?.city ?? keyParts.city,
             )
             const normalizedCityExisting = normalizeKeyPart(keyParts.city)
 
@@ -381,7 +485,7 @@ export const Locations: CollectionConfig = {
 
           if (level === 'neighborhood') {
             const normalizedNeighborhoodInput = normalizeKeyPart(
-              data.neighborhood ?? originalDoc?.neighborhood ?? keyParts.neighborhood
+              data.neighborhood ?? originalDoc?.neighborhood ?? keyParts.neighborhood,
             )
             const normalizedNeighborhoodExisting = normalizeKeyPart(keyParts.neighborhood)
 
@@ -421,12 +525,10 @@ export const Locations: CollectionConfig = {
           data.neighborhood = keyData.neighborhood
         }
 
-        const countryNameRaw = normalizeDisplayName(
-          data.countryName ?? originalDoc?.countryName
-        )
+        const countryNameRaw = normalizeDisplayName(data.countryName ?? originalDoc?.countryName)
         const cityNameRaw = normalizeDisplayName(data.cityName ?? originalDoc?.cityName)
         const neighborhoodNameRaw = normalizeDisplayName(
-          data.neighborhoodName ?? originalDoc?.neighborhoodName
+          data.neighborhoodName ?? originalDoc?.neighborhoodName,
         )
 
         const countryFallback = formatFallbackName(String(data.country || ''))
@@ -454,13 +556,7 @@ export const Locations: CollectionConfig = {
         data.neighborhoodName = level === 'neighborhood' ? neighborhoodName : null
 
         const guide = (data.guide ?? originalDoc?.guide) as
-          | {
-              countryData?: unknown
-              localShared?: unknown
-              explore?: unknown
-              stay?: unknown
-              move?: unknown
-            }
+          | (LocationGuideRecord & Record<string, unknown>)
           | undefined
 
         if (level === 'neighborhood' && data.guide) {
@@ -468,21 +564,21 @@ export const Locations: CollectionConfig = {
         }
 
         if (guide) {
-          const hasCountryData = hasMeaningfulValue(guide.countryData)
-          const hasLocalGuideData =
-            hasMeaningfulValue(guide.localShared) ||
-            hasMeaningfulValue(guide.explore) ||
-            hasMeaningfulValue(guide.stay) ||
-            hasMeaningfulValue(guide.move)
+          const hasLocalGuideData = [...localGuideSectionKeys].some((sectionKey) =>
+            hasMeaningfulLocationGuideValue(guide[sectionKey]),
+          )
 
           if (level === 'country' && hasLocalGuideData) {
-            throw new Error(
-              'country locations cannot store localShared, explore, stay, or move guide data'
-            )
+            throw new Error('country locations cannot store core, explore, stay, or move guide data')
           }
 
-          if (level !== 'country' && hasCountryData) {
-            throw new Error('city and neighborhood locations cannot store countryData')
+          for (const sectionKey of Object.keys(guide)) {
+            if (sectionKey === 'media') continue
+            if (level === 'country' && countryGuideSectionKeys.has(sectionKey)) continue
+            if (level !== 'country' && localGuideSectionKeys.has(sectionKey)) continue
+            if (!hasMeaningfulLocationGuideValue(guide[sectionKey])) continue
+
+            throw new Error(`guide.${sectionKey} is not valid for ${level} locations`)
           }
         }
 
@@ -508,6 +604,7 @@ export const Locations: CollectionConfig = {
         return data
       },
     ],
+    afterRead: [afterReadResolveGuideHook],
     beforeDelete: [
       async ({ req, id }) => {
         const location = id
@@ -540,7 +637,7 @@ export const Locations: CollectionConfig = {
 
         if (children.totalDocs > 0) {
           throw new Error(
-            `Cannot delete location "${locationKey}" because it has child locations.`
+            `Cannot delete location "${locationKey}" because it has child locations.`,
           )
         }
 
@@ -549,8 +646,8 @@ export const Locations: CollectionConfig = {
         if (references.length > 0) {
           throw new Error(
             `Cannot delete location "${locationKey}" because it is referenced by: ${references.join(
-              ', '
-            )}`
+              ', ',
+            )}`,
           )
         }
       },

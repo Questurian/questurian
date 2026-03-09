@@ -13,9 +13,7 @@ const monthOptions = [
   { label: 'October', value: 'oct' },
   { label: 'November', value: 'nov' },
   { label: 'December', value: 'dec' },
-] as const
-
-const isCountryLevel = (data: unknown): boolean => (data as { level?: unknown } | null)?.level === 'country'
+]
 
 const isLocalLevel = (data: unknown): boolean => {
   const level = (data as { level?: unknown } | null)?.level
@@ -189,80 +187,14 @@ const buildWeatherMonthlyStatsFields = (): Field => ({
   ],
 })
 
-const buildCountryDataField = (): Field => ({
-  name: 'countryData',
-  label: 'Country Data',
-  type: 'group',
-  admin: {
-    condition: (data) => isCountryLevel(data),
-    description: 'Country-wide facts that can be composed with local guide content.',
-  },
-  fields: [
-    {
-      name: 'currency',
-      label: 'Currency',
-      type: 'group',
-      fields: [
-        textField('code', 'Code'),
-        textField('name', 'Name'),
-        textField('symbol', 'Symbol'),
-        textareaField('cardUsageSummary', 'Card Usage Summary'),
-      ],
-    },
-    {
-      name: 'timezone',
-      label: 'Timezone',
-      type: 'group',
-      fields: [textField('primary', 'Primary'), textareaField('notes', 'Notes')],
-    },
-    buildEmergencyNumberFields(),
-    {
-      name: 'tapWater',
-      label: 'Tap Water',
-      type: 'group',
-      fields: [
-        {
-          name: 'status',
-          label: 'Status',
-          type: 'select',
-          options: [
-            { label: 'Drinkable', value: 'drinkable' },
-            { label: 'Not Drinkable', value: 'not_drinkable' },
-            { label: 'Varies By Region', value: 'varies_by_region' },
-          ],
-        },
-        textareaField('notes', 'Notes'),
-      ],
-    },
-    {
-      name: 'visaPolicy',
-      label: 'Visa Policy',
-      type: 'group',
-      fields: [
-        textField('touristVisaRequired', 'Tourist Visa Required'),
-        textareaField('touristVisaNotes', 'Tourist Visa Notes'),
-        {
-          name: 'residencyPathways',
-          label: 'Residency Pathways',
-          type: 'array',
-          fields: [textField('type', 'Type'), textareaField('summary', 'Summary')],
-        },
-        textareaField('residencyNotes', 'Residency Notes'),
-      ],
-    },
-    textareaField('entryRequirements', 'Entry Requirements'),
-    textareaField('healthNotes', 'Health Notes'),
-    textareaField('moneyNotes', 'Money Notes'),
-  ],
-})
-
-const buildLocalSharedField = (): Field => ({
-  name: 'localShared',
-  label: 'Shared Overview',
+const buildCoreField = (): Field => ({
+  name: 'core',
+  label: 'Core Guide',
   type: 'group',
   admin: {
     condition: (data) => isLocalLevel(data),
-    description: 'Cross-mode practical guide data for cities and neighborhoods.',
+    description:
+      'Primary city guide content. Neighborhood docs can fill only the fields they want to override.',
   },
   fields: [
     textField('headline', 'Headline'),
@@ -273,20 +205,18 @@ const buildLocalSharedField = (): Field => ({
       type: 'group',
       fields: [textField('label', 'Label'), textareaField('notes', 'Notes')],
     },
+    buildSafetyFields(),
     {
       name: 'healthSafety',
       label: 'Health & Safety',
       type: 'group',
-      fields: [
-        buildEmergencyNumberFields(),
-      ],
+      fields: [buildEmergencyNumberFields()],
     },
     {
       name: 'moneyHandling',
       label: 'Money Handling',
       type: 'group',
       fields: [
-        textField('currencyDisplay', 'Currency Display'),
         textField('exchangeRateDisplay', 'Exchange Rate Display'),
         textareaField('atmAvailability', 'ATM Availability'),
         textField('maxWithdrawal', 'Max Withdrawal'),
@@ -326,7 +256,6 @@ const buildModeFields = (name: 'explore' | 'stay' | 'move'): Field => {
         textField('touristVisaStatus', 'Tourist Visa Status'),
         textareaField('touristVisaNotes', 'Tourist Visa Notes'),
         textField('exchangeRateInfo', 'Exchange Rate Info'),
-        buildSafetyFields(),
         textField('costOfLivingSummary', 'Cost of Living Summary'),
         buildHighlightFields(),
       ],
@@ -355,7 +284,6 @@ const buildModeFields = (name: 'explore' | 'stay' | 'move'): Field => {
           fields: [textField('summary', 'Summary'), textareaField('notes', 'Notes')],
         },
         textField('shortTermRent', 'Short-Term Rent'),
-        buildSafetyFields(),
         buildHighlightFields(),
       ],
     }
@@ -388,7 +316,7 @@ export const buildGuideField = (): Field => ({
   label: 'Guide',
   type: 'group',
   admin: {
-    description: 'Structured location guide content split by level and audience.',
+    description: 'Structured location guide content split by media, core guide, and intent.',
   },
   fields: [
     {
@@ -413,23 +341,31 @@ export const buildGuideField = (): Field => ({
           ],
         },
         {
-          label: 'Country Data',
-          fields: [buildCountryDataField()],
-        },
-        {
-          label: 'Shared Overview',
-          fields: [buildLocalSharedField()],
+          label: 'Core Guide',
+          admin: {
+            condition: (data) => isLocalLevel(data),
+          },
+          fields: [buildCoreField()],
         },
         {
           label: 'Explore',
+          admin: {
+            condition: (data) => isLocalLevel(data),
+          },
           fields: [buildModeFields('explore')],
         },
         {
           label: 'Stay',
+          admin: {
+            condition: (data) => isLocalLevel(data),
+          },
           fields: [buildModeFields('stay')],
         },
         {
           label: 'Move',
+          admin: {
+            condition: (data) => isLocalLevel(data),
+          },
           fields: [buildModeFields('move')],
         },
       ],

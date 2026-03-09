@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@shared/types': resolve(__dirname, '../../packages/shared/types.ts')
+      '@shared/types': resolve(__dirname, '../../packages/shared/types.ts'),
+      '@location-guide-contract': resolve(__dirname, '../../../../location-guide-contract.json')
     }
   },
   server: {

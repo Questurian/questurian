@@ -1,4 +1,7 @@
+import asyncio
+import pytest
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.router import router as api_router
@@ -42,8 +45,29 @@ def test_fill_document_accepts_frontend_aliases_and_returns_alias_response(monke
               "countryName": "Peru",
               "cityName": "Lima",
               "guide": {
-                "localShared": {
+                "core": {
                   "headline": "Living in Lima Overview"
+                },
+                "explore": {
+                  "highlights": [
+                    { "title": "Barranco art walk", "description": "Coastal creative district." },
+                    { "title": "Historic center", "description": "Colonial landmarks and plazas." },
+                    { "title": "Miraflores cliffs", "description": "Parks, ocean views, and cafes." }
+                  ]
+                },
+                "stay": {
+                  "highlights": [
+                    { "title": "Coworking zones", "description": "Strong remote-work neighborhoods." },
+                    { "title": "Short-term rentals", "description": "Wide furnished apartment inventory." },
+                    { "title": "Cafe work scene", "description": "Reliable daytime laptop spots." }
+                  ]
+                },
+                "move": {
+                  "highlights": [
+                    { "title": "Family districts", "description": "More residential areas with schools." },
+                    { "title": "Transit access", "description": "Key corridors for daily commutes." },
+                    { "title": "Housing options", "description": "Mix of apartments and houses." }
+                  ]
                 }
               }
             }
@@ -56,10 +80,8 @@ def test_fill_document_accepts_frontend_aliases_and_returns_alias_response(monke
         lambda *, step_runner: step_runner(),
     )
 
-    client = _build_client()
-    response = client.post(
-        "/location-documents/ai/fill-document",
-        json={
+    request = location_document_routes.FillDocumentRequest.model_validate(
+        {
             "draft": {
                 "level": "city",
                 "country": "peru",
@@ -69,16 +91,17 @@ def test_fill_document_accepts_frontend_aliases_and_returns_alias_response(monke
             },
             "sourceNotes": "Use the attached city research notes.",
             "modelName": "gemini-2.5-flash",
-        },
+        }
     )
 
-    assert response.status_code == 200
-    payload = response.json()
+    response = location_document_routes._fill_document_impl(request)
+
+    payload = response.model_dump(by_alias=True)
     assert payload["modelUsed"] == "gemini-2.5-flash"
-    assert payload["document"]["guide"]["localShared"]["headline"] == "Living in Lima Overview"
+    assert payload["document"]["guide"]["core"]["headline"] == "Living in Lima Overview"
 
 
-def test_fill_document_allows_empty_select_values_in_the_incoming_draft(monkeypatch):
+def test_fill_document_accepts_country_drafts_without_local_sections(monkeypatch):
     monkeypatch.setattr(
         location_document_routes,
         "_get_vertex_llm",
@@ -98,48 +121,40 @@ def test_fill_document_allows_empty_select_values_in_the_incoming_draft(monkeypa
         lambda *, step_runner: step_runner(),
     )
 
-    client = _build_client()
-    response = client.post(
-        "/location-documents/ai/fill-document",
-        json={
+    request = location_document_routes.FillDocumentRequest.model_validate(
+        {
             "draft": {
                 "level": "country",
                 "country": "peru",
                 "countryName": "Peru",
-                "guide": {
-                    "countryData": {
-                        "tapWater": {
-                            "status": "",
-                            "notes": "",
-                        }
-                    }
-                },
             }
-        },
+        }
     )
 
-    assert response.status_code == 200
-    payload = response.json()
+    response = location_document_routes._fill_document_impl(request)
+
+    payload = response.model_dump(by_alias=True)
     assert payload["document"]["country"] == "peru"
 
 
 def test_fill_section_rejects_invalid_section_for_country_level():
-    client = _build_client()
-    response = client.post(
-        "/location-documents/ai/fill-section",
-        json={
+    request = location_document_routes.FillSectionRequest.model_validate(
+        {
             "draft": {
                 "level": "country",
                 "country": "peru",
                 "countryName": "Peru",
             },
-            "sectionPath": "guide.localShared",
+            "sectionPath": "guide.core",
             "currentSection": {},
-        },
+        }
     )
 
-    assert response.status_code == 400
-    assert "sectionPath must be one of" in response.json()["detail"]
+    with pytest.raises(HTTPException) as exc_info:
+        location_document_routes._fill_section_impl(request)
+
+    assert exc_info.value.status_code == 400
+    assert "sectionPath must be one of" in exc_info.value.detail
 
 
 def test_fill_field_uses_langgraph_runner_and_returns_value(monkeypatch):
@@ -161,10 +176,8 @@ def test_fill_field_uses_langgraph_runner_and_returns_value(monkeypatch):
         _fake_graph_runner,
     )
 
-    client = _build_client()
-    response = client.post(
-        "/location-documents/ai/fill-field",
-        json={
+    request = location_document_routes.FillFieldRequest.model_validate(
+        {
             "draft": {
                 "level": "country",
                 "country": "peru",
@@ -173,11 +186,12 @@ def test_fill_field_uses_langgraph_runner_and_returns_value(monkeypatch):
             "fieldPath": "countryName",
             "currentValue": "",
             "instruction": "Return the display name only.",
-        },
+        }
     )
 
-    assert response.status_code == 200
-    payload = response.json()
+    response = asyncio.run(location_document_routes.fill_field(request))
+
+    payload = response.model_dump(by_alias=True)
     assert payload["fieldPath"] == "countryName"
     assert payload["value"] == "Peru"
     assert called["graph"] is True

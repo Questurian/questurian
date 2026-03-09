@@ -6,8 +6,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .contract import FIELD_PATHS_BY_LEVEL as CONTRACT_FIELD_PATHS_BY_LEVEL
+from .contract import SECTION_PATHS_BY_LEVEL as CONTRACT_SECTION_PATHS_BY_LEVEL
+
 LocationLevel = Literal["country", "city", "neighborhood"]
-TapWaterStatus = Literal["drinkable", "not_drinkable", "varies_by_region"]
 MonthValue = Literal[
     "jan",
     "feb",
@@ -50,53 +52,6 @@ class EmergencyNumberDraft(StrictModel):
     notes: str = ""
 
 
-class ResidencyPathwayDraft(StrictModel):
-    type: str = ""
-    summary: str = ""
-
-
-class TapWaterDraft(StrictModel):
-    status: TapWaterStatus | None = None
-    notes: str = ""
-
-    @field_validator("status", mode="before")
-    @classmethod
-    def normalize_empty_status(cls, value: Any) -> Any:
-        if value == "":
-            return None
-        return value
-
-
-class CurrencyDraft(StrictModel):
-    code: str = ""
-    name: str = ""
-    symbol: str = ""
-    cardUsageSummary: str = ""
-
-
-class CountryTimezoneDraft(StrictModel):
-    primary: str = ""
-    notes: str = ""
-
-
-class VisaPolicyDraft(StrictModel):
-    touristVisaRequired: str = ""
-    touristVisaNotes: str = ""
-    residencyPathways: list[ResidencyPathwayDraft] = Field(default_factory=list)
-    residencyNotes: str = ""
-
-
-class CountryDataDraft(StrictModel):
-    currency: CurrencyDraft = Field(default_factory=CurrencyDraft)
-    timezone: CountryTimezoneDraft = Field(default_factory=CountryTimezoneDraft)
-    emergencyNumbers: list[EmergencyNumberDraft] = Field(default_factory=list)
-    tapWater: TapWaterDraft = Field(default_factory=TapWaterDraft)
-    visaPolicy: VisaPolicyDraft = Field(default_factory=VisaPolicyDraft)
-    entryRequirements: str = ""
-    healthNotes: str = ""
-    moneyNotes: str = ""
-
-
 class GuideMediaDraft(StrictModel):
     coverImage: int | None = None
 
@@ -106,7 +61,6 @@ class HealthSafetyDraft(StrictModel):
 
 
 class MoneyHandlingDraft(StrictModel):
-    currencyDisplay: str = ""
     exchangeRateDisplay: str = ""
     atmAvailability: str = ""
     maxWithdrawal: str = ""
@@ -145,19 +99,20 @@ class LocalTimezoneDraft(StrictModel):
     notes: str = ""
 
 
-class LocalSharedDraft(StrictModel):
+class SafetyDraft(StrictModel):
+    status: str = ""
+    notes: str = ""
+
+
+class CoreDraft(StrictModel):
     headline: str = ""
     subheadline: str = ""
     timezone: LocalTimezoneDraft = Field(default_factory=LocalTimezoneDraft)
+    safety: SafetyDraft = Field(default_factory=SafetyDraft)
     healthSafety: HealthSafetyDraft = Field(default_factory=HealthSafetyDraft)
     moneyHandling: MoneyHandlingDraft = Field(default_factory=MoneyHandlingDraft)
     weather: WeatherDraft = Field(default_factory=WeatherDraft)
     localContext: LocalContextDraft = Field(default_factory=LocalContextDraft)
-
-
-class SafetyDraft(StrictModel):
-    status: str = ""
-    notes: str = ""
 
 
 class HighlightDraft(StrictModel):
@@ -172,7 +127,6 @@ class ExploreDraft(StrictModel):
     touristVisaStatus: str = ""
     touristVisaNotes: str = ""
     exchangeRateInfo: str = ""
-    safety: SafetyDraft = Field(default_factory=SafetyDraft)
     costOfLivingSummary: str = ""
     highlights: list[HighlightDraft] = Field(default_factory=list)
 
@@ -191,7 +145,6 @@ class StayDraft(StrictModel):
     internetSpeed: str = ""
     coworking: CoworkingDraft = Field(default_factory=CoworkingDraft)
     shortTermRent: str = ""
-    safety: SafetyDraft = Field(default_factory=SafetyDraft)
     highlights: list[HighlightDraft] = Field(default_factory=list)
 
 
@@ -210,8 +163,7 @@ class MoveDraft(StrictModel):
 
 class GuideDraft(StrictModel):
     media: GuideMediaDraft = Field(default_factory=GuideMediaDraft)
-    countryData: CountryDataDraft = Field(default_factory=CountryDataDraft)
-    localShared: LocalSharedDraft = Field(default_factory=LocalSharedDraft)
+    core: CoreDraft = Field(default_factory=CoreDraft)
     explore: ExploreDraft = Field(default_factory=ExploreDraft)
     stay: StayDraft = Field(default_factory=StayDraft)
     move: MoveDraft = Field(default_factory=MoveDraft)
@@ -232,119 +184,33 @@ class LocationDocumentDraft(StrictModel):
     @model_validator(mode="after")
     def validate_level_sections(self) -> "LocationDocumentDraft":
         if self.level == "country":
-            if _has_meaningful_value(self.guide.localShared) or _has_meaningful_value(
+            if _has_meaningful_value(self.guide.core) or _has_meaningful_value(
                 self.guide.explore
             ) or _has_meaningful_value(self.guide.stay) or _has_meaningful_value(
                 self.guide.move
             ):
                 raise ValueError(
-                    "country locations cannot store localShared, explore, stay, or move guide data"
+                    "country locations cannot store core, explore, stay, or move guide data"
                 )
-        else:
-            if _has_meaningful_value(self.guide.countryData):
-                raise ValueError("city and neighborhood locations cannot store countryData")
         return self
 
 
 SECTION_MODEL_BY_PATH = {
     "guide.media": GuideMediaDraft,
-    "guide.countryData": CountryDataDraft,
-    "guide.localShared": LocalSharedDraft,
+    "guide.core": CoreDraft,
     "guide.explore": ExploreDraft,
     "guide.stay": StayDraft,
     "guide.move": MoveDraft,
 }
 
-COMMON_FIELD_PATHS = {
-    "country",
-    "countryName",
-}
-
-LOCAL_FIELD_PATHS = {
-    "city",
-    "cityName",
-    "guide.localShared.headline",
-    "guide.localShared.subheadline",
-    "guide.localShared.timezone.label",
-    "guide.localShared.timezone.notes",
-    "guide.localShared.moneyHandling.currencyDisplay",
-    "guide.localShared.moneyHandling.exchangeRateDisplay",
-    "guide.localShared.moneyHandling.atmAvailability",
-    "guide.localShared.moneyHandling.maxWithdrawal",
-    "guide.localShared.moneyHandling.withdrawalFee",
-    "guide.localShared.moneyHandling.cardUsage",
-    "guide.localShared.weather.summary",
-    "guide.localShared.localContext.vibe",
-    "guide.localShared.localContext.walkability",
-    "guide.explore.intro",
-    "guide.explore.touristVisaStatus",
-    "guide.explore.touristVisaNotes",
-    "guide.explore.exchangeRateInfo",
-    "guide.explore.safety.status",
-    "guide.explore.safety.notes",
-    "guide.explore.costOfLivingSummary",
-    "guide.stay.intro",
-    "guide.stay.touristVisaDuration",
-    "guide.stay.touristVisaExtensionNotes",
-    "guide.stay.timezoneOverlapNote",
-    "guide.stay.monthlyBudgetRange",
-    "guide.stay.internetSpeed",
-    "guide.stay.coworking.summary",
-    "guide.stay.coworking.notes",
-    "guide.stay.shortTermRent",
-    "guide.stay.safety.status",
-    "guide.stay.safety.notes",
-    "guide.move.intro",
-    "guide.move.residencyVisa",
-    "guide.move.residencyNotes",
-    "guide.move.processingTime",
-    "guide.move.familyCostOfLivingRange",
-    "guide.move.propertyPricesPerSqm",
-    "guide.move.incomeRequirements",
-    "guide.move.safestDistricts",
-    "guide.move.workPermits",
-}
-
-COUNTRY_ONLY_FIELD_PATHS = {
-    "guide.countryData.currency.code",
-    "guide.countryData.currency.name",
-    "guide.countryData.currency.symbol",
-    "guide.countryData.currency.cardUsageSummary",
-    "guide.countryData.timezone.primary",
-    "guide.countryData.timezone.notes",
-    "guide.countryData.tapWater.notes",
-    "guide.countryData.visaPolicy.touristVisaRequired",
-    "guide.countryData.visaPolicy.touristVisaNotes",
-    "guide.countryData.visaPolicy.residencyNotes",
-    "guide.countryData.entryRequirements",
-    "guide.countryData.healthNotes",
-    "guide.countryData.moneyNotes",
-}
-
-NEIGHBORHOOD_ONLY_FIELD_PATHS = {
-    "neighborhood",
-    "neighborhoodName",
-}
-
 SECTION_PATHS_BY_LEVEL: dict[LocationLevel, set[str]] = {
-    "country": {"guide.media", "guide.countryData"},
-    "city": {"guide.media", "guide.localShared", "guide.explore", "guide.stay", "guide.move"},
-    "neighborhood": {
-        "guide.media",
-        "guide.localShared",
-        "guide.explore",
-        "guide.stay",
-        "guide.move",
-    },
+    level: {path for path in paths if path != "identity"}
+    for level, paths in CONTRACT_SECTION_PATHS_BY_LEVEL.items()
 }
 
 FIELD_PATHS_BY_LEVEL: dict[LocationLevel, set[str]] = {
-    "country": COMMON_FIELD_PATHS | COUNTRY_ONLY_FIELD_PATHS,
-    "city": COMMON_FIELD_PATHS | LOCAL_FIELD_PATHS | {"city", "cityName"},
-    "neighborhood": COMMON_FIELD_PATHS
-    | LOCAL_FIELD_PATHS
-    | {"city", "cityName"}
-    | NEIGHBORHOOD_ONLY_FIELD_PATHS,
+    level: set(paths)
+    for level, paths in CONTRACT_FIELD_PATHS_BY_LEVEL.items()
 }
 
 

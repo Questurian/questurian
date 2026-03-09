@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   buildLocationHierarchyTitle,
   buildPayloadLocationBody,
+  collectUnresolvedHintWarnings,
   createEmptyLocationDraft,
   getVisibleLocationSections,
+  preserveDraftRelationshipHints,
   resolveLocationDraftRef,
   sanitizeLocationDraftShape,
 } from './schema'
@@ -15,24 +17,24 @@ describe('locationDocuments schema helpers', () => {
     expect(getVisibleLocationSections('country').map((section) => section.id)).toEqual([
       'hierarchy',
       'media',
-      'countryData',
     ])
   })
 
-  it('builds a city payload and resolves neighborhood relationship hints without leaking country-only guide data', () => {
+  it('builds a city payload and resolves shorthand neighborhood hints within the current city without leaking country-only guide data', () => {
     const draft = createEmptyLocationDraft()
     draft.level = 'city'
-    draft.country = 'Peru'
-    draft.city = 'Lima'
+    draft.country = 'Brazil'
+    draft.city = 'Rio de Janeiro'
+    draft.countryName = 'Brazil'
+    draft.cityName = 'Rio de Janeiro'
     draft.guide.media.coverImage = 91
-    draft.guide.countryData.healthNotes = 'country-only field should be stripped for city payloads'
-    draft.guide.localShared.headline = 'Living in Lima Overview'
+    draft.guide.core.headline = 'Living in Rio Overview'
     draft.guide.explore.highlights = [
       {
-        title: 'Best food district',
-        description: 'Start in Miraflores.',
+        title: 'Beach circuit',
+        description: 'Start in Copacabana and Ipanema.',
         relatedNeighborhoods: [],
-        relatedNeighborhoodKeys: ['peru|lima|miraflores'],
+        relatedNeighborhoodKeys: ['copacabana', 'ipanema'],
       },
     ]
 
@@ -40,26 +42,105 @@ describe('locationDocuments schema helpers', () => {
       {
         id: 44,
         level: 'neighborhood',
-        country: 'peru',
-        city: 'lima',
-        neighborhood: 'miraflores',
-        countryName: 'Peru',
-        cityName: 'Lima',
-        neighborhoodName: 'Miraflores',
-        locationKey: 'peru|lima|miraflores',
+        country: 'brazil',
+        city: 'rio-de-janeiro',
+        neighborhood: 'copacabana',
+        countryName: 'Brazil',
+        cityName: 'Rio de Janeiro',
+        neighborhoodName: 'Copacabana',
+        locationKey: 'brazil|rio-de-janeiro|copacabana',
+      },
+      {
+        id: 45,
+        level: 'neighborhood',
+        country: 'brazil',
+        city: 'rio-de-janeiro',
+        neighborhood: 'ipanema',
+        countryName: 'Brazil',
+        cityName: 'Rio de Janeiro',
+        neighborhoodName: 'Ipanema',
+        locationKey: 'brazil|rio-de-janeiro|ipanema',
+      },
+      {
+        id: 46,
+        level: 'neighborhood',
+        country: 'brazil',
+        city: 'some-other-city',
+        neighborhood: 'copacabana',
+        countryName: 'Brazil',
+        cityName: 'Some Other City',
+        neighborhoodName: 'Copacabana',
+        locationKey: 'brazil|some-other-city|copacabana',
       },
     ]
+
+    expect(collectUnresolvedHintWarnings(draft, locationOptions)).toEqual([])
     const payload = buildPayloadLocationBody(draft, locationOptions)
 
     expect(payload.level).toBe('city')
-    expect(payload.country).toBe('peru')
-    expect(payload.city).toBe('lima')
-    expect(payload.countryName).toBe('Peru')
-    expect(payload.cityName).toBe('Lima')
-    expect(payload.guide?.countryData).toBeUndefined()
+    expect(payload.country).toBe('brazil')
+    expect(payload.city).toBe('rio-de-janeiro')
+    expect(payload.countryName).toBe('Brazil')
+    expect(payload.cityName).toBe('Rio de Janeiro')
     expect(payload.guide?.media?.coverImage).toBe(91)
-    expect(payload.guide?.localShared?.headline).toBe('Living in Lima Overview')
-    expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([44])
+    expect(payload.guide?.core?.headline).toBe('Living in Rio Overview')
+    expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([44, 45])
+  })
+
+  it('resolves city-prefixed neighborhood hint slugs and preserves hint keys across save reloads', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'city'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.guide.explore.highlights = [
+      {
+        title: 'Historic Center of Lima',
+        description: 'Colonial core and civic plazas.',
+        relatedNeighborhoods: [],
+        relatedNeighborhoodKeys: ['lima-historic-center'],
+      },
+    ]
+
+    const locationOptions: LocationOption[] = [
+      {
+        id: 71,
+        level: 'neighborhood',
+        country: 'peru',
+        city: 'lima',
+        neighborhood: 'historic-center',
+        countryName: 'Peru',
+        cityName: 'Lima',
+        neighborhoodName: 'Historic Center',
+        locationKey: 'peru|lima|historic-center',
+      },
+    ]
+
+    expect(collectUnresolvedHintWarnings(draft, locationOptions)).toEqual([])
+
+    const payload = buildPayloadLocationBody(draft, locationOptions)
+    expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([71])
+
+    const persisted = createEmptyLocationDraft()
+    persisted.level = 'city'
+    persisted.country = 'Peru'
+    persisted.city = 'Lima'
+    persisted.countryName = 'Peru'
+    persisted.cityName = 'Lima'
+    persisted.guide.explore.highlights = [
+      {
+        title: 'Historic Center of Lima',
+        description: 'Colonial core and civic plazas.',
+        relatedNeighborhoods: [71],
+        relatedNeighborhoodKeys: [],
+      },
+    ]
+
+    const merged = preserveDraftRelationshipHints(persisted, draft)
+    expect(merged.guide.explore.highlights[0]?.relatedNeighborhoodKeys).toEqual([
+      'lima-historic-center',
+    ])
   })
 
   it('resolves the current payload location ref from payload id or a matching location key', () => {

@@ -1,12 +1,11 @@
 import type { EditorAssistModelName } from '../staging/api'
 
 export type LocationLevel = 'country' | 'city' | 'neighborhood'
-export type LocationSectionKey = 'hierarchy' | 'media' | 'countryData' | 'localShared' | 'explore' | 'stay' | 'move'
+export type LocationSectionKey = 'hierarchy' | 'media' | 'core' | 'explore' | 'stay' | 'move'
 export type LocationAiSectionPath =
   | 'identity'
   | 'guide.media'
-  | 'guide.countryData'
-  | 'guide.localShared'
+  | 'guide.core'
   | 'guide.explore'
   | 'guide.stay'
   | 'guide.move'
@@ -20,11 +19,6 @@ export type EmergencyNumber = {
   service: string
   number: string
   notes: string
-}
-
-export type ResidencyPathway = {
-  type: string
-  summary: string
 }
 
 export type WeatherMonth =
@@ -62,45 +56,18 @@ export type SafetyGroup = {
   notes: string
 }
 
-export type CountryDataGuide = {
-  currency: {
-    code: string
-    name: string
-    symbol: string
-    cardUsageSummary: string
-  }
-  timezone: {
-    primary: string
-    notes: string
-  }
-  emergencyNumbers: EmergencyNumber[]
-  tapWater: {
-    status: '' | 'drinkable' | 'not_drinkable' | 'varies_by_region'
-    notes: string
-  }
-  visaPolicy: {
-    touristVisaRequired: string
-    touristVisaNotes: string
-    residencyPathways: ResidencyPathway[]
-    residencyNotes: string
-  }
-  entryRequirements: string
-  healthNotes: string
-  moneyNotes: string
-}
-
-export type LocalSharedGuide = {
+export type CoreGuide = {
   headline: string
   subheadline: string
   timezone: {
     label: string
     notes: string
   }
+  safety: SafetyGroup
   healthSafety: {
     emergencyNumbers: EmergencyNumber[]
   }
   moneyHandling: {
-    currencyDisplay: string
     exchangeRateDisplay: string
     atmAvailability: string
     maxWithdrawal: string
@@ -122,7 +89,6 @@ export type ExploreGuide = {
   touristVisaStatus: string
   touristVisaNotes: string
   exchangeRateInfo: string
-  safety: SafetyGroup
   costOfLivingSummary: string
   highlights: HighlightItem[]
 }
@@ -139,7 +105,6 @@ export type StayGuide = {
     notes: string
   }
   shortTermRent: string
-  safety: SafetyGroup
   highlights: HighlightItem[]
 }
 
@@ -162,16 +127,14 @@ export type MediaGuide = {
 
 export type LocationGuideDraft = {
   media: MediaGuide
-  countryData: CountryDataGuide
-  localShared: LocalSharedGuide
+  core: CoreGuide
   explore: ExploreGuide
   stay: StayGuide
   move: MoveGuide
 }
 
 export type MediaDraft = MediaGuide
-export type CountryDataDraft = CountryDataGuide
-export type LocalSharedDraft = LocalSharedGuide
+export type CoreDraft = CoreGuide
 export type ExploreDraft = ExploreGuide
 export type StayDraft = StayGuide
 export type MoveDraft = MoveGuide
@@ -201,14 +164,12 @@ export type PayloadLocationGuide = {
   media?: {
     coverImage?: number | { id?: number } | null
   } | null
-  countryData?: Partial<CountryDataGuide> | null
-  localShared?: Partial<LocalSharedGuide> | null
+  core?: Partial<CoreGuide> | null
   explore?: {
     intro?: string | null
     touristVisaStatus?: string | null
     touristVisaNotes?: string | null
     exchangeRateInfo?: string | null
-    safety?: Partial<SafetyGroup> | null
     costOfLivingSummary?: string | null
     highlights?: Array<{
       title?: string | null
@@ -228,7 +189,6 @@ export type PayloadLocationGuide = {
       notes?: string | null
     } | null
     shortTermRent?: string | null
-    safety?: Partial<SafetyGroup> | null
     highlights?: Array<{
       title?: string | null
       description?: string | null

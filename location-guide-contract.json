@@ -1,0 +1,207 @@
+{
+  "version": 3,
+  "sectionOrder": [
+    "hierarchy",
+    "media",
+    "core",
+    "explore",
+    "stay",
+    "move"
+  ],
+  "sections": {
+    "hierarchy": {
+      "label": "Hierarchy",
+      "path": "identity",
+      "levels": ["country", "city", "neighborhood"]
+    },
+    "media": {
+      "label": "Media",
+      "path": "guide.media",
+      "levels": ["country", "city", "neighborhood"]
+    },
+    "core": {
+      "label": "Core Guide",
+      "path": "guide.core",
+      "levels": ["city", "neighborhood"]
+    },
+    "explore": {
+      "label": "Explore",
+      "path": "guide.explore",
+      "levels": ["city", "neighborhood"]
+    },
+    "stay": {
+      "label": "Stay",
+      "path": "guide.stay",
+      "levels": ["city", "neighborhood"]
+    },
+    "move": {
+      "label": "Move",
+      "path": "guide.move",
+      "levels": ["city", "neighborhood"]
+    }
+  },
+  "sectionPathsByLevel": {
+    "country": ["identity", "guide.media"],
+    "city": ["identity", "guide.media", "guide.core", "guide.explore", "guide.stay", "guide.move"],
+    "neighborhood": ["identity", "guide.media", "guide.core", "guide.explore", "guide.stay", "guide.move"]
+  },
+  "fieldPathsByLevel": {
+    "country": [
+      "country",
+      "countryName"
+    ],
+    "city": [
+      "country",
+      "countryName",
+      "city",
+      "cityName",
+      "guide.core.headline",
+      "guide.core.subheadline",
+      "guide.core.timezone.label",
+      "guide.core.timezone.notes",
+      "guide.core.safety.status",
+      "guide.core.safety.notes",
+      "guide.core.moneyHandling.exchangeRateDisplay",
+      "guide.core.moneyHandling.atmAvailability",
+      "guide.core.moneyHandling.maxWithdrawal",
+      "guide.core.moneyHandling.withdrawalFee",
+      "guide.core.moneyHandling.cardUsage",
+      "guide.core.weather.summary",
+      "guide.core.localContext.vibe",
+      "guide.core.localContext.walkability",
+      "guide.explore.intro",
+      "guide.explore.touristVisaStatus",
+      "guide.explore.touristVisaNotes",
+      "guide.explore.exchangeRateInfo",
+      "guide.explore.costOfLivingSummary",
+      "guide.stay.intro",
+      "guide.stay.touristVisaDuration",
+      "guide.stay.touristVisaExtensionNotes",
+      "guide.stay.timezoneOverlapNote",
+      "guide.stay.monthlyBudgetRange",
+      "guide.stay.internetSpeed",
+      "guide.stay.coworking.summary",
+      "guide.stay.coworking.notes",
+      "guide.stay.shortTermRent",
+      "guide.move.intro",
+      "guide.move.residencyVisa",
+      "guide.move.residencyNotes",
+      "guide.move.processingTime",
+      "guide.move.familyCostOfLivingRange",
+      "guide.move.propertyPricesPerSqm",
+      "guide.move.incomeRequirements",
+      "guide.move.safestDistricts",
+      "guide.move.workPermits"
+    ],
+    "neighborhood": [
+      "country",
+      "countryName",
+      "city",
+      "cityName",
+      "neighborhood",
+      "neighborhoodName",
+      "guide.core.headline",
+      "guide.core.subheadline",
+      "guide.core.timezone.label",
+      "guide.core.timezone.notes",
+      "guide.core.safety.status",
+      "guide.core.safety.notes",
+      "guide.core.moneyHandling.exchangeRateDisplay",
+      "guide.core.moneyHandling.atmAvailability",
+      "guide.core.moneyHandling.maxWithdrawal",
+      "guide.core.moneyHandling.withdrawalFee",
+      "guide.core.moneyHandling.cardUsage",
+      "guide.core.weather.summary",
+      "guide.core.localContext.vibe",
+      "guide.core.localContext.walkability",
+      "guide.explore.intro",
+      "guide.explore.touristVisaStatus",
+      "guide.explore.touristVisaNotes",
+      "guide.explore.exchangeRateInfo",
+      "guide.explore.costOfLivingSummary",
+      "guide.stay.intro",
+      "guide.stay.touristVisaDuration",
+      "guide.stay.touristVisaExtensionNotes",
+      "guide.stay.timezoneOverlapNote",
+      "guide.stay.monthlyBudgetRange",
+      "guide.stay.internetSpeed",
+      "guide.stay.coworking.summary",
+      "guide.stay.coworking.notes",
+      "guide.stay.shortTermRent",
+      "guide.move.intro",
+      "guide.move.residencyVisa",
+      "guide.move.residencyNotes",
+      "guide.move.processingTime",
+      "guide.move.familyCostOfLivingRange",
+      "guide.move.propertyPricesPerSqm",
+      "guide.move.incomeRequirements",
+      "guide.move.safestDistricts",
+      "guide.move.workPermits"
+    ]
+  },
+  "aiFieldPaths": [
+    "countryName",
+    "cityName",
+    "neighborhoodName",
+    "guide.core.headline",
+    "guide.core.subheadline",
+    "guide.core.timezone.label",
+    "guide.core.timezone.notes",
+    "guide.core.safety.status",
+    "guide.core.safety.notes",
+    "guide.core.moneyHandling.exchangeRateDisplay",
+    "guide.core.moneyHandling.atmAvailability",
+    "guide.core.moneyHandling.maxWithdrawal",
+    "guide.core.moneyHandling.withdrawalFee",
+    "guide.core.moneyHandling.cardUsage",
+    "guide.core.weather.summary",
+    "guide.core.localContext.vibe",
+    "guide.core.localContext.walkability",
+    "guide.explore.intro",
+    "guide.explore.touristVisaStatus",
+    "guide.explore.touristVisaNotes",
+    "guide.explore.exchangeRateInfo",
+    "guide.explore.costOfLivingSummary",
+    "guide.stay.intro",
+    "guide.stay.touristVisaDuration",
+    "guide.stay.touristVisaExtensionNotes",
+    "guide.stay.timezoneOverlapNote",
+    "guide.stay.monthlyBudgetRange",
+    "guide.stay.internetSpeed",
+    "guide.stay.coworking.summary",
+    "guide.stay.coworking.notes",
+    "guide.stay.shortTermRent",
+    "guide.move.intro",
+    "guide.move.residencyVisa",
+    "guide.move.residencyNotes",
+    "guide.move.processingTime",
+    "guide.move.familyCostOfLivingRange",
+    "guide.move.propertyPricesPerSqm",
+    "guide.move.incomeRequirements",
+    "guide.move.safestDistricts",
+    "guide.move.workPermits"
+  ],
+  "relationshipHints": {
+    "neighborhoods": [
+      "guide.explore.highlights[].relatedNeighborhoodKeys",
+      "guide.stay.highlights[].relatedNeighborhoodKeys",
+      "guide.move.highlights[].relatedNeighborhoodKeys"
+    ]
+  },
+  "highlightRules": {
+    "min": 3,
+    "max": 4,
+    "sectionPaths": ["guide.explore", "guide.stay", "guide.move"]
+  },
+  "resolution": {
+    "mediaSectionPath": "guide.media",
+    "overlaySectionPaths": ["guide.core", "guide.explore", "guide.stay", "guide.move"],
+    "precedenceByLevel": {
+      "country": ["country"],
+      "city": ["country", "city"],
+      "neighborhood": ["country", "city", "neighborhood"]
+    },
+    "emptyValuesDoNotOverride": true,
+    "arrayStrategy": "replace-on-non-empty"
+  }
+}

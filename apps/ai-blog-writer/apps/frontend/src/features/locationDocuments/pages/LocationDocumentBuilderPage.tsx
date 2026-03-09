@@ -20,6 +20,7 @@ import {
   collectUnresolvedHintWarnings,
   createEmptyLocationDocumentDraft,
   getVisibleLocationSections,
+  preserveDraftRelationshipHints,
   resolveDraftHints,
   resolveLocationDraftRef,
   validateDraft
@@ -345,25 +346,31 @@ export default function LocationDocumentBuilderPage() {
         throw new Error(validationError)
       }
 
-      const unresolvedWarnings = collectUnresolvedHintWarnings(
-        draft,
-        locations
-      )
+      let saveLocations = locations
+      let unresolvedWarnings = collectUnresolvedHintWarnings(draft, saveLocations)
+
       if (unresolvedWarnings.length > 0) {
-        throw new Error(unresolvedWarnings[0])
+        try {
+          const refreshedLocations = await fetchLocationOptions(token)
+          saveLocations = refreshedLocations
+          setLocations(refreshedLocations)
+          unresolvedWarnings = collectUnresolvedHintWarnings(draft, refreshedLocations)
+        } catch (refreshError: unknown) {
+          console.warn('Failed to refresh location options before save', refreshError)
+        }
       }
 
-      const payloadBody = buildPayloadLocationBody(draft, locations)
+      const payloadBody = buildPayloadLocationBody(draft, saveLocations)
       const savedDoc = draft.payloadId
         ? await updateLocation(draft.payloadId, payloadBody, token)
         : await createLocation(payloadBody, token)
 
-      const nextDraft = {
+      const nextDraft = preserveDraftRelationshipHints({
         ...buildDraftFromPayloadDoc(savedDoc),
         draftId: draft.draftId,
         editorModelName: draft.editorModelName,
         aiSourceNotes: draft.aiSourceNotes
-      }
+      }, draft)
 
       setDraft(nextDraft)
       saveDraft(nextDraft)
@@ -372,9 +379,15 @@ export default function LocationDocumentBuilderPage() {
         draftId: nextDraft.draftId
       })
       setResult(
-        draft.payloadId
-          ? 'Updated Payload location document.'
-          : 'Created new Payload location document.'
+        `${
+          draft.payloadId
+            ? 'Updated Payload location document.'
+            : 'Created new Payload location document.'
+        }${
+          unresolvedWarnings.length > 0
+            ? ' Some neighborhood hint keys could not be matched yet, so they were kept in your local builder draft only.'
+            : ''
+        }`
       )
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save location')
@@ -664,8 +677,9 @@ export default function LocationDocumentBuilderPage() {
             <span className="ldb-mode-badge">{modeLabel}</span>
           </div>
           <p className="ldb-lede">
-            Build the full Payload `locations` document, including shared guide
-            sections and audience-specific explore/stay/move content.
+            Build the full Payload `locations` document, with hierarchy, media,
+            city/neighborhood core guide content, and audience-specific
+            explore/stay/move content.
           </p>
         </div>
 

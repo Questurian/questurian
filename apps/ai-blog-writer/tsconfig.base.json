@@ -6,7 +6,8 @@
     "module": "ESNext",
     "baseUrl": ".",
     "paths": {
-      "@shared/types": ["packages/shared/types.ts"]
+      "@shared/types": ["packages/shared/types.ts"],
+      "@location-guide-contract": ["../../location-guide-contract.json"]
     },
     "skipLibCheck": true,
     "moduleResolution": "Bundler",

@@ -16,6 +16,7 @@ from .graph import (
     run_location_documents_fill_field_graph,
     run_location_documents_fill_section_graph,
 )
+from .contract import HIGHLIGHT_MAX, HIGHLIGHT_MIN, HIGHLIGHT_SECTION_PATHS
 from .models import (
     FIELD_PATHS_BY_LEVEL,
     SECTION_MODEL_BY_PATH,
@@ -117,7 +118,7 @@ Previous response:
 {previous_response}"""
 
 
-DOCUMENT_FILL_RULES = """You are filling a structured JSON draft for a Payload CMS `locations` document.
+DOCUMENT_FILL_RULES = f"""You are filling a structured JSON draft for a Payload CMS `locations` document.
 
 Hard rules:
 - Return only a single JSON object matching the requested schema.
@@ -129,15 +130,15 @@ Hard rules:
   - guide.explore/stay/move.highlights[].relatedNeighborhoodKeys
 - If a relationship ID is unknown, keep the real ID field null or [] and use the hint/key field instead.
 - Level rules:
-  - country documents may use only guide.media and guide.countryData
-  - city and neighborhood documents may use only guide.media, guide.localShared, guide.explore, guide.stay, and guide.move
+  - country documents may use only guide.media
+  - city and neighborhood documents may use only guide.media, guide.core, guide.explore, guide.stay, and guide.move
 - Highlight count rule for city/neighborhood drafts:
-  - guide.explore.highlights must contain 3 or 4 items
-  - guide.stay.highlights must contain 3 or 4 items
-  - guide.move.highlights must contain 3 or 4 items"""
+  - guide.explore.highlights must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items
+  - guide.stay.highlights must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items
+  - guide.move.highlights must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items"""
 
 
-SECTION_FILL_RULES = """You are filling one structured section inside a Payload CMS `locations` document draft.
+SECTION_FILL_RULES = f"""You are filling one structured section inside a Payload CMS `locations` document draft.
 
 Hard rules:
 - Return only the target section JSON object, not the whole document.
@@ -145,7 +146,7 @@ Hard rules:
 - Preserve existing user-provided values unless the instruction clearly asks for changes.
 - Unknown values must stay as empty strings, nulls, or empty arrays.
 - Do not invent numeric Payload IDs.
-- If the target section path is guide.explore, guide.stay, or guide.move, the highlights array must contain 3 or 4 items."""
+- If the target section path is guide.explore, guide.stay, or guide.move, the highlights array must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items."""
 
 
 FIELD_FILL_RULES = """You are filling one scalar text field inside a Payload CMS `locations` document draft.
@@ -346,11 +347,11 @@ def _validate_document_highlight_counts(
     invalid = [
         f"{mode}={count}"
         for mode, count in counts.items()
-        if count < 3 or count > 4
+        if count < HIGHLIGHT_MIN or count > HIGHLIGHT_MAX
     ]
     if invalid:
         raise ValueError(
-            "Each mode highlights array must contain 3-4 items for city/neighborhood drafts. "
+            f"Each mode highlights array must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items for city/neighborhood drafts. "
             f"Received: {', '.join(invalid)}"
         )
     return document
@@ -360,18 +361,18 @@ def _validate_section_highlight_counts(
     section_path: str,
     section: Any,
 ) -> Any:
-    if section_path not in {"guide.explore", "guide.stay", "guide.move"}:
+    if section_path not in HIGHLIGHT_SECTION_PATHS:
         return section
 
     highlights = getattr(section, "highlights", None)
     if not isinstance(highlights, list):
         raise ValueError(
-            f"{section_path}.highlights must be an array with 3-4 items."
+            f"{section_path}.highlights must be an array with {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items."
         )
 
-    if len(highlights) < 3 or len(highlights) > 4:
+    if len(highlights) < HIGHLIGHT_MIN or len(highlights) > HIGHLIGHT_MAX:
         raise ValueError(
-            f"{section_path}.highlights must contain 3-4 items, received {len(highlights)}."
+            f"{section_path}.highlights must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items, received {len(highlights)}."
         )
 
     return section
