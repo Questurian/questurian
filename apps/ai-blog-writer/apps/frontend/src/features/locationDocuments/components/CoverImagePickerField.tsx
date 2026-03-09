@@ -1,4 +1,5 @@
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ImageUpload,
   MultiVariantCropper,
@@ -176,6 +177,15 @@ function CoverImagePickerModal({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -434,7 +444,7 @@ function CoverImagePickerModal({
     )
   }
 
-  return (
+  return createPortal(
     <div className="fip-overlay" ref={overlayRef} onClick={handleOverlayClick} role="presentation">
       <div
         className="fip-modal"
@@ -757,7 +767,8 @@ function CoverImagePickerModal({
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -868,9 +879,6 @@ export function CoverImagePickerField({
           <span className="ldb-picker-trigger__preview">
             <span className="ldb-picker-trigger__label ldb-picker-trigger__label--placeholder">
               {field.label}
-            </span>
-            <span className="ldb-picker-trigger__hint">
-              Select from Payload, upload a new image, or import from Unsplash/Pexels.
             </span>
           </span>
           <span className="ldb-picker-trigger__caret">▼</span>

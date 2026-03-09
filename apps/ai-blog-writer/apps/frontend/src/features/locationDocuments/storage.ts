@@ -1,5 +1,5 @@
 import type { LocationDocumentDraft } from './types'
-import { createEmptyLocationDraft } from './schema'
+import { createEmptyLocationDraft, sanitizeLocationDraftShape } from './schema'
 
 const STORAGE_KEY = 'location_documents_staged_v1'
 
@@ -10,23 +10,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function normalizeStoredDraft(value: unknown, index: number): LocationDocumentDraft | null {
   if (!isRecord(value)) return null
 
-  const emptyDraft = createEmptyLocationDraft()
-  const nowIso = new Date().toISOString()
   const fallbackDraftId = `location_doc_migrated_${Date.now()}_${index}`
+  const sanitized = sanitizeLocationDraftShape(value)
 
   return {
-    ...emptyDraft,
-    ...value,
+    ...sanitized,
     draftId: typeof value.draftId === 'string' && value.draftId.trim() ? value.draftId : fallbackDraftId,
-    payloadId: typeof value.payloadId === 'number' ? value.payloadId : undefined,
+    payloadId: typeof value.payloadId === 'number' && Number.isFinite(value.payloadId)
+      ? value.payloadId
+      : undefined,
     aiSourceNotes: typeof value.aiSourceNotes === 'string' ? value.aiSourceNotes : '',
-    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : nowIso,
-    guide: isRecord(value.guide)
-      ? ({
-          ...emptyDraft.guide,
-          ...value.guide,
-        } as LocationDocumentDraft['guide'])
-      : emptyDraft.guide,
+    updatedAt: typeof value.updatedAt === 'string' && value.updatedAt.trim()
+      ? value.updatedAt
+      : new Date().toISOString(),
   }
 }
 
@@ -48,8 +44,9 @@ export function listDrafts(): LocationDocumentDraft[] {
 
 export function saveDraft(draft: LocationDocumentDraft): void {
   const all = listDrafts()
+  const sanitizedDraft = sanitizeLocationDraftShape(draft)
   const nextDraft = {
-    ...draft,
+    ...sanitizedDraft,
     updatedAt: new Date().toISOString(),
   }
   const index = all.findIndex((item) => item.draftId === draft.draftId)

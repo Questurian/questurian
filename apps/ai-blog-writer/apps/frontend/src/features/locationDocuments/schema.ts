@@ -10,16 +10,21 @@ import type {
   LocationOption,
   LocationSectionDefinition,
   MediaDraft,
-  MediaSetOption,
   PayloadLocationBody,
   PayloadLocationDoc,
   PayloadRelationship,
   PayloadRelationshipList,
   ScalarFieldDefinition,
-  UsefulAppDraft,
   WeatherMonth,
 } from './types'
-import { cloneValue, mergeDefinedValues, pruneEmptyValues } from './utils'
+import {
+  cloneValue,
+  createDefaultObjectFromFields,
+  getValueAtPath,
+  mergeDefinedValues,
+  pruneEmptyValues,
+  setValueAtPath,
+} from './utils'
 
 export const LOCATION_LEVEL_OPTIONS: Array<{ value: LocationLevel; label: string }> = [
   { value: 'country', label: 'Country' },
@@ -161,17 +166,6 @@ const emergencyNumberFields: LocationFieldDefinition[] = [
   textareaField('notes', 'Notes'),
 ]
 
-const vaccinationFields: LocationFieldDefinition[] = [
-  textField('name', 'Name'),
-  textField('recommended', 'Recommended'),
-  textareaField('notes', 'Notes'),
-]
-
-const namedVaccinationFields: LocationFieldDefinition[] = [
-  textField('name', 'Name'),
-  textareaField('notes', 'Notes'),
-]
-
 const highlightFields: LocationFieldDefinition[] = [
   textField('title', 'Title'),
   textareaField('description', 'Description'),
@@ -224,7 +218,7 @@ const locationSections: LocationSectionDefinition[] = [
   {
     id: 'media',
     label: 'Media',
-    description: 'Cover, map, and geo display metadata shared by the location guide.',
+    description: 'Media metadata for the location guide.',
     levels: ['country', 'city', 'neighborhood'],
     path: ['guide', 'media'],
     aiPath: 'guide.media',
@@ -232,15 +226,6 @@ const locationSections: LocationSectionDefinition[] = [
       relationshipField('coverImage', 'Cover Image', 'media-sets', 'mediaSets', {
         picker: 'mediaSetLibrary',
       }),
-      numberField('mapCenterLat', 'Map Center Latitude'),
-      numberField('mapCenterLng', 'Map Center Longitude'),
-      numberField('mapZoom', 'Map Zoom'),
-      groupField('mapBounds', 'Map Bounds', [
-        numberField('north', 'North'),
-        numberField('south', 'South'),
-        numberField('east', 'East'),
-        numberField('west', 'West'),
-      ]),
     ],
   },
   {
@@ -264,9 +249,6 @@ const locationSections: LocationSectionDefinition[] = [
       arrayField('emergencyNumbers', 'Emergency Numbers', emergencyNumberFields, {
         addLabel: 'Add emergency number',
         maxRows: 12,
-      }),
-      arrayField('vaccinations', 'Vaccinations', vaccinationFields, {
-        addLabel: 'Add vaccination',
       }),
       groupField('tapWater', 'Tap Water', [
         selectField('status', 'Status', [...TAP_WATER_STATUS_OPTIONS]),
@@ -302,63 +284,20 @@ const locationSections: LocationSectionDefinition[] = [
         textField('label', 'Label', { aiEnabled: true }),
         textareaField('notes', 'Notes', { aiEnabled: true }),
       ]),
-      groupField('costs', 'Costs', [
-        arrayField('items', 'Cost Items', [
-          textField('label', 'Label'),
-          textField('amount', 'Amount'),
-          textareaField('notes', 'Notes'),
-        ], {
-          addLabel: 'Add cost item',
-          maxRows: 30,
-        }),
-      ]),
       groupField('healthSafety', 'Health & Safety', [
         arrayField('emergencyNumbers', 'Emergency Numbers', emergencyNumberFields, {
           addLabel: 'Add emergency number',
           maxRows: 12,
-        }),
-        arrayField('precautions', 'Precautions', [
-          textField('label', 'Label'),
-          textField('value', 'Value'),
-          textareaField('notes', 'Notes'),
-        ], {
-          addLabel: 'Add precaution',
-        }),
-        arrayField('vaccinations', 'Vaccinations', namedVaccinationFields, {
-          addLabel: 'Add vaccination',
-        }),
-        textareaField('hospitalsEmbed', 'Hospitals Embed', { aiEnabled: true }),
-        textareaField('airQualitySummary', 'Air Quality Summary', { aiEnabled: true }),
-        arrayField('mustHaveItems', 'Must Have Items', [
-          textField('name', 'Name'),
-          textareaField('notes', 'Notes'),
-        ], {
-          addLabel: 'Add item',
+          aiEnabled: true,
         }),
       ]),
       groupField('moneyHandling', 'Money Handling', [
         textField('currencyDisplay', 'Currency Display', { aiEnabled: true }),
         textField('exchangeRateDisplay', 'Exchange Rate Display', { aiEnabled: true }),
-        textareaField('exchangeEmbed', 'Exchange Embed', { aiEnabled: true }),
         textareaField('atmAvailability', 'ATM Availability', { aiEnabled: true }),
         textField('maxWithdrawal', 'Max Withdrawal', { aiEnabled: true }),
         textField('withdrawalFee', 'Withdrawal Fee', { aiEnabled: true }),
         textField('cardUsage', 'Card Usage', { aiEnabled: true }),
-      ]),
-      groupField('usefulApps', 'Useful Apps', [
-        arrayField('apps', 'Apps', [
-          textField('category', 'Category'),
-          textField('name', 'Name'),
-          relationshipField('logo', 'Logo', 'media-sets', 'mediaSets', {
-            hintKey: 'logoHint',
-            hintLabel: 'AI logo hint',
-          }),
-          textareaField('description', 'Description'),
-          textField('url', 'URL'),
-        ], {
-          addLabel: 'Add app',
-          maxRows: 20,
-        }),
       ]),
       groupField('weather', 'Weather', [
         textareaField('summary', 'Summary', { aiEnabled: true }),
@@ -377,11 +316,6 @@ const locationSections: LocationSectionDefinition[] = [
       groupField('localContext', 'Local Context', [
         textField('vibe', 'Vibe', { aiEnabled: true }),
         textareaField('walkability', 'Walkability', { aiEnabled: true }),
-        arrayField('bestFor', 'Best For', [
-          textField('label', 'Label'),
-        ], {
-          addLabel: 'Add best-for tag',
-        }),
       ]),
     ],
   },
@@ -496,11 +430,8 @@ export const FIELD_AI_PATHS = [
   'guide.localShared.subheadline',
   'guide.localShared.timezone.label',
   'guide.localShared.timezone.notes',
-  'guide.localShared.healthSafety.hospitalsEmbed',
-  'guide.localShared.healthSafety.airQualitySummary',
   'guide.localShared.moneyHandling.currencyDisplay',
   'guide.localShared.moneyHandling.exchangeRateDisplay',
-  'guide.localShared.moneyHandling.exchangeEmbed',
   'guide.localShared.moneyHandling.atmAvailability',
   'guide.localShared.moneyHandling.maxWithdrawal',
   'guide.localShared.moneyHandling.withdrawalFee',
@@ -540,15 +471,6 @@ export const FIELD_AI_PATHS = [
 function createEmptyMediaDraft(): MediaDraft {
   return {
     coverImage: null,
-    mapCenterLat: null,
-    mapCenterLng: null,
-    mapZoom: null,
-    mapBounds: {
-      north: null,
-      south: null,
-      east: null,
-      west: null,
-    },
   }
 }
 
@@ -565,7 +487,6 @@ function createEmptyCountryDataDraft(): CountryDataDraft {
       notes: '',
     },
     emergencyNumbers: [],
-    vaccinations: [],
     tapWater: {
       status: '',
       notes: '',
@@ -590,28 +511,16 @@ function createEmptyLocalSharedDraft(): LocationGuideDraft['localShared'] {
       label: '',
       notes: '',
     },
-    costs: {
-      items: [],
-    },
     healthSafety: {
       emergencyNumbers: [],
-      precautions: [],
-      vaccinations: [],
-      hospitalsEmbed: '',
-      airQualitySummary: '',
-      mustHaveItems: [],
     },
     moneyHandling: {
       currencyDisplay: '',
       exchangeRateDisplay: '',
-      exchangeEmbed: '',
       atmAvailability: '',
       maxWithdrawal: '',
       withdrawalFee: '',
       cardUsage: '',
-    },
-    usefulApps: {
-      apps: [],
     },
     weather: {
       summary: '',
@@ -620,7 +529,6 @@ function createEmptyLocalSharedDraft(): LocationGuideDraft['localShared'] {
     localContext: {
       vibe: '',
       walkability: '',
-      bestFor: [],
     },
   }
 }
@@ -700,6 +608,118 @@ export function createEmptyLocationDraft(): LocationDocumentDraft {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function sanitizeFieldValue(
+  field: LocationFieldDefinition,
+  rawValue: unknown,
+): unknown {
+  if (field.type === 'group') {
+    const source = isRecord(rawValue) ? rawValue : {}
+    const next = createDefaultObjectFromFields(field.fields)
+    for (const childField of field.fields) {
+      next[childField.key] = sanitizeFieldValue(
+        childField,
+        source[childField.key],
+      )
+    }
+    return next
+  }
+
+  if (field.type === 'array') {
+    if (!Array.isArray(rawValue)) return []
+    return rawValue.map((rowValue) => {
+      const source = isRecord(rowValue) ? rowValue : {}
+      const next = createDefaultObjectFromFields(field.fields)
+      for (const childField of field.fields) {
+        next[childField.key] = sanitizeFieldValue(
+          childField,
+          source[childField.key],
+        )
+      }
+      return next
+    })
+  }
+
+  if (field.type === 'relationship') {
+    if (field.hasMany) {
+      if (!Array.isArray(rawValue)) return []
+      return rawValue
+        .map((value) => extractRelationshipId(value as PayloadRelationship))
+        .filter((value): value is number => value !== null)
+    }
+
+    return extractRelationshipId(rawValue as PayloadRelationship)
+  }
+
+  if (field.type === 'number') {
+    return typeof rawValue === 'number' && Number.isFinite(rawValue)
+      ? rawValue
+      : null
+  }
+
+  if (field.type === 'select') {
+    if (typeof rawValue !== 'string') return ''
+    if (!field.options?.some((option) => option.value === rawValue)) return ''
+    return rawValue
+  }
+
+  return typeof rawValue === 'string' ? rawValue : ''
+}
+
+function applySanitizedFields(
+  draft: LocationDocumentDraft,
+  source: Record<string, unknown>,
+  basePath: string[],
+  fields: LocationFieldDefinition[],
+): LocationDocumentDraft {
+  let nextDraft = draft
+  for (const field of fields) {
+    const path = [...basePath, field.key]
+    const rawValue = getValueAtPath(source, path)
+    const sanitizedValue = sanitizeFieldValue(field, rawValue)
+    nextDraft = setValueAtPath(nextDraft, path, sanitizedValue)
+  }
+  return nextDraft
+}
+
+export function sanitizeLocationDraftShape(input: unknown): LocationDocumentDraft {
+  const nextDraft = createEmptyLocationDraft()
+  if (!isRecord(input)) return nextDraft
+
+  let sanitized = cloneValue(nextDraft)
+
+  for (const section of LOCATION_SECTION_DEFINITIONS) {
+    sanitized = applySanitizedFields(sanitized, input, section.path, section.fields)
+  }
+
+  if (typeof input.draftId === 'string' && input.draftId.trim()) {
+    sanitized.draftId = input.draftId
+  }
+
+  if (typeof input.payloadId === 'number' && Number.isFinite(input.payloadId)) {
+    sanitized.payloadId = input.payloadId
+  } else {
+    sanitized.payloadId = undefined
+  }
+
+  if (typeof input.editorModelName === 'string' && input.editorModelName.trim()) {
+    sanitized.editorModelName = input.editorModelName as LocationDocumentDraft['editorModelName']
+  }
+
+  if (typeof input.aiSourceNotes === 'string') {
+    sanitized.aiSourceNotes = input.aiSourceNotes
+  }
+
+  if (typeof input.updatedAt === 'string' && input.updatedAt.trim()) {
+    sanitized.updatedAt = input.updatedAt
+  }
+
+  return sanitized
+}
+
 export function getVisibleSections(level: LocationLevel): LocationSectionDefinition[] {
   return LOCATION_SECTION_DEFINITIONS.filter((section) => section.levels.includes(level))
 }
@@ -736,7 +756,6 @@ export function buildLocationSchemaContract(): string {
     })),
     aiFieldPaths: [...FIELD_AI_PATHS],
     relationshipHints: {
-      media: ['guide.localShared.usefulApps.apps[].logoHint'],
       neighborhoods: [
         'guide.explore.highlights[].relatedNeighborhoodKeys',
         'guide.stay.highlights[].relatedNeighborhoodKeys',
@@ -747,7 +766,7 @@ export function buildLocationSchemaContract(): string {
       'Return JSON only with no markdown or commentary.',
       'Only include fields valid for the selected location level.',
       'Do not invent Payload IDs for relationships.',
-      'Use relationship hint fields when you know a locationKey or app logo phrase but not an ID.',
+      'Use relationship hint fields when you know a locationKey but not an ID.',
       'Leave unknown values empty instead of fabricating facts.',
     ],
   }
@@ -779,6 +798,39 @@ export function formatFallbackName(value: string): string {
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
+}
+
+function resolveHierarchyTitlePart(nameValue: string, keyValue: string): string {
+  const name = nameValue.trim()
+  if (name) return name
+
+  const normalizedKey = normalizeKeyPart(keyValue)
+  if (!normalizedKey) return ''
+  return formatFallbackName(normalizedKey)
+}
+
+export function buildLocationHierarchyTitle(
+  draft: Pick<
+    LocationDocumentDraft,
+    'level' | 'country' | 'city' | 'neighborhood' | 'countryName' | 'cityName' | 'neighborhoodName'
+  >,
+): string {
+  const country = resolveHierarchyTitlePart(draft.countryName, draft.country)
+  const city = resolveHierarchyTitlePart(draft.cityName, draft.city)
+  const neighborhood = resolveHierarchyTitlePart(
+    draft.neighborhoodName,
+    draft.neighborhood,
+  )
+
+  if (draft.level === 'country') {
+    return country
+  }
+
+  if (draft.level === 'city') {
+    return [city, country].filter(Boolean).join(', ')
+  }
+
+  return [neighborhood, city, country].filter(Boolean).join(', ')
 }
 
 export function buildLocationKeyPreview(draft: Pick<LocationDocumentDraft, 'level' | 'country' | 'city' | 'neighborhood'>): string {
@@ -864,15 +916,6 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
 
   next.guide.media = {
     coverImage: extractRelationshipId(doc.guide?.media?.coverImage),
-    mapCenterLat: valueOrNull(doc.guide?.media?.mapCenterLat),
-    mapCenterLng: valueOrNull(doc.guide?.media?.mapCenterLng),
-    mapZoom: valueOrNull(doc.guide?.media?.mapZoom),
-    mapBounds: {
-      north: valueOrNull(doc.guide?.media?.mapBounds?.north),
-      south: valueOrNull(doc.guide?.media?.mapBounds?.south),
-      east: valueOrNull(doc.guide?.media?.mapBounds?.east),
-      west: valueOrNull(doc.guide?.media?.mapBounds?.west),
-    },
   }
 
   next.guide.countryData = {
@@ -889,11 +932,6 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
     emergencyNumbers: (doc.guide?.countryData?.emergencyNumbers || []).map((row) => ({
       service: trimText(row.service),
       number: trimText(row.number),
-      notes: trimText(row.notes),
-    })),
-    vaccinations: (doc.guide?.countryData?.vaccinations || []).map((row) => ({
-      name: trimText(row.name),
-      recommended: trimText(row.recommended),
       notes: trimText(row.notes),
     })),
     tapWater: {
@@ -921,54 +959,20 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
       label: trimText(doc.guide?.localShared?.timezone?.label),
       notes: trimText(doc.guide?.localShared?.timezone?.notes),
     },
-    costs: {
-      items: (doc.guide?.localShared?.costs?.items || []).map((row) => ({
-        label: trimText(row.label),
-        amount: trimText(row.amount),
-        notes: trimText(row.notes),
-      })),
-    },
     healthSafety: {
       emergencyNumbers: (doc.guide?.localShared?.healthSafety?.emergencyNumbers || []).map((row) => ({
         service: trimText(row.service),
         number: trimText(row.number),
         notes: trimText(row.notes),
       })),
-      precautions: (doc.guide?.localShared?.healthSafety?.precautions || []).map((row) => ({
-        label: trimText(row.label),
-        value: trimText(row.value),
-        notes: trimText(row.notes),
-      })),
-      vaccinations: (doc.guide?.localShared?.healthSafety?.vaccinations || []).map((row) => ({
-        name: trimText(row.name),
-        recommended: '',
-        notes: trimText(row.notes),
-      })),
-      hospitalsEmbed: trimText(doc.guide?.localShared?.healthSafety?.hospitalsEmbed),
-      airQualitySummary: trimText(doc.guide?.localShared?.healthSafety?.airQualitySummary),
-      mustHaveItems: (doc.guide?.localShared?.healthSafety?.mustHaveItems || []).map((row) => ({
-        name: trimText(row.name),
-        notes: trimText(row.notes),
-      })),
     },
     moneyHandling: {
       currencyDisplay: trimText(doc.guide?.localShared?.moneyHandling?.currencyDisplay),
       exchangeRateDisplay: trimText(doc.guide?.localShared?.moneyHandling?.exchangeRateDisplay),
-      exchangeEmbed: trimText(doc.guide?.localShared?.moneyHandling?.exchangeEmbed),
       atmAvailability: trimText(doc.guide?.localShared?.moneyHandling?.atmAvailability),
       maxWithdrawal: trimText(doc.guide?.localShared?.moneyHandling?.maxWithdrawal),
       withdrawalFee: trimText(doc.guide?.localShared?.moneyHandling?.withdrawalFee),
       cardUsage: trimText(doc.guide?.localShared?.moneyHandling?.cardUsage),
-    },
-    usefulApps: {
-      apps: (doc.guide?.localShared?.usefulApps?.apps || []).map((row) => ({
-        category: trimText(row.category),
-        name: trimText(row.name),
-        logo: extractRelationshipId(row.logo),
-        logoHint: '',
-        description: trimText(row.description),
-        url: trimText(row.url),
-      })),
     },
     weather: {
       summary: trimText(doc.guide?.localShared?.weather?.summary),
@@ -984,9 +988,6 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
     localContext: {
       vibe: trimText(doc.guide?.localShared?.localContext?.vibe),
       walkability: trimText(doc.guide?.localShared?.localContext?.walkability),
-      bestFor: (doc.guide?.localShared?.localContext?.bestFor || []).map((row) => ({
-        label: trimText(row.label),
-      })),
     },
   }
 
@@ -1066,18 +1067,6 @@ export function mergeDraftPatch(
   return merged
 }
 
-function resolveMediaHint(hint: string, options: MediaSetOption[]): number | null {
-  const normalizedHint = hint.trim().toLowerCase()
-  if (!normalizedHint) return null
-
-  const exact = options.find((option) => {
-    const haystacks = [option.title, option.alt_text, option.location]
-    return haystacks.some((value) => value?.trim().toLowerCase() === normalizedHint)
-  })
-
-  return exact?.id ?? null
-}
-
 function resolveNeighborhoodKeys(keys: string[], options: LocationOption[]): number[] {
   const ids = new Set<number>()
   const neighborhoodOptions = options.filter((option) => option.level === 'neighborhood')
@@ -1097,16 +1086,9 @@ function resolveNeighborhoodKeys(keys: string[], options: LocationOption[]): num
 
 export function resolveDraftRelationshipHints(
   draft: LocationDocumentDraft,
-  locationOptions: LocationOption[],
-  mediaOptions: MediaSetOption[]
+  locationOptions: LocationOption[]
 ): LocationDocumentDraft {
   const next = cloneValue(draft)
-
-  next.guide.localShared.usefulApps.apps = next.guide.localShared.usefulApps.apps.map((app) => {
-    if (!app.logoHint.trim()) return app
-    const resolvedId = resolveMediaHint(app.logoHint, mediaOptions)
-    return resolvedId === null ? app : { ...app, logo: resolvedId }
-  })
 
   const resolveHighlights = (highlights: HighlightDraft[]) =>
     highlights.map((highlight) => {
@@ -1130,16 +1112,9 @@ export const resolveDraftHints = resolveDraftRelationshipHints
 
 export function collectUnresolvedHintWarnings(
   draft: LocationDocumentDraft,
-  locationOptions: LocationOption[],
-  mediaOptions: MediaSetOption[]
+  locationOptions: LocationOption[]
 ): string[] {
   const warnings: string[] = []
-
-  for (const app of draft.guide.localShared.usefulApps.apps) {
-    if (app.logoHint.trim() && resolveMediaHint(app.logoHint, mediaOptions) === null) {
-      warnings.push(`App logo hint "${app.logoHint}" could not be matched to a media set.`)
-    }
-  }
 
   const unresolvedHighlightWarnings = (modeLabel: string, highlights: HighlightDraft[]) => {
     for (const highlight of highlights) {
@@ -1166,17 +1141,6 @@ export function collectUnresolvedHintWarnings(
   return warnings
 }
 
-function buildPayloadUsefulApp(app: UsefulAppDraft) {
-  return {
-    category: app.category,
-    name: app.name,
-    logo: app.logo,
-    logoHint: app.logoHint,
-    description: app.description,
-    url: app.url,
-  }
-}
-
 function buildPayloadHighlight(highlight: HighlightDraft) {
   return {
     title: highlight.title,
@@ -1187,10 +1151,10 @@ function buildPayloadHighlight(highlight: HighlightDraft) {
 
 export function buildPayloadLocationBody(
   draft: LocationDocumentDraft,
-  locationOptions: LocationOption[],
-  mediaOptions: MediaSetOption[]
+  locationOptions: LocationOption[]
 ): PayloadLocationBody {
-  const resolved = resolveDraftRelationshipHints(draft, locationOptions, mediaOptions)
+  const sanitizedDraft = sanitizeLocationDraftShape(draft)
+  const resolved = resolveDraftRelationshipHints(sanitizedDraft, locationOptions)
   const country = normalizeKeyPart(resolved.country)
   const city = normalizeKeyPart(resolved.city)
   const neighborhood = normalizeKeyPart(resolved.neighborhood)
@@ -1218,22 +1182,13 @@ export function buildPayloadLocationBody(
   body.guide = {
     media: {
       coverImage: resolved.guide.media.coverImage,
-      mapCenterLat: resolved.guide.media.mapCenterLat,
-      mapCenterLng: resolved.guide.media.mapCenterLng,
-      mapZoom: resolved.guide.media.mapZoom,
-      mapBounds: resolved.guide.media.mapBounds,
     },
   }
 
   if (resolved.level === 'country') {
     body.guide.countryData = resolved.guide.countryData
   } else {
-    body.guide.localShared = {
-      ...resolved.guide.localShared,
-      usefulApps: {
-        apps: resolved.guide.localShared.usefulApps.apps.map(buildPayloadUsefulApp),
-      },
-    }
+    body.guide.localShared = resolved.guide.localShared
     body.guide.explore = {
       ...resolved.guide.explore,
       highlights: resolved.guide.explore.highlights.map(buildPayloadHighlight),

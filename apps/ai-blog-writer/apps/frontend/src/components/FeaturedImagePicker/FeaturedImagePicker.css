@@ -3,18 +3,22 @@
 .fip-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(17, 24, 39, 0.42);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(17, 24, 39, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  z-index: 200;
+  padding: 1.5rem;
+  z-index: 9999;
 }
 
 .fip-modal {
-  width: min(980px, calc(100vw - 2rem));
-  height: min(760px, 88vh);
-  max-height: min(760px, 88vh);
+  width: min(1120px, calc(100vw - 3rem));
+  height: min(840px, 90vh);
+  max-height: min(840px, 90vh);
   display: flex;
   flex-direction: column;
   background: #fff;

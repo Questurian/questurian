@@ -15,6 +15,7 @@ import type {
   PayloadLocationBody,
   PayloadLocationDoc,
 } from './types'
+import { sanitizeLocationDraftShape } from './schema'
 
 export type LocationIndexFilters = {
   level?: string
@@ -27,7 +28,8 @@ export type LocationIndexFilters = {
 const PAYLOAD_REQUEST_TIMEOUT_MS = 12000
 
 function toAiDraftPayload(draft: LocationDocumentDraft): Record<string, unknown> {
-  const payloadDraft: Record<string, unknown> = { ...draft }
+  const sanitizedDraft = sanitizeLocationDraftShape(draft)
+  const payloadDraft: Record<string, unknown> = { ...sanitizedDraft }
   delete payloadDraft.draftId
   delete payloadDraft.payloadId
   delete payloadDraft.editorModelName
@@ -67,6 +69,34 @@ async function payloadRequest<T>(endpoint: string, token: string, init?: Request
   } finally {
     window.clearTimeout(timeoutId)
   }
+}
+
+function isPayloadLocationDoc(value: unknown): value is PayloadLocationDoc {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as { id?: unknown }
+  return typeof candidate.id === 'number' && Number.isFinite(candidate.id)
+}
+
+function parsePayloadLocationDocResponse(
+  response: unknown,
+  operation: string,
+): PayloadLocationDoc {
+  if (isPayloadLocationDoc(response)) {
+    return response
+  }
+
+  if (response && typeof response === 'object') {
+    const wrappedDoc = (response as { doc?: unknown }).doc
+    if (isPayloadLocationDoc(wrappedDoc)) {
+      return wrappedDoc
+    }
+  }
+
+  const keys = response && typeof response === 'object'
+    ? Object.keys(response as Record<string, unknown>).slice(0, 10)
+    : []
+  const details = keys.length > 0 ? `keys: ${keys.join(', ')}` : `type: ${typeof response}`
+  throw new Error(`${operation} returned an unexpected response shape (${details}).`)
 }
 
 function appendSelectParams(params: URLSearchParams, fields: string[]) {
@@ -133,24 +163,24 @@ export async function fetchLocationsIndex(token: string, filters: LocationIndexF
 }
 
 export async function fetchLocationById(id: number, token: string): Promise<PayloadLocationDoc> {
-  const response = await payloadRequest<{ doc: PayloadLocationDoc }>(`/api/locations/${id}?depth=0`, token)
-  return response.doc
+  const response = await payloadRequest<unknown>(`/api/locations/${id}?depth=0`, token)
+  return parsePayloadLocationDocResponse(response, 'Fetch location')
 }
 
 export async function createLocation(body: PayloadLocationBody, token: string): Promise<PayloadLocationDoc> {
-  const response = await payloadRequest<{ doc: PayloadLocationDoc }>(`/api/locations`, token, {
+  const response = await payloadRequest<unknown>(`/api/locations`, token, {
     method: 'POST',
     body: JSON.stringify(body),
   })
-  return response.doc
+  return parsePayloadLocationDocResponse(response, 'Create location')
 }
 
 export async function updateLocation(id: number, body: PayloadLocationBody, token: string): Promise<PayloadLocationDoc> {
-  const response = await payloadRequest<{ doc: PayloadLocationDoc }>(`/api/locations/${id}`, token, {
+  const response = await payloadRequest<unknown>(`/api/locations/${id}`, token, {
     method: 'PATCH',
     body: JSON.stringify(body),
   })
-  return response.doc
+  return parsePayloadLocationDocResponse(response, 'Update location')
 }
 
 export async function fetchLocationOptions(token: string): Promise<LocationOption[]> {

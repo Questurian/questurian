@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildLocationHierarchyTitle,
   buildPayloadLocationBody,
   createEmptyLocationDraft,
   getVisibleLocationSections,
   resolveLocationDraftRef,
 } from './schema'
-import type { LocationOption, MediaSetOption } from './types'
+import type { LocationOption } from './types'
 
 describe('locationDocuments schema helpers', () => {
   it('shows only country sections for country-level drafts', () => {
@@ -47,14 +48,7 @@ describe('locationDocuments schema helpers', () => {
         locationKey: 'peru|lima|miraflores',
       },
     ]
-    const mediaOptions: MediaSetOption[] = [
-      {
-        id: 91,
-        title: 'Lima hero',
-      },
-    ]
-
-    const payload = buildPayloadLocationBody(draft, locationOptions, mediaOptions)
+    const payload = buildPayloadLocationBody(draft, locationOptions)
 
     expect(payload.level).toBe('city')
     expect(payload.country).toBe('peru')
@@ -91,5 +85,33 @@ describe('locationDocuments schema helpers', () => {
 
     draft.payloadId = 91
     expect(resolveLocationDraftRef(draft, locationOptions)).toBe(91)
+  })
+
+  it('builds a level-aware header title from hierarchy fields', () => {
+    const draft = createEmptyLocationDraft()
+
+    draft.level = 'country'
+    draft.countryName = 'Peru'
+    expect(buildLocationHierarchyTitle(draft)).toBe('Peru')
+
+    draft.level = 'city'
+    draft.cityName = 'Lima'
+    expect(buildLocationHierarchyTitle(draft)).toBe('Lima, Peru')
+
+    draft.level = 'neighborhood'
+    draft.neighborhoodName = 'Miraflores'
+    expect(buildLocationHierarchyTitle(draft)).toBe('Miraflores, Lima, Peru')
+  })
+
+  it('falls back to key parts when hierarchy names are blank', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'neighborhood'
+    draft.country = 'united-states'
+    draft.city = 'new-york'
+    draft.neighborhood = 'upper-east-side'
+
+    expect(buildLocationHierarchyTitle(draft)).toBe(
+      'Upper East Side, New York, United States',
+    )
   })
 })

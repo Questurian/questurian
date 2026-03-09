@@ -50,15 +50,6 @@ class EmergencyNumberDraft(StrictModel):
     notes: str = ""
 
 
-class VaccinationDraft(StrictModel):
-    name: str = ""
-    notes: str = ""
-
-
-class RecommendedVaccinationDraft(VaccinationDraft):
-    recommended: str = ""
-
-
 class ResidencyPathwayDraft(StrictModel):
     type: str = ""
     summary: str = ""
@@ -99,7 +90,6 @@ class CountryDataDraft(StrictModel):
     currency: CurrencyDraft = Field(default_factory=CurrencyDraft)
     timezone: CountryTimezoneDraft = Field(default_factory=CountryTimezoneDraft)
     emergencyNumbers: list[EmergencyNumberDraft] = Field(default_factory=list)
-    vaccinations: list[RecommendedVaccinationDraft] = Field(default_factory=list)
     tapWater: TapWaterDraft = Field(default_factory=TapWaterDraft)
     visaPolicy: VisaPolicyDraft = Field(default_factory=VisaPolicyDraft)
     entryRequirements: str = ""
@@ -107,72 +97,21 @@ class CountryDataDraft(StrictModel):
     moneyNotes: str = ""
 
 
-class MapBoundsDraft(StrictModel):
-    north: float | None = None
-    south: float | None = None
-    east: float | None = None
-    west: float | None = None
-
-
 class GuideMediaDraft(StrictModel):
     coverImage: int | None = None
-    mapCenterLat: float | None = None
-    mapCenterLng: float | None = None
-    mapZoom: float | None = None
-    mapBounds: MapBoundsDraft = Field(default_factory=MapBoundsDraft)
-
-
-class CostItemDraft(StrictModel):
-    label: str = ""
-    amount: str = ""
-    notes: str = ""
-
-
-class CostsDraft(StrictModel):
-    items: list[CostItemDraft] = Field(default_factory=list)
-
-
-class PrecautionDraft(StrictModel):
-    label: str = ""
-    value: str = ""
-    notes: str = ""
-
-
-class MustHaveItemDraft(StrictModel):
-    name: str = ""
-    notes: str = ""
 
 
 class HealthSafetyDraft(StrictModel):
     emergencyNumbers: list[EmergencyNumberDraft] = Field(default_factory=list)
-    precautions: list[PrecautionDraft] = Field(default_factory=list)
-    vaccinations: list[VaccinationDraft] = Field(default_factory=list)
-    hospitalsEmbed: str = ""
-    airQualitySummary: str = ""
-    mustHaveItems: list[MustHaveItemDraft] = Field(default_factory=list)
 
 
 class MoneyHandlingDraft(StrictModel):
     currencyDisplay: str = ""
     exchangeRateDisplay: str = ""
-    exchangeEmbed: str = ""
     atmAvailability: str = ""
     maxWithdrawal: str = ""
     withdrawalFee: str = ""
     cardUsage: str = ""
-
-
-class UsefulAppDraft(StrictModel):
-    category: str = ""
-    name: str = ""
-    logo: int | None = None
-    logoHint: str = ""
-    description: str = ""
-    url: str = ""
-
-
-class UsefulAppsDraft(StrictModel):
-    apps: list[UsefulAppDraft] = Field(default_factory=list)
 
 
 class WeatherMonthlyStatDraft(StrictModel):
@@ -196,14 +135,9 @@ class WeatherDraft(StrictModel):
     monthlyStats: list[WeatherMonthlyStatDraft] = Field(default_factory=list)
 
 
-class BestForDraft(StrictModel):
-    label: str = ""
-
-
 class LocalContextDraft(StrictModel):
     vibe: str = ""
     walkability: str = ""
-    bestFor: list[BestForDraft] = Field(default_factory=list)
 
 
 class LocalTimezoneDraft(StrictModel):
@@ -215,10 +149,8 @@ class LocalSharedDraft(StrictModel):
     headline: str = ""
     subheadline: str = ""
     timezone: LocalTimezoneDraft = Field(default_factory=LocalTimezoneDraft)
-    costs: CostsDraft = Field(default_factory=CostsDraft)
     healthSafety: HealthSafetyDraft = Field(default_factory=HealthSafetyDraft)
     moneyHandling: MoneyHandlingDraft = Field(default_factory=MoneyHandlingDraft)
-    usefulApps: UsefulAppsDraft = Field(default_factory=UsefulAppsDraft)
     weather: WeatherDraft = Field(default_factory=WeatherDraft)
     localContext: LocalContextDraft = Field(default_factory=LocalContextDraft)
 
@@ -335,11 +267,8 @@ LOCAL_FIELD_PATHS = {
     "guide.localShared.subheadline",
     "guide.localShared.timezone.label",
     "guide.localShared.timezone.notes",
-    "guide.localShared.healthSafety.hospitalsEmbed",
-    "guide.localShared.healthSafety.airQualitySummary",
     "guide.localShared.moneyHandling.currencyDisplay",
     "guide.localShared.moneyHandling.exchangeRateDisplay",
-    "guide.localShared.moneyHandling.exchangeEmbed",
     "guide.localShared.moneyHandling.atmAvailability",
     "guide.localShared.moneyHandling.maxWithdrawal",
     "guide.localShared.moneyHandling.withdrawalFee",

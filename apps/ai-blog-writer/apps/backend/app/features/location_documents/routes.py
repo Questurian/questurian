@@ -125,13 +125,16 @@ Hard rules:
 - Preserve existing user-provided values unless the instruction clearly asks for changes.
 - Unknown values must stay as empty strings, nulls, or empty arrays.
 - Do not invent numeric Payload IDs for relationships.
-- Use the UI-only hint fields when you want to suggest app logo or neighborhood relationships:
-  - guide.localShared.usefulApps.apps[].logoHint
+- Use the UI-only hint fields when you want to suggest neighborhood relationships:
   - guide.explore/stay/move.highlights[].relatedNeighborhoodKeys
 - If a relationship ID is unknown, keep the real ID field null or [] and use the hint/key field instead.
 - Level rules:
   - country documents may use only guide.media and guide.countryData
-  - city and neighborhood documents may use only guide.media, guide.localShared, guide.explore, guide.stay, and guide.move"""
+  - city and neighborhood documents may use only guide.media, guide.localShared, guide.explore, guide.stay, and guide.move
+- Highlight count rule for city/neighborhood drafts:
+  - guide.explore.highlights must contain 3 or 4 items
+  - guide.stay.highlights must contain 3 or 4 items
+  - guide.move.highlights must contain 3 or 4 items"""
 
 
 SECTION_FILL_RULES = """You are filling one structured section inside a Payload CMS `locations` document draft.
@@ -141,7 +144,8 @@ Hard rules:
 - Do not include markdown, commentary, backticks, or code fences.
 - Preserve existing user-provided values unless the instruction clearly asks for changes.
 - Unknown values must stay as empty strings, nulls, or empty arrays.
-- Do not invent numeric Payload IDs."""
+- Do not invent numeric Payload IDs.
+- If the target section path is guide.explore, guide.stay, or guide.move, the highlights array must contain 3 or 4 items."""
 
 
 FIELD_FILL_RULES = """You are filling one scalar text field inside a Payload CMS `locations` document draft.
@@ -328,6 +332,51 @@ def _level_rules_text(level: LocationLevel) -> str:
     )
 
 
+def _validate_document_highlight_counts(
+    document: LocationDocumentDraft,
+) -> LocationDocumentDraft:
+    if document.level == "country":
+        return document
+
+    counts = {
+        "explore": len(document.guide.explore.highlights),
+        "stay": len(document.guide.stay.highlights),
+        "move": len(document.guide.move.highlights),
+    }
+    invalid = [
+        f"{mode}={count}"
+        for mode, count in counts.items()
+        if count < 3 or count > 4
+    ]
+    if invalid:
+        raise ValueError(
+            "Each mode highlights array must contain 3-4 items for city/neighborhood drafts. "
+            f"Received: {', '.join(invalid)}"
+        )
+    return document
+
+
+def _validate_section_highlight_counts(
+    section_path: str,
+    section: Any,
+) -> Any:
+    if section_path not in {"guide.explore", "guide.stay", "guide.move"}:
+        return section
+
+    highlights = getattr(section, "highlights", None)
+    if not isinstance(highlights, list):
+        raise ValueError(
+            f"{section_path}.highlights must be an array with 3-4 items."
+        )
+
+    if len(highlights) < 3 or len(highlights) > 4:
+        raise ValueError(
+            f"{section_path}.highlights must contain 3-4 items, received {len(highlights)}."
+        )
+
+    return section
+
+
 def _build_document_prompt(request: FillDocumentRequest) -> str:
     parts = [
         DOCUMENT_FILL_RULES,
@@ -416,7 +465,7 @@ def _invoke_json_llm_with_retry(
         if parsed is not None:
             try:
                 return validator(parsed)
-            except ValidationError as exc:
+            except (ValidationError, ValueError) as exc:
                 last_error = str(exc)
                 continue
         last_error = parse_error or "Strict parse failed"
@@ -458,7 +507,9 @@ def _fill_document_impl(request: FillDocumentRequest) -> FillDocumentResponse:
             model_used=model_used,
             temperature=0.2,
             max_tokens=8192,
-            validator=LocationDocumentDraft.model_validate,
+            validator=lambda payload: _validate_document_highlight_counts(
+                LocationDocumentDraft.model_validate(payload)
+            ),
             label="Location document fill",
         )
     except Exception as exc:  # noqa: BLE001
@@ -483,7 +534,10 @@ def _fill_section_impl(request: FillSectionRequest) -> FillSectionResponse:
             model_used=model_used,
             temperature=0.2,
             max_tokens=8192,
-            validator=section_model.model_validate,
+            validator=lambda payload: _validate_section_highlight_counts(
+                request.section_path,
+                section_model.model_validate(payload),
+            ),
             label=f"Location section fill for {request.section_path}",
         )
     except ValidationError as exc:

@@ -22,41 +22,9 @@ export type EmergencyNumber = {
   notes: string
 }
 
-export type Vaccination = {
-  name: string
-  recommended: string
-  notes: string
-}
-
 export type ResidencyPathway = {
   type: string
   summary: string
-}
-
-export type CostItem = {
-  label: string
-  amount: string
-  notes: string
-}
-
-export type PrecautionItem = {
-  label: string
-  value: string
-  notes: string
-}
-
-export type NamedNoteItem = {
-  name: string
-  notes: string
-}
-
-export type UsefulAppItem = {
-  category: string
-  name: string
-  logo: number | null
-  logoHint: string
-  description: string
-  url: string
 }
 
 export type WeatherMonth =
@@ -80,10 +48,6 @@ export type WeatherMonthlyStat = {
   rainfallMm: number | null
   rainDays: number | null
   sunshineHours: number | null
-}
-
-export type BestForItem = {
-  label: string
 }
 
 export type HighlightItem = {
@@ -110,7 +74,6 @@ export type CountryDataGuide = {
     notes: string
   }
   emergencyNumbers: EmergencyNumber[]
-  vaccinations: Vaccination[]
   tapWater: {
     status: '' | 'drinkable' | 'not_drinkable' | 'varies_by_region'
     notes: string
@@ -133,28 +96,16 @@ export type LocalSharedGuide = {
     label: string
     notes: string
   }
-  costs: {
-    items: CostItem[]
-  }
   healthSafety: {
     emergencyNumbers: EmergencyNumber[]
-    precautions: PrecautionItem[]
-    vaccinations: NamedNoteItem[]
-    hospitalsEmbed: string
-    airQualitySummary: string
-    mustHaveItems: NamedNoteItem[]
   }
   moneyHandling: {
     currencyDisplay: string
     exchangeRateDisplay: string
-    exchangeEmbed: string
     atmAvailability: string
     maxWithdrawal: string
     withdrawalFee: string
     cardUsage: string
-  }
-  usefulApps: {
-    apps: UsefulAppItem[]
   }
   weather: {
     summary: string
@@ -163,7 +114,6 @@ export type LocalSharedGuide = {
   localContext: {
     vibe: string
     walkability: string
-    bestFor: BestForItem[]
   }
 }
 
@@ -208,15 +158,6 @@ export type MoveGuide = {
 
 export type MediaGuide = {
   coverImage: number | null
-  mapCenterLat: number | null
-  mapCenterLng: number | null
-  mapZoom: number | null
-  mapBounds: {
-    north: number | null
-    south: number | null
-    east: number | null
-    west: number | null
-  }
 }
 
 export type LocationGuideDraft = {
@@ -235,7 +176,6 @@ export type ExploreDraft = ExploreGuide
 export type StayDraft = StayGuide
 export type MoveDraft = MoveGuide
 export type HighlightDraft = HighlightItem
-export type UsefulAppDraft = UsefulAppItem
 export type SafetyDraft = SafetyGroup
 
 export type PayloadRelationship = number | { id?: number } | null | undefined
@@ -260,15 +200,6 @@ export type LocationDocumentDraft = {
 export type PayloadLocationGuide = {
   media?: {
     coverImage?: number | { id?: number } | null
-    mapCenterLat?: number | null
-    mapCenterLng?: number | null
-    mapZoom?: number | null
-    mapBounds?: {
-      north?: number | null
-      south?: number | null
-      east?: number | null
-      west?: number | null
-    } | null
   } | null
   countryData?: Partial<CountryDataGuide> | null
   localShared?: Partial<LocalSharedGuide> | null
@@ -432,6 +363,7 @@ export type ArrayFieldDefinition = FieldBase & {
   fields: LocationFieldDefinition[]
   maxRows?: number
   addLabel?: string
+  aiEnabled?: boolean
 }
 
 export type LocationFieldDefinition =

@@ -67,20 +67,6 @@ const buildEmergencyNumberFields = (name = 'emergencyNumbers'): Field => ({
   ],
 })
 
-const buildVaccinationFields = (
-  name = 'vaccinations',
-  includeRecommended = false
-): Field => ({
-  name,
-  label: 'Vaccinations',
-  type: 'array',
-  fields: [
-    textField('name', 'Name'),
-    ...(includeRecommended ? [textField('recommended', 'Recommended')] : []),
-    textareaField('notes', 'Notes'),
-  ],
-})
-
 const extractRelationshipIds = (value: unknown): Array<string | number> => {
   const rawValues = Array.isArray(value) ? value : value ? [value] : []
 
@@ -202,51 +188,6 @@ const buildWeatherMonthlyStatsFields = (): Field => ({
   ],
 })
 
-const buildCostsField = (): Field => ({
-  name: 'costs',
-  label: 'Costs',
-  type: 'group',
-  fields: [
-    {
-      name: 'items',
-      label: 'Cost Items',
-      type: 'array',
-      maxRows: 30,
-      fields: [
-        textField('label', 'Label'),
-        textField('amount', 'Amount'),
-        textareaField('notes', 'Notes'),
-      ],
-    },
-  ],
-})
-
-const buildUsefulAppsField = (): Field => ({
-  name: 'usefulApps',
-  label: 'Useful Apps',
-  type: 'group',
-  fields: [
-    {
-      name: 'apps',
-      label: 'Apps',
-      type: 'array',
-      maxRows: 20,
-      fields: [
-        textField('category', 'Category'),
-        textField('name', 'Name'),
-        {
-          name: 'logo',
-          label: 'Logo',
-          type: 'relationship',
-          relationTo: 'media-sets',
-        },
-        textareaField('description', 'Description'),
-        textField('url', 'URL'),
-      ],
-    },
-  ],
-})
-
 const buildCountryDataField = (): Field => ({
   name: 'countryData',
   label: 'Country Data',
@@ -274,7 +215,6 @@ const buildCountryDataField = (): Field => ({
       fields: [textField('primary', 'Primary'), textareaField('notes', 'Notes')],
     },
     buildEmergencyNumberFields(),
-    buildVaccinationFields('vaccinations', true),
     {
       name: 'tapWater',
       label: 'Tap Water',
@@ -332,32 +272,12 @@ const buildLocalSharedField = (): Field => ({
       type: 'group',
       fields: [textField('label', 'Label'), textareaField('notes', 'Notes')],
     },
-    buildCostsField(),
     {
       name: 'healthSafety',
       label: 'Health & Safety',
       type: 'group',
       fields: [
         buildEmergencyNumberFields(),
-        {
-          name: 'precautions',
-          label: 'Precautions',
-          type: 'array',
-          fields: [
-            textField('label', 'Label'),
-            textField('value', 'Value'),
-            textareaField('notes', 'Notes'),
-          ],
-        },
-        buildVaccinationFields(),
-        textareaField('hospitalsEmbed', 'Hospitals Embed'),
-        textareaField('airQualitySummary', 'Air Quality Summary'),
-        {
-          name: 'mustHaveItems',
-          label: 'Must Have Items',
-          type: 'array',
-          fields: [textField('name', 'Name'), textareaField('notes', 'Notes')],
-        },
       ],
     },
     {
@@ -367,14 +287,12 @@ const buildLocalSharedField = (): Field => ({
       fields: [
         textField('currencyDisplay', 'Currency Display'),
         textField('exchangeRateDisplay', 'Exchange Rate Display'),
-        textareaField('exchangeEmbed', 'Exchange Embed'),
         textareaField('atmAvailability', 'ATM Availability'),
         textField('maxWithdrawal', 'Max Withdrawal'),
         textField('withdrawalFee', 'Withdrawal Fee'),
         textField('cardUsage', 'Card Usage'),
       ],
     },
-    buildUsefulAppsField(),
     {
       name: 'weather',
       label: 'Weather',
@@ -388,12 +306,6 @@ const buildLocalSharedField = (): Field => ({
       fields: [
         textField('vibe', 'Vibe'),
         textareaField('walkability', 'Walkability'),
-        {
-          name: 'bestFor',
-          label: 'Best For',
-          type: 'array',
-          fields: [textField('label', 'Label')],
-        },
       ],
     },
   ],
@@ -494,20 +406,6 @@ export const buildGuideField = (): Field => ({
                   label: 'Cover Image',
                   type: 'relationship',
                   relationTo: 'media-sets',
-                },
-                numberField('mapCenterLat', 'Map Center Lat'),
-                numberField('mapCenterLng', 'Map Center Lng'),
-                numberField('mapZoom', 'Map Zoom'),
-                {
-                  name: 'mapBounds',
-                  label: 'Map Bounds',
-                  type: 'group',
-                  fields: [
-                    numberField('north', 'North'),
-                    numberField('south', 'South'),
-                    numberField('east', 'East'),
-                    numberField('west', 'West'),
-                  ],
                 },
               ],
             },
