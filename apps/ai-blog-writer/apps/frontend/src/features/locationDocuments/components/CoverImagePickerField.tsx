@@ -625,9 +625,9 @@ function CoverImagePickerModal({
 
                   {unsplashError ? <p className="fip-error">{unsplashError}</p> : null}
                   {importError ? <p className="fip-error">{importError}</p> : null}
-                  {locationRef === null && unsplashResults.length > 0 ? (
+                  {locationRef === null ? (
                     <p className="fip-location-notice">
-                      Save this location in Payload before importing a new cover image.
+                      Search works here, but you need to save this location in Payload before importing a new cover image.
                     </p>
                   ) : null}
 
@@ -647,8 +647,12 @@ function CoverImagePickerModal({
                               onClick={() => {
                                 void prepareExternalCropDraft(photo, 'unsplash')
                               }}
-                              disabled={importingId !== null || locationRef === null || isUploadingExternalVariants}
-                              title={photo.photographer ?? 'Open crop editor for Unsplash image'}
+                              disabled={importingId !== null || isUploadingExternalVariants}
+                              title={
+                                locationRef === null
+                                  ? 'Save this location in Payload before importing'
+                                  : photo.photographer ?? 'Open crop editor for Unsplash image'
+                              }
                             >
                               <img
                                 className="fip-card__thumb fip-card__thumb--natural"
@@ -716,9 +720,9 @@ function CoverImagePickerModal({
 
                   {pexelsError ? <p className="fip-error">{pexelsError}</p> : null}
                   {importError ? <p className="fip-error">{importError}</p> : null}
-                  {locationRef === null && pexelsResults.length > 0 ? (
+                  {locationRef === null ? (
                     <p className="fip-location-notice">
-                      Save this location in Payload before importing a new cover image.
+                      Search works here, but you need to save this location in Payload before importing a new cover image.
                     </p>
                   ) : null}
 
@@ -738,8 +742,12 @@ function CoverImagePickerModal({
                               onClick={() => {
                                 void prepareExternalCropDraft(photo, 'pexels')
                               }}
-                              disabled={importingId !== null || locationRef === null || isUploadingExternalVariants}
-                              title={photo.photographer ?? 'Open crop editor for Pexels image'}
+                              disabled={importingId !== null || isUploadingExternalVariants}
+                              title={
+                                locationRef === null
+                                  ? 'Save this location in Payload before importing'
+                                  : photo.photographer ?? 'Open crop editor for Pexels image'
+                              }
                             >
                               <img
                                 className="fip-card__thumb fip-card__thumb--natural"

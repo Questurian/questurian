@@ -307,6 +307,7 @@ export type RelationshipFieldDefinition = FieldBase & {
   type: 'relationship'
   relationTo: 'locations' | 'media-sets'
   hasMany?: boolean
+  maxSelections?: number
   optionSource: 'locations' | 'neighborhoods' | 'mediaSets'
   hintKey?: string
   hintLabel?: string

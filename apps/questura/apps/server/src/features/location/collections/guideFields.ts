@@ -15,6 +15,8 @@ const monthOptions = [
   { label: 'December', value: 'dec' },
 ]
 
+const MAX_RELATED_NEIGHBORHOODS = 4
+
 const isLocalLevel = (data: unknown): boolean => {
   const level = (data as { level?: unknown } | null)?.level
   return level === 'city' || level === 'neighborhood'
@@ -87,6 +89,9 @@ const extractRelationshipIds = (value: unknown): Array<string | number> => {
 const validateNeighborhoodRelationships: Validate = async (value, { req }) => {
   const ids = extractRelationshipIds(value)
   if (!ids.length) return true
+  if (ids.length > MAX_RELATED_NEIGHBORHOODS) {
+    return `Select up to ${MAX_RELATED_NEIGHBORHOODS} related neighborhoods per highlight.`
+  }
 
   for (const id of ids) {
     const location = await req.payload.findByID({
@@ -114,7 +119,7 @@ const buildNeighborhoodReferenceField = (): Field => ({
   type: 'relationship',
   relationTo: 'locations',
   hasMany: true,
-  maxRows: 8,
+  maxRows: MAX_RELATED_NEIGHBORHOODS,
   filterOptions: {
     level: {
       equals: 'neighborhood',
@@ -123,7 +128,7 @@ const buildNeighborhoodReferenceField = (): Field => ({
   validate: validateNeighborhoodRelationships,
   admin: {
     condition: (data) => (data as { level?: unknown } | null)?.level === 'city',
-    description: 'Optional neighborhood references for city-level highlights.',
+    description: `Optional city neighborhood references. Select up to ${MAX_RELATED_NEIGHBORHOODS}.`,
   },
 })
 

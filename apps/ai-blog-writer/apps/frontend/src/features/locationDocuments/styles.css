@@ -865,6 +865,126 @@
   cursor: pointer;
 }
 
+.ldb-neighborhood-picker {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(201, 111, 54, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 252, 247, 0.98), rgba(250, 242, 232, 0.92));
+}
+
+.ldb-neighborhood-picker-toolbar,
+.ldb-neighborhood-modal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ldb-neighborhood-picker-copy {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.ldb-neighborhood-picker-copy strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.ldb-neighborhood-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ldb-neighborhood-modal {
+  width: min(920px, 100%);
+}
+
+.ldb-neighborhood-empty {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed rgba(45, 42, 38, 0.14);
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.ldb-neighborhood-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.ldb-neighborhood-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border: 1px solid rgba(45, 42, 38, 0.1);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.86);
+  text-align: left;
+  transition:
+    transform var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    background-color var(--transition-base);
+}
+
+.ldb-neighborhood-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(201, 111, 54, 0.26);
+  box-shadow: 0 12px 22px rgba(15, 21, 32, 0.08);
+}
+
+.ldb-neighborhood-card.is-selected {
+  border-color: rgba(201, 111, 54, 0.38);
+  background: linear-gradient(135deg, rgba(255, 245, 236, 0.96), rgba(255, 239, 224, 0.92));
+  box-shadow: 0 16px 28px rgba(201, 111, 54, 0.12);
+}
+
+.ldb-neighborhood-card:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ldb-neighborhood-card-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(20, 33, 48, 0.08);
+  color: var(--ink-light);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ldb-neighborhood-card.is-selected .ldb-neighborhood-card-badge {
+  background: rgba(201, 111, 54, 0.16);
+  color: #8f3d14;
+}
+
+.ldb-neighborhood-card-title {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.ldb-neighborhood-card-meta,
+.ldb-neighborhood-card-key {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.ldb-neighborhood-card-key {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
 .ldb-table-wrap {
   overflow-x: auto;
 }
@@ -1214,6 +1334,20 @@
   }
 
   .ldb-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ldb-neighborhood-picker-toolbar,
+  .ldb-neighborhood-modal-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ldb-neighborhood-picker-actions {
+    justify-content: space-between;
+  }
+
+  .ldb-neighborhood-card-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

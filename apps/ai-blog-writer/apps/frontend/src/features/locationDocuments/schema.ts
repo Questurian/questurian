@@ -18,6 +18,7 @@ import type {
   WeatherMonth,
 } from './types'
 import {
+  clampRelationshipSelections,
   cloneValue,
   createDefaultObjectFromFields,
   getValueAtPath,
@@ -182,6 +183,8 @@ const highlightFields: LocationFieldDefinition[] = [
   textareaField('description', 'Description'),
   relationshipField('relatedNeighborhoods', 'Related Neighborhoods', 'locations', 'neighborhoods', {
     hasMany: true,
+    maxSelections: 4,
+    description: 'Choose up to 4 neighborhoods or districts for this highlight.',
     hintKey: 'relatedNeighborhoodKeys',
     hintLabel: 'AI locationKey hints',
     visibleWhen: isCityLevel,
@@ -284,6 +287,7 @@ const locationSections: LocationSectionDefinition[] = [
         ], {
           addLabel: 'Add month',
           maxRows: 12,
+          aiEnabled: true,
         }),
       ]),
       groupField('localContext', 'Local Context', [
@@ -1065,7 +1069,10 @@ export function resolveDraftRelationshipHints(
       return {
         ...highlight,
         relatedNeighborhoodKeys,
-        relatedNeighborhoods: [...new Set([...relatedNeighborhoods, ...resolvedIds])],
+        relatedNeighborhoods: clampRelationshipSelections(
+          [...new Set([...relatedNeighborhoods, ...resolvedIds])],
+          4,
+        ),
       }
     })
 
@@ -1177,7 +1184,9 @@ export function buildPayloadLocationBody(
   const buildPayloadHighlightForLevel = (highlight: HighlightDraft) => ({
     title: highlight.title,
     description: highlight.description,
-    relatedNeighborhoods: resolved.level === 'city' ? highlight.relatedNeighborhoods : [],
+    relatedNeighborhoods: resolved.level === 'city'
+      ? clampRelationshipSelections(highlight.relatedNeighborhoods, 4)
+      : [],
   })
 
   body.guide = {

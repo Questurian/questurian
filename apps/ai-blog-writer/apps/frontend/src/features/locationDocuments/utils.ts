@@ -1,4 +1,5 @@
 import type {
+  LocationDocumentDraft,
   LocationFieldDefinition,
   LocationIndexRow,
   LocationLevel,
@@ -156,6 +157,10 @@ function normalizeLocationGroupKey(...values: Array<string | null | undefined>):
   return normalizeLocationSortValue(...values).toLowerCase()
 }
 
+function normalizeLocationToken(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
+
 function resolveCountryLabel(row: LocationIndexRow): string {
   return normalizeLocationSortValue(
     row.countryName,
@@ -303,6 +308,83 @@ export function formatLocationLabel(location: Pick<LocationOption, 'level' | 'co
   }
 
   return `${primary} · ${location.locationKey}`
+}
+
+export function clampRelationshipSelections(values: number[], maxSelections: number): number[] {
+  const unique = [...new Set(values.filter((value) => Number.isFinite(value)))]
+  return unique.slice(0, Math.max(0, maxSelections))
+}
+
+export function toggleLimitedRelationshipSelection(
+  values: number[],
+  optionId: number,
+  maxSelections: number,
+): number[] {
+  const nextValues = [...new Set(values.filter((value) => Number.isFinite(value)))]
+
+  if (nextValues.includes(optionId)) {
+    return nextValues.filter((value) => value !== optionId)
+  }
+
+  if (nextValues.length >= maxSelections) {
+    return nextValues
+  }
+
+  return [...nextValues, optionId]
+}
+
+export function getNeighborhoodPickerOptions(
+  locations: LocationOption[],
+  draft: Pick<LocationDocumentDraft, 'country' | 'city'>,
+): {
+  options: LocationOption[]
+  isScopedToCity: boolean
+} {
+  const neighborhoods = locations.filter((item) => item.level === 'neighborhood')
+  const countryKey = normalizeLocationToken(draft.country)
+  const cityKey = normalizeLocationToken(draft.city)
+
+  const sortOptions = (options: LocationOption[]) => [...options].sort((left, right) => {
+    const neighborhoodComparison = LOCATION_ROW_COLLATOR.compare(
+      normalizeLocationSortValue(left.neighborhoodName, left.neighborhood),
+      normalizeLocationSortValue(right.neighborhoodName, right.neighborhood),
+    )
+
+    if (neighborhoodComparison !== 0) return neighborhoodComparison
+
+    const cityComparison = LOCATION_ROW_COLLATOR.compare(
+      normalizeLocationSortValue(left.cityName, left.city),
+      normalizeLocationSortValue(right.cityName, right.city),
+    )
+
+    if (cityComparison !== 0) return cityComparison
+
+    const countryComparison = LOCATION_ROW_COLLATOR.compare(
+      normalizeLocationSortValue(left.countryName, left.country),
+      normalizeLocationSortValue(right.countryName, right.country),
+    )
+
+    if (countryComparison !== 0) return countryComparison
+
+    return LOCATION_ROW_COLLATOR.compare(left.locationKey, right.locationKey)
+  })
+
+  if (!countryKey || !cityKey) {
+    return {
+      options: sortOptions(neighborhoods),
+      isScopedToCity: false,
+    }
+  }
+
+  return {
+    options: sortOptions(
+      neighborhoods.filter((item) => (
+        normalizeLocationToken(item.country) === countryKey
+        && normalizeLocationToken(item.city) === cityKey
+      )),
+    ),
+    isScopedToCity: true,
+  }
 }
 
 export function formatMediaSetLabel(option: Pick<MediaSetOption, 'title' | 'location' | 'alt_text'>): string {

@@ -13,6 +13,24 @@ import {
 import type { LocationOption } from './types'
 
 describe('locationDocuments schema helpers', () => {
+  it('keeps weather monthly stats AI-enabled for city drafts', () => {
+    const coreSection = getVisibleLocationSections('city').find((section) => section.id === 'core')
+    const weatherField = coreSection?.fields.find(
+      (field) => field.type === 'group' && field.key === 'weather',
+    )
+
+    expect(weatherField?.type).toBe('group')
+
+    const monthlyStatsField = weatherField?.type === 'group'
+      ? weatherField.fields.find(
+          (field) => field.type === 'array' && field.key === 'monthlyStats',
+        )
+      : undefined
+
+    expect(monthlyStatsField?.type).toBe('array')
+    expect(monthlyStatsField?.type === 'array' ? monthlyStatsField.aiEnabled : undefined).toBe(true)
+  })
+
   it('shows only country sections for country-level drafts', () => {
     expect(getVisibleLocationSections('country').map((section) => section.id)).toEqual([
       'hierarchy',
@@ -85,6 +103,27 @@ describe('locationDocuments schema helpers', () => {
     expect(payload.guide?.media?.coverImage).toBe(91)
     expect(payload.guide?.core?.headline).toBe('Living in Rio Overview')
     expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([44, 45])
+  })
+
+  it('caps related neighborhoods at four ids per highlight in the payload body', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'city'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.guide.explore.highlights = [
+      {
+        title: 'Best districts',
+        description: 'Cluster of neighborhoods to browse.',
+        relatedNeighborhoods: [11, 12, 13, 14, 15],
+        relatedNeighborhoodKeys: [],
+      },
+    ]
+
+    const payload = buildPayloadLocationBody(draft, [])
+
+    expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([11, 12, 13, 14])
   })
 
   it('resolves city-prefixed neighborhood hint slugs and preserves hint keys across save reloads', () => {

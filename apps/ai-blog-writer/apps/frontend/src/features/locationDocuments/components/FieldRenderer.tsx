@@ -15,6 +15,7 @@ import {
   getValueAtPath,
 } from '../utils'
 import { CoverImagePickerField } from './CoverImagePickerField'
+import { NeighborhoodPickerField } from './NeighborhoodPickerField'
 
 type FieldRendererProps = {
   fields: LocationFieldDefinition[]
@@ -579,14 +580,26 @@ export function FieldRenderer({
                   onValueChange={(nextValue) => onChange(path, nextValue)}
                 />
               ) : field.hasMany ? (
-                <RelationshipManyFieldInput
-                  field={field}
-                  value={Array.isArray(value) ? (value as number[]) : []}
-                  hintValues={Array.isArray(hintValue) ? (hintValue as string[]) : []}
-                  locations={locations}
-                  onValueChange={(nextValue) => onChange(path, nextValue)}
-                  onHintChange={field.hintKey ? (nextValue) => onChange([...basePath, field.hintKey!], nextValue) : undefined}
-                />
+                field.optionSource === 'neighborhoods' ? (
+                  <NeighborhoodPickerField
+                    field={field}
+                    draft={draft}
+                    value={Array.isArray(value) ? (value as number[]) : []}
+                    hintValues={Array.isArray(hintValue) ? (hintValue as string[]) : []}
+                    locations={locations}
+                    onValueChange={(nextValue) => onChange(path, nextValue)}
+                    onHintChange={field.hintKey ? (nextValue) => onChange([...basePath, field.hintKey!], nextValue) : undefined}
+                  />
+                ) : (
+                  <RelationshipManyFieldInput
+                    field={field}
+                    value={Array.isArray(value) ? (value as number[]) : []}
+                    hintValues={Array.isArray(hintValue) ? (hintValue as string[]) : []}
+                    locations={locations}
+                    onValueChange={(nextValue) => onChange(path, nextValue)}
+                    onHintChange={field.hintKey ? (nextValue) => onChange([...basePath, field.hintKey!], nextValue) : undefined}
+                  />
+                )
               ) : (
                 <RelationshipFieldInput
                   field={field}
