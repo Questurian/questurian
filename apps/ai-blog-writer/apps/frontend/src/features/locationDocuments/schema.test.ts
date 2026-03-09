@@ -6,6 +6,7 @@ import {
   createEmptyLocationDraft,
   getVisibleLocationSections,
   resolveLocationDraftRef,
+  sanitizeLocationDraftShape,
 } from './schema'
 import type { LocationOption } from './types'
 
@@ -113,5 +114,66 @@ describe('locationDocuments schema helpers', () => {
     expect(buildLocationHierarchyTitle(draft)).toBe(
       'Upper East Side, New York, United States',
     )
+  })
+
+  it('preserves relationship hint arrays when sanitizing older drafts', () => {
+    const sanitized = sanitizeLocationDraftShape({
+      level: 'city',
+      country: 'peru',
+      city: 'lima',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      guide: {
+        explore: {
+          highlights: [
+            {
+              title: 'Best food district',
+              description: 'Start in Miraflores.',
+              relatedNeighborhoods: [],
+              relatedNeighborhoodKeys: ['peru|lima|miraflores'],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(sanitized.guide.explore.highlights[0]?.relatedNeighborhoodKeys).toEqual([
+      'peru|lima|miraflores',
+    ])
+  })
+
+  it('strips related neighborhoods from neighborhood-level payload highlights', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'neighborhood'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.neighborhood = 'Miraflores'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.neighborhoodName = 'Miraflores'
+    draft.guide.explore.highlights = [
+      {
+        title: 'Walkable core',
+        description: 'Everything is nearby.',
+        relatedNeighborhoods: [44],
+        relatedNeighborhoodKeys: ['peru|lima|barranco'],
+      },
+    ]
+
+    const payload = buildPayloadLocationBody(draft, [
+      {
+        id: 44,
+        level: 'neighborhood',
+        country: 'peru',
+        city: 'lima',
+        neighborhood: 'barranco',
+        countryName: 'Peru',
+        cityName: 'Lima',
+        neighborhoodName: 'Barranco',
+        locationKey: 'peru|lima|barranco',
+      },
+    ])
+
+    expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toBeUndefined()
   })
 })

@@ -6,8 +6,12 @@ interface RequireAuthProps {
 }
 
 export default function RequireAuth({ children }: RequireAuthProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isRestoringSession } = useAuth();
   const location = useLocation();
+
+  if (isRestoringSession && !isAuthenticated) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;

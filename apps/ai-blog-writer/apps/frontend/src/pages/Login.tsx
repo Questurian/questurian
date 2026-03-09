@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../providers/useAuth';
 
 export default function Login() {
-  const { isAuthenticated, login, isConnected, connectionError } = useAuth();
+  const { isAuthenticated, isRestoringSession, login, isConnected, connectionError } = useAuth();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +14,19 @@ export default function Login() {
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />;
+  }
+
+  if (isRestoringSession) {
+    return (
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-header">
+            <h1>Restoring session</h1>
+            <p>Checking your saved AI Blog Writer login…</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   async function handleSubmit(event: React.FormEvent) {

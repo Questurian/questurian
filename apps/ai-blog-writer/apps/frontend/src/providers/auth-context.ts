@@ -19,6 +19,7 @@ export interface AuthContextValue {
   expiresAt: number | null;
   user: User | null;
   isAuthenticated: boolean;
+  isRestoringSession: boolean;
   isConnected: boolean;
   connectionError: string | null;
   login: (email: string, password: string) => Promise<void>;

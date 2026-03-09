@@ -889,6 +889,188 @@
   color: var(--muted);
 }
 
+.ldb-country-summary,
+.ldb-country-group-stats,
+.ldb-city-group-stats,
+.ldb-doc-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ldb-country-summary {
+  justify-content: flex-end;
+}
+
+.ldb-country-summary-pill,
+.ldb-country-group-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: var(--radius-full);
+  background: rgba(20, 33, 48, 0.08);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.ldb-country-group-count {
+  background: linear-gradient(135deg, rgba(216, 157, 77, 0.18), rgba(201, 111, 54, 0.14));
+  color: #6b3b1f;
+}
+
+.ldb-country-groups,
+.ldb-city-groups {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ldb-country-group {
+  position: relative;
+  display: grid;
+  gap: var(--space-4);
+  padding: clamp(var(--space-4), 2.4vw, var(--space-5));
+  border-radius: calc(var(--radius-xl) - 2px);
+  border: 1px solid rgba(45, 42, 38, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 249, 0.98), rgba(247, 242, 234, 0.92)),
+    radial-gradient(circle at top right, rgba(216, 157, 77, 0.12), transparent 35%);
+  box-shadow: 0 18px 40px rgba(48, 40, 31, 0.07);
+  overflow: hidden;
+}
+
+.ldb-country-group::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, #d89d4d, #c96f36);
+}
+
+.ldb-country-group-header,
+.ldb-country-featured-doc,
+.ldb-city-group-header,
+.ldb-doc-card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ldb-country-group-header,
+.ldb-city-group-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.ldb-country-group-copy,
+.ldb-country-featured-doc-main,
+.ldb-city-group-header > div:first-child,
+.ldb-doc-card-main {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.ldb-country-group-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9a6430;
+}
+
+.ldb-country-group-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ldb-country-group-title-row h3,
+.ldb-city-group-header h4 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.ldb-country-group-copy > p:last-child,
+.ldb-city-group-header p,
+.ldb-country-featured-doc-main p,
+.ldb-doc-card-key,
+.ldb-doc-card-meta {
+  margin: 0;
+  color: var(--muted);
+}
+
+.ldb-country-featured-doc {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(216, 157, 77, 0.22);
+  background: linear-gradient(135deg, rgba(255, 250, 241, 0.96), rgba(255, 255, 255, 0.88));
+}
+
+.ldb-country-featured-doc-main strong {
+  font-size: 1.03rem;
+  color: var(--ink);
+}
+
+.ldb-country-featured-doc-main p,
+.ldb-doc-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 1rem;
+}
+
+.ldb-country-featured-doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.ldb-city-group {
+  display: grid;
+  gap: var(--space-3);
+  padding: clamp(var(--space-3), 2vw, var(--space-4));
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(45, 42, 38, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.ldb-doc-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ldb-doc-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(45, 42, 38, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.ldb-doc-card-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ldb-doc-card-title-row strong {
+  color: var(--ink);
+}
+
+.ldb-doc-card-key {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+}
+
 .ldb-tab {
   position: relative;
   flex: 0 0 auto;
@@ -1046,5 +1228,22 @@
 
   .ldb-tabs-panel {
     padding: var(--space-3) var(--space-4);
+  }
+
+  .ldb-country-summary,
+  .ldb-country-group-stats,
+  .ldb-city-group-stats {
+    justify-content: flex-start;
+  }
+
+  .ldb-country-group-header,
+  .ldb-country-featured-doc,
+  .ldb-city-group-header,
+  .ldb-doc-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ldb-country-featured-doc-actions {
+    justify-content: flex-start;
   }
 }

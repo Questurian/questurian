@@ -62,6 +62,7 @@ export const TAP_WATER_STATUS_OPTIONS = [
 
 const isLocalLevel = (draft: LocationDocumentDraft): boolean => draft.level === 'city' || draft.level === 'neighborhood'
 const isNeighborhoodLevel = (draft: LocationDocumentDraft): boolean => draft.level === 'neighborhood'
+const isCityLevel = (draft: LocationDocumentDraft): boolean => draft.level === 'city'
 
 function scalarField(
   key: string,
@@ -173,6 +174,7 @@ const highlightFields: LocationFieldDefinition[] = [
     hasMany: true,
     hintKey: 'relatedNeighborhoodKeys',
     hintLabel: 'AI locationKey hints',
+    visibleWhen: isCityLevel,
   }),
 ]
 
@@ -618,28 +620,14 @@ function sanitizeFieldValue(
 ): unknown {
   if (field.type === 'group') {
     const source = isRecord(rawValue) ? rawValue : {}
-    const next = createDefaultObjectFromFields(field.fields)
-    for (const childField of field.fields) {
-      next[childField.key] = sanitizeFieldValue(
-        childField,
-        source[childField.key],
-      )
-    }
-    return next
+    return sanitizeFieldCollection(field.fields, source)
   }
 
   if (field.type === 'array') {
     if (!Array.isArray(rawValue)) return []
     return rawValue.map((rowValue) => {
       const source = isRecord(rowValue) ? rowValue : {}
-      const next = createDefaultObjectFromFields(field.fields)
-      for (const childField of field.fields) {
-        next[childField.key] = sanitizeFieldValue(
-          childField,
-          source[childField.key],
-        )
-      }
-      return next
+      return sanitizeFieldCollection(field.fields, source)
     })
   }
 
@@ -669,6 +657,46 @@ function sanitizeFieldValue(
   return typeof rawValue === 'string' ? rawValue : ''
 }
 
+function sanitizeFieldCollection(
+  fields: LocationFieldDefinition[],
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = createDefaultObjectFromFields(fields)
+
+  for (const childField of fields) {
+    next[childField.key] = sanitizeFieldValue(
+      childField,
+      source[childField.key],
+    )
+
+    if (childField.type === 'relationship' && childField.hintKey) {
+      next[childField.hintKey] = sanitizeRelationshipHintValue(
+        childField,
+        source[childField.hintKey],
+      )
+    }
+  }
+
+  return next
+}
+
+function sanitizeRelationshipHintValue(
+  field: Extract<LocationFieldDefinition, { type: 'relationship' }>,
+  rawValue: unknown,
+): unknown {
+  if (!field.hintKey) return undefined
+
+  if (field.hasMany) {
+    if (!Array.isArray(rawValue)) return []
+    return rawValue
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  }
+
+  return typeof rawValue === 'string' ? rawValue : ''
+}
+
 function applySanitizedFields(
   draft: LocationDocumentDraft,
   source: Record<string, unknown>,
@@ -681,6 +709,13 @@ function applySanitizedFields(
     const rawValue = getValueAtPath(source, path)
     const sanitizedValue = sanitizeFieldValue(field, rawValue)
     nextDraft = setValueAtPath(nextDraft, path, sanitizedValue)
+
+    if (field.type === 'relationship' && field.hintKey) {
+      const hintPath = [...basePath, field.hintKey]
+      const hintRawValue = getValueAtPath(source, hintPath)
+      const sanitizedHintValue = sanitizeRelationshipHintValue(field, hintRawValue)
+      nextDraft = setValueAtPath(nextDraft, hintPath, sanitizedHintValue)
+    }
   }
   return nextDraft
 }
@@ -1092,12 +1127,34 @@ export function resolveDraftRelationshipHints(
 
   const resolveHighlights = (highlights: HighlightDraft[]) =>
     highlights.map((highlight) => {
-      if (!highlight.relatedNeighborhoodKeys.length) return highlight
-      const resolvedIds = resolveNeighborhoodKeys(highlight.relatedNeighborhoodKeys, locationOptions)
-      if (!resolvedIds.length) return highlight
+      const relatedNeighborhoodKeys = Array.isArray(highlight.relatedNeighborhoodKeys)
+        ? highlight.relatedNeighborhoodKeys
+        : []
+      const relatedNeighborhoods = Array.isArray(highlight.relatedNeighborhoods)
+        ? highlight.relatedNeighborhoods
+        : []
+
+      if (!relatedNeighborhoodKeys.length) {
+        return {
+          ...highlight,
+          relatedNeighborhoodKeys,
+          relatedNeighborhoods,
+        }
+      }
+
+      const resolvedIds = resolveNeighborhoodKeys(relatedNeighborhoodKeys, locationOptions)
+      if (!resolvedIds.length) {
+        return {
+          ...highlight,
+          relatedNeighborhoodKeys,
+          relatedNeighborhoods,
+        }
+      }
+
       return {
         ...highlight,
-        relatedNeighborhoods: [...new Set([...highlight.relatedNeighborhoods, ...resolvedIds])],
+        relatedNeighborhoodKeys,
+        relatedNeighborhoods: [...new Set([...relatedNeighborhoods, ...resolvedIds])],
       }
     })
 
@@ -1118,7 +1175,9 @@ export function collectUnresolvedHintWarnings(
 
   const unresolvedHighlightWarnings = (modeLabel: string, highlights: HighlightDraft[]) => {
     for (const highlight of highlights) {
-      const unresolvedKeys = highlight.relatedNeighborhoodKeys.filter((key) => {
+      const unresolvedKeys = (Array.isArray(highlight.relatedNeighborhoodKeys)
+        ? highlight.relatedNeighborhoodKeys
+        : []).filter((key) => {
         const normalized = key.trim().toLowerCase()
         if (!normalized) return false
         return !locationOptions.some(
@@ -1139,14 +1198,6 @@ export function collectUnresolvedHintWarnings(
   unresolvedHighlightWarnings('Move', draft.guide.move.highlights)
 
   return warnings
-}
-
-function buildPayloadHighlight(highlight: HighlightDraft) {
-  return {
-    title: highlight.title,
-    description: highlight.description,
-    relatedNeighborhoods: highlight.relatedNeighborhoods,
-  }
 }
 
 export function buildPayloadLocationBody(
@@ -1179,6 +1230,12 @@ export function buildPayloadLocationBody(
     body.neighborhoodName = neighborhoodName
   }
 
+  const buildPayloadHighlightForLevel = (highlight: HighlightDraft) => ({
+    title: highlight.title,
+    description: highlight.description,
+    relatedNeighborhoods: resolved.level === 'city' ? highlight.relatedNeighborhoods : [],
+  })
+
   body.guide = {
     media: {
       coverImage: resolved.guide.media.coverImage,
@@ -1191,15 +1248,15 @@ export function buildPayloadLocationBody(
     body.guide.localShared = resolved.guide.localShared
     body.guide.explore = {
       ...resolved.guide.explore,
-      highlights: resolved.guide.explore.highlights.map(buildPayloadHighlight),
+      highlights: resolved.guide.explore.highlights.map(buildPayloadHighlightForLevel),
     }
     body.guide.stay = {
       ...resolved.guide.stay,
-      highlights: resolved.guide.stay.highlights.map(buildPayloadHighlight),
+      highlights: resolved.guide.stay.highlights.map(buildPayloadHighlightForLevel),
     }
     body.guide.move = {
       ...resolved.guide.move,
-      highlights: resolved.guide.move.highlights.map(buildPayloadHighlight),
+      highlights: resolved.guide.move.highlights.map(buildPayloadHighlightForLevel),
     }
   }
 

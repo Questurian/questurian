@@ -74,6 +74,28 @@ const hasMeaningfulValue = (value: unknown): boolean => {
   return false
 }
 
+const stripHighlightNeighborhoodReferences = (value: unknown): void => {
+  if (!value || typeof value !== 'object') return
+
+  const highlights = (value as { highlights?: unknown }).highlights
+  if (!Array.isArray(highlights)) return
+
+  for (const highlight of highlights) {
+    if (highlight && typeof highlight === 'object' && 'relatedNeighborhoods' in highlight) {
+      delete (highlight as Record<string, unknown>).relatedNeighborhoods
+    }
+  }
+}
+
+const stripNeighborhoodGuideRelationships = (guide: unknown): void => {
+  if (!guide || typeof guide !== 'object') return
+
+  const guideRecord = guide as Record<string, unknown>
+  stripHighlightNeighborhoodReferences(guideRecord.explore)
+  stripHighlightNeighborhoodReferences(guideRecord.stay)
+  stripHighlightNeighborhoodReferences(guideRecord.move)
+}
+
 const parseLocationKey = (locationKey: string) => {
   const parts = locationKey.split('|')
   if (parts.length < 1 || parts.length > 3) {
@@ -440,6 +462,10 @@ export const Locations: CollectionConfig = {
               move?: unknown
             }
           | undefined
+
+        if (level === 'neighborhood' && data.guide) {
+          stripNeighborhoodGuideRelationships(data.guide)
+        }
 
         if (guide) {
           const hasCountryData = hasMeaningfulValue(guide.countryData)

@@ -4,7 +4,7 @@ import { useAuth } from '../../../providers/useAuth'
 import { fetchLocationsIndex } from '../api'
 import { listDrafts, removeDraft } from '../storage'
 import type { LocationDocumentDraft, LocationIndexRow } from '../types'
-import { summarizeLocationIndexRow } from '../utils'
+import { groupLocationIndexRowsByCountry, summarizeLocationIndexRow } from '../utils'
 import '../styles.css'
 
 type LocationIndexFilters = {
@@ -35,6 +35,10 @@ function summarizeDraft(draft: LocationDocumentDraft): string {
   }
 
   return draft.country || 'Untitled draft'
+}
+
+function formatCount(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`
 }
 
 export default function LocationDocumentsPage() {
@@ -118,6 +122,27 @@ export default function LocationDocumentsPage() {
       return true
     })
   }, [deferredFilters, payloadRows])
+
+  const payloadCountryGroups = useMemo(
+    () => groupLocationIndexRowsByCountry(filteredPayloadRows),
+    [filteredPayloadRows],
+  )
+
+  const payloadCountryStats = useMemo(() => {
+    return payloadCountryGroups.reduce(
+      (totals, group) => {
+        if (group.countryRow) totals.countryDocs += 1
+        totals.cityDocs += group.cityCount
+        totals.neighborhoodDocs += group.neighborhoodCount
+        return totals
+      },
+      {
+        countryDocs: 0,
+        cityDocs: 0,
+        neighborhoodDocs: 0,
+      },
+    )
+  }, [payloadCountryGroups])
 
   const discardDraft = (draftId: string) => {
     const confirmed = window.confirm('Discard this local draft? This cannot be undone.')
@@ -262,8 +287,15 @@ export default function LocationDocumentsPage() {
         <div className="ldb-panel-header">
           <div>
             <h2>Payload Documents ({filteredPayloadRows.length})</h2>
-            <p>Open an existing location document to update the live Payload record.</p>
+            <p>Browse the live `locations` collection by country first, then drill into city and neighborhood records.</p>
           </div>
+          {!isLoading && !error && filteredPayloadRows.length > 0 ? (
+            <div className="ldb-country-summary" aria-label="Payload document summary">
+              <span className="ldb-country-summary-pill">{formatCount(payloadCountryGroups.length, 'country')}</span>
+              <span className="ldb-country-summary-pill">{formatCount(payloadCountryStats.cityDocs, 'city')}</span>
+              <span className="ldb-country-summary-pill">{formatCount(payloadCountryStats.neighborhoodDocs, 'neighborhood')}</span>
+            </div>
+          ) : null}
         </div>
 
         {isLoading ? <p className="ldb-placeholder">Loading locations...</p> : null}
@@ -276,35 +308,112 @@ export default function LocationDocumentsPage() {
               <p>Change the search or create a new location from the builder.</p>
             </div>
           ) : (
-            <div className="ldb-table-wrap">
-              <table className="ldb-table">
-                <thead>
-                  <tr>
-                    <th>Location</th>
-                    <th>Key</th>
-                    <th>Level</th>
-                    <th>Updated</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPayloadRows.map((row) => (
-                    <tr key={row.id}>
-                      <td>{summarizeLocationIndexRow(row)}</td>
-                      <td>{row.locationKey}</td>
-                      <td>
-                        <span className={`ldb-status-chip is-${row.level}`}>{row.level}</span>
-                      </td>
-                      <td>{formatDate(row.updatedAt)}</td>
-                      <td>
-                        <Link className="ldb-link" to={`/location-documents/builder?id=${row.id}`}>
-                          Edit
+            <div className="ldb-country-groups">
+              {payloadCountryGroups.map((countryGroup) => (
+                <article key={countryGroup.countryKey} className="ldb-country-group">
+                  <div className="ldb-country-group-header">
+                    <div className="ldb-country-group-copy">
+                      <p className="ldb-country-group-kicker">Country group</p>
+                      <div className="ldb-country-group-title-row">
+                        <h3>{countryGroup.countryLabel}</h3>
+                        <span className="ldb-country-group-count">
+                          {formatCount(countryGroup.rows.length, 'document')}
+                        </span>
+                      </div>
+                      <p>
+                        {countryGroup.cityGroups.length > 0
+                          ? `Includes ${formatCount(countryGroup.cityGroups.length, 'city cluster')}.`
+                          : 'Country-level record only.'}
+                      </p>
+                    </div>
+                    <div className="ldb-country-group-stats">
+                      <span className="ldb-country-summary-pill">
+                        {countryGroup.countryRow ? 'Country doc ready' : 'No country doc'}
+                      </span>
+                      <span className="ldb-country-summary-pill">{formatCount(countryGroup.cityCount, 'city')}</span>
+                      <span className="ldb-country-summary-pill">
+                        {formatCount(countryGroup.neighborhoodCount, 'neighborhood')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {countryGroup.countryRow ? (
+                    <div className="ldb-country-featured-doc">
+                      <div className="ldb-country-featured-doc-main">
+                        <span className="ldb-mini-label">Country document</span>
+                        <strong>{summarizeLocationIndexRow(countryGroup.countryRow)}</strong>
+                        <p>
+                          <span>{countryGroup.countryRow.locationKey}</span>
+                          <span>Updated {formatDate(countryGroup.countryRow.updatedAt)}</span>
+                        </p>
+                      </div>
+                      <div className="ldb-country-featured-doc-actions">
+                        <span className="ldb-status-chip is-country">country</span>
+                        <Link className="ldb-link" to={`/location-documents/builder?id=${countryGroup.countryRow.id}`}>
+                          Edit country
                         </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {countryGroup.cityGroups.length > 0 ? (
+                    <div className="ldb-city-groups">
+                      {countryGroup.cityGroups.map((cityGroup) => (
+                        <section key={`${countryGroup.countryKey}-${cityGroup.cityKey}`} className="ldb-city-group">
+                          <div className="ldb-city-group-header">
+                            <div>
+                              <p className="ldb-mini-label">City cluster</p>
+                              <h4>{cityGroup.cityLabel}</h4>
+                              <p>
+                                {cityGroup.cityRow
+                                  ? `${formatCount(cityGroup.neighborhoodRows.length, 'neighborhood')} linked to this city.`
+                                  : `Neighborhood records only in ${cityGroup.cityLabel}.`}
+                              </p>
+                            </div>
+                            <div className="ldb-city-group-stats">
+                              {cityGroup.cityRow ? (
+                                <span className="ldb-country-summary-pill">City doc ready</span>
+                              ) : (
+                                <span className="ldb-country-summary-pill">City doc missing</span>
+                              )}
+                              <span className="ldb-country-summary-pill">
+                                {formatCount(cityGroup.neighborhoodRows.length, 'neighborhood')}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="ldb-doc-grid">
+                            {cityGroup.rows.map((row) => (
+                              <div key={row.id} className="ldb-doc-card">
+                                <div className="ldb-doc-card-main">
+                                  <div className="ldb-doc-card-title-row">
+                                    <strong>{summarizeLocationIndexRow(row)}</strong>
+                                    <span className={`ldb-status-chip is-${row.level}`}>{row.level}</span>
+                                  </div>
+                                  <p className="ldb-doc-card-key">{row.locationKey}</p>
+                                  <p className="ldb-doc-card-meta">
+                                    <span>Updated {formatDate(row.updatedAt)}</span>
+                                    {row.level !== 'country' ? (
+                                      <span>
+                                        {[row.countryName, row.cityName, row.neighborhoodName]
+                                          .filter((value): value is string => Boolean(value?.trim()))
+                                          .join(' / ')}
+                                      </span>
+                                    ) : null}
+                                  </p>
+                                </div>
+                                <Link className="ldb-link" to={`/location-documents/builder?id=${row.id}`}>
+                                  Edit
+                                </Link>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
             </div>
           )
         ) : null}

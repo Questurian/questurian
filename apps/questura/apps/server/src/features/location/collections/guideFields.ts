@@ -124,7 +124,8 @@ const buildNeighborhoodReferenceField = (): Field => ({
   },
   validate: validateNeighborhoodRelationships,
   admin: {
-    description: 'Optional neighborhood references for linked highlights.',
+    condition: (data) => (data as { level?: unknown } | null)?.level === 'city',
+    description: 'Optional neighborhood references for city-level highlights.',
   },
 })
 
