@@ -1,4 +1,5 @@
 import { useDialogOverlayEffects } from '../hooks/useDialogOverlayEffects';
+import styles from './DialogOverlay.module.css';
 
 export default function DialogOverlay({
   dialog,
@@ -11,22 +12,22 @@ export default function DialogOverlay({
   });
 
   return (
-    <div className="dialog-backdrop" role="presentation">
+    <div className={styles.backdrop} role="presentation">
       <div
-        className="dialog"
+        className={styles.dialog}
         data-tone={dialog.tone}
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
         aria-describedby="dialog-message"
       >
-        <h2 className="dialog-title" id="dialog-title">
+        <h2 className={styles.title} id="dialog-title">
           {dialog.title}
         </h2>
-        <p className="dialog-message" id="dialog-message">
+        <p className={styles.message} id="dialog-message">
           {dialog.message}
         </p>
-        <div className="dialog-actions">
+        <div className={styles.actions}>
           {dialog.type === 'confirm' && (
             <button
               className="button secondary"

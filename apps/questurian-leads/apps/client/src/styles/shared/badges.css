@@ -1,0 +1,70 @@
+/* ===== BADGES ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.badge.warning {
+  border-color: rgba(245, 158, 11, 0.2);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge.danger {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.badge.success {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge.instagram {
+  border-color: rgba(233, 30, 99, 0.2);
+  background: var(--source-instagram-soft);
+  color: var(--source-instagram);
+}
+
+.badge.youtube {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: var(--source-youtube-soft);
+  color: var(--source-youtube);
+}
+
+.translation-badge {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.language-badge {
+  border-color: rgba(245, 158, 11, 0.2);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.language-badge .language-abbrev {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .language-badge .language-full {
+    display: none;
+  }
+  .language-badge .language-abbrev {
+    display: inline;
+  }
+}

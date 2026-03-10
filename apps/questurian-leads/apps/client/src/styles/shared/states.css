@@ -1,0 +1,42 @@
+/* ===== LOAD MORE ===== */
+.load-more {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  padding: var(--space-16);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-xl);
+  background: var(--card-bg);
+  text-align: center;
+}
+
+.empty-state p {
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+}
+
+/* ===== LOADING ===== */
+.loading {
+  padding: var(--space-12);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+}
+
+/* ===== ERROR ===== */
+.error {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-6);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.error-text {
+  color: var(--danger);
+}

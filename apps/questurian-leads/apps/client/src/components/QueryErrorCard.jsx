@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { API_BASE } from '../api';
+import styles from './QueryErrorCard.module.css';
 
 const TABLE_LABELS = {
   batch_fetch_jobs: 'batch fetch jobs',
@@ -271,22 +272,22 @@ export default function QueryErrorCard({ error }) {
   const model = buildErrorModel(error, location.pathname);
 
   return (
-    <section className="query-error-card" data-tone={model.tone} role="alert">
-      <div className="query-error-header">
-        <span className="query-error-kicker">{model.kicker}</span>
-        <h2 className="query-error-title">{model.title}</h2>
-        <p className="query-error-description">{model.description}</p>
+    <section className={styles.card} data-tone={model.tone} role="alert">
+      <div className={styles.header}>
+        <span className={styles.kicker}>{model.kicker}</span>
+        <h2 className={styles.title}>{model.title}</h2>
+        <p className={styles.description}>{model.description}</p>
       </div>
 
-      <div className="query-error-grid">
-        <div className="query-error-panel">
+      <div className={styles.grid}>
+        <div className={styles.panel}>
           <h3>This page expects</h3>
           {model.needs.length ? (
-            <ul className="query-error-needs">
+            <ul className={styles.needs}>
               {model.needs.map((item) => {
                 const isMissing = model.missingTable === item.key;
                 return (
-                  <li key={item.key} className="query-error-need" data-state={isMissing ? 'missing' : 'expected'}>
+                  <li key={item.key} className={styles.need} data-state={isMissing ? 'missing' : 'expected'}>
                     <span>{item.label}</span>
                     <strong>{isMissing ? 'Missing' : 'Needed'}</strong>
                   </li>
@@ -294,13 +295,13 @@ export default function QueryErrorCard({ error }) {
               })}
             </ul>
           ) : (
-            <p className="query-error-note">This page has no extra setup notes yet.</p>
+            <p className={styles.note}>This page has no extra setup notes yet.</p>
           )}
         </div>
 
-        <div className="query-error-panel">
+        <div className={styles.panel}>
           <h3>Check next</h3>
-          <ul className="query-error-list">
+          <ul className={styles.list}>
             {model.checklist.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -308,14 +309,14 @@ export default function QueryErrorCard({ error }) {
         </div>
       </div>
 
-      <div className="query-error-actions">
+      <div className={styles.actions}>
         <button type="button" className="button secondary" onClick={() => window.location.reload()}>
           Reload page
         </button>
-        <span className="query-error-api">API: {API_BASE}</span>
+        <span className={styles.api}>API: {API_BASE}</span>
       </div>
 
-      <details className="query-error-details">
+      <details className={styles.details}>
         <summary>Technical details</summary>
         <code>{model.technicalMessage}</code>
       </details>

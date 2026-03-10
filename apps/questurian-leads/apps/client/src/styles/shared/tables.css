@@ -1,0 +1,38 @@
+/* ===== TABLES ===== */
+.table-container {
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  background: var(--card-bg);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: var(--bg-surface);
+}
+
+th {
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+td {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--card-border);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+tr:hover td {
+  background: var(--bg-hover);
+}

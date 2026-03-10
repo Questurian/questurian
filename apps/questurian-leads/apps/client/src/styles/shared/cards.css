@@ -1,0 +1,13 @@
+/* ===== CARDS ===== */
+.card {
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  background: var(--card-bg);
+  backdrop-filter: blur(10px);
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--card-border-hover);
+}
