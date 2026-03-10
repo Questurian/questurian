@@ -17,12 +17,22 @@ from .graph import (
     run_location_documents_fill_section_graph,
 )
 from .contract import HIGHLIGHT_MAX, HIGHLIGHT_MIN, HIGHLIGHT_SECTION_PATHS
+from .currency_references import (
+    CurrencyReference,
+    build_currency_prompt_payload,
+    find_currency_reference_by_code,
+    find_currency_reference_by_country,
+    find_currency_reference_by_id,
+    get_active_currency_references,
+    normalize_currency_code,
+)
 from .models import (
     FIELD_PATHS_BY_LEVEL,
     SECTION_MODEL_BY_PATH,
     SECTION_PATHS_BY_LEVEL,
     LocationDocumentDraft,
     LocationLevel,
+    MoneyHandlingDraft,
     StrictModel,
     is_field_path_allowed,
     is_section_path_allowed,
@@ -126,6 +136,11 @@ Hard rules:
 - Preserve existing user-provided values unless the instruction clearly asks for changes.
 - Unknown values must stay as empty strings, nulls, or empty arrays.
 - Do not invent numeric Payload IDs for relationships.
+- `guide.core.moneyHandling.currencyCode` is a local helper field for AI and builder resolution.
+- If you want to set a city currency, set `guide.core.moneyHandling.currencyCode` using one of the provided currency codes.
+- Never invent or guess numeric currency IDs for `guide.core.moneyHandling.currency`.
+- `guide.core.moneyHandling.exchangeRateNotes` is editorial guidance only. Do not invent live exchange quotes there.
+- If currency metadata includes a live USD rate, treat it as reference context only and do not overwrite it with made-up numbers.
 - Use the UI-only hint fields when you want to suggest neighborhood relationships:
   - guide.explore/stay/move.highlights[].relatedNeighborhoodKeys
 - If a relationship ID is unknown, keep the real ID field null or [] and use the hint/key field instead.
@@ -147,6 +162,9 @@ Hard rules:
 - Preserve existing user-provided values unless the instruction clearly asks for changes.
 - Unknown values must stay as empty strings, nulls, or empty arrays.
 - Do not invent numeric Payload IDs.
+- If the target section is guide.core and you want to set a currency, use `moneyHandling.currencyCode` from the provided currency catalog.
+- Never invent or guess numeric currency IDs for `moneyHandling.currency`.
+- `moneyHandling.exchangeRateNotes` is editorial context only; do not invent live exchange-rate quotes there.
 - For neighborhood drafts, only return neighborhood-specific overlays. Do not fill city-wide practical facts such as timezone, emergency numbers, money handling, weather, tourist visa facts, or residency/work permit facts.
 - If the target section path is guide.explore, guide.stay, or guide.move, the highlights array must contain {HIGHLIGHT_MIN}-{HIGHLIGHT_MAX} items."""
 
@@ -335,6 +353,143 @@ def _level_rules_text(level: LocationLevel) -> str:
     )
 
 
+def _load_currency_references() -> list[CurrencyReference]:
+    try:
+        return get_active_currency_references()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to load currency references from Payload: %s", exc)
+        return []
+
+
+def _current_currency_reference(
+    draft: LocationDocumentDraft,
+    currencies: list[CurrencyReference],
+) -> CurrencyReference | None:
+    return find_currency_reference_by_id(
+        draft.guide.core.moneyHandling.currency,
+        currencies,
+    ) or find_currency_reference_by_code(
+        draft.guide.core.moneyHandling.currencyCode,
+        currencies,
+    )
+
+
+def _currency_context_text(
+    draft: LocationDocumentDraft,
+    *,
+    section_path: str | None = None,
+) -> str:
+    if draft.level != "city":
+        return ""
+    if section_path is not None and section_path != "guide.core":
+        return ""
+
+    currencies = _load_currency_references()
+    if not currencies:
+        return ""
+
+    parts = [
+        "Available active currencies for guide.core.moneyHandling.currencyCode:",
+        _json_text(build_currency_prompt_payload(currencies)),
+    ]
+
+    current_currency = _current_currency_reference(draft, currencies)
+    if current_currency is not None:
+        parts.extend(
+            [
+                "Current selected currency:",
+                _json_text(build_currency_prompt_payload([current_currency])[0]),
+            ]
+        )
+    else:
+        current_currency_code = normalize_currency_code(
+            draft.guide.core.moneyHandling.currencyCode
+        )
+        if current_currency_code:
+            parts.extend(
+                [
+                    "Current selected currency code hint:",
+                    _json_text({"currencyCode": current_currency_code}),
+                ]
+            )
+
+    return "\n\n".join(parts)
+
+
+def _resolve_money_handling_currency(
+    money_handling: MoneyHandlingDraft,
+    *,
+    draft: LocationDocumentDraft,
+    currencies: list[CurrencyReference],
+) -> None:
+    if draft.level != "city":
+        money_handling.currency = None
+        money_handling.currencyCode = ""
+        return
+
+    if not currencies:
+        money_handling.currency = draft.guide.core.moneyHandling.currency
+        money_handling.currencyCode = normalize_currency_code(
+            money_handling.currencyCode or draft.guide.core.moneyHandling.currencyCode
+        )
+        return
+
+    existing_currency = find_currency_reference_by_id(
+        draft.guide.core.moneyHandling.currency,
+        currencies,
+    )
+    if existing_currency is not None:
+        money_handling.currency = existing_currency.id
+        money_handling.currencyCode = existing_currency.code
+        return
+
+    generated_code = normalize_currency_code(money_handling.currencyCode)
+    resolved_currency = find_currency_reference_by_code(generated_code, currencies)
+    if resolved_currency is None:
+        resolved_currency = find_currency_reference_by_country(
+            [draft.countryName or "", draft.country or ""],
+            currencies,
+        )
+
+    if resolved_currency is None:
+        money_handling.currency = None
+        money_handling.currencyCode = generated_code
+        return
+
+    money_handling.currency = resolved_currency.id
+    money_handling.currencyCode = resolved_currency.code
+
+
+def _resolve_document_currency_references(
+    document: LocationDocumentDraft,
+    *,
+    request_draft: LocationDocumentDraft,
+) -> LocationDocumentDraft:
+    _resolve_money_handling_currency(
+        document.guide.core.moneyHandling,
+        draft=request_draft,
+        currencies=_load_currency_references(),
+    )
+    return document
+
+
+def _resolve_section_currency_references(
+    section_path: str,
+    section: Any,
+    *,
+    request_draft: LocationDocumentDraft,
+) -> Any:
+    if section_path != "guide.core":
+        return section
+
+    _resolve_money_handling_currency(
+        section.moneyHandling,
+        draft=request_draft,
+        currencies=_load_currency_references(),
+    )
+    return section
+
+
 def _validate_document_highlight_counts(
     document: LocationDocumentDraft,
 ) -> LocationDocumentDraft:
@@ -389,6 +544,9 @@ def _build_document_prompt(request: FillDocumentRequest) -> str:
         "Current draft JSON:",
         _json_text(request.draft.model_dump(by_alias=True, exclude_none=False)),
     ]
+    currency_context = _currency_context_text(request.draft)
+    if currency_context:
+        parts.append(currency_context)
     if request.instruction:
         parts.extend(["Instruction:", request.instruction.strip()])
     if request.source_notes:
@@ -408,6 +566,12 @@ def _build_section_prompt(request: FillSectionRequest) -> str:
         "Current target section JSON:",
         _json_text(_current_section_payload(request) or {}),
     ]
+    currency_context = _currency_context_text(
+        request.draft,
+        section_path=request.section_path,
+    )
+    if currency_context:
+        parts.append(currency_context)
     if request.instruction:
         parts.extend(["Instruction:", request.instruction.strip()])
     if request.source_notes:
@@ -515,6 +679,10 @@ def _fill_document_impl(request: FillDocumentRequest) -> FillDocumentResponse:
             ),
             label="Location document fill",
         )
+        document = _resolve_document_currency_references(
+            document,
+            request_draft=request.draft,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.exception("Location documents fill-document failed: %s", exc)
         raise HTTPException(
@@ -542,6 +710,11 @@ def _fill_section_impl(request: FillSectionRequest) -> FillSectionResponse:
                 section_model.model_validate(payload),
             ),
             label=f"Location section fill for {request.section_path}",
+        )
+        section = _resolve_section_currency_references(
+            request.section_path,
+            section,
+            request_draft=request.draft,
         )
     except ValidationError as exc:
         logger.exception("Location documents fill-section validation failed: %s", exc)

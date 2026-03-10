@@ -8,10 +8,11 @@ import {
   createEmptyLocationDraft,
   getVisibleLocationSections,
   preserveDraftRelationshipHints,
+  resolveDraftHints,
   resolveLocationDraftRef,
   sanitizeLocationDraftShape,
 } from './schema'
-import type { LocationOption } from './types'
+import type { CurrencyOption, LocationOption } from './types'
 
 describe('locationDocuments schema helpers', () => {
   it('keeps weather monthly stats AI-enabled for city drafts', () => {
@@ -52,6 +53,7 @@ describe('locationDocuments schema helpers', () => {
         core: {
           headline: 'Barranco',
           moneyHandling: {
+            currency: 9,
             cardUsage: 'Cards accepted almost everywhere.',
           },
           weather: {
@@ -74,6 +76,7 @@ describe('locationDocuments schema helpers', () => {
 
     expect(sanitized.guide.core.headline).toBe('Barranco')
     expect(sanitized.guide.core.localContext.vibe).toBe('Creative and walkable.')
+    expect(sanitized.guide.core.moneyHandling.currency).toBeNull()
     expect(sanitized.guide.core.moneyHandling.cardUsage).toBe('')
     expect(sanitized.guide.core.weather.summary).toBe('')
     expect(sanitized.guide.explore.touristVisaStatus).toBe('')
@@ -90,6 +93,7 @@ describe('locationDocuments schema helpers', () => {
     draft.cityName = 'Rio de Janeiro'
     draft.guide.media.coverImage = 91
     draft.guide.core.headline = 'Living in Rio Overview'
+    draft.guide.core.moneyHandling.currency = 12
     draft.guide.explore.highlights = [
       {
         title: 'Beach circuit',
@@ -145,7 +149,61 @@ describe('locationDocuments schema helpers', () => {
     expect(payload.cityName).toBe('Rio de Janeiro')
     expect(payload.guide?.media?.coverImage).toBe(91)
     expect(payload.guide?.core?.headline).toBe('Living in Rio Overview')
+    expect(payload.guide?.core?.moneyHandling?.currency).toBe(12)
     expect(payload.guide?.explore?.highlights?.[0]?.relatedNeighborhoods).toEqual([44, 45])
+  })
+
+  it('resolves a local currency code to a real relationship id and strips currencyCode from the payload body', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'city'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.guide.core.moneyHandling.currency = null
+    draft.guide.core.moneyHandling.currencyCode = 'pen'
+    draft.guide.core.moneyHandling.exchangeRateNotes = 'Airport kiosks are usually worse than city ATMs.'
+
+    const currencyOptions: CurrencyOption[] = [
+      {
+        id: 14,
+        code: 'PEN',
+        name: 'Peruvian Sol',
+        symbol: 'S/',
+        displaySymbol: 'S/',
+        defaultLocale: 'es-PE',
+        decimalPlaces: 2,
+      },
+    ]
+
+    const resolvedDraft = resolveDraftHints(draft, [], currencyOptions)
+    expect(resolvedDraft.guide.core.moneyHandling.currency).toBe(14)
+    expect(resolvedDraft.guide.core.moneyHandling.currencyCode).toBe('PEN')
+
+    const payload = buildPayloadLocationBody(draft, [], currencyOptions)
+    expect(payload.guide?.core?.moneyHandling?.currency).toBe(14)
+    expect(payload.guide?.core?.moneyHandling?.exchangeRateNotes).toBe(
+      'Airport kiosks are usually worse than city ATMs.',
+    )
+    expect('currencyCode' in (payload.guide?.core?.moneyHandling ?? {})).toBe(false)
+  })
+
+  it('keeps unresolved currency codes local and reports them as non-blocking warnings', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'city'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.guide.core.moneyHandling.currencyCode = 'XYZ'
+
+    expect(collectUnresolvedHintWarnings(draft, [], [])).toEqual([
+      'Money Handling has an unresolved currency code: XYZ.',
+    ])
+
+    const payload = buildPayloadLocationBody(draft, [], [])
+    expect(payload.guide?.core?.moneyHandling?.currency).toBeUndefined()
+    expect('currencyCode' in (payload.guide?.core?.moneyHandling ?? {})).toBe(false)
   })
 
   it('caps related neighborhoods at four ids per highlight in the payload body', () => {
@@ -179,6 +237,7 @@ describe('locationDocuments schema helpers', () => {
     draft.cityName = 'Lima'
     draft.neighborhoodName = 'Barranco'
     draft.guide.core.headline = 'Barranco'
+    draft.guide.core.moneyHandling.currency = 17
     draft.guide.core.moneyHandling.cardUsage = 'Mostly cards'
     draft.guide.core.weather.summary = 'Cloudy'
     draft.guide.stay.shortTermRent = '$900-$1,400'
@@ -387,6 +446,7 @@ describe('locationDocuments schema helpers', () => {
             monthlyStats: [],
           },
           moneyHandling: {
+            currency: 23,
             cardUsage: 'Cards accepted',
           },
           localContext: {
@@ -404,9 +464,56 @@ describe('locationDocuments schema helpers', () => {
 
     expect(draft.guide.core.headline).toBe('Barranco')
     expect(draft.guide.core.localContext.vibe).toBe('Creative')
+    expect(draft.guide.core.moneyHandling.currency).toBeNull()
     expect(draft.guide.core.moneyHandling.cardUsage).toBe('')
     expect(draft.guide.core.weather.summary).toBe('')
     expect(draft.guide.explore.touristVisaStatus).toBe('')
     expect(draft.guide.explore.intro).toBe('Creative district')
+  })
+
+  it('loads and preserves the city currency relationship from payload docs', () => {
+    const draft = buildDraftFromPayloadDoc({
+      id: 88,
+      level: 'city',
+      country: 'peru',
+      city: 'lima',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      locationKey: 'peru|lima',
+      guide: {
+        core: {
+          moneyHandling: {
+            currency: 31,
+            cardUsage: 'Cards accepted in most districts.',
+          },
+        },
+      },
+    })
+
+    expect(draft.guide.core.moneyHandling.currency).toBe(31)
+    expect(draft.guide.core.moneyHandling.cardUsage).toBe('Cards accepted in most districts.')
+  })
+
+  it('maps legacy exchangeRateDisplay payload content into exchangeRateNotes on load', () => {
+    const draft = buildDraftFromPayloadDoc({
+      id: 90,
+      level: 'city',
+      country: 'peru',
+      city: 'lima',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      locationKey: 'peru|lima',
+      guide: {
+        core: {
+          moneyHandling: {
+            exchangeRateDisplay: 'ATMs usually give better rates than airport kiosks.',
+          },
+        },
+      },
+    })
+
+    expect(draft.guide.core.moneyHandling.exchangeRateNotes).toBe(
+      'ATMs usually give better rates than airport kiosks.',
+    )
   })
 })

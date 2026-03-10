@@ -1,6 +1,7 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api'
 import locationGuideContract from '@location-guide-contract'
 import type {
+  CurrencyOption,
   HighlightDraft,
   LocationDocumentDraft,
   LocationFieldDefinition,
@@ -64,6 +65,10 @@ export const MONTH_OPTIONS = [
   { value: 'nov', label: 'November' },
   { value: 'dec', label: 'December' },
 ] as const
+
+function normalizeCurrencyCode(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim().toUpperCase() : ''
+}
 
 function coerceWeatherMonth(value: string): WeatherMonth | '' {
   return MONTH_OPTIONS.some((option) => option.value === value)
@@ -158,8 +163,8 @@ function arrayField(
 function relationshipField(
   key: string,
   label: string,
-  relationTo: 'locations' | 'media-sets',
-  optionSource: 'locations' | 'neighborhoods' | 'mediaSets',
+  relationTo: 'locations' | 'media-sets' | 'currencies',
+  optionSource: 'locations' | 'neighborhoods' | 'mediaSets' | 'currencies',
   config: Partial<Extract<LocationFieldDefinition, { type: 'relationship' }>> = {},
 ): LocationFieldDefinition {
   return {
@@ -276,7 +281,17 @@ const locationSections: LocationSectionDefinition[] = [
       },
       {
         ...groupField('moneyHandling', 'Money Handling', [
-          textField('exchangeRateDisplay', 'Exchange Rate Display', { aiEnabled: true }),
+          relationshipField('currency', 'Currency', 'currencies', 'currencies', {
+            description: 'Reusable currency reference for this city.',
+          }),
+          textareaField(
+            'exchangeRateNotes',
+            'Exchange Rate Notes',
+            {
+              aiEnabled: true,
+              description: 'Editorial context only. The live USD rate preview comes from the linked currency.',
+            },
+          ),
           textareaField('atmAvailability', 'ATM Availability', { aiEnabled: true }),
           textField('maxWithdrawal', 'Max Withdrawal', { aiEnabled: true }),
           textField('withdrawalFee', 'Withdrawal Fee', { aiEnabled: true }),
@@ -418,7 +433,9 @@ function createEmptyCoreDraft(): LocationGuideDraft['core'] {
       emergencyNumbers: [],
     },
     moneyHandling: {
-      exchangeRateDisplay: '',
+      currency: null,
+      currencyCode: '',
+      exchangeRateNotes: '',
       atmAvailability: '',
       maxWithdrawal: '',
       withdrawalFee: '',
@@ -696,6 +713,22 @@ export function sanitizeLocationDraftShape(input: unknown): LocationDocumentDraf
     sanitized.updatedAt = input.updatedAt
   }
 
+  if (isRecord(input.guide)) {
+    const rawCurrencyCode = getValueAtPath(input, ['guide', 'core', 'moneyHandling', 'currencyCode'])
+    const rawExchangeRateNotes = getValueAtPath(input, ['guide', 'core', 'moneyHandling', 'exchangeRateNotes'])
+    const rawLegacyExchangeRateDisplay = getValueAtPath(input, ['guide', 'core', 'moneyHandling', 'exchangeRateDisplay'])
+    sanitized.guide.core.moneyHandling.currencyCode = normalizeCurrencyCode(
+      typeof rawCurrencyCode === 'string' ? rawCurrencyCode : '',
+    )
+    sanitized.guide.core.moneyHandling.exchangeRateNotes = trimText(
+      typeof rawExchangeRateNotes === 'string'
+        ? rawExchangeRateNotes
+        : typeof rawLegacyExchangeRateDisplay === 'string'
+          ? rawLegacyExchangeRateDisplay
+          : '',
+    )
+  }
+
   return normalizeDraftForLevel(sanitized)
 }
 
@@ -858,12 +891,61 @@ function valueOrNull(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+function resolveCurrencyOptionById(
+  currencyId: number | null | undefined,
+  currencyOptions: CurrencyOption[],
+): CurrencyOption | null {
+  if (typeof currencyId !== 'number' || !Number.isFinite(currencyId)) return null
+  return currencyOptions.find((option) => option.id === currencyId) ?? null
+}
+
+function resolveCurrencyOptionByCode(
+  currencyCode: string | null | undefined,
+  currencyOptions: CurrencyOption[],
+): CurrencyOption | null {
+  const normalizedCode = normalizeCurrencyCode(currencyCode)
+  if (!normalizedCode) return null
+  return currencyOptions.find((option) => normalizeCurrencyCode(option.code) === normalizedCode) ?? null
+}
+
+function syncDraftCurrencySelection(
+  draft: LocationDocumentDraft,
+  currencyOptions: CurrencyOption[],
+): LocationDocumentDraft {
+  if (draft.level !== 'city') {
+    return draft
+  }
+
+  const next = cloneValue(draft)
+  const currentMoneyHandling = next.guide.core.moneyHandling
+  const selectedOption = resolveCurrencyOptionById(currentMoneyHandling.currency, currencyOptions)
+  const hintedOption = resolveCurrencyOptionByCode(currentMoneyHandling.currencyCode, currencyOptions)
+
+  if (selectedOption) {
+    currentMoneyHandling.currencyCode = normalizeCurrencyCode(selectedOption.code)
+    return next
+  }
+
+  if (hintedOption) {
+    currentMoneyHandling.currency = hintedOption.id
+    currentMoneyHandling.currencyCode = normalizeCurrencyCode(hintedOption.code)
+    return next
+  }
+
+  currentMoneyHandling.currencyCode = normalizeCurrencyCode(currentMoneyHandling.currencyCode)
+  return next
+}
+
 export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumentDraft {
   const draft = createEmptyLocationDraft()
   const legacyGuide = (doc.guide as (PayloadLocationGuide & {
     localShared?: PayloadLocationGuide['core']
   }) | undefined)
   const payloadCore = legacyGuide?.core ?? legacyGuide?.localShared
+  const legacyMoneyHandling = payloadCore?.moneyHandling as ({
+    exchangeRateNotes?: string | null
+    exchangeRateDisplay?: string | null
+  } | null | undefined)
 
   const next: LocationDocumentDraft = {
     ...draft,
@@ -901,7 +983,11 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
       })),
     },
     moneyHandling: {
-      exchangeRateDisplay: trimText(payloadCore?.moneyHandling?.exchangeRateDisplay),
+      currency: extractRelationshipId(payloadCore?.moneyHandling?.currency),
+      currencyCode: '',
+      exchangeRateNotes: trimText(
+        legacyMoneyHandling?.exchangeRateNotes ?? legacyMoneyHandling?.exchangeRateDisplay,
+      ),
       atmAvailability: trimText(payloadCore?.moneyHandling?.atmAvailability),
       maxWithdrawal: trimText(payloadCore?.moneyHandling?.maxWithdrawal),
       withdrawalFee: trimText(payloadCore?.moneyHandling?.withdrawalFee),
@@ -1097,9 +1183,10 @@ function resolveNeighborhoodKeys(
 
 export function resolveDraftRelationshipHints(
   draft: LocationDocumentDraft,
-  locationOptions: LocationOption[]
+  locationOptions: LocationOption[],
+  currencyOptions: CurrencyOption[] = [],
 ): LocationDocumentDraft {
-  const next = cloneValue(draft)
+  const next = syncDraftCurrencySelection(draft, currencyOptions)
 
   if (next.level !== 'city') {
     return next
@@ -1156,6 +1243,13 @@ export function preserveDraftRelationshipHints(
 ): LocationDocumentDraft {
   const next = cloneValue(draft)
 
+  if (sourceDraft.level === 'city') {
+    const sourceCurrencyCode = normalizeCurrencyCode(sourceDraft.guide.core.moneyHandling.currencyCode)
+    if (sourceCurrencyCode && !normalizeCurrencyCode(next.guide.core.moneyHandling.currencyCode)) {
+      next.guide.core.moneyHandling.currencyCode = sourceCurrencyCode
+    }
+  }
+
   const mergeHighlights = (
     targetHighlights: HighlightDraft[],
     sourceHighlights: HighlightDraft[],
@@ -1185,13 +1279,24 @@ export function preserveDraftRelationshipHints(
 
 export function collectUnresolvedHintWarnings(
   draft: LocationDocumentDraft,
-  locationOptions: LocationOption[]
+  locationOptions: LocationOption[],
+  currencyOptions: CurrencyOption[] = [],
 ): string[] {
   if (draft.level !== 'city') {
     return []
   }
 
   const warnings: string[] = []
+  const normalizedCurrencyCode = normalizeCurrencyCode(draft.guide.core.moneyHandling.currencyCode)
+  const selectedCurrencyId = draft.guide.core.moneyHandling.currency
+
+  if (
+    normalizedCurrencyCode
+    && (typeof selectedCurrencyId !== 'number' || !Number.isFinite(selectedCurrencyId))
+    && !resolveCurrencyOptionByCode(normalizedCurrencyCode, currencyOptions)
+  ) {
+    warnings.push(`Money Handling has an unresolved currency code: ${normalizedCurrencyCode}.`)
+  }
 
   const unresolvedHighlightWarnings = (modeLabel: string, highlights: HighlightDraft[]) => {
     for (const highlight of highlights) {
@@ -1218,11 +1323,12 @@ export function collectUnresolvedHintWarnings(
 
 export function buildPayloadLocationBody(
   draft: LocationDocumentDraft,
-  locationOptions: LocationOption[]
+  locationOptions: LocationOption[],
+  currencyOptions: CurrencyOption[] = [],
 ): PayloadLocationBody {
   const sanitizedDraft = sanitizeLocationDraftShape(draft)
   const resolved = normalizeDraftForLevel(
-    resolveDraftRelationshipHints(sanitizedDraft, locationOptions),
+    resolveDraftRelationshipHints(sanitizedDraft, locationOptions, currencyOptions),
   )
   const country = normalizeKeyPart(resolved.country)
   const city = normalizeKeyPart(resolved.city)
@@ -1263,7 +1369,9 @@ export function buildPayloadLocationBody(
   }
 
   if (resolved.level !== 'country') {
-    body.guide.core = resolved.guide.core
+    const payloadCore = cloneValue(resolved.guide.core)
+    delete payloadCore.moneyHandling.currencyCode
+    body.guide.core = payloadCore
     body.guide.explore = {
       ...resolved.guide.explore,
       highlights: resolved.guide.explore.highlights.map(buildPayloadHighlightForLevel),

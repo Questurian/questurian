@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   clampRelationshipSelections,
+  formatCurrencyRateTimestamp,
+  formatCurrencyUsdRatePreview,
   getNeighborhoodPickerOptions,
   groupLocationIndexRowsByCountry,
   sortLocationIndexRows,
   toggleLimitedRelationshipSelection,
 } from './utils'
-import type { LocationIndexRow, LocationOption } from './types'
+import type { CurrencyOption, LocationIndexRow, LocationOption } from './types'
 
 function buildRow(overrides: Partial<LocationIndexRow>): LocationIndexRow {
   return {
@@ -261,5 +263,25 @@ describe('sortLocationIndexRows', () => {
     expect(toggleLimitedRelationshipSelection([1, 2, 3, 4], 5, 4)).toEqual([1, 2, 3, 4])
     expect(toggleLimitedRelationshipSelection([1, 2, 3, 4], 4, 4)).toEqual([1, 2, 3])
     expect(toggleLimitedRelationshipSelection([1, 2, 3], 4, 4)).toEqual([1, 2, 3, 4])
+  })
+
+  it('formats stored USD rate previews from the selected currency option', () => {
+    const option: CurrencyOption = {
+      id: 14,
+      code: 'PEN',
+      name: 'Peruvian Sol',
+      defaultLocale: 'es-PE',
+      decimalPlaces: 2,
+      latestUsdRate: {
+        unitsPerUsd: 3.72,
+        provider: 'exchange-rate-api-open',
+        sourceUpdatedAt: '2026-03-09T00:00:01.000Z',
+        nextUpdateAt: '2026-03-10T00:00:01.000Z',
+        fetchedAt: '2026-03-09T12:00:00.000Z',
+      },
+    }
+
+    expect(formatCurrencyUsdRatePreview(option)).toBe('1 USD ≈ 3.72 PEN')
+    expect(formatCurrencyRateTimestamp(option.latestUsdRate?.fetchedAt)).toContain('2026')
   })
 })

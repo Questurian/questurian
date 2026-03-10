@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.router import router as api_router
+from app.features.location_documents.currency_references import CurrencyLatestUsdRate
 import app.features.location_documents.routes as location_document_routes
 from app.features.location_documents.models import LocationDocumentDraft
 
@@ -34,46 +35,74 @@ def test_location_documents_routes_are_registered():
 
 
 def test_fill_document_accepts_frontend_aliases_and_returns_alias_response(monkeypatch):
+    stub_llm = _StubLLM(
+        """
+        {
+          "level": "city",
+          "country": "peru",
+          "city": "lima",
+          "countryName": "Peru",
+          "cityName": "Lima",
+          "guide": {
+            "core": {
+              "headline": "Living in Lima Overview",
+              "moneyHandling": {
+                "currencyCode": "PEN"
+              }
+            },
+            "explore": {
+              "highlights": [
+                { "title": "Barranco art walk", "description": "Coastal creative district." },
+                { "title": "Historic center", "description": "Colonial landmarks and plazas." },
+                { "title": "Miraflores cliffs", "description": "Parks, ocean views, and cafes." }
+              ]
+            },
+            "stay": {
+              "highlights": [
+                { "title": "Coworking zones", "description": "Strong remote-work neighborhoods." },
+                { "title": "Short-term rentals", "description": "Wide furnished apartment inventory." },
+                { "title": "Cafe work scene", "description": "Reliable daytime laptop spots." }
+              ]
+            },
+            "move": {
+              "highlights": [
+                { "title": "Family districts", "description": "More residential areas with schools." },
+                { "title": "Transit access", "description": "Key corridors for daily commutes." },
+                { "title": "Housing options", "description": "Mix of apartments and houses." }
+              ]
+            }
+          }
+        }
+        """
+    )
     monkeypatch.setattr(
         location_document_routes,
         "_get_vertex_llm",
-        lambda **_kwargs: _StubLLM(
-            """
-            {
-              "level": "city",
-              "country": "peru",
-              "city": "lima",
-              "countryName": "Peru",
-              "cityName": "Lima",
-              "guide": {
-                "core": {
-                  "headline": "Living in Lima Overview"
-                },
-                "explore": {
-                  "highlights": [
-                    { "title": "Barranco art walk", "description": "Coastal creative district." },
-                    { "title": "Historic center", "description": "Colonial landmarks and plazas." },
-                    { "title": "Miraflores cliffs", "description": "Parks, ocean views, and cafes." }
-                  ]
-                },
-                "stay": {
-                  "highlights": [
-                    { "title": "Coworking zones", "description": "Strong remote-work neighborhoods." },
-                    { "title": "Short-term rentals", "description": "Wide furnished apartment inventory." },
-                    { "title": "Cafe work scene", "description": "Reliable daytime laptop spots." }
-                  ]
-                },
-                "move": {
-                  "highlights": [
-                    { "title": "Family districts", "description": "More residential areas with schools." },
-                    { "title": "Transit access", "description": "Key corridors for daily commutes." },
-                    { "title": "Housing options", "description": "Mix of apartments and houses." }
-                  ]
-                }
-              }
-            }
-            """
-        ),
+        lambda **_kwargs: stub_llm,
+    )
+    monkeypatch.setattr(
+        location_document_routes,
+        "get_active_currency_references",
+        lambda: [
+            location_document_routes.CurrencyReference(
+                id=14,
+                code="PEN",
+                name="Peruvian Sol",
+                symbol="S/",
+                display_symbol="S/",
+                default_locale="es-PE",
+                decimal_places=2,
+                used_in=("Peru",),
+                notes="",
+                latest_usd_rate=CurrencyLatestUsdRate(
+                    units_per_usd=3.72,
+                    provider="exchange-rate-api-open",
+                    source_updated_at="2026-03-09T00:00:01.000Z",
+                    next_update_at="2026-03-10T00:00:01.000Z",
+                    fetched_at="2026-03-09T12:00:00.000Z",
+                ),
+            )
+        ],
     )
     monkeypatch.setattr(
         location_document_routes,
@@ -100,6 +129,13 @@ def test_fill_document_accepts_frontend_aliases_and_returns_alias_response(monke
     payload = response.model_dump(by_alias=True)
     assert payload["modelUsed"] == "gemini-2.5-flash"
     assert payload["document"]["guide"]["core"]["headline"] == "Living in Lima Overview"
+    assert payload["document"]["guide"]["core"]["moneyHandling"]["currency"] == 14
+    assert payload["document"]["guide"]["core"]["moneyHandling"]["currencyCode"] == "PEN"
+    assert stub_llm.last_prompt is not None
+    assert "Available active currencies" in stub_llm.last_prompt
+    assert '"code": "PEN"' in stub_llm.last_prompt
+    assert '"latestUsdRate"' in stub_llm.last_prompt
+    assert '"unitsPerUsd": 3.72' in stub_llm.last_prompt
 
 
 def test_fill_document_accepts_country_drafts_without_local_sections(monkeypatch):
@@ -156,6 +192,73 @@ def test_fill_section_rejects_invalid_section_for_country_level():
 
     assert exc_info.value.status_code == 400
     assert "sectionPath must be one of" in exc_info.value.detail
+
+
+def test_fill_core_section_uses_currency_catalog_and_resolves_currency_code(monkeypatch):
+    stub_llm = _StubLLM(
+        """
+        {
+          "headline": "Practical Lima overview",
+          "moneyHandling": {
+            "currencyCode": "PEN",
+            "cardUsage": "Cards are accepted in most neighborhoods."
+          }
+        }
+        """
+    )
+    monkeypatch.setattr(
+        location_document_routes,
+        "_get_vertex_llm",
+        lambda **_kwargs: stub_llm,
+    )
+    monkeypatch.setattr(
+        location_document_routes,
+        "get_active_currency_references",
+        lambda: [
+            location_document_routes.CurrencyReference(
+                id=14,
+                code="PEN",
+                name="Peruvian Sol",
+                symbol="S/",
+                display_symbol="S/",
+                default_locale="es-PE",
+                decimal_places=2,
+                used_in=("Peru",),
+                notes="",
+                latest_usd_rate=CurrencyLatestUsdRate(
+                    units_per_usd=3.72,
+                    provider="exchange-rate-api-open",
+                    source_updated_at="2026-03-09T00:00:01.000Z",
+                    next_update_at="2026-03-10T00:00:01.000Z",
+                    fetched_at="2026-03-09T12:00:00.000Z",
+                ),
+            )
+        ],
+    )
+
+    request = location_document_routes.FillSectionRequest.model_validate(
+        {
+            "draft": {
+                "level": "city",
+                "country": "peru",
+                "city": "lima",
+                "countryName": "Peru",
+                "cityName": "Lima",
+            },
+            "sectionPath": "guide.core",
+            "currentSection": {},
+        }
+    )
+
+    response = location_document_routes._fill_section_impl(request)
+    payload = response.model_dump(by_alias=True)
+
+    assert payload["section"]["moneyHandling"]["currency"] == 14
+    assert payload["section"]["moneyHandling"]["currencyCode"] == "PEN"
+    assert stub_llm.last_prompt is not None
+    assert "Available active currencies" in stub_llm.last_prompt
+    assert '"name": "Peruvian Sol"' in stub_llm.last_prompt
+    assert '"latestUsdRate"' in stub_llm.last_prompt
 
 
 def test_fill_field_uses_langgraph_runner_and_returns_value(monkeypatch):
@@ -239,6 +342,7 @@ def test_neighborhood_model_strips_city_wide_practical_fields():
                         "summary": "Cloudy",
                     },
                     "moneyHandling": {
+                        "currency": 18,
                         "cardUsage": "Cards accepted",
                     },
                 },
@@ -256,6 +360,7 @@ def test_neighborhood_model_strips_city_wide_practical_fields():
 
     assert draft.guide.core.headline == "Barranco"
     assert draft.guide.core.weather.summary == ""
+    assert draft.guide.core.moneyHandling.currency is None
     assert draft.guide.core.moneyHandling.cardUsage == ""
     assert draft.guide.explore.intro == "Creative district"
     assert draft.guide.explore.touristVisaStatus == ""

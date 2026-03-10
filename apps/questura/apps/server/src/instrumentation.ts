@@ -8,6 +8,7 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { logger } = await import('./shared/utils/logger')
+    const { ensureCurrencyStartupTask } = await import('./features/shared/currencies/startup')
 
     logger.info('🚀 Server starting', {
       environment: process.env.NODE_ENV || 'development',
@@ -32,6 +33,10 @@ export async function register() {
       logger.info('✅ Database connection established', {
         status: 'connected',
       })
+
+      setTimeout(() => {
+        void ensureCurrencyStartupTask(payload, logger)
+      }, 0)
     } catch (error) {
       logger.error('❌ Database connection failed', {
         error: error instanceof Error ? error.message : 'Unknown error',

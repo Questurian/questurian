@@ -61,7 +61,9 @@ class HealthSafetyDraft(StrictModel):
 
 
 class MoneyHandlingDraft(StrictModel):
-    exchangeRateDisplay: str = ""
+    currency: int | None = None
+    currencyCode: str = ""
+    exchangeRateNotes: str = ""
     atmAvailability: str = ""
     maxWithdrawal: str = ""
     withdrawalFee: str = ""

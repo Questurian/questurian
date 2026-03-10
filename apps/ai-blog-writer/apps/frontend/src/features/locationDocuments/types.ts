@@ -68,7 +68,9 @@ export type CoreGuide = {
     emergencyNumbers: EmergencyNumber[]
   }
   moneyHandling: {
-    exchangeRateDisplay: string
+    currency: number | null
+    currencyCode: string
+    exchangeRateNotes: string
     atmAvailability: string
     maxWithdrawal: string
     withdrawalFee: string
@@ -164,7 +166,49 @@ export type PayloadLocationGuide = {
   media?: {
     coverImage?: number | { id?: number } | null
   } | null
-  core?: Partial<CoreGuide> | null
+  core?: {
+    headline?: string | null
+    subheadline?: string | null
+    timezone?: {
+      label?: string | null
+      notes?: string | null
+    } | null
+    safety?: {
+      status?: string | null
+      notes?: string | null
+    } | null
+    healthSafety?: {
+      emergencyNumbers?: Array<{
+        service?: string | null
+        number?: string | null
+        notes?: string | null
+      }> | null
+    } | null
+    moneyHandling?: {
+      currency?: PayloadRelationship
+      exchangeRateNotes?: string | null
+      exchangeRateDisplay?: string | null
+      atmAvailability?: string | null
+      maxWithdrawal?: string | null
+      withdrawalFee?: string | null
+      cardUsage?: string | null
+    } | null
+    weather?: {
+      summary?: string | null
+      monthlyStats?: Array<{
+        month?: string | null
+        avgHighC?: number | null
+        avgLowC?: number | null
+        rainfallMm?: number | null
+        rainDays?: number | null
+        sunshineHours?: number | null
+      }> | null
+    } | null
+    localContext?: {
+      vibe?: string | null
+      walkability?: string | null
+    } | null
+  } | null
   explore?: {
     intro?: string | null
     touristVisaStatus?: string | null
@@ -281,6 +325,24 @@ export type MediaSetOption = {
   } | null
 }
 
+export type CurrencyOption = {
+  id: number
+  code: string
+  name: string
+  symbol?: string | null
+  displaySymbol?: string | null
+  defaultLocale?: string | null
+  decimalPlaces?: number | null
+  latestUsdRate?: {
+    unitsPerUsd?: number | null
+    provider?: string | null
+    sourceUpdatedAt?: string | null
+    nextUpdateAt?: string | null
+    fetchedAt?: string | null
+  } | null
+  status?: string | null
+}
+
 export type MediaSetVariantAsset = {
   id: number
   filename?: string | null
@@ -305,10 +367,10 @@ export type ScalarFieldDefinition = FieldBase & {
 
 export type RelationshipFieldDefinition = FieldBase & {
   type: 'relationship'
-  relationTo: 'locations' | 'media-sets'
+  relationTo: 'locations' | 'media-sets' | 'currencies'
   hasMany?: boolean
   maxSelections?: number
-  optionSource: 'locations' | 'neighborhoods' | 'mediaSets'
+  optionSource: 'locations' | 'neighborhoods' | 'mediaSets' | 'currencies'
   hintKey?: string
   hintLabel?: string
   picker?: 'mediaSetLibrary'

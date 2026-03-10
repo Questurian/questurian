@@ -12,9 +12,12 @@ import {
   type LocationLevel,
 } from '@/shared/lib/locationGuideContract'
 import {
+  attachResolvedCurrencyMeta,
+  extractResolvedCurrencyId,
   hasMeaningfulLocationGuideValue,
   resolveLocationGuideForHierarchy,
   type LocationGuideRecord,
+  type ResolvedCurrencyMeta,
 } from '@/shared/lib/locationGuideResolution'
 import { buildGuideField } from './guideFields'
 
@@ -38,6 +41,24 @@ type LocationReadDoc = {
 }
 
 const LOCATION_GUIDE_RESOLVE_CONTEXT_KEY = 'skipLocationGuideResolve'
+const LOCATION_GUIDE_CURRENCY_META_CACHE_KEY = 'locationGuideCurrencyMetaCache'
+
+type CurrencyMetaDoc = {
+  id: number
+  code?: string | null
+  name?: string | null
+  symbol?: string | null
+  displaySymbol?: string | null
+  defaultLocale?: string | null
+  decimalPlaces?: number | null
+  latestUsdRate?: {
+    unitsPerUsd?: number | null
+    provider?: string | null
+    sourceUpdatedAt?: string | null
+    nextUpdateAt?: string | null
+    fetchedAt?: string | null
+  } | null
+}
 
 const levelOptions = [
   { label: 'Country', value: 'country' },
@@ -260,6 +281,79 @@ const findLocationGuideByKey = async (
   return (result.docs?.[0] as LocationReadDoc | undefined) ?? null
 }
 
+const findCurrencyMetaById = async (
+  payload: Payload,
+  currencyId: number,
+  context?: Record<string, unknown>,
+): Promise<ResolvedCurrencyMeta | null> => {
+  const currencyMetaCache = (
+    context?.[LOCATION_GUIDE_CURRENCY_META_CACHE_KEY] as Map<number, ResolvedCurrencyMeta | null> | undefined
+  ) ?? new Map<number, ResolvedCurrencyMeta | null>()
+
+  if (context && !context[LOCATION_GUIDE_CURRENCY_META_CACHE_KEY]) {
+    context[LOCATION_GUIDE_CURRENCY_META_CACHE_KEY] = currencyMetaCache
+  }
+
+  if (currencyMetaCache.has(currencyId)) {
+    return currencyMetaCache.get(currencyId) ?? null
+  }
+
+  const currencyDoc = await payload.findByID({
+    collection: 'currencies',
+    id: currencyId,
+    depth: 0,
+    overrideAccess: true,
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      symbol: true,
+      displaySymbol: true,
+      defaultLocale: true,
+      decimalPlaces: true,
+      latestUsdRate: true,
+    },
+  } as any).catch(() => null)
+
+  const doc = currencyDoc as CurrencyMetaDoc | null
+  if (!doc || typeof doc.id !== 'number' || !doc.code || !doc.name) {
+    currencyMetaCache.set(currencyId, null)
+    return null
+  }
+
+  const resolvedMeta: ResolvedCurrencyMeta = {
+    id: doc.id,
+    code: doc.code,
+    name: doc.name,
+    symbol: doc.symbol ?? '',
+    displaySymbol: doc.displaySymbol ?? doc.symbol ?? doc.code,
+    defaultLocale: doc.defaultLocale ?? 'en-US',
+    decimalPlaces: typeof doc.decimalPlaces === 'number' ? doc.decimalPlaces : 2,
+    latestUsdRate: doc.latestUsdRate && typeof doc.latestUsdRate === 'object'
+      ? {
+          unitsPerUsd: typeof doc.latestUsdRate.unitsPerUsd === 'number'
+            ? doc.latestUsdRate.unitsPerUsd
+            : null,
+          provider: typeof doc.latestUsdRate.provider === 'string'
+            ? doc.latestUsdRate.provider
+            : null,
+          sourceUpdatedAt: typeof doc.latestUsdRate.sourceUpdatedAt === 'string'
+            ? doc.latestUsdRate.sourceUpdatedAt
+            : null,
+          nextUpdateAt: typeof doc.latestUsdRate.nextUpdateAt === 'string'
+            ? doc.latestUsdRate.nextUpdateAt
+            : null,
+          fetchedAt: typeof doc.latestUsdRate.fetchedAt === 'string'
+            ? doc.latestUsdRate.fetchedAt
+            : null,
+        }
+      : null,
+  }
+
+  currencyMetaCache.set(currencyId, resolvedMeta)
+  return resolvedMeta
+}
+
 const createLocationIfMissing = async (
   payload: Payload,
   locationKey: string,
@@ -354,9 +448,14 @@ const afterReadResolveGuideHook: CollectionAfterReadHook = async ({ doc, req }) 
   if (!isLocationLevel(locationDoc.level)) return doc
 
   const resolvedGuide = await resolveLocationReadGuide(req.payload, locationDoc, context)
+  const resolvedCurrencyId = extractResolvedCurrencyId(resolvedGuide)
+  const resolvedCurrencyMeta = resolvedCurrencyId === null
+    ? null
+    : await findCurrencyMetaById(req.payload, resolvedCurrencyId, context)
+  const enrichedGuide = attachResolvedCurrencyMeta(resolvedGuide, resolvedCurrencyMeta)
 
-  if (hasMeaningfulLocationGuideValue(resolvedGuide)) {
-    locationDoc.resolvedGuide = resolvedGuide
+  if (hasMeaningfulLocationGuideValue(enrichedGuide)) {
+    locationDoc.resolvedGuide = enrichedGuide
   }
 
   return locationDoc

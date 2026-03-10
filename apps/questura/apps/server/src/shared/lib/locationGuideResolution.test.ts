@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { resolveLocationGuideForHierarchy } from './locationGuideResolution'
+import {
+  attachResolvedCurrencyMeta,
+  extractResolvedCurrencyId,
+  formatResolvedCurrencyAmount,
+  formatResolvedCurrencyLabel,
+  resolveLocationGuideForHierarchy,
+} from './locationGuideResolution'
 
 describe('resolveLocationGuideForHierarchy', () => {
   it('uses country media as a fallback for city docs without copying extra authored sections', () => {
@@ -116,5 +122,92 @@ describe('resolveLocationGuideForHierarchy', () => {
         },
       },
     })
+  })
+
+  it('extracts and enriches a resolved currency selection for consumer reads', () => {
+    const resolved = resolveLocationGuideForHierarchy({
+      level: 'neighborhood',
+      cityGuide: {
+        core: {
+          moneyHandling: {
+            currency: 14,
+            cardUsage: 'Cards accepted in most cafes.',
+          },
+        },
+      },
+      ownGuide: {
+        core: {
+          safety: {
+            notes: 'Quiet side streets at night.',
+          },
+        },
+      },
+    })
+
+    expect(extractResolvedCurrencyId(resolved)).toBe(14)
+
+    const enriched = attachResolvedCurrencyMeta(resolved, {
+      id: 14,
+      code: 'PEN',
+      name: 'Peruvian Sol',
+      symbol: 'S/',
+      displaySymbol: 'S/',
+      defaultLocale: 'es-PE',
+      decimalPlaces: 2,
+      latestUsdRate: {
+        unitsPerUsd: 3.72,
+        provider: 'exchange-rate-api-open',
+        sourceUpdatedAt: '2026-03-09T00:00:00.000Z',
+        nextUpdateAt: '2026-03-10T00:00:00.000Z',
+        fetchedAt: '2026-03-09T12:00:00.000Z',
+      },
+    })
+
+    expect(enriched).toEqual({
+      core: {
+        moneyHandling: {
+          currency: 14,
+          cardUsage: 'Cards accepted in most cafes.',
+          currencyMeta: {
+            id: 14,
+            code: 'PEN',
+            name: 'Peruvian Sol',
+            symbol: 'S/',
+            displaySymbol: 'S/',
+            defaultLocale: 'es-PE',
+            decimalPlaces: 2,
+            latestUsdRate: {
+              unitsPerUsd: 3.72,
+              provider: 'exchange-rate-api-open',
+              sourceUpdatedAt: '2026-03-09T00:00:00.000Z',
+              nextUpdateAt: '2026-03-10T00:00:00.000Z',
+              fetchedAt: '2026-03-09T12:00:00.000Z',
+            },
+          },
+        },
+        safety: {
+          notes: 'Quiet side streets at night.',
+        },
+      },
+    })
+
+    expect(formatResolvedCurrencyLabel({
+      id: 14,
+      code: 'PEN',
+      name: 'Peruvian Sol',
+      symbol: 'S/',
+      displaySymbol: 'S/',
+      defaultLocale: 'es-PE',
+      decimalPlaces: 2,
+    })).toBe('Peruvian Sol (PEN)')
+    expect(formatResolvedCurrencyAmount(18, {
+      id: 14,
+      code: 'PEN',
+      name: 'Peruvian Sol',
+      symbol: 'S/',
+      displaySymbol: 'S/',
+      defaultLocale: 'es-PE',
+      decimalPlaces: 2,
+    })).toContain('18')
   })
 })

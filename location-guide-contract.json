@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 6,
   "sectionOrder": [
     "hierarchy",
     "media",
@@ -61,7 +61,8 @@
       "guide.core.timezone.notes",
       "guide.core.safety.status",
       "guide.core.safety.notes",
-      "guide.core.moneyHandling.exchangeRateDisplay",
+      "guide.core.moneyHandling.currencyCode",
+      "guide.core.moneyHandling.exchangeRateNotes",
       "guide.core.moneyHandling.atmAvailability",
       "guide.core.moneyHandling.maxWithdrawal",
       "guide.core.moneyHandling.withdrawalFee",
@@ -128,7 +129,7 @@
     "guide.core.timezone.notes",
     "guide.core.safety.status",
     "guide.core.safety.notes",
-    "guide.core.moneyHandling.exchangeRateDisplay",
+    "guide.core.moneyHandling.exchangeRateNotes",
     "guide.core.moneyHandling.atmAvailability",
     "guide.core.moneyHandling.maxWithdrawal",
     "guide.core.moneyHandling.withdrawalFee",

@@ -12,6 +12,23 @@ export type LocationGuideRecord = {
   move?: PlainObject | null
 }
 
+export type ResolvedCurrencyMeta = {
+  id: number
+  code: string
+  name: string
+  symbol: string
+  displaySymbol: string
+  defaultLocale: string
+  decimalPlaces: number
+  latestUsdRate?: {
+    unitsPerUsd: number | null
+    provider: string | null
+    sourceUpdatedAt: string | null
+    nextUpdateAt: string | null
+    fetchedAt: string | null
+  } | null
+}
+
 const isPlainObject = (value: unknown): value is PlainObject =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 
@@ -138,4 +155,63 @@ export const resolveLocationGuideForHierarchy = ({
   withMeaningfulSection(resolved, 'move', mergeLocationGuideLayers(city.move, own.move))
 
   return resolved
+}
+
+export const extractResolvedCurrencyId = (guide: unknown): number | null => {
+  if (!isPlainObject(guide)) return null
+  const core = guide.core
+  if (!isPlainObject(core)) return null
+  const moneyHandling = core.moneyHandling
+  if (!isPlainObject(moneyHandling)) return null
+  const rawCurrency = moneyHandling.currency
+
+  if (typeof rawCurrency === 'number' && Number.isFinite(rawCurrency)) {
+    return rawCurrency
+  }
+
+  if (isPlainObject(rawCurrency) && typeof rawCurrency.id === 'number' && Number.isFinite(rawCurrency.id)) {
+    return rawCurrency.id
+  }
+
+  return null
+}
+
+export const attachResolvedCurrencyMeta = (
+  guide: PlainObject,
+  currencyMeta: ResolvedCurrencyMeta | null,
+): PlainObject => {
+  const nextGuide = cloneLocationGuideValue(guide)
+  if (!currencyMeta) return nextGuide
+  const core = nextGuide.core
+  if (!isPlainObject(core)) return nextGuide
+  const moneyHandling = core.moneyHandling
+  if (!isPlainObject(moneyHandling)) return nextGuide
+
+  core.moneyHandling = {
+    ...moneyHandling,
+    currencyMeta: cloneLocationGuideValue(currencyMeta),
+  }
+
+  return nextGuide
+}
+
+export const formatResolvedCurrencyLabel = (currencyMeta: ResolvedCurrencyMeta): string => {
+  return `${currencyMeta.name} (${currencyMeta.code})`
+}
+
+export const formatResolvedCurrencyAmount = (
+  value: number,
+  currencyMeta: ResolvedCurrencyMeta,
+): string => {
+  try {
+    return new Intl.NumberFormat(currencyMeta.defaultLocale || 'en-US', {
+      style: 'currency',
+      currency: currencyMeta.code,
+      minimumFractionDigits: currencyMeta.decimalPlaces,
+      maximumFractionDigits: currencyMeta.decimalPlaces,
+    }).format(value)
+  } catch {
+    const displaySymbol = currencyMeta.displaySymbol || currencyMeta.symbol || currencyMeta.code
+    return `${displaySymbol} ${value.toFixed(currencyMeta.decimalPlaces)}`
+  }
 }

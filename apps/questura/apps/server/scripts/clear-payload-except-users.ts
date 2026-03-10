@@ -1,5 +1,5 @@
 /**
- * Clear all Payload CMS collections except the users collection.
+ * Clear all Payload CMS collections except stable reference collections.
  *
  * Usage:
  *   pnpm clear:payload:except-users
@@ -77,12 +77,13 @@ async function main() {
   const resolvedConfig = await config
   const userCollection =
     typeof resolvedConfig.admin?.user === 'string' ? resolvedConfig.admin.user : 'users'
+  const preservedCollections = new Set([userCollection, 'currencies'])
 
   const allCollections = (resolvedConfig.collections ?? [])
     .map((collection) => collection.slug)
     .filter((slug): slug is string => typeof slug === 'string')
 
-  const targetCollections = allCollections.filter((slug) => slug !== userCollection)
+  const targetCollections = allCollections.filter((slug) => !preservedCollections.has(slug))
 
   if (targetCollections.length === 0) {
     console.log('No collections to clear.')
@@ -90,7 +91,7 @@ async function main() {
   }
 
   console.log(
-    `🧹 Clearing Payload data${isDryRun ? ' (dry run)' : ''} - preserving "${userCollection}" only`
+    `🧹 Clearing Payload data${isDryRun ? ' (dry run)' : ''} - preserving ${[...preservedCollections].map((collection) => `"${collection}"`).join(', ')}`
   )
   console.log(`📦 Target collections (${targetCollections.length}): ${targetCollections.join(', ')}`)
 
@@ -136,6 +137,9 @@ async function main() {
   }
 
   const usersCount = await countDocs(payload, userCollection)
+  const currenciesCount = preservedCollections.has('currencies')
+    ? await countDocs(payload, 'currencies')
+    : 0
   let unresolvedCollections = 0
 
   console.log('\n📊 Summary')
@@ -149,6 +153,9 @@ async function main() {
   }
 
   console.log(`\n👤 Preserved ${userCollection}: ${usersCount} docs`)
+  if (preservedCollections.has('currencies')) {
+    console.log(`💱 Preserved currencies: ${currenciesCount} docs`)
+  }
 
   if (unresolvedCollections > 0) {
     console.error(
@@ -157,7 +164,7 @@ async function main() {
     process.exit(1)
   }
 
-  console.log('\n✅ Payload cleanup complete (users preserved).')
+  console.log('\n✅ Payload cleanup complete (stable reference data preserved).')
   process.exit(0)
 }
 

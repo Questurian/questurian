@@ -233,7 +233,22 @@ const buildCoreField = (): Field => ({
       label: 'Money Handling',
       type: 'group',
       fields: [
-        textField('exchangeRateDisplay', 'Exchange Rate Display'),
+        {
+          name: 'currency',
+          label: 'Currency',
+          type: 'relationship',
+          relationTo: 'currencies',
+          filterOptions: {
+            status: {
+              equals: 'active',
+            },
+          },
+        },
+        textareaField(
+          'exchangeRateNotes',
+          'Exchange Rate Notes',
+          'Editorial exchange guidance only. Live USD rates come from the linked currency record.',
+        ),
         textareaField('atmAvailability', 'ATM Availability'),
         textField('maxWithdrawal', 'Max Withdrawal'),
         textField('withdrawalFee', 'Withdrawal Fee'),

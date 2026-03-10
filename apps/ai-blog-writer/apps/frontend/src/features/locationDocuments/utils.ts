@@ -1,4 +1,5 @@
 import type {
+  CurrencyOption,
   LocationDocumentDraft,
   LocationFieldDefinition,
   LocationIndexRow,
@@ -390,6 +391,64 @@ export function getNeighborhoodPickerOptions(
 export function formatMediaSetLabel(option: Pick<MediaSetOption, 'title' | 'location' | 'alt_text'>): string {
   const parts = [option.title, option.location, option.alt_text].filter((value): value is string => Boolean(value?.trim()))
   return parts.join(' · ') || 'Untitled media set'
+}
+
+export function formatCurrencyLabel(
+  option: Pick<CurrencyOption, 'code' | 'name' | 'displaySymbol' | 'symbol'>,
+): string {
+  const displaySymbol = option.displaySymbol?.trim() || option.symbol?.trim()
+  const parts = [option.code, option.name, displaySymbol].filter((value): value is string => Boolean(value?.trim()))
+  return parts.join(' · ')
+}
+
+export function formatCurrencyUsdRatePreview(
+  option: Pick<CurrencyOption, 'code' | 'defaultLocale' | 'decimalPlaces' | 'latestUsdRate'>,
+): string | null {
+  const unitsPerUsd = option.latestUsdRate?.unitsPerUsd
+  if (typeof unitsPerUsd !== 'number' || !Number.isFinite(unitsPerUsd) || unitsPerUsd <= 0) {
+    return null
+  }
+
+  const fractionDigits = typeof option.decimalPlaces === 'number'
+    ? Math.max(0, option.decimalPlaces)
+    : 2
+
+  try {
+    const formattedValue = new Intl.NumberFormat(option.defaultLocale || 'en-US', {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(unitsPerUsd)
+
+    return `1 USD ≈ ${formattedValue} ${option.code}`
+  } catch {
+    return `1 USD ≈ ${unitsPerUsd.toFixed(fractionDigits)} ${option.code}`
+  }
+}
+
+export function formatCurrencyRateProviderLabel(provider: string | null | undefined): string {
+  if (provider === 'exchange-rate-api-open') {
+    return 'ExchangeRate-API Open'
+  }
+
+  return provider?.trim() || ''
+}
+
+export function formatCurrencyRateTimestamp(value: string | null | undefined): string {
+  if (typeof value !== 'string' || !value.trim()) return ''
+
+  const timestamp = new Date(value)
+  if (Number.isNaN(timestamp.getTime())) {
+    return value
+  }
+
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(timestamp)
+  } catch {
+    return timestamp.toISOString()
+  }
 }
 
 const PREFERRED_MEDIA_SET_VARIANTS = ['thumbnail', 'square', 'editorial', 'wide', 'portrait', 'hero', 'open_graph'] as const

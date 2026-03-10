@@ -4,6 +4,7 @@ import { EDITOR_ASSIST_MODEL_OPTIONS } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
 import {
   createLocation,
+  fetchCurrencyOptions,
   fetchLocationById,
   fetchLocationOptions,
   fetchMediaSetOptions,
@@ -125,6 +126,9 @@ export default function LocationDocumentBuilderPage() {
   const [mediaSets, setMediaSets] = useState<
     Awaited<ReturnType<typeof fetchMediaSetOptions>>
   >([])
+  const [currencies, setCurrencies] = useState<
+    Awaited<ReturnType<typeof fetchCurrencyOptions>>
+  >([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -210,8 +214,9 @@ export default function LocationDocumentBuilderPage() {
 
     Promise.allSettled([
       fetchLocationOptions(token),
-      fetchMediaSetOptions(token)
-    ]).then(([locationResult, mediaResult]) => {
+      fetchMediaSetOptions(token),
+      fetchCurrencyOptions(token),
+    ]).then(([locationResult, mediaResult, currencyResult]) => {
       if (cancelled) return
 
       if (locationResult.status === 'fulfilled') {
@@ -224,6 +229,12 @@ export default function LocationDocumentBuilderPage() {
         setMediaSets(mediaResult.value)
       } else {
         setMediaSets([])
+      }
+
+      if (currencyResult.status === 'fulfilled') {
+        setCurrencies(currencyResult.value)
+      } else {
+        setCurrencies([])
       }
 
       const messages: string[] = []
@@ -239,6 +250,14 @@ export default function LocationDocumentBuilderPage() {
           mediaResult.reason instanceof Error
             ? mediaResult.reason.message
             : 'Failed to load media set options'
+        )
+      }
+
+      if (currencyResult.status === 'rejected') {
+        messages.push(
+          currencyResult.reason instanceof Error
+            ? currencyResult.reason.message
+            : 'Failed to load currency options'
         )
       }
 
@@ -270,13 +289,13 @@ export default function LocationDocumentBuilderPage() {
   }, [activeSectionId, draft])
 
   useEffect(() => {
-    if (!draft || locations.length === 0) return
+    if (!draft) return
 
-    const resolved = resolveDraftHints(draft, locations)
+    const resolved = resolveDraftHints(draft, locations, currencies)
     if (JSON.stringify(resolved) !== JSON.stringify(draft)) {
       setDraft(resolved)
     }
-  }, [draft, locations])
+  }, [draft, locations, currencies])
 
   const visibleSections = useMemo(() => {
     if (!draft) return []
@@ -322,9 +341,20 @@ export default function LocationDocumentBuilderPage() {
   const updateDraftValue = useCallback((path: string[], value: unknown) => {
     setDraft((current) => {
       if (!current) return current
-      return setValueAtPath(current, path, value)
+      let nextDraft = setValueAtPath(current, path, value)
+
+      if (path.join('.') === 'guide.core.moneyHandling.currency') {
+        const selectedCurrency = currencies.find((option) => option.id === value)
+        nextDraft = setValueAtPath(
+          nextDraft,
+          ['guide', 'core', 'moneyHandling', 'currencyCode'],
+          selectedCurrency?.code ?? '',
+        )
+      }
+
+      return nextDraft
     })
-  }, [])
+  }, [currencies])
 
   const handleSaveDraft = useCallback(() => {
     if (!draft) return
@@ -347,20 +377,26 @@ export default function LocationDocumentBuilderPage() {
       }
 
       let saveLocations = locations
-      let unresolvedWarnings = collectUnresolvedHintWarnings(draft, saveLocations)
+      let saveCurrencies = currencies
+      let unresolvedWarnings = collectUnresolvedHintWarnings(draft, saveLocations, saveCurrencies)
 
       if (unresolvedWarnings.length > 0) {
         try {
-          const refreshedLocations = await fetchLocationOptions(token)
+          const [refreshedLocations, refreshedCurrencies] = await Promise.all([
+            fetchLocationOptions(token),
+            fetchCurrencyOptions(token),
+          ])
           saveLocations = refreshedLocations
+          saveCurrencies = refreshedCurrencies
           setLocations(refreshedLocations)
-          unresolvedWarnings = collectUnresolvedHintWarnings(draft, refreshedLocations)
+          setCurrencies(refreshedCurrencies)
+          unresolvedWarnings = collectUnresolvedHintWarnings(draft, refreshedLocations, refreshedCurrencies)
         } catch (refreshError: unknown) {
-          console.warn('Failed to refresh location options before save', refreshError)
+          console.warn('Failed to refresh builder reference options before save', refreshError)
         }
       }
 
-      const payloadBody = buildPayloadLocationBody(draft, saveLocations)
+      const payloadBody = buildPayloadLocationBody(draft, saveLocations, saveCurrencies)
       const savedDoc = draft.payloadId
         ? await updateLocation(draft.payloadId, payloadBody, token)
         : await createLocation(payloadBody, token)
@@ -385,7 +421,7 @@ export default function LocationDocumentBuilderPage() {
             : 'Created new Payload location document.'
         }${
           unresolvedWarnings.length > 0
-            ? ' Some neighborhood hint keys could not be matched yet, so they were kept in your local builder draft only.'
+            ? ' Some reference hints could not be matched yet, so they were kept in your local builder draft only.'
             : ''
         }`
       )
@@ -394,7 +430,7 @@ export default function LocationDocumentBuilderPage() {
     } finally {
       setIsSaving(false)
     }
-  }, [draft, locations, setSearchParams, token])
+  }, [currencies, draft, locations, setSearchParams, token])
 
   const runAiTarget = useCallback(
     async (target: AiTarget, mode: AiRunMode, customInstruction = '') => {
@@ -869,6 +905,7 @@ export default function LocationDocumentBuilderPage() {
             token={token}
             locationRef={currentLocationRef}
             locations={locations}
+            currencies={currencies}
             mediaSets={mediaSets}
             onChange={updateDraftValue}
             onFieldAiGenerate={handleFieldAiGenerate}

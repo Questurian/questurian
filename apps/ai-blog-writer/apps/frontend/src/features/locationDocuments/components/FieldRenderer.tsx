@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type {
   ArrayFieldDefinition,
+  CurrencyOption,
   LocationDocumentDraft,
   LocationFieldDefinition,
   LocationOption,
@@ -10,6 +11,10 @@ import type {
 } from '../types'
 import {
   createDefaultObjectFromFields,
+  formatCurrencyRateProviderLabel,
+  formatCurrencyRateTimestamp,
+  formatCurrencyLabel,
+  formatCurrencyUsdRatePreview,
   formatLocationLabel,
   formatMediaSetLabel,
   getValueAtPath,
@@ -24,6 +29,7 @@ type FieldRendererProps = {
   token: string | null
   locationRef: number | null
   locations: LocationOption[]
+  currencies: CurrencyOption[]
   mediaSets: MediaSetOption[]
   onChange: (path: string[], value: unknown) => void
   onFieldAiGenerate: (path: string[], field: ScalarFieldDefinition) => void
@@ -51,6 +57,7 @@ function RelationshipFieldInput({
   value,
   hintValue,
   locations,
+  currencies,
   mediaSets,
   onValueChange,
   onHintChange,
@@ -59,6 +66,7 @@ function RelationshipFieldInput({
   value: number | null
   hintValue?: string
   locations: LocationOption[]
+  currencies: CurrencyOption[]
   mediaSets: MediaSetOption[]
   onValueChange: (value: number | null) => void
   onHintChange?: (value: string) => void
@@ -68,12 +76,33 @@ function RelationshipFieldInput({
         id: item.id,
         label: formatMediaSetLabel(item),
       }))
-    : locations
-      .filter((item) => field.optionSource !== 'neighborhoods' || item.level === 'neighborhood')
-      .map((item) => ({
-        id: item.id,
-        label: formatLocationLabel(item),
-      }))
+    : field.optionSource === 'currencies'
+      ? currencies.map((item) => ({
+          id: item.id,
+          label: formatCurrencyLabel(item),
+        }))
+      : locations
+        .filter((item) => field.optionSource !== 'neighborhoods' || item.level === 'neighborhood')
+        .map((item) => ({
+          id: item.id,
+          label: formatLocationLabel(item),
+        }))
+  const selectedCurrency = field.optionSource === 'currencies' && typeof value === 'number'
+    ? currencies.find((item) => item.id === value) ?? null
+    : null
+  const ratePreview = selectedCurrency ? formatCurrencyUsdRatePreview(selectedCurrency) : null
+  const providerLabel = selectedCurrency?.latestUsdRate?.provider
+    ? formatCurrencyRateProviderLabel(selectedCurrency.latestUsdRate.provider)
+    : ''
+  const sourceUpdatedLabel = selectedCurrency?.latestUsdRate?.sourceUpdatedAt
+    ? formatCurrencyRateTimestamp(selectedCurrency.latestUsdRate.sourceUpdatedAt)
+    : ''
+  const nextUpdateLabel = selectedCurrency?.latestUsdRate?.nextUpdateAt
+    ? formatCurrencyRateTimestamp(selectedCurrency.latestUsdRate.nextUpdateAt)
+    : ''
+  const fetchedAtLabel = selectedCurrency?.latestUsdRate?.fetchedAt
+    ? formatCurrencyRateTimestamp(selectedCurrency.latestUsdRate.fetchedAt)
+    : ''
 
   return (
     <div className="ldb-field-control-stack">
@@ -103,6 +132,37 @@ function RelationshipFieldInput({
             onChange={(event) => onHintChange(event.target.value)}
             placeholder="Optional AI hint or lookup phrase"
           />
+        </div>
+      ) : null}
+
+      {selectedCurrency ? (
+        <div className="ldb-field-control-stack">
+          <span className="ldb-mini-label">Stored Live Rate</span>
+          <div className="ldb-pill-list">
+            <span className={`ldb-pill${ratePreview ? '' : ' ldb-pill-placeholder'}`}>
+              {ratePreview || 'No stored USD rate yet'}
+            </span>
+            {providerLabel ? (
+              <span className="ldb-pill-placeholder">
+                Provider: {providerLabel}
+              </span>
+            ) : null}
+            {sourceUpdatedLabel ? (
+              <span className="ldb-pill-placeholder">
+                Source updated: {sourceUpdatedLabel}
+              </span>
+            ) : null}
+            {nextUpdateLabel ? (
+              <span className="ldb-pill-placeholder">
+                Next update: {nextUpdateLabel}
+              </span>
+            ) : null}
+            {fetchedAtLabel ? (
+              <span className="ldb-pill-placeholder">
+                Fetched: {fetchedAtLabel}
+              </span>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>
@@ -442,6 +502,7 @@ export function FieldRenderer({
   token,
   locationRef,
   locations,
+  currencies,
   mediaSets,
   onChange,
   onFieldAiGenerate,
@@ -473,6 +534,7 @@ export function FieldRenderer({
                 token={token}
                 locationRef={locationRef}
                 locations={locations}
+                currencies={currencies}
                 mediaSets={mediaSets}
                 onChange={onChange}
                 onFieldAiGenerate={onFieldAiGenerate}
@@ -541,6 +603,7 @@ export function FieldRenderer({
                         token={token}
                         locationRef={locationRef}
                         locations={locations}
+                        currencies={currencies}
                         mediaSets={mediaSets}
                         onChange={onChange}
                         onFieldAiGenerate={onFieldAiGenerate}
@@ -606,6 +669,7 @@ export function FieldRenderer({
                   value={typeof value === 'number' ? value : null}
                   hintValue={typeof hintValue === 'string' ? hintValue : ''}
                   locations={locations}
+                  currencies={currencies}
                   mediaSets={mediaSets}
                   onValueChange={(nextValue) => onChange(path, nextValue)}
                   onHintChange={field.hintKey ? (nextValue) => onChange([...basePath, field.hintKey!], nextValue) : undefined}

@@ -1,6 +1,7 @@
 import { API_BASE_URL, PAYLOAD_API_URL } from '../staging/api/client/config'
 import { parseErrorResponse } from '../staging/api/client/error-parser'
 import type {
+  CurrencyOption,
   LocationAiFillDocumentRequest,
   LocationAiFillDocumentResponse,
   LocationAiFillFieldRequest,
@@ -229,6 +230,39 @@ export async function fetchMediaSetOptions(token: string): Promise<MediaSetOptio
     appendSelectParams(params, ['id', 'title', 'alt_text', 'location'])
 
     const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(`/api/media-sets?${params.toString()}`, token)
+    docs.push(...(response.docs || []))
+    totalPages = response.totalPages || 1
+    page += 1
+  }
+
+  return docs
+}
+
+export async function fetchCurrencyOptions(token: string): Promise<CurrencyOption[]> {
+  const docs: CurrencyOption[] = []
+  let page = 1
+  let totalPages = 1
+
+  while (page <= totalPages) {
+    const params = new URLSearchParams()
+    params.set('depth', '0')
+    params.set('limit', '200')
+    params.set('page', String(page))
+    params.set('sort', 'code')
+    params.set('where[status][equals]', 'active')
+    appendSelectParams(params, [
+      'id',
+      'code',
+      'name',
+      'symbol',
+      'displaySymbol',
+      'defaultLocale',
+      'decimalPlaces',
+      'latestUsdRate',
+      'status',
+    ])
+
+    const response = await payloadRequest<PayloadListResponse<CurrencyOption>>(`/api/currencies?${params.toString()}`, token)
     docs.push(...(response.docs || []))
     totalPages = response.totalPages || 1
     page += 1

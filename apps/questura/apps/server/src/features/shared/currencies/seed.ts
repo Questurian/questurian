@@ -1,0 +1,304 @@
+import type { Payload } from 'payload'
+
+type CurrencySeedRecord = {
+  code: string
+  name: string
+  symbol: string
+  displaySymbol: string
+  defaultLocale: string
+  decimalPlaces: number
+  regions: Array<
+    'north-america'
+    | 'central-america'
+    | 'south-america'
+    | 'europe'
+    | 'caribbean'
+    | 'global'
+  >
+  usedIn: string[]
+  notes?: string
+}
+
+const CURRENCY_SEED_DATA: CurrencySeedRecord[] = [
+  {
+    code: 'USD',
+    name: 'United States Dollar',
+    symbol: '$',
+    displaySymbol: 'US$',
+    defaultLocale: 'en-US',
+    decimalPlaces: 2,
+    regions: ['north-america', 'central-america', 'south-america'],
+    usedIn: ['United States', 'Ecuador', 'El Salvador', 'Panama'],
+    notes: 'Panama circulates USD cash alongside the Panamanian balboa.',
+  },
+  {
+    code: 'EUR',
+    name: 'Euro',
+    symbol: '€',
+    displaySymbol: '€',
+    defaultLocale: 'en-IE',
+    decimalPlaces: 2,
+    regions: ['europe'],
+    usedIn: ['Eurozone'],
+  },
+  {
+    code: 'GBP',
+    name: 'British Pound Sterling',
+    symbol: '£',
+    displaySymbol: '£',
+    defaultLocale: 'en-GB',
+    decimalPlaces: 2,
+    regions: ['europe'],
+    usedIn: ['United Kingdom'],
+  },
+  {
+    code: 'CAD',
+    name: 'Canadian Dollar',
+    symbol: '$',
+    displaySymbol: 'CA$',
+    defaultLocale: 'en-CA',
+    decimalPlaces: 2,
+    regions: ['north-america'],
+    usedIn: ['Canada'],
+  },
+  {
+    code: 'MXN',
+    name: 'Mexican Peso',
+    symbol: '$',
+    displaySymbol: 'MX$',
+    defaultLocale: 'es-MX',
+    decimalPlaces: 2,
+    regions: ['north-america'],
+    usedIn: ['Mexico'],
+  },
+  {
+    code: 'CHF',
+    name: 'Swiss Franc',
+    symbol: 'CHF',
+    displaySymbol: 'CHF',
+    defaultLocale: 'de-CH',
+    decimalPlaces: 2,
+    regions: ['europe'],
+    usedIn: ['Switzerland', 'Liechtenstein'],
+  },
+  {
+    code: 'ARS',
+    name: 'Argentine Peso',
+    symbol: '$',
+    displaySymbol: 'AR$',
+    defaultLocale: 'es-AR',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Argentina'],
+  },
+  {
+    code: 'BOB',
+    name: 'Boliviano',
+    symbol: 'Bs',
+    displaySymbol: 'Bs',
+    defaultLocale: 'es-BO',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Bolivia'],
+  },
+  {
+    code: 'BRL',
+    name: 'Brazilian Real',
+    symbol: 'R$',
+    displaySymbol: 'R$',
+    defaultLocale: 'pt-BR',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Brazil'],
+  },
+  {
+    code: 'CLP',
+    name: 'Chilean Peso',
+    symbol: '$',
+    displaySymbol: 'CLP$',
+    defaultLocale: 'es-CL',
+    decimalPlaces: 0,
+    regions: ['south-america'],
+    usedIn: ['Chile'],
+  },
+  {
+    code: 'COP',
+    name: 'Colombian Peso',
+    symbol: '$',
+    displaySymbol: 'COP$',
+    defaultLocale: 'es-CO',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Colombia'],
+  },
+  {
+    code: 'GYD',
+    name: 'Guyanese Dollar',
+    symbol: '$',
+    displaySymbol: 'GY$',
+    defaultLocale: 'en-GY',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Guyana'],
+  },
+  {
+    code: 'PYG',
+    name: 'Paraguayan Guarani',
+    symbol: 'Gs',
+    displaySymbol: 'Gs',
+    defaultLocale: 'es-PY',
+    decimalPlaces: 0,
+    regions: ['south-america'],
+    usedIn: ['Paraguay'],
+  },
+  {
+    code: 'PEN',
+    name: 'Peruvian Sol',
+    symbol: 'S/',
+    displaySymbol: 'S/',
+    defaultLocale: 'es-PE',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Peru'],
+  },
+  {
+    code: 'SRD',
+    name: 'Surinamese Dollar',
+    symbol: '$',
+    displaySymbol: 'SRD$',
+    defaultLocale: 'nl-SR',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Suriname'],
+  },
+  {
+    code: 'UYU',
+    name: 'Uruguayan Peso',
+    symbol: '$',
+    displaySymbol: 'UYU$',
+    defaultLocale: 'es-UY',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Uruguay'],
+  },
+  {
+    code: 'VES',
+    name: 'Venezuelan Bolivar',
+    symbol: 'Bs.',
+    displaySymbol: 'Bs.',
+    defaultLocale: 'es-VE',
+    decimalPlaces: 2,
+    regions: ['south-america'],
+    usedIn: ['Venezuela'],
+    notes: 'Keep editorial usage cautious because real-world pricing and exchange behavior are volatile.',
+  },
+  {
+    code: 'BZD',
+    name: 'Belize Dollar',
+    symbol: '$',
+    displaySymbol: 'BZ$',
+    defaultLocale: 'en-BZ',
+    decimalPlaces: 2,
+    regions: ['central-america'],
+    usedIn: ['Belize'],
+  },
+  {
+    code: 'CRC',
+    name: 'Costa Rican Colon',
+    symbol: '₡',
+    displaySymbol: '₡',
+    defaultLocale: 'es-CR',
+    decimalPlaces: 2,
+    regions: ['central-america'],
+    usedIn: ['Costa Rica'],
+  },
+  {
+    code: 'GTQ',
+    name: 'Guatemalan Quetzal',
+    symbol: 'Q',
+    displaySymbol: 'Q',
+    defaultLocale: 'es-GT',
+    decimalPlaces: 2,
+    regions: ['central-america'],
+    usedIn: ['Guatemala'],
+  },
+  {
+    code: 'HNL',
+    name: 'Honduran Lempira',
+    symbol: 'L',
+    displaySymbol: 'L',
+    defaultLocale: 'es-HN',
+    decimalPlaces: 2,
+    regions: ['central-america'],
+    usedIn: ['Honduras'],
+  },
+  {
+    code: 'NIO',
+    name: 'Nicaraguan Cordoba',
+    symbol: 'C$',
+    displaySymbol: 'C$',
+    defaultLocale: 'es-NI',
+    decimalPlaces: 2,
+    regions: ['central-america'],
+    usedIn: ['Nicaragua'],
+  },
+  {
+    code: 'PAB',
+    name: 'Panamanian Balboa',
+    symbol: 'B/.',
+    displaySymbol: 'B/.',
+    defaultLocale: 'es-PA',
+    decimalPlaces: 2,
+    regions: ['central-america'],
+    usedIn: ['Panama'],
+    notes: 'Pegged 1:1 to USD. Local paper currency in Panama is usually USD.',
+  },
+]
+
+export const seedCurrencies = async (payload: Payload) => {
+  console.log('Seeding currencies...')
+
+  for (const currency of CURRENCY_SEED_DATA) {
+    const existing = await payload.find({
+      collection: 'currencies',
+      where: {
+        code: {
+          equals: currency.code,
+        },
+      },
+      limit: 1,
+      depth: 0,
+    })
+
+    const data = {
+      code: currency.code,
+      name: currency.name,
+      symbol: currency.symbol,
+      displaySymbol: currency.displaySymbol,
+      defaultLocale: currency.defaultLocale,
+      decimalPlaces: currency.decimalPlaces,
+      regions: currency.regions,
+      usedIn: currency.usedIn.map((country) => ({ country })),
+      notes: currency.notes ?? '',
+      status: 'active',
+    }
+
+    if (existing.docs[0]) {
+      await payload.update({
+        collection: 'currencies',
+        id: existing.docs[0].id,
+        data,
+      })
+      console.log(`  ↺ Updated currency: ${currency.code}`)
+      continue
+    }
+
+    await payload.create({
+      collection: 'currencies',
+      data,
+    })
+    console.log(`  ✓ Created currency: ${currency.code}`)
+  }
+
+  console.log(`\n✓ Currency seeding complete (${CURRENCY_SEED_DATA.length} records)!`)
+}
