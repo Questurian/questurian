@@ -1,276 +1,50 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  useCategories,
-  useDeleteLead,
-  useDetectLeadLanguages,
-  useFeeds,
-  useLeadsList,
-  useTags,
-  useTranslateLeads,
-} from '../hooks';
 import QueryErrorCard from '../components/QueryErrorCard';
-import { useDialog } from '../providers/DialogProvider';
-import { getLanguageName } from '../utils/contentLanguage';
-import { cleanLeadSummary } from '../utils/leadSummary';
+import LeadsBulkActions from '../features/leads/components/LeadsBulkActions';
+import LeadsFilters from '../features/leads/components/LeadsFilters';
+import LeadsHeader from '../features/leads/components/LeadsHeader';
+import LeadsResults from '../features/leads/components/LeadsResults';
+import { useLeadsPageActions } from '../features/leads/hooks/useLeadsPageActions';
+import { useLeadsPageData } from '../features/leads/hooks/useLeadsPageData';
+import { useLeadsPageFilters } from '../features/leads/hooks/useLeadsPageFilters';
 
 export default function Leads() {
-  const [filters, setFilters] = useState({
-    search: '',
-    category: '',
-    tag: '',
-    feed_id: '',
-  });
-  const [showTranslated, setShowTranslated] = useState(true); // Default to showing English
-  const dialog = useDialog();
-  const {
-    data: leads = [],
-    isLoading: leadsLoading,
-    isFetching: leadsFetching,
-    error: leadsError,
-  } = useLeadsList(filters);
-  const {
-    data: feeds = [],
-    isLoading: feedsLoading,
-    error: feedsError,
-  } = useFeeds();
-  const {
-    data: categories = [],
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = useCategories();
-  const {
-    data: tags = [],
-    isLoading: tagsLoading,
-    error: tagsError,
-  } = useTags();
-
-  const deleteLead = useDeleteLead();
-  const translateLeads = useTranslateLeads();
-  const detectLanguages = useDetectLeadLanguages();
-
-  const isLoading = leadsLoading || feedsLoading || categoriesLoading || tagsLoading;
-  const error = leadsError || feedsError || categoriesError || tagsError;
-  const isMutating =
-    deleteLead.isPending || translateLeads.isPending || detectLanguages.isPending;
-
-  async function handleDelete(id) {
-    const confirmed = await dialog.confirm('Are you sure you want to delete this lead?');
-    if (!confirmed) return;
-    try {
-      await deleteLead.mutateAsync(id);
-    } catch (err) {
-      await dialog.alert(`Error: ${err.message}`);
-    }
-  }
-
-  function getFeedName(feedId) {
-    const feed = feeds.find(f => f.id === feedId);
-    return feed ? feed.source_name : 'Unknown';
-  }
-
-  function handleFilterChange(key, value) {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }
-
-  function clearFilters() {
-    setFilters({
-      search: '',
-      category: '',
-      tag: '',
-      feed_id: '',
-    });
-  }
-
-  async function handleTranslate() {
-    const confirmed = await dialog.confirm('Translate all pending leads to English?');
-    if (!confirmed) return;
-    try {
-      const result = await translateLeads.mutateAsync(filters);
-      await dialog.alert(
-        `Translation complete!\n${result.stats.translated} translated\n${result.stats.already_english} already in English`,
-      );
-    } catch (err) {
-      await dialog.alert(`Error: ${err.message}`);
-    }
-  }
-
-  async function handleDetectLanguages() {
-    const confirmed = await dialog.confirm(
-      'Re-detect language for ALL leads? This will fix any incorrect language detections.',
-    );
-    if (!confirmed) return;
-    try {
-      // Force re-detection for all leads (not just NULL ones)
-      const result = await detectLanguages.mutateAsync(true);
-      await dialog.alert(`Language detection complete!\n${result.leads_updated} leads updated`);
-    } catch (err) {
-      await dialog.alert(`Error: ${err.message}`);
-    }
-  }
+  const filters = useLeadsPageFilters();
+  const data = useLeadsPageData(filters.values);
+  const actions = useLeadsPageActions({ filters: filters.values });
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Leads</h1>
-        <div className="page-actions">
-          <Link to="/feeds" className="button secondary">Manage Article Feeds</Link>
-        </div>
-        <div className="lead-count">{leads.length} leads found</div>
-      </div>
+      <LeadsHeader
+        isRefreshing={data.isRefreshing}
+        leadCount={data.leads.length}
+      />
 
-      {leadsFetching && !leadsLoading && <div className="badge">Refreshing...</div>}
+      {data.error && <QueryErrorCard error={data.error} />}
 
-      {error && <QueryErrorCard error={error} />}
+      <LeadsFilters
+        categories={data.categories}
+        feeds={data.feeds}
+        filters={filters.values}
+        onClear={filters.clearFilters}
+        onFilterChange={filters.handleFilterChange}
+        tags={data.tags}
+      />
 
-      <div className="filters card">
-        <h3>Filters</h3>
-        <div className="filters-grid">
-          <div className="form-group">
-            <label>Search</label>
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              placeholder="Search in title, summary, content..."
-            />
-          </div>
-          <div className="form-group">
-            <label>Category</label>
-            <select
-              value={filters.category}
-              onChange={(e) => handleFilterChange('category', e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Tag</label>
-            <select
-              value={filters.tag}
-              onChange={(e) => handleFilterChange('tag', e.target.value)}
-            >
-              <option value="">All Tags</option>
-              {tags.map(tag => (
-                <option key={tag.id} value={tag.name}>{tag.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Feed</label>
-            <select
-              value={filters.feed_id}
-              onChange={(e) => handleFilterChange('feed_id', e.target.value)}
-            >
-              <option value="">All Feeds</option>
-              {feeds.map(feed => (
-                <option key={feed.id} value={feed.id}>{feed.source_name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <button className="button secondary" onClick={clearFilters}>
-          Clear Filters
-        </button>
-      </div>
+      <LeadsBulkActions
+        detectPending={actions.detectPending}
+        onDetectLanguages={actions.handleDetectLanguages}
+        onTranslate={actions.handleTranslate}
+        translatePending={actions.translatePending}
+      />
 
-      <div className="translation-controls card">
-        <div className="translation-header">
-          <h3>Translation</h3>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              className="button secondary"
-              onClick={handleDetectLanguages}
-              disabled={detectLanguages.isPending}
-            >
-              {detectLanguages.isPending ? 'Detecting...' : 'Detect Languages'}
-            </button>
-            <button
-              className="button primary"
-              onClick={handleTranslate}
-              disabled={translateLeads.isPending}
-            >
-              {translateLeads.isPending ? 'Translating...' : 'Translate Pending Leads'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="loading">Loading leads...</div>
-      ) : (
-        <div className="leads-list">
-          {leads.map((lead) => {
-            // Determine which text to show based on toggle and availability
-            const displayTitle = showTranslated && lead.title_translated
-              ? lead.title_translated
-              : lead.title;
-
-            const rawSummary = showTranslated && lead.summary_translated
-              ? lead.summary_translated
-              : lead.summary;
-
-            const summary = cleanLeadSummary(rawSummary);
-
-            const isTranslated = lead.translation_status === 'translated';
-            const isEnglish = lead.translation_status === 'already_english';
-
-            return (
-              <div key={lead.id} className="lead-card">
-                {lead.image_url && (
-                  <div className="lead-image">
-                    <img src={lead.image_url} alt={displayTitle} loading="lazy" />
-                  </div>
-                )}
-                <div className="lead-header">
-                  <h3>
-                    <a href={lead.link} target="_blank" rel="noopener noreferrer">
-                      {displayTitle}
-                    </a>
-                  </h3>
-                  <button className="button-sm danger" onClick={() => handleDelete(lead.id)} disabled={isMutating}>
-                    Delete
-                  </button>
-                </div>
-
-                <div className="lead-badges">
-                  <span className={`badge ${getFeedName(lead.feed_id).toLowerCase().includes('instagram') ? 'instagram' : ''}`}>{getFeedName(lead.feed_id)}</span>
-                  {isTranslated && <span className="badge translation-badge">Translated</span>}
-                  {lead.detected_language && lead.detected_language !== 'en' && (
-                    <span className="badge language-badge" data-lang-code={lead.detected_language.toUpperCase()}>
-                      <span className="language-full">{getLanguageName(lead.detected_language)}</span>
-                      <span className="language-abbrev">{lead.detected_language.toUpperCase()}</span>
-                    </span>
-                  )}
-                </div>
-
-                <div className="lead-meta">
-                  {lead.author && <span>By {lead.author}</span>}
-                  {lead.published && <span>{new Date(lead.published).toLocaleDateString()}</span>}
-                </div>
-                {summary && (
-                  <p className="lead-summary">{summary}</p>
-                )}
-                <div className="lead-footer">
-                  <small>Collected: {new Date(lead.collected_at).toLocaleString()}</small>
-                  {!showTranslated && lead.title_translated && (
-                    <small className="translation-hint">English translation available</small>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {leads.length === 0 && !isLoading && (
-        <div className="empty-state">
-          <p>No leads found. Try adjusting your filters or fetch some feeds!</p>
-        </div>
-      )}
+      <LeadsResults
+        feedNames={data.feedNames}
+        isLoading={data.isLoading}
+        isMutating={actions.isMutating}
+        leads={data.leads}
+        onDelete={actions.handleDelete}
+        showTranslated={filters.showTranslated}
+      />
     </div>
   );
 }
