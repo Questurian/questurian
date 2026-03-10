@@ -1,5 +1,7 @@
 import {
+  useDiarioCurrentScrapeJob,
   useDiarioCorreoFeeds,
+  useElComercioCurrentScrapeJob,
   useElComercioFeeds,
   useFetchDiarioCorreoFeed,
   useFetchElComercioFeed,
@@ -14,19 +16,34 @@ function formatDate(value) {
   return date.toLocaleString();
 }
 
-function formatResultDetails(result) {
-  const lines = [
-    `Status: ${result.status}`,
-    `New posts: ${result.new_post_count ?? result.post_count ?? 0}`,
-    `Already stored: ${result.existing_post_count ?? 0}`,
-    `Invalid/failed: ${result.invalid_post_count ?? 0}`,
-  ];
-
-  if (result.error_message) {
-    lines.push('', 'Errors:', result.error_message);
+function parseJobResult(job) {
+  if (!job?.result_json) return null;
+  try {
+    return JSON.parse(job.result_json);
+  } catch (error) {
+    return null;
   }
+}
 
-  return lines.join('\n');
+function formatJobStatus(status) {
+  switch (status) {
+    case 'queued':
+      return 'Queued';
+    case 'running':
+      return 'Running';
+    case 'success':
+      return 'Success';
+    case 'partial':
+      return 'Partial';
+    case 'failed':
+      return 'Failed';
+    default:
+      return 'Idle';
+  }
+}
+
+function isJobActive(job) {
+  return job && ['queued', 'running'].includes(job.status);
 }
 
 export default function ManageScrapes() {
@@ -41,6 +58,8 @@ export default function ManageScrapes() {
     isLoading: diarioLoading,
     error: diarioError,
   } = useDiarioCorreoFeeds();
+  const { data: elComercioJob } = useElComercioCurrentScrapeJob();
+  const { data: diarioCorreoJob } = useDiarioCurrentScrapeJob();
 
   const fetchElComercio = useFetchElComercioFeed();
   const fetchDiarioCorreo = useFetchDiarioCorreoFeed();
@@ -52,8 +71,11 @@ export default function ManageScrapes() {
 
   async function handleFetch(label, mutate) {
     try {
-      const result = await mutate();
-      await dialog.alert(`${label} scrape finished.\n\n${formatResultDetails(result)}`);
+      const job = await mutate();
+      const message = isJobActive(job)
+        ? `${label} scrape queued.\n\nJob #${job.id} is now ${formatJobStatus(job.status).toLowerCase()}.`
+        : `${label} scrape state updated.\n\n${job.message || `Job #${job.id}`}`;
+      await dialog.alert(message);
     } catch (err) {
       await dialog.alert(`Error: ${err.message}`);
     }
@@ -65,8 +87,9 @@ export default function ManageScrapes() {
       name: 'El Comercio',
       section: 'Gastronomia',
       url: 'https://elcomercio.pe/archivo/gastronomia/',
-      description: 'Scrapes the archive, preserves existing rows, and inserts only newly discovered article URLs.',
+      description: 'Queues a background scrape for the archive, preserves existing rows, and inserts only newly discovered article URLs.',
       feed: elComercioFeed,
+      job: elComercioJob,
       isPending: fetchElComercio.isPending,
       onFetch: () => handleFetch('El Comercio', fetchElComercio.mutateAsync),
     },
@@ -75,8 +98,9 @@ export default function ManageScrapes() {
       name: 'Diario Correo',
       section: 'Gastronomia',
       url: 'https://diariocorreo.pe/gastronomia/',
-      description: 'Scrapes the section, preserves existing rows, and inserts only newly discovered article URLs.',
+      description: 'Queues a background scrape for the section, preserves existing rows, and inserts only newly discovered article URLs.',
       feed: diarioCorreoFeed,
+      job: diarioCorreoJob,
       isPending: fetchDiarioCorreo.isPending,
       onFetch: () => handleFetch('Diario Correo', fetchDiarioCorreo.mutateAsync),
     },
@@ -88,7 +112,7 @@ export default function ManageScrapes() {
         <div>
           <h1>Manage Scrapes</h1>
           <p className="page-subtitle">
-            Hard-coded Peru sources. Fetch runs synchronously, preserves history, and adds only new article URLs.
+            Hard-coded Peru sources. Scrapes now run in the background, preserve history, and add only new article URLs.
           </p>
         </div>
         {isRefreshing && <span className="badge">Refreshing...</span>}
@@ -100,7 +124,17 @@ export default function ManageScrapes() {
         {sources.map((source) => {
           const lastFetched = formatDate(source.feed?.last_fetched);
           const displayName = source.feed?.display_name || source.name;
-          const fetchLabel = source.feed?.last_fetched ? 'Refetch' : 'Fetch';
+          const fetchLabel = source.isPending
+            ? 'Queueing...'
+            : isJobActive(source.job)
+              ? 'Queued...'
+              : source.feed?.last_fetched
+                ? 'Queue Refetch'
+                : 'Queue Fetch';
+          const result = parseJobResult(source.job);
+          const lastJobAt = formatDate(
+            source.job?.finished_at || source.job?.started_at || source.job?.created_at,
+          );
 
           return (
             <div key={source.key} className="lead-card">
@@ -110,22 +144,36 @@ export default function ManageScrapes() {
                   <div className="lead-meta">
                     <span className="badge">Peru</span>
                     <span className="badge secondary">{source.section}</span>
+                    {source.job && (
+                      <span className="badge secondary">
+                        Job: {formatJobStatus(source.job.status)}
+                      </span>
+                    )}
                     <span>Last fetched: {lastFetched}</span>
                   </div>
                 </div>
                 <button
                   className="button primary"
                   onClick={source.onFetch}
-                  disabled={source.isPending}
+                  disabled={source.isPending || isJobActive(source.job)}
                 >
-                  {source.isPending ? 'Fetching...' : fetchLabel}
+                  {fetchLabel}
                 </button>
               </div>
 
               <p className="lead-summary">{source.description}</p>
 
+              {source.job && (
+                <p className="lead-summary">
+                  Latest job: {lastJobAt}
+                  {result ? ` | New: ${result.new_post_count ?? result.post_count ?? 0} | Existing: ${result.existing_post_count ?? 0} | Invalid: ${result.invalid_post_count ?? 0}` : ''}
+                  {source.job.error_message ? ` | Error: ${source.job.error_message}` : ''}
+                </p>
+              )}
+
               <div className="lead-footer">
                 Source: {source.url}
+                {source.job?.artifact_dir ? ` | Artifacts: ${source.job.artifact_dir}` : ''}
               </div>
             </div>
           );

@@ -1,15 +1,25 @@
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 DATABASE_PATH = Path(__file__).parent.parent.parent / "leads.db"
+DEFAULT_BUSY_TIMEOUT_MS = max(1000, int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "5000")))
+
+
+def _configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
+    conn.row_factory = sqlite3.Row
+    conn.execute(f"PRAGMA busy_timeout = {DEFAULT_BUSY_TIMEOUT_MS}")
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    return conn
 
 
 def get_db_connection():
     """Get a database connection with row factory."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    timeout_seconds = max(5.0, DEFAULT_BUSY_TIMEOUT_MS / 1000)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=timeout_seconds)
+    return _configure_connection(conn)
 
 
 def execute_query(query: str, params: Tuple = ()) -> int:

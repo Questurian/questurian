@@ -290,4 +290,17 @@ export const queryKeys = {
   ],
   batchFetchJob: (id) => ['batchFetch', 'job', id],
   batchFetchCurrent: ['batchFetch', 'current'],
+
+  // Scrape Jobs
+  scrapeJobs: ['scrapeJobs'],
+  scrapeJobsList: ({ source_type = '', status = '', limit = '', offset = '' } = {}) => [
+    'scrapeJobs',
+    'list',
+    source_type || '',
+    status || '',
+    limit ?? '',
+    offset ?? '',
+  ],
+  scrapeJob: (id) => ['scrapeJobs', 'job', id],
+  scrapeJobsCurrent: (sourceType = '') => ['scrapeJobs', 'current', sourceType || ''],
 };

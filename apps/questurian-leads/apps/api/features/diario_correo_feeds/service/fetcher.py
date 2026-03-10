@@ -7,7 +7,7 @@ import requests
 from features.diario_correo_feeds.service.parser import extract_section_items
 from features.translation.service.translator import TranslationService
 from lib.database import fetch_all
-from lib.scraping import ScrapeSourceConfig, record_fetch_failure, run_scrape_feed, run_scrapy_spider
+from lib.scraping import ScrapeSourceConfig, record_fetch_failure, run_scrape_feed
 
 SOURCE_CONFIG = ScrapeSourceConfig(
     source_key="diario_correo",
@@ -18,6 +18,15 @@ SOURCE_CONFIG = ScrapeSourceConfig(
     source_name="diariocorreo",
 )
 DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; LeadsManager/1.0)"
+
+
+def _write_artifact(artifact_dir: Optional[str], filename: str, content: str) -> None:
+    if not artifact_dir:
+        return
+    path = Path(artifact_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    path.joinpath(filename).write_text(content, encoding="utf-8")
+
 
 def fetch_html(url: str) -> str:
     """Fetch raw HTML for a page using a stable user-agent."""
@@ -40,35 +49,36 @@ def fetch_html(url: str) -> str:
         raise Exception(f"Failed to fetch Diario Correo HTML: {exc}") from exc
 
 
-def fetch_items_via_html(feed_url: str, section_slug: str) -> List[Dict]:
-    """Fallback HTML parser to extract items without Scrapy."""
+def fetch_items_via_html(
+    feed_url: str,
+    section_slug: str,
+    artifact_dir: Optional[str] = None,
+) -> List[Dict]:
+    """Fetch once, then parse Diario Correo via cache-first DOM fallback."""
     html = fetch_html(feed_url)
-    return extract_section_items(html, feed_url=feed_url, section_slug=section_slug)
+    items = extract_section_items(html, feed_url=feed_url, section_slug=section_slug)
+    if not items:
+        _write_artifact(artifact_dir, "diario_correo-response.html", html)
+    return items
 
 
-def run_spider() -> List[Dict]:
-    return run_scrapy_spider(
-        Path(__file__).parent / "spider.py",
-        settings_module=SOURCE_CONFIG.scrapy_settings_module,
-        timeout_seconds=SOURCE_CONFIG.spider_timeout_seconds,
+def _load_scraped_items(feed: dict, artifact_dir: Optional[str] = None) -> List[Dict]:
+    return fetch_items_via_html(
+        feed["url"],
+        feed.get("section") or SOURCE_CONFIG.default_section,
+        artifact_dir=artifact_dir,
     )
-
-
-def _load_scraped_items(feed: dict) -> List[Dict]:
-    scraped_items = run_spider()
-    if scraped_items:
-        return scraped_items
-    return fetch_items_via_html(feed["url"], feed.get("section") or SOURCE_CONFIG.default_section)
 
 
 def fetch_diario_correo_feed(
     feed_id: int,
     translator: Optional[TranslationService] = None,
+    artifact_dir: Optional[str] = None,
 ) -> Dict:
     return run_scrape_feed(
         feed_id,
         config=SOURCE_CONFIG,
-        load_items=_load_scraped_items,
+        load_items=lambda feed: _load_scraped_items(feed, artifact_dir=artifact_dir),
         translator=translator,
     )
 

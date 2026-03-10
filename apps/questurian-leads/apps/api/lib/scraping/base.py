@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import json
 import os
@@ -312,14 +312,23 @@ def run_scrape_feed(
     if not feed:
         raise ValueError(f"Feed {feed_id} not found")
 
+    effective_config = config
+    raw_max_items = feed.get("max_items")
+    try:
+        max_items = int(raw_max_items) if raw_max_items is not None else config.max_items
+    except (TypeError, ValueError):
+        max_items = config.max_items
+    if max_items > 0 and max_items != config.max_items:
+        effective_config = replace(config, max_items=max_items)
+
     try:
         scraped_items = load_items(feed)
         return _persist_scraped_items(
             feed_id,
             feed=feed,
-            config=config,
+            config=effective_config,
             scraped_items=scraped_items,
             translator=translator or get_translator(),
         )
     except Exception as exc:
-        return record_fetch_failure(feed_id, config, str(exc))
+        return record_fetch_failure(feed_id, effective_config, str(exc))

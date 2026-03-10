@@ -12,6 +12,13 @@ except ModuleNotFoundError:
 DATABASE_PATH = Path(__file__).parent.parent.parent / "leads.db"
 
 
+def _configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
+    return conn
+
+
 def add_image_columns():
     """Add image_url column to content tables."""
     conn = sqlite3.connect(DATABASE_PATH)
@@ -221,7 +228,7 @@ def backfill_el_comercio_published_at_iso():
 
 def init_database():
     """Initialize the database with schema."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _configure_connection(sqlite3.connect(DATABASE_PATH))
     cursor = conn.cursor()
 
     # Create categories table
@@ -444,7 +451,7 @@ def init_database():
 
 def add_el_comercio_tables():
     """Add El Comercio scraping tables."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _configure_connection(sqlite3.connect(DATABASE_PATH))
     cursor = conn.cursor()
 
     # Table 1: Feed configuration
@@ -455,6 +462,7 @@ def add_el_comercio_tables():
             url TEXT UNIQUE NOT NULL,
             display_name TEXT NOT NULL,
             section TEXT NOT NULL,
+            max_items INTEGER DEFAULT 15,
             fetch_interval INTEGER DEFAULT 60,
             last_fetched TEXT,
             is_active INTEGER DEFAULT 1,
@@ -522,7 +530,7 @@ def add_el_comercio_tables():
 
 def add_diario_correo_tables():
     """Add Diario Correo scraping tables."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _configure_connection(sqlite3.connect(DATABASE_PATH))
     cursor = conn.cursor()
 
     # Table 1: Feed configuration
@@ -533,6 +541,7 @@ def add_diario_correo_tables():
             url TEXT UNIQUE NOT NULL,
             display_name TEXT NOT NULL,
             section TEXT NOT NULL,
+            max_items INTEGER DEFAULT 15,
             fetch_interval INTEGER DEFAULT 60,
             last_fetched TEXT,
             is_active INTEGER DEFAULT 1,
@@ -654,7 +663,7 @@ def add_youtube_tables():
 
 def add_batch_fetch_tables():
     """Add batch fetch job tables."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _configure_connection(sqlite3.connect(DATABASE_PATH))
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -695,6 +704,65 @@ def add_batch_fetch_tables():
     conn.commit()
     conn.close()
     print("✅ Batch fetch tables created")
+
+
+def add_scrape_feed_config_columns():
+    """Add configurable scrape feed columns to site feed tables."""
+    conn = _configure_connection(sqlite3.connect(DATABASE_PATH))
+    cursor = conn.cursor()
+
+    def column_exists(table_name: str, column_name: str) -> bool:
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = [row[1] for row in cursor.fetchall()]
+        return column_name in columns
+
+    tables = ["el_comercio_feeds", "diario_correo_feeds"]
+    for table_name in tables:
+        if not column_exists(table_name, "max_items"):
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN max_items INTEGER DEFAULT 15")
+        cursor.execute(
+            f"UPDATE {table_name} SET max_items = 15 WHERE max_items IS NULL OR max_items <= 0"
+        )
+
+    conn.commit()
+    conn.close()
+    print("✅ Scrape feed config columns added")
+
+
+def add_scrape_job_tables():
+    """Add async scrape job tables."""
+    conn = _configure_connection(sqlite3.connect(DATABASE_PATH))
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS scrape_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_type TEXT NOT NULL,
+            feed_id INTEGER NOT NULL,
+            source_name TEXT NOT NULL,
+            redis_job_id TEXT,
+            status TEXT NOT NULL DEFAULT 'queued',
+            message TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            started_at TEXT,
+            finished_at TEXT,
+            result_json TEXT,
+            error_message TEXT,
+            artifact_dir TEXT
+        )
+    """)
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source_status "
+        "ON scrape_jobs(source_type, feed_id, status, created_at DESC)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scrape_jobs_created_at "
+        "ON scrape_jobs(created_at DESC)"
+    )
+
+    conn.commit()
+    conn.close()
+    print("✅ Scrape job tables created")
 
 
 def add_youtube_transcript_columns():
@@ -744,6 +812,8 @@ def run_migrations():
     init_database()
     add_el_comercio_tables()
     add_diario_correo_tables()
+    add_scrape_feed_config_columns()
+    add_scrape_job_tables()
     add_youtube_tables()
     add_youtube_transcript_columns()
     add_youtube_shorts_column()

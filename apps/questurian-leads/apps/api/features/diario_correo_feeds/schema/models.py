@@ -12,6 +12,7 @@ class DiarioCorreoFeedCreate(BaseModel):
     url: str = "https://diariocorreo.pe/gastronomia/"
     display_name: str = "Diario Correo Gastronomia"
     section: str = "gastronomia"
+    max_items: int = 15
     fetch_interval: int = 60
     is_active: int = 1
 
@@ -22,6 +23,7 @@ class DiarioCorreoFeedUpdate(BaseModel):
     url: Optional[str] = None
     display_name: Optional[str] = None
     section: Optional[str] = None
+    max_items: Optional[int] = None
     fetch_interval: Optional[int] = None
     is_active: Optional[int] = None
 
@@ -33,6 +35,7 @@ class DiarioCorreoFeedResponse(BaseModel):
     url: str
     display_name: str
     section: str
+    max_items: int = 15
     fetch_interval: int
     last_fetched: Optional[str] = None
     is_active: int

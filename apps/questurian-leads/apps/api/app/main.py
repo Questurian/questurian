@@ -21,6 +21,7 @@ from features.diario_correo_feeds.api.routes import router as diario_correo_feed
 from features.scrapes.api.routes import router as scrapes_router
 from features.youtube_feeds.api.routes import router as youtube_feeds_router
 from features.batch_fetch.api.routes import router as batch_fetch_router
+from features.scrape_jobs.api.routes import router as scrape_jobs_router
 from lib.database.init_db import DATABASE_PATH, run_migrations
 
 app = FastAPI(title="RSS Leads API")
@@ -86,6 +87,7 @@ app.include_router(scrapes_router)
 app.include_router(youtube_feeds_router)
 app.include_router(dev_router)
 app.include_router(batch_fetch_router)
+app.include_router(scrape_jobs_router)
 
 
 @app.get("/health", tags=["health"])

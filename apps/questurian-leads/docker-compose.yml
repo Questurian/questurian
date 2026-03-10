@@ -1,6 +1,12 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
   libretranslate:
     image: libretranslate/libretranslate:latest
     restart: unless-stopped
@@ -28,12 +34,31 @@ services:
       - LIBRETRANSLATE_API_KEY=${LIBRETRANSLATE_API_KEY:-}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
       - RAPIDAPI_KEY=${RAPIDAPI_KEY:-}
+      - SCRAPE_QUEUE_URL=redis://redis:6379/0
+      - SCRAPE_ARTIFACTS_DIR=/tmp/questurian-leads-scrape-artifacts
       - CORS_ALLOW_ORIGINS=http://localhost:3004,http://127.0.0.1:3004
     volumes:
       - ./apps/api:/app
     depends_on:
+      - redis
       - libretranslate
     command: sh -c "python lib/database/init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 4004 --reload"
+
+  scrape-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      - LIBRETRANSLATE_URL=http://libretranslate:5000
+      - LIBRETRANSLATE_API_KEY=${LIBRETRANSLATE_API_KEY:-}
+      - SCRAPE_QUEUE_URL=redis://redis:6379/0
+      - SCRAPE_ARTIFACTS_DIR=/tmp/questurian-leads-scrape-artifacts
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      - redis
+      - libretranslate
+    command: sh -c "python lib/database/init_db.py && python worker.py"
 
   client:
     build:

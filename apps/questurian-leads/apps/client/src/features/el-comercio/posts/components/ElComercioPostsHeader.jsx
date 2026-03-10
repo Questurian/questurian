@@ -6,6 +6,7 @@ export default function ElComercioPostsHeader({
   isRefreshing,
   onScrape,
   scrapePending,
+  scrapeStatusLabel,
 }) {
   return (
     <>
@@ -13,7 +14,7 @@ export default function ElComercioPostsHeader({
         <h1>El Comercio Articles</h1>
         <div className="page-actions">
           <button className="button primary" onClick={onScrape} disabled={isMutating}>
-            {scrapePending ? 'Scraping...' : 'Scrape Articles'}
+            {scrapePending ? (scrapeStatusLabel || 'Scrape Queued') : 'Queue Scrape'}
           </button>
           <Link to="/scrapes/manage" className="button secondary">
             Scraper Info

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { diarioCorreoFeedsApi } from '../api';
 import { queryKeys } from '../api/queryKeys';
+import { useDiarioCurrentScrapeJob } from './useScrapeJobs';
 
 export function useDiarioCorreoFeeds() {
   return useQuery({
@@ -16,10 +17,8 @@ export function useFetchDiarioCorreoFeed() {
     mutationFn: () => diarioCorreoFeedsApi.fetch(),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.diarioCorreoFeeds });
-      queryClient.invalidateQueries({ queryKey: queryKeys.diarioCorreoPosts });
-      queryClient.invalidateQueries({ queryKey: queryKeys.scrapes });
-      queryClient.invalidateQueries({ queryKey: ['approval'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobsCurrent('diario_correo') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobs });
     },
   });
 }
@@ -31,10 +30,10 @@ export function useFetchAllDiarioCorreoFeeds() {
     mutationFn: () => diarioCorreoFeedsApi.fetchAll(),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.diarioCorreoFeeds });
-      queryClient.invalidateQueries({ queryKey: queryKeys.diarioCorreoPosts });
-      queryClient.invalidateQueries({ queryKey: queryKeys.scrapes });
-      queryClient.invalidateQueries({ queryKey: ['approval'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobsCurrent('diario_correo') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobs });
     },
   });
 }
+
+export { useDiarioCurrentScrapeJob };

@@ -2,16 +2,17 @@
 FastAPI routes for El Comercio feeds.
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional, Dict
+from typing import List, Optional
+
+from fastapi import APIRouter, HTTPException, Query, status
 
 from features.el_comercio_feeds.schema.models import (
     ElComercioFeedResponse,
     ElComercioPostResponse,
 )
-from features.el_comercio_feeds.service.fetcher import (
-    fetch_el_comercio_feed,
-)
+from features.scrape_jobs.schema import ScrapeJobResponse
+from features.scrape_jobs.service.queue import QueueUnavailableError
+from features.scrape_jobs.service.runner import queue_scrape_job
 from lib.database import execute_query, fetch_all, fetch_one
 
 router = APIRouter(prefix="/el-comercio-feeds", tags=["el-comercio-feeds"])
@@ -52,6 +53,17 @@ def ensure_feed() -> dict:
         ),
     )
     return fetch_one("SELECT * FROM el_comercio_feeds WHERE id = ?", (feed_id,))
+
+
+def _enqueue_feed_scrape(feed: dict) -> dict:
+    try:
+        return queue_scrape_job(
+            source_type="el_comercio",
+            feed_id=feed["id"],
+            source_name=feed.get("display_name") or DEFAULT_DISPLAY_NAME,
+        )
+    except QueueUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 # Feed Operations
@@ -146,42 +158,34 @@ def get_feed(feed_id: int):
 
 # Fetch Operations
 
-@router.post("/fetch", response_model=Dict)
+@router.post("/fetch", response_model=ScrapeJobResponse, status_code=status.HTTP_202_ACCEPTED)
 def trigger_fetch():
     """
-    Manually trigger scrape for the default feed.
-
-    IMPORTANT: This endpoint BLOCKS for 10-30 seconds while scraping.
-    The scraper preserves existing rows and inserts only new article URLs.
-    If no feed row exists yet, one is created with category "Peru".
+    Queue a scrape for the default feed.
     """
     try:
         existing = ensure_feed()
-        result = fetch_el_comercio_feed(existing["id"])
-        return {
-            "el_comercio_feed_id": existing["id"],
-            "display_name": existing["display_name"],
-            **result
-        }
+        return ScrapeJobResponse(**_enqueue_feed_scrape(existing))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fetch-all", response_model=List[Dict])
+@router.post(
+    "/fetch-all",
+    response_model=List[ScrapeJobResponse],
+    status_code=status.HTTP_202_ACCEPTED,
+)
 def trigger_fetch_all():
     """
-    Trigger fetch for all active El Comercio feeds.
-
-    IMPORTANT: This endpoint BLOCKS while scraping all feeds.
+    Backward-compatible alias for queueing the singleton El Comercio scrape.
     """
     try:
         existing = ensure_feed()
-        result = fetch_el_comercio_feed(existing["id"])
-        return [{
-            "el_comercio_feed_id": existing["id"],
-            "display_name": existing["display_name"],
-            **result
-        }]
+        return [ScrapeJobResponse(**_enqueue_feed_scrape(existing))]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

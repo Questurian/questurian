@@ -25,6 +25,7 @@ export default function ElComercioPosts() {
         isRefreshing={data.isRefreshing}
         onScrape={actions.handleFetchArticles}
         scrapePending={actions.scrapePending}
+        scrapeStatusLabel={actions.scrapeStatusLabel}
       />
 
       {data.error && <QueryErrorCard error={data.error} />}

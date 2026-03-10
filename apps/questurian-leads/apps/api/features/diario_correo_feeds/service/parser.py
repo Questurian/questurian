@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 import json
+from parsel import Selector
 import re
 import urllib.parse
 
@@ -88,42 +89,181 @@ def get_image_url(element: dict[str, Any], base_url: str) -> Optional[str]:
     return image_url
 
 
-def extract_section_items(html: str, *, feed_url: str, section_slug: str) -> list[dict]:
-    cache = extract_content_cache(html)
-    if not cache:
-        return []
+def _clean_text(value: str | None) -> Optional[str]:
+    if value is None:
+        return None
+    cleaned = " ".join(value.split())
+    return cleaned or None
 
-    section = f"/{section_slug.lstrip('/')}"
-    feed_data = get_section_feed(cache, section)
-    if not feed_data:
-        return []
 
+def _clean_joined_text(values: list[str]) -> Optional[str]:
+    return _clean_text(" ".join(value.strip() for value in values if value and value.strip()))
+
+
+def _first_attr(selector: Selector, queries: list[str]) -> Optional[str]:
+    for query in queries:
+        value = selector.css(query).get()
+        cleaned = _clean_text(value)
+        if cleaned:
+            return cleaned
+    return None
+
+
+def _first_text(selector: Selector, queries: list[str]) -> Optional[str]:
+    for query in queries:
+        value = _clean_joined_text(selector.css(query).getall())
+        if value:
+            return value
+    return None
+
+
+def _parse_srcset(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    first_candidate = value.split(",")[0].strip()
+    if not first_candidate:
+        return None
+    return first_candidate.split(" ")[0].strip() or None
+
+
+def extract_section_items_from_dom(html: str, *, feed_url: str, section_slug: str) -> list[dict]:
+    selector = Selector(text=html)
+    section_path = f"/{section_slug.lstrip('/')}/"
+    containers = selector.css("article, .story-card, .article-item, .news-item, .post-item")
     items: list[dict] = []
-    for element in feed_data.get("content_elements", []):
-        if element.get("type") != "story":
+    seen_urls: set[str] = set()
+
+    for container in containers:
+        url = _first_attr(
+            container,
+            [
+                f'a[href*="{section_path}"]::attr(href)',
+                "h2 a::attr(href)",
+                "h3 a::attr(href)",
+                "a::attr(href)",
+            ],
+        )
+        if not url:
             continue
 
-        title = get_title(element)
-        url = element.get("website_url") or element.get("canonical_url")
-        if url and not url.startswith("http"):
-            url = urllib.parse.urljoin(feed_url, url)
+        absolute_url = urllib.parse.urljoin(feed_url, url)
+        if section_path.rstrip("/") not in absolute_url:
+            continue
+        if absolute_url in seen_urls:
+            continue
 
-        if title and url:
-            items.append(
-                {
-                    "url": url,
-                    "title": title.strip(),
-                    "published_at": (
-                        element.get("display_date")
-                        or element.get("publish_date")
-                        or element.get("first_publish_date")
-                    ),
-                    "section": section_slug,
-                    "image_url": get_image_url(element, feed_url),
-                    "excerpt": get_excerpt(element),
-                    "language": "es",
-                    "source": "diariocorreo",
-                }
-            )
+        title = _first_text(
+            container,
+            [
+                f'a[href*="{section_path}"]::text',
+                f'a[href*="{section_path}"] *::text',
+                "h2 a::text",
+                "h2 a *::text",
+                "h3 a::text",
+                "h3 a *::text",
+                "a::text",
+                "a *::text",
+            ],
+        )
+        if not title:
+            continue
+
+        published_at = _first_attr(
+            container,
+            [
+                "time::attr(datetime)",
+            ],
+        ) or _first_text(
+            container,
+            [
+                "time::text",
+                "time *::text",
+                '[class*="date"]::text',
+                '[class*="date"] *::text',
+                '[class*="time"]::text',
+                '[class*="time"] *::text',
+            ],
+        )
+        image_url = _first_attr(
+            container,
+            [
+                "img::attr(src)",
+                "img::attr(data-src)",
+                "img::attr(data-original)",
+            ],
+        )
+        if not image_url:
+            image_url = _parse_srcset(_first_attr(container, ["source::attr(srcset)"]))
+
+        excerpt = _first_text(
+            container,
+            [
+                '[class*="subtitle"]::text',
+                '[class*="subtitle"] *::text',
+                '[class*="summary"]::text',
+                '[class*="summary"] *::text',
+                '[class*="description"]::text',
+                '[class*="description"] *::text',
+                "p::text",
+                "p *::text",
+            ],
+        )
+
+        items.append(
+            {
+                "url": absolute_url,
+                "title": title,
+                "published_at": published_at,
+                "section": section_slug,
+                "image_url": (
+                    urllib.parse.urljoin(feed_url, image_url)
+                    if image_url and image_url.startswith("/")
+                    else image_url
+                ),
+                "excerpt": excerpt[:500] if excerpt else None,
+                "language": "es",
+                "source": "diariocorreo",
+            }
+        )
+        seen_urls.add(absolute_url)
 
     return items
+
+
+def extract_section_items(html: str, *, feed_url: str, section_slug: str) -> list[dict]:
+    cache = extract_content_cache(html)
+    if cache:
+        section = f"/{section_slug.lstrip('/')}"
+        feed_data = get_section_feed(cache, section)
+        if feed_data:
+            items: list[dict] = []
+            for element in feed_data.get("content_elements", []):
+                if element.get("type") != "story":
+                    continue
+
+                title = get_title(element)
+                url = element.get("website_url") or element.get("canonical_url")
+                if url and not url.startswith("http"):
+                    url = urllib.parse.urljoin(feed_url, url)
+
+                if title and url:
+                    items.append(
+                        {
+                            "url": url,
+                            "title": title.strip(),
+                            "published_at": (
+                                element.get("display_date")
+                                or element.get("publish_date")
+                                or element.get("first_publish_date")
+                            ),
+                            "section": section_slug,
+                            "image_url": get_image_url(element, feed_url),
+                            "excerpt": get_excerpt(element),
+                            "language": "es",
+                            "source": "diariocorreo",
+                        }
+                    )
+            if items:
+                return items
+
+    return extract_section_items_from_dom(html, feed_url=feed_url, section_slug=section_slug)

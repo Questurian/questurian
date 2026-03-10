@@ -17,6 +17,7 @@ A full-stack application for managing RSS feeds, organizing them by categories a
 **Backend:**
 - Python 3 with FastAPI
 - SQLite database
+- Redis-backed scrape queue (`rq`)
 - Pydantic for validation
 
 **Frontend:**
@@ -66,6 +67,13 @@ pnpm run dev
 ```
 Backend runs on http://localhost:4004
 
+Terminal 1b - Scrape worker:
+```bash
+cd apps/api
+python worker.py
+```
+Queued website scrapes require Redis plus this worker process.
+
 Terminal 2 - Frontend:
 ```bash
 cd apps/client
@@ -93,6 +101,8 @@ This starts:
 - API: http://localhost:4004
 - Frontend: http://localhost:3004
 - LibreTranslate: http://localhost:5001
+- Redis: `redis://localhost:6379/0`
+- Scrape worker: background service for queued website scrapes
 
 Notes:
 - Set `YOUTUBE_API_KEY`, `RAPIDAPI_KEY`, and `LIBRETRANSLATE_API_KEY` in your environment if needed.

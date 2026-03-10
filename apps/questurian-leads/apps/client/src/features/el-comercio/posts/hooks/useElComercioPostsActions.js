@@ -1,4 +1,5 @@
 import {
+  useElComercioCurrentScrapeJob,
   useDeleteElComercioPost,
   useFetchAllElComercioFeeds,
 } from '../../../../hooks';
@@ -8,6 +9,7 @@ export function useElComercioPostsActions() {
   const dialog = useDialog();
   const deletePost = useDeleteElComercioPost();
   const fetchAllFeeds = useFetchAllElComercioFeeds();
+  const { data: currentJob } = useElComercioCurrentScrapeJob();
 
   async function handleDelete(id) {
     const confirmed = await dialog.confirm(
@@ -26,19 +28,22 @@ export function useElComercioPostsActions() {
   async function handleFetchArticles() {
     try {
       const result = await fetchAllFeeds.mutateAsync();
-      const successCount = result?.filter((item) => item.status === 'SUCCESS').length || 0;
+      const job = Array.isArray(result) ? result[0] : result;
       await dialog.alert(
-        `Scraping complete! Successfully scraped ${successCount} feed(s). Check the approval queue to review new articles.`,
+        `El Comercio scrape queued.\n\nJob #${job?.id} is ${job?.status || 'queued'}. Check Scraper Info for progress.`,
       );
     } catch (error) {
       await dialog.alert(`Error: ${error.message}`);
     }
   }
 
+  const scrapePending = fetchAllFeeds.isPending || ['queued', 'running'].includes(currentJob?.status);
+
   return {
     handleDelete,
     handleFetchArticles,
-    isMutating: deletePost.isPending || fetchAllFeeds.isPending,
-    scrapePending: fetchAllFeeds.isPending,
+    isMutating: deletePost.isPending || scrapePending,
+    scrapePending,
+    scrapeStatusLabel: currentJob?.status === 'running' ? 'Scrape Running' : 'Scrape Queued',
   };
 }

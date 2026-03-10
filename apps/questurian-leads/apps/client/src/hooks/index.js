@@ -13,6 +13,7 @@ export * from './useInstagramFeeds';
 export * from './useInstagramPosts';
 export * from './useLeads';
 export * from './useScrapes';
+export * from './useScrapeJobs';
 export * from './useSubreddits';
 export * from './useTags';
 export * from './useYouTubeFeeds';

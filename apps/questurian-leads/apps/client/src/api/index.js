@@ -21,5 +21,6 @@ export { subredditsApi } from './sources/subreddits.api';
 
 export { devApi } from './workflows/dev.api';
 export { batchFetchApi } from './workflows/batch-fetch.api';
+export { scrapeJobsApi } from './workflows/scrape-jobs.api';
 export { translationApi } from './workflows/translation.api';
 export { approvalApi } from './workflows/approval.api';

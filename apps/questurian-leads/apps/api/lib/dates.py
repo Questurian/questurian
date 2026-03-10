@@ -16,7 +16,9 @@ def to_isoformat(value) -> Optional[str]:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
 
-_DD_MM_YYYY_RE = re.compile(r"^\s*(\d{2})/(\d{2})/(\d{4})\s*$")
+_DD_MM_YYYY_RE = re.compile(
+    r"^\s*(\d{2})/(\d{2})/(\d{4})(?:\s*[_-]?\s*(\d{2}):(\d{2}))?\s*$"
+)
 
 
 def normalize_published_at(value: Optional[str]) -> Optional[str]:
@@ -25,6 +27,7 @@ def normalize_published_at(value: Optional[str]) -> Optional[str]:
 
     Supports:
     - El Comercio format: DD/MM/YYYY
+    - El Comercio format with time: DD/MM/YYYY _ HH:MM
     - ISO-like datetimes (including trailing Z)
     - ISO-like dates (YYYY-MM-DD)
     """
@@ -40,8 +43,10 @@ def normalize_published_at(value: Optional[str]) -> Optional[str]:
         day = int(dmy_match.group(1))
         month = int(dmy_match.group(2))
         year = int(dmy_match.group(3))
+        hour = int(dmy_match.group(4) or 0)
+        minute = int(dmy_match.group(5) or 0)
         try:
-            return datetime(year, month, day, tzinfo=timezone.utc).isoformat()
+            return datetime(year, month, day, hour, minute, tzinfo=timezone.utc).isoformat()
         except ValueError:
             return None
 

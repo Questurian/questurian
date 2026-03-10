@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { elComercioFeedsApi } from '../api';
 import { queryKeys } from '../api/queryKeys';
+import { useElComercioCurrentScrapeJob } from './useScrapeJobs';
 
 export function useElComercioFeeds() {
   return useQuery({
@@ -16,11 +17,8 @@ export function useFetchElComercioFeed() {
     mutationFn: () => elComercioFeedsApi.fetch(),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.elComercioFeeds });
-      queryClient.invalidateQueries({ queryKey: ['elComercioPosts', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['elComercioPosts', 'infinite'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.scrapes });
-      queryClient.invalidateQueries({ queryKey: ['approval'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobsCurrent('el_comercio') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobs });
     },
   });
 }
@@ -32,11 +30,10 @@ export function useFetchAllElComercioFeeds() {
     mutationFn: () => elComercioFeedsApi.fetchAll(),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.elComercioFeeds });
-      queryClient.invalidateQueries({ queryKey: ['elComercioPosts', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['elComercioPosts', 'infinite'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.scrapes });
-      queryClient.invalidateQueries({ queryKey: ['approval'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobsCurrent('el_comercio') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scrapeJobs });
     },
   });
 }
+
+export { useElComercioCurrentScrapeJob };
