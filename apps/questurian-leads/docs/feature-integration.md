@@ -9,7 +9,7 @@ the same pipeline.
 
 1) Pull data from the external source (API client, RSS parser, or scraper).
 2) Store items in SQLite with `approval_status = 'pending'`.
-3) Load pending items into the Approval queue at `http://localhost:5317/approval`.
+3) Load pending items into the Approval queue at `http://localhost:3004/approval`.
 4) On approval, update `approval_status = 'approved'`.
 5) The Home page uses only approved items and merges them into the feed.
 
@@ -64,7 +64,8 @@ the Approval queue and Home feed:
 
 7) Scrape-specific steps (if scraping)
    - Use the singleton pattern (one feed row per site).
-   - Create `service/spider.py` and `service/fetcher.py`.
+   - Create `service/spider.py`, `service/parser.py`, and `service/fetcher.py`.
+   - Reuse the shared runner/persistence helpers in `apps/api/lib/scraping/`.
    - Register in `apps/api/features/scrapes/api/routes.py`.
    - See `docs/scrapes.md` for the full checklist.
 
@@ -93,6 +94,6 @@ the Approval queue and Home feed:
 ## Quick Smoke Test
 
 1) Trigger a fetch from the API.
-2) Confirm new items appear on `http://localhost:5317/approval`.
+2) Confirm new items appear on `http://localhost:3004/approval`.
 3) Approve one item.
 4) Confirm it shows on the Home page (and Scrapes page if applicable).

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { instagramPostImageUrl } from '../api';
+import QueryErrorCard from '../components/QueryErrorCard';
 import {
   useCategories,
   useInstagramFeeds,
@@ -94,7 +95,7 @@ export default function InstagramPosts() {
 
       {postsFetching && !postsLoading && <div className="badge">Refreshing...</div>}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       <div className="filters card">
         <h3>Filters</h3>

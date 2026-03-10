@@ -3,7 +3,7 @@
 This API stores subreddit links so the UI can display browseable sources.
 It does not fetch Reddit posts.
 
-Base URL: `http://localhost:8428`
+Base URL: `http://localhost:4004`
 
 ## Endpoints
 
@@ -17,7 +17,7 @@ Optional query params:
 
 Example:
 ```bash
-curl "http://localhost:8428/subreddits"
+curl "http://localhost:4004/subreddits"
 ```
 
 ### Create a subreddit
@@ -31,7 +31,7 @@ Body:
 
 Example:
 ```bash
-curl -X POST "http://localhost:8428/subreddits" \
+curl -X POST "http://localhost:4004/subreddits" \
   -H "Content-Type: application/json" \
   -d '{
     "category_id": 2,
@@ -46,7 +46,7 @@ curl -X POST "http://localhost:8428/subreddits" \
 
 Example:
 ```bash
-curl "http://localhost:8428/subreddits/1"
+curl "http://localhost:4004/subreddits/1"
 ```
 
 ### Update a subreddit
@@ -54,7 +54,7 @@ curl "http://localhost:8428/subreddits/1"
 
 Example:
 ```bash
-curl -X PUT "http://localhost:8428/subreddits/1" \
+curl -X PUT "http://localhost:4004/subreddits/1" \
   -H "Content-Type: application/json" \
   -d '{
     "display_name": "Python (Official)",
@@ -67,7 +67,7 @@ curl -X PUT "http://localhost:8428/subreddits/1" \
 
 Example:
 ```bash
-curl -X DELETE "http://localhost:8428/subreddits/1"
+curl -X DELETE "http://localhost:4004/subreddits/1"
 ```
 
 ## Database

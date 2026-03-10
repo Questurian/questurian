@@ -2,7 +2,8 @@
 
 ## Overview
 Scrapes Diario Correo's Gastronomia section and stores articles in SQLite.
-Data is pulled from the Fusion content cache JSON embedded in the page.
+Data is pulled from the Fusion content cache JSON embedded in the page, with an
+HTML fallback if the spider returns no items.
 
 ## Endpoints
 - `GET /diario-correo-feeds` list feed configurations.
@@ -15,11 +16,12 @@ Data is pulled from the Fusion content cache JSON embedded in the page.
 ## Scraping Flow
 1. Spider requests `https://diariocorreo.pe/gastronomia/`.
 2. Parses `Fusion.contentCache` JSON to extract stories.
-3. Fetcher deletes old posts, inserts the latest 15, and writes a fetch log.
+3. Fetcher preserves existing rows, inserts only new URLs, and writes a fetch log.
 4. Titles/excerpts are translated to English and queued for approval.
 
 ## Notes
 - The fetch endpoints auto-create a single feed row (category `Peru`) if missing.
 - Spider lives in `apps/api/features/diario_correo_feeds/service/spider.py`.
+- Parser lives in `apps/api/features/diario_correo_feeds/service/parser.py`.
 - Scrape results are stored in `diario_correo_posts`.
 - Logs are stored in `diario_correo_fetch_logs`.

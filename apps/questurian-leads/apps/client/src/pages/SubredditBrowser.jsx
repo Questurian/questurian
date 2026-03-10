@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCategories, useSubreddits } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 
 const browseOptions = [
   { label: 'Hot', sort: 'hot' },
@@ -77,7 +78,7 @@ export default function SubredditBrowser() {
 
       {subredditsFetching && <div className="badge">Refreshing...</div>}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       <div className="subreddit-grid">
         {sortedSubreddits.map((subreddit) => (

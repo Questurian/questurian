@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDeleteFetchLog, useFetchLogsList, useFeeds } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
 
 export default function FetchLogs() {
@@ -64,7 +65,7 @@ export default function FetchLogs() {
 
       {logsFetching && !logsLoading && <div className="badge">Refreshing...</div>}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       <div className="filters card">
         <h3>Filters</h3>

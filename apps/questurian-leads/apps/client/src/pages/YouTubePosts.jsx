@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCategories, useYouTubeFeeds, useYouTubePostsList } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 
 export default function YouTubePosts() {
   const [filters, setFilters] = useState({
@@ -60,7 +61,7 @@ export default function YouTubePosts() {
 
       {postsFetching && !postsLoading && <div className="badge">Refreshing...</div>}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       <div className="filters card">
         <h3>Filters</h3>

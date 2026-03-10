@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node ../../scripts/show-commands-client.cjs && vite",
-    "dev:clean": "lsof -ti:5173 | xargs kill -9 2>/dev/null || true; pnpm install --filter @questurian/leads-client... && node ../../scripts/show-commands-client.cjs && vite",
+    "dev:clean": "lsof -ti:3004 | xargs kill -9 2>/dev/null || true; pnpm install --filter @questurian/leads-client... && node ../../scripts/show-commands-client.cjs && vite",
     "build": "vite build",
     "lint": "echo 'Lint intentionally skipped for leads-client (no ESLint config yet)'",
     "test": "echo 'No tests configured yet for leads-client (explicitly skipped)'",

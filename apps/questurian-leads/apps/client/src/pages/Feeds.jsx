@@ -9,6 +9,7 @@ import {
   useFetchFeed,
   useUpdateFeed,
 } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
 
 export default function Feeds() {
@@ -194,7 +195,7 @@ export default function Feeds() {
         </div>
       )}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       {showForm && (
         <form className="form card" onSubmit={handleSubmit}>

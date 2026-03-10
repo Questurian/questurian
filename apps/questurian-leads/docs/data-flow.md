@@ -7,7 +7,7 @@ It is detailed but intentionally simple to scan.
 
 ```mermaid
 flowchart LR
-  UI[React UI<br/>apps/client] -->|HTTP JSON| API[Main FastAPI<br/>:8428]
+  UI[React UI<br/>apps/client] -->|HTTP JSON| API[Main FastAPI<br/>:4004]
   API --> DB[(SQLite<br/>apps/api/leads.db)]
 
   API -->|/feed?url=| FeedParse[RSS Parse-only]
@@ -27,13 +27,13 @@ flowchart LR
 ```
 
 Notes:
-- The main API exposes `/subreddits` and serves on port 8428.
+- The main API exposes `/subreddits` and serves on port 4004.
 - The main API uses the SQLite database at `apps/api/leads.db`.
 
 ## Services and entrypoints (dev)
 
-- Main API: `apps/api/app/main.py` on `http://localhost:8428`
-- Frontend: `apps/client` on `http://localhost:5317`
+- Main API: `apps/api/app/main.py` on `http://localhost:4004`
+- Frontend: `apps/client` on `http://localhost:3004`
 
 ## Shared data stores
 
@@ -44,7 +44,7 @@ Notes:
 ## Frontend data flow
 
 Frontend code lives in `apps/client`.
-The API client is `apps/client/src/api.js` with `API_BASE = http://localhost:8428`.
+The API client is `apps/client/src/api.js` with `API_BASE = /api` in dev and `http://localhost:4004` outside dev.
 
 ### Dashboard page (`apps/client/src/pages/Dashboard.jsx`)
 1) UI calls `GET /categories`, `GET /feeds`, `GET /tags`, and `GET /leads?limit=1`.
@@ -176,4 +176,4 @@ Endpoints: `apps/api/features/youtube_feeds/api/routes.py`
 
 - Fetch intervals are stored in DB but no scheduler exists in code.
   Fetching is manual via API calls or an external cron.
-- The UI uses the main API at port 8428.
+- The UI uses the main API at port 4004.

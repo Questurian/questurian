@@ -6,6 +6,7 @@ import {
   useDeleteElComercioPost,
   useFetchAllElComercioFeeds,
 } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
 
 const PAGE_SIZE = 30;
@@ -121,14 +122,14 @@ export default function ElComercioPosts() {
           >
             {fetchAllFeeds.isPending ? 'Scraping...' : 'Scrape Articles'}
           </button>
-          <Link to="/el-comercio-feeds" className="button secondary">Scraper Info</Link>
+          <Link to="/scrapes/manage" className="button secondary">Scraper Info</Link>
         </div>
         <div className="lead-count">{posts.length} approved articles</div>
       </div>
 
       {isRefreshing && <div className="badge">Refreshing...</div>}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       <div className="filters card">
         <h3>Filters</h3>
@@ -179,7 +180,7 @@ export default function ElComercioPosts() {
           {posts.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
               <p>No articles found. Try adjusting your filters or scraping a feed.</p>
-              <Link to="/el-comercio-feeds" className="button" style={{ marginTop: '20px' }}>
+              <Link to="/scrapes/manage" className="button" style={{ marginTop: '20px' }}>
                 Go to Feeds
               </Link>
             </div>

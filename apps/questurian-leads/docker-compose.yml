@@ -22,28 +22,31 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     ports:
-      - "8428:8428"
+      - "4004:4004"
     environment:
       - LIBRETRANSLATE_URL=http://libretranslate:5000
       - LIBRETRANSLATE_API_KEY=${LIBRETRANSLATE_API_KEY:-}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
       - RAPIDAPI_KEY=${RAPIDAPI_KEY:-}
+      - CORS_ALLOW_ORIGINS=http://localhost:3004,http://127.0.0.1:3004
     volumes:
       - ./apps/api:/app
     depends_on:
       - libretranslate
-    command: sh -c "python lib/database/init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8428 --reload"
+    command: sh -c "python lib/database/init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 4004 --reload"
 
   client:
     build:
       context: .
       dockerfile: apps/client/Dockerfile
     ports:
-      - "5317:5317"
+      - "3004:3004"
+    environment:
+      - VITE_API_TARGET=http://api:4004
     volumes:
       - ./:/repo
       - /repo/node_modules
       - /repo/apps/client/node_modules
     depends_on:
       - api
-    command: sh -c "corepack enable && pnpm --dir apps/client install && pnpm --dir apps/client run dev -- --host 0.0.0.0 --port 5317"
+    command: sh -c "corepack enable && pnpm --dir apps/client install && pnpm --dir apps/client run dev -- --host 0.0.0.0 --port 3004"

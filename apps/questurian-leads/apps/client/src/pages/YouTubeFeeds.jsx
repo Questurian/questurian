@@ -10,6 +10,7 @@ import {
   useUpdateYouTubeFeed,
   useYouTubeFeeds,
 } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
 
 export default function YouTubeFeeds() {
@@ -209,7 +210,7 @@ export default function YouTubeFeeds() {
         {feedsFetching && <span className="badge">Refreshing...</span>}
       </div>
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       {showForm && (
         <form className="form card" onSubmit={handleSubmit}>

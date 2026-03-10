@@ -1,4 +1,5 @@
 import os
+import sqlite3
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,19 +21,39 @@ from features.diario_correo_feeds.api.routes import router as diario_correo_feed
 from features.scrapes.api.routes import router as scrapes_router
 from features.youtube_feeds.api.routes import router as youtube_feeds_router
 from features.batch_fetch.api.routes import router as batch_fetch_router
-from lib.database.init_db import run_migrations
+from lib.database.init_db import DATABASE_PATH, run_migrations
 
 app = FastAPI(title="RSS Leads API")
 
 def _should_run_migrations() -> bool:
     return os.getenv("RUN_MIGRATIONS", "").strip().lower() in {"1", "true", "yes", "on"}
 
+
+def _database_needs_migrations() -> bool:
+    if not DATABASE_PATH.exists() or DATABASE_PATH.stat().st_size == 0:
+        return True
+
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name = 'categories'"
+        )
+        has_categories = cursor.fetchone() is not None
+        conn.close()
+        return not has_categories
+    except sqlite3.Error:
+        return True
+
 # Add CORS middleware
 origins_env = os.getenv("CORS_ALLOW_ORIGINS")
 if origins_env:
     allow_origins = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
 else:
-    allow_origins = ["http://localhost:3004", "http://localhost:3000", "http://localhost:4004"]
+    allow_origins = [
+        "http://localhost:3004",
+        "http://127.0.0.1:3004",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,7 +65,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def run_startup_migrations() -> None:
-    if _should_run_migrations():
+    if _should_run_migrations() or _database_needs_migrations():
         run_migrations()
 
 # Include all routers

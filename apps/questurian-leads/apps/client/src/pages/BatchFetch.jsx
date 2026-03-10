@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useBatchFetchCurrent, useBatchFetchJobs, useStartBatchFetch } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
 
 function normalizeDate(value) {
@@ -80,6 +81,14 @@ function formatStepSummary(step) {
   }
   try {
     const result = JSON.parse(step.result_json);
+    if (
+      result?.post_count !== undefined &&
+      result?.new_post_count !== undefined &&
+      result?.existing_post_count !== undefined
+    ) {
+      const base = `Posts: ${result.post_count} new, ${result.existing_post_count} existing, ${result.invalid_post_count ?? 0} invalid`;
+      return step.error_message ? `${base} - ${step.error_message}` : base;
+    }
     if (result?.lead_count !== undefined) {
       const base = `Leads: ${result.lead_count}`;
       return step.error_message ? `${base} - ${step.error_message}` : base;
@@ -177,7 +186,7 @@ export default function BatchFetch() {
 
       {isJobRunning && <span className="badge">Live updates every 5s</span>}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       {currentJob ? (
         <div className="card batch-job-card">

@@ -9,98 +9,10 @@ import {
   useTags,
   useTranslateLeads,
 } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
-
-const SUMMARY_SUFFIX_RE = /\s*The post\b[\s\S]*?\bfirst appeared on\b[\s\S]*$/i;
-
-// Language code to full name mapping (ISO 639-1)
-const LANGUAGE_NAMES = {
-  'af': 'Afrikaans',
-  'ar': 'Arabic',
-  'bg': 'Bulgarian',
-  'bn': 'Bengali',
-  'ca': 'Catalan',
-  'cs': 'Czech',
-  'cy': 'Welsh',
-  'da': 'Danish',
-  'de': 'German',
-  'el': 'Greek',
-  'en': 'English',
-  'eo': 'Esperanto',
-  'es': 'Spanish',
-  'et': 'Estonian',
-  'fa': 'Persian',
-  'fi': 'Finnish',
-  'fr': 'French',
-  'ga': 'Irish',
-  'gu': 'Gujarati',
-  'he': 'Hebrew',
-  'hi': 'Hindi',
-  'hr': 'Croatian',
-  'hu': 'Hungarian',
-  'id': 'Indonesian',
-  'is': 'Icelandic',
-  'it': 'Italian',
-  'ja': 'Japanese',
-  'kn': 'Kannada',
-  'ko': 'Korean',
-  'lt': 'Lithuanian',
-  'lv': 'Latvian',
-  'mk': 'Macedonian',
-  'ml': 'Malayalam',
-  'mr': 'Marathi',
-  'ne': 'Nepali',
-  'nl': 'Dutch',
-  'no': 'Norwegian',
-  'pa': 'Punjabi',
-  'pl': 'Polish',
-  'pt': 'Portuguese',
-  'ro': 'Romanian',
-  'ru': 'Russian',
-  'sk': 'Slovak',
-  'sl': 'Slovenian',
-  'so': 'Somali',
-  'sq': 'Albanian',
-  'sv': 'Swedish',
-  'sw': 'Swahili',
-  'ta': 'Tamil',
-  'te': 'Telugu',
-  'th': 'Thai',
-  'tl': 'Tagalog',
-  'tr': 'Turkish',
-  'uk': 'Ukrainian',
-  'ur': 'Urdu',
-  'vi': 'Vietnamese',
-  'zh': 'Chinese'
-};
-
-function getLanguageName(code) {
-  return LANGUAGE_NAMES[code] || code?.toUpperCase() || '';
-}
-
-function cleanLeadSummary(summary) {
-  if (!summary) return '';
-
-  if (typeof DOMParser === 'undefined') {
-    return summary
-      .replace(/<[^>]*>/g, ' ')
-      .replace(SUMMARY_SUFFIX_RE, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  const doc = new DOMParser().parseFromString(summary, 'text/html');
-  const paragraphs = Array.from(doc.body.querySelectorAll('p'))
-    .map(p => (p.textContent || '').trim())
-    .filter(Boolean);
-
-  const text = paragraphs.length ? paragraphs[0] : (doc.body.textContent || '');
-
-  return text
-    .replace(SUMMARY_SUFFIX_RE, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+import { getLanguageName } from '../utils/contentLanguage';
+import { cleanLeadSummary } from '../utils/leadSummary';
 
 export default function Leads() {
   const [filters, setFilters] = useState({
@@ -209,7 +121,7 @@ export default function Leads() {
 
       {leadsFetching && !leadsLoading && <div className="badge">Refreshing...</div>}
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       <div className="filters card">
         <h3>Filters</h3>

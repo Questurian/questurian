@@ -2,7 +2,8 @@
 
 This document tracks current scrape sources and provides a checklist/template
 for adding the next site. The pipeline is single-source (singleton) per site:
-one feed row per source, one fetch endpoint, and hard-coded parsing logic.
+one feed row per source, one fetch endpoint, source-specific parsers, and a
+shared runner/persistence layer in `apps/api/lib/scraping/`.
 
 ## Registry
 
@@ -12,6 +13,7 @@ one feed row per source, one fetch endpoint, and hard-coded parsing logic.
 - Tables: `el_comercio_feeds`, `el_comercio_posts`, `el_comercio_fetch_logs`
 - Fetch endpoint: `POST /el-comercio-feeds/fetch`
 - Unified scrapes content type: `el_comercio_post`
+- Runtime: Scrapy + Playwright (`scrapy-playwright`, Chromium required)
 
 ### Diario Correo
 - Feature folder: `apps/api/features/diario_correo_feeds/`
@@ -19,11 +21,12 @@ one feed row per source, one fetch endpoint, and hard-coded parsing logic.
 - Tables: `diario_correo_feeds`, `diario_correo_posts`, `diario_correo_fetch_logs`
 - Fetch endpoint: `POST /diario-correo-feeds/fetch`
 - Unified scrapes content type: `diario_correo_post`
+- Runtime: Scrapy first, HTML fallback second
 
 ## Pipeline Overview (Singleton)
 
 1. `POST /<site>-feeds/fetch` triggers the fetcher.
-2. Fetcher runs a spider (Scrapy or HTML fallback).
+2. Fetcher runs a spider through the shared scraper runner.
 3. Existing posts are preserved.
 4. Only new article URLs are inserted with translations and `approval_status='pending'`.
 5. Fetch log row is written; approvals happen in `/approval`.
@@ -43,6 +46,7 @@ apps/api/features/<site>_feeds/
     models.py
   service/
     __init__.py
+    parser.py
     spider.py
     fetcher.py
   __init__.py
@@ -68,8 +72,12 @@ app.include_router(<site>_feeds_router)
 ### 4) Implement fetcher and spider
 In `service/fetcher.py`:
 - `ensure_feed()` auto-creates a single feed row (category "Peru")
-- `fetch_<site>_feed()` runs the spider, skips existing URLs, inserts only new ones,
-  translates title/excerpt, and writes a fetch log.
+- `fetch_<site>_feed()` uses the shared helpers in `apps/api/lib/scraping/`
+  to run the spider, skip existing URLs, insert only new ones, translate
+  title/excerpt, and write a fetch log.
+
+In `service/parser.py`:
+- Keep source-specific parsing logic pure and testable from saved fixtures.
 
 In `service/spider.py`:
 - Scrapy spider that returns items with fields:
@@ -121,5 +129,13 @@ Scrapes <site> <section> and stores articles in SQLite.
 ## Notes
 - The fetch endpoint auto-creates a single feed row (category `Peru`).
 - Spider lives in `apps/api/features/<site>_feeds/service/spider.py`.
+- Parser lives in `apps/api/features/<site>_feeds/service/parser.py`.
 - Posts are stored in `<site>_posts`; logs in `<site>_fetch_logs`.
 ```
+
+## Verification
+
+- Fixture tests live in `apps/api/tests/` and should cover parser output and
+  preserve-plus-dedupe persistence.
+- Live smoke tests are opt-in via `RUN_LIVE_SCRAPE_TESTS=1` and should be run
+  after parser changes or source-selector updates.

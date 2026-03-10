@@ -20,7 +20,8 @@ To inspect:
 
 import scrapy
 from scrapy_playwright.page import PageMethod
-from typing import Dict, Any
+
+from features.el_comercio_feeds.service.parser import extract_archive_items
 
 
 class ElComercioGastronomiaSpider(scrapy.Spider):
@@ -68,73 +69,10 @@ class ElComercioGastronomiaSpider(scrapy.Spider):
         )
 
     def parse(self, response):
-        """
-        Parse article data from the page.
-
-        Selectors verified from actual El Comercio page structure:
-        - Container: .story-item
-        - Title: a.story-item__title
-        - URL: a.story-item__title::attr(href)
-        - Date: .story-item__date-time (format: DD/MM/YYYY)
-        - Image: img.story-item__img::attr(src)
-        - Excerpt: p.story-item__subtitle
-        """
-
-        # Get all article containers
-        articles = response.css('.story-item')
-
-        self.logger.info(f"Found {len(articles)} articles")
-
-        # Limit to first 15 articles
-        for article in articles[:15]:
-            try:
-                # Extract title
-                title = article.css('a.story-item__title::text').get()
-
-                # Extract URL
-                url = article.css('a.story-item__title::attr(href)').get()
-
-                # Make URL absolute if relative
-                if url and not url.startswith('http'):
-                    url = response.urljoin(url)
-
-                # Extract date (format: DD/MM/YYYY)
-                date_parts = article.css('.story-item__date-time::text').getall()
-                published_at = date_parts[0] if date_parts else None
-
-                # Extract image URL
-                image_url = article.css('img.story-item__img::attr(src)').get()
-
-                # Make image URL absolute if relative
-                if image_url and not image_url.startswith('http'):
-                    image_url = response.urljoin(image_url)
-
-                # Extract excerpt/description
-                excerpt = article.css('p.story-item__subtitle::text').get()
-
-                # Truncate excerpt to ~100 words (500 characters)
-                if excerpt:
-                    excerpt = excerpt.strip()[:500]
-
-                # Only yield if we have at least title and URL
-                if title and url:
-                    yield {
-                        'url': url,
-                        'title': title.strip() if title else None,
-                        'published_at': published_at,  # Format: DD/MM/YYYY
-                        'section': 'gastronomia',
-                        'image_url': image_url,
-                        'excerpt': excerpt,
-                        'language': 'es',
-                        'source': 'elcomercio'
-                    }
-                else:
-                    self.logger.warning(f"Skipping article - missing title or URL")
-
-            except Exception as e:
-                # Skip individual article failures
-                self.logger.error(f"Failed to parse article: {e}")
-                continue
+        items = extract_archive_items(response.text, response.url)
+        self.logger.info("Found %s El Comercio archive items", len(items))
+        for item in items[:15]:
+            yield item
 
     async def errback_close_page(self, failure):
         """Close Playwright page on error."""

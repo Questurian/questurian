@@ -11,10 +11,8 @@ from features.diario_correo_feeds.schema.models import (
 )
 from features.diario_correo_feeds.service.fetcher import (
     fetch_diario_correo_feed,
-    fetch_one,
-    fetch_all,
-    execute_query,
 )
+from lib.database import execute_query, fetch_all, fetch_one
 
 router = APIRouter(prefix="/diario-correo-feeds", tags=["diario-correo-feeds"])
 
@@ -152,9 +150,8 @@ def trigger_fetch():
     The scraper preserves existing rows and inserts only new article URLs.
     If no feed row exists yet, one is created with category "Peru".
     """
-    existing = ensure_feed()
-
     try:
+        existing = ensure_feed()
         result = fetch_diario_correo_feed(existing["id"])
         return {
             "diario_correo_feed_id": existing["id"],

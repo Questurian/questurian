@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
 
 export default function Categories() {
@@ -71,7 +72,7 @@ export default function Categories() {
         {isFetching && <span className="badge">Refreshing...</span>}
       </div>
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       {showForm && (
         <form className="form card" onSubmit={handleSubmit}>

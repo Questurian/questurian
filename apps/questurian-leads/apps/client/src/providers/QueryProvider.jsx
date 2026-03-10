@@ -8,8 +8,17 @@ const queryClient = new QueryClient({
       gcTime: 10 * 60 * 1000,
       retry: (failureCount, error) => {
         const status = error?.status;
+        const code = error?.code;
         const message = typeof error?.message === 'string' ? error.message : '';
-        if (status === 404 || status === 403 || message.includes('404') || message.includes('403')) {
+        if (
+          code === 'NETWORK_ERROR' ||
+          code === 'MISSING_TABLE' ||
+          status === 0 ||
+          status === 404 ||
+          status === 403 ||
+          message.includes('404') ||
+          message.includes('403')
+        ) {
           return false;
         }
         return failureCount < 3;

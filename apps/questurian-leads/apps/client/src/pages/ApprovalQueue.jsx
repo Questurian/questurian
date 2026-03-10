@@ -6,8 +6,9 @@ import {
   useApproveItem,
   useRejectItem,
 } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
-
+import { getLanguageName } from '../utils/contentLanguage';
 
 const CONTENT_TYPE_LABELS = {
   lead: 'Article',
@@ -16,70 +17,6 @@ const CONTENT_TYPE_LABELS = {
   el_comercio_post: 'El Comercio Article',
   diario_correo_post: 'Diario Correo Article'
 };
-
-const LANGUAGE_NAMES = {
-  'af': 'Afrikaans',
-  'ar': 'Arabic',
-  'bg': 'Bulgarian',
-  'bn': 'Bengali',
-  'ca': 'Catalan',
-  'cs': 'Czech',
-  'cy': 'Welsh',
-  'da': 'Danish',
-  'de': 'German',
-  'el': 'Greek',
-  'en': 'English',
-  'eo': 'Esperanto',
-  'es': 'Spanish',
-  'et': 'Estonian',
-  'fa': 'Persian',
-  'fi': 'Finnish',
-  'fr': 'French',
-  'ga': 'Irish',
-  'gu': 'Gujarati',
-  'he': 'Hebrew',
-  'hi': 'Hindi',
-  'hr': 'Croatian',
-  'hu': 'Hungarian',
-  'id': 'Indonesian',
-  'is': 'Icelandic',
-  'it': 'Italian',
-  'ja': 'Japanese',
-  'kn': 'Kannada',
-  'ko': 'Korean',
-  'lt': 'Lithuanian',
-  'lv': 'Latvian',
-  'mk': 'Macedonian',
-  'ml': 'Malayalam',
-  'mr': 'Marathi',
-  'ne': 'Nepali',
-  'nl': 'Dutch',
-  'no': 'Norwegian',
-  'pa': 'Punjabi',
-  'pl': 'Polish',
-  'pt': 'Portuguese',
-  'ro': 'Romanian',
-  'ru': 'Russian',
-  'sk': 'Slovak',
-  'sl': 'Slovenian',
-  'so': 'Somali',
-  'sq': 'Albanian',
-  'sv': 'Swedish',
-  'sw': 'Swahili',
-  'ta': 'Tamil',
-  'te': 'Telugu',
-  'th': 'Thai',
-  'tl': 'Tagalog',
-  'tr': 'Turkish',
-  'uk': 'Ukrainian',
-  'ur': 'Urdu',
-  'vi': 'Vietnamese',
-  'zh': 'Chinese'
-};
-
-function getLanguageName(code) {
-  return LANGUAGE_NAMES[code] || code?.toUpperCase() || '';
-}
 
 function formatDateTime(value) {
   if (!value) return 'Unknown';
@@ -154,7 +91,7 @@ export default function ApprovalQueue() {
         </div>
       </div>
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       {/* Filter Tabs */}
       <div className="filters card">

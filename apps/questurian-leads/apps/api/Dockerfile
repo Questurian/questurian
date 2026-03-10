@@ -11,6 +11,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt \
 
 COPY apps/api /app
 
-EXPOSE 8428
+EXPOSE 4004
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8428", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "4004", "--reload"]

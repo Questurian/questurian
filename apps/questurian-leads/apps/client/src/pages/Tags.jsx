@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCreateTag, useDeleteTag, useTags, useUpdateTag } from '../hooks';
+import QueryErrorCard from '../components/QueryErrorCard';
 import { useDialog } from '../providers/DialogProvider';
 
 export default function Tags() {
@@ -70,7 +71,7 @@ export default function Tags() {
         {isFetching && <span className="badge">Refreshing...</span>}
       </div>
 
-      {error && <div className="error">{error.message}</div>}
+      {error && <QueryErrorCard error={error} />}
 
       {showForm && (
         <form className="form card" onSubmit={handleSubmit}>

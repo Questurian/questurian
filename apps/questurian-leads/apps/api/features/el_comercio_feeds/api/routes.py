@@ -11,10 +11,8 @@ from features.el_comercio_feeds.schema.models import (
 )
 from features.el_comercio_feeds.service.fetcher import (
     fetch_el_comercio_feed,
-    fetch_one,
-    fetch_all,
-    execute_query
 )
+from lib.database import execute_query, fetch_all, fetch_one
 
 router = APIRouter(prefix="/el-comercio-feeds", tags=["el-comercio-feeds"])
 
@@ -157,9 +155,8 @@ def trigger_fetch():
     The scraper preserves existing rows and inserts only new article URLs.
     If no feed row exists yet, one is created with category "Peru".
     """
-    existing = ensure_feed()
-
     try:
+        existing = ensure_feed()
         result = fetch_el_comercio_feed(existing["id"])
         return {
             "el_comercio_feed_id": existing["id"],
