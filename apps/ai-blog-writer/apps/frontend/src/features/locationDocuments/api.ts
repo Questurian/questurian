@@ -33,6 +33,10 @@ function toAiDraftPayload(draft: LocationDocumentDraft): Record<string, unknown>
   const payloadDraft: Record<string, unknown> = { ...sanitizedDraft }
   delete payloadDraft.draftId
   delete payloadDraft.payloadId
+  delete payloadDraft.currentPayloadSignature
+  delete payloadDraft.lastPayloadSyncSignature
+  delete payloadDraft.lastPayloadSyncAt
+  delete payloadDraft.hasUnsyncedPayloadChanges
   delete payloadDraft.editorModelName
   delete payloadDraft.aiSourceNotes
   delete payloadDraft.updatedAt

@@ -7,14 +7,6 @@ import type { LocationDocumentDraft, LocationIndexRow } from '../types'
 import { groupLocationIndexRowsByCountry, summarizeLocationIndexRow } from '../utils'
 import '../styles.css'
 
-type LocationIndexFilters = {
-  level: string
-  countryName: string
-  cityName: string
-  neighborhoodName: string
-  locationKey: string
-}
-
 function formatDate(value?: string): string {
   if (!value) return 'Unknown'
   const date = new Date(value)
@@ -28,33 +20,54 @@ function formatDate(value?: string): string {
   })
 }
 
-function summarizeDraft(draft: LocationDocumentDraft): string {
-  const parts = [draft.countryName, draft.cityName, draft.neighborhoodName].filter((value) => value.trim().length > 0)
-  if (parts.length > 0) {
-    return parts.join(' / ')
-  }
-
-  return draft.country || 'Untitled draft'
-}
-
 function formatCount(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`
+}
+
+function formatLevelLabel(level: LocationIndexRow['level']): string {
+  return level.charAt(0).toUpperCase() + level.slice(1)
+}
+
+function getLinkedDraftLabel(draft: LocationDocumentDraft): string {
+  return `Local changes saved ${formatDate(draft.updatedAt)}`
+}
+
+function getLinkedDraftStatus(draft: LocationDocumentDraft): {
+  pillLabel?: string
+  pillClassName?: string
+  title: string
+  detail: string
+} {
+  if (draft.hasUnsyncedPayloadChanges) {
+    return {
+      pillLabel: 'Resync needed',
+      pillClassName: 'is-attention',
+      title: 'Unsynced changes',
+      detail: `Local changes were made after the last Payload sync${draft.lastPayloadSyncAt ? ` (${formatDate(draft.lastPayloadSyncAt)})` : ''}.`,
+    }
+  }
+
+  if (draft.lastPayloadSyncAt) {
+    return {
+      title: 'Local changes saved',
+      detail: `Payload synced ${formatDate(draft.lastPayloadSyncAt)}.`,
+    }
+  }
+
+  return {
+    title: 'Local changes saved',
+    detail: getLinkedDraftLabel(draft),
+  }
 }
 
 export default function LocationDocumentsPage() {
   const { token } = useAuth()
   const [payloadRows, setPayloadRows] = useState<LocationIndexRow[]>([])
   const [localDrafts, setLocalDrafts] = useState<LocationDocumentDraft[]>(() => listDrafts())
-  const [filters, setFilters] = useState<LocationIndexFilters>({
-    level: '',
-    countryName: '',
-    cityName: '',
-    neighborhoodName: '',
-    locationKey: '',
-  })
+  const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const deferredFilters = useDeferredValue(filters)
+  const deferredSearchQuery = useDeferredValue(searchQuery)
 
   useEffect(() => {
     const refreshDrafts = () => setLocalDrafts(listDrafts())
@@ -103,25 +116,38 @@ export default function LocationDocumentsPage() {
   const sortedDrafts = useMemo(() => {
     return [...localDrafts].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   }, [localDrafts])
+  const localOnlyDrafts = useMemo(
+    () => sortedDrafts.filter((draft) => !(typeof draft.payloadId === 'number' && Number.isFinite(draft.payloadId))),
+    [sortedDrafts],
+  )
+  const payloadDraftMap = useMemo(() => {
+    return new Map(
+      sortedDrafts
+        .filter((draft): draft is LocationDocumentDraft & { payloadId: number } => (
+          typeof draft.payloadId === 'number' && Number.isFinite(draft.payloadId)
+        ))
+        .map((draft) => [draft.payloadId, draft]),
+    )
+  }, [sortedDrafts])
 
   const filteredPayloadRows = useMemo(() => {
-    const normalized = {
-      level: deferredFilters.level.trim().toLowerCase(),
-      countryName: deferredFilters.countryName.trim().toLowerCase(),
-      cityName: deferredFilters.cityName.trim().toLowerCase(),
-      neighborhoodName: deferredFilters.neighborhoodName.trim().toLowerCase(),
-      locationKey: deferredFilters.locationKey.trim().toLowerCase(),
-    }
+    const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase()
+    if (!normalizedSearchQuery) return payloadRows
 
     return payloadRows.filter((row) => {
-      if (normalized.level && row.level !== normalized.level) return false
-      if (normalized.countryName && !(row.countryName || '').toLowerCase().includes(normalized.countryName)) return false
-      if (normalized.cityName && !(row.cityName || '').toLowerCase().includes(normalized.cityName)) return false
-      if (normalized.neighborhoodName && !(row.neighborhoodName || '').toLowerCase().includes(normalized.neighborhoodName)) return false
-      if (normalized.locationKey && !row.locationKey.toLowerCase().includes(normalized.locationKey)) return false
-      return true
+      const searchableText = [
+        summarizeLocationIndexRow(row),
+        row.countryName || '',
+        row.cityName || '',
+        row.neighborhoodName || '',
+        formatLevelLabel(row.level),
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      return searchableText.includes(normalizedSearchQuery)
     })
-  }, [deferredFilters, payloadRows])
+  }, [deferredSearchQuery, payloadRows])
 
   const payloadCountryGroups = useMemo(
     () => groupLocationIndexRowsByCountry(filteredPayloadRows),
@@ -144,10 +170,12 @@ export default function LocationDocumentsPage() {
     )
   }, [payloadCountryGroups])
 
-  const discardDraft = (draftId: string) => {
-    const confirmed = window.confirm('Discard this local draft? This cannot be undone.')
+  const discardUnsupportedLocalRecords = () => {
+    const confirmed = window.confirm('Discard unsupported local-only records? This cannot be undone.')
     if (!confirmed) return
-    removeDraft(draftId)
+    for (const record of localOnlyDrafts) {
+      removeDraft(record.draftId)
+    }
     setLocalDrafts(listDrafts())
   }
 
@@ -158,144 +186,57 @@ export default function LocationDocumentsPage() {
           <p className="ldb-eyebrow">Questurian Studio</p>
           <h1>Location Documents</h1>
           <p className="ldb-lede">
-            Create and update Payload `locations` documents with the full guide schema, local drafts, and AI-assisted generation.
+            Review and update existing Payload `locations` documents with local change tracking and AI-assisted editing.
           </p>
         </div>
         <div className="ldb-hero-actions">
           <Link className="ldb-btn ldb-btn-secondary" to="/">
             Back Home
           </Link>
-          <Link className="ldb-btn" to="/location-documents/builder">
-            New Location
-          </Link>
         </div>
       </header>
 
-      <section className="ldb-panel">
-        <div className="ldb-panel-header">
-          <div>
-            <h2>Payload Search</h2>
-            <p>Filter the live `locations` collection before opening a document in the builder.</p>
-          </div>
-        </div>
-        <div className="ldb-filter-grid">
-          <label className="ldb-field">
-            <span className="ldb-label">Level</span>
-            <select
-              className="ldb-select"
-              value={filters.level || ''}
-              onChange={(event) => setFilters((current) => ({ ...current, level: event.target.value }))}
-            >
-              <option value="">All levels</option>
-              <option value="country">Country</option>
-              <option value="city">City</option>
-              <option value="neighborhood">Neighborhood</option>
-            </select>
-          </label>
-          <label className="ldb-field">
-            <span className="ldb-label">Country Name</span>
-            <input
-              className="ldb-input"
-              type="search"
-              value={filters.countryName || ''}
-              onChange={(event) => setFilters((current) => ({ ...current, countryName: event.target.value }))}
-            />
-          </label>
-          <label className="ldb-field">
-            <span className="ldb-label">City Name</span>
-            <input
-              className="ldb-input"
-              type="search"
-              value={filters.cityName || ''}
-              onChange={(event) => setFilters((current) => ({ ...current, cityName: event.target.value }))}
-            />
-          </label>
-          <label className="ldb-field">
-            <span className="ldb-label">Neighborhood Name</span>
-            <input
-              className="ldb-input"
-              type="search"
-              value={filters.neighborhoodName || ''}
-              onChange={(event) => setFilters((current) => ({ ...current, neighborhoodName: event.target.value }))}
-            />
-          </label>
-          <label className="ldb-field">
-            <span className="ldb-label">Location Key</span>
-            <input
-              className="ldb-input"
-              type="search"
-              value={filters.locationKey || ''}
-              onChange={(event) => setFilters((current) => ({ ...current, locationKey: event.target.value }))}
-            />
-          </label>
-        </div>
-      </section>
+      <div className="ldb-search-strip">
+        <label className="ldb-search-field" htmlFor="location-documents-search">
+          <span className="ldb-search-label">Search locations</span>
+          <input
+            id="location-documents-search"
+            className="ldb-input ldb-search-input"
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by country, city, or neighborhood"
+          />
+        </label>
+      </div>
 
-      <section className="ldb-panel">
-        <div className="ldb-panel-header">
-          <div>
-            <h2>Local Drafts ({sortedDrafts.length})</h2>
-            <p>Autosaved drafts live in this browser until you create or update the Payload document.</p>
-          </div>
-        </div>
-
-        {sortedDrafts.length === 0 ? (
-          <div className="ldb-empty">
-            <p>No local drafts saved yet.</p>
-            <p>Start a new location document in the builder and it will autosave here.</p>
-          </div>
-        ) : (
-          <div className="ldb-table-wrap">
-            <table className="ldb-table">
-              <thead>
-                <tr>
-                  <th>Location</th>
-                  <th>Level</th>
-                  <th>Source</th>
-                  <th>Updated</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedDrafts.map((draft) => (
-                  <tr key={draft.draftId}>
-                    <td>{summarizeDraft(draft)}</td>
-                    <td>
-                      <span className={`ldb-status-chip is-${draft.level}`}>{draft.level}</span>
-                    </td>
-                    <td>{draft.payloadId ? `Payload #${draft.payloadId}` : 'Local only'}</td>
-                    <td>{formatDate(draft.updatedAt)}</td>
-                    <td>
-                      <div className="ldb-table-actions">
-                        <Link className="ldb-link" to={`/location-documents/builder?draftId=${encodeURIComponent(draft.draftId)}`}>
-                          Resume
-                        </Link>
-                        <button type="button" className="ldb-danger-link" onClick={() => discardDraft(draft.draftId)}>
-                          Discard
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="ldb-panel">
-        <div className="ldb-panel-header">
-          <div>
-            <h2>Payload Documents ({filteredPayloadRows.length})</h2>
-            <p>Browse the live `locations` collection by country first, then drill into city and neighborhood records.</p>
-          </div>
-          {!isLoading && !error && filteredPayloadRows.length > 0 ? (
-            <div className="ldb-country-summary" aria-label="Payload document summary">
-              <span className="ldb-country-summary-pill">{formatCount(payloadCountryGroups.length, 'country')}</span>
-              <span className="ldb-country-summary-pill">{formatCount(payloadCountryStats.cityDocs, 'city')}</span>
-              <span className="ldb-country-summary-pill">{formatCount(payloadCountryStats.neighborhoodDocs, 'neighborhood')}</span>
+      {localOnlyDrafts.length > 0 ? (
+        <section className="ldb-panel">
+          <div className="ldb-panel-header">
+            <div>
+              <h2>Unsupported Local Records ({localOnlyDrafts.length})</h2>
+              <p>
+                This editor now works only against existing Payload locations. Older local-only records are hidden from the main workflow because they can create conflicts.
+              </p>
             </div>
-          ) : null}
+            <button type="button" className="ldb-btn ldb-btn-secondary" onClick={discardUnsupportedLocalRecords}>
+              Discard Hidden Records
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="ldb-panel">
+        <div className="ldb-panel-header">
+          <div>
+            <h2>Payload Locations ({filteredPayloadRows.length})</h2>
+            <p>
+              Browse the live `locations` collection by country first, then open or resume the local edits tied to each document.
+              {!isLoading && !error && filteredPayloadRows.length > 0
+                ? ` ${formatCount(payloadCountryGroups.length, 'country')}, ${formatCount(payloadCountryStats.cityDocs, 'city')}, ${formatCount(payloadCountryStats.neighborhoodDocs, 'neighborhood')}.`
+                : ''}
+            </p>
+          </div>
         </div>
 
         {isLoading ? <p className="ldb-placeholder">Loading locations...</p> : null}
@@ -309,111 +250,134 @@ export default function LocationDocumentsPage() {
             </div>
           ) : (
             <div className="ldb-country-groups">
-              {payloadCountryGroups.map((countryGroup) => (
-                <article key={countryGroup.countryKey} className="ldb-country-group">
-                  <div className="ldb-country-group-header">
-                    <div className="ldb-country-group-copy">
-                      <p className="ldb-country-group-kicker">Country group</p>
-                      <div className="ldb-country-group-title-row">
-                        <h3>{countryGroup.countryLabel}</h3>
-                        <span className="ldb-country-group-count">
-                          {formatCount(countryGroup.rows.length, 'document')}
-                        </span>
-                      </div>
-                      <p>
-                        {countryGroup.cityGroups.length > 0
-                          ? `Includes ${formatCount(countryGroup.cityGroups.length, 'city cluster')}.`
-                          : 'Country-level record only.'}
-                      </p>
-                    </div>
-                    <div className="ldb-country-group-stats">
-                      <span className="ldb-country-summary-pill">
-                        {countryGroup.countryRow ? 'Country doc ready' : 'No country doc'}
-                      </span>
-                      <span className="ldb-country-summary-pill">{formatCount(countryGroup.cityCount, 'city')}</span>
-                      <span className="ldb-country-summary-pill">
-                        {formatCount(countryGroup.neighborhoodCount, 'neighborhood')}
-                      </span>
-                    </div>
-                  </div>
+              {payloadCountryGroups.map((countryGroup) => {
+                const linkedCountryDraft = countryGroup.countryRow
+                  ? payloadDraftMap.get(countryGroup.countryRow.id)
+                  : undefined
+                const linkedCountrySyncStatus = linkedCountryDraft
+                  ? getLinkedDraftStatus(linkedCountryDraft)
+                  : null
 
-                  {countryGroup.countryRow ? (
-                    <div className="ldb-country-featured-doc">
-                      <div className="ldb-country-featured-doc-main">
-                        <span className="ldb-mini-label">Country document</span>
-                        <strong>{summarizeLocationIndexRow(countryGroup.countryRow)}</strong>
+                return (
+                  <article key={countryGroup.countryKey} className="ldb-country-group">
+                    <div className="ldb-country-group-header">
+                      <div className="ldb-country-group-copy">
+                        <p className="ldb-country-group-kicker">Country group</p>
+                        <div className="ldb-country-group-title-row">
+                          <h3>{countryGroup.countryLabel}</h3>
+                        </div>
                         <p>
-                          <span>{countryGroup.countryRow.locationKey}</span>
-                          <span>Updated {formatDate(countryGroup.countryRow.updatedAt)}</span>
+                          {countryGroup.cityGroups.length > 0
+                            ? `${formatCount(countryGroup.rows.length, 'document')}. ${formatCount(countryGroup.cityGroups.length, 'city cluster')}, ${formatCount(countryGroup.cityCount, 'city')}, ${formatCount(countryGroup.neighborhoodCount, 'neighborhood')}.`
+                            : `${formatCount(countryGroup.rows.length, 'document')}. Country-level record only.`}
                         </p>
                       </div>
-                      <div className="ldb-country-featured-doc-actions">
-                        <span className="ldb-status-chip is-country">country</span>
-                        <Link className="ldb-link" to={`/location-documents/builder?id=${countryGroup.countryRow.id}`}>
-                          Edit country
-                        </Link>
+                    </div>
+
+                    {countryGroup.countryRow ? (
+                      <div className="ldb-country-featured-doc">
+                        <div className="ldb-country-featured-doc-main">
+                          <span className="ldb-mini-label">Country document</span>
+                          <strong>{summarizeLocationIndexRow(countryGroup.countryRow)}</strong>
+                          <p>
+                            <span>Updated {formatDate(countryGroup.countryRow.updatedAt)}</span>
+                          </p>
+                          {linkedCountrySyncStatus ? (
+                            <p>
+                              <span>{linkedCountrySyncStatus.title}</span>
+                              <span>{linkedCountrySyncStatus.detail}</span>
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="ldb-country-featured-doc-actions">
+                          {linkedCountrySyncStatus?.pillLabel ? (
+                            <span className={`ldb-country-summary-pill${linkedCountrySyncStatus.pillClassName ? ` ${linkedCountrySyncStatus.pillClassName}` : ''}`}>
+                              {linkedCountrySyncStatus.pillLabel}
+                            </span>
+                          ) : null}
+                          <Link
+                            className="ldb-link"
+                            to={linkedCountryDraft
+                              ? `/location-documents/builder?draftId=${encodeURIComponent(linkedCountryDraft.draftId)}`
+                              : `/location-documents/builder?id=${countryGroup.countryRow.id}`}
+                          >
+                            {linkedCountryDraft ? 'Resume Edits' : 'Edit'}
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
+                    ) : null}
 
-                  {countryGroup.cityGroups.length > 0 ? (
-                    <div className="ldb-city-groups">
-                      {countryGroup.cityGroups.map((cityGroup) => (
-                        <section key={`${countryGroup.countryKey}-${cityGroup.cityKey}`} className="ldb-city-group">
-                          <div className="ldb-city-group-header">
-                            <div>
-                              <p className="ldb-mini-label">City cluster</p>
-                              <h4>{cityGroup.cityLabel}</h4>
-                              <p>
-                                {cityGroup.cityRow
-                                  ? `${formatCount(cityGroup.neighborhoodRows.length, 'neighborhood')} linked to this city.`
-                                  : `Neighborhood records only in ${cityGroup.cityLabel}.`}
-                              </p>
-                            </div>
-                            <div className="ldb-city-group-stats">
-                              {cityGroup.cityRow ? (
-                                <span className="ldb-country-summary-pill">City doc ready</span>
-                              ) : (
-                                <span className="ldb-country-summary-pill">City doc missing</span>
-                              )}
-                              <span className="ldb-country-summary-pill">
-                                {formatCount(cityGroup.neighborhoodRows.length, 'neighborhood')}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="ldb-doc-grid">
-                            {cityGroup.rows.map((row) => (
-                              <div key={row.id} className="ldb-doc-card">
-                                <div className="ldb-doc-card-main">
-                                  <div className="ldb-doc-card-title-row">
-                                    <strong>{summarizeLocationIndexRow(row)}</strong>
-                                    <span className={`ldb-status-chip is-${row.level}`}>{row.level}</span>
-                                  </div>
-                                  <p className="ldb-doc-card-key">{row.locationKey}</p>
-                                  <p className="ldb-doc-card-meta">
-                                    <span>Updated {formatDate(row.updatedAt)}</span>
-                                    {row.level !== 'country' ? (
-                                      <span>
-                                        {[row.countryName, row.cityName, row.neighborhoodName]
-                                          .filter((value): value is string => Boolean(value?.trim()))
-                                          .join(' / ')}
-                                      </span>
-                                    ) : null}
-                                  </p>
-                                </div>
-                                <Link className="ldb-link" to={`/location-documents/builder?id=${row.id}`}>
-                                  Edit
-                                </Link>
+                    {countryGroup.cityGroups.length > 0 ? (
+                      <div className="ldb-city-groups">
+                        {countryGroup.cityGroups.map((cityGroup) => (
+                          <section key={`${countryGroup.countryKey}-${cityGroup.cityKey}`} className="ldb-city-group">
+                            <div className="ldb-city-group-header">
+                              <div>
+                                <p className="ldb-mini-label">City cluster</p>
+                                <h4>{cityGroup.cityLabel}</h4>
+                                <p>
+                                  {cityGroup.cityRow
+                                    ? `Official city document available. ${formatCount(cityGroup.neighborhoodRows.length, 'neighborhood')} linked to this city.`
+                                    : `Neighborhood records only in ${cityGroup.cityLabel}.`}
+                                </p>
                               </div>
-                            ))}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  ) : null}
-                </article>
-              ))}
+                            </div>
+
+                            <div className="ldb-doc-grid">
+                              {cityGroup.rows.map((row) => {
+                                const linkedDraft = payloadDraftMap.get(row.id)
+                                const syncStatus = linkedDraft ? getLinkedDraftStatus(linkedDraft) : null
+
+                                return (
+                                  <div key={row.id} className="ldb-doc-card">
+                                    <div className="ldb-doc-card-main">
+                                      <p className="ldb-doc-card-level">{formatLevelLabel(row.level)}</p>
+                                      <div className="ldb-doc-card-title-row">
+                                        <strong>{summarizeLocationIndexRow(row)}</strong>
+                                      </div>
+                                      <p className="ldb-doc-card-meta">
+                                        <span>Updated {formatDate(row.updatedAt)}</span>
+                                        {row.level !== 'country' ? (
+                                          <span>
+                                            {[row.countryName, row.cityName, row.neighborhoodName]
+                                              .filter((value): value is string => Boolean(value?.trim()))
+                                              .join(' / ')}
+                                          </span>
+                                        ) : null}
+                                      </p>
+                                      {linkedDraft ? (
+                                        <p className="ldb-doc-card-meta">
+                                          <span>{syncStatus?.title}</span>
+                                          <span>{syncStatus?.detail}</span>
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div className="ldb-doc-card-actions">
+                                      {syncStatus?.pillLabel ? (
+                                        <span className={`ldb-country-summary-pill${syncStatus?.pillClassName ? ` ${syncStatus.pillClassName}` : ''}`}>
+                                          {syncStatus?.pillLabel}
+                                        </span>
+                                      ) : null}
+                                      <Link
+                                        className="ldb-link"
+                                        to={linkedDraft
+                                          ? `/location-documents/builder?draftId=${encodeURIComponent(linkedDraft.draftId)}`
+                                          : `/location-documents/builder?id=${row.id}`}
+                                      >
+                                        {linkedDraft ? 'Resume Edits' : 'Edit'}
+                                      </Link>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    ) : null}
+                  </article>
+                )
+              })}
             </div>
           )
         ) : null}

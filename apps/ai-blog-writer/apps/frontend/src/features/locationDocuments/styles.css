@@ -80,6 +80,31 @@
   gap: var(--space-3);
 }
 
+.ldb-search-strip {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.ldb-search-field {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.ldb-search-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(72, 62, 52, 0.72);
+}
+
+.ldb-search-input {
+  min-height: 3.1rem;
+  font-size: 1rem;
+}
+
 .ldb-builder-actions {
   display: grid;
   gap: var(--space-4);
@@ -197,12 +222,25 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.ldb-builder-action-grid .ldb-btn {
+.ldb-builder-action-grid .ldb-btn,
+.ldb-builder-action-grid .payload-action-btn {
   width: 100%;
 }
 
-.ldb-builder-action-grid--primary .ldb-btn {
+.ldb-builder-action-grid--primary .ldb-btn,
+.ldb-builder-action-grid--primary .payload-action-btn {
   min-height: 3rem;
+}
+
+.ldb-builder-actions-warning {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(184, 68, 68, 0.28);
+  background: rgba(184, 68, 68, 0.16);
+  color: #fff0f0;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 .ldb-builder-actions-note {
@@ -1035,6 +1073,16 @@
   font-weight: 700;
 }
 
+.ldb-country-summary-pill.is-attention {
+  background: rgba(184, 68, 68, 0.14);
+  color: #8b1f1f;
+}
+
+.ldb-country-summary-pill.is-success {
+  background: rgba(55, 126, 85, 0.14);
+  color: #215a39;
+}
+
 .ldb-country-group-count {
   background: linear-gradient(135deg, rgba(216, 157, 77, 0.18), rgba(201, 111, 54, 0.14));
   color: #6b3b1f;
@@ -1175,11 +1223,28 @@
   background: rgba(255, 255, 255, 0.94);
 }
 
+.ldb-doc-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 .ldb-doc-card-title-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+.ldb-doc-card-level {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(72, 62, 52, 0.62);
 }
 
 .ldb-doc-card-title-row strong {
@@ -1272,6 +1337,23 @@
 .ldb-error {
   color: var(--error);
   background: var(--error-soft);
+}
+
+.ldb-local-draft-groups {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ldb-local-draft-group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ldb-local-draft-group-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .ldb-ai-modal-backdrop {

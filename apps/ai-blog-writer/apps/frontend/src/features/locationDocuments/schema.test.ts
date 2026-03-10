@@ -4,13 +4,17 @@ import {
   buildDraftFromPayloadDoc,
   buildLocationHierarchyTitle,
   buildPayloadLocationBody,
+  buildPayloadSyncSignature,
   collectUnresolvedHintWarnings,
   createEmptyLocationDraft,
   getVisibleLocationSections,
+  markDraftAsPayloadSynced,
   preserveDraftRelationshipHints,
+  refreshDraftPayloadSyncState,
   resolveDraftHints,
   resolveLocationDraftRef,
   sanitizeLocationDraftShape,
+  validateDraft,
 } from './schema'
 import type { CurrencyOption, LocationOption } from './types'
 
@@ -31,6 +35,42 @@ describe('locationDocuments schema helpers', () => {
 
     expect(monthlyStatsField?.type).toBe('array')
     expect(monthlyStatsField?.type === 'array' ? monthlyStatsField.aiEnabled : undefined).toBe(true)
+  })
+
+  it('blocks payload sync when city monthly stats are empty', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'city'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+
+    expect(validateDraft(draft)).toBe(
+      'Weather > Monthly Stats must include at least one month before syncing to Payload.',
+    )
+  })
+
+  it('blocks payload sync when a monthly stats row has no values', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'city'
+    draft.country = 'Peru'
+    draft.city = 'Lima'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.guide.core.weather.monthlyStats = [
+      {
+        month: 'jan',
+        avgHighC: null,
+        avgLowC: null,
+        rainfallMm: null,
+        rainDays: null,
+        sunshineHours: null,
+      },
+    ]
+
+    expect(validateDraft(draft)).toBe(
+      'Weather > Monthly Stats row 1 needs at least one weather value.',
+    )
   })
 
   it('shows only country sections for country-level drafts', () => {
@@ -515,5 +555,77 @@ describe('locationDocuments schema helpers', () => {
     expect(draft.guide.core.moneyHandling.exchangeRateNotes).toBe(
       'ATMs usually give better rates than airport kiosks.',
     )
+  })
+
+  it('marks payload-backed drafts as synced and flips to resync-needed after edits', () => {
+    const draft = createEmptyLocationDraft()
+    draft.payloadId = 91
+    draft.level = 'city'
+    draft.country = 'peru'
+    draft.city = 'lima'
+    draft.countryName = 'Peru'
+    draft.cityName = 'Lima'
+    draft.guide.core.weather.monthlyStats = [
+      {
+        month: 'jan',
+        avgHighC: 28,
+        avgLowC: 22,
+        rainfallMm: 2,
+        rainDays: 1,
+        sunshineHours: 220,
+      },
+    ]
+    draft.guide.core.headline = 'City overview'
+
+    const syncedDraft = markDraftAsPayloadSynced(draft, '2026-03-09T12:00:00.000Z')
+
+    expect(syncedDraft.hasUnsyncedPayloadChanges).toBe(false)
+    expect(syncedDraft.currentPayloadSignature).toBeTruthy()
+    expect(syncedDraft.currentPayloadSignature).toBe(syncedDraft.lastPayloadSyncSignature)
+
+    const editedDraft = createEmptyLocationDraft()
+    Object.assign(editedDraft, syncedDraft)
+    editedDraft.guide = structuredClone(syncedDraft.guide)
+    editedDraft.guide.core.headline = 'Updated city overview'
+
+    const refreshedDraft = refreshDraftPayloadSyncState(editedDraft)
+
+    expect(refreshedDraft.hasUnsyncedPayloadChanges).toBe(true)
+    expect(refreshedDraft.currentPayloadSignature).not.toBe(refreshedDraft.lastPayloadSyncSignature)
+  })
+
+  it('builds a stable payload sync signature for payload-backed drafts loaded from payload', () => {
+    const draft = buildDraftFromPayloadDoc({
+      id: 92,
+      level: 'city',
+      country: 'peru',
+      city: 'lima',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      locationKey: 'peru|lima',
+      updatedAt: '2026-03-09T12:00:00.000Z',
+      guide: {
+        core: {
+          headline: 'Lima overview',
+          weather: {
+            monthlyStats: [
+              {
+                month: 'jan',
+                avgHighC: 28,
+                avgLowC: 22,
+                rainfallMm: 2,
+                rainDays: 1,
+                sunshineHours: 220,
+              },
+            ],
+          },
+        },
+      },
+    })
+
+    expect(draft.hasUnsyncedPayloadChanges).toBe(false)
+    expect(draft.currentPayloadSignature).toBe(buildPayloadSyncSignature(draft))
+    expect(draft.currentPayloadSignature).toBe(draft.lastPayloadSyncSignature)
+    expect(draft.lastPayloadSyncAt).toBe('2026-03-09T12:00:00.000Z')
   })
 })

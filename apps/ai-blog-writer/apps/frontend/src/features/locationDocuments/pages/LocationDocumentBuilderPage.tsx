@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import payloadLogoUrl from '../../../assets/payload-logo.svg?url'
 import { EDITOR_ASSIST_MODEL_OPTIONS } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
 import {
-  createLocation,
   fetchCurrencyOptions,
   fetchLocationById,
   fetchLocationOptions,
@@ -19,14 +19,15 @@ import {
   buildDraftFromPayloadDoc,
   buildPayloadLocationBody,
   collectUnresolvedHintWarnings,
-  createEmptyLocationDocumentDraft,
   getVisibleLocationSections,
+  markDraftAsPayloadSynced,
   preserveDraftRelationshipHints,
+  refreshDraftPayloadSyncState,
   resolveDraftHints,
   resolveLocationDraftRef,
   validateDraft
 } from '../schema'
-import { findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../storage'
+import { findDraftByDraftId, findDraftByPayloadId, removeDraft, saveDraft } from '../storage'
 import type {
   ArrayFieldDefinition,
   LocationDocumentDraft,
@@ -160,7 +161,13 @@ export default function LocationDocumentBuilderPage() {
         if (draftIdParam) {
           const localDraft = findDraftByDraftId(draftIdParam)
           if (cancelled) return
-          setDraft(localDraft || createEmptyLocationDocumentDraft())
+          if (localDraft?.payloadId) {
+            setDraft(localDraft)
+            return
+          }
+
+          setDraft(null)
+          setInitializationError('Open an existing Payload location from the list. This editor does not create new location records.')
           return
         }
 
@@ -168,6 +175,9 @@ export default function LocationDocumentBuilderPage() {
           const localDraft = findDraftByPayloadId(payloadId)
           if (localDraft) {
             if (cancelled) return
+            if (draftIdParam !== localDraft.draftId) {
+              setSearchParams({ draftId: localDraft.draftId }, { replace: true })
+            }
             setDraft(localDraft)
             return
           }
@@ -179,7 +189,8 @@ export default function LocationDocumentBuilderPage() {
         }
 
         if (cancelled) return
-        setDraft(createEmptyLocationDocumentDraft())
+        setDraft(null)
+        setInitializationError('Open an existing Payload location from the list. This editor does not create new location records.')
       } catch (err: unknown) {
         if (cancelled) return
         const errorMessage = err instanceof Error ? err.message : 'Failed to load builder data'
@@ -204,7 +215,7 @@ export default function LocationDocumentBuilderPage() {
     return () => {
       cancelled = true
     }
-  }, [draftIdParam, payloadId, payloadIdParam, token])
+  }, [draftIdParam, payloadId, payloadIdParam, setSearchParams, token])
 
   useEffect(() => {
     if (!token) return
@@ -291,7 +302,8 @@ export default function LocationDocumentBuilderPage() {
   useEffect(() => {
     if (!draft) return
 
-    const resolved = resolveDraftHints(draft, locations, currencies)
+    let resolved = resolveDraftHints(draft, locations, currencies)
+    resolved = refreshDraftPayloadSyncState(resolved, locations, currencies)
     if (JSON.stringify(resolved) !== JSON.stringify(draft)) {
       setDraft(resolved)
     }
@@ -305,18 +317,19 @@ export default function LocationDocumentBuilderPage() {
   const activeSection =
     visibleSections.find((section) => section.id === activeSectionId) ||
     visibleSections[0]
+  const syncValidationError = draft ? validateDraft(draft) : null
+  const requiresPayloadResync = Boolean(draft?.payloadId && draft.hasUnsyncedPayloadChanges)
+  const payloadSyncTimestamp = draft?.lastPayloadSyncAt
   const currentLocationRef = useMemo(() => {
     if (!draft) return null
     return resolveLocationDraftRef(draft, locations)
   }, [draft, locations])
   const modeLabel = draft?.payloadId
     ? 'Editing Payload'
-    : draftIdParam
-      ? 'Draft'
-      : 'New'
+    : 'Unavailable'
   const headerTitle = useMemo(() => {
-    if (!draft) return 'New Location Document'
-    return buildLocationHierarchyTitle(draft) || 'New Location Document'
+    if (!draft) return 'Location Editor'
+    return buildLocationHierarchyTitle(draft) || 'Location Editor'
   }, [draft])
   const activeAiPathKey = useMemo(() => {
     if (!activeAiRun) return null
@@ -359,7 +372,7 @@ export default function LocationDocumentBuilderPage() {
   const handleSaveDraft = useCallback(() => {
     if (!draft) return
     saveDraft(draft)
-    setResult('Saved local draft in this browser.')
+    setResult('Saved local changes in this browser.')
     setError(null)
   }, [draft])
 
@@ -371,6 +384,10 @@ export default function LocationDocumentBuilderPage() {
     setResult(null)
 
     try {
+      if (!draft.payloadId) {
+        throw new Error('This editor only updates existing Payload location records.')
+      }
+
       const validationError = validateDraft(draft)
       if (validationError) {
         throw new Error(validationError)
@@ -397,16 +414,20 @@ export default function LocationDocumentBuilderPage() {
       }
 
       const payloadBody = buildPayloadLocationBody(draft, saveLocations, saveCurrencies)
-      const savedDoc = draft.payloadId
-        ? await updateLocation(draft.payloadId, payloadBody, token)
-        : await createLocation(payloadBody, token)
+      const savedDoc = await updateLocation(draft.payloadId, payloadBody, token)
 
-      const nextDraft = preserveDraftRelationshipHints({
-        ...buildDraftFromPayloadDoc(savedDoc),
-        draftId: draft.draftId,
-        editorModelName: draft.editorModelName,
-        aiSourceNotes: draft.aiSourceNotes
-      }, draft)
+      const syncedDraft = markDraftAsPayloadSynced(
+        {
+          ...buildDraftFromPayloadDoc(savedDoc),
+          draftId: draft.draftId,
+          editorModelName: draft.editorModelName,
+          aiSourceNotes: draft.aiSourceNotes
+        },
+        savedDoc.updatedAt || new Date().toISOString(),
+        saveLocations,
+        saveCurrencies,
+      )
+      const nextDraft = preserveDraftRelationshipHints(syncedDraft, draft)
 
       setDraft(nextDraft)
       saveDraft(nextDraft)
@@ -415,13 +436,9 @@ export default function LocationDocumentBuilderPage() {
         draftId: nextDraft.draftId
       })
       setResult(
-        `${
-          draft.payloadId
-            ? 'Updated Payload location document.'
-            : 'Created new Payload location document.'
-        }${
+        `Updated Payload location document.${
           unresolvedWarnings.length > 0
-            ? ' Some reference hints could not be matched yet, so they were kept in your local builder draft only.'
+            ? ' Some reference hints could not be matched yet, so they were kept in your local edits only.'
             : ''
         }`
       )
@@ -650,16 +667,14 @@ export default function LocationDocumentBuilderPage() {
     setAiInstruction('')
   }, [aiInstruction, aiTarget, runAiTarget])
 
-  const handleRecoverWithEmptyDraft = useCallback(() => {
-    const nextDraft = createEmptyLocationDocumentDraft()
-    setDraft(nextDraft)
-    saveDraft(nextDraft)
+  const handleDiscardUnsupportedLocalRecord = useCallback(() => {
+    if (draftIdParam) {
+      removeDraft(draftIdParam)
+    }
     setInitializationError(null)
     setError(null)
-    setSearchParams({
-      draftId: nextDraft.draftId,
-    })
-  }, [setSearchParams])
+    setSearchParams({})
+  }, [draftIdParam, setSearchParams])
 
   if (isLoading) {
     return (
@@ -681,16 +696,15 @@ export default function LocationDocumentBuilderPage() {
           {initializationError ? (
             <p className="ldb-error">Initialization error: {initializationError}</p>
           ) : null}
-          <p className="ldb-placeholder">
-            Context: id={payloadIdParam || 'none'} draftId={draftIdParam || 'none'}
-          </p>
-          <button
-            type="button"
-            className="ldb-btn ldb-btn-secondary"
-            onClick={handleRecoverWithEmptyDraft}
-          >
-            Start New Empty Draft
-          </button>
+          {draftIdParam ? (
+            <button
+              type="button"
+              className="ldb-btn ldb-btn-secondary"
+              onClick={handleDiscardUnsupportedLocalRecord}
+            >
+              Discard Unsupported Local Record
+            </button>
+          ) : null}
           <Link className="ldb-link" to="/location-documents">
             Back to location documents
           </Link>
@@ -713,9 +727,8 @@ export default function LocationDocumentBuilderPage() {
             <span className="ldb-mode-badge">{modeLabel}</span>
           </div>
           <p className="ldb-lede">
-            Build the full Payload `locations` document, with hierarchy, media,
-            city/neighborhood core guide content, and audience-specific
-            explore/stay/move content.
+            Review and update the existing Payload `locations` document with
+            hierarchy, media, and city/neighborhood guide content.
           </p>
         </div>
 
@@ -724,8 +737,8 @@ export default function LocationDocumentBuilderPage() {
             <div className="ldb-builder-actions-head">
               <p className="ldb-builder-actions-kicker">Studio Controls</p>
               <p className="ldb-builder-actions-copy">
-                Pick a model, generate the draft, then save or push the
-                finished document to Payload.
+                Pick a model, generate updates, then save your local changes or
+                sync the finished edit back to Payload.
               </p>
             </div>
 
@@ -768,26 +781,24 @@ export default function LocationDocumentBuilderPage() {
                         <span className="ldb-spinner ldb-spinner--sm" />
                         Generating...
                       </>
-                    ) : 'Generate Full Draft'}
+                    ) : 'Generate Full Update'}
                   </button>
                   <button
                     type="button"
-                    className="ldb-btn"
+                    className="payload-action-btn"
                     onClick={handleSubmit}
-                    disabled={isSaving}
+                    disabled={isSaving || Boolean(syncValidationError)}
+                    title={syncValidationError || undefined}
                   >
-                    {isSaving
-                      ? 'Saving...'
-                      : draft.payloadId
-                        ? 'Update Payload'
-                        : 'Create Payload'}
+                    <img src={payloadLogoUrl} alt="" aria-hidden="true" className="payload-action-btn-icon" />
+                    {isSaving ? 'Syncing...' : requiresPayloadResync ? 'Resync to Payload' : 'Sync to Payload'}
                   </button>
                 </div>
               </div>
 
               <div className="ldb-builder-action-group">
                 <span className="ldb-builder-action-group-label">
-                  Draft actions
+                  Local changes
                 </span>
                 <div className="ldb-builder-action-grid">
                   <button
@@ -796,7 +807,7 @@ export default function LocationDocumentBuilderPage() {
                     onClick={handleSaveDraft}
                     disabled={isGeneratingAi}
                   >
-                    Save Draft
+                    Save Local Changes
                   </button>
                   <button
                     type="button"
@@ -809,14 +820,34 @@ export default function LocationDocumentBuilderPage() {
                       })
                     }
                   >
-                    Improve Draft
+                    Improve Content
                   </button>
                 </div>
               </div>
             </div>
 
+            {syncValidationError ? (
+              <p className="ldb-builder-actions-warning">
+                Payload sync blocked: {syncValidationError}
+              </p>
+            ) : null}
+
+            {!syncValidationError && requiresPayloadResync ? (
+              <p className="ldb-builder-actions-warning">
+                Local changes are newer than the last Payload sync. Sync again to update the live document.
+              </p>
+            ) : null}
+
             <p className="ldb-builder-actions-note">
-              Local changes auto-save in this browser while you work.
+              {draft.payloadId && payloadSyncTimestamp && !requiresPayloadResync
+                ? `Payload is up to date as of ${new Date(payloadSyncTimestamp).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}. Local changes auto-save in this browser while you work.`
+                : 'Local changes auto-save in this browser while you work.'}
             </p>
           </div>
         </div>

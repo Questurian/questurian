@@ -701,6 +701,22 @@ export function sanitizeLocationDraftShape(input: unknown): LocationDocumentDraf
     sanitized.payloadId = undefined
   }
 
+  if (typeof input.currentPayloadSignature === 'string' && input.currentPayloadSignature.trim()) {
+    sanitized.currentPayloadSignature = input.currentPayloadSignature
+  }
+
+  if (typeof input.lastPayloadSyncSignature === 'string' && input.lastPayloadSyncSignature.trim()) {
+    sanitized.lastPayloadSyncSignature = input.lastPayloadSyncSignature
+  }
+
+  if (typeof input.lastPayloadSyncAt === 'string' && input.lastPayloadSyncAt.trim()) {
+    sanitized.lastPayloadSyncAt = input.lastPayloadSyncAt
+  }
+
+  if (typeof input.hasUnsyncedPayloadChanges === 'boolean') {
+    sanitized.hasUnsyncedPayloadChanges = input.hasUnsyncedPayloadChanges
+  }
+
   if (typeof input.editorModelName === 'string' && input.editorModelName.trim()) {
     sanitized.editorModelName = input.editorModelName as LocationDocumentDraft['editorModelName']
   }
@@ -887,6 +903,28 @@ function trimText(value: string | null | undefined): string {
   return typeof value === 'string' ? value : ''
 }
 
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sortKeysDeep(entry))
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    return Object.keys(record)
+      .sort()
+      .reduce<Record<string, unknown>>((next, key) => {
+        next[key] = sortKeysDeep(record[key])
+        return next
+      }, {})
+  }
+
+  return value
+}
+
+function stableSerialize(value: unknown): string {
+  return JSON.stringify(sortKeysDeep(value))
+}
+
 function valueOrNull(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
@@ -1062,7 +1100,10 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
     })),
   }
 
-  return normalizeDraftForLevel(next)
+  return markDraftAsPayloadSynced(
+    normalizeDraftForLevel(next),
+    doc.updatedAt || new Date().toISOString(),
+  )
 }
 
 export const buildDraftFromPayloadDoc = payloadLocationToDraft
@@ -1389,6 +1430,63 @@ export function buildPayloadLocationBody(
   return (pruneEmptyValues(body) || body) as PayloadLocationBody
 }
 
+export function buildPayloadSyncSignature(
+  draft: LocationDocumentDraft,
+  locationOptions: LocationOption[] = [],
+  currencyOptions: CurrencyOption[] = [],
+): string {
+  return stableSerialize(buildPayloadLocationBody(draft, locationOptions, currencyOptions))
+}
+
+export function refreshDraftPayloadSyncState(
+  draft: LocationDocumentDraft,
+  locationOptions: LocationOption[] = [],
+  currencyOptions: CurrencyOption[] = [],
+): LocationDocumentDraft {
+  const next = cloneValue(draft)
+
+  if (typeof next.payloadId !== 'number' || !Number.isFinite(next.payloadId)) {
+    next.currentPayloadSignature = undefined
+    next.hasUnsyncedPayloadChanges = false
+    return next
+  }
+
+  next.currentPayloadSignature = buildPayloadSyncSignature(next, locationOptions, currencyOptions)
+  next.hasUnsyncedPayloadChanges = Boolean(
+    next.lastPayloadSyncSignature
+    && next.currentPayloadSignature !== next.lastPayloadSyncSignature
+  )
+
+  return next
+}
+
+export function markDraftAsPayloadSynced(
+  draft: LocationDocumentDraft,
+  syncedAt: string,
+  locationOptions: LocationOption[] = [],
+  currencyOptions: CurrencyOption[] = [],
+): LocationDocumentDraft {
+  const next = cloneValue(draft)
+  const signature = buildPayloadSyncSignature(next, locationOptions, currencyOptions)
+  next.currentPayloadSignature = signature
+  next.lastPayloadSyncSignature = signature
+  next.lastPayloadSyncAt = syncedAt
+  next.hasUnsyncedPayloadChanges = false
+  return next
+}
+
+function hasMeaningfulMonthlyStatValue(
+  row: LocationGuideDraft['core']['weather']['monthlyStats'][number],
+): boolean {
+  return [
+    row.avgHighC,
+    row.avgLowC,
+    row.rainfallMm,
+    row.rainDays,
+    row.sunshineHours,
+  ].some((value) => typeof value === 'number' && Number.isFinite(value))
+}
+
 export function validateDraft(draft: LocationDocumentDraft): string | null {
   if (!normalizeKeyPart(draft.country)) return 'Country key is required.'
   if (!draft.countryName.trim() && !normalizeKeyPart(draft.country)) return 'Country name is required.'
@@ -1407,6 +1505,34 @@ export function validateDraft(draft: LocationDocumentDraft): string | null {
 
   if (draft.level === 'neighborhood' && !draft.neighborhoodName.trim() && !normalizeKeyPart(draft.neighborhood)) {
     return 'Neighborhood name is required for neighborhood locations.'
+  }
+
+  if (draft.level === 'city') {
+    const monthlyStats = Array.isArray(draft.guide.core.weather.monthlyStats)
+      ? draft.guide.core.weather.monthlyStats
+      : []
+
+    if (monthlyStats.length === 0) {
+      return 'Weather > Monthly Stats must include at least one month before syncing to Payload.'
+    }
+
+    const seenMonths = new Set<string>()
+
+    for (const [index, row] of monthlyStats.entries()) {
+      if (!row.month) {
+        return `Weather > Monthly Stats row ${index + 1} is missing a month.`
+      }
+
+      if (seenMonths.has(row.month)) {
+        return `Weather > Monthly Stats can only include each month once. Duplicate: ${row.month}.`
+      }
+
+      seenMonths.add(row.month)
+
+      if (!hasMeaningfulMonthlyStatValue(row)) {
+        return `Weather > Monthly Stats row ${index + 1} needs at least one weather value.`
+      }
+    }
   }
 
   return null

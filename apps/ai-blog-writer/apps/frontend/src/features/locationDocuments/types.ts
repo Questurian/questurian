@@ -149,6 +149,10 @@ export type PayloadRelationshipList = Array<number | { id?: number } | null> | n
 export type LocationDocumentDraft = {
   draftId: string
   payloadId?: number
+  currentPayloadSignature?: string
+  lastPayloadSyncSignature?: string
+  lastPayloadSyncAt?: string
+  hasUnsyncedPayloadChanges?: boolean
   editorModelName: EditorAssistModelName
   level: LocationLevel
   country: string

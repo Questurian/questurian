@@ -26,6 +26,36 @@ function normalizeStoredDraft(value: unknown, index: number): LocationDocumentDr
   }
 }
 
+function getDraftTimestamp(value?: string): number {
+  if (!value) return 0
+  const timestamp = new Date(value).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function dedupeDrafts(drafts: LocationDocumentDraft[]): LocationDocumentDraft[] {
+  const sorted = [...drafts].sort((left, right) => getDraftTimestamp(right.updatedAt) - getDraftTimestamp(left.updatedAt))
+  const seenPayloadIds = new Set<number>()
+  const deduped: LocationDocumentDraft[] = []
+
+  for (const draft of sorted) {
+    if (typeof draft.payloadId === 'number' && Number.isFinite(draft.payloadId)) {
+      if (seenPayloadIds.has(draft.payloadId)) {
+        continue
+      }
+
+      seenPayloadIds.add(draft.payloadId)
+    }
+
+    deduped.push(draft)
+  }
+
+  return deduped
+}
+
+function writeDrafts(drafts: LocationDocumentDraft[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(dedupeDrafts(drafts)))
+}
+
 export function listDrafts(): LocationDocumentDraft[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -34,9 +64,16 @@ export function listDrafts(): LocationDocumentDraft[] {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
 
-    return parsed
+    const drafts = parsed
       .map((draft, index) => normalizeStoredDraft(draft, index))
       .filter((draft): draft is LocationDocumentDraft => Boolean(draft))
+    const dedupedDrafts = dedupeDrafts(drafts)
+
+    if (dedupedDrafts.length !== drafts.length) {
+      writeDrafts(dedupedDrafts)
+    }
+
+    return dedupedDrafts
   } catch {
     return []
   }
@@ -49,20 +86,22 @@ export function saveDraft(draft: LocationDocumentDraft): void {
     ...sanitizedDraft,
     updatedAt: new Date().toISOString(),
   }
-  const index = all.findIndex((item) => item.draftId === draft.draftId)
+  const nextDrafts = all.filter((item) => item.draftId !== draft.draftId)
+    .filter((item) => {
+      if (typeof nextDraft.payloadId !== 'number' || !Number.isFinite(nextDraft.payloadId)) {
+        return true
+      }
 
-  if (index >= 0) {
-    all[index] = nextDraft
-  } else {
-    all.push(nextDraft)
-  }
+      return item.payloadId !== nextDraft.payloadId
+    })
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
+  nextDrafts.push(nextDraft)
+  writeDrafts(nextDrafts)
 }
 
 export function removeDraft(draftId: string): void {
   const next = listDrafts().filter((item) => item.draftId !== draftId)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+  writeDrafts(next)
 }
 
 export function findDraftByDraftId(draftId: string): LocationDocumentDraft | null {

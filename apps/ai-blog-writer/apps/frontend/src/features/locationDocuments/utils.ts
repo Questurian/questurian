@@ -300,15 +300,12 @@ export function formatLocationLabel(location: Pick<LocationOption, 'level' | 'co
 
   if (location.level === 'country') return primary
 
-  const segments = [location.countryName, location.cityName, location.neighborhoodName].filter(
-    (value): value is string => Boolean(value?.trim()),
-  )
+  const context = location.level === 'city'
+    ? [location.countryName]
+    : [location.cityName, location.countryName]
 
-  if (segments.length > 1) {
-    return `${primary} · ${segments.join(' / ')}`
-  }
-
-  return `${primary} · ${location.locationKey}`
+  const prettyContext = context.filter((value): value is string => Boolean(value?.trim()))
+  return prettyContext.length > 0 ? `${primary} / ${prettyContext.join(' / ')}` : primary
 }
 
 export function clampRelationshipSelections(values: number[], maxSelections: number): number[] {

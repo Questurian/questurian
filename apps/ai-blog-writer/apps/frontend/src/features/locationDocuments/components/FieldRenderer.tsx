@@ -251,7 +251,7 @@ function RelationshipManyFieldInput({
 
       {field.hintKey && onHintChange ? (
         <div className="ldb-hint-field">
-          <label className="ldb-mini-label">{field.hintLabel || 'AI location keys'}</label>
+          <label className="ldb-mini-label">{field.hintLabel || 'AI neighborhood hints'}</label>
           <textarea
             className="ldb-textarea"
             rows={3}
@@ -263,7 +263,7 @@ function RelationshipManyFieldInput({
                 .filter(Boolean)
               onHintChange(nextValues)
             }}
-            placeholder="AI can place unresolved locationKey suggestions here, one per line"
+            placeholder="AI can place unresolved neighborhood hints here, one per line"
           />
         </div>
       ) : null}
