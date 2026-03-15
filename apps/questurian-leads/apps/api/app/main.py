@@ -1,3 +1,4 @@
+import logging
 import os
 import sqlite3
 
@@ -21,13 +22,26 @@ from features.diario_correo_feeds.api.routes import router as diario_correo_feed
 from features.scrapes.api.routes import router as scrapes_router
 from features.youtube_feeds.api.routes import router as youtube_feeds_router
 from features.batch_fetch.api.routes import router as batch_fetch_router
+from features.batch_fetch.service.runner import (
+    ActiveBatchFetchJobError,
+    DEFAULT_STARTUP_SCRAPE_MAX_ITEMS_FLOOR,
+    DEFAULT_STARTUP_YOUTUBE_MAX_RESULTS,
+    STARTUP_BATCH_FETCH_TRIGGER,
+    start_new_batch_fetch_job,
+)
 from features.scrape_jobs.api.routes import router as scrape_jobs_router
-from lib.database.init_db import DATABASE_PATH, run_migrations
+from lib.database.init_db import DATABASE_PATH, REQUIRED_TABLES, run_migrations
 
 app = FastAPI(title="RSS Leads API")
+LOGGER = logging.getLogger(__name__)
+ENABLED_VALUES = {"1", "true", "yes", "on"}
 
 def _should_run_migrations() -> bool:
-    return os.getenv("RUN_MIGRATIONS", "").strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv("RUN_MIGRATIONS", "").strip().lower() in ENABLED_VALUES
+
+
+def _should_run_startup_batch_fetch() -> bool:
+    return os.getenv("BATCH_FETCH_RUN_ON_STARTUP", "").strip().lower() in ENABLED_VALUES
 
 
 def _database_needs_migrations() -> bool:
@@ -38,11 +52,14 @@ def _database_needs_migrations() -> bool:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name = 'categories'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name IN ({})".format(
+                ",".join("?" for _ in REQUIRED_TABLES)
+            ),
+            REQUIRED_TABLES,
         )
-        has_categories = cursor.fetchone() is not None
+        existing_tables = {row[0] for row in cursor.fetchall()}
         conn.close()
-        return not has_categories
+        return any(table_name not in existing_tables for table_name in REQUIRED_TABLES)
     except sqlite3.Error:
         return True
 
@@ -68,6 +85,19 @@ app.add_middleware(
 def run_startup_migrations() -> None:
     if _should_run_migrations() or _database_needs_migrations():
         run_migrations()
+    if not _should_run_startup_batch_fetch():
+        return
+
+    try:
+        start_new_batch_fetch_job(
+            trigger=STARTUP_BATCH_FETCH_TRIGGER,
+            youtube_max_results=DEFAULT_STARTUP_YOUTUBE_MAX_RESULTS,
+            scrape_max_items_floor=DEFAULT_STARTUP_SCRAPE_MAX_ITEMS_FLOOR,
+        )
+    except ActiveBatchFetchJobError as exc:
+        LOGGER.info("Skipping startup batch recovery: %s", exc)
+    except Exception:
+        LOGGER.exception("Failed to enqueue startup batch recovery job")
 
 # Include all routers
 app.include_router(categories_router)

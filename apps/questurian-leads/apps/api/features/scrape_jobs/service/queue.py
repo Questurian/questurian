@@ -4,7 +4,7 @@ import os
 
 
 DEFAULT_QUEUE_NAME = "scrapes"
-DEFAULT_QUEUE_URL = "redis://redis:6379/0"
+DEFAULT_QUEUE_URL = "redis://localhost:6379/0"
 DEFAULT_JOB_TIMEOUT_SECONDS = 15 * 60
 
 
@@ -61,7 +61,7 @@ def enqueue_scrape_worker_job(job_id: int) -> str:
         job = queue.enqueue_call(
             func="features.scrape_jobs.service.runner.process_scrape_job",
             args=(job_id,),
-            job_timeout=get_job_timeout_seconds(),
+            timeout=get_job_timeout_seconds(),
             result_ttl=24 * 60 * 60,
             failure_ttl=7 * 24 * 60 * 60,
         )

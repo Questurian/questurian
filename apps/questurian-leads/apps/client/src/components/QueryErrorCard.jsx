@@ -219,7 +219,8 @@ function buildErrorModel(error, pathname) {
       title: `This page doesn't have ${missingLabel} yet`,
       description: `The API responded, but the database is missing the ${missingTable} table. This usually means migrations have not been run in this environment yet.`,
       checklist: [
-        'Start the API once with RUN_MIGRATIONS=1 so the SQLite schema is created.',
+        'Restart the leads API so it can recreate any missing SQLite tables automatically.',
+        'If the table is still missing after a restart, start the API once with RUN_MIGRATIONS=1.',
         'Reload this page after the backend has initialized the database.',
         'If the schema exists but the page is still empty, add the setup records listed below.',
       ],

@@ -307,6 +307,7 @@ def run_scrape_feed(
     config: ScrapeSourceConfig,
     load_items: Callable[[dict], list[dict]],
     translator: Optional[TranslationService] = None,
+    max_items_floor: Optional[int] = None,
 ) -> dict:
     feed = fetch_one(f"SELECT * FROM {config.feed_table} WHERE id = ?", (feed_id,))
     if not feed:
@@ -318,6 +319,11 @@ def run_scrape_feed(
         max_items = int(raw_max_items) if raw_max_items is not None else config.max_items
     except (TypeError, ValueError):
         max_items = config.max_items
+    if max_items_floor is not None:
+        try:
+            max_items = max(max_items, int(max_items_floor))
+        except (TypeError, ValueError):
+            pass
     if max_items > 0 and max_items != config.max_items:
         effective_config = replace(config, max_items=max_items)
 

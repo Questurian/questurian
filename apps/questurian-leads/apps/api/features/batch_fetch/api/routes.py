@@ -6,13 +6,11 @@ from features.batch_fetch.schema import (
     BatchFetchJobResponse,
 )
 from features.batch_fetch.service.runner import (
-    create_batch_fetch_job,
-    create_batch_fetch_steps,
-    get_active_job,
+    ActiveBatchFetchJobError,
     get_current_job_detail,
     get_job_detail,
     list_jobs,
-    start_batch_fetch_job,
+    start_new_batch_fetch_job,
 )
 
 router = APIRouter(prefix="/batch-fetch", tags=["batch-fetch"])
@@ -26,20 +24,13 @@ def start_batch_fetch(
     ),
 ) -> BatchFetchJobDetailResponse:
     """Start a batch fetch job across all active sources."""
-    active = get_active_job()
-    if active:
+    try:
+        job = start_new_batch_fetch_job(force=force)
+    except ActiveBatchFetchJobError as exc:
         raise HTTPException(
             status_code=409,
-            detail=f"Batch fetch already running (job_id={active['id']}).",
-        )
-
-    job_id = create_batch_fetch_job(force=force)
-    create_batch_fetch_steps(job_id)
-    start_batch_fetch_job(job_id, force=force)
-
-    job = get_job_detail(job_id)
-    if not job:
-        raise HTTPException(status_code=500, detail="Failed to start batch fetch job")
+            detail=str(exc),
+        ) from exc
     return BatchFetchJobDetailResponse(**job)
 
 

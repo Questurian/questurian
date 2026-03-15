@@ -34,6 +34,7 @@ Notes:
 
 - Main API: `apps/api/app/main.py` on `http://localhost:4004`
 - Frontend: `apps/client` on `http://localhost:3004`
+- Optional startup recovery: enable `BATCH_FETCH_RUN_ON_STARTUP=true` to enqueue one background batch-fetch job after API migrations complete
 
 ## Shared data stores
 
@@ -162,6 +163,19 @@ Endpoints: `apps/api/features/youtube_feeds/api/routes.py`
 5) Logs written to `youtube_fetch_logs`.
 6) `youtube_feeds.last_fetched` updated.
 
+## Startup recovery flow
+
+1) FastAPI startup runs migrations if needed.
+2) If `BATCH_FETCH_RUN_ON_STARTUP=true`, the API tries to enqueue one batch fetch job using the existing batch-fetch runner.
+3) The recovery job runs in the background and shows up in the same `batch_fetch_jobs` and `batch_fetch_job_steps` tables as manual batch fetches.
+4) The runner still skips sources fetched within `BATCH_FETCH_SKIP_HOURS`.
+5) Recovery is bounded rather than replaying missed intervals:
+   - RSS uses normal fetch behavior
+   - Instagram performs one API page per feed
+   - YouTube uses `max_results=50`
+   - El Comercio / Diario Correo use a runtime floor of 50 scraped items
+6) If the startup enqueue fails, the API logs the error and continues booting.
+
 ## Table map (which feature writes where)
 
 - Categories: `categories`
@@ -175,5 +189,6 @@ Endpoints: `apps/api/features/youtube_feeds/api/routes.py`
 ## Operational notes
 
 - Fetch intervals are stored in DB but no scheduler exists in code.
-  Fetching is manual via API calls or an external cron.
+  Fetching is manual via API calls or an external cron unless startup recovery is enabled.
+- Startup recovery reuses the existing batch-fetch pipeline and creates one bounded catch-up job per API startup when `BATCH_FETCH_RUN_ON_STARTUP=true`.
 - The UI uses the main API at port 4004.

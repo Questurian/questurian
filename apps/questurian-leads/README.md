@@ -107,6 +107,9 @@ This starts:
 Notes:
 - Set `YOUTUBE_API_KEY`, `RAPIDAPI_KEY`, and `LIBRETRANSLATE_API_KEY` in your environment if needed.
 - The API container runs `python lib/database/init_db.py` on startup and uses `apps/api/leads.db`.
+- Set `BATCH_FETCH_RUN_ON_STARTUP=true` to enqueue one startup recovery batch after migrations complete. It is disabled by default.
+- Startup recovery uses the existing batch-fetch pipeline in the background, does not block API startup on enqueue failure, and still skips sources fetched within `BATCH_FETCH_SKIP_HOURS`.
+- Startup recovery is bounded rather than replaying every missed interval: RSS behavior is unchanged, Instagram still fetches one page per feed, YouTube uses `max_results=50`, and scrape sources use a runtime floor of 50 items.
 
 ### Access the Application
 
@@ -211,6 +214,18 @@ The database comes pre-populated with:
 Once the backend is running, visit:
 - **Swagger UI**: http://localhost:4004/docs
 - **ReDoc**: http://localhost:4004/redoc
+
+## Startup Recovery Batch Fetch
+
+- `BATCH_FETCH_RUN_ON_STARTUP` defaults to `false`. When enabled, the API enqueues one background recovery batch on startup after migrations run.
+- Recovery uses the same batch-fetch workflow as `POST /batch-fetch`, so progress and results appear in the existing batch job history.
+- The startup batch is bounded: it does not replay every missed `fetch_interval`, and it still skips recently fetched sources using `BATCH_FETCH_SKIP_HOURS`.
+- Recovery depth is higher than normal manual defaults:
+  - RSS feeds: unchanged
+  - Instagram feeds: unchanged, one page per feed
+  - YouTube feeds: `max_results=50`
+  - El Comercio / Diario Correo scrapes: runtime floor of 50 items without changing stored feed defaults
+- If startup recovery cannot be enqueued, the API still finishes booting and logs the failure instead of aborting startup.
 
 ## License
 

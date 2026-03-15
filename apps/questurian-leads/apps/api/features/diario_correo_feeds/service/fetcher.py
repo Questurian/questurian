@@ -74,12 +74,14 @@ def fetch_diario_correo_feed(
     feed_id: int,
     translator: Optional[TranslationService] = None,
     artifact_dir: Optional[str] = None,
+    max_items_floor: Optional[int] = None,
 ) -> Dict:
     return run_scrape_feed(
         feed_id,
         config=SOURCE_CONFIG,
         load_items=lambda feed: _load_scraped_items(feed, artifact_dir=artifact_dir),
         translator=translator,
+        max_items_floor=max_items_floor,
     )
 
 

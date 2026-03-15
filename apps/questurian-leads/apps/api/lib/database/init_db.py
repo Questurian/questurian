@@ -10,6 +10,37 @@ except ModuleNotFoundError:
     from lib.dates import normalize_published_at
 
 DATABASE_PATH = Path(__file__).parent.parent.parent / "leads.db"
+REQUIRED_TABLES = (
+    "categories",
+    "countries",
+    "feeds",
+    "feed_tags",
+    "feed_tag_map",
+    "leads",
+    "fetch_logs",
+    "instagram_feeds",
+    "instagram_posts",
+    "instagram_feed_tag_map",
+    "instagram_fetch_logs",
+    "reddit_feeds",
+    "reddit_posts",
+    "reddit_feed_tag_map",
+    "reddit_fetch_logs",
+    "el_comercio_feeds",
+    "el_comercio_posts",
+    "el_comercio_feed_tag_map",
+    "el_comercio_fetch_logs",
+    "diario_correo_feeds",
+    "diario_correo_posts",
+    "diario_correo_feed_tag_map",
+    "diario_correo_fetch_logs",
+    "youtube_feeds",
+    "youtube_posts",
+    "youtube_fetch_logs",
+    "scrape_jobs",
+    "batch_fetch_jobs",
+    "batch_fetch_job_steps",
+)
 
 
 def _configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:

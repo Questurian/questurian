@@ -101,6 +101,18 @@ Batch fetch runs all active sources (RSS, Instagram, YouTube, El Comercio, Diari
 in one background job. Sources fetched within the last 24 hours are skipped, and Instagram
 calls are spaced out by 5-10 seconds by default.
 
+Startup recovery can also enqueue this same workflow automatically after API startup.
+Set `BATCH_FETCH_RUN_ON_STARTUP=true` to enable it; the default is `false`.
+When enabled, the API enqueues one bounded background recovery batch after migrations finish.
+It still respects `BATCH_FETCH_SKIP_HOURS`, does not replay every missed `fetch_interval`,
+and any enqueue failure is logged without blocking API startup.
+
+Startup recovery depth differs from the standard manual defaults:
+- RSS feeds: unchanged
+- Instagram feeds: unchanged, one page per feed
+- YouTube feeds: `max_results=50`
+- El Comercio / Diario Correo scrapes: runtime floor of 50 items without changing saved feed settings
+
 ### POST /batch-fetch
 
 Purpose: Start a batch fetch job.
@@ -113,6 +125,10 @@ Response
   - Body: `BatchFetchJobDetailResponse` (includes steps)
 - 409 Conflict
   - When a job is already running.
+
+Notes
+- Manual requests continue to use the normal batch-fetch defaults.
+- Startup-triggered recovery jobs use the same endpoint-independent job model and appear in the same `/batch-fetch` history.
 
 ### GET /batch-fetch/current
 

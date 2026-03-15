@@ -10,6 +10,7 @@ from fastapi import HTTPException
 
 from features.el_comercio_feeds.api import routes as el_routes
 from features.scrape_jobs.service import runner as scrape_runner
+from features.scrape_jobs.service import queue as scrape_queue
 from features.scrape_jobs.service.queue import QueueUnavailableError
 from lib.database import execute_query, fetch_one
 from tests.support import temporary_database
@@ -125,3 +126,29 @@ class ScrapeRouteTests(unittest.TestCase):
 
         self.assertEqual(ctx.exception.status_code, 503)
         self.assertEqual(ctx.exception.detail, "queue offline")
+
+
+class ScrapeQueueConfigTests(unittest.TestCase):
+    def test_queue_url_defaults_to_localhost_for_local_dev(self) -> None:
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(scrape_queue.get_queue_url(), "redis://localhost:6379/0")
+
+    def test_enqueue_scrape_worker_job_uses_timeout_keyword_for_rq(self) -> None:
+        class FakeJob:
+            id = "rq-job-1"
+
+        class FakeQueue:
+            def __init__(self) -> None:
+                self.calls = []
+
+            def enqueue_call(self, **kwargs):
+                self.calls.append(kwargs)
+                return FakeJob()
+
+        queue = FakeQueue()
+        with patch.object(scrape_queue, "get_queue", return_value=queue):
+            job_id = scrape_queue.enqueue_scrape_worker_job(42)
+
+        self.assertEqual(job_id, "rq-job-1")
+        self.assertEqual(queue.calls[0]["timeout"], scrape_queue.get_job_timeout_seconds())
+        self.assertNotIn("job_timeout", queue.calls[0])

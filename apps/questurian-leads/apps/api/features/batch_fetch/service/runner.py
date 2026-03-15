@@ -16,6 +16,11 @@ from features.diario_correo_feeds.service.fetcher import fetch_diario_correo_fee
 DEFAULT_SKIP_HOURS = 24
 DEFAULT_INSTAGRAM_DELAY_MIN = 5
 DEFAULT_INSTAGRAM_DELAY_MAX = 10
+DEFAULT_BATCH_FETCH_TRIGGER = "manual"
+STARTUP_BATCH_FETCH_TRIGGER = "startup"
+DEFAULT_YOUTUBE_MAX_RESULTS = 5
+DEFAULT_STARTUP_YOUTUBE_MAX_RESULTS = 50
+DEFAULT_STARTUP_SCRAPE_MAX_ITEMS_FLOOR = 50
 
 EL_COMERCIO_DEFAULT_CATEGORY_NAME = "Peru"
 EL_COMERCIO_DEFAULT_FEED_URL = "https://elcomercio.pe/archivo/gastronomia/"
@@ -28,6 +33,14 @@ DIARIO_CORREO_DEFAULT_FEED_URL = "https://diariocorreo.pe/gastronomia/"
 DIARIO_CORREO_DEFAULT_DISPLAY_NAME = "Diario Correo Gastronomia"
 DIARIO_CORREO_DEFAULT_SECTION = "gastronomia"
 DIARIO_CORREO_DEFAULT_FETCH_INTERVAL = 60
+
+
+class ActiveBatchFetchJobError(RuntimeError):
+    """Raised when a batch fetch job is already running or queued."""
+
+    def __init__(self, job_id: int):
+        self.job_id = job_id
+        super().__init__(f"Batch fetch already running (job_id={job_id}).")
 
 
 def _get_skip_hours() -> int:
@@ -55,6 +68,34 @@ def _get_instagram_delay_range() -> tuple[float, float]:
     if delay_max < delay_min:
         delay_min, delay_max = delay_max, delay_min
     return delay_min, delay_max
+
+
+def _coerce_int(value: object, default: int, minimum: int = 1) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, parsed)
+
+
+def _coerce_float(value: object, default: float, minimum: float = 0.0) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, parsed)
+
+
+def _coerce_optional_int(value: object, minimum: int = 1) -> Optional[int]:
+    if value in (None, ""):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed < minimum:
+        return None
+    return parsed
 
 
 def _parse_iso(value: Optional[str]) -> Optional[datetime]:
@@ -173,20 +214,101 @@ def _format_step_label(step: dict) -> str:
     return str(step.get("source_type"))
 
 
-def create_batch_fetch_job(force: bool = False) -> int:
+def _build_job_message(trigger: str) -> str:
+    if trigger == STARTUP_BATCH_FETCH_TRIGGER:
+        return "Startup recovery batch queued"
+    return "Queued"
+
+
+def _build_starting_message(trigger: str) -> str:
+    if trigger == STARTUP_BATCH_FETCH_TRIGGER:
+        return "Starting startup recovery batch"
+    return "Starting batch fetch"
+
+
+def _build_batch_fetch_config(
+    *,
+    force: bool = False,
+    trigger: str = DEFAULT_BATCH_FETCH_TRIGGER,
+    youtube_max_results: int = DEFAULT_YOUTUBE_MAX_RESULTS,
+    scrape_max_items_floor: Optional[int] = None,
+) -> dict:
     skip_hours = _get_skip_hours()
     delay_min, delay_max = _get_instagram_delay_range()
-    config = json.dumps({
+    return {
+        "trigger": trigger or DEFAULT_BATCH_FETCH_TRIGGER,
         "skip_hours": skip_hours,
         "instagram_delay_min_seconds": delay_min,
         "instagram_delay_max_seconds": delay_max,
         "force": bool(force),
-    })
+        "youtube_max_results": _coerce_int(
+            youtube_max_results,
+            DEFAULT_YOUTUBE_MAX_RESULTS,
+        ),
+        "scrape_max_items_floor": _coerce_optional_int(scrape_max_items_floor),
+    }
+
+
+def _load_batch_fetch_config(job: Optional[dict], *, force: bool = False) -> dict:
+    config = _build_batch_fetch_config(force=force)
+    raw_config = job.get("config_json") if job else None
+    if not raw_config:
+        return config
+
+    try:
+        parsed = json.loads(raw_config)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return config
+
+    if not isinstance(parsed, dict):
+        return config
+
+    config["trigger"] = str(parsed.get("trigger") or config["trigger"])
+    config["force"] = bool(parsed.get("force", config["force"]))
+    config["skip_hours"] = _coerce_int(parsed.get("skip_hours"), config["skip_hours"], minimum=0)
+
+    delay_min = _coerce_float(
+        parsed.get("instagram_delay_min_seconds"),
+        config["instagram_delay_min_seconds"],
+    )
+    delay_max = _coerce_float(
+        parsed.get("instagram_delay_max_seconds"),
+        config["instagram_delay_max_seconds"],
+    )
+    if delay_max < delay_min:
+        delay_min, delay_max = delay_max, delay_min
+    config["instagram_delay_min_seconds"] = delay_min
+    config["instagram_delay_max_seconds"] = delay_max
+    config["youtube_max_results"] = _coerce_int(
+        parsed.get("youtube_max_results"),
+        config["youtube_max_results"],
+    )
+    config["scrape_max_items_floor"] = _coerce_optional_int(
+        parsed.get("scrape_max_items_floor")
+    )
+    return config
+
+
+def create_batch_fetch_job(
+    force: bool = False,
+    *,
+    trigger: str = DEFAULT_BATCH_FETCH_TRIGGER,
+    youtube_max_results: int = DEFAULT_YOUTUBE_MAX_RESULTS,
+    scrape_max_items_floor: Optional[int] = None,
+) -> int:
+    config = json.dumps(
+        _build_batch_fetch_config(
+            force=force,
+            trigger=trigger,
+            youtube_max_results=youtube_max_results,
+            scrape_max_items_floor=scrape_max_items_floor,
+        )
+    )
     return execute_query(
         """INSERT INTO batch_fetch_jobs
            (status, message, config_json, total_steps, completed_steps, success_steps, failed_steps, skipped_steps)
            VALUES (?, ?, ?, 0, 0, 0, 0, 0)""",
-        ("queued", "Queued", config),
+        ("queued", _build_job_message(trigger), config),
     )
 
 
@@ -281,14 +403,55 @@ def get_current_job_detail() -> Optional[dict]:
     return get_job_detail(job["id"])
 
 
-def start_batch_fetch_job(job_id: int, force: bool = False) -> None:
-    thread = Thread(target=_run_batch_fetch_job, args=(job_id, force), daemon=True)
+def start_new_batch_fetch_job(
+    *,
+    force: bool = False,
+    trigger: str = DEFAULT_BATCH_FETCH_TRIGGER,
+    youtube_max_results: int = DEFAULT_YOUTUBE_MAX_RESULTS,
+    scrape_max_items_floor: Optional[int] = None,
+) -> dict:
+    active = get_active_job()
+    if active:
+        raise ActiveBatchFetchJobError(active["id"])
+
+    job_id = create_batch_fetch_job(
+        force=force,
+        trigger=trigger,
+        youtube_max_results=youtube_max_results,
+        scrape_max_items_floor=scrape_max_items_floor,
+    )
+    create_batch_fetch_steps(job_id)
+    start_batch_fetch_job(job_id)
+
+    job = get_job_detail(job_id)
+    if not job:
+        raise RuntimeError("Failed to start batch fetch job")
+    return job
+
+
+def start_batch_fetch_job(job_id: int) -> None:
+    thread = Thread(target=_run_batch_fetch_job, args=(job_id,), daemon=True)
     thread.start()
 
 
-def _run_batch_fetch_job(job_id: int, force: bool = False) -> None:
+def _run_batch_fetch_job(job_id: int) -> None:
+    job = get_job(job_id)
+    if not job:
+        raise RuntimeError(f"Batch fetch job {job_id} not found")
+
+    job_config = _load_batch_fetch_config(job)
+    force = bool(job_config["force"])
+    trigger = str(job_config["trigger"])
+    youtube_max_results = int(job_config["youtube_max_results"])
+    scrape_max_items_floor = job_config.get("scrape_max_items_floor")
+
     started_at = datetime.utcnow().isoformat()
-    _update_job(job_id, status="running", started_at=started_at, message="Starting batch fetch")
+    _update_job(
+        job_id,
+        status="running",
+        started_at=started_at,
+        message=_build_starting_message(trigger),
+    )
 
     steps = fetch_all(
         "SELECT * FROM batch_fetch_job_steps WHERE job_id = ? ORDER BY id",
@@ -308,8 +471,9 @@ def _run_batch_fetch_job(job_id: int, force: bool = False) -> None:
         )
         return
 
-    skip_hours = _get_skip_hours()
-    delay_min, delay_max = _get_instagram_delay_range()
+    skip_hours = int(job_config["skip_hours"])
+    delay_min = float(job_config["instagram_delay_min_seconds"])
+    delay_max = float(job_config["instagram_delay_max_seconds"])
 
     completed_steps = 0
     success_steps = 0
@@ -401,11 +565,20 @@ def _run_batch_fetch_job(job_id: int, force: bool = False) -> None:
                     instagram_calls += 1
                     result = fetch_instagram_feed(int(source_id))
                 elif source_type == "youtube":
-                    result = fetch_youtube_feed(int(source_id))
+                    result = fetch_youtube_feed(
+                        int(source_id),
+                        max_results=youtube_max_results,
+                    )
                 elif source_type == "el_comercio":
-                    result = fetch_el_comercio_feed(int(source_id))
+                    result = fetch_el_comercio_feed(
+                        int(source_id),
+                        max_items_floor=scrape_max_items_floor,
+                    )
                 elif source_type == "diario_correo":
-                    result = fetch_diario_correo_feed(int(source_id))
+                    result = fetch_diario_correo_feed(
+                        int(source_id),
+                        max_items_floor=scrape_max_items_floor,
+                    )
                 else:
                     raise ValueError(f"Unsupported source type: {source_type}")
 
