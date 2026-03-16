@@ -227,6 +227,12 @@
   --card-accent-softer: rgba(59, 130, 246, 0.06);
 }
 
+.landing-card--keyword-intel {
+  --card-accent: #d1802f;
+  --card-accent-soft: rgba(209, 128, 47, 0.14);
+  --card-accent-softer: rgba(209, 128, 47, 0.06);
+}
+
 .landing-card--single-listicles {
   --card-accent: #b7791f;
   --card-accent-soft: rgba(183, 121, 31, 0.14);

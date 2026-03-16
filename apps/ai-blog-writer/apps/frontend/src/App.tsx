@@ -38,6 +38,7 @@ import {
   LocationDocumentsPage,
   LocationDocumentBuilderPage,
 } from './features/locationDocuments'
+import { KeywordIntelPage } from './features/keywordIntel'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -91,6 +92,9 @@ export default function App() {
               {/* Location Documents */}
               <Route path="location-documents" element={<LocationDocumentsPage />} />
               <Route path="location-documents/builder" element={<LocationDocumentBuilderPage />} />
+
+              {/* Keyword Intel */}
+              <Route path="keyword-intel" element={<KeywordIntelPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

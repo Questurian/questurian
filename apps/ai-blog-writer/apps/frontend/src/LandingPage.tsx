@@ -76,6 +76,23 @@ export default function LandingPage() {
           </span>
         </Link>
 
+        <Link to="/keyword-intel" className="landing-card landing-card--keyword-intel">
+          <div className="landing-card-icon">
+            <svg className="landing-card-main-icon" aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M18 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h2>Keyword Intel</h2>
+          <p>Collect autocomplete and related-search phrasing, cluster the intent, and surface ranked opportunities without drafting articles.</p>
+          <span className="landing-card-action">
+            Open Intel
+            <svg className="landing-card-action-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+        </Link>
+
         <Link to="/single-type-listicles" className="landing-card landing-card--single-listicles">
           <div className="landing-card-icon">
             <svg className="landing-card-main-icon" aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
