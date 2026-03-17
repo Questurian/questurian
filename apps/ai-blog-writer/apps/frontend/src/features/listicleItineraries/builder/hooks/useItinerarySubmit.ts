@@ -2,7 +2,6 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
-import { isLocationWithinScope } from '../../../locationScope/scope'
 import { createItinerary, markdownToLexical, updateItinerary } from '../../api'
 import { saveDraft } from '../../storage'
 import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
@@ -21,7 +20,7 @@ import { validateSeoSection, validateStep2, validateStep3 } from '../validators/
 import { normalizeTripIntent } from '../../../trip-intent'
 
 type UseItinerarySubmitParams = {
-  token?: string
+  token?: string | null
   draft: ListicleItineraryDraft | null
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
   selectedLocationRefId: number | null
@@ -50,6 +49,7 @@ export function useItinerarySubmit({
 
   async function submit(targetStatus: 'draft' | 'published') {
     if (!token || !draft) return
+    const authToken = token
 
     onError('')
     setResult(null)
@@ -139,12 +139,8 @@ export function useItinerarySubmit({
 
         const relatedOptions = relatedByBlockType[item.blockType] || []
         const selectedRelated = relatedOptions.find((entry) => entry.id === item.item)
-        if (
-          selectedRelated?.location
-          && draft.location
-          && !isLocationWithinScope(selectedRelated.location, draft.location)
-        ) {
-          throw new Error(`Item ${index + 1} location does not match itinerary location (${submitDraft.location})`)
+        if (!selectedRelated) {
+          throw new Error(`Item ${index + 1} selected related entry is unavailable for current itinerary filters`)
         }
 
         const blurb = item.blurbMarkdown.trim()
@@ -174,6 +170,7 @@ export function useItinerarySubmit({
         title: submitDraft.title.trim(),
         location: submitDraft.location,
         locationRef: selectedLocationRefId,
+        sharedNeighborhoods: submitDraft.sharedNeighborhoods,
         dayAudience: submitDraft.dayAudience,
         itineraryStartHour: submitDraft.itineraryStartHour,
         itineraryStartMinute: submitDraft.itineraryStartMinute,
@@ -199,8 +196,8 @@ export function useItinerarySubmit({
       }
 
       let doc = draft.payloadId
-        ? await updateItinerary(draft.payloadId, body, token)
-        : await createItinerary(body, token)
+        ? await updateItinerary(draft.payloadId, body, authToken)
+        : await createItinerary(body, authToken)
 
       if (targetStatus === 'published') {
         const publishedStructuredData = serializeStructuredDataTemplate(
@@ -226,7 +223,7 @@ export function useItinerarySubmit({
               ...seoSectionForSubmit,
               structuredData: publishedStructuredData,
             }),
-          }, token)
+          }, authToken)
         }
       }
 

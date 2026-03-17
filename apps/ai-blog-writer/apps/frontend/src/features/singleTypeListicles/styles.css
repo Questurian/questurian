@@ -596,6 +596,10 @@
   min-height: 96px;
 }
 
+.stl-multi-select {
+  min-height: 132px;
+}
+
 .stl-target-size-field {
   gap: 0.65rem;
   padding: 0.78rem 0.82rem;

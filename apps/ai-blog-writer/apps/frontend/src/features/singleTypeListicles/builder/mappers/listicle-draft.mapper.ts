@@ -40,6 +40,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     title: doc.title || '',
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),
+    sharedNeighborhoods: getRelationshipIds(doc.sharedNeighborhoods),
     listicleType: doc.listicleType || '',
     targetItemCount: normalizeTargetItemCount(fallbackTargetItemCount, items),
     step1_complete: Boolean(doc.step1_complete),

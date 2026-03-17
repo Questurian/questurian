@@ -2,8 +2,9 @@ import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { ListicleItineraryDraft } from './types'
 import { DEFAULT_TRIP_INTENT, normalizeTripIntent } from '../trip-intent'
+import { normalizeLocationIds } from '../locationScope/scope'
 
-const STORAGE_KEY = 'listicle_itineraries_staged_v3_inline_seo'
+const STORAGE_KEY = 'listicle_itineraries_staged_v4_exact_neighborhoods'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -30,6 +31,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',
     locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,
+    sharedNeighborhoods: normalizeLocationIds(value.sharedNeighborhoods),
     dayAudience:
       value.dayAudience === 'anyday'
       || value.dayAudience === 'weekday'
@@ -134,6 +136,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     title: '',
     location: '',
     locationRef: null,
+    sharedNeighborhoods: [],
     dayAudience: '',
     itineraryStartHour: 9,
     itineraryStartMinute: '00',

@@ -10,7 +10,7 @@ import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
 
 type UseBuilderBootstrapParams = {
-  token?: string
+  token?: string | null
   payloadIdParam: string | null
   draftIdParam: string | null
   setSearchParams: SetURLSearchParams
@@ -56,6 +56,7 @@ export function useBuilderBootstrap({
 
   useEffect(() => {
     if (!token) return
+    const authToken = token
 
     let cancelled = false
 
@@ -65,8 +66,8 @@ export function useBuilderBootstrap({
 
       try {
         const [locationDocs, mediaDocs] = await Promise.all([
-          fetchLocations(token),
-          fetchMediaAssets(token),
+          fetchLocations(authToken),
+          fetchMediaAssets(authToken),
         ])
 
         if (cancelled) return
@@ -83,7 +84,7 @@ export function useBuilderBootstrap({
               saveDraft(normalizedLocalDraft)
             }
           } else {
-            const doc = await fetchListicleById(payloadId, token)
+            const doc = await fetchListicleById(payloadId, authToken)
             if (cancelled) return
             const normalizedPayloadDraft = normalizeDraftModelName(payloadDocToDraft(doc))
             setDraft(normalizedPayloadDraft)

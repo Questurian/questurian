@@ -2,6 +2,12 @@ export type SynthesizeResponse = {
   synthesized: string
 }
 
+export type Prompt2BlogModelName =
+  | 'gemini-2.5-flash-lite'
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.0-flash'
+
 export type Prompt2BlogInputOption = {
   id: string
   label: string
@@ -58,7 +64,7 @@ export type Prompt2BlogPipelineStartRequest = {
   negative_instructions?: string[]
   include_debug?: boolean
   enable_editorial_augmentation?: boolean
-  model_name?: string
+  model_name?: Prompt2BlogModelName
 }
 
 export type Prompt2BlogPipelineStartResponse = {
@@ -84,7 +90,7 @@ export type Prompt2BlogRunRequest = {
   negative_instructions?: string[]
   include_debug?: boolean
   enable_editorial_augmentation?: boolean
-  model_name?: string
+  model_name?: Prompt2BlogModelName
 }
 
 export type Prompt2BlogRunResponse = {

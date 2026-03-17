@@ -22,6 +22,7 @@ import type { TimelineItem } from '../workflow.service'
 import type { EditorialStageUiEvent, PublishPhase } from '../state/editorialStageUiMachine'
 import { normalizeTripIntent } from '../../../../trip-intent'
 import { getLocationDisplayName } from '../utils/editorial-stage-view.utils'
+import { sanitizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
 
 type DispatchUiEvent = (event: EditorialStageUiEvent) => void
 
@@ -67,7 +68,7 @@ export function useEditorialStagePublishWorkflow({
   publishPhase,
   publishResult,
 }: UseEditorialStagePublishWorkflowParams) {
-  const schemaPublisherConfig = getSchemaPublisherConfig()
+  const schemaPublisherConfig = useMemo(() => getSchemaPublisherConfig(), [])
 
   const handlePublish = useCallback(async (targetStatus: 'draft' | 'published') => {
     if (!token || !stagedArticle) return
@@ -76,6 +77,11 @@ export function useEditorialStagePublishWorkflow({
 
     const trimmedTitle = stagedArticle.title.trim()
     const location = locations.find((candidate) => candidate.id === stagedArticle.locationId)
+    const sharedNeighborhoods = sanitizeSharedNeighborhoods(
+      stagedArticle.sharedNeighborhoods,
+      locations,
+      stagedArticle.locationId
+    )
     const resolvedFeaturedAsset = stagedArticle.featuredImageId
       ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
       : null
@@ -240,6 +246,7 @@ export function useEditorialStagePublishWorkflow({
         title: trimmedTitle,
         location: location.locationKey,
         locationRef: location.id,
+        sharedNeighborhoods,
         step1_complete: true,
         tripIntent: normalizeTripIntent(stagedArticle.tripIntent),
         status: targetStatus,
@@ -324,7 +331,7 @@ export function useEditorialStagePublishWorkflow({
     updateArticle,
     editorialPublishAnalysis,
     markArticleSynced,
-    schemaPublisherConfig.defaultAuthorName,
+    schemaPublisherConfig,
     timelineItems,
     updateStagedArticle,
   ])

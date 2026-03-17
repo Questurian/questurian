@@ -82,6 +82,8 @@ export default function ListicleItineraryBuilderPage() {
   const { isLoadingRelated, relatedByBlockType } = useRelatedItems({
     token,
     location: draft?.location,
+    sharedNeighborhoods: draft?.sharedNeighborhoods,
+    locations,
     onError,
   })
 

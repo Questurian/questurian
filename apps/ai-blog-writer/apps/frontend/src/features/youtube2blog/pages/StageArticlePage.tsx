@@ -24,7 +24,7 @@ export type {
 export default function StageArticlePage() {
   return (
     <EditorialStageArticlePage
-      storageKey="youtube2blog_staged_articles"
+      storageKey="youtube2blog_staged_articles_v2"
       routes={{
         stagePath: '/youtube2blog/stage',
         stageArticlePath: '/youtube2blog/stage-article',

@@ -1,6 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useMemo, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
+import {
+  areLocationIdSelectionsEqual,
+  findLocationByKey,
+  normalizeLocationIds,
+  normalizeLocationKey,
+} from '../../../locationScope/scope'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
 import { createEmptySeoSection } from '../services/seo-section.service'
 import { createEmptyDraft, removeDraft } from '../../storage'
@@ -83,6 +89,7 @@ export function useBuilderDraftActions({
   const [setupBaseline, setSetupBaseline] = useState<{
     location: string
     listicleType: ListicleType | ''
+    sharedNeighborhoods: number[]
   } | null>(null)
 
   const hasResettableContent = (current: SingleTypeListicleDraft): boolean => (
@@ -94,9 +101,6 @@ export function useBuilderDraftActions({
     || (current.header.introJsonText || '').trim().length > 0
     || hasSeoContent(current)
   )
-
-  const normalizeLocationKey = (value: string): string =>
-    value.trim().toLowerCase().replace(/\s*\|\s*/g, '|')
 
   const selectedLocationRefId = useMemo(() => {
     const fallbackLocationRef = (
@@ -112,11 +116,7 @@ export function useBuilderDraftActions({
       return fallbackLocationRef
     }
 
-    const normalizedLocationKey = normalizeLocationKey(locationKey)
-    const selected = locations.find((location) => (
-      normalizeLocationKey(location.locationKey) === normalizedLocationKey
-    ))
-
+    const selected = findLocationByKey(locations, locationKey)
     return selected?.id || fallbackLocationRef
   }, [draft?.location, draft?.locationRef, locations])
 
@@ -124,16 +124,27 @@ export function useBuilderDraftActions({
     setDraft((current) => {
       if (!current) return current
 
+      const locationChanged = (
+        typeof next.location === 'string'
+        && normalizeLocationKey(next.location) !== normalizeLocationKey(current.location)
+      )
       const shouldLockTargetCountEdit = (
         typeof next.targetItemCount === 'number'
         && next.targetItemCount !== current.targetItemCount
         && hasAnyWrittenItemData(current.items)
       )
 
+      const normalizedSharedNeighborhoods = 'sharedNeighborhoods' in next
+        ? normalizeLocationIds(next.sharedNeighborhoods)
+        : locationChanged
+          ? []
+          : current.sharedNeighborhoods
+
       if (!shouldLockTargetCountEdit) {
         return {
           ...current,
           ...next,
+          sharedNeighborhoods: normalizedSharedNeighborhoods,
         }
       }
 
@@ -142,6 +153,7 @@ export function useBuilderDraftActions({
       return {
         ...current,
         ...safeNext,
+        sharedNeighborhoods: normalizedSharedNeighborhoods,
       }
     })
   }
@@ -248,6 +260,7 @@ export function useBuilderDraftActions({
     setSetupBaseline({
       location: draft.location,
       listicleType: draft.listicleType,
+      sharedNeighborhoods: [...draft.sharedNeighborhoods],
     })
     updateDraft({ in_update_mode: true })
     onError('')
@@ -264,6 +277,12 @@ export function useBuilderDraftActions({
 
     const prevType = setupBaseline?.listicleType
     const typeChanged = prevType && prevType !== draft.listicleType
+    const locationChanged = setupBaseline
+      ? normalizeLocationKey(setupBaseline.location) !== normalizeLocationKey(draft.location)
+      : false
+    const sharedNeighborhoodsChanged = setupBaseline
+      ? !areLocationIdSelectionsEqual(setupBaseline.sharedNeighborhoods, draft.sharedNeighborhoods)
+      : false
 
     if (typeChanged) {
       if (hasResettableContent(draft)) {
@@ -293,6 +312,33 @@ export function useBuilderDraftActions({
           items: [],
           seoSection: createEmptySeoSection(),
           status: 'draft',
+          locationRef: selectedLocationRefId,
+        }
+      })
+      setSetupBaseline(null)
+      onError('')
+      return
+    }
+
+    if (locationChanged || sharedNeighborhoodsChanged) {
+      if (hasAnyWrittenItemData(draft.items)) {
+        const confirmed = window.confirm(
+          'Changing location or shared neighborhoods clears the current related item selections. Continue?',
+        )
+        if (!confirmed) return
+      }
+
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          in_update_mode: false,
+          step1_complete: true,
+          step2_complete: false,
+          step2_in_update_mode: false,
+          step3_complete: false,
+          step3_in_update_mode: false,
+          items: resizeItemsToTargetCount([], current.targetItemCount, current.listicleType),
           locationRef: selectedLocationRefId,
         }
       })

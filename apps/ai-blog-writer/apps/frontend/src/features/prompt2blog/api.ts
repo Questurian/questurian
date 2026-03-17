@@ -10,6 +10,7 @@ export type {
   Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOption,
   Prompt2BlogInputOptionsResponse,
+  Prompt2BlogModelName,
   Prompt2BlogPipelinePayload,
   Prompt2BlogPipelineStartRequest,
   Prompt2BlogPipelineStartResponse,

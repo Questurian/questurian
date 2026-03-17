@@ -15,8 +15,13 @@ import {
   requiresInstagram,
   requiresPhotos,
 } from '../../shared/utils/itemMedia'
+import {
+  getArticleLocationScope,
+  isLocationWithinArticleScope,
+  syncSharedNeighborhoodsField,
+  validateSharedNeighborhoodSelection,
+} from '@/shared/location/server/articleLocationScope'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
-import { isLocationWithinScope } from '@/shared/location/server/locationScope'
 import {
   step1Complete,
   inUpdateMode,
@@ -24,6 +29,7 @@ import {
   title,
   location,
   locationRef,
+  sharedNeighborhoods,
   dayAudience,
   itineraryStart,
   itineraryEnd,
@@ -112,6 +118,7 @@ export const ListicleItineraries: CollectionConfig = {
     title,
     location,
     locationRef,
+    sharedNeighborhoods,
     dayAudience,
     itineraryStart,
     itineraryEnd,
@@ -153,11 +160,21 @@ export const ListicleItineraries: CollectionConfig = {
     ],
     beforeValidate: [
       syncLocationFields(),
+      syncSharedNeighborhoodsField(),
       async ({ data, originalDoc, operation, req }) => {
         const merged = {
           ...(originalDoc ?? {}),
           ...(data ?? {}),
         } as Record<string, unknown>
+
+        const sharedNeighborhoodValidation = await validateSharedNeighborhoodSelection(req.payload, {
+          location: getValue<string>(merged, 'location'),
+          sharedNeighborhoods: getValue<unknown>(merged, 'sharedNeighborhoods'),
+        })
+
+        if (sharedNeighborhoodValidation !== true) {
+          throw new Error(sharedNeighborhoodValidation)
+        }
 
         if ((operation === 'create' || operation === 'update') && !getValue<boolean>(merged, 'step1_complete')) {
           throw new Error(
@@ -336,10 +353,17 @@ export const ListicleItineraries: CollectionConfig = {
 
         const parentLocation = getValue<string>(merged, 'location')
         if (parentLocation) {
+          const locationScope = await getArticleLocationScope(req.payload, {
+            location: parentLocation,
+            sharedNeighborhoods: getValue<unknown>(merged, 'sharedNeighborhoods'),
+          })
+
           for (const block of computed) {
-            if (block.location && !isLocationWithinScope(block.location, parentLocation)) {
+            if (block.location && !isLocationWithinArticleScope(block.location, locationScope)) {
               throw new Error(
-                `Item ${block.index + 1} location does not match itinerary location (${parentLocation}).`,
+                locationScope.exactNeighborhoods
+                  ? `Item ${block.index + 1} location does not match the selected neighborhoods.`
+                  : `Item ${block.index + 1} location does not match itinerary location (${parentLocation}).`,
               )
             }
           }

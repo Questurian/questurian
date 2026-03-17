@@ -214,6 +214,7 @@ export function useEditorialStagePageData({
               content: composeArticleMarkdown(blocks, editorialBlocks),
               blocks,
               editorialBlocks,
+              sharedNeighborhoods: [],
               editorModelName: DEFAULT_EDITOR_MODEL_NAME,
               tripIntent: [...DEFAULT_TRIP_INTENT],
               step1_complete: false,

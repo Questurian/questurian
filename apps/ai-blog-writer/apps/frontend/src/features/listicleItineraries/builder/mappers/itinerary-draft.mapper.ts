@@ -44,6 +44,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     title: doc.title || '',
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),
+    sharedNeighborhoods: getRelationshipIds(doc.sharedNeighborhoods),
     dayAudience: doc.dayAudience || '',
     itineraryStartHour: typeof doc.itineraryStartHour === 'number' ? doc.itineraryStartHour : 9,
     itineraryStartMinute: normalizeQuarterMinute(doc.itineraryStartMinute),

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { getLocationScopeForKey } from '../../../locationScope/scope'
+import { getArticleLocationScope } from '../../../locationScope/scope'
 import { fetchRelatedItems } from '../../api'
-import type { ItineraryBlockType, RelatedItemOption } from '../../types'
+import type { ItineraryBlockType, LocationOption, RelatedItemOption } from '../../types'
 import { BLOCK_TYPE_OPTIONS, EMPTY_RELATED_BY_BLOCK_TYPE } from '../constants/builder-options.constants'
 
 type UseRelatedItemsParams = {
-  token?: string
+  token?: string | null
   location?: string
+  sharedNeighborhoods?: number[]
+  locations: LocationOption[]
   onError: (message: string) => void
 }
 
@@ -15,7 +17,13 @@ type UseRelatedItemsResult = {
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
 }
 
-export function useRelatedItems({ token, location, onError }: UseRelatedItemsParams): UseRelatedItemsResult {
+export function useRelatedItems({
+  token,
+  location,
+  sharedNeighborhoods,
+  locations,
+  onError,
+}: UseRelatedItemsParams): UseRelatedItemsResult {
   const [isLoadingRelated, setIsLoadingRelated] = useState(false)
   const [relatedByBlockType, setRelatedByBlockType] = useState<Record<ItineraryBlockType, RelatedItemOption[]>>(EMPTY_RELATED_BY_BLOCK_TYPE)
 
@@ -25,13 +33,24 @@ export function useRelatedItems({ token, location, onError }: UseRelatedItemsPar
       return
     }
 
+    const authToken = token
+    const primaryLocation = location
+    const exactNeighborhoods = sharedNeighborhoods
+
     let cancelled = false
     setIsLoadingRelated(true)
 
-    getLocationScopeForKey(location, token)
+    getArticleLocationScope({
+      locationKey: primaryLocation,
+      sharedNeighborhoods: exactNeighborhoods,
+      locations,
+      token: authToken,
+    })
       .then((scope) => {
         if (cancelled) return []
-        return Promise.all(BLOCK_TYPE_OPTIONS.map((option) => fetchRelatedItems(option.value, location, token, scope)))
+        return Promise.all(BLOCK_TYPE_OPTIONS.map((option) => (
+          fetchRelatedItems(option.value, primaryLocation, authToken, scope)
+        )))
       })
       .then((docsByType) => {
         if (cancelled) return
@@ -55,7 +74,7 @@ export function useRelatedItems({ token, location, onError }: UseRelatedItemsPar
     return () => {
       cancelled = true
     }
-  }, [token, location, onError])
+  }, [token, location, sharedNeighborhoods, locations, onError])
 
   return {
     isLoadingRelated,

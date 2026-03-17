@@ -42,6 +42,7 @@ export type StagedArticle = {
   blocks: ContentBlock[]
   editorialBlocks: EditorialBlock[]
   locationId?: number
+  sharedNeighborhoods: number[]
   editorModelName?: string
   featuredImageId?: number
   step1_complete?: boolean

@@ -1,4 +1,4 @@
-const STAGED_ARTICLES_KEY = 'youtube2blog_staged_articles'
+const STAGED_ARTICLES_KEY = 'youtube2blog_staged_articles_v2'
 
 export function getStagedArticlesCount(): number {
   try {

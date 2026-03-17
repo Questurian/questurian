@@ -1,6 +1,7 @@
 import type { EditorAssistModelName } from '../staging/api'
 import type { SeoSection, SeoTwitterCardType } from '../shared/seo/types'
 import type { TripIntent } from '../trip-intent'
+import type { LocationLevel } from '../locationScope/types'
 
 export type ListicleType = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
 
@@ -40,6 +41,7 @@ export type SingleTypeListicleDraft = {
   title: string
   location: string
   locationRef: number | null
+  sharedNeighborhoods: number[]
   listicleType: ListicleType | ''
   /** 0 means "unset"; valid configured range is 1..50 */
   targetItemCount: number
@@ -76,6 +78,7 @@ export type PayloadListicleDoc = {
   slug?: string | null
   location?: string
   locationRef?: number | { id?: number }
+  sharedNeighborhoods?: Array<number | { id?: number }>
   listicleType?: ListicleType
   targetItemCount?: number
   tripIntent?: TripIntent[]
@@ -139,6 +142,8 @@ export type LocationOption = {
   country?: string
   city?: string | null
   neighborhood?: string | null
+  level?: LocationLevel
+  parentKey?: string | null
 }
 
 export type MediaAssetOption = {
@@ -202,6 +207,7 @@ export type RelatedItemOption = {
   id: number
   title: string
   location?: string
+  locationRef?: number | { id?: number } | null
   status?: string
   gallery?: Array<{
     image?: number | GalleryImageObject

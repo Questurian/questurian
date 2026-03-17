@@ -25,7 +25,7 @@ export type {
 export default function StageArticlePage() {
   return (
     <StandardArticleStageBuilder
-      storageKey="prompt2blog_staged_articles"
+      storageKey="prompt2blog_staged_articles_v2"
       routes={{
         stagePath: '/prompt2blog/stage',
         stageArticlePath: '/prompt2blog/stage-article',

@@ -31,6 +31,11 @@ import {
   serializeStandardArticleStructuredDataTemplate,
   validateStandardArticleSeoSection,
 } from '../features/editorial-stage-article/services/standard-article-seo.service'
+import {
+  buildPrimaryLocationUpdate,
+  getSharedNeighborhoodOptions,
+  sanitizeSharedNeighborhoods,
+} from '../features/editorial-stage-article/utils/sharedNeighborhoods'
 import { FeaturedImageModal } from './editorial-stage/FeaturedImageModal'
 import { BlockImageModal } from './editorial-stage/BlockImageModal'
 import { EditorialTimelineList } from './editorial-stage/EditorialTimelineList'
@@ -107,6 +112,18 @@ export function StandardArticleStageBuilder({
     () => sidebarProps?.locations.find((location) => location.id === stagedArticle?.locationId),
     [sidebarProps?.locations, stagedArticle?.locationId],
   )
+  const sharedNeighborhoodOptions = useMemo(
+    () => getSharedNeighborhoodOptions(sidebarProps?.locations ?? [], stagedArticle?.locationId),
+    [sidebarProps?.locations, stagedArticle?.locationId],
+  )
+  const selectedSharedNeighborhoods = useMemo(
+    () => sanitizeSharedNeighborhoods(
+      stagedArticle?.sharedNeighborhoods ?? [],
+      sidebarProps?.locations ?? [],
+      stagedArticle?.locationId
+    ),
+    [sidebarProps?.locations, stagedArticle?.locationId, stagedArticle?.sharedNeighborhoods],
+  )
   const selectedLocationLabel = useMemo(
     () => getLocationDisplayName(selectedLocation),
     [selectedLocation],
@@ -150,6 +167,7 @@ export function StandardArticleStageBuilder({
   const isFeaturedImagePlaceholder = !featuredImageId
   const canManagePublished = user?.role === 'admin' || user?.role === 'editor'
   const isPublished = stagedArticle?.payloadStatus === 'published'
+  const isCityPrimaryLocation = selectedLocation?.level === 'city'
 
   const isStep1Locked = Boolean(stagedArticle?.step1_complete && !stagedArticle?.in_update_mode)
   const isStep2Locked = Boolean(stagedArticle?.step2_complete && !stagedArticle?.step2_in_update_mode)
@@ -509,7 +527,14 @@ export function StandardArticleStageBuilder({
                   <span>Location</span>
                   <select
                     value={stagedArticle.locationId || ''}
-                    onChange={(event) => sidebarProps.onUpdateStagedArticle({ locationId: Number(event.target.value) || undefined })}
+                    onChange={(event) => {
+                      const nextLocationId = Number(event.target.value) || undefined
+                      sidebarProps.onUpdateStagedArticle(buildPrimaryLocationUpdate({
+                        locations: sidebarProps.locations,
+                        nextLocationId,
+                        sharedNeighborhoods: stagedArticle.sharedNeighborhoods,
+                      }))
+                    }}
                   >
                     <option value="">Select location</option>
                     {sidebarProps.locations.map((location) => (
@@ -519,6 +544,42 @@ export function StandardArticleStageBuilder({
                     ))}
                   </select>
                 </label>
+
+                {isCityPrimaryLocation ? (
+                  <label className="stl-field">
+                    <span>Shared Neighborhoods</span>
+                    <small>Optional. Exact neighborhood scoping only.</small>
+                    <select
+                      multiple
+                      value={selectedSharedNeighborhoods.map(String)}
+                      onChange={(event) => {
+                        const nextSharedNeighborhoods = Array.from(
+                          event.currentTarget.selectedOptions,
+                          (option) => Number(option.value)
+                        ).filter((value) => Number.isFinite(value) && value > 0)
+
+                        sidebarProps.onUpdateStagedArticle({
+                          sharedNeighborhoods: sanitizeSharedNeighborhoods(
+                            nextSharedNeighborhoods,
+                            sidebarProps.locations,
+                            stagedArticle.locationId
+                          ),
+                        })
+                      }}
+                      style={{ minHeight: '8rem' }}
+                      disabled={sharedNeighborhoodOptions.length === 0}
+                    >
+                      {sharedNeighborhoodOptions.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {getLocationDisplayName(location)}
+                        </option>
+                      ))}
+                    </select>
+                    {sharedNeighborhoodOptions.length === 0 ? (
+                      <small>No neighborhoods are available for this city yet.</small>
+                    ) : null}
+                  </label>
+                ) : null}
 
                 <label className="stl-field">
                   <span>AI Model</span>
@@ -566,7 +627,7 @@ export function StandardArticleStageBuilder({
 
               {isStep1Locked ? (
                 <p className="sab-stage-summary">
-                  Locked with title, location, trip intent, and AI model. Updating setup will unlock later steps.
+                  Locked with title, primary location, optional shared neighborhoods, trip intent, and AI model. Updating setup will unlock later steps.
                 </p>
               ) : null}
             </section>

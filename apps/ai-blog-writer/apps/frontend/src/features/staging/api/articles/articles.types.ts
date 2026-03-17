@@ -22,6 +22,7 @@ export type CreateArticlePayload = {
   title: string
   location?: string
   locationRef?: number
+  sharedNeighborhoods?: number[]
   step1_complete: boolean
   status?: 'draft' | 'published'
   tripIntent: TripIntent[]

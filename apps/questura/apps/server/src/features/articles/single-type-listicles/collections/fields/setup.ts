@@ -1,5 +1,8 @@
 import { Field } from 'payload'
-import { createLocationRefField } from '@/shared/location/server/fields'
+import {
+  createLocationRefField,
+  createSharedNeighborhoodsField,
+} from '@/shared/location/server/fields'
 
 const listicleTypeOptions = [
   { label: 'Dining', value: 'dining' },
@@ -35,6 +38,8 @@ export const location: Field = {
 }
 
 export const locationRef: Field = createLocationRefField()
+
+export const sharedNeighborhoods: Field = createSharedNeighborhoodsField()
 
 export const listicleType: Field = {
   name: 'listicleType',

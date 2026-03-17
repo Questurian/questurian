@@ -12,7 +12,12 @@ import {
   requiresPhotos,
 } from '../blocks/utils/itemMedia'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
-import { isLocationWithinScope } from '@/shared/location/server/locationScope'
+import {
+  getArticleLocationScope,
+  isLocationWithinArticleScope,
+  syncSharedNeighborhoodsField,
+  validateSharedNeighborhoodSelection,
+} from '@/shared/location/server/articleLocationScope'
 import {
   step1Complete,
   inUpdateMode,
@@ -20,6 +25,7 @@ import {
   title,
   location,
   locationRef,
+  sharedNeighborhoods,
   listicleType,
   targetItemCount,
   step1UiWrapper,
@@ -97,6 +103,7 @@ export const SingleTypeListicles: CollectionConfig = {
     title,
     location,
     locationRef,
+    sharedNeighborhoods,
     listicleType,
     targetItemCount,
     step1UiWrapper,
@@ -137,7 +144,17 @@ export const SingleTypeListicles: CollectionConfig = {
     ],
     beforeValidate: [
       syncLocationFields(),
+      syncSharedNeighborhoodsField(),
       async ({ data, operation, req }) => {
+        const sharedNeighborhoodValidation = await validateSharedNeighborhoodSelection(req.payload, {
+          location: data?.location,
+          sharedNeighborhoods: data?.sharedNeighborhoods,
+        })
+
+        if (sharedNeighborhoodValidation !== true) {
+          throw new Error(sharedNeighborhoodValidation)
+        }
+
         if ((operation === 'create' || operation === 'update') && !data?.step1_complete) {
           throw new Error(
             'Please complete setup: title, location, listicle type, and target list size',
@@ -176,6 +193,10 @@ export const SingleTypeListicles: CollectionConfig = {
 
         if (data?.items && Array.isArray(data.items)) {
           const parentLocation = data?.location
+          const locationScope = await getArticleLocationScope(req.payload, {
+            location: data?.location,
+            sharedNeighborhoods: data?.sharedNeighborhoods,
+          })
           const sourceItemCache = new Map<string, Record<string, unknown> | null>()
 
           for (let i = 0; i < data.items.length; i++) {
@@ -258,9 +279,11 @@ export const SingleTypeListicles: CollectionConfig = {
             }
 
             if (parentLocation && typeof sourceItem.location === 'string') {
-              if (!isLocationWithinScope(sourceItem.location, parentLocation)) {
+              if (!isLocationWithinArticleScope(sourceItem.location, locationScope)) {
                 throw new Error(
-                  `Item ${i + 1} location does not match listicle location (${parentLocation}).`,
+                  locationScope.exactNeighborhoods
+                    ? `Item ${i + 1} location does not match the selected neighborhoods.`
+                    : `Item ${i + 1} location does not match listicle location (${parentLocation}).`,
                 )
               }
             }

@@ -11,9 +11,15 @@ import {
   type Prompt2BlogGuidelinePreviewResponse,
   type Prompt2BlogInputOption,
   type Prompt2BlogInputOptionsResponse,
+  type Prompt2BlogModelName,
   type Prompt2BlogPipelinePayload,
   type Prompt2BlogStatusResponse,
 } from './api'
+import {
+  DEFAULT_PROMPT2BLOG_MODEL,
+  PROMPT2BLOG_MODEL_OPTIONS,
+  resolvePrompt2BlogModelName,
+} from './constants/prompt2blog.constants'
 import './styles.css'
 
 interface RawBlob {
@@ -26,6 +32,7 @@ interface P2BFormState {
   articleGoal: string
   targetReader: string
   destinationContext: string
+  modelName: Prompt2BlogModelName
   toneId: string
   lengthId: string
   brandVoiceId: string
@@ -48,6 +55,7 @@ const DEFAULT_STATE: P2BFormState = {
   articleGoal: '',
   targetReader: '',
   destinationContext: '',
+  modelName: DEFAULT_PROMPT2BLOG_MODEL,
   toneId: '',
   lengthId: '',
   brandVoiceId: '',
@@ -70,6 +78,7 @@ function loadSavedState(): P2BFormState {
     return {
       ...DEFAULT_STATE,
       ...parsed,
+      modelName: resolvePrompt2BlogModelName(parsed.modelName),
       blobs: Array.isArray(parsed.blobs) && parsed.blobs.length ? parsed.blobs : DEFAULT_STATE.blobs,
       creativityLevel:
         parsed.creativityLevel === 'low' || parsed.creativityLevel === 'high'
@@ -215,6 +224,7 @@ export default function Prompt2BlogPage() {
   const [articleGoal, setArticleGoal] = useState(saved.current.articleGoal)
   const [targetReader, setTargetReader] = useState(saved.current.targetReader)
   const [destinationContext, setDestinationContext] = useState(saved.current.destinationContext)
+  const [modelName, setModelName] = useState<Prompt2BlogModelName>(saved.current.modelName)
   const [toneId, setToneId] = useState(saved.current.toneId)
   const [lengthId, setLengthId] = useState(saved.current.lengthId)
   const [brandVoiceId, setBrandVoiceId] = useState(saved.current.brandVoiceId)
@@ -243,6 +253,7 @@ export default function Prompt2BlogPage() {
       articleGoal,
       targetReader,
       destinationContext,
+      modelName,
       toneId,
       lengthId,
       brandVoiceId,
@@ -262,6 +273,7 @@ export default function Prompt2BlogPage() {
     articleGoal,
     targetReader,
     destinationContext,
+    modelName,
     toneId,
     lengthId,
     brandVoiceId,
@@ -396,6 +408,7 @@ export default function Prompt2BlogPage() {
       article_goal: articleGoal,
       target_reader: targetReader,
       destination_context: destinationContext,
+      model_name: modelName,
       tone_id: toneId,
       length_id: lengthId,
       brand_voice_id: brandVoiceId || undefined,
@@ -415,6 +428,7 @@ export default function Prompt2BlogPage() {
     articleGoal,
     targetReader,
     destinationContext,
+    modelName,
     toneId,
     lengthId,
     brandVoiceId,
@@ -512,6 +526,7 @@ export default function Prompt2BlogPage() {
     setArticleGoal(DEFAULT_STATE.articleGoal)
     setTargetReader(DEFAULT_STATE.targetReader)
     setDestinationContext(DEFAULT_STATE.destinationContext)
+    setModelName(DEFAULT_STATE.modelName)
     setToneId(DEFAULT_STATE.toneId)
     setLengthId(DEFAULT_STATE.lengthId)
     setBrandVoiceId(DEFAULT_STATE.brandVoiceId)
@@ -662,7 +677,7 @@ export default function Prompt2BlogPage() {
           <Link to="/prompt2blog/stage" className="p2b-nav-link">
             Staged ({(() => {
               try {
-                const stored = localStorage.getItem('prompt2blog_staged_articles')
+                const stored = localStorage.getItem('prompt2blog_staged_articles_v2')
                 return stored ? JSON.parse(stored).length : 0
               } catch {
                 return 0
@@ -784,7 +799,20 @@ export default function Prompt2BlogPage() {
                 </div>
               </div>
 
-              <div className="p2b-field-row p2b-field-row--2">
+              <div className="p2b-field-row p2b-field-row--3">
+                <div className="p2b-field">
+                  <label htmlFor="p2b-model">Writing Model</label>
+                  <select
+                    id="p2b-model"
+                    className="p2b-select"
+                    value={modelName}
+                    onChange={(event) => setModelName(resolvePrompt2BlogModelName(event.target.value))}
+                  >
+                    {PROMPT2BLOG_MODEL_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="p2b-field">
                   <label htmlFor="p2b-creativity">Creativity Level</label>
                   <select
@@ -1003,6 +1031,7 @@ export default function Prompt2BlogPage() {
                   </div>
                   <p><strong>Status:</strong> {pipelineResult.pipeline_status}</p>
                   <p><strong>Article Type:</strong> {pipelineResult.article_type.name}</p>
+                  <p><strong>Model Used:</strong> {pipelineResult.quality_review.model_used}</p>
                   <p><strong>Title:</strong> {pipelineResult.improved_article.title}</p>
                   <p><strong>Quality Summary:</strong> {pipelineResult.quality_review.quality_summary}</p>
 

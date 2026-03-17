@@ -1,8 +1,15 @@
-import type { ListicleType, LocationOption, SingleTypeListicleDraft, TripIntent } from '../../types'
+import type { ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import { LISTICLE_TYPE_OPTIONS } from '../constants/builder-options.constants'
 import { TRIP_INTENT_OPTIONS } from '../../../trip-intent'
+import type { TripIntent } from '../../../trip-intent'
+import {
+  findLocationByKey,
+  formatLocationLabel,
+  getNeighborhoodOptionsForLocation,
+  isCityLocation,
+} from '../../../locationScope/scope'
 import { hasAnyWrittenItemData } from '../utils/item-target-count.utils'
 import { validateStep1 } from '../validators/setup.validators'
 
@@ -18,40 +25,6 @@ type BuilderSetupPanelProps = {
   updateDraft: (next: Partial<SingleTypeListicleDraft>) => void
   setTargetItemCount: (nextCount: number) => void
   onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
-}
-
-function formatLocationToken(token: string): string {
-  return token
-    .trim()
-    .split(/[\s_-]+/g)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
-}
-
-function formatLocationLabel(location: LocationOption): string {
-  const partsFromFields = [
-    location.country,
-    location.city || undefined,
-    location.neighborhood || undefined,
-  ]
-    .map((part) => (part || '').trim())
-    .filter(Boolean)
-
-  if (partsFromFields.length > 0) {
-    return partsFromFields.map((part) => formatLocationToken(part)).join(' > ')
-  }
-
-  const partsFromKey = (location.locationKey || '')
-    .split('|')
-    .map((part) => part.trim())
-    .filter(Boolean)
-
-  if (partsFromKey.length > 0) {
-    return partsFromKey.map((part) => formatLocationToken(part)).join(' > ')
-  }
-
-  return location.locationKey
 }
 
 function getAiTitleDisabledReason(draft: SingleTypeListicleDraft): string | undefined {
@@ -83,6 +56,9 @@ export function BuilderSetupPanel({
   const selectedTargetCount = draft.targetItemCount > 0 ? draft.targetItemCount : null
   const selectedTripIntent = draft.tripIntent || []
   const canUnsetLastTripIntent = selectedTripIntent.length > 1
+  const selectedPrimaryLocation = findLocationByKey(locations, draft.location)
+  const neighborhoodOptions = getNeighborhoodOptionsForLocation(locations, draft.location)
+  const showNeighborhoodPicker = isCityLocation(selectedPrimaryLocation)
 
   const handleTripIntentChange = (intent: TripIntent, nextChecked: boolean) => {
     const nextTripIntent = nextChecked
@@ -133,7 +109,11 @@ export function BuilderSetupPanel({
           <select
             value={draft.location}
             disabled={isSetupLocked}
-            onChange={(event) => updateDraft({ location: event.target.value, locationRef: null })}
+            onChange={(event) => updateDraft({
+              location: event.target.value,
+              locationRef: null,
+              sharedNeighborhoods: [],
+            })}
           >
             <option value="">Select location</option>
             {locations.map((location) => (
@@ -143,6 +123,35 @@ export function BuilderSetupPanel({
             ))}
           </select>
         </label>
+
+        {showNeighborhoodPicker ? (
+          <label className="stl-field">
+            <span>Shared Neighborhoods</span>
+            <select
+              className="stl-multi-select"
+              multiple
+              size={Math.min(Math.max(neighborhoodOptions.length, 3), 8)}
+              value={draft.sharedNeighborhoods.map(String)}
+              disabled={isSetupLocked || neighborhoodOptions.length < 1}
+              onChange={(event) => updateDraft({
+                sharedNeighborhoods: Array.from(event.target.selectedOptions)
+                  .map((option) => Number(option.value))
+                  .filter((value) => Number.isFinite(value)),
+              })}
+            >
+              {neighborhoodOptions.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {formatLocationLabel(location)}
+                </option>
+              ))}
+            </select>
+            <small className="stl-summary-note">
+              {neighborhoodOptions.length > 0
+                ? 'Optional. When selected, related item filters match only these exact neighborhoods.'
+                : 'No neighborhoods are available under this city.'}
+            </small>
+          </label>
+        ) : null}
 
         <label className="stl-field">
           <span>Listicle Data Type *</span>

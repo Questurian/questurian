@@ -13,6 +13,8 @@ export const LOCATION_REFERENCE_TARGETS: LocationReferenceTarget[] = [
   { slug: 'nightlife', label: 'Nightlife' },
   { slug: 'attractions', label: 'Attractions' },
   { slug: 'articles', label: 'Articles' },
+  { slug: 'single-type-listicles', label: 'Single Type Listicles' },
+  { slug: 'listicle-itineraries', label: 'Listicle Itineraries' },
 ]
 
 export const findLocationReferences = async (
@@ -53,6 +55,22 @@ export const findLocationReferences = async (
       })
 
       if (byRef.totalDocs > 0) {
+        references.add(target.label)
+      }
+
+      const bySharedNeighborhood = await payload.find({
+        collection: target.slug,
+        where: {
+          sharedNeighborhoods: {
+            in: [locationId],
+          },
+        },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+
+      if (bySharedNeighborhood.totalDocs > 0) {
         references.add(target.label)
       }
     }

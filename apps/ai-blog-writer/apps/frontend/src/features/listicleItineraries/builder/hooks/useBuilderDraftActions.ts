@@ -1,6 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useMemo, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
+import {
+  areLocationIdSelectionsEqual,
+  findLocationByKey,
+  normalizeLocationIds,
+  normalizeLocationKey,
+} from '../../../locationScope/scope'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
 import { createEmptyDraft, removeDraft } from '../../storage'
 import type {
@@ -64,20 +70,40 @@ export function useBuilderDraftActions({
   onError,
   setResult,
 }: UseBuilderDraftActionsParams): UseBuilderDraftActionsResult {
-  const [setupBaseline, setSetupBaseline] = useState<{ location: string } | null>(null)
+  const [setupBaseline, setSetupBaseline] = useState<{
+    location: string
+    sharedNeighborhoods: number[]
+  } | null>(null)
 
   const selectedLocationRefId = useMemo(() => {
-    if (!draft?.location) return null
-    const selected = locations.find((location) => location.locationKey === draft.location)
-    return selected?.id || null
-  }, [draft?.location, locations])
+    const fallbackLocationRef = (
+      typeof draft?.locationRef === 'number'
+      && Number.isFinite(draft.locationRef)
+      && draft.locationRef > 0
+    )
+      ? draft.locationRef
+      : null
+
+    if (!draft?.location) return fallbackLocationRef
+    const selected = findLocationByKey(locations, draft.location)
+    return selected?.id || fallbackLocationRef
+  }, [draft?.location, draft?.locationRef, locations])
 
   function updateDraft(next: Partial<ListicleItineraryDraft>) {
     setDraft((current) => {
       if (!current) return current
+      const locationChanged = (
+        typeof next.location === 'string'
+        && normalizeLocationKey(next.location) !== normalizeLocationKey(current.location)
+      )
       return {
         ...current,
         ...next,
+        sharedNeighborhoods: 'sharedNeighborhoods' in next
+          ? normalizeLocationIds(next.sharedNeighborhoods)
+          : locationChanged
+            ? []
+            : current.sharedNeighborhoods,
       }
     })
   }
@@ -191,6 +217,7 @@ export function useBuilderDraftActions({
     if (!draft) return
     setSetupBaseline({
       location: draft.location,
+      sharedNeighborhoods: [...draft.sharedNeighborhoods],
     })
     updateDraft({ in_update_mode: true })
     onError('')
@@ -205,11 +232,38 @@ export function useBuilderDraftActions({
       return
     }
 
-    const locationChanged = setupBaseline?.location && setupBaseline.location !== draft.location
+    const locationChanged = setupBaseline
+      ? normalizeLocationKey(setupBaseline.location) !== normalizeLocationKey(draft.location)
+      : false
+    const sharedNeighborhoodsChanged = setupBaseline
+      ? !areLocationIdSelectionsEqual(setupBaseline.sharedNeighborhoods, draft.sharedNeighborhoods)
+      : false
 
-    if (locationChanged && draft.items.length > 0) {
-      const confirmed = window.confirm('Changing location clears current itinerary items. Continue?')
+    if ((locationChanged || sharedNeighborhoodsChanged) && draft.items.length > 0) {
+      const confirmed = window.confirm(
+        'Changing location or shared neighborhoods clears current itinerary stops. Continue?',
+      )
       if (!confirmed) return
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          items: [],
+          in_update_mode: false,
+          step1_complete: true,
+          step2_complete: false,
+          step2_in_update_mode: false,
+          step3_complete: false,
+          step3_in_update_mode: false,
+          locationRef: selectedLocationRefId,
+        }
+      })
+      setSetupBaseline(null)
+      onError('')
+      return
+    }
+
+    if (locationChanged || sharedNeighborhoodsChanged) {
       updateDraft({
         items: [],
         in_update_mode: false,
@@ -221,6 +275,7 @@ export function useBuilderDraftActions({
         locationRef: selectedLocationRefId,
       })
       setSetupBaseline(null)
+      onError('')
       return
     }
 

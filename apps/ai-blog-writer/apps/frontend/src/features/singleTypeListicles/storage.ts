@@ -2,9 +2,9 @@ import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { SingleTypeListicleDraft } from './types'
 import { DEFAULT_TRIP_INTENT, normalizeTripIntent } from '../trip-intent'
+import { normalizeLocationIds } from '../locationScope/scope'
 
-const STORAGE_KEY = 'single_type_listicles_staged_v3_inline_seo'
-const LEGACY_STORAGE_KEYS = ['single_type_listicles_staged_v2_media', 'single_type_listicles_staged'] as const
+const STORAGE_KEY = 'single_type_listicles_staged_v4_exact_neighborhoods'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -42,6 +42,7 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',
     locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,
+    sharedNeighborhoods: normalizeLocationIds(value.sharedNeighborhoods),
     listicleType:
       value.listicleType === 'dining'
       || value.listicleType === 'accommodations'
@@ -72,30 +73,9 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
 }
 
 export function listDrafts(): SingleTypeListicleDraft[] {
-  const currentDrafts = parseDraftArray(STORAGE_KEY)
+  return parseDraftArray(STORAGE_KEY)
     .map((draft, index) => normalizeStoredDraft(draft, index))
     .filter((draft): draft is SingleTypeListicleDraft => Boolean(draft))
-
-  if (currentDrafts.length > 0) {
-    return currentDrafts
-  }
-
-  for (const legacyKey of LEGACY_STORAGE_KEYS) {
-    const legacyDrafts = parseDraftArray(legacyKey)
-      .map((draft, index) => normalizeStoredDraft(draft, index))
-      .filter((draft): draft is SingleTypeListicleDraft => Boolean(draft))
-
-    if (legacyDrafts.length < 1) continue
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacyDrafts))
-    for (const key of LEGACY_STORAGE_KEYS) {
-      localStorage.removeItem(key)
-    }
-
-    return legacyDrafts
-  }
-
-  return []
 }
 
 export function saveDraft(draft: SingleTypeListicleDraft): void {
@@ -143,6 +123,7 @@ export function createEmptyDraft(): SingleTypeListicleDraft {
     title: '',
     location: '',
     locationRef: null,
+    sharedNeighborhoods: [],
     listicleType: '',
     targetItemCount: 0,
     tripIntent: [...DEFAULT_TRIP_INTENT],

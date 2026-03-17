@@ -25,7 +25,7 @@ export type {
 export default function StageArticlePage() {
   return (
     <StandardArticleStageBuilder
-      storageKey="url2blog_staged_articles"
+      storageKey="url2blog_staged_articles_v2"
       routes={{
         stagePath: '/url2blog/stage',
         stageArticlePath: '/url2blog/stage-article',

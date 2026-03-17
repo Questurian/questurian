@@ -613,7 +613,7 @@ export default function Url2BlogPage() {
           <Link to="/url2blog/stage" className="url2blog-nav-link">
             Staged ({(() => {
               try {
-                const stored = localStorage.getItem('url2blog_staged_articles')
+                const stored = localStorage.getItem('url2blog_staged_articles_v2')
                 return stored ? JSON.parse(stored).length : 0
               } catch {
                 return 0

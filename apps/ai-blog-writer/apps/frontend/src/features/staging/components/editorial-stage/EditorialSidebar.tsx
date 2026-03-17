@@ -9,6 +9,11 @@ import {
   validateStandardArticleSeoSection,
 } from '../../features/editorial-stage-article/services/standard-article-seo.service'
 import { getLocationDisplayName } from '../../features/editorial-stage-article/utils/editorial-stage-view.utils'
+import {
+  buildPrimaryLocationUpdate,
+  getSharedNeighborhoodOptions,
+  sanitizeSharedNeighborhoods,
+} from '../../features/editorial-stage-article/utils/sharedNeighborhoods'
 import { isStagedArticleEditingLocked } from '../../utils/staged-article-sync'
 
 type PublishResult = { success: boolean; message: string } | null
@@ -50,6 +55,13 @@ export function EditorialSidebar({
   const canManagePublished = user?.role === 'admin' || user?.role === 'editor'
   const isPublished = stagedArticle.payloadStatus === 'published'
   const isLinkedDraft = Boolean(stagedArticle.payloadArticleId) && !isPublished
+  const selectedLocation = locations.find((location) => location.id === stagedArticle.locationId)
+  const sharedNeighborhoodOptions = getSharedNeighborhoodOptions(locations, stagedArticle.locationId)
+  const selectedSharedNeighborhoods = sanitizeSharedNeighborhoods(
+    stagedArticle.sharedNeighborhoods,
+    locations,
+    stagedArticle.locationId
+  )
   const seoSection = stagedArticle.seoSection ?? {
     seoTitle: '',
     metaDescription: '',
@@ -251,7 +263,14 @@ export function EditorialSidebar({
           </label>
           <select
             value={stagedArticle.locationId || ''}
-            onChange={(event) => onUpdateStagedArticle({ locationId: Number(event.target.value) || undefined })}
+            onChange={(event) => {
+              const nextLocationId = Number(event.target.value) || undefined
+              onUpdateStagedArticle(buildPrimaryLocationUpdate({
+                locations,
+                nextLocationId,
+                sharedNeighborhoods: stagedArticle.sharedNeighborhoods,
+              }))
+            }}
             className="stage-article-select"
             disabled={isEditingLocked}
           >
@@ -263,6 +282,47 @@ export function EditorialSidebar({
             ))}
           </select>
         </div>
+
+        {selectedLocation?.level === 'city' ? (
+          <div className="stage-article-sidebar-section">
+            <label className="stage-article-label">Shared Neighborhoods</label>
+            <span className="stage-article-label-hint">
+              Optional. Exact neighborhood scoping only.
+            </span>
+            <select
+              multiple
+              value={selectedSharedNeighborhoods.map(String)}
+              onChange={(event) => {
+                const nextSharedNeighborhoods = Array.from(
+                  event.currentTarget.selectedOptions,
+                  (option) => Number(option.value)
+                ).filter((value) => Number.isFinite(value) && value > 0)
+
+                onUpdateStagedArticle({
+                  sharedNeighborhoods: sanitizeSharedNeighborhoods(
+                    nextSharedNeighborhoods,
+                    locations,
+                    stagedArticle.locationId
+                  ),
+                })
+              }}
+              className="stage-article-select"
+              disabled={isEditingLocked || sharedNeighborhoodOptions.length === 0}
+              style={{ minHeight: '8rem' }}
+            >
+              {sharedNeighborhoodOptions.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {getLocationDisplayName(location)}
+                </option>
+              ))}
+            </select>
+            {sharedNeighborhoodOptions.length === 0 ? (
+              <p className="stage-article-publish-checklist-more">
+                No neighborhoods are available for this city yet.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="stage-article-sidebar-section">
           <label className="stage-article-label">

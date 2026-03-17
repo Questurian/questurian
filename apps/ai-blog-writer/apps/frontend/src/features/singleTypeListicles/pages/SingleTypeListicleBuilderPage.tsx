@@ -83,7 +83,7 @@ export default function SingleTypeListicleBuilderPage() {
 
   useBuilderAutosave(draft)
 
-  const { relatedItems, isLoadingRelated } = useRelatedItems({ token, draft, onError })
+  const { relatedItems, isLoadingRelated } = useRelatedItems({ token, draft, locations, onError })
 
   const actions = useBuilderDraftActions({
     draft,

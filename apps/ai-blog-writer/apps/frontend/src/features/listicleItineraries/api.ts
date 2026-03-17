@@ -1,5 +1,5 @@
 import { convertMarkdownToLexical, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
-import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
+import { appendScopedLocationWhere, getArticleLocationScope } from '../locationScope/scope'
 import type { LocationScope } from '../locationScope/types'
 import type {
   ItineraryBlockType,
@@ -78,8 +78,22 @@ export async function updateItinerary(
 }
 
 export async function fetchLocations(token: string): Promise<LocationOption[]> {
-  const response = await payloadRequest<PayloadListResponse<LocationOption>>(`/api/locations?limit=200`, token)
-  return response.docs || []
+  const allDocs: LocationOption[] = []
+  let page = 1
+  let totalPages = 1
+
+  while (page <= totalPages) {
+    const response = await payloadRequest<PayloadListResponse<LocationOption>>(
+      `/api/locations?limit=200&page=${page}&depth=0`,
+      token,
+    )
+
+    allDocs.push(...(response.docs || []))
+    totalPages = response.totalPages || 1
+    page += 1
+  }
+
+  return allDocs
 }
 
 export async function fetchMediaAssets(token: string): Promise<MediaAssetOption[]> {
@@ -103,7 +117,7 @@ export async function fetchRelatedItems(
   params.set('where[status][equals]', 'published')
 
   if (locationKey) {
-    const resolvedScope = scope || (await getLocationScopeForKey(locationKey, token))
+    const resolvedScope = scope || (await getArticleLocationScope({ locationKey, token }))
     appendScopedLocationWhere(params, resolvedScope)
   }
 

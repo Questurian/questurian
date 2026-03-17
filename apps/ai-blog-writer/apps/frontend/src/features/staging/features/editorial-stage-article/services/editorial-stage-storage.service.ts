@@ -2,6 +2,7 @@ import type { StagedArticle } from '../../../types'
 import { resolveEditorModelName } from '../constants'
 import { createEmptySeoSection, normalizeSeoSection } from '../../../../shared/seo/services/seo-section.service'
 import { normalizeTripIntent } from '../../../../trip-intent'
+import { normalizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -22,6 +23,7 @@ export function normalizeStagedArticle(value: unknown): StagedArticle | null {
   const locationId = typeof value.locationId === 'number' && Number.isFinite(value.locationId)
     ? value.locationId
     : undefined
+  const sharedNeighborhoods = normalizeSharedNeighborhoods(value.sharedNeighborhoods)
   const featuredImageId = typeof value.featuredImageId === 'number' && Number.isFinite(value.featuredImageId)
     ? value.featuredImageId
     : undefined
@@ -41,6 +43,7 @@ export function normalizeStagedArticle(value: unknown): StagedArticle | null {
     blocks,
     editorialBlocks: Array.isArray(value.editorialBlocks) ? value.editorialBlocks as StagedArticle['editorialBlocks'] : [],
     locationId,
+    sharedNeighborhoods,
     editorModelName: resolveEditorModelName(
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined
     ),

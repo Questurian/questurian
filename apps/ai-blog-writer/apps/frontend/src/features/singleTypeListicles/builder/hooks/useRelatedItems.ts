@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { fetchRelatedItems } from '../../api'
-import type { RelatedItemOption, SingleTypeListicleDraft } from '../../types'
+import { getArticleLocationScope } from '../../../locationScope/scope'
+import type { LocationOption, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 
 type UseRelatedItemsParams = {
-  token?: string
+  token?: string | null
   draft: SingleTypeListicleDraft | null
+  locations: LocationOption[]
   onError: (message: string) => void
 }
 
@@ -13,7 +15,7 @@ type UseRelatedItemsResult = {
   isLoadingRelated: boolean
 }
 
-export function useRelatedItems({ token, draft, onError }: UseRelatedItemsParams): UseRelatedItemsResult {
+export function useRelatedItems({ token, draft, locations, onError }: UseRelatedItemsParams): UseRelatedItemsResult {
   const [relatedItems, setRelatedItems] = useState<RelatedItemOption[]>([])
   const [isLoadingRelated, setIsLoadingRelated] = useState(false)
 
@@ -23,10 +25,24 @@ export function useRelatedItems({ token, draft, onError }: UseRelatedItemsParams
       return
     }
 
+    const authToken = token
+    const listicleType = draft.listicleType
+    const locationKey = draft.location
+    const sharedNeighborhoods = draft.sharedNeighborhoods
+
     let cancelled = false
     setIsLoadingRelated(true)
 
-    fetchRelatedItems(draft.listicleType, draft.location, token)
+    getArticleLocationScope({
+      locationKey,
+      sharedNeighborhoods,
+      locations,
+      token: authToken,
+    })
+      .then((scope) => {
+        if (cancelled) return []
+        return fetchRelatedItems(listicleType, locationKey, authToken, scope)
+      })
       .then((docs) => {
         if (cancelled) return
         setRelatedItems(docs)
@@ -43,7 +59,7 @@ export function useRelatedItems({ token, draft, onError }: UseRelatedItemsParams
     return () => {
       cancelled = true
     }
-  }, [token, draft?.listicleType, draft?.location, onError])
+  }, [token, draft?.listicleType, draft?.location, draft?.sharedNeighborhoods, locations, onError])
 
   return { relatedItems, isLoadingRelated }
 }

@@ -91,6 +91,7 @@ export async function submitListicle({
     title: draft.title.trim(),
     location: draft.location,
     locationRef: selectedLocationRefId,
+    sharedNeighborhoods: draft.sharedNeighborhoods,
     listicleType: draft.listicleType,
     targetItemCount: draft.targetItemCount,
     step1_complete: true,

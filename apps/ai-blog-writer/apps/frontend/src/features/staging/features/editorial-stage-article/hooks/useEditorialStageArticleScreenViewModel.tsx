@@ -44,6 +44,7 @@ const EMPTY_STAGED_ARTICLE: StagedArticle = {
   content: '',
   blocks: [],
   editorialBlocks: [],
+  sharedNeighborhoods: [],
   tripIntent: [...DEFAULT_TRIP_INTENT],
   seoSection: createEmptySeoSection(),
   syncBehavior: 'finalize',

@@ -4,6 +4,10 @@
  */
 
 import { CollectionConfig } from 'payload'
+import {
+  syncSharedNeighborhoodsField,
+  validateSharedNeighborhoodSelection,
+} from '@/shared/location/server/articleLocationScope'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import {
   step1Complete,
@@ -11,6 +15,7 @@ import {
   title,
   location,
   locationRef,
+  sharedNeighborhoods,
   step1UiWrapper,
   headerSection,
   contentBlocks,
@@ -106,6 +111,7 @@ export const Articles: CollectionConfig = {
     title,
     location,
     locationRef,
+    sharedNeighborhoods,
     step1UiWrapper,
 
     // Step 2: Content (visible when Step 1 complete)
@@ -149,7 +155,20 @@ export const Articles: CollectionConfig = {
     ],
     beforeValidate: [
       syncLocationFields(),
-      async ({ data, operation }) => {
+      syncSharedNeighborhoodsField(),
+      async ({ data, operation, req }) => {
+        const sharedNeighborhoodValidation = await validateSharedNeighborhoodSelection(
+          req.payload,
+          {
+            location: data?.location,
+            sharedNeighborhoods: data?.sharedNeighborhoods,
+          },
+        )
+
+        if (sharedNeighborhoodValidation !== true) {
+          throw new Error(sharedNeighborhoodValidation)
+        }
+
         // Only enforce step1_complete on create/update operations (not on initial load)
         // Also ensure we don't block initial creation if fields are present
         if ((operation === 'create' || operation === 'update') && !data?.step1_complete) {

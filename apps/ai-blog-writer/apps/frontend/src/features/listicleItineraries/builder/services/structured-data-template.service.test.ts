@@ -4,10 +4,6 @@ import {
   validateListicleItineraryStructuredDataShape,
 } from './structured-data-template.service'
 
-const assert = (condition: unknown, message: string) => {
-  if (!condition) throw new Error(message)
-}
-
 function buildDraft(): ListicleItineraryDraft {
   return {
     draftId: 'draft-1',
@@ -20,6 +16,7 @@ function buildDraft(): ListicleItineraryDraft {
     title: 'One Day Lima Itinerary',
     location: 'Peru|Lima|Barranco',
     locationRef: 1,
+    sharedNeighborhoods: [],
     dayAudience: 'anyday',
     itineraryStartHour: 9,
     itineraryStartMinute: '00',
@@ -107,84 +104,78 @@ function buildRelatedByType(): Record<ListicleItineraryDraft['items'][number]['b
   }
 }
 
-function run() {
-  const draft = buildDraft()
-  const structuredData = buildListicleItineraryStructuredDataTemplate({
-    draft,
-    relatedByBlockType: buildRelatedByType(),
-    publisherConfig: {
-      siteName: 'Questurian',
-      logoUrl: 'https://example.com/logo.png',
-      defaultAuthorName: 'Questurian Team',
-    },
+describe('listicleItineraries structured data template', () => {
+  it('builds valid published structured data with trip metadata', () => {
+    const draft = buildDraft()
+    const structuredData = buildListicleItineraryStructuredDataTemplate({
+      draft,
+      relatedByBlockType: buildRelatedByType(),
+      publisherConfig: {
+        siteName: 'Questurian',
+        logoUrl: 'https://example.com/logo.png',
+        defaultAuthorName: 'Questurian Team',
+      },
+    })
+
+    const graph = Array.isArray(structuredData['@graph']) ? structuredData['@graph'] : []
+    const blogPostingNode = graph.find((node) => (
+      node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'BlogPosting'
+    )) as Record<string, unknown> | undefined
+    const tripNode = graph.find((node) => (
+      node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'Trip'
+    )) as Record<string, unknown> | undefined
+    const itemListNode = graph.find((node) => (
+      node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'ItemList'
+    )) as Record<string, unknown> | undefined
+
+    expect(blogPostingNode).toBeTruthy()
+    expect(tripNode).toBeTruthy()
+    expect(itemListNode).toBeTruthy()
+    expect(tripNode?.departureTime).toBe('2026-03-03T09:00:00')
+    expect(tripNode?.arrivalTime).toBe('2026-03-03T18:00:00')
+    expect(blogPostingNode?.['@id']).toBe(
+      'https://example.com/one-day-lima-itinerary#listicle-itinerary-blog-posting',
+    )
+    expect(blogPostingNode?.datePublished).toBe('2026-03-03T09:15:00.000Z')
+    expect(blogPostingNode?.dateModified).toBe('2026-03-03T10:30:00.000Z')
+
+    const author = (blogPostingNode?.author && typeof blogPostingNode.author === 'object')
+      ? blogPostingNode.author as Record<string, unknown>
+      : undefined
+    expect(author?.name).toBe('Alan Malpartida')
+
+    const publisher = (blogPostingNode?.publisher && typeof blogPostingNode.publisher === 'object')
+      ? blogPostingNode.publisher as Record<string, unknown>
+      : undefined
+    expect(publisher?.name).toBe('Questurian')
+
+    const contentLocation = (blogPostingNode?.contentLocation && typeof blogPostingNode.contentLocation === 'object')
+      ? blogPostingNode.contentLocation as Record<string, unknown>
+      : undefined
+    expect(contentLocation?.name).toBe('Barranco, Lima, Peru')
+
+    const mainEntityOfPage = (blogPostingNode?.mainEntityOfPage && typeof blogPostingNode.mainEntityOfPage === 'object')
+      ? blogPostingNode.mainEntityOfPage as Record<string, unknown>
+      : undefined
+    expect(mainEntityOfPage?.['@id']).toBe('https://example.com/one-day-lima-itinerary')
+
+    const itemListElement = Array.isArray(itemListNode?.itemListElement) ? itemListNode.itemListElement : []
+    const firstListItem = itemListElement[0] as Record<string, unknown> | undefined
+    const secondListItem = itemListElement[1] as Record<string, unknown> | undefined
+    const firstEntity = (firstListItem?.item && typeof firstListItem.item === 'object')
+      ? firstListItem.item as Record<string, unknown>
+      : undefined
+    const secondEntity = (secondListItem?.item && typeof secondListItem.item === 'object')
+      ? secondListItem.item as Record<string, unknown>
+      : undefined
+
+    expect(firstEntity?.['@type']).toBe('Restaurant')
+    expect(secondEntity?.['@type']).toBe('TouristAttraction')
+
+    const shapeIssues = validateListicleItineraryStructuredDataShape({
+      structuredData,
+      draft,
+    })
+    expect(shapeIssues).toEqual([])
   })
-
-  const graph = Array.isArray(structuredData['@graph']) ? structuredData['@graph'] : []
-  const blogPostingNode = graph.find((node) => (
-    node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'BlogPosting'
-  )) as Record<string, unknown> | undefined
-  const tripNode = graph.find((node) => (
-    node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'Trip'
-  )) as Record<string, unknown> | undefined
-  const itemListNode = graph.find((node) => (
-    node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'ItemList'
-  )) as Record<string, unknown> | undefined
-
-  assert(Boolean(blogPostingNode), 'Expected BlogPosting node in @graph.')
-  assert(Boolean(tripNode), 'Expected Trip node in @graph.')
-  assert(Boolean(itemListNode), 'Expected ItemList node in @graph.')
-  assert(tripNode?.departureTime === '2026-03-03T09:00:00', 'Expected Trip departureTime from itinerary start.')
-  assert(tripNode?.arrivalTime === '2026-03-03T18:00:00', 'Expected Trip arrivalTime from itinerary end.')
-  assert(
-    blogPostingNode?.['@id'] === 'https://example.com/one-day-lima-itinerary#listicle-itinerary-blog-posting',
-    'Expected BlogPosting @id to use the canonical URL.',
-  )
-  assert(
-    blogPostingNode?.datePublished === '2026-03-03T09:15:00.000Z',
-    'Expected BlogPosting datePublished from hydrated Payload publish time.',
-  )
-  assert(
-    blogPostingNode?.dateModified === '2026-03-03T10:30:00.000Z',
-    'Expected BlogPosting dateModified from hydrated Payload update time.',
-  )
-  const author = (blogPostingNode?.author && typeof blogPostingNode.author === 'object')
-    ? blogPostingNode.author as Record<string, unknown>
-    : undefined
-  assert(author?.name === 'Alan Malpartida', 'Expected BlogPosting author from hydrated Payload author.')
-  const publisher = (blogPostingNode?.publisher && typeof blogPostingNode.publisher === 'object')
-    ? blogPostingNode.publisher as Record<string, unknown>
-    : undefined
-  assert(publisher?.name === 'Questurian', 'Expected BlogPosting publisher from schema config.')
-  const contentLocation = (blogPostingNode?.contentLocation && typeof blogPostingNode.contentLocation === 'object')
-    ? blogPostingNode.contentLocation as Record<string, unknown>
-    : undefined
-  assert(contentLocation?.name === 'Barranco, Lima, Peru', 'Expected contentLocation.name to be human-readable.')
-  const mainEntityOfPage = (blogPostingNode?.mainEntityOfPage && typeof blogPostingNode.mainEntityOfPage === 'object')
-    ? blogPostingNode.mainEntityOfPage as Record<string, unknown>
-    : undefined
-  assert(
-    mainEntityOfPage?.['@id'] === 'https://example.com/one-day-lima-itinerary',
-    'Expected BlogPosting mainEntityOfPage to match the canonical URL.',
-  )
-
-  const itemListElement = Array.isArray(itemListNode?.itemListElement) ? itemListNode.itemListElement : []
-  const firstListItem = itemListElement[0] as Record<string, unknown> | undefined
-  const secondListItem = itemListElement[1] as Record<string, unknown> | undefined
-  const firstEntity = (firstListItem?.item && typeof firstListItem.item === 'object')
-    ? firstListItem.item as Record<string, unknown>
-    : undefined
-  const secondEntity = (secondListItem?.item && typeof secondListItem.item === 'object')
-    ? secondListItem.item as Record<string, unknown>
-    : undefined
-
-  assert(firstEntity?.['@type'] === 'Restaurant', 'Expected dining stop mapped to Restaurant.')
-  assert(secondEntity?.['@type'] === 'TouristAttraction', 'Expected attraction stop mapped to TouristAttraction.')
-
-  const shapeIssues = validateListicleItineraryStructuredDataShape({
-    structuredData,
-    draft,
-  })
-  assert(shapeIssues.length === 0, `Expected no shape issues, received: ${shapeIssues.join('; ')}`)
-}
-
-run()
+})

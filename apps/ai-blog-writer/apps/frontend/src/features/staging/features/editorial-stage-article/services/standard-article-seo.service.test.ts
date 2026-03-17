@@ -1,3 +1,4 @@
+import { describe, it } from 'vitest'
 import type { StagedArticle } from '../../../types'
 import {
   buildLegacyStandardArticleStructuredDataTemplate,
@@ -35,6 +36,7 @@ function buildStagedArticle(): StagedArticle {
     ],
     editorialBlocks: [],
     locationId: 10,
+    sharedNeighborhoods: [],
     editorModelName: 'gemini-2.5-flash',
     featuredImageId: 99,
     step1_complete: true,
@@ -223,7 +225,9 @@ function runPromptRulesTest() {
   )
 }
 
-runStructuredDataTemplateTest()
-runValidationTest()
-runAutoManagementTest()
-runPromptRulesTest()
+describe('standard article seo service', () => {
+  it('builds the structured data template', runStructuredDataTemplateTest)
+  it('validates the structured data graph shape', runValidationTest)
+  it('keeps auto-managed structured data opt-in rules', runAutoManagementTest)
+  it('preserves the graph requirements in the AI prompt', runPromptRulesTest)
+})

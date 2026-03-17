@@ -1,12 +1,25 @@
 import { DAY_AUDIENCE_OPTIONS, PERIOD_OPTIONS, QUARTER_MINUTE_OPTIONS } from '../constants/builder-options.constants'
-import type { DayAudience, ListicleItineraryDraft, Meridiem, QuarterMinute, TripIntent } from '../../types'
+import type {
+  DayAudience,
+  ListicleItineraryDraft,
+  LocationOption,
+  Meridiem,
+  QuarterMinute,
+} from '../../types'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import { TRIP_INTENT_OPTIONS } from '../../../trip-intent'
+import type { TripIntent } from '../../../trip-intent'
+import {
+  findLocationByKey,
+  formatLocationLabel,
+  getNeighborhoodOptionsForLocation,
+  isCityLocation,
+} from '../../../locationScope/scope'
 
 type BuilderSetupPanelProps = {
   draft: ListicleItineraryDraft
-  locations: Array<{ id: number; locationKey: string }>
+  locations: LocationOption[]
   onContinue: () => void
   onUpdateSetup: () => void
   onSaveSetup: () => void
@@ -36,6 +49,9 @@ export function BuilderSetupPanel({
   const isSetupLocked = draft.step1_complete && !draft.in_update_mode
   const selectedTripIntent = draft.tripIntent || []
   const canUnsetLastTripIntent = selectedTripIntent.length > 1
+  const selectedPrimaryLocation = findLocationByKey(locations, draft.location)
+  const neighborhoodOptions = getNeighborhoodOptionsForLocation(locations, draft.location)
+  const showNeighborhoodPicker = isCityLocation(selectedPrimaryLocation)
 
   const handleTripIntentChange = (intent: TripIntent, nextChecked: boolean) => {
     const nextTripIntent = nextChecked
@@ -108,16 +124,49 @@ export function BuilderSetupPanel({
           <select
             value={draft.location}
             disabled={draft.step1_complete && !draft.in_update_mode}
-            onChange={(event) => updateDraft({ location: event.target.value, locationRef: null })}
+            onChange={(event) => updateDraft({
+              location: event.target.value,
+              locationRef: null,
+              sharedNeighborhoods: [],
+            })}
           >
             <option value="">Select location</option>
             {locations.map((location) => (
               <option key={location.id} value={location.locationKey}>
-                {location.locationKey}
+                {formatLocationLabel(location)}
               </option>
             ))}
           </select>
         </label>
+
+        {showNeighborhoodPicker ? (
+          <label className="stl-field">
+            <span>Shared Neighborhoods</span>
+            <select
+              className="stl-multi-select"
+              multiple
+              size={Math.min(Math.max(neighborhoodOptions.length, 3), 8)}
+              value={draft.sharedNeighborhoods.map(String)}
+              disabled={isSetupLocked || neighborhoodOptions.length < 1}
+              onChange={(event) => updateDraft({
+                sharedNeighborhoods: Array.from(event.target.selectedOptions)
+                  .map((option) => Number(option.value))
+                  .filter((value) => Number.isFinite(value)),
+              })}
+            >
+              {neighborhoodOptions.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {formatLocationLabel(location)}
+                </option>
+              ))}
+            </select>
+            <small className="stl-summary-note">
+              {neighborhoodOptions.length > 0
+                ? 'Optional. When selected, stop pickers match only these exact neighborhoods.'
+                : 'No neighborhoods are available under this city.'}
+            </small>
+          </label>
+        ) : null}
 
         <label className="stl-field">
           <span>Day Type *</span>

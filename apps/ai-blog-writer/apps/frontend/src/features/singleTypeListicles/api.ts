@@ -1,5 +1,6 @@
 import { convertMarkdownToLexical, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
-import { appendScopedLocationWhere, getLocationScopeForKey } from '../locationScope/scope'
+import { appendScopedLocationWhere, getArticleLocationScope } from '../locationScope/scope'
+import type { LocationScope } from '../locationScope/types'
 import type {
   ListicleType,
   LocationOption,
@@ -115,6 +116,7 @@ export async function fetchRelatedItems(
   listicleType: ListicleType,
   locationKey: string,
   token: string,
+  scope?: LocationScope,
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForType(listicleType)
   const params = new URLSearchParams()
@@ -122,8 +124,8 @@ export async function fetchRelatedItems(
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
   if (locationKey) {
-    const scope = await getLocationScopeForKey(locationKey, token)
-    appendScopedLocationWhere(params, scope)
+    const resolvedScope = scope || (await getArticleLocationScope({ locationKey, token }))
+    appendScopedLocationWhere(params, resolvedScope)
   }
 
   const response = await payloadRequest<PayloadListResponse<RelatedItemOption>>(

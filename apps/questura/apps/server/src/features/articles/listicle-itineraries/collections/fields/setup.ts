@@ -1,5 +1,8 @@
 import { Field } from 'payload'
-import { createLocationRefField } from '@/shared/location/server/fields'
+import {
+  createLocationRefField,
+  createSharedNeighborhoodsField,
+} from '@/shared/location/server/fields'
 
 const dayAudienceOptions = [
   { label: 'Any Day', value: 'anyday' },
@@ -46,6 +49,8 @@ export const location: Field = {
 }
 
 export const locationRef: Field = createLocationRefField()
+
+export const sharedNeighborhoods: Field = createSharedNeighborhoodsField()
 
 export const dayAudience: Field = {
   name: 'dayAudience',
