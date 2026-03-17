@@ -39,6 +39,7 @@ import {
   LocationDocumentBuilderPage,
 } from './features/locationDocuments'
 import { KeywordIntelPage } from './features/keywordIntel'
+import { ImageRecreationPromptsPage } from './features/imageRecreationPrompts'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -95,6 +96,9 @@ export default function App() {
 
               {/* Keyword Intel */}
               <Route path="keyword-intel" element={<KeywordIntelPage />} />
+
+              {/* Image Recreation Prompts */}
+              <Route path="image-recreation-prompts" element={<ImageRecreationPromptsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
