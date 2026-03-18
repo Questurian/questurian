@@ -52,6 +52,18 @@ export function buildImageFileNamePrefix(articleTitle: string, externalRef: stri
   return `${titlePart}-${idPart}`
 }
 
+export function buildFeaturedUploadExternalRef(stagedArticleId: string): string {
+  const articleToken = stagedArticleId
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 48) || 'staged-article'
+
+  return `${articleToken}_featured_upload_${Date.now()}`
+}
+
 export function getMediaAssetAltText(img?: MediaAsset | null): string {
   if (!img) return ''
   return img.alt_text?.trim() || img.alt?.trim() || img.altText?.trim() || ''

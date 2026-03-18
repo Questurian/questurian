@@ -178,6 +178,8 @@ export function useEditorialStageMedia({
   }, [token, stagedArticle?.featuredImageId, mediaAssets, fetchMediaAssets, block])
 
   const featured = useEditorialStageFeaturedMedia({
+    stagedArticleId: stagedArticle?.id ?? 'staged-article',
+    articleTitle: stagedArticle?.title ?? 'Featured Image',
     searchPexelsImages,
     searchUnsplashImages,
     resetExternalImportState,

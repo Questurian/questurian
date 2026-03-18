@@ -3,22 +3,18 @@ import { createFormStateFromPreset } from './config'
 import { buildImageRecreationPrompt } from './promptBuilder'
 
 describe('buildImageRecreationPrompt', () => {
-  it('builds a strong default landmark prompt with duplicated no-people guardrails', () => {
+  it('builds a shorter default landmark prompt while keeping the core no-people guardrail', () => {
     const result = buildImageRecreationPrompt(createFormStateFromPreset())
+    const detailedPrompt = result.blocks.map((block) => block.text).join('\n\n')
 
     expect(result.finalPrompt).toContain(
       'Use the uploaded reference image as the exact subject, composition base, and scene category.',
     )
     expect(result.finalPrompt).toContain(
-      'Recreate the image as a true-to-life photograph captured with Sony A7R V and 24mm f/1.4.',
+      'Recreate it as a true-to-life travel photography photograph captured with Sony A7R V and 24mm f/1.4.',
     )
-
-    const matches =
-      result.finalPrompt.match(
-        /Do not add any people\. If no people are present in the reference image, the output must contain no people\./g,
-      ) ?? []
-
-    expect(matches).toHaveLength(2)
+    expect(result.finalPrompt).toContain('Do not add any people.')
+    expect(result.finalPrompt.length).toBeLessThan(detailedPrompt.length)
   })
 
   it('preserves crowd language without inventing theatrical foreground characters', () => {
@@ -26,16 +22,17 @@ describe('buildImageRecreationPrompt', () => {
       ...createFormStateFromPreset('city-square-blue-hour'),
       sceneCategory: 'tourist-landmark-crowd' as const,
       peoplePresence: 'dense-crowd' as const,
-      peopleHandling: 'keep-environment-primary' as const,
+      peopleHandling: 'environment-dominant-with-people' as const,
+      crowdCharacter: 'international-tourist-mix' as const,
     }
 
     const result = buildImageRecreationPrompt(state)
 
     expect(result.finalPrompt).toContain(
-      'Preserve the crowd density as part of the real scene without inventing theatrical or exaggerated foreground characters.',
+      'Keep the same dense crowd, but keep the landmark or environment clearly dominant.',
     )
     expect(result.finalPrompt).toContain(
-      'Preserve the fact that the scene contains a crowd, but do not invent a completely different crowd composition',
+      'Give the people an international tourist feel.',
     )
   })
 
@@ -46,24 +43,36 @@ describe('buildImageRecreationPrompt', () => {
     })
 
     expect(result.finalPrompt).toContain(
-      'Use warm low-angle sunlight, long soft shadows, and rich but realistic color.',
+      'Use warm late-day sunlight, long soft shadows, and realistic color.',
     )
+    expect(result.finalPrompt).toContain(
+      'Any new or intensified lighting should create realistic shadows and highlights with coherent direction, softness, density, and falloff.',
+    )
+    expect(result.finalPrompt).not.toContain('do not introduce new light sources')
   })
 
-  it('adds conservative reframing language when a custom aspect ratio is selected', () => {
+  it('reinterprets the camera viewpoint when a non-reference shot perspective is selected', () => {
     const result = buildImageRecreationPrompt({
       ...createFormStateFromPreset(),
-      aspectRatio: '16-9-widescreen',
+      shotPerspective: 'ground-level-dramatic',
     })
 
     expect(result.finalPrompt).toContain(
-      'Render the final image in a 16:9 widescreen frame while keeping the reference composition dominant and using only restrained reframing.',
+      'Use a ground-level dramatic viewpoint while keeping the same spatial layout.',
     )
-    expect(result.finalPrompt).toContain(
-      'If reframing is necessary for the selected output ratio, do it conservatively and do not invent missing off-frame content.',
+    expect(result.finalPrompt).not.toContain(
+      'Match the original framing, perspective, spatial relationships, and composition intent before making any realism upgrades.',
     )
+  })
+
+  it('adds centered composition guidance when the composition checkbox is enabled', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset('couple-travel-photo'),
+      centerMainSubject: true,
+    })
+
     expect(result.finalPrompt).toContain(
-      'Do not invent new off-frame scenery, architecture, sky detail, people, or props just to satisfy the selected aspect ratio.',
+      'Center the main subject in the composition and create a more symmetrical, balanced image. Align the subject along the vertical center axis, correct any tilt or perspective distortion, and evenly distribute visual weight on both sides of the frame. Straighten lines where needed, improve framing so the scene feels intentional and harmonious, and keep the result realistic and natural to the original image.',
     )
   })
 
@@ -76,6 +85,39 @@ describe('buildImageRecreationPrompt', () => {
     expect(result.finalPrompt).toContain(
       'Use an iPhone-like vivid look with slightly stronger color and contrast, while keeping skin, sky, and environmental detail realistic and controlled.',
     )
+  })
+
+  it('supports new flagship gear and deeper vintage filters in the compact prompt', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset('vintage-street-scene'),
+      cameraPreset: 'canon-r1',
+      lensPreset: '28-70mm-f2',
+      filterLook: 'kodachrome-64',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Recreate it as a true-to-life filmic vintage photograph captured with Canon R1 and 28-70mm f/2.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Use a Kodachrome 64-inspired palette with rich travel color, warm editorial nostalgia, and slide-film clarity.',
+    )
+  })
+
+  it('includes a built-in guardrail against distorted faces and facial features', () => {
+    const result = buildImageRecreationPrompt(createFormStateFromPreset('couple-travel-photo'))
+
+    expect(result.finalPrompt).toContain(
+      'Avoid face distortion, oversharpening, fake HDR, and unnatural contrast.',
+    )
+  })
+
+  it('omits crowd-character language when the scene remains strictly people-free', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      crowdCharacter: 'international-tourist-mix',
+    })
+
+    expect(result.finalPrompt).not.toContain('international tourist mix')
   })
 
   it('switches preservation wording between strict, balanced, and flexible modes', () => {
@@ -93,13 +135,123 @@ describe('buildImageRecreationPrompt', () => {
     })
 
     expect(strictResult.finalPrompt).toContain(
-      'Preserve the scene structure, subject count, composition intent, and major elements very closely.',
+      'Stay strict about scene preservation.',
     )
     expect(balancedResult.finalPrompt).toContain(
-      'Preserve the core image faithfully while allowing subtle natural variation that does not change the image identity.',
+      'Preserve the core image with only subtle natural variation.',
     )
     expect(flexibleResult.finalPrompt).toContain(
-      'Preserve the scene category and core subject while allowing restrained reinterpretation of minor details.',
+      'Allow restrained reinterpretation while keeping the same scene identity.',
+    )
+  })
+
+  it('lets the new people-expansion mode override fixed-count and no-people guardrails', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      peoplePresence: 'no-people',
+      peopleHandling: 'reshuffle-and-add-people-naturally',
+      primarySubjectEmphasis: 'person-first',
+      preservationStrength: 'strict',
+      allowedVariation: 'small-positional-shifts',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'The reference may be empty, but restrained human presence may be introduced if needed; keep it plausible and natural.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Do not remove existing people.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Limit changes to small positional shifts only.',
+    )
+    expect(result.finalPrompt).not.toContain(
+      'Do not add, remove, or replace any people.',
+    )
+    expect(result.finalPrompt).not.toContain(
+      'Do not add any people.',
+    )
+  })
+
+  it('lets the recast mode replace the full human cast without changing the scene itself', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset('city-square-blue-hour'),
+      peoplePresence: 'small-group',
+      peopleHandling: 'change-every-person-and-reshuffle',
+      primarySubjectEmphasis: 'person-first',
+      preservationStrength: 'balanced',
+      allowedVariation: 'small-positional-shifts',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Recast the people to fit a believable small group setup, with natural styling, spacing, and pose variation.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Only change people as needed to match the selected people presence.',
+    )
+    expect(result.finalPrompt).not.toContain(
+      'Preserve the original subject count unless the allowed-variation setting explicitly permits limited micro-adjustments for those same existing subjects.',
+    )
+  })
+
+  it('lets the reduce mode remove only a few people without allowing new ones', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset('city-square-blue-hour'),
+      peoplePresence: 'dense-crowd',
+      peopleHandling: 'reduce-a-few-people',
+      allowedVariation: 'small-positional-shifts',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Allow only a slight reduction from the dense crowd scene by removing a few existing people; do not add or replace anyone.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Remove only a small number of existing people, and do not add or replace anyone.',
+    )
+    expect(result.finalPrompt).not.toContain(
+      'introduce additional people when needed',
+    )
+  })
+
+  it('supports a strict mode that removes everyone from the photo', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset('city-square-blue-hour'),
+      peoplePresence: 'no-people',
+      peopleHandling: 'remove-all-people',
+      crowdCharacter: 'international-tourist-mix',
+      allowedVariation: 'small-environmental-cleanup',
+    })
+    const detailedPrompt = result.blocks.map((block) => block.text).join('\n\n')
+
+    expect(result.finalPrompt).toContain(
+      'Remove all people from the frame and keep the scene convincingly people-free.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Do not add any people.',
+    )
+    expect(detailedPrompt).toContain(
+      'Remove all existing people cleanly and do not replace them with new subjects.',
+    )
+    expect(result.finalPrompt).not.toContain(
+      'international tourist feel',
+    )
+  })
+
+  it('keeps the no-people guardrail when recast mode is paired with no-people', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      peoplePresence: 'no-people',
+      peopleHandling: 'change-every-person-and-reshuffle',
+      allowedVariation: 'small-positional-shifts',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Remove people from the frame and keep the scene convincingly people-free.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Do not add any people.',
+    )
+    expect(result.finalPrompt).not.toContain(
+      'Changed or replaced people are allowed only when the resulting human presence stays plausible, naturally integrated, and consistent with the selected people setting.',
     )
   })
 
@@ -110,10 +262,10 @@ describe('buildImageRecreationPrompt', () => {
     })
 
     expect(result.finalPrompt).toContain(
-      'Allow only small positional shifts for people already present, without changing subject count or creating new focal subjects.',
+      'Limit changes to small positional shifts only.',
     )
     expect(result.finalPrompt).toContain(
-      'Any allowed variation must stay subordinate to the original scene and may never create subjects that were not already present in the reference image.',
+      'Do not add, remove, or replace any people.',
     )
   })
 })

@@ -213,6 +213,11 @@
   gap: 0.45rem;
 }
 
+.irp-field-meta {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .irp-field-label {
   font-size: 0.85rem;
   font-weight: 700;
@@ -223,6 +228,150 @@
   color: var(--irp-muted);
   font-size: 0.88rem;
   line-height: 1.55;
+}
+
+.irp-option-note {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.72rem 0.82rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(41, 95, 90, 0.12);
+  background: linear-gradient(180deg, rgba(41, 95, 90, 0.08), rgba(41, 95, 90, 0.03));
+}
+
+.irp-option-note-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--irp-secondary);
+}
+
+.irp-option-note-copy {
+  color: var(--irp-ink);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.irp-binary-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.irp-binary-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.irp-binary-option {
+  min-height: 3.15rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(31, 38, 35, 0.14);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--irp-ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.irp-binary-option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 38, 35, 0.22);
+}
+
+.irp-binary-option.is-active {
+  border-color: rgba(41, 95, 90, 0.28);
+  background:
+    linear-gradient(180deg, rgba(41, 95, 90, 0.12), rgba(255, 255, 255, 0.9)),
+    rgba(255, 255, 255, 0.82);
+  box-shadow: 0 12px 24px -20px rgba(41, 95, 90, 0.4);
+  color: var(--irp-secondary);
+}
+
+.irp-checkbox-field {
+  display: block;
+  cursor: pointer;
+}
+
+.irp-checkbox-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.irp-checkbox-shell {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(31, 38, 35, 0.12);
+  background: rgba(255, 255, 255, 0.76);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+
+.irp-checkbox-field:hover .irp-checkbox-shell {
+  transform: translateY(-1px);
+  border-color: rgba(31, 38, 35, 0.2);
+}
+
+.irp-checkbox-input:focus-visible + .irp-checkbox-shell {
+  outline: none;
+  border-color: rgba(196, 107, 51, 0.44);
+  box-shadow: 0 0 0 4px rgba(196, 107, 51, 0.14);
+}
+
+.irp-checkbox-input:checked + .irp-checkbox-shell {
+  border-color: rgba(41, 95, 90, 0.28);
+  background:
+    linear-gradient(180deg, rgba(41, 95, 90, 0.09), rgba(255, 255, 255, 0.9)),
+    rgba(255, 255, 255, 0.76);
+  box-shadow: 0 16px 28px -24px rgba(41, 95, 90, 0.42);
+}
+
+.irp-checkbox-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(31, 38, 35, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--irp-secondary);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.irp-checkbox-input:checked + .irp-checkbox-shell .irp-checkbox-control {
+  border-color: rgba(41, 95, 90, 0.22);
+  background: linear-gradient(135deg, rgba(41, 95, 90, 0.16), rgba(196, 107, 51, 0.14));
+}
+
+.irp-checkbox-copy {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
 }
 
 .irp-input {
@@ -248,6 +397,23 @@
   outline: none;
   border-color: rgba(196, 107, 51, 0.44);
   box-shadow: 0 0 0 4px rgba(196, 107, 51, 0.14);
+}
+
+.irp-input:disabled {
+  cursor: not-allowed;
+  color: rgba(31, 38, 35, 0.56);
+  background: rgba(244, 239, 233, 0.84);
+  border-color: rgba(31, 38, 35, 0.08);
+  box-shadow: none;
+}
+
+.irp-field.is-disabled .irp-field-label,
+.irp-field.is-disabled .irp-field-helper {
+  color: rgba(86, 96, 91, 0.74);
+}
+
+.irp-field.is-disabled .irp-option-note {
+  opacity: 0.72;
 }
 
 .irp-select {
@@ -442,11 +608,61 @@
     var(--irp-panel);
 }
 
+.irp-callout--camera {
+  border-color: rgba(196, 107, 51, 0.2);
+  background:
+    linear-gradient(180deg, rgba(196, 107, 51, 0.08), rgba(255, 255, 255, 0.88)),
+    var(--irp-panel);
+}
+
 .irp-callout--warning {
   border-color: rgba(143, 60, 40, 0.22);
   background:
     linear-gradient(180deg, rgba(143, 60, 40, 0.08), rgba(255, 255, 255, 0.86)),
     var(--irp-panel);
+}
+
+.irp-callout--people-lock {
+  border-color: rgba(31, 38, 35, 0.12);
+  background:
+    linear-gradient(180deg, rgba(31, 38, 35, 0.06), rgba(255, 255, 255, 0.88)),
+    var(--irp-panel);
+}
+
+.irp-combo-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.irp-combo-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(31, 38, 35, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.irp-combo-title {
+  color: var(--irp-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.irp-combo-recipe {
+  color: var(--irp-ink);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.irp-combo-note {
+  color: var(--irp-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
 }
 
 .irp-action-row {
@@ -546,6 +762,10 @@
 }
 
 @media (max-width: 860px) {
+  .irp-binary-grid {
+    grid-template-columns: 1fr;
+  }
+
   .irp-reference-stage {
     min-height: min(62vh, 26rem);
   }

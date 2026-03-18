@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   PexelsPhoto,
   UnsplashPhoto,
@@ -7,9 +7,15 @@ import type {
   ImageSourceOption,
   PexelsOrientationOption,
 } from '../types'
+import {
+  buildFeaturedUploadExternalRef,
+  buildImageFileNamePrefix,
+} from '../media-utils'
 import { searchExternalPhotos } from '../services/editorial-stage-image-search.service'
 
 type UseEditorialStageFeaturedMediaParams = {
+  stagedArticleId: string
+  articleTitle: string
   searchPexelsImages: (
     query: string,
     params?: {
@@ -30,10 +36,21 @@ type UseEditorialStageFeaturedMediaParams = {
 }
 
 export function useEditorialStageFeaturedMedia({
+  stagedArticleId,
+  articleTitle,
   searchPexelsImages,
   searchUnsplashImages,
   resetExternalImportState,
 }: UseEditorialStageFeaturedMediaParams) {
+  const buildUploadIdentity = useCallback(() => {
+    const externalRef = buildFeaturedUploadExternalRef(stagedArticleId)
+    return {
+      featuredImageUploadExternalRef: externalRef,
+      featuredImageFileNamePrefix: buildImageFileNamePrefix(articleTitle, externalRef),
+    }
+  }, [articleTitle, stagedArticleId])
+
+  const [featuredUploadIdentity, setFeaturedUploadIdentity] = useState(buildUploadIdentity)
   const [showImageModal, setShowImageModal] = useState(false)
   const [featuredImageSource, setFeaturedImageSource] = useState<ImageSourceOption>('payload')
   const [imageSearch, setImageSearch] = useState('')
@@ -52,6 +69,15 @@ export function useEditorialStageFeaturedMedia({
   const [pexelsFeaturedOrientation, setPexelsFeaturedOrientation] = useState<PexelsOrientationOption>('')
   const [pexelsFeaturedPerPage, setPexelsFeaturedPerPage] = useState<number>(18)
   const [isImportingFeaturedExternalImage, setIsImportingFeaturedExternalImage] = useState(false)
+  const wasImageModalOpenRef = useRef(false)
+
+  useEffect(() => {
+    if (showImageModal && !wasImageModalOpenRef.current) {
+      setFeaturedUploadIdentity(buildUploadIdentity())
+    }
+
+    wasImageModalOpenRef.current = showImageModal
+  }, [buildUploadIdentity, showImageModal])
 
   useEffect(() => {
     if (showImageModal) return
@@ -130,6 +156,7 @@ export function useEditorialStageFeaturedMedia({
   ])
 
   return {
+    ...featuredUploadIdentity,
     showImageModal,
     setShowImageModal,
     featuredImageSource,

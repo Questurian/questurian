@@ -34,7 +34,7 @@ type FeaturedImageModalPayloadProps = {
 }
 
 type FeaturedImageModalUploadProps = {
-  stagedArticleId: string
+  featuredImageExternalRef: string
   featuredImageFileNamePrefix: string
   selectedLocation?: Location
   token?: string
@@ -106,7 +106,7 @@ export function FeaturedImageModal({
     selectedFeaturedImage,
   } = payload
   const {
-    stagedArticleId,
+    featuredImageExternalRef,
     featuredImageFileNamePrefix,
     selectedLocation,
     token,
@@ -296,7 +296,7 @@ export function FeaturedImageModal({
             <div className="stage-article-upload-section">
               {selectedLocation ? (
                 <ImageUpload
-                  externalRef={stagedArticleId}
+                  externalRef={featuredImageExternalRef}
                   fileNamePrefix={featuredImageFileNamePrefix}
                   locationRef={selectedLocation.id}
                   token={token || ''}

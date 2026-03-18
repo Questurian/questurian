@@ -6,6 +6,11 @@ export type SceneCategoryId =
   | 'tourist-landmark-sparse-people'
   | 'tourist-landmark-crowd'
   | 'city-street-scene'
+  | 'street-art-mural'
+  | 'market-food-stall'
+  | 'cafe-restaurant-scene'
+  | 'rooftop-terrace-view'
+  | 'nightlife-neon-scene'
   | 'architecture-exterior'
   | 'architecture-interior'
   | 'portrait'
@@ -27,11 +32,26 @@ export type PeoplePresenceId =
   | 'dense-crowd'
 
 export type PeopleHandlingId =
-  | 'preserve-exactly'
-  | 'preserve-count-minor-natural-changes'
-  | 'preserve-scene-subtle-reshuffling'
-  | 'keep-people-secondary'
-  | 'keep-environment-primary'
+  | 'keep-every-person-as-is'
+  | 'keep-same-people-small-natural-changes'
+  | 'keep-same-people-small-repositioning'
+  | 'reduce-a-few-people'
+  | 'remove-all-people'
+  | 'change-every-person-and-reshuffle'
+  | 'reshuffle-and-add-people-naturally'
+  | 'people-secondary-environment-primary'
+  | 'environment-dominant-with-people'
+
+export type CrowdCharacterId =
+  | 'match-reference-crowd'
+  | 'international-tourist-mix'
+  | 'locals-dominant'
+  | 'mixed-age-travelers'
+  | 'family-heavy-travelers'
+  | 'adult-travelers'
+  | 'backpacker-travel-crowd'
+  | 'stylish-city-weekend-crowd'
+  | 'understated-neutral-crowd'
 
 export type PrimarySubjectEmphasisId =
   | 'environment-first'
@@ -43,37 +63,61 @@ export type CameraPresetId =
   | 'sony-a7r-v'
   | 'sony-a7-iv'
   | 'sony-a1'
+  | 'sony-a9-iii'
   | 'canon-r5'
   | 'canon-r6-mark-ii'
+  | 'canon-r1'
+  | 'canon-r3'
   | 'nikon-z8'
+  | 'nikon-z9'
   | 'nikon-zf'
   | 'fujifilm-gfx-100s'
+  | 'hasselblad-x2d-100c'
+  | 'fujifilm-x-t5'
   | 'fujifilm-x100vi'
   | 'leica-q3'
+  | 'leica-sl3'
+  | 'leica-m11'
   | 'contax-t2'
+  | 'yashica-t4'
   | 'leica-m6'
   | 'hasselblad-500cm'
   | 'mamiya-7'
   | 'pentax-67'
   | 'canon-ae-1'
   | 'nikon-fm2'
+  | 'olympus-om-1'
+  | 'minolta-cle'
   | 'polaroid-sx-70'
 
 export type LensPresetId =
+  | '20mm-f1-8'
   | '24mm-f1-4'
+  | '24mm-f1-8'
   | '28mm-f2'
+  | '28-70mm-f2'
   | '35mm-f1-8'
   | '35mm-f1-4'
+  | '50mm-f1-2'
   | '50mm-f1-4'
   | '50mm-f1-8'
+  | '90mm-f2'
   | '85mm-f1-8'
+  | '85mm-f1-2'
+  | '135mm-f1-8'
+  | '14-24mm-f2-8'
   | '70-200mm-f2-8'
+  | '100-400mm-f4-5-5-6'
   | '24-70mm-f2-8'
   | '16-35mm-f2-8'
+  | '21mm-vintage-ultra-wide'
   | '35mm-vintage-rangefinder'
+  | '40mm-vintage-pancake'
   | '50mm-vintage-fast-prime'
   | '85mm-vintage-portrait'
   | 'soft-vintage-film-lens'
+  | 'swirly-vintage-portrait-lens'
+  | 'anamorphic-vintage-inspired'
   | 'classic-medium-format-rendering'
   | '45mm-equivalent-medium-format'
 
@@ -88,24 +132,44 @@ export type CaptureStyleId =
   | 'real-estate-architecture-clean'
   | 'casual-candid'
 
-export type AspectRatioId =
-  | 'match-reference'
-  | '1-1-square'
-  | '4-5-portrait'
-  | '3-4-portrait'
-  | '2-3-portrait'
-  | '3-2-landscape'
-  | '4-3-landscape'
-  | '16-9-widescreen'
-  | '9-16-vertical'
+export type ShotPerspectiveId =
+  | 'match-reference-viewpoint'
+  | 'eye-level-natural'
+  | 'low-angle-upward'
+  | 'ground-level-dramatic'
+  | 'high-angle-downward'
+  | 'elevated-overlook'
+  | 'birds-eye-overhead'
+  | 'drone-oblique'
+  | 'straight-on-frontal'
+  | 'three-quarter-oblique'
+  | 'side-profile-angle'
+  | 'tilted-dynamic'
+  | 'foreground-led-wide'
+  | 'telephoto-observer'
 
 export type FilterLookId =
   | 'neutral-no-filter'
   | 'iphone-natural'
   | 'iphone-vivid'
   | 'fujifilm-classic-chrome'
+  | 'fujifilm-nostalgic-neg'
+  | 'fujifilm-reala-ace'
+  | 'fujifilm-pro-400h'
   | 'kodak-portra-400'
+  | 'kodak-portra-800'
   | 'kodak-gold-200'
+  | 'kodak-ektar-100'
+  | 'kodak-ultramax-400'
+  | 'cinestill-800t'
+  | 'kodachrome-64'
+  | 'agfa-vista-200'
+  | 'faded-print-vintage'
+  | 'faded-disposable-film'
+  | 'dusty-postcard-vintage'
+  | 'expired-color-negative'
+  | 'ilford-hp5-bw'
+  | 'kodak-tri-x-400'
   | 'leica-natural'
 
 export type LightingId =
@@ -171,13 +235,16 @@ export interface PromptBuildResult {
 export interface ImageRecreationFormState {
   presetId: PromptPresetId
   sceneCategory: SceneCategoryId
+  referenceHasPeople: boolean
   peoplePresence: PeoplePresenceId
   peopleHandling: PeopleHandlingId
+  crowdCharacter: CrowdCharacterId
   primarySubjectEmphasis: PrimarySubjectEmphasisId
   cameraPreset: CameraPresetId
   lensPreset: LensPresetId
   captureStyle: CaptureStyleId
-  aspectRatio: AspectRatioId
+  shotPerspective: ShotPerspectiveId
+  centerMainSubject: boolean
   filterLook: FilterLookId
   lighting: LightingId
   preservationStrength: PreservationStrengthId
@@ -191,6 +258,7 @@ export interface SelectOption<TId extends string> {
   label: string
   description: string
   prompt: string
+  disabled?: boolean
 }
 
 export interface OptionGroup<TId extends string> {
@@ -207,7 +275,12 @@ export interface PromptPreset {
   id: Exclude<PromptPresetId, 'custom'>
   label: string
   description: string
-  values: Omit<ImageRecreationFormState, 'presetId' | 'extraInstructions'> & {
+  values: Omit<
+    ImageRecreationFormState,
+    'presetId' | 'extraInstructions' | 'referenceHasPeople' | 'centerMainSubject'
+  > & {
+    referenceHasPeople?: boolean
+    centerMainSubject?: boolean
     extraInstructions?: string
   }
 }

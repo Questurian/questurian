@@ -1,4 +1,4 @@
-import { useMemo, type Dispatch, type SetStateAction } from 'react'
+import { type Dispatch, type SetStateAction } from 'react'
 import type { StagedArticle } from '../../../types'
 import type { Location, MediaAsset } from '../../../api'
 import type { TimelineItem } from '../workflow.service'
@@ -109,6 +109,8 @@ type UseEditorialStageLoadedArticleViewsParams = {
   toggleEditorialPicker: (target: string) => void
   showImageModal: boolean
   setShowImageModalTracked: Dispatch<SetStateAction<boolean>>
+  featuredImageUploadExternalRef: string
+  featuredImageFileNamePrefix: string
   featuredImageSource: ImageSourceOption
   setFeaturedImageSource: Dispatch<SetStateAction<ImageSourceOption>>
   imageSearch: string
@@ -256,11 +258,6 @@ export function useEditorialStageLoadedArticleViews(
     findPreferredVariantAsset: params.findPreferredVariantAsset,
   })
 
-  const featuredImageFileNamePrefix = useMemo(() => buildImageFileNamePrefix(
-    params.stagedArticle.title,
-    params.stagedArticle.id
-  ), [params.stagedArticle.title, params.stagedArticle.id])
-
   const blockImageExternalRef = params.blockImageModal
     ? `${params.stagedArticle.id}_block_${params.blockImageModal.blockId}`
     : ''
@@ -363,7 +360,8 @@ export function useEditorialStageLoadedArticleViews(
     filteredFeaturedImageAssets,
     selectedFeaturedImage,
     selectedLocation,
-    featuredImageFileNamePrefix,
+    featuredImageExternalRef: params.featuredImageUploadExternalRef,
+    featuredImageFileNamePrefix: params.featuredImageFileNamePrefix,
     token: params.token || undefined,
     imageAltText: params.imageAltText,
     imagePhotographerCredit: params.imagePhotographerCredit,

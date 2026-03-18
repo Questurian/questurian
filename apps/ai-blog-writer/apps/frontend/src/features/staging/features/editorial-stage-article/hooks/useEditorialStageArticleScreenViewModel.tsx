@@ -193,6 +193,8 @@ export function useEditorialStageArticleScreenViewModel({
 
   const {
     featured: {
+      featuredImageUploadExternalRef,
+      featuredImageFileNamePrefix,
       showImageModal,
       setShowImageModal,
       featuredImageSource,
@@ -438,6 +440,8 @@ export function useEditorialStageArticleScreenViewModel({
     toggleEditorialPicker,
     showImageModal,
     setShowImageModalTracked,
+    featuredImageUploadExternalRef,
+    featuredImageFileNamePrefix,
     featuredImageSource,
     setFeaturedImageSource,
     imageSearch,

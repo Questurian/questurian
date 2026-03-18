@@ -1,8 +1,8 @@
 import type {
   AllowedVariationId,
-  AspectRatioId,
   CameraPresetId,
   CaptureStyleId,
+  CrowdCharacterId,
   EnvironmentEnhancementId,
   FilterLookId,
   ImageRecreationFormState,
@@ -16,6 +16,7 @@ import type {
   PromptPreset,
   SceneCategoryId,
   SceneCategoryOption,
+  ShotPerspectiveId,
   SelectOption,
 } from './types'
 
@@ -85,6 +86,51 @@ export const SCENE_CATEGORY_OPTIONS: SceneCategoryOption[] = [
     prompt:
       'Preserve the real urban layout, street depth, storefronts or facades, and the original public-space rhythm of the scene.',
     helperText: 'Best for plazas, street corners, walkways, and everyday city scenes.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'street-art-mural',
+    label: 'Street art / mural',
+    description: 'Street-art scene built around a mural, painted wall, or graphic public artwork.',
+    prompt:
+      'Preserve the mural, painted wall, or street-art surface as the defining subject, keeping the artwork readable, grounded, and true to the original urban setting.',
+    helperText: 'Best for murals, graffiti walls, painted alleys, and other public art scenes.',
+    recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'market-food-stall',
+    label: 'Market / food stall',
+    description: 'Travel or street-market scene shaped by stalls, produce, counters, or food displays.',
+    prompt:
+      'Preserve the market layout, stall structure, display density, and the real flow of goods, tables, or vendor setups in the scene.',
+    helperText: 'Use for bazaars, food stalls, produce stands, and street-market travel shots.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'cafe-restaurant-scene',
+    label: 'Cafe / restaurant scene',
+    description: 'Dining or cafe setting where tables, seating, and hospitality details shape the frame.',
+    prompt:
+      'Preserve the table layout, seating rhythm, interior or terrace setup, and the real hospitality context of the original scene.',
+    helperText: 'Best for cafes, patios, dining terraces, and restaurant travel images.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'rooftop-terrace-view',
+    label: 'Rooftop / terrace view',
+    description: 'Elevated city or scenic view anchored by a terrace, rooftop edge, or lookout platform.',
+    prompt:
+      'Preserve the elevated viewpoint, railing or terrace geometry, skyline relationship, and the original sense of height and openness.',
+    helperText: 'Useful for rooftops, terrace bars, lookout decks, and elevated city views.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'nightlife-neon-scene',
+    label: 'Nightlife / neon street',
+    description: 'Night street or nightlife scene driven by signage, storefront light, and urban evening energy.',
+    prompt:
+      'Preserve the night-street layout, practical signage, storefront lighting, and the original after-dark energy of the location.',
+    helperText: 'Use for neon streets, nightlife corridors, evening alleys, and busy night travel scenes.',
     recommendedPeoplePresence: 'small-group',
   },
   {
@@ -235,39 +281,141 @@ export const PEOPLE_PRESENCE_OPTIONS: SelectOption<PeoplePresenceId>[] = [
 
 export const PEOPLE_HANDLING_OPTIONS: SelectOption<PeopleHandlingId>[] = [
   {
-    id: 'preserve-exactly',
-    label: 'Preserve exactly',
-    description: 'Keep people tightly anchored to the original image.',
+    id: 'keep-every-person-as-is',
+    label: 'Keep every person as-is',
+    description: 'No added people, no removed people, no identity changes.',
     prompt:
-      'Preserve the existing people exactly as they appear in the reference image, including count, scene role, and general placement.',
+      'Preserve the existing people exactly as they appear in the reference image, including count, scene role, and general placement. Do not add, remove, or replace any people.',
   },
   {
-    id: 'preserve-count-minor-natural-changes',
-    label: 'Preserve count, allow minor natural changes',
-    description: 'Keep the count fixed but allow only tiny natural micro-variation.',
+    id: 'keep-same-people-small-natural-changes',
+    label: 'Keep same people, allow tiny natural changes',
+    description:
+      'No added or removed people. Same people stay in frame, but expressions, posture, and micro-details can soften naturally.',
     prompt:
-      'Preserve the original people count while allowing only minor natural micro-variation for those same existing people.',
+      'Preserve the original people count while allowing only minor natural micro-variation for those same existing people. Do not add, remove, or replace any people.',
   },
   {
-    id: 'preserve-scene-subtle-reshuffling',
-    label: 'Preserve scene, allow subtle reshuffling only for existing people',
-    description: 'Allow only restrained repositioning of people who already exist in frame.',
+    id: 'keep-same-people-small-repositioning',
+    label: 'Keep same people, allow small repositioning',
+    description:
+      'No added or removed people. Same people and same count remain, but they can shift to nearby believable positions.',
     prompt:
-      'Preserve the same scene and the same people count while allowing only subtle reshuffling of existing people within plausible positions.',
+      'Preserve the same scene and the same people count while allowing only subtle reshuffling of existing people within plausible positions. Do not add, remove, or replace any people.',
   },
   {
-    id: 'keep-people-secondary',
-    label: 'Keep people secondary to environment',
-    description: 'People stay present but should not dominate the image.',
+    id: 'reduce-a-few-people',
+    label: 'Remove a few people, keep the rest',
+    description:
+      'You may remove a small number of existing people, but do not add anyone new or replace the remaining people.',
     prompt:
-      'Keep existing people secondary to the environment so they support the scene without overtaking the frame.',
+      'Allow a slight reduction in people count by removing a small number of existing people and subtly rebalancing the remaining people. Do not add any new people or replace who the remaining people are.',
   },
   {
-    id: 'keep-environment-primary',
-    label: 'Keep landmark / environment as primary focus',
-    description: 'The place remains primary even if people are visible.',
+    id: 'remove-all-people',
+    label: 'Remove everyone from the photo',
+    description:
+      'Clear the frame completely by removing all visible people. This mode forces a people-free final image.',
     prompt:
-      'Keep the landmark or environment as the primary focus even when existing people remain in the scene.',
+      'Remove all existing people from the frame and keep the final image convincingly people-free. Do not add any replacement people.',
+  },
+  {
+    id: 'change-every-person-and-reshuffle',
+    label: 'Change every person and reshuffle',
+    description:
+      'Recast the full human cast. You may replace people and adjust count only as needed to match the selected people presence.',
+    prompt:
+      'Do not preserve the original people identities. Recast every visible person, restyle them naturally, and reshuffle their positions so the human presence fits the selected scene setup believably. Only add or remove people when needed to match the selected people presence.',
+  },
+  {
+    id: 'reshuffle-and-add-people-naturally',
+    label: 'Rebalance people and add more naturally',
+    description:
+      'You may add new people and reshuffle placement, but do not remove existing people.',
+    prompt:
+      'Allow people to be reshuffled around the scene and introduce additional people when needed, as long as the overall result still feels naturally integrated, believable, and true to the location. Do not remove existing people.',
+  },
+  {
+    id: 'people-secondary-environment-primary',
+    label: 'Keep people secondary',
+    description:
+      'No added or removed people. People remain visible, but the place should read first.',
+    prompt:
+      'Keep existing people secondary to the environment so they support the scene without overtaking the frame. Do not add, remove, or replace any people.',
+  },
+  {
+    id: 'environment-dominant-with-people',
+    label: 'Keep environment dominant',
+    description:
+      'No added or removed people. Even with people present, the landmark or environment should stay clearly in charge.',
+    prompt:
+      'Keep the landmark or environment as the primary focus even when existing people remain in the scene. Do not add, remove, or replace any people.',
+  },
+]
+
+export const CROWD_CHARACTER_OPTIONS: SelectOption<CrowdCharacterId>[] = [
+  {
+    id: 'match-reference-crowd',
+    label: 'Match reference crowd',
+    description: 'Keep the social feel, styling, and visitor energy close to the reference image.',
+    prompt:
+      'Keep the overall crowd character, social energy, and styling direction close to the reference image.',
+  },
+  {
+    id: 'international-tourist-mix',
+    label: 'International tourist mix',
+    description: 'A varied destination-travel crowd with believable sightseeing energy.',
+    prompt:
+      'If people are visible, give them the feel of an international tourist mix with varied travel styling, natural sightseeing behavior, and believable destination energy.',
+  },
+  {
+    id: 'locals-dominant',
+    label: 'Locals-dominant',
+    description: 'People should feel more like everyday locals than destination tourists.',
+    prompt:
+      'If people are visible, make them feel more like locals or everyday residents than overt tourists, with practical clothing and natural public-space behavior.',
+  },
+  {
+    id: 'mixed-age-travelers',
+    label: 'Mixed-age travelers',
+    description: 'A believable spread of adult ages without feeling staged.',
+    prompt:
+      'If people are visible, give the scene a mixed-age traveler feel with natural variety in age, styling, and body language.',
+  },
+  {
+    id: 'family-heavy-travelers',
+    label: 'Family-heavy travelers',
+    description: 'Lean toward family travel groups and multi-person vacation behavior.',
+    prompt:
+      'If people are visible, lean toward a family-travel feel with small clusters, practical vacation clothing, and believable family-group behavior.',
+  },
+  {
+    id: 'adult-travelers',
+    label: 'Adult travelers',
+    description: 'Lean toward adults, couples, and friend groups rather than families.',
+    prompt:
+      'If people are visible, lean toward adult travelers, couples, and friend groups with believable vacation styling and relaxed destination behavior.',
+  },
+  {
+    id: 'backpacker-travel-crowd',
+    label: 'Backpacker travel crowd',
+    description: 'Casual, practical, mobile travel energy with relaxed styling.',
+    prompt:
+      'If people are visible, give the crowd a relaxed backpacker or independent-travel feel with casual clothing, practical bags, and organic movement.',
+  },
+  {
+    id: 'stylish-city-weekend-crowd',
+    label: 'Stylish city weekend crowd',
+    description: 'A polished urban crowd with fashionable but believable styling.',
+    prompt:
+      'If people are visible, give the crowd a stylish city-weekend feel with believable casual fashion, social energy, and natural public-space behavior.',
+  },
+  {
+    id: 'understated-neutral-crowd',
+    label: 'Understated neutral crowd',
+    description: 'Keep people visually quiet so they support the scene without making a statement.',
+    prompt:
+      'If people are visible, keep the crowd styling neutral, understated, and observational so people support the scene without becoming the main story.',
   },
 ]
 
@@ -304,8 +452,22 @@ export const PRIMARY_SUBJECT_OPTIONS: SelectOption<PrimarySubjectEmphasisId>[] =
 
 export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
   {
-    label: 'Modern digital',
+    label: 'Flagship mirrorless',
     options: [
+      {
+        id: 'sony-a1',
+        label: 'Sony A1',
+        description: 'Sony flagship with elite speed, detail, and polished modern fidelity.',
+        prompt:
+          'Use flagship-level digital clarity, controlled highlight handling, and premium modern image fidelity.',
+      },
+      {
+        id: 'sony-a9-iii',
+        label: 'Sony A9 III',
+        description: 'Press-and-action flagship with crisp fast-reportage energy.',
+        prompt:
+          'Use ultra-premium flagship rendering with crisp editorial timing, clean tonal separation, and top-tier full-frame realism.',
+      },
       {
         id: 'sony-a7r-v',
         label: 'Sony A7R V',
@@ -314,18 +476,18 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
           'Use crisp modern full-frame rendering, broad dynamic range, and clean high-resolution photographic detail.',
       },
       {
-        id: 'sony-a7-iv',
-        label: 'Sony A7 IV',
-        description: 'Balanced full-frame travel camera rendering.',
+        id: 'canon-r1',
+        label: 'Canon R1',
+        description: 'Canon flagship with top-tier press, sports, and editorial polish.',
         prompt:
-          'Use balanced full-frame realism with strong dynamic range, natural contrast, and dependable travel-photo clarity.',
+          'Use flagship Canon rendering with confident subject definition, premium tonal control, and polished real-world color.',
       },
       {
-        id: 'sony-a1',
-        label: 'Sony A1',
-        description: 'Premium flagship digital clarity and speed.',
+        id: 'canon-r3',
+        label: 'Canon R3',
+        description: 'Fast press-oriented full-frame body with clean professional rendering.',
         prompt:
-          'Use flagship-level digital clarity, controlled highlight handling, and premium modern image fidelity.',
+          'Use high-end Canon press-style rendering with dependable color, confident detail, and believable editorial realism.',
       },
       {
         id: 'canon-r5',
@@ -335,11 +497,11 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
           'Use high-detail modern digital capture with polished color, realistic contrast, and confident full-frame sharpness.',
       },
       {
-        id: 'canon-r6-mark-ii',
-        label: 'Canon R6 Mark II',
-        description: 'Natural, flexible full-frame travel rendering.',
+        id: 'nikon-z9',
+        label: 'Nikon Z9',
+        description: 'Nikon flagship with strong tonal separation and robust natural contrast.',
         prompt:
-          'Use natural modern full-frame rendering with soft but realistic tonal transitions and dependable real-world color.',
+          'Use top-tier flagship capture with strong dynamic range, controlled contrast, and robust modern realism.',
       },
       {
         id: 'nikon-z8',
@@ -349,11 +511,23 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
           'Use detailed modern capture with strong dynamic range, clean tonal separation, and grounded high-end realism.',
       },
       {
-        id: 'nikon-zf',
-        label: 'Nikon Zf',
-        description: 'Modern digital capture with a subtly classic tonal feel.',
+        id: 'leica-sl3',
+        label: 'Leica SL3',
+        description: 'Luxury full-frame rendering with refined micro-contrast and premium clarity.',
         prompt:
-          'Use modern digital fidelity with a slightly classic tonal feel, restrained contrast, and realistic texture handling.',
+          'Use luxury full-frame rendering with refined micro-contrast, clean color discipline, and polished optical realism.',
+      },
+    ],
+  },
+  {
+    label: 'Large-format and premium detail',
+    options: [
+      {
+        id: 'hasselblad-x2d-100c',
+        label: 'Hasselblad X2D 100C',
+        description: 'Ultra-premium medium-format digital look with calm depth and tonal richness.',
+        prompt:
+          'Use ultra-premium medium-format rendering with luxurious tonal depth, refined transitions, and composed photographic realism.',
       },
       {
         id: 'fujifilm-gfx-100s',
@@ -361,6 +535,39 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
         description: 'Large-format-style digital rendering with depth and tonal richness.',
         prompt:
           'Use large-sensor realism with rich tonal depth, refined texture, and the calm precision of medium-format capture.',
+      },
+    ],
+  },
+  {
+    label: 'Premium travel and reportage',
+    options: [
+      {
+        id: 'sony-a7-iv',
+        label: 'Sony A7 IV',
+        description: 'Balanced full-frame travel camera rendering.',
+        prompt:
+          'Use balanced full-frame realism with strong dynamic range, natural contrast, and dependable travel-photo clarity.',
+      },
+      {
+        id: 'canon-r6-mark-ii',
+        label: 'Canon R6 Mark II',
+        description: 'Natural, flexible full-frame travel rendering.',
+        prompt:
+          'Use natural modern full-frame rendering with soft but realistic tonal transitions and dependable real-world color.',
+      },
+      {
+        id: 'nikon-zf',
+        label: 'Nikon Zf',
+        description: 'Modern digital capture with a subtly classic tonal feel.',
+        prompt:
+          'Use modern digital fidelity with a slightly classic tonal feel, restrained contrast, and realistic texture handling.',
+      },
+      {
+        id: 'fujifilm-x-t5',
+        label: 'Fujifilm X-T5',
+        description: 'Premium APS-C body with punchy travel color and classic controls.',
+        prompt:
+          'Use crisp premium APS-C travel realism with confident color, natural sharpness, and a slightly classic photographer-first feel.',
       },
       {
         id: 'fujifilm-x100vi',
@@ -376,6 +583,13 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
         prompt:
           'Use premium reportage rendering with refined micro-contrast, clean edge definition, and believable full-frame depth.',
       },
+      {
+        id: 'leica-m11',
+        label: 'Leica M11',
+        description: 'Digital rangefinder look with understated luxury and classic reportage discipline.',
+        prompt:
+          'Use premium digital rangefinder realism with understated color, crisp but natural rendering, and composed reportage character.',
+      },
     ],
   },
   {
@@ -387,6 +601,13 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
         description: 'Compact premium film-camera character with polished analog charm.',
         prompt:
           'Use premium compact-film character with soft analog texture, natural grain, and elegant highlight rolloff.',
+      },
+      {
+        id: 'yashica-t4',
+        label: 'Yashica T4',
+        description: 'Cult compact-film look with lively flash-era travel nostalgia.',
+        prompt:
+          'Use compact 35mm film character with casual analog charm, relaxed contrast, and believable point-and-shoot nostalgia.',
       },
       {
         id: 'leica-m6',
@@ -431,6 +652,20 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
           'Use straightforward 35mm film realism with crisp analog texture, believable contrast, and restrained grain.',
       },
       {
+        id: 'olympus-om-1',
+        label: 'Olympus OM-1',
+        description: 'Compact 35mm SLR character with nimble travel-documentary energy.',
+        prompt:
+          'Use nimble 35mm film realism with compact-travel charm, practical analog texture, and honest documentary clarity.',
+      },
+      {
+        id: 'minolta-cle',
+        label: 'Minolta CLE',
+        description: 'Small rangefinder-film look with understated vintage reportage warmth.',
+        prompt:
+          'Use compact rangefinder-film character with gentle analog warmth, restrained contrast, and believable vintage reportage realism.',
+      },
+      {
         id: 'polaroid-sx-70',
         label: 'Polaroid SX-70',
         description: 'Instant-film softness with vintage bloom and nostalgia.',
@@ -443,14 +678,28 @@ export const CAMERA_PRESET_GROUPS: OptionGroup<CameraPresetId>[] = [
 
 export const LENS_PRESET_GROUPS: OptionGroup<LensPresetId>[] = [
   {
-    label: 'Modern lenses',
+    label: 'Modern and flagship lenses',
     options: [
+      {
+        id: '20mm-f1-8',
+        label: '20mm f/1.8',
+        description: 'Ultra-wide premium prime for dramatic but controlled spatial depth.',
+        prompt:
+          'Use a premium ultra-wide prime look with strong environmental scale, controlled edge behavior, and believable near-to-far depth.',
+      },
       {
         id: '24mm-f1-4',
         label: '24mm f/1.4',
         description: 'Wide fast prime for immersive environmental perspective.',
         prompt:
           'Use wide-angle environmental perspective with strong spatial depth, realistic edge behavior, and immersive scene coverage.',
+      },
+      {
+        id: '24mm-f1-8',
+        label: '24mm f/1.8',
+        description: 'Practical wide prime for travel, architecture, and environmental portraits.',
+        prompt:
+          'Use a practical wide-prime perspective with clean spatial depth, realistic framing, and versatile travel-photo coverage.',
       },
       {
         id: '28mm-f2',
@@ -474,6 +723,13 @@ export const LENS_PRESET_GROUPS: OptionGroup<LensPresetId>[] = [
           'Use classic storytelling perspective with shallow-but-believable depth, natural subject presence, and clean optical rendering.',
       },
       {
+        id: '50mm-f1-2',
+        label: '50mm f/1.2',
+        description: 'Flagship normal prime with premium subject separation and rich rendering.',
+        prompt:
+          'Use a flagship fast-normal prime look with luxurious subject separation, refined focus falloff, and polished premium optics.',
+      },
+      {
         id: '50mm-f1-4',
         label: '50mm f/1.4',
         description: 'Natural normal perspective with strong subject separation.',
@@ -488,11 +744,39 @@ export const LENS_PRESET_GROUPS: OptionGroup<LensPresetId>[] = [
           'Use natural normal-lens perspective with clean rendering, practical depth, and restrained photographic realism.',
       },
       {
+        id: '85mm-f1-2',
+        label: '85mm f/1.2',
+        description: 'High-end portrait prime with premium compression and depth.',
+        prompt:
+          'Use a flagship portrait-prime look with flattering compression, rich depth, and premium subject isolation that still feels photographic.',
+      },
+      {
         id: '85mm-f1-8',
         label: '85mm f/1.8',
         description: 'Portrait-oriented telephoto perspective.',
         prompt:
           'Use flattering short-telephoto compression with realistic subject separation and natural spatial layering.',
+      },
+      {
+        id: '90mm-f2',
+        label: '90mm f/2',
+        description: 'Premium short telephoto look with refined micro-contrast and compression.',
+        prompt:
+          'Use a premium short-telephoto perspective with elegant compression, crisp detail, and refined depth transitions.',
+      },
+      {
+        id: '135mm-f1-8',
+        label: '135mm f/1.8',
+        description: 'Flagship telephoto prime with strong compression and cinematic isolation.',
+        prompt:
+          'Use a flagship telephoto-prime look with strong compression, clean background melt, and controlled long-lens realism.',
+      },
+      {
+        id: '14-24mm-f2-8',
+        label: '14-24mm f/2.8',
+        description: 'Flagship ultra-wide zoom for architecture, interiors, and epic landscapes.',
+        prompt:
+          'Use flagship ultra-wide zoom rendering with controlled geometry, powerful environmental coverage, and premium wide-angle realism.',
       },
       {
         id: '70-200mm-f2-8',
@@ -509,23 +793,51 @@ export const LENS_PRESET_GROUPS: OptionGroup<LensPresetId>[] = [
           'Use versatile pro-zoom rendering with realistic depth, dependable sharpness, and practical editorial framing.',
       },
       {
+        id: '28-70mm-f2',
+        label: '28-70mm f/2',
+        description: 'Flagship standard zoom with richer separation and premium rendering.',
+        prompt:
+          'Use a flagship standard-zoom look with premium depth, refined contrast, and polished editorial flexibility.',
+      },
+      {
         id: '16-35mm-f2-8',
         label: '16-35mm f/2.8',
         description: 'Ultra-wide environmental coverage for architecture and landscapes.',
         prompt:
           'Use ultra-wide environmental coverage with believable geometry, strong depth cues, and realistic wide-angle optics.',
       },
+      {
+        id: '100-400mm-f4-5-5-6',
+        label: '100-400mm f/4.5-5.6',
+        description: 'Long telephoto zoom for distant compression, overlooks, and observational detail.',
+        prompt:
+          'Use long-telephoto compression with distant observational framing, controlled atmospheric stacking, and believable far-subject detail.',
+      },
     ],
   },
   {
-    label: 'Vintage / character lenses',
+    label: 'Vintage lenses and character glass',
     options: [
+      {
+        id: '21mm-vintage-ultra-wide',
+        label: '21mm vintage ultra-wide',
+        description: 'Old-school ultra-wide look with stronger edge personality and architectural drama.',
+        prompt:
+          'Use vintage ultra-wide character with assertive spatial stretch, expressive edge behavior, and believable old-glass drama.',
+      },
       {
         id: '35mm-vintage-rangefinder',
         label: '35mm vintage rangefinder lens',
         description: 'Classic rangefinder perspective with gentle analog character.',
         prompt:
           'Use classic rangefinder perspective with gentle edge softness, organic contrast, and believable vintage optical character.',
+      },
+      {
+        id: '40mm-vintage-pancake',
+        label: '40mm vintage pancake',
+        description: 'Compact vintage lens look with understated softness and casual travel charm.',
+        prompt:
+          'Use a compact vintage pancake-lens feel with modest softness, honest contrast, and lightweight travel-camera character.',
       },
       {
         id: '50mm-vintage-fast-prime',
@@ -547,6 +859,20 @@ export const LENS_PRESET_GROUPS: OptionGroup<LensPresetId>[] = [
         description: 'Dreamier vintage optical behavior while staying realistic.',
         prompt:
           'Use gentle vintage softness, mild blooming highlights, and analog imperfection while keeping the scene believable and photographic.',
+      },
+      {
+        id: 'swirly-vintage-portrait-lens',
+        label: 'swirly vintage portrait lens',
+        description: 'Character-heavy vintage portrait look with more expressive background rendering.',
+        prompt:
+          'Use a character-rich vintage portrait-lens look with expressive background swirl, softer contrast, and believable old-glass personality.',
+      },
+      {
+        id: 'anamorphic-vintage-inspired',
+        label: 'anamorphic vintage-inspired',
+        description: 'Cinematic old-glass feel with subtle stretch and controlled flare character.',
+        prompt:
+          'Use a restrained vintage-anamorphic-inspired look with subtle cinematic character, controlled flare behavior, and believable optical imperfection.',
       },
       {
         id: 'classic-medium-format-rendering',
@@ -632,192 +958,382 @@ export const CAPTURE_STYLE_OPTIONS: SelectOption<CaptureStyleId>[] = [
   },
 ]
 
-export const ASPECT_RATIO_OPTIONS: SelectOption<AspectRatioId>[] = [
+export const SHOT_PERSPECTIVE_OPTIONS: SelectOption<ShotPerspectiveId>[] = [
   {
-    id: 'match-reference',
-    label: 'Match reference image',
-    description: 'Preserve the source image ratio and framing boundaries.',
+    id: 'match-reference-viewpoint',
+    label: 'Match reference viewpoint',
+    description: 'Preserve the original camera height, angle, and spatial read as closely as possible.',
     prompt:
-      'Preserve the original aspect ratio and the original framing boundaries of the reference image.',
+      'Keep the original camera height, angle, and viewpoint logic closely matched to the reference image.',
   },
   {
-    id: '1-1-square',
-    label: '1:1 square',
-    description: 'Square output with restrained reframing.',
+    id: 'eye-level-natural',
+    label: 'Eye-level natural',
+    description: 'Neutral real-world standing viewpoint with familiar travel/editorial balance.',
     prompt:
-      'Render the final image in a 1:1 square frame while keeping the reference image as the composition base and using only minimal reframing.',
+      'Shift the image toward a natural eye-level camera position with grounded proportions, realistic human-scale perspective, and an authentic on-location feel.',
   },
   {
-    id: '4-5-portrait',
-    label: '4:5 portrait',
-    description: 'Tall portrait crop common for editorial and social formats.',
+    id: 'low-angle-upward',
+    label: 'Low angle upward',
+    description: 'Slightly lower camera height that adds presence and scale without becoming extreme.',
     prompt:
-      'Render the final image in a 4:5 portrait frame while keeping the main subject placement and scene identity faithful to the reference image.',
+      'Use a controlled low-angle upward viewpoint that adds presence, scale, and architectural or subject stature while remaining physically believable.',
   },
   {
-    id: '3-4-portrait',
-    label: '3:4 portrait',
-    description: 'Balanced portrait-oriented output.',
+    id: 'ground-level-dramatic',
+    label: 'Ground-level dramatic',
+    description: 'Near-ground camera position with strong foreground stretch and dramatic depth.',
     prompt:
-      'Render the final image in a 3:4 portrait frame while preserving the original composition intent as closely as possible.',
+      'Use a near-ground dramatic viewpoint with foreground-led depth, strong spatial pull, and believable wide-angle perspective without turning the scene into fantasy.',
   },
   {
-    id: '2-3-portrait',
-    label: '2:3 portrait',
-    description: 'Classic portrait photo ratio.',
+    id: 'high-angle-downward',
+    label: 'High angle downward',
+    description: 'Raised camera position looking down for cleaner layout and spatial overview.',
     prompt:
-      'Render the final image in a 2:3 portrait frame while preserving subject placement, scene hierarchy, and composition intent.',
+      'Use a clean high-angle downward viewpoint that reveals the scene layout more clearly while keeping proportions, scale, and geometry natural.',
   },
   {
-    id: '3-2-landscape',
-    label: '3:2 landscape',
-    description: 'Classic horizontal photo ratio.',
+    id: 'elevated-overlook',
+    label: 'Elevated overlook',
+    description: 'Balcony, terrace, or stepped-up vantage that opens up depth through the scene.',
     prompt:
-      'Render the final image in a 3:2 landscape frame while preserving the original composition anchor and scene structure.',
+      'Reinterpret the shot from an elevated overlook vantage, as if photographed from a terrace, steps, or overlook point with expanded depth and readable spatial layering.',
   },
   {
-    id: '4-3-landscape',
-    label: '4:3 landscape',
-    description: 'Balanced horizontal output with slightly taller framing.',
+    id: 'birds-eye-overhead',
+    label: 'Bird\'s-eye overhead',
+    description: 'Top-down overhead view emphasizing layout, patterns, and scene organization.',
     prompt:
-      'Render the final image in a 4:3 landscape frame while keeping the original scene balance and focal hierarchy intact.',
+      'Use a bird\'s-eye overhead viewpoint with a strong top-down read, clean scene organization, and realistic overhead geometry rather than abstract flattening.',
   },
   {
-    id: '16-9-widescreen',
-    label: '16:9 widescreen',
-    description: 'Wide cinematic frame with minimal compositional expansion.',
+    id: 'drone-oblique',
+    label: 'Drone oblique',
+    description: 'Aerial-but-angled travel view that keeps depth, scale, and destination context visible.',
     prompt:
-      'Render the final image in a 16:9 widescreen frame while keeping the reference composition dominant and using only restrained reframing.',
+      'Use an oblique drone-style aerial perspective with believable elevation, readable destination context, and natural-looking scale relationships across the scene.',
   },
   {
-    id: '9-16-vertical',
-    label: '9:16 vertical',
-    description: 'Tall vertical frame for story-style output.',
+    id: 'straight-on-frontal',
+    label: 'Straight-on frontal',
+    description: 'Level, frontal viewpoint for symmetrical scenes, facades, and direct subject presentation.',
     prompt:
-      'Render the final image in a 9:16 vertical frame while keeping the original subject anchor and composition intent recognizable.',
+      'Use a straight-on frontal viewpoint with clean alignment, controlled symmetry, and a clear direct read of the subject or facade.',
+  },
+  {
+    id: 'three-quarter-oblique',
+    label: 'Three-quarter oblique',
+    description: 'Classic editorial angle that shows depth while keeping the subject legible.',
+    prompt:
+      'Use a three-quarter oblique viewpoint that reveals depth, side planes, and dimensionality while still keeping the subject immediately legible.',
+  },
+  {
+    id: 'side-profile-angle',
+    label: 'Side profile angle',
+    description: 'Profile-oriented side angle for motion, sequence, or strong lateral composition.',
+    prompt:
+      'Use a side-profile camera angle with believable lateral perspective, directional flow, and realistic subject proportions.',
+  },
+  {
+    id: 'tilted-dynamic',
+    label: 'Tilted dynamic',
+    description: 'Restrained dutch-angle energy for street, fashion, or kinetic travel images.',
+    prompt:
+      'Use a restrained dynamic tilt that adds motion and editorial energy without making the scene feel distorted, gimmicky, or unstable.',
+  },
+  {
+    id: 'foreground-led-wide',
+    label: 'Foreground-led wide',
+    description: 'Immersive near-to-far perspective that pulls foreground textures and objects into the frame.',
+    prompt:
+      'Use an immersive foreground-led wide perspective with strong near-to-far depth, believable scale falloff, and tactile environmental presence.',
+  },
+  {
+    id: 'telephoto-observer',
+    label: 'Telephoto observer',
+    description: 'More distant compressed viewpoint with observational travel/editorial character.',
+    prompt:
+      'Use a telephoto observer viewpoint with natural compression, slightly more distant camera placement, and a candid long-lens travel/editorial feel.',
   },
 ]
 
-export const FILTER_LOOK_OPTIONS: SelectOption<FilterLookId>[] = [
+export const FILTER_LOOK_GROUPS: OptionGroup<FilterLookId>[] = [
   {
-    id: 'neutral-no-filter',
-    label: 'Neutral / no filter',
-    description: 'Clean natural color without an obvious applied filter treatment.',
-    prompt:
-      'Keep the color treatment neutral and photographic, with no obvious applied social-media filter look.',
+    label: 'Clean digital looks',
+    options: [
+      {
+        id: 'neutral-no-filter',
+        label: 'Neutral / no filter',
+        description: 'Clean natural color without an obvious applied filter treatment.',
+        prompt:
+          'Keep the color treatment neutral and photographic, with no obvious applied social-media filter look.',
+      },
+      {
+        id: 'iphone-natural',
+        label: 'iPhone natural',
+        description: 'Familiar modern smartphone look with clean color and approachable contrast.',
+        prompt:
+          'Use a modern iPhone-like natural look with clean color, approachable contrast, and realistic everyday travel-photo rendering.',
+      },
+      {
+        id: 'iphone-vivid',
+        label: 'iPhone vivid',
+        description: 'Popular punchier smartphone look with brighter color and contrast.',
+        prompt:
+          'Use an iPhone-like vivid look with slightly stronger color and contrast, while keeping skin, sky, and environmental detail realistic and controlled.',
+      },
+      {
+        id: 'leica-natural',
+        label: 'Leica natural',
+        description: 'Well-known premium reportage look with restrained color and micro-contrast.',
+        prompt:
+          'Use a Leica-like natural reportage color treatment with restrained saturation, refined micro-contrast, and polished editorial realism.',
+      },
+    ],
   },
   {
-    id: 'iphone-natural',
-    label: 'iPhone natural',
-    description: 'Familiar modern smartphone look with clean color and approachable contrast.',
-    prompt:
-      'Use a modern iPhone-like natural look with clean color, approachable contrast, and realistic everyday travel-photo rendering.',
+    label: 'Editorial film color',
+    options: [
+      {
+        id: 'fujifilm-classic-chrome',
+        label: 'Fujifilm Classic Chrome',
+        description: 'Well-known travel/editorial palette with muted saturation and refined contrast.',
+        prompt:
+          'Use a Classic Chrome-inspired travel/editorial palette with muted saturation, refined contrast, and subdued but believable color separation.',
+      },
+      {
+        id: 'fujifilm-nostalgic-neg',
+        label: 'Fujifilm Nostalgic Neg',
+        description: 'Warm cinema-leaning Fujifilm palette with soft contrast and nostalgic travel color.',
+        prompt:
+          'Use a Nostalgic Neg-inspired palette with warm editorial color, softer contrast, and understated cinematic nostalgia.',
+      },
+      {
+        id: 'fujifilm-reala-ace',
+        label: 'Fujifilm Reala Ace',
+        description: 'Balanced premium Fujifilm color with richer greens, blues, and polished travel realism.',
+        prompt:
+          'Use a Reala Ace-inspired palette with polished travel color, richer greens and blues, and clean premium realism.',
+      },
+      {
+        id: 'fujifilm-pro-400h',
+        label: 'Fujifilm Pro 400H',
+        description: 'Pastel-leaning film palette with airy greens and soft editorial light.',
+        prompt:
+          'Use a Fuji Pro 400H-inspired palette with airy greens, soft pastel color, and gentle editorial film restraint.',
+      },
+      {
+        id: 'kodak-portra-400',
+        label: 'Kodak Portra 400',
+        description: 'Popular editorial film look with warm natural skin and soft color rolloff.',
+        prompt:
+          'Use a Portra 400-inspired editorial film palette with warm natural color, soft highlight rolloff, and restrained analog richness.',
+      },
+      {
+        id: 'kodak-portra-800',
+        label: 'Kodak Portra 800',
+        description: 'Richer low-light color-negative look with warm shadows and cinematic travel mood.',
+        prompt:
+          'Use a Portra 800-inspired palette with richer low-light color, warm shadow depth, and premium nighttime film character.',
+      },
+      {
+        id: 'kodak-gold-200',
+        label: 'Kodak Gold 200',
+        description: 'Recognizable warm travel-film look with sunny nostalgic color.',
+        prompt:
+          'Use a Kodak Gold-inspired travel look with warm sunlit color, gentle nostalgic richness, and believable film-style warmth.',
+      },
+      {
+        id: 'kodak-ektar-100',
+        label: 'Kodak Ektar 100',
+        description: 'Saturated clean film look with vivid travel color and crisp daylight punch.',
+        prompt:
+          'Use an Ektar 100-inspired palette with clean vivid color, crisp daylight punch, and polished travel-photo saturation.',
+      },
+      {
+        id: 'kodak-ultramax-400',
+        label: 'Kodak Ultramax 400',
+        description: 'Casual consumer-film palette with bright color and familiar vacation-photo energy.',
+        prompt:
+          'Use an Ultramax 400-inspired palette with bright casual color, everyday travel warmth, and believable consumer-film nostalgia.',
+      },
+    ],
   },
   {
-    id: 'iphone-vivid',
-    label: 'iPhone vivid',
-    description: 'Popular punchier smartphone look with brighter color and contrast.',
-    prompt:
-      'Use an iPhone-like vivid look with slightly stronger color and contrast, while keeping skin, sky, and environmental detail realistic and controlled.',
+    label: 'Vintage and nostalgic color',
+    options: [
+      {
+        id: 'cinestill-800t',
+        label: 'CineStill 800T',
+        description: 'Popular tungsten-night film look with glowing practical lights and urban atmosphere.',
+        prompt:
+          'Use a CineStill 800T-inspired palette with tungsten-night color separation, glowing practical lights, and believable urban film mood.',
+      },
+      {
+        id: 'kodachrome-64',
+        label: 'Kodachrome 64',
+        description: 'Classic slide-film nostalgia with saturated travel color and old-magazine warmth.',
+        prompt:
+          'Use a Kodachrome 64-inspired palette with rich travel color, warm editorial nostalgia, and slide-film clarity.',
+      },
+      {
+        id: 'agfa-vista-200',
+        label: 'Agfa Vista 200',
+        description: 'Cheerful consumer-film palette with lively color and European travel nostalgia.',
+        prompt:
+          'Use an Agfa Vista-inspired palette with lively color, cheerful daylight warmth, and believable old-vacation-film character.',
+      },
+      {
+        id: 'faded-print-vintage',
+        label: 'Faded print vintage',
+        description: 'Softly aged print look with lifted blacks and worn nostalgic color.',
+        prompt:
+          'Use a faded vintage-print treatment with lifted blacks, softened contrast, and gently aged travel color.',
+      },
+      {
+        id: 'faded-disposable-film',
+        label: 'Faded disposable film',
+        description: 'Vacation-snapshot look with soft flash-era color, mild haze, and disposable-camera charm.',
+        prompt:
+          'Use a faded disposable-film look with casual flash-era nostalgia, mild haze, and believable imperfect vacation color.',
+      },
+      {
+        id: 'dusty-postcard-vintage',
+        label: 'Dusty postcard vintage',
+        description: 'Warm printed-postcard feel with dusty highlights and sun-aged travel color.',
+        prompt:
+          'Use a dusty postcard-style vintage palette with warm printed color, sun-aged highlights, and restrained souvenir-photo nostalgia.',
+      },
+      {
+        id: 'expired-color-negative',
+        label: 'Expired color negative',
+        description: 'Unpredictable analog color shifts with restrained old-film imperfection.',
+        prompt:
+          'Use an expired color-negative feel with restrained analog color shifts, imperfect balance, and believable old-film character.',
+      },
+    ],
   },
   {
-    id: 'fujifilm-classic-chrome',
-    label: 'Fujifilm Classic Chrome',
-    description: 'Well-known travel/editorial palette with muted saturation and refined contrast.',
-    prompt:
-      'Use a Classic Chrome-inspired travel/editorial palette with muted saturation, refined contrast, and subdued but believable color separation.',
-  },
-  {
-    id: 'kodak-portra-400',
-    label: 'Kodak Portra 400',
-    description: 'Popular editorial film look with warm natural skin and soft color rolloff.',
-    prompt:
-      'Use a Portra 400-inspired editorial film palette with warm natural color, soft highlight rolloff, and restrained analog richness.',
-  },
-  {
-    id: 'kodak-gold-200',
-    label: 'Kodak Gold 200',
-    description: 'Recognizable warm travel-film look with sunny nostalgic color.',
-    prompt:
-      'Use a Kodak Gold-inspired travel look with warm sunlit color, gentle nostalgic richness, and believable film-style warmth.',
-  },
-  {
-    id: 'leica-natural',
-    label: 'Leica natural',
-    description: 'Well-known premium reportage look with restrained color and micro-contrast.',
-    prompt:
-      'Use a Leica-like natural reportage color treatment with restrained saturation, refined micro-contrast, and polished editorial realism.',
+    label: 'Black-and-white film',
+    options: [
+      {
+        id: 'ilford-hp5-bw',
+        label: 'Ilford HP5+ B&W',
+        description: 'Classic documentary black-and-white look with open grain and natural tonal range.',
+        prompt:
+          'Use an Ilford HP5 Plus-inspired black-and-white film look with open grain, natural tonal range, and grounded documentary realism.',
+      },
+      {
+        id: 'kodak-tri-x-400',
+        label: 'Kodak Tri-X 400',
+        description: 'Punchier black-and-white street-film look with classic reportage grit.',
+        prompt:
+          'Use a Kodak Tri-X-inspired black-and-white look with punchier contrast, classic reportage grit, and believable analog grain.',
+      },
+    ],
   },
 ]
+
+export const FILTER_LOOK_OPTIONS = FILTER_LOOK_GROUPS.flatMap((group) => group.options)
+
+export const VINTAGE_COMBO_NOTES = [
+  {
+    title: 'Leica street classic',
+    recipe: 'Leica M6 + 35mm vintage rangefinder lens + Kodak Tri-X 400',
+    note: 'Documentary street frames with restrained grain, honest contrast, and timeless reportage energy.',
+  },
+  {
+    title: 'Luxury medium-format film',
+    recipe: 'Hasselblad 500CM + classic medium format lens rendering + Kodak Portra 400',
+    note: 'Premium analog editorial mood with calm depth, soft rolloff, and polished travel color.',
+  },
+  {
+    title: 'Sunny compact vacation',
+    recipe: 'Contax T2 + 40mm vintage pancake + Kodak Gold 200',
+    note: 'Warm point-and-shoot travel nostalgia with clean sunlight and easy holiday charm.',
+  },
+  {
+    title: 'Old postcard city color',
+    recipe: 'Canon AE-1 + 50mm vintage fast prime + Kodachrome 64',
+    note: 'Richer retro travel color with magazine-era warmth and a believable analog finish.',
+  },
+  {
+    title: 'Disposable-night nostalgia',
+    recipe: 'Yashica T4 + soft vintage film lens + faded disposable film',
+    note: 'Casual imperfect nightlife or travel snapshots with soft haze and flash-era charm.',
+  },
+] as const
 
 export const LIGHTING_OPTIONS: SelectOption<LightingId>[] = [
   {
     id: 'clear-bright-midday-sun',
-    label: 'Clear bright midday sun',
-    description: 'Bright daylight with clean visibility and crisp shadows.',
+    label: 'Clear sunny day',
+    description: 'Bright direct daylight with clean visibility and crisp shadows.',
     prompt:
-      'Use clean blue sky daylight, crisp shadows, high visibility, and natural midday clarity.',
+      'Use clear sunny daylight, natural visibility, and crisp realistic shadows.',
   },
   {
     id: 'soft-morning-light',
-    label: 'Soft morning light',
-    description: 'Gentle early-daylight illumination with soft contrast.',
+    label: 'Morning',
+    description: 'Gentle early daylight with soft contrast and fresh clarity.',
     prompt:
       'Use soft early-daylight illumination, fresh atmosphere, gentle contrast, and believable morning clarity.',
   },
   {
     id: 'golden-hour',
-    label: 'Golden hour',
-    description: 'Warm low-angle sunlight with long soft shadows.',
+    label: 'Late afternoon',
+    description: 'Warm lower-angle sunlight with longer, softer shadows.',
     prompt:
-      'Use warm low-angle sunlight, long soft shadows, and rich but realistic color.',
+      'Use warm late-day sunlight, long soft shadows, and realistic color.',
   },
   {
     id: 'sunset-glow',
-    label: 'Sunset glow',
-    description: 'Warm sunset atmosphere with realistic haze and color.',
+    label: 'Sunset',
+    description: 'Sunset light with natural evening color and atmospheric softness.',
     prompt:
-      'Use a photogenic sunset sky, warm atmosphere, realistic haze, and cinematic but believable light.',
+      'Use realistic sunset light, warm evening color, and natural atmospheric softness.',
   },
   {
     id: 'blue-hour',
-    label: 'Blue hour',
-    description: 'Cool dusk ambience with subtle natural glow.',
+    label: 'Dusk',
+    description: 'Cool early-evening light with a calm dusk atmosphere.',
     prompt:
-      'Use cool ambient dusk light, subtle glow, and a natural blue-hour atmosphere.',
+      'Use cool ambient dusk light and a natural early-evening atmosphere.',
   },
   {
     id: 'overcast-soft-light',
-    label: 'Overcast soft light',
-    description: 'Soft diffused daylight with muted highlights.',
+    label: 'Overcast day',
+    description: 'Soft diffused daylight with muted highlights and gentle contrast.',
     prompt:
       'Use soft diffused light, gentle contrast, realistic cloud cover, and muted highlights.',
   },
   {
     id: 'diffused-cloudy-daylight',
-    label: 'Diffused cloudy daylight',
-    description: 'Cloud-filtered daylight with even tonal balance.',
+    label: 'Cloudy day',
+    description: 'Cloud-filtered daylight with even tonal balance and subdued brightness.',
     prompt:
       'Use evenly diffused cloudy daylight, calm tonal balance, and realistic subdued brightness.',
   },
   {
     id: 'dramatic-storm-light',
-    label: 'Dramatic storm light',
-    description: 'Moody cloud cover with selective light and tension.',
+    label: 'Stormy daylight',
+    description: 'Moody cloud cover with selective brighter breaks.',
     prompt:
       'Use heavy cloud mood, selective sunlight, and realistic atmospheric tension.',
   },
   {
     id: 'hazy-afternoon-light',
-    label: 'Hazy afternoon light',
+    label: 'Hazy afternoon',
     description: 'Bright afternoon light softened by haze or moisture.',
     prompt:
       'Use hazy afternoon brightness, softened distance detail, and believable atmospheric diffusion.',
   },
   {
     id: 'backlit-sunlight',
-    label: 'Backlit sunlight',
-    description: 'Sunlit backlight with controlled flare and rim effects.',
+    label: 'Backlit sun',
+    description: 'Direct sun behind the subject with controlled flare and rim light.',
     prompt:
       'Use realistic backlit sunlight with controlled flare, believable rim light, and preserved scene detail.',
   },
@@ -830,22 +1346,22 @@ export const LIGHTING_OPTIONS: SelectOption<LightingId>[] = [
   },
   {
     id: 'night-city-lights',
-    label: 'Night city lights',
-    description: 'Urban night exposure driven by practical lights.',
+    label: 'Night',
+    description: 'Urban night exposure driven by practical and ambient lights.',
     prompt:
       'Use realistic urban night exposure, practical lights, controlled highlights, and believable darkness.',
   },
   {
     id: 'mixed-urban-lighting',
-    label: 'Mixed urban lighting',
+    label: 'Mixed city lights',
     description: 'Layered city lighting from signage, streetlights, and ambient sources.',
     prompt:
       'Use layered city lighting from practical sources with realistic color contrast and controlled highlight spill.',
   },
   {
     id: 'flat-neutral-daylight',
-    label: 'Flat neutral daylight',
-    description: 'Low-drama daylight with minimal contrast.',
+    label: 'Neutral daylight',
+    description: 'Low-drama daylight with minimal contrast and accurate color.',
     prompt:
       'Use flat neutral daylight with restrained contrast, accurate color, and an honest low-drama photographic feel.',
   },
@@ -945,12 +1461,13 @@ export const PROMPT_PRESETS: PromptPreset[] = [
     values: {
       sceneCategory: 'tourist-landmark-no-people',
       peoplePresence: 'no-people',
-      peopleHandling: 'preserve-exactly',
+      peopleHandling: 'keep-every-person-as-is',
+      crowdCharacter: 'match-reference-crowd',
       primarySubjectEmphasis: 'landmark-first',
       cameraPreset: 'sony-a7r-v',
       lensPreset: '24mm-f1-4',
       captureStyle: 'travel-photography',
-      aspectRatio: 'match-reference',
+      shotPerspective: 'match-reference-viewpoint',
       filterLook: 'neutral-no-filter',
       lighting: 'clear-bright-midday-sun',
       preservationStrength: 'strict',
@@ -966,12 +1483,13 @@ export const PROMPT_PRESETS: PromptPreset[] = [
     values: {
       sceneCategory: 'desert-rock-formations',
       peoplePresence: 'no-people',
-      peopleHandling: 'preserve-exactly',
+      peopleHandling: 'keep-every-person-as-is',
+      crowdCharacter: 'match-reference-crowd',
       primarySubjectEmphasis: 'environment-first',
       cameraPreset: 'sony-a7r-v',
       lensPreset: '35mm-f1-8',
       captureStyle: 'editorial',
-      aspectRatio: 'match-reference',
+      shotPerspective: 'match-reference-viewpoint',
       filterLook: 'kodak-gold-200',
       lighting: 'golden-hour',
       preservationStrength: 'strict',
@@ -987,12 +1505,13 @@ export const PROMPT_PRESETS: PromptPreset[] = [
     values: {
       sceneCategory: 'tourist-landmark-sparse-people',
       peoplePresence: 'small-group',
-      peopleHandling: 'keep-environment-primary',
+      peopleHandling: 'environment-dominant-with-people',
+      crowdCharacter: 'international-tourist-mix',
       primarySubjectEmphasis: 'landmark-first',
       cameraPreset: 'canon-r5',
       lensPreset: '35mm-f1-4',
       captureStyle: 'editorial',
-      aspectRatio: 'match-reference',
+      shotPerspective: 'match-reference-viewpoint',
       filterLook: 'kodak-portra-400',
       lighting: 'sunset-glow',
       preservationStrength: 'balanced',
@@ -1008,12 +1527,13 @@ export const PROMPT_PRESETS: PromptPreset[] = [
     values: {
       sceneCategory: 'city-street-scene',
       peoplePresence: 'spread-out-crowd',
-      peopleHandling: 'keep-people-secondary',
+      peopleHandling: 'people-secondary-environment-primary',
+      crowdCharacter: 'stylish-city-weekend-crowd',
       primarySubjectEmphasis: 'balanced-scene',
       cameraPreset: 'leica-q3',
       lensPreset: '28mm-f2',
       captureStyle: 'street-photography',
-      aspectRatio: 'match-reference',
+      shotPerspective: 'match-reference-viewpoint',
       filterLook: 'leica-natural',
       lighting: 'blue-hour',
       preservationStrength: 'balanced',
@@ -1029,12 +1549,13 @@ export const PROMPT_PRESETS: PromptPreset[] = [
     values: {
       sceneCategory: 'mountain-hiking',
       peoplePresence: 'no-people',
-      peopleHandling: 'preserve-exactly',
+      peopleHandling: 'keep-every-person-as-is',
+      crowdCharacter: 'match-reference-crowd',
       primarySubjectEmphasis: 'environment-first',
       cameraPreset: 'fujifilm-gfx-100s',
       lensPreset: '45mm-equivalent-medium-format',
       captureStyle: 'fine-art-landscape',
-      aspectRatio: 'match-reference',
+      shotPerspective: 'match-reference-viewpoint',
       filterLook: 'fujifilm-classic-chrome',
       lighting: 'soft-morning-light',
       preservationStrength: 'strict',
@@ -1050,12 +1571,13 @@ export const PROMPT_PRESETS: PromptPreset[] = [
     values: {
       sceneCategory: 'couple-friends-photo',
       peoplePresence: 'two-people',
-      peopleHandling: 'preserve-count-minor-natural-changes',
+      peopleHandling: 'keep-same-people-small-natural-changes',
+      crowdCharacter: 'adult-travelers',
       primarySubjectEmphasis: 'person-first',
       cameraPreset: 'sony-a7-iv',
       lensPreset: '50mm-f1-4',
       captureStyle: 'luxury-campaign',
-      aspectRatio: 'match-reference',
+      shotPerspective: 'match-reference-viewpoint',
       filterLook: 'kodak-portra-400',
       lighting: 'golden-hour',
       preservationStrength: 'balanced',
@@ -1071,13 +1593,14 @@ export const PROMPT_PRESETS: PromptPreset[] = [
     values: {
       sceneCategory: 'city-street-scene',
       peoplePresence: 'small-group',
-      peopleHandling: 'keep-people-secondary',
+      peopleHandling: 'people-secondary-environment-primary',
+      crowdCharacter: 'locals-dominant',
       primarySubjectEmphasis: 'balanced-scene',
       cameraPreset: 'leica-m6',
       lensPreset: '35mm-vintage-rangefinder',
       captureStyle: 'filmic-vintage',
-      aspectRatio: 'match-reference',
-      filterLook: 'fujifilm-classic-chrome',
+      shotPerspective: 'match-reference-viewpoint',
+      filterLook: 'kodak-tri-x-400',
       lighting: 'overcast-soft-light',
       preservationStrength: 'balanced',
       allowedVariation: 'minor-secondary-detail-changes',
@@ -1098,11 +1621,12 @@ function toOptionMap<TId extends string, TOption extends { id: TId }>(
 export const SCENE_CATEGORY_MAP = toOptionMap(SCENE_CATEGORY_OPTIONS)
 export const PEOPLE_PRESENCE_MAP = toOptionMap(PEOPLE_PRESENCE_OPTIONS)
 export const PEOPLE_HANDLING_MAP = toOptionMap(PEOPLE_HANDLING_OPTIONS)
+export const CROWD_CHARACTER_MAP = toOptionMap(CROWD_CHARACTER_OPTIONS)
 export const PRIMARY_SUBJECT_MAP = toOptionMap(PRIMARY_SUBJECT_OPTIONS)
 export const CAMERA_PRESET_MAP = toOptionMap(CAMERA_PRESET_OPTIONS)
 export const LENS_PRESET_MAP = toOptionMap(LENS_PRESET_OPTIONS)
 export const CAPTURE_STYLE_MAP = toOptionMap(CAPTURE_STYLE_OPTIONS)
-export const ASPECT_RATIO_MAP = toOptionMap(ASPECT_RATIO_OPTIONS)
+export const SHOT_PERSPECTIVE_MAP = toOptionMap(SHOT_PERSPECTIVE_OPTIONS)
 export const FILTER_LOOK_MAP = toOptionMap(FILTER_LOOK_OPTIONS)
 export const LIGHTING_MAP = toOptionMap(LIGHTING_OPTIONS)
 export const PRESERVATION_STRENGTH_MAP = toOptionMap(PRESERVATION_STRENGTH_OPTIONS)
@@ -1118,6 +1642,8 @@ export function createFormStateFromPreset(
   return {
     presetId,
     extraInstructions: preset.values.extraInstructions ?? '',
+    referenceHasPeople: preset.values.referenceHasPeople ?? preset.values.peoplePresence !== 'no-people',
+    centerMainSubject: preset.values.centerMainSubject ?? false,
     ...preset.values,
   }
 }
@@ -1133,6 +1659,9 @@ export const VALID_PEOPLE_PRESENCE_IDS = new Set<PeoplePresenceId>(
 export const VALID_PEOPLE_HANDLING_IDS = new Set<PeopleHandlingId>(
   PEOPLE_HANDLING_OPTIONS.map((option) => option.id),
 )
+export const VALID_CROWD_CHARACTER_IDS = new Set<CrowdCharacterId>(
+  CROWD_CHARACTER_OPTIONS.map((option) => option.id),
+)
 export const VALID_PRIMARY_SUBJECT_IDS = new Set<PrimarySubjectEmphasisId>(
   PRIMARY_SUBJECT_OPTIONS.map((option) => option.id),
 )
@@ -1145,8 +1674,8 @@ export const VALID_LENS_PRESET_IDS = new Set<LensPresetId>(
 export const VALID_CAPTURE_STYLE_IDS = new Set<CaptureStyleId>(
   CAPTURE_STYLE_OPTIONS.map((option) => option.id),
 )
-export const VALID_ASPECT_RATIO_IDS = new Set<AspectRatioId>(
-  ASPECT_RATIO_OPTIONS.map((option) => option.id),
+export const VALID_SHOT_PERSPECTIVE_IDS = new Set<ShotPerspectiveId>(
+  SHOT_PERSPECTIVE_OPTIONS.map((option) => option.id),
 )
 export const VALID_FILTER_LOOK_IDS = new Set<FilterLookId>(
   FILTER_LOOK_OPTIONS.map((option) => option.id),

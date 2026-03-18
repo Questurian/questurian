@@ -22,6 +22,7 @@ type BuildFeaturedModalViewInput = {
   filteredFeaturedImageAssets: MediaAsset[]
   selectedFeaturedImage: MediaAsset | null
   selectedLocation?: Location
+  featuredImageExternalRef: string
   featuredImageFileNamePrefix: string
   token?: string
   imageAltText: string
@@ -79,7 +80,7 @@ export function buildFeaturedModalView(input: BuildFeaturedModalViewInput): Feat
     },
     upload: {
       selectedLocation: input.selectedLocation,
-      stagedArticleId: input.stagedArticle.id,
+      featuredImageExternalRef: input.featuredImageExternalRef,
       featuredImageFileNamePrefix: input.featuredImageFileNamePrefix,
       token: input.token,
       imageAltText: input.imageAltText,

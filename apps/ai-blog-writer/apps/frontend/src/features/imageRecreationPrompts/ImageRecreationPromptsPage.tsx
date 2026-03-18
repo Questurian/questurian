@@ -3,13 +3,13 @@ import type { ChangeEvent, DragEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ALLOWED_VARIATION_OPTIONS,
-  ASPECT_RATIO_OPTIONS,
   CAMERA_PRESET_GROUPS,
   CAPTURE_STYLE_OPTIONS,
+  CROWD_CHARACTER_OPTIONS,
   DEFAULT_IMAGE_RECREATION_FORM_STATE,
   DEFAULT_PROMPT_PRESET_ID,
   ENVIRONMENT_ENHANCEMENT_OPTIONS,
-  FILTER_LOOK_OPTIONS,
+  FILTER_LOOK_GROUPS,
   IMAGE_RECREATION_PROMPTS_STORAGE_KEY,
   isKnownPresetId,
   LENS_PRESET_GROUPS,
@@ -23,9 +23,9 @@ import {
   SCENE_CATEGORY_MAP,
   SCENE_CATEGORY_OPTIONS,
   VALID_ALLOWED_VARIATION_IDS,
-  VALID_ASPECT_RATIO_IDS,
   VALID_CAMERA_PRESET_IDS,
   VALID_CAPTURE_STYLE_IDS,
+  VALID_CROWD_CHARACTER_IDS,
   VALID_ENVIRONMENT_ENHANCEMENT_IDS,
   VALID_FILTER_LOOK_IDS,
   VALID_LENS_PRESET_IDS,
@@ -35,15 +35,91 @@ import {
   VALID_PRESERVATION_STRENGTH_IDS,
   VALID_PRIMARY_SUBJECT_IDS,
   VALID_SCENE_CATEGORY_IDS,
+  VALID_SHOT_PERSPECTIVE_IDS,
+  SHOT_PERSPECTIVE_OPTIONS,
+  VINTAGE_COMBO_NOTES,
   createFormStateFromPreset,
 } from './config'
 import { buildImageRecreationPrompt } from './promptBuilder'
 import type {
+  FilterLookId,
   ImageRecreationFormState,
   OptionGroup,
+  AllowedVariationId,
+  PeopleHandlingId,
+  PrimarySubjectEmphasisId,
   PromptPresetId,
+  SelectOption,
 } from './types'
 import './styles.css'
+
+const LEGACY_PEOPLE_HANDLING_ID_MAP: Record<string, PeopleHandlingId> = {
+  'preserve-exactly': 'keep-every-person-as-is',
+  'preserve-count-minor-natural-changes': 'keep-same-people-small-natural-changes',
+  'preserve-scene-subtle-reshuffling': 'keep-same-people-small-repositioning',
+  'keep-people-secondary': 'people-secondary-environment-primary',
+  'keep-environment-primary': 'environment-dominant-with-people',
+}
+
+const LEGACY_FILTER_LOOK_ID_MAP: Record<string, FilterLookId> = {
+  'kodak-ekta-100': 'kodak-ektar-100',
+}
+
+const PEOPLE_FREE_HANDLING_IDS = new Set<PeopleHandlingId>([
+  'keep-every-person-as-is',
+  'remove-all-people',
+])
+
+const PEOPLE_DEPENDENT_VARIATION_FALLBACK: AllowedVariationId = 'small-environmental-cleanup'
+const PEOPLE_FREE_PRIMARY_SUBJECT_FALLBACK: PrimarySubjectEmphasisId = 'environment-first'
+
+function resultHasVisiblePeople(state: Pick<ImageRecreationFormState, 'peoplePresence' | 'peopleHandling'>): boolean {
+  return state.peoplePresence !== 'no-people'
+}
+
+function getScenePeopleFallback(
+  sceneCategory: ImageRecreationFormState['sceneCategory'],
+): ImageRecreationFormState['peoplePresence'] {
+  const recommendedPeoplePresence = SCENE_CATEGORY_MAP[sceneCategory].recommendedPeoplePresence
+
+  return recommendedPeoplePresence === 'no-people' ? 'one-person' : recommendedPeoplePresence
+}
+
+function normalizeFormStateForUi(state: ImageRecreationFormState): ImageRecreationFormState {
+  const nextState = { ...state }
+
+  if (!nextState.referenceHasPeople && nextState.peopleHandling === 'remove-all-people') {
+    nextState.peopleHandling = 'keep-every-person-as-is'
+  }
+
+  if (nextState.peopleHandling === 'remove-all-people') {
+    nextState.peoplePresence = 'no-people'
+  }
+
+  if (
+    nextState.peoplePresence === 'no-people' &&
+    !PEOPLE_FREE_HANDLING_IDS.has(nextState.peopleHandling)
+  ) {
+    nextState.peopleHandling = nextState.referenceHasPeople
+      ? 'remove-all-people'
+      : 'keep-every-person-as-is'
+  }
+
+  if (!resultHasVisiblePeople(nextState)) {
+    if (nextState.primarySubjectEmphasis === 'person-first') {
+      nextState.primarySubjectEmphasis = PEOPLE_FREE_PRIMARY_SUBJECT_FALLBACK
+    }
+
+    if (
+      nextState.allowedVariation === 'small-wardrobe-changes' ||
+      nextState.allowedVariation === 'small-positional-shifts'
+    ) {
+      nextState.allowedVariation = PEOPLE_DEPENDENT_VARIATION_FALLBACK
+    }
+  }
+
+  return nextState
+}
 
 function coerceOptionValue<TId extends string>(
   value: unknown,
@@ -51,6 +127,34 @@ function coerceOptionValue<TId extends string>(
   fallback: TId,
 ): TId {
   return typeof value === 'string' && validValues.has(value as TId) ? (value as TId) : fallback
+}
+
+function coercePeopleHandlingValue(
+  value: unknown,
+  validValues: Set<PeopleHandlingId>,
+  fallback: PeopleHandlingId,
+): PeopleHandlingId {
+  if (typeof value !== 'string') return fallback
+
+  const migratedValue = LEGACY_PEOPLE_HANDLING_ID_MAP[value] ?? value
+
+  return validValues.has(migratedValue as PeopleHandlingId)
+    ? (migratedValue as PeopleHandlingId)
+    : fallback
+}
+
+function coerceFilterLookValue(
+  value: unknown,
+  validValues: Set<FilterLookId>,
+  fallback: FilterLookId,
+): FilterLookId {
+  if (typeof value !== 'string') return fallback
+
+  const migratedValue = LEGACY_FILTER_LOOK_ID_MAP[value] ?? value
+
+  return validValues.has(migratedValue as FilterLookId)
+    ? (migratedValue as FilterLookId)
+    : fallback
 }
 
 function loadSavedState(): ImageRecreationFormState {
@@ -62,22 +166,37 @@ function loadSavedState(): ImageRecreationFormState {
 
     const parsed = JSON.parse(raw) as Partial<ImageRecreationFormState>
 
-    return {
+    const restoredPeopleHandling = coercePeopleHandlingValue(
+      parsed.peopleHandling,
+      VALID_PEOPLE_HANDLING_IDS,
+      fallback.peopleHandling,
+    )
+    const restoredPeoplePresence = coerceOptionValue(
+      parsed.peoplePresence,
+      VALID_PEOPLE_PRESENCE_IDS,
+      fallback.peoplePresence,
+    )
+    const restoredReferenceHasPeople =
+      typeof parsed.referenceHasPeople === 'boolean'
+        ? parsed.referenceHasPeople
+        : restoredPeoplePresence !== 'no-people' ||
+          restoredPeopleHandling !== 'keep-every-person-as-is'
+
+    return normalizeFormStateForUi({
       presetId: isKnownPresetId(parsed.presetId) ? parsed.presetId : fallback.presetId,
       sceneCategory: coerceOptionValue(
         parsed.sceneCategory,
         VALID_SCENE_CATEGORY_IDS,
         fallback.sceneCategory,
       ),
-      peoplePresence: coerceOptionValue(
-        parsed.peoplePresence,
-        VALID_PEOPLE_PRESENCE_IDS,
-        fallback.peoplePresence,
-      ),
-      peopleHandling: coerceOptionValue(
-        parsed.peopleHandling,
-        VALID_PEOPLE_HANDLING_IDS,
-        fallback.peopleHandling,
+      referenceHasPeople: restoredReferenceHasPeople,
+      peoplePresence:
+        restoredPeopleHandling === 'remove-all-people' ? 'no-people' : restoredPeoplePresence,
+      peopleHandling: restoredPeopleHandling,
+      crowdCharacter: coerceOptionValue(
+        parsed.crowdCharacter,
+        VALID_CROWD_CHARACTER_IDS,
+        fallback.crowdCharacter,
       ),
       primarySubjectEmphasis: coerceOptionValue(
         parsed.primarySubjectEmphasis,
@@ -95,12 +214,16 @@ function loadSavedState(): ImageRecreationFormState {
         VALID_CAPTURE_STYLE_IDS,
         fallback.captureStyle,
       ),
-      aspectRatio: coerceOptionValue(
-        parsed.aspectRatio,
-        VALID_ASPECT_RATIO_IDS,
-        fallback.aspectRatio,
+      shotPerspective: coerceOptionValue(
+        parsed.shotPerspective,
+        VALID_SHOT_PERSPECTIVE_IDS,
+        fallback.shotPerspective,
       ),
-      filterLook: coerceOptionValue(
+      centerMainSubject:
+        typeof parsed.centerMainSubject === 'boolean'
+          ? parsed.centerMainSubject
+          : fallback.centerMainSubject,
+      filterLook: coerceFilterLookValue(
         parsed.filterLook,
         VALID_FILTER_LOOK_IDS,
         fallback.filterLook,
@@ -123,10 +246,88 @@ function loadSavedState(): ImageRecreationFormState {
       ),
       extraInstructions:
         typeof parsed.extraInstructions === 'string' ? parsed.extraInstructions : fallback.extraInstructions,
-    }
+    })
   } catch {
     return fallback
   }
+}
+
+type BinaryChoiceFieldProps = {
+  label: string
+  helperText?: ReactNode
+  value: boolean
+  trueLabel: string
+  falseLabel: string
+  onChange: (value: boolean) => void
+}
+
+function BinaryChoiceField({
+  label,
+  helperText,
+  value,
+  trueLabel,
+  falseLabel,
+  onChange,
+}: BinaryChoiceFieldProps) {
+  return (
+    <fieldset className="irp-field irp-binary-field">
+      <legend className="irp-field-label">{label}</legend>
+      <div className="irp-binary-grid" role="group" aria-label={label}>
+        <button
+          type="button"
+          className={`irp-binary-option${!value ? ' is-active' : ''}`}
+          aria-pressed={!value}
+          onClick={() => onChange(false)}
+        >
+          {falseLabel}
+        </button>
+        <button
+          type="button"
+          className={`irp-binary-option${value ? ' is-active' : ''}`}
+          aria-pressed={value}
+          onClick={() => onChange(true)}
+        >
+          {trueLabel}
+        </button>
+      </div>
+      {helperText ? (
+        <div className="irp-field-meta">
+          <span className="irp-field-helper">{helperText}</span>
+        </div>
+      ) : null}
+    </fieldset>
+  )
+}
+
+type CheckboxFieldProps = {
+  id: string
+  label: string
+  helperText: ReactNode
+  checked: boolean
+  onChange: (checked: boolean) => void
+}
+
+function CheckboxField({ id, label, helperText, checked, onChange }: CheckboxFieldProps) {
+  return (
+    <label className="irp-checkbox-field" htmlFor={id}>
+      <input
+        id={id}
+        className="irp-checkbox-input"
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="irp-checkbox-shell">
+        <span className="irp-checkbox-control" aria-hidden="true">
+          {checked ? '✓' : ''}
+        </span>
+        <span className="irp-checkbox-copy">
+          <span className="irp-field-label">{label}</span>
+          <span className="irp-field-helper">{helperText}</span>
+        </span>
+      </span>
+    </label>
+  )
 }
 
 type SelectFieldProps<TId extends string> = {
@@ -134,7 +335,9 @@ type SelectFieldProps<TId extends string> = {
   label: string
   value: TId
   helperText?: ReactNode
-  options?: Array<{ id: TId; label: string }>
+  disabled?: boolean
+  hideSelectionNote?: boolean
+  options?: Array<{ id: TId; label: string; description?: ReactNode; disabled?: boolean }>
   optionGroups?: OptionGroup<TId>[]
   onChange: (value: TId) => void
 }
@@ -144,36 +347,53 @@ function SelectField<TId extends string>({
   label,
   value,
   helperText,
+  disabled = false,
+  hideSelectionNote = false,
   options,
   optionGroups,
   onChange,
 }: SelectFieldProps<TId>) {
+  const flattenedOptions = options ?? optionGroups?.flatMap((group) => group.options) ?? []
+  const selectedOption = flattenedOptions.find((option) => option.id === value)
+  const showSelectionNote = !hideSelectionNote && selectedOption?.description
+
   return (
-    <label className="irp-field" htmlFor={id}>
+    <label className={`irp-field${disabled ? ' is-disabled' : ''}`} htmlFor={id}>
       <span className="irp-field-label">{label}</span>
       <select
         id={id}
         className="irp-input irp-select"
         aria-label={label}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value as TId)}
       >
         {options?.map((option) => (
-          <option key={option.id} value={option.id}>
+          <option key={option.id} value={option.id} disabled={option.disabled}>
             {option.label}
           </option>
         ))}
         {optionGroups?.map((group) => (
           <optgroup key={group.label} label={group.label}>
             {group.options.map((option) => (
-              <option key={option.id} value={option.id}>
+              <option key={option.id} value={option.id} disabled={option.disabled}>
                 {option.label}
               </option>
             ))}
           </optgroup>
         ))}
       </select>
-      {helperText ? <span className="irp-field-helper">{helperText}</span> : null}
+      {helperText || showSelectionNote ? (
+        <div className="irp-field-meta">
+          {helperText ? <span className="irp-field-helper">{helperText}</span> : null}
+          {showSelectionNote ? (
+            <div className="irp-option-note" aria-live="polite">
+              <span className="irp-option-note-label">Current selection</span>
+              <span className="irp-option-note-copy">{selectedOption.description}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </label>
   )
 }
@@ -188,12 +408,34 @@ export default function ImageRecreationPromptsPage() {
 
   const sceneOption = SCENE_CATEGORY_MAP[formState.sceneCategory]
   const recommendedPeoplePresence = PEOPLE_PRESENCE_MAP[sceneOption.recommendedPeoplePresence]
-  const selectedPreset =
-    formState.presetId === 'custom' ? null : PROMPT_PRESETS.find((preset) => preset.id === formState.presetId)
   const peopleOverrideWarning =
     formState.peoplePresence !== sceneOption.recommendedPeoplePresence
       ? `This scene usually pairs with ${recommendedPeoplePresence.label.toLowerCase()}. Your override will still be respected, but it departs from the normal scene-fidelity expectation for ${sceneOption.label.toLowerCase()}.`
       : null
+  const sourcePhotoIsPeopleFree = !formState.referenceHasPeople
+  const forcesPeopleFreeResult = !resultHasVisiblePeople(formState)
+  const peopleAmountOptions = (
+    formState.referenceHasPeople && !forcesPeopleFreeResult
+      ? PEOPLE_PRESENCE_OPTIONS.filter((option) => option.id !== 'no-people')
+      : PEOPLE_PRESENCE_OPTIONS
+  ) as typeof PEOPLE_PRESENCE_OPTIONS
+  const peopleHandlingOptions: SelectOption<PeopleHandlingId>[] = PEOPLE_HANDLING_OPTIONS.map((option) => ({
+    ...option,
+    disabled:
+      formState.peoplePresence === 'no-people'
+        ? !PEOPLE_FREE_HANDLING_IDS.has(option.id)
+        : false,
+  }))
+  const primarySubjectOptions: SelectOption<PrimarySubjectEmphasisId>[] = PRIMARY_SUBJECT_OPTIONS.map((option) => ({
+    ...option,
+    disabled: forcesPeopleFreeResult && option.id === 'person-first',
+  }))
+  const allowedVariationOptions: SelectOption<AllowedVariationId>[] = ALLOWED_VARIATION_OPTIONS.map((option) => ({
+    ...option,
+    disabled:
+      forcesPeopleFreeResult &&
+      (option.id === 'small-wardrobe-changes' || option.id === 'small-positional-shifts'),
+  }))
 
   const promptOutput = buildImageRecreationPrompt(formState)
 
@@ -223,11 +465,13 @@ export default function ImageRecreationPromptsPage() {
     field: K,
     value: ImageRecreationFormState[K],
   ) {
-    setFormState((current) => ({
-      ...current,
-      presetId: 'custom',
-      [field]: value,
-    }))
+    setFormState((current) =>
+      normalizeFormStateForUi({
+        ...current,
+        presetId: 'custom',
+        [field]: value,
+      }),
+    )
   }
 
   function clearReferencePreview() {
@@ -254,19 +498,70 @@ export default function ImageRecreationPromptsPage() {
 
   function handlePresetChange(nextPresetId: PromptPresetId) {
     if (nextPresetId === 'custom') return
-    setFormState(createFormStateFromPreset(nextPresetId))
+    setFormState(normalizeFormStateForUi(createFormStateFromPreset(nextPresetId)))
     setCopyFeedback(null)
   }
 
   function handleSceneCategoryChange(nextSceneCategory: ImageRecreationFormState['sceneCategory']) {
     const nextScene = SCENE_CATEGORY_MAP[nextSceneCategory]
 
-    setFormState((current) => ({
-      ...current,
-      presetId: 'custom',
-      sceneCategory: nextSceneCategory,
-      peoplePresence: nextScene.recommendedPeoplePresence,
-    }))
+    setFormState((current) =>
+      normalizeFormStateForUi({
+        ...current,
+        presetId: 'custom',
+        sceneCategory: nextSceneCategory,
+        peoplePresence: current.peopleHandling === 'remove-all-people'
+          ? 'no-people'
+          : current.referenceHasPeople
+            ? nextScene.recommendedPeoplePresence === 'no-people'
+              ? getScenePeopleFallback(nextSceneCategory)
+              : nextScene.recommendedPeoplePresence
+            : 'no-people',
+      }),
+    )
+    setCopyFeedback(null)
+  }
+
+  function handleReferenceHasPeopleChange(nextReferenceHasPeople: boolean) {
+    setFormState((current) =>
+      normalizeFormStateForUi({
+        ...current,
+        presetId: 'custom',
+        referenceHasPeople: nextReferenceHasPeople,
+        peopleHandling:
+          !nextReferenceHasPeople && current.peopleHandling === 'remove-all-people'
+            ? 'keep-every-person-as-is'
+            : current.peopleHandling,
+        peoplePresence: nextReferenceHasPeople
+          ? current.peoplePresence === 'no-people'
+            ? getScenePeopleFallback(current.sceneCategory)
+            : current.peoplePresence
+          : 'no-people',
+      }),
+    )
+    setCopyFeedback(null)
+  }
+
+  function handlePeopleHandlingChange(nextPeopleHandling: PeopleHandlingId) {
+    setFormState((current) =>
+      normalizeFormStateForUi({
+        ...current,
+        presetId: 'custom',
+        peopleHandling: nextPeopleHandling,
+        peoplePresence: nextPeopleHandling === 'remove-all-people' ? 'no-people' : current.peoplePresence,
+      }),
+    )
+    setCopyFeedback(null)
+  }
+
+  function handlePeoplePresenceChange(nextPeoplePresence: ImageRecreationFormState['peoplePresence']) {
+    setFormState((current) =>
+      normalizeFormStateForUi({
+        ...current,
+        presetId: 'custom',
+        peoplePresence: nextPeoplePresence,
+      }),
+    )
     setCopyFeedback(null)
   }
 
@@ -353,11 +648,7 @@ export default function ImageRecreationPromptsPage() {
               value={formState.presetId}
               onChange={(value) => handlePresetChange(value as PromptPresetId)}
               options={[{ id: 'custom', label: 'Custom' }, ...PROMPT_PRESETS]}
-              helperText={
-                selectedPreset
-                  ? selectedPreset.description
-                  : undefined
-              }
+              helperText="Pick a starting recipe, then refine the details below."
             />
 
             <div className="irp-reference-panel">
@@ -473,14 +764,41 @@ export default function ImageRecreationPromptsPage() {
               label="Scene category"
               value={formState.sceneCategory}
               options={SCENE_CATEGORY_OPTIONS}
+              helperText="Start by locking the kind of scene this actually is: landscape, landmark, city, portrait, architecture, mural, market, cafe, nightlife, and so on."
               onChange={handleSceneCategoryChange}
             />
+            <BinaryChoiceField
+              label="Any people in the reference photo?"
+              value={formState.referenceHasPeople}
+              falseLabel="No, none visible"
+              trueLabel="Yes, people are visible"
+              helperText="Answer this from the source image itself. This keeps the prompt anchored to what is actually in the photo before you decide how people should be handled."
+              onChange={handleReferenceHasPeopleChange}
+            />
+            {sourcePhotoIsPeopleFree ? (
+              <div className="irp-callout irp-callout--people-lock" role="status">
+                <strong>People controls are locked</strong>
+                <p>
+                  Because the reference photo is marked as people-free, the people amount,
+                  people handling, and crowd vibe controls stay greyed out.
+                </p>
+              </div>
+            ) : null}
             <SelectField
               id="irp-people-presence"
-              label="People presence"
+              label="People amount / crowd level"
               value={formState.peoplePresence}
-              options={PEOPLE_PRESENCE_OPTIONS}
-              onChange={(value) => updateForm('peoplePresence', value)}
+              disabled={sourcePhotoIsPeopleFree || forcesPeopleFreeResult}
+              hideSelectionNote={sourcePhotoIsPeopleFree}
+              options={peopleAmountOptions}
+              helperText={
+                sourcePhotoIsPeopleFree
+                  ? 'This stays on No people because you marked the source photo as people-free.'
+                  : forcesPeopleFreeResult
+                    ? 'This field is locked to No people because the selected people-handling mode removes everyone from the photo.'
+                    : 'Set how many people or how much crowd activity the image should preserve or work toward after the people-handling rule is applied.'
+              }
+              onChange={handlePeoplePresenceChange}
             />
 
             {peopleOverrideWarning ? (
@@ -494,14 +812,42 @@ export default function ImageRecreationPromptsPage() {
               id="irp-people-handling"
               label="People handling"
               value={formState.peopleHandling}
-              options={PEOPLE_HANDLING_OPTIONS}
-              onChange={(value) => updateForm('peopleHandling', value)}
+              disabled={sourcePhotoIsPeopleFree}
+              hideSelectionNote={sourcePhotoIsPeopleFree}
+              options={peopleHandlingOptions}
+              helperText={
+                formState.peoplePresence === 'no-people'
+                  ? formState.referenceHasPeople
+                    ? 'Because the current result is people-free, the handling rule is reduced to preserve-as-is or remove-everyone logic only.'
+                    : 'Because the source photo is marked as people-free, people-dependent handling modes are disabled.'
+                  : 'This tells the prompt whether the visible people must stay, can be reduced slightly, can be fully recast, or should stay secondary to the environment.'
+              }
+              onChange={handlePeopleHandlingChange}
+            />
+            <SelectField
+              id="irp-crowd-character"
+              label="People / crowd vibe"
+              value={formState.crowdCharacter}
+              disabled={sourcePhotoIsPeopleFree || forcesPeopleFreeResult}
+              hideSelectionNote={sourcePhotoIsPeopleFree || forcesPeopleFreeResult}
+              options={CROWD_CHARACTER_OPTIONS}
+              helperText={
+                forcesPeopleFreeResult
+                  ? 'This field is disabled because the current people settings produce a people-free image, so crowd styling has no effect.'
+                  : 'Use broad crowd or travel vibes like international tourists, locals-dominant, family-heavy, or stylish city weekend energy. This tool does not target race or ethnicity directly.'
+              }
+              onChange={(value) => updateForm('crowdCharacter', value)}
             />
             <SelectField
               id="irp-primary-subject"
               label="Primary subject emphasis"
               value={formState.primarySubjectEmphasis}
-              options={PRIMARY_SUBJECT_OPTIONS}
+              options={primarySubjectOptions}
+              helperText={
+                forcesPeopleFreeResult
+                  ? 'People-first is disabled because the current people settings produce a people-free image.'
+                  : 'This decides what should visually lead the frame: the place, the landmark, the people, or a balanced mix.'
+              }
               onChange={(value) => updateForm('primarySubjectEmphasis', value)}
             />
             <SelectField
@@ -509,13 +855,19 @@ export default function ImageRecreationPromptsPage() {
               label="Preservation strength"
               value={formState.preservationStrength}
               options={PRESERVATION_STRENGTH_OPTIONS}
+              helperText="Use this to control how tightly the final image stays locked to the original scene identity."
               onChange={(value) => updateForm('preservationStrength', value)}
             />
             <SelectField
               id="irp-allowed-variation"
               label="Allowed variation"
               value={formState.allowedVariation}
-              options={ALLOWED_VARIATION_OPTIONS}
+              options={allowedVariationOptions}
+              helperText={
+                forcesPeopleFreeResult
+                  ? 'Wardrobe and positional-shift variations are disabled because the current result is people-free.'
+                  : 'This controls what kinds of secondary changes are allowed once the main scene and people rules are set.'
+              }
               onChange={(value) => updateForm('allowedVariation', value)}
             />
           </section>
@@ -533,6 +885,7 @@ export default function ImageRecreationPromptsPage() {
               label="Camera preset"
               value={formState.cameraPreset}
               optionGroups={CAMERA_PRESET_GROUPS}
+              helperText="Choose from flagship mirrorless bodies, premium travel/reportage cameras, and film-era classics."
               onChange={(value) => updateForm('cameraPreset', value)}
             />
             <SelectField
@@ -540,6 +893,7 @@ export default function ImageRecreationPromptsPage() {
               label="Lens preset"
               value={formState.lensPreset}
               optionGroups={LENS_PRESET_GROUPS}
+              helperText="Pick the optical feel: flagship primes, workhorse zooms, or older character glass for a more analog result."
               onChange={(value) => updateForm('lensPreset', value)}
             />
             <SelectField
@@ -547,29 +901,51 @@ export default function ImageRecreationPromptsPage() {
               label="Capture style"
               value={formState.captureStyle}
               options={CAPTURE_STYLE_OPTIONS}
+              helperText="Use this to steer the editorial tone, travel feel, documentary energy, or campaign polish of the shot."
               onChange={(value) => updateForm('captureStyle', value)}
+            />
+            <SelectField
+              id="irp-shot-perspective"
+              label="Shot perspective"
+              value={formState.shotPerspective}
+              options={SHOT_PERSPECTIVE_OPTIONS}
+              helperText="Match reference viewpoint keeps the safest recreation. Other options deliberately reinterpret camera height or angle while keeping the same scene identity."
+              onChange={(value) => updateForm('shotPerspective', value)}
+            />
+            <CheckboxField
+              id="irp-center-main-subject"
+              label="Center and balance the composition"
+              checked={formState.centerMainSubject}
+              helperText="Center the main subject in the composition and create a more symmetrical, balanced image. Align the subject along the vertical center axis, correct any tilt or perspective distortion, and evenly distribute visual weight on both sides of the frame. Straighten lines where needed, improve framing so the scene feels intentional and harmonious, and keep the result realistic and natural to the original image."
+              onChange={(value) => updateForm('centerMainSubject', value)}
             />
             <SelectField
               id="irp-filter-look"
               label="Filter / color look"
               value={formState.filterLook}
-              options={FILTER_LOOK_OPTIONS}
-              helperText="Popular, recognizable looks that still stay grounded in travel/editorial realism."
+              optionGroups={FILTER_LOOK_GROUPS}
+              helperText="Choose a clean digital look, an editorial film stock, or a more nostalgic vintage treatment."
               onChange={(value) => updateForm('filterLook', value)}
             />
-            <SelectField
-              id="irp-aspect-ratio"
-              label="Aspect ratio"
-              value={formState.aspectRatio}
-              options={ASPECT_RATIO_OPTIONS}
-              helperText="Match reference image is the safest option. Other ratios request controlled reframing without changing the scene or inventing missing off-frame content."
-              onChange={(value) => updateForm('aspectRatio', value)}
-            />
+            <div className="irp-callout irp-callout--camera">
+              <strong>Vintage-ready combos</strong>
+              <p>Quick starting points if you want analog travel/editorial character without guessing through the whole gear stack.</p>
+              <div className="irp-combo-grid">
+                {VINTAGE_COMBO_NOTES.map((combo) => (
+                  <div key={combo.title} className="irp-combo-card">
+                    <span className="irp-combo-title">{combo.title}</span>
+                    <span className="irp-combo-recipe">{combo.recipe}</span>
+                    <span className="irp-combo-note">{combo.note}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
             <SelectField
               id="irp-lighting"
               label="Lighting / time of day"
               value={formState.lighting}
               options={LIGHTING_OPTIONS}
+              helperText="This controls the light quality, contrast, sky feel, and time-of-day atmosphere in the final image."
               onChange={(value) => updateForm('lighting', value)}
             />
             <SelectField
@@ -577,6 +953,7 @@ export default function ImageRecreationPromptsPage() {
               label="Environment enhancement"
               value={formState.environmentEnhancement}
               options={ENVIRONMENT_ENHANCEMENT_OPTIONS}
+              helperText="Choose how hard the prompt should push realism in terrain, architecture, haze, shadows, and scene depth."
               onChange={(value) => updateForm('environmentEnhancement', value)}
             />
           </section>
@@ -591,6 +968,9 @@ export default function ImageRecreationPromptsPage() {
 
             <label className="irp-field" htmlFor="irp-extra-instructions">
               <span className="irp-field-label">Additional user guidance</span>
+              <span className="irp-field-helper">
+                Add any last-mile direction that should refine the prompt without overriding the main scene and preservation rules.
+              </span>
               <textarea
                 id="irp-extra-instructions"
                 className="irp-input irp-textarea"
