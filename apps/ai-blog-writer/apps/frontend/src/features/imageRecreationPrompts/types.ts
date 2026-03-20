@@ -164,9 +164,17 @@ export type FilterLookId =
   | 'cinestill-800t'
   | 'kodachrome-64'
   | 'agfa-vista-200'
+  | 'modern-vintage-soft-warm'
+  | 'modern-vintage-faded-clean'
+  | 'clean-analog-color'
+  | 'soft-editorial-nostalgia'
+  | 'subtle-analog-grain'
   | 'faded-print-vintage'
   | 'faded-disposable-film'
   | 'dusty-postcard-vintage'
+  | 'sun-faded-travel-print'
+  | 'retro-chrome-slide'
+  | 'warm-archive-postcard'
   | 'expired-color-negative'
   | 'ilford-hp5-bw'
   | 'kodak-tri-x-400'
@@ -201,6 +209,13 @@ export type EnvironmentEnhancementId =
   | 'minimal'
   | 'moderate-realism-boost'
   | 'strong-realism-boost'
+
+export type FluxModelId =
+  | 'flux-2-pro-preview'
+  | 'flux-2-pro'
+  | 'flux-2-flex'
+
+export type FluxSafetyToleranceId = '0' | '1' | '2' | '3' | '4' | '5'
 
 export type PromptPresetId =
   | 'famous-landmark-no-people'
@@ -250,6 +265,10 @@ export interface ImageRecreationFormState {
   preservationStrength: PreservationStrengthId
   allowedVariation: AllowedVariationId
   environmentEnhancement: EnvironmentEnhancementId
+  modelId: FluxModelId
+  safetyTolerance: FluxSafetyToleranceId
+  enablePromptUpsampling: boolean
+  seedValue: string
   extraInstructions: string
 }
 
@@ -277,7 +296,14 @@ export interface PromptPreset {
   description: string
   values: Omit<
     ImageRecreationFormState,
-    'presetId' | 'extraInstructions' | 'referenceHasPeople' | 'centerMainSubject'
+    | 'presetId'
+    | 'extraInstructions'
+    | 'referenceHasPeople'
+    | 'centerMainSubject'
+    | 'modelId'
+    | 'safetyTolerance'
+    | 'enablePromptUpsampling'
+    | 'seedValue'
   > & {
     referenceHasPeople?: boolean
     centerMainSubject?: boolean

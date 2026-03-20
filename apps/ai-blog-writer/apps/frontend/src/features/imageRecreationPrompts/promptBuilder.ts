@@ -335,6 +335,22 @@ function resolveCompactCrowdCharacterSentence(state: ImageRecreationFormState): 
   return ''
 }
 
+function resolveHumanDetailIntegrityPrompt(state: ImageRecreationFormState): string {
+  if (!hasVisiblePeopleLayer(state)) {
+    return ''
+  }
+
+  return 'If people appear small, distant, or in the background, keep faces, heads, hands, and bodies softly natural and anatomically coherent. Do not force sharp facial detail into tiny subjects; when a face is too small to resolve clearly, keep it low-detail but believable instead of warped, cloned, melted, or over-sharpened.'
+}
+
+function resolveCompactHumanDetailSentence(state: ImageRecreationFormState): string {
+  if (!hasVisiblePeopleLayer(state)) {
+    return ''
+  }
+
+  return 'Keep small or distant people low-detail but believable; do not warp, clone, melt, or over-sharpen tiny faces or human features.'
+}
+
 function resolveCompactPreservationSentence(state: ImageRecreationFormState): string {
   switch (state.preservationStrength) {
     case 'strict':
@@ -403,6 +419,9 @@ function buildCompactNegativeSentence(state: ImageRecreationFormState): string {
     'Remove CGI, painted, or illustrated qualities.',
     'If lighting changes create new or stronger shadows, keep their direction, softness, density, and falloff physically realistic.',
     'Avoid face distortion, oversharpening, fake HDR, and unnatural contrast.',
+    hasVisiblePeopleLayer(state)
+      ? 'Do not warp or hallucinate tiny background faces, heads, hands, or bodies. Keep small people proportional, low-detail, and believable.'
+      : '',
   ])
 }
 
@@ -470,6 +489,7 @@ function buildPeopleSpecificPrompt(state: ImageRecreationFormState): string {
     resolveCrowdCharacterPrompt(state),
     sceneSpecificCrowdPrompt,
     crowdPrompt,
+    resolveHumanDetailIntegrityPrompt(state),
     peopleCanBeAdded
       ? 'Any added or reshuffled people should still feel integrated into the original scene instead of reading like staged insertions, and existing people should not be removed just to simplify the frame.'
       : peopleCanBeReduced
@@ -637,6 +657,9 @@ function buildNegativeInstructions(state: ImageRecreationFormState): string {
     'Remove all CGI, painted, or illustrated qualities.',
     'Do not distort faces, heads, eyes, noses, mouths, skin, or other human features. Keep facial proportions natural and anatomically believable.',
     'Do not over-enhance faces, heads, skin, or human features.',
+    hasVisiblePeopleLayer(state)
+      ? 'Do not hallucinate crisp facial detail on tiny or distant people. Keep small faces and human features soft, proportional, and believable instead of warped, cloned, melted, or over-sharpened.'
+      : '',
     'If lighting is changed or intensified, any new shadows and highlights must stay coherent in direction, softness, density, contact, and falloff so the image still reads as one believable real photograph.',
     'Avoid over-sharpened textures, implausible HDR, fake detail, or unnatural contrast.',
     'Maintain realistic light, shadows, depth, atmosphere, and color.',
@@ -775,6 +798,7 @@ export function buildImageRecreationPrompt(
     joinSentences([
       resolveCompactPeopleSentence(state),
       resolveCompactCrowdCharacterSentence(state),
+      resolveCompactHumanDetailSentence(state),
     ]),
     joinSentences([
       `Recreate it as a true-to-life ${style.label.toLowerCase()} photograph captured with ${camera.label} and ${lens.label}.`,

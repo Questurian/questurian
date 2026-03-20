@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LandingPage from '../../LandingPage'
@@ -6,7 +6,67 @@ import {
   DEFAULT_PROMPT_PRESET_ID,
   IMAGE_RECREATION_PROMPTS_STORAGE_KEY,
 } from './config'
+
+vi.mock('./ReferenceImageCropModal', () => ({
+  ReferenceImageCropModal: ({
+    initialPresetId,
+    isOpen,
+    onClose,
+    onConfirm,
+    onUseOriginal,
+    sourceFile,
+  }: any) => {
+    if (!isOpen) return null
+
+    return (
+      <div role="dialog" aria-label="Reference image crop editor">
+        <p>Reference crop modal</p>
+        <p>Initial preset {initialPresetId}</p>
+        <p>Source file {sourceFile?.name}</p>
+        <button type="button" onClick={onUseOriginal}>
+          Use original
+        </button>
+        <button type="button" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onConfirm({
+              presetId: 'open_graph',
+              label: 'Open Graph crop',
+              width: 1200,
+              height: 630,
+              file: new File(['cropped'], 'staged-open-graph.webp', {
+                type: 'image/webp',
+              }),
+            })
+          }
+        >
+          Save open graph crop
+        </button>
+      </div>
+    )
+  },
+}))
+
 import ImageRecreationPromptsPage from './ImageRecreationPromptsPage'
+
+const mockAuthState = vi.hoisted(() => ({
+  token: 'test-token' as string | null,
+  expiresAt: null as number | null,
+  user: null,
+  isAuthenticated: true,
+  isRestoringSession: false,
+  isConnected: true,
+  connectionError: null as string | null,
+  login: vi.fn(),
+  logout: vi.fn(),
+}))
+
+vi.mock('../../providers/useAuth', () => ({
+  useAuth: () => mockAuthState,
+}))
 
 function renderPage() {
   return render(
@@ -16,13 +76,38 @@ function renderPage() {
   )
 }
 
+async function uploadPrimaryReference(fileName = 'travel-photo.jpg') {
+  fireEvent.change(screen.getByLabelText('Upload reference image'), {
+    target: {
+      files: [new File(['preview'], fileName, { type: 'image/jpeg' })],
+    },
+  })
+
+  return screen.findByRole('dialog', { name: 'Reference image crop editor' })
+}
+
+function useOriginalReferenceFromCropper() {
+  const cropper = screen.getByRole('dialog', { name: 'Reference image crop editor' })
+  fireEvent.click(within(cropper).getByRole('button', { name: 'Use original' }))
+}
+
+function saveOpenGraphCropFromCropper() {
+  const cropper = screen.getByRole('dialog', { name: 'Reference image crop editor' })
+  fireEvent.click(
+    within(cropper).getByRole('button', { name: 'Save open graph crop' }),
+  )
+}
+
 describe('ImageRecreationPromptsPage', () => {
   beforeEach(() => {
     localStorage.clear()
+    mockAuthState.token = 'test-token'
+    vi.stubGlobal('fetch', vi.fn())
+    vi.stubGlobal('open', vi.fn())
 
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
-      value: vi.fn((file: File) => `blob:${file.name}`),
+      value: vi.fn((input: Blob) => `blob:${input instanceof File ? input.name : 'generated-result'}`),
     })
 
     Object.defineProperty(URL, 'revokeObjectURL', {
@@ -35,6 +120,13 @@ describe('ImageRecreationPromptsPage', () => {
     renderPage()
 
     expect(screen.getByLabelText('Preset')).toHaveValue(DEFAULT_PROMPT_PRESET_ID)
+    expect(screen.getByLabelText('FLUX model')).toHaveValue('flux-2-pro-preview')
+    expect(screen.getByLabelText('Safety tolerance')).toHaveValue('2')
+    expect(screen.getByLabelText('Seed')).toHaveValue('')
+    expect(screen.queryByLabelText('Output size')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Primary reference sizing')).toHaveTextContent(
+      'Original reference',
+    )
     expect(screen.getByLabelText('People / crowd vibe')).toHaveValue('match-reference-crowd')
     expect(screen.getByLabelText('Shot perspective')).toHaveValue('match-reference-viewpoint')
     expect(screen.getByLabelText('Filter / color look')).toHaveValue('neutral-no-filter')
@@ -110,12 +202,8 @@ describe('ImageRecreationPromptsPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows grouped filter descriptions and vintage combo guidance', () => {
+  it('shows grouped filter descriptions', () => {
     renderPage()
-
-    expect(
-      screen.getByText('Leica M6 + 35mm vintage rangefinder lens + Kodak Tri-X 400'),
-    ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Filter / color look'), {
       target: { value: 'kodachrome-64' },
@@ -124,6 +212,34 @@ describe('ImageRecreationPromptsPage', () => {
     expect(
       screen.getByText(
         'Classic slide-film nostalgia with saturated travel color and old-magazine warmth.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the new subtle modern-vintage filter descriptions', () => {
+    renderPage()
+
+    fireEvent.change(screen.getByLabelText('Filter / color look'), {
+      target: { value: 'modern-vintage-soft-warm' },
+    })
+
+    expect(
+      screen.getByText(
+        'Modern editorial warmth with intact contrast and only a hint of analog softness.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the subtle analog grain description for cleaner classic texture', () => {
+    renderPage()
+
+    fireEvent.change(screen.getByLabelText('Filter / color look'), {
+      target: { value: 'subtle-analog-grain' },
+    })
+
+    expect(
+      screen.getByText(
+        'Mostly modern color and contrast with ultra-fine film grain instead of dusty vintage specks.',
       ),
     ).toBeInTheDocument()
   })
@@ -151,7 +267,9 @@ describe('ImageRecreationPromptsPage', () => {
       target: { files: [firstFile] },
     })
 
-    expect(await screen.findByLabelText('Replace image')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Reference image crop editor' })).toBeInTheDocument()
+    useOriginalReferenceFromCropper()
+    expect(await screen.findByRole('button', { name: 'Replace image' })).toBeInTheDocument()
     expect(screen.getByAltText('Selected reference preview')).toHaveAttribute(
       'src',
       'blob:desert-reference.jpg',
@@ -161,6 +279,9 @@ describe('ImageRecreationPromptsPage', () => {
       target: { files: [secondFile] },
     })
 
+    expect(await screen.findByRole('dialog', { name: 'Reference image crop editor' })).toBeInTheDocument()
+    useOriginalReferenceFromCropper()
+
     await waitFor(() => {
       expect(screen.getByAltText('Selected reference preview')).toHaveAttribute(
         'src',
@@ -168,11 +289,103 @@ describe('ImageRecreationPromptsPage', () => {
       )
     })
 
-    fireEvent.click(screen.getByLabelText('Remove image'))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove image' }))
 
     await waitFor(() => {
       expect(screen.queryByAltText('Selected reference preview')).not.toBeInTheDocument()
     })
+  })
+
+  it('auto-opens the crop modal for a newly uploaded primary reference', async () => {
+    renderPage()
+
+    const cropper = await uploadPrimaryReference()
+
+    expect(cropper).toHaveTextContent('Reference crop modal')
+    expect(cropper).toHaveTextContent('Initial preset original')
+  })
+
+  it('reopens the crop modal with the current staged preset', async () => {
+    renderPage()
+
+    await uploadPrimaryReference()
+    saveOpenGraphCropFromCropper()
+
+    expect(await screen.findByText('Open Graph crop is staged')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit crop' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Reference image crop editor' })).toHaveTextContent(
+      'Initial preset open_graph',
+    )
+  })
+
+  it('requires a reference image before enabling FLUX generation', async () => {
+    renderPage()
+
+    expect(
+      screen.getByRole('button', { name: /Upload a reference image to unlock FLUX.2/i }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText('FLUX.2 generation stays locked until exactly one reference image is uploaded.'),
+    ).toBeInTheDocument()
+
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Generate with FLUX.2/i })).not.toBeDisabled()
+    })
+    expect(
+      screen.queryByText('FLUX.2 generation stays locked until exactly one reference image is uploaded.'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps FLUX generation disabled when the auth token is unavailable', async () => {
+    mockAuthState.token = null
+
+    renderPage()
+
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Generate with FLUX.2/i })).toBeDisabled()
+    })
+  })
+
+  it('adds and removes supporting reference images locally', async () => {
+    renderPage()
+
+    const supportingInput = screen.getByLabelText('Add supporting reference images')
+    const firstSupportingFile = new File(['texture'], 'texture-reference.png', { type: 'image/png' })
+    const secondSupportingFile = new File(['chair'], 'chair-reference.jpg', { type: 'image/jpeg' })
+
+    fireEvent.change(supportingInput, {
+      target: { files: [firstSupportingFile, secondSupportingFile] },
+    })
+
+    expect(await screen.findByAltText('Supporting reference 1')).toHaveAttribute(
+      'src',
+      'blob:texture-reference.png',
+    )
+    expect(screen.getByAltText('Supporting reference 2')).toHaveAttribute(
+      'src',
+      'blob:chair-reference.jpg',
+    )
+    expect(screen.getByText('2 / 7 supporting references')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Remove texture-reference\.png/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByAltText('Supporting reference 2')).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByAltText('Supporting reference 1')).toHaveAttribute(
+      'src',
+      'blob:chair-reference.jpg',
+    )
+    expect(screen.getByText('1 / 7 supporting references')).toBeInTheDocument()
   })
 
   it('copies the generated prompt to the clipboard', async () => {
@@ -191,6 +404,120 @@ describe('ImageRecreationPromptsPage', () => {
     expect(screen.getByText('Prompt copied to clipboard.')).toBeInTheDocument()
   })
 
+  it('generates an image preview with FLUX.2 and marks it stale after prompt changes', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('png-bytes', {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Disposition': 'inline; filename="flux-preview.png"',
+          'X-BFL-Request-Id': 'req_123',
+          'X-BFL-Model': 'flux-2-pro-preview',
+          'X-BFL-Cost': '3.5',
+          'X-BFL-Output-MP': '1',
+        },
+      }),
+    )
+
+    renderPage()
+
+    await uploadPrimaryReference()
+    saveOpenGraphCropFromCropper()
+    fireEvent.change(screen.getByLabelText('FLUX model'), {
+      target: { value: 'flux-2-flex' },
+    })
+    fireEvent.change(screen.getByLabelText('Safety tolerance'), {
+      target: { value: '4' },
+    })
+    fireEvent.change(screen.getByLabelText('Seed'), {
+      target: { value: '4242' },
+    })
+    fireEvent.click(screen.getByRole('checkbox', { name: /Enable prompt upsampling/i }))
+    fireEvent.change(screen.getByLabelText('Add supporting reference images'), {
+      target: {
+        files: [
+          new File(['texture'], 'texture-reference.png', { type: 'image/png' }),
+          new File(['chair'], 'chair-reference.jpg', { type: 'image/jpeg' }),
+        ],
+      },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Generate with FLUX.2/i }))
+
+    await screen.findByAltText('Generated FLUX.2 preview')
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    const [, requestInit] = vi.mocked(fetch).mock.calls[0]
+    const requestBody = requestInit?.body as FormData
+
+    expect(requestInit?.method).toBe('POST')
+    expect(requestInit?.headers).toMatchObject({
+      Authorization: 'Bearer test-token',
+    })
+    expect(requestBody.get('prompt')).toEqual(
+      expect.stringContaining(
+        'Use the uploaded reference image as the exact subject, composition base, and scene category.',
+      ),
+    )
+    expect(requestBody.get('reference_image')).toBeInstanceOf(File)
+    expect(requestBody.get('model_id')).toBe('flux-2-flex')
+    expect(requestBody.get('width')).toBe('1200')
+    expect(requestBody.get('height')).toBe('630')
+    expect(requestBody.get('safety_tolerance')).toBe('4')
+    expect(requestBody.get('prompt_upsampling')).toBe('true')
+    expect(requestBody.get('seed')).toBe('4242')
+    expect(requestBody.getAll('additional_reference_images')).toHaveLength(2)
+    expect((requestBody.get('reference_image') as File).name).toBe('staged-open-graph.webp')
+
+    expect(screen.getByAltText('Generated FLUX.2 preview')).toHaveAttribute(
+      'src',
+      'blob:generated-result',
+    )
+    expect(screen.getByAltText('Reference image used for FLUX.2 generation')).toHaveAttribute(
+      'src',
+      'blob:staged-open-graph.webp',
+    )
+    expect(screen.getByText('flux-2-pro-preview')).toBeInTheDocument()
+    expect(screen.getByText('3 references')).toBeInTheDocument()
+    expect(screen.getByText('3.5 credits')).toBeInTheDocument()
+    expect(screen.getByText('1 MP output')).toBeInTheDocument()
+    expect(screen.getByText('Request req_123')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Expand primary reference/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Expand supporting reference 1/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Expand generated image/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Open full image/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Download image/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Expand generated image/i }))
+
+    const expandedPreview = await screen.findByRole('dialog', { name: 'Expanded image preview' })
+    expect(within(expandedPreview).getByText('Generated image')).toBeInTheDocument()
+    expect(within(expandedPreview).getByAltText('Generated FLUX.2 preview')).toHaveAttribute(
+      'src',
+      'blob:generated-result',
+    )
+
+    fireEvent.click(within(expandedPreview).getByRole('button', { name: 'Close' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Expanded image preview' })).not.toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Open full image/i }))
+
+    expect(window.open).toHaveBeenCalledWith(
+      'blob:generated-result',
+      '_blank',
+      'noopener,noreferrer',
+    )
+
+    fireEvent.change(screen.getByLabelText('Additional user guidance'), {
+      target: { value: 'Keep the sky slightly softer.' },
+    })
+
+    expect(screen.getByText('Inputs changed after generation')).toBeInTheDocument()
+  })
+
   it('resets the form and clears the local preview', async () => {
     renderPage()
 
@@ -200,11 +527,8 @@ describe('ImageRecreationPromptsPage', () => {
     fireEvent.change(screen.getByLabelText('Additional user guidance'), {
       target: { value: 'Keep the sky slightly softer.' },
     })
-    fireEvent.change(screen.getByLabelText('Upload reference image'), {
-      target: {
-        files: [new File(['preview'], 'travel-photo.jpg', { type: 'image/jpeg' })],
-      },
-    })
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
 
     expect(await screen.findByAltText('Selected reference preview')).toHaveAttribute(
       'src',
@@ -219,6 +543,93 @@ describe('ImageRecreationPromptsPage', () => {
 
     expect(screen.getByLabelText('Additional user guidance')).toHaveValue('')
     expect(screen.queryByAltText('Selected reference preview')).not.toBeInTheDocument()
+  })
+
+  it('clears the generated image result on reset', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('png-bytes', {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Disposition': 'inline; filename="flux-preview.png"',
+        },
+      }),
+    )
+
+    renderPage()
+
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
+    fireEvent.click(screen.getByRole('button', { name: /Generate with FLUX.2/i }))
+
+    expect(await screen.findByAltText('Generated FLUX.2 preview')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
+
+    await waitFor(() => {
+      expect(screen.queryByAltText('Generated FLUX.2 preview')).not.toBeInTheDocument()
+    })
+
+    expect(screen.queryByAltText('Selected reference preview')).not.toBeInTheDocument()
+  })
+
+  it('shows inline FLUX errors without clearing the prompt or reference image', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          detail: {
+            message: 'BFL request failed',
+            step: 'submit_flux_edit',
+            detail: 'Rate limit exceeded',
+          },
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    renderPage()
+
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
+    fireEvent.click(screen.getByRole('button', { name: /Generate with FLUX.2/i }))
+
+    expect(await screen.findByText(/BFL request failed/i)).toBeInTheDocument()
+    expect(screen.getByAltText('Selected reference preview')).toBeInTheDocument()
+    expect((screen.getByLabelText('Final prompt preview') as HTMLTextAreaElement).value).toContain(
+      'Use the uploaded reference image as the exact subject, composition base, and scene category.',
+    )
+  })
+
+  it('omits width and height when the original reference stays active', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('png-bytes', {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Disposition': 'inline; filename="flux-preview.png"',
+        },
+      }),
+    )
+
+    renderPage()
+
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
+    fireEvent.click(screen.getByRole('button', { name: /Generate with FLUX.2/i }))
+
+    await screen.findByAltText('Generated FLUX.2 preview')
+
+    const [, requestInit] = vi.mocked(fetch).mock.calls[0]
+    const requestBody = requestInit?.body as FormData
+
+    expect(requestBody.get('width')).toBeNull()
+    expect(requestBody.get('height')).toBeNull()
+    expect((requestBody.get('reference_image') as File).name).toBe('travel-photo.jpg')
   })
 
   it('shows a non-blocking warning when people presence overrides the scene recommendation', async () => {
@@ -298,6 +709,10 @@ describe('ImageRecreationPromptsPage', () => {
         preservationStrength: 'balanced',
         allowedVariation: 'minor-secondary-detail-changes',
         environmentEnhancement: 'moderate-realism-boost',
+        modelId: 'flux-2-flex',
+        safetyTolerance: '4',
+        enablePromptUpsampling: true,
+        seedValue: '999',
         extraInstructions: 'Keep storefront signage believable and understated.',
       }),
     )
@@ -311,6 +726,10 @@ describe('ImageRecreationPromptsPage', () => {
     expect(screen.getByLabelText('People / crowd vibe')).toHaveValue('locals-dominant')
     expect(screen.getByLabelText('Shot perspective')).toHaveValue('drone-oblique')
     expect(screen.getByLabelText('Filter / color look')).toHaveValue('iphone-vivid')
+    expect(screen.getByLabelText('FLUX model')).toHaveValue('flux-2-flex')
+    expect(screen.getByLabelText('Safety tolerance')).toHaveValue('4')
+    expect(screen.getByRole('checkbox', { name: /Enable prompt upsampling/i })).toBeChecked()
+    expect(screen.getByLabelText('Seed')).toHaveValue('999')
     expect(screen.getByLabelText('Additional user guidance')).toHaveValue(
       'Keep storefront signage believable and understated.',
     )

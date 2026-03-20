@@ -5,6 +5,8 @@ import type {
   CrowdCharacterId,
   EnvironmentEnhancementId,
   FilterLookId,
+  FluxModelId,
+  FluxSafetyToleranceId,
   ImageRecreationFormState,
   LensPresetId,
   LightingId,
@@ -23,6 +25,75 @@ import type {
 export const IMAGE_RECREATION_PROMPTS_STORAGE_KEY = 'image_recreation_prompts_form_v1'
 
 export const DEFAULT_PROMPT_PRESET_ID = 'famous-landmark-no-people' as const
+
+export const FLUX_MODEL_OPTIONS: SelectOption<FluxModelId>[] = [
+  {
+    id: 'flux-2-pro-preview',
+    label: 'FLUX.2 Pro Preview',
+    description:
+      'Latest continuously updated FLUX.2 [pro] endpoint. Best default when you want BFL’s newest improvements first.',
+    prompt: '',
+  },
+  {
+    id: 'flux-2-pro',
+    label: 'FLUX.2 Pro (Pinned)',
+    description:
+      'Fixed FLUX.2 [pro] snapshot for more reproducible runs when you need a stable model target.',
+    prompt: '',
+  },
+  {
+    id: 'flux-2-flex',
+    label: 'FLUX.2 Flex',
+    description:
+      'Same editing flow, but with the FLEX model family for finer-grained controls and future guidance/steps tuning.',
+    prompt: '',
+  },
+]
+
+export const FLUX_SAFETY_TOLERANCE_OPTIONS: SelectOption<FluxSafetyToleranceId>[] = [
+  {
+    id: '0',
+    label: '0 · Very strict',
+    description:
+      'Strongest moderation posture. Best when you want the most conservative input and output filtering.',
+    prompt: '',
+  },
+  {
+    id: '1',
+    label: '1 · Strict',
+    description:
+      'Slightly more flexible than the strictest setting while still staying conservative.',
+    prompt: '',
+  },
+  {
+    id: '2',
+    label: '2 · Balanced',
+    description:
+      'BFL’s default moderation level. Good starting point for normal production editing.',
+    prompt: '',
+  },
+  {
+    id: '3',
+    label: '3 · Open',
+    description:
+      'More permissive than the default while still retaining moderation checks.',
+    prompt: '',
+  },
+  {
+    id: '4',
+    label: '4 · More open',
+    description:
+      'Higher tolerance for edge-case prompts and edits. Use only when the default is too restrictive.',
+    prompt: '',
+  },
+  {
+    id: '5',
+    label: '5 · Most open',
+    description:
+      'Most permissive FLUX.2 tolerance documented by BFL for these endpoints.',
+    prompt: '',
+  },
+]
 
 export const SCENE_CATEGORY_OPTIONS: SceneCategoryOption[] = [
   {
@@ -1162,6 +1233,46 @@ export const FILTER_LOOK_GROUPS: OptionGroup<FilterLookId>[] = [
     ],
   },
   {
+    label: 'Subtle modern vintage',
+    options: [
+      {
+        id: 'modern-vintage-soft-warm',
+        label: 'Modern vintage soft warm',
+        description: 'Modern editorial warmth with intact contrast and only a hint of analog softness.',
+        prompt:
+          'Use a modern-vintage treatment with gentle analog warmth, preserved contrast, subtle highlight rolloff, and a clean current editorial finish rather than a heavy retro effect.',
+      },
+      {
+        id: 'modern-vintage-faded-clean',
+        label: 'Modern vintage faded clean',
+        description: 'Very light fade with controlled contrast and contemporary polish.',
+        prompt:
+          'Use a clean modern-vintage fade with restrained black lift, preserved midtone contrast, and controlled color muting while keeping the image polished and contemporary.',
+      },
+      {
+        id: 'clean-analog-color',
+        label: 'Clean analog color',
+        description: 'Subtle analog color separation with crisp contrast and almost no obvious retro fade.',
+        prompt:
+          'Use a clean analog-inspired color treatment with crisp natural contrast, subtle film warmth, refined color separation, and minimal nostalgic styling so the image still feels modern.',
+      },
+      {
+        id: 'soft-editorial-nostalgia',
+        label: 'Soft editorial nostalgia',
+        description: 'Gentle nostalgic warmth with preserved clarity and magazine-like polish.',
+        prompt:
+          'Use a soft editorial nostalgia treatment with warm highlights, preserved contrast, polished clarity, and restrained analog mood without pushing the image into obvious vintage gimmickry.',
+      },
+      {
+        id: 'subtle-analog-grain',
+        label: 'Subtle analog grain',
+        description: 'Mostly modern color and contrast with ultra-fine film grain instead of dusty vintage specks.',
+        prompt:
+          'Use a mostly modern color treatment with preserved contrast and ultra-fine analog grain. Keep the grain subtle and even, not dusty, speckled, scratched, or damaged.',
+      },
+    ],
+  },
+  {
     label: 'Vintage and nostalgic color',
     options: [
       {
@@ -1207,6 +1318,27 @@ export const FILTER_LOOK_GROUPS: OptionGroup<FilterLookId>[] = [
           'Use a dusty postcard-style vintage palette with warm printed color, sun-aged highlights, and restrained souvenir-photo nostalgia.',
       },
       {
+        id: 'sun-faded-travel-print',
+        label: 'Sun-faded travel print',
+        description: 'Aged holiday-print feel with warm fading, softened contrast, and believable old-photo wear.',
+        prompt:
+          'Use a sun-faded travel-print palette with warm faded color, softened contrast, and believable aged-photo nostalgia.',
+      },
+      {
+        id: 'retro-chrome-slide',
+        label: 'Retro chrome slide',
+        description: 'Richer retro slide color with cleaner contrast and glossy travel-magazine character.',
+        prompt:
+          'Use a retro chrome-slide palette with richer color, glossy travel-magazine vibrancy, and controlled vintage slide-film character.',
+      },
+      {
+        id: 'warm-archive-postcard',
+        label: 'Warm archive postcard',
+        description: 'Archived print look with paper warmth, gentle age fade, and old-travel keepsake character.',
+        prompt:
+          'Use a warm archive-postcard treatment with gentle paper warmth, mild age fade, and believable old-travel-print character.',
+      },
+      {
         id: 'expired-color-negative',
         label: 'Expired color negative',
         description: 'Unpredictable analog color shifts with restrained old-film imperfection.',
@@ -1237,34 +1369,6 @@ export const FILTER_LOOK_GROUPS: OptionGroup<FilterLookId>[] = [
 ]
 
 export const FILTER_LOOK_OPTIONS = FILTER_LOOK_GROUPS.flatMap((group) => group.options)
-
-export const VINTAGE_COMBO_NOTES = [
-  {
-    title: 'Leica street classic',
-    recipe: 'Leica M6 + 35mm vintage rangefinder lens + Kodak Tri-X 400',
-    note: 'Documentary street frames with restrained grain, honest contrast, and timeless reportage energy.',
-  },
-  {
-    title: 'Luxury medium-format film',
-    recipe: 'Hasselblad 500CM + classic medium format lens rendering + Kodak Portra 400',
-    note: 'Premium analog editorial mood with calm depth, soft rolloff, and polished travel color.',
-  },
-  {
-    title: 'Sunny compact vacation',
-    recipe: 'Contax T2 + 40mm vintage pancake + Kodak Gold 200',
-    note: 'Warm point-and-shoot travel nostalgia with clean sunlight and easy holiday charm.',
-  },
-  {
-    title: 'Old postcard city color',
-    recipe: 'Canon AE-1 + 50mm vintage fast prime + Kodachrome 64',
-    note: 'Richer retro travel color with magazine-era warmth and a believable analog finish.',
-  },
-  {
-    title: 'Disposable-night nostalgia',
-    recipe: 'Yashica T4 + soft vintage film lens + faded disposable film',
-    note: 'Casual imperfect nightlife or travel snapshots with soft haze and flash-era charm.',
-  },
-] as const
 
 export const LIGHTING_OPTIONS: SelectOption<LightingId>[] = [
   {
@@ -1632,6 +1736,8 @@ export const LIGHTING_MAP = toOptionMap(LIGHTING_OPTIONS)
 export const PRESERVATION_STRENGTH_MAP = toOptionMap(PRESERVATION_STRENGTH_OPTIONS)
 export const ALLOWED_VARIATION_MAP = toOptionMap(ALLOWED_VARIATION_OPTIONS)
 export const ENVIRONMENT_ENHANCEMENT_MAP = toOptionMap(ENVIRONMENT_ENHANCEMENT_OPTIONS)
+export const FLUX_MODEL_MAP = toOptionMap(FLUX_MODEL_OPTIONS)
+export const FLUX_SAFETY_TOLERANCE_MAP = toOptionMap(FLUX_SAFETY_TOLERANCE_OPTIONS)
 export const PROMPT_PRESET_MAP = toOptionMap(PROMPT_PRESETS)
 
 export function createFormStateFromPreset(
@@ -1644,6 +1750,10 @@ export function createFormStateFromPreset(
     extraInstructions: preset.values.extraInstructions ?? '',
     referenceHasPeople: preset.values.referenceHasPeople ?? preset.values.peoplePresence !== 'no-people',
     centerMainSubject: preset.values.centerMainSubject ?? false,
+    modelId: 'flux-2-pro-preview',
+    safetyTolerance: '2',
+    enablePromptUpsampling: false,
+    seedValue: '',
     ...preset.values,
   }
 }
@@ -1691,6 +1801,12 @@ export const VALID_ALLOWED_VARIATION_IDS = new Set<AllowedVariationId>(
 )
 export const VALID_ENVIRONMENT_ENHANCEMENT_IDS = new Set<EnvironmentEnhancementId>(
   ENVIRONMENT_ENHANCEMENT_OPTIONS.map((option) => option.id),
+)
+export const VALID_FLUX_MODEL_IDS = new Set<FluxModelId>(
+  FLUX_MODEL_OPTIONS.map((option) => option.id),
+)
+export const VALID_FLUX_SAFETY_TOLERANCE_IDS = new Set<FluxSafetyToleranceId>(
+  FLUX_SAFETY_TOLERANCE_OPTIONS.map((option) => option.id),
 )
 
 export function isKnownPresetId(value: unknown): value is ImageRecreationFormState['presetId'] {

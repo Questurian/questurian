@@ -87,6 +87,28 @@ describe('buildImageRecreationPrompt', () => {
     )
   })
 
+  it('supports lighter modern-vintage filter looks without pushing the image too far into retro styling', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      filterLook: 'modern-vintage-soft-warm',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Use a modern-vintage treatment with gentle analog warmth, preserved contrast, subtle highlight rolloff, and a clean current editorial finish rather than a heavy retro effect.',
+    )
+  })
+
+  it('supports subtle grain without turning the image into a dusty damaged vintage effect', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      filterLook: 'subtle-analog-grain',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Use a mostly modern color treatment with preserved contrast and ultra-fine analog grain. Keep the grain subtle and even, not dusty, speckled, scratched, or damaged.',
+    )
+  })
+
   it('supports new flagship gear and deeper vintage filters in the compact prompt', () => {
     const result = buildImageRecreationPrompt({
       ...createFormStateFromPreset('vintage-street-scene'),
@@ -108,6 +130,20 @@ describe('buildImageRecreationPrompt', () => {
 
     expect(result.finalPrompt).toContain(
       'Avoid face distortion, oversharpening, fake HDR, and unnatural contrast.',
+    )
+  })
+
+  it('adds small-face integrity guidance only when people are visible in the result', () => {
+    const peopleVisibleResult = buildImageRecreationPrompt(
+      createFormStateFromPreset('couple-travel-photo'),
+    )
+    const peopleFreeResult = buildImageRecreationPrompt(createFormStateFromPreset())
+
+    expect(peopleVisibleResult.finalPrompt).toContain(
+      'Keep small or distant people low-detail but believable; do not warp, clone, melt, or over-sharpen tiny faces or human features.',
+    )
+    expect(peopleFreeResult.finalPrompt).not.toContain(
+      'Keep small or distant people low-detail but believable; do not warp, clone, melt, or over-sharpen tiny faces or human features.',
     )
   })
 

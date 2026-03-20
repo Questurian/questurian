@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from .alt_text_generator import generate_alt_text
+from .bfl_client import BflApiError, BflClient
 from .image_processor import (
     VARIANT_SPECS,
     ImageVariantType,
@@ -35,6 +36,10 @@ router = APIRouter(prefix="/images", tags=["images"])
 logger = logging.getLogger("images.routes")
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
+ALLOWED_BFL_MODEL_IDS = {"flux-2-pro-preview", "flux-2-pro", "flux-2-flex"}
+MAX_BFL_ADDITIONAL_REFERENCE_IMAGES = 7
+MIN_BFL_DIMENSION = 64
+BFL_DIMENSION_MULTIPLE = 16
 REQUIRED_VARIANT_TYPES = tuple(variant.value for variant in ImageVariantType)
 PEXELS_SEARCH_URL = "https://api.pexels.com/v1/search"
 PEXELS_ALLOWED_ORIENTATIONS = {"landscape", "portrait", "square"}
@@ -108,6 +113,20 @@ def _status_from_payload_error(error: PayloadUploadError) -> int:
     return 503
 
 
+def _status_from_bfl_error(error: BflApiError) -> int:
+    """Map BFL-specific errors into API response status codes."""
+    if error.status_code in {400, 402, 403, 422, 429, 500, 503, 504}:
+        return error.status_code
+
+    if 400 <= error.status_code < 500:
+        return error.status_code
+
+    if error.status_code >= 500:
+        return 502
+
+    return 502
+
+
 def _extract_bearer_token(authorization: Optional[str]) -> str:
     """Extract and validate the JWT from the Authorization header."""
     if not authorization or not authorization.startswith("Bearer "):
@@ -126,6 +145,87 @@ def _extract_bearer_token(authorization: Optional[str]) -> str:
         )
 
     return token
+
+
+def _validate_flux_prompt(prompt: str) -> str:
+    normalized_prompt = prompt.strip()
+    if not normalized_prompt:
+        _raise_http_error(
+            status_code=400,
+            message="prompt is required",
+            step="validate_flux_prompt",
+        )
+    return normalized_prompt
+
+
+def _validate_flux_model_id(model_id: Optional[str]) -> Optional[str]:
+    normalized_model_id = (model_id or "").strip()
+    if not normalized_model_id:
+        return None
+
+    if normalized_model_id not in ALLOWED_BFL_MODEL_IDS:
+        _raise_http_error(
+            status_code=400,
+            message="model_id must target a supported FLUX.2 endpoint",
+            step="validate_flux_model_id",
+            model_id=model_id,
+            allowed_model_ids=sorted(ALLOWED_BFL_MODEL_IDS),
+        )
+
+    return normalized_model_id
+
+
+def _validate_flux_safety_tolerance(safety_tolerance: int) -> int:
+    if 0 <= safety_tolerance <= 5:
+        return safety_tolerance
+
+    _raise_http_error(
+        status_code=400,
+        message="safety_tolerance must be between 0 and 5",
+        step="validate_flux_safety_tolerance",
+        safety_tolerance=safety_tolerance,
+        min_value=0,
+        max_value=5,
+    )
+
+
+def _validate_flux_dimensions(
+    width: Optional[int],
+    height: Optional[int],
+) -> tuple[Optional[int], Optional[int]]:
+    if width is None and height is None:
+        return None, None
+
+    if width is None or height is None:
+        _raise_http_error(
+            status_code=400,
+            message="width and height must be provided together",
+            step="validate_flux_dimensions",
+            width=width,
+            height=height,
+        )
+
+    if width < MIN_BFL_DIMENSION or height < MIN_BFL_DIMENSION:
+        _raise_http_error(
+            status_code=400,
+            message="width and height must each be at least 64 pixels",
+            step="validate_flux_dimensions",
+            width=width,
+            height=height,
+            min_dimension=MIN_BFL_DIMENSION,
+        )
+
+    if width % BFL_DIMENSION_MULTIPLE != 0 or height % BFL_DIMENSION_MULTIPLE != 0:
+        _raise_http_error(
+            status_code=400,
+            message="width and height must be multiples of 16",
+            step="validate_flux_dimensions",
+            width=width,
+            height=height,
+            multiple=BFL_DIMENSION_MULTIPLE,
+        )
+
+    return width, height
 
 
 def _asset_area(asset: PayloadMediaAssetDoc) -> int:
@@ -515,6 +615,31 @@ async def _read_upload_file(file: UploadFile, step: str) -> bytes:
         )
 
     return content
+
+
+async def _read_additional_reference_images(
+    files: List[UploadFile],
+) -> List[bytes]:
+    normalized_files = [file for file in files if file and file.filename]
+    if len(normalized_files) > MAX_BFL_ADDITIONAL_REFERENCE_IMAGES:
+        _raise_http_error(
+            status_code=400,
+            message="FLUX.2 accepts up to 7 additional reference images",
+            step="validate_additional_reference_images",
+            additional_reference_count=len(normalized_files),
+            max_additional_reference_images=MAX_BFL_ADDITIONAL_REFERENCE_IMAGES,
+        )
+
+    image_bytes: List[bytes] = []
+    for file in normalized_files:
+        image_bytes.append(
+            await _read_upload_file(
+                file,
+                step="validate_additional_reference_image",
+            )
+        )
+
+    return image_bytes
 
 
 @router.get("/pexels/search")
@@ -1519,6 +1644,123 @@ async def upload_social_image(
             "width": VARIANT_SPECS[ImageVariantType.OPEN_GRAPH].width,
             "height": VARIANT_SPECS[ImageVariantType.OPEN_GRAPH].height,
         }
+    )
+
+
+@router.post("/flux-edit")
+async def flux_edit_image(
+    prompt: str = Form(..., description="Exact prompt text to send to FLUX.2"),
+    reference_image: UploadFile = File(
+        ...,
+        description="Reference image used as FLUX.2 input_image",
+    ),
+    additional_reference_images: List[UploadFile] = File(
+        default=[],
+        description="Optional supporting reference images mapped to input_image_2 through input_image_8",
+    ),
+    model_id: Optional[str] = Form(
+        None,
+        description="Optional FLUX.2 model override such as flux-2-pro-preview, flux-2-pro, or flux-2-flex",
+    ),
+    width: Optional[int] = Form(
+        None,
+        description="Optional output width. Must be paired with height and both must be multiples of 16.",
+    ),
+    height: Optional[int] = Form(
+        None,
+        description="Optional output height. Must be paired with width and both must be multiples of 16.",
+    ),
+    safety_tolerance: int = Form(
+        2,
+        description="BFL moderation tolerance from 0 (strictest) to 5 (most open)",
+    ),
+    prompt_upsampling: bool = Form(
+        False,
+        description="Enable BFL prompt upsampling for models that support it",
+    ),
+    seed: Optional[int] = Form(
+        None,
+        description="Optional generation seed for reproducibility",
+    ),
+    authorization: Optional[str] = Header(None),
+) -> Response:
+    """Proxy a single-reference FLUX.2 edit and return the generated image bytes."""
+    _extract_bearer_token(authorization)
+    valid_prompt = _validate_flux_prompt(prompt)
+    valid_model_id = _validate_flux_model_id(model_id)
+    valid_width, valid_height = _validate_flux_dimensions(width, height)
+    valid_safety_tolerance = _validate_flux_safety_tolerance(safety_tolerance)
+    reference_bytes = await _read_upload_file(
+        reference_image,
+        step="validate_reference_image",
+    )
+    additional_reference_bytes = await _read_additional_reference_images(
+        additional_reference_images,
+    )
+
+    try:
+        bfl_client = BflClient(model_id=valid_model_id)
+        generated_image = await bfl_client.generate_flux_edit(
+            prompt=valid_prompt,
+            reference_image=reference_bytes,
+            additional_reference_images=additional_reference_bytes,
+            width=valid_width,
+            height=valid_height,
+            safety_tolerance=valid_safety_tolerance,
+            prompt_upsampling=prompt_upsampling,
+            seed=seed,
+        )
+    except BflApiError as exc:
+        model_id = bfl_client.model_id if "bfl_client" in locals() else None
+        log_method = logger.warning if _status_from_bfl_error(exc) < 500 else logger.exception
+        log_method(
+            "BFL error during /images/flux-edit | model_id=%s step=%s status=%s",
+            model_id,
+            exc.step,
+            exc.status_code,
+        )
+        _raise_http_error(
+            status_code=_status_from_bfl_error(exc),
+            message=exc.user_message,
+            step=exc.step,
+            detail=exc.detail or str(exc),
+            request_url=exc.request_url,
+            provider_status_code=exc.status_code or None,
+            bfl_status=exc.bfl_status,
+            env_var=exc.env_var,
+            bfl_error=exc.to_dict(),
+            model_id=model_id,
+        )
+    except Exception as exc:
+        logger.exception("Unexpected error during /images/flux-edit")
+        _raise_http_error(
+            status_code=500,
+            message="Unexpected error while generating image with FLUX.2",
+            step="flux_edit_image",
+            detail=str(exc),
+        )
+
+    extension = "png" if generated_image.content_type == "image/png" else "jpg"
+    safe_request_id = re.sub(r"[^A-Za-z0-9_-]+", "-", generated_image.request_id).strip("-") or "generated"
+    output_filename = f"{generated_image.model_id}-{safe_request_id}.{extension}"
+
+    headers = {
+        "Content-Disposition": f'inline; filename="{output_filename}"',
+        "Cache-Control": "no-store",
+        "X-BFL-Request-Id": generated_image.request_id,
+        "X-BFL-Model": generated_image.model_id,
+    }
+    if generated_image.cost is not None:
+        headers["X-BFL-Cost"] = str(generated_image.cost)
+    if generated_image.input_mp is not None:
+        headers["X-BFL-Input-MP"] = str(generated_image.input_mp)
+    if generated_image.output_mp is not None:
+        headers["X-BFL-Output-MP"] = str(generated_image.output_mp)
+
+    return Response(
+        content=generated_image.bytes_content,
+        media_type=generated_image.content_type,
+        headers=headers,
     )
 
 

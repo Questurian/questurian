@@ -96,6 +96,7 @@ Primary flow: upload one Location Manager export JSON per run. The export must i
 | POST | `/images/upload` | Upload one image, process variants, upload to Payload |
 | POST | `/images/upload-variants` | Upload pre-processed variants to Payload |
 | POST | `/images/process-only` | Process image variants without Payload upload |
+| POST | `/images/flux-edit` | Proxy a FLUX.2 edit using the exact prompt, one required primary reference image, optional supporting reference images, and advanced model/size/safety controls, then return generated image bytes |
 | POST | `/images/generate-alt-text` | Generate alt text with Gemini vision (optional `narrative_focus` to emphasize audience-relevant details) |
 
 ### Shared Article Types (`/article-types`)

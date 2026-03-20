@@ -3,8 +3,10 @@
  */
 
 import type { ImageVariantType } from '../utils/imageProcessing';
+import { fluxEditApi } from './flux-edit.api';
 import { generateAltTextApi } from './alt-text/generate-alt-text.api';
 import type {
+  FluxEditImageResponse,
   GenerateSocialImageResponse,
   ProcessImageOnlyResponse,
   UploadImageResponse,
@@ -20,6 +22,7 @@ import { uploadVariantsApi } from './uploads/upload-variants.api';
 export type { UploadImageResponse, UploadProgress };
 export type { GenerateSocialImageResponse };
 export type { UploadSocialImageResponse };
+export type { FluxEditImageResponse };
 
 /**
  * Upload pre-processed image variants to be stored in Payload CMS
@@ -109,5 +112,27 @@ export async function uploadSocialImage(
     locationRef,
     token,
     photographerCredit,
+  });
+}
+
+export async function generateFluxEditedImage(
+  prompt: string,
+  referenceImage: File,
+  token: string,
+  options?: {
+    additionalReferenceImages?: File[];
+    modelId?: string;
+    width?: number;
+    height?: number;
+    safetyTolerance?: number;
+    promptUpsampling?: boolean;
+    seed?: string | number;
+  },
+): Promise<FluxEditImageResponse> {
+  return fluxEditApi({
+    prompt,
+    referenceImage,
+    token,
+    ...options,
   });
 }

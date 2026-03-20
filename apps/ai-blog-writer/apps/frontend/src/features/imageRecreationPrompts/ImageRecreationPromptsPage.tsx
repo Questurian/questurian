@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { generateFluxEditedImage } from '../images'
+import { useAuth } from '../../providers/useAuth'
+import {
+  ReferenceImageCropModal,
+  type ReferenceCropSelection,
+} from './ReferenceImageCropModal'
 import {
   ALLOWED_VARIATION_OPTIONS,
   CAMERA_PRESET_GROUPS,
@@ -10,6 +16,8 @@ import {
   DEFAULT_PROMPT_PRESET_ID,
   ENVIRONMENT_ENHANCEMENT_OPTIONS,
   FILTER_LOOK_GROUPS,
+  FLUX_MODEL_OPTIONS,
+  FLUX_SAFETY_TOLERANCE_OPTIONS,
   IMAGE_RECREATION_PROMPTS_STORAGE_KEY,
   isKnownPresetId,
   LENS_PRESET_GROUPS,
@@ -27,6 +35,8 @@ import {
   VALID_CAPTURE_STYLE_IDS,
   VALID_CROWD_CHARACTER_IDS,
   VALID_ENVIRONMENT_ENHANCEMENT_IDS,
+  VALID_FLUX_MODEL_IDS,
+  VALID_FLUX_SAFETY_TOLERANCE_IDS,
   VALID_FILTER_LOOK_IDS,
   VALID_LENS_PRESET_IDS,
   VALID_LIGHTING_IDS,
@@ -37,7 +47,6 @@ import {
   VALID_SCENE_CATEGORY_IDS,
   VALID_SHOT_PERSPECTIVE_IDS,
   SHOT_PERSPECTIVE_OPTIONS,
-  VINTAGE_COMBO_NOTES,
   createFormStateFromPreset,
 } from './config'
 import { buildImageRecreationPrompt } from './promptBuilder'
@@ -51,6 +60,7 @@ import type {
   PromptPresetId,
   SelectOption,
 } from './types'
+import { getReferenceCropPreset } from './referenceCropPresets'
 import './styles.css'
 
 const LEGACY_PEOPLE_HANDLING_ID_MAP: Record<string, PeopleHandlingId> = {
@@ -244,6 +254,17 @@ function loadSavedState(): ImageRecreationFormState {
         VALID_ENVIRONMENT_ENHANCEMENT_IDS,
         fallback.environmentEnhancement,
       ),
+      modelId: coerceOptionValue(parsed.modelId, VALID_FLUX_MODEL_IDS, fallback.modelId),
+      safetyTolerance: coerceOptionValue(
+        parsed.safetyTolerance,
+        VALID_FLUX_SAFETY_TOLERANCE_IDS,
+        fallback.safetyTolerance,
+      ),
+      enablePromptUpsampling:
+        typeof parsed.enablePromptUpsampling === 'boolean'
+          ? parsed.enablePromptUpsampling
+          : fallback.enablePromptUpsampling,
+      seedValue: typeof parsed.seedValue === 'string' ? parsed.seedValue : fallback.seedValue,
       extraInstructions:
         typeof parsed.extraInstructions === 'string' ? parsed.extraInstructions : fallback.extraInstructions,
     })
@@ -398,13 +419,98 @@ function SelectField<TId extends string>({
   )
 }
 
+type GeneratedImagePreview = {
+  previewUrl: string
+  fileName: string
+  contentType: string
+  inputSignature: string
+  model: string | null
+  requestId: string | null
+  cost: number | null
+  inputMegapixels: number | null
+  outputMegapixels: number | null
+  referenceCount: number
+}
+
+type ExpandedPreview = {
+  title: string
+  alt: string
+  previewUrl: string
+  description: string
+}
+
+type AdditionalReferencePreview = {
+  id: string
+  file: File
+  previewUrl: string
+}
+
+type StagedReferenceCrop = Omit<ReferenceCropSelection, 'file'>
+
+const MAX_ADDITIONAL_REFERENCE_IMAGES = 7
+
+function buildFileSignature(file: File | null): string | null {
+  if (!file) return null
+  return [file.name, file.type, file.size, file.lastModified].join(':')
+}
+
+function buildGenerationInputSignature(args: {
+  prompt: string
+  formState: Pick<
+    ImageRecreationFormState,
+    'modelId' | 'safetyTolerance' | 'enablePromptUpsampling' | 'seedValue'
+  >
+  referenceFile: File | null
+  stagedReferenceCrop: StagedReferenceCrop | null
+  additionalReferenceImages: AdditionalReferencePreview[]
+}): string {
+  return JSON.stringify({
+    prompt: args.prompt,
+    modelId: args.formState.modelId,
+    safetyTolerance: args.formState.safetyTolerance,
+    enablePromptUpsampling: args.formState.enablePromptUpsampling,
+    seedValue: args.formState.seedValue.trim(),
+    referenceFile: buildFileSignature(args.referenceFile),
+    stagedReferenceCrop: args.stagedReferenceCrop,
+    additionalReferenceImages: args.additionalReferenceImages.map(({ file }) => buildFileSignature(file)),
+  })
+}
+
+function revokeAdditionalReferencePreviews(images: AdditionalReferencePreview[]) {
+  images.forEach((image) => {
+    URL.revokeObjectURL(image.previewUrl)
+  })
+}
+
+function revokeUniqueObjectUrls(urls: Array<string | null>) {
+  new Set(urls.filter((url): url is string => Boolean(url))).forEach((url) => {
+    URL.revokeObjectURL(url)
+  })
+}
+
 export default function ImageRecreationPromptsPage() {
+  const { token } = useAuth()
   const [formState, setFormState] = useState<ImageRecreationFormState>(() => loadSavedState())
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
+  const [generationError, setGenerationError] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [referenceSourceFile, setReferenceSourceFile] = useState<File | null>(null)
+  const [referenceSourcePreviewUrl, setReferenceSourcePreviewUrl] = useState<string | null>(null)
+  const [selectedReferenceFile, setSelectedReferenceFile] = useState<File | null>(null)
   const [referencePreviewUrl, setReferencePreviewUrl] = useState<string | null>(null)
+  const [stagedReferenceCrop, setStagedReferenceCrop] = useState<StagedReferenceCrop | null>(null)
+  const [isReferenceCropEditorOpen, setIsReferenceCropEditorOpen] = useState(false)
+  const [additionalReferenceImages, setAdditionalReferenceImages] = useState<AdditionalReferencePreview[]>([])
+  const [generatedImage, setGeneratedImage] = useState<GeneratedImagePreview | null>(null)
+  const [expandedPreview, setExpandedPreview] = useState<ExpandedPreview | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const additionalReferenceInputRef = useRef<HTMLInputElement>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const sourcePreviewUrlRef = useRef<string | null>(null)
+  const generatedPreviewUrlRef = useRef<string | null>(null)
+  const additionalReferenceImagesRef = useRef<AdditionalReferencePreview[]>([])
+  const generationRequestRef = useRef(0)
 
   const sceneOption = SCENE_CATEGORY_MAP[formState.sceneCategory]
   const recommendedPeoplePresence = PEOPLE_PRESENCE_MAP[sceneOption.recommendedPeoplePresence]
@@ -438,6 +544,40 @@ export default function ImageRecreationPromptsPage() {
   }))
 
   const promptOutput = buildImageRecreationPrompt(formState)
+  const hasReferenceImage = Boolean(selectedReferenceFile && referencePreviewUrl)
+  const selectedFluxModelOption = FLUX_MODEL_OPTIONS.find((option) => option.id === formState.modelId)
+  const selectedFluxSafetyOption = FLUX_SAFETY_TOLERANCE_OPTIONS.find(
+    (option) => option.id === formState.safetyTolerance,
+  )
+  const canStageReferenceCrop = Boolean(referenceSourceFile && referenceSourcePreviewUrl)
+  const normalizedSeedValue = formState.seedValue.trim()
+  const configuredReferenceCount = (hasReferenceImage ? 1 : 0) + additionalReferenceImages.length
+  const hasStagedReferenceCrop = Boolean(stagedReferenceCrop)
+  const activeReferencePreset = getReferenceCropPreset(stagedReferenceCrop?.presetId ?? 'original')
+  const activeReferenceSummary = stagedReferenceCrop
+    ? `${stagedReferenceCrop.label} · ${stagedReferenceCrop.width} × ${stagedReferenceCrop.height}`
+    : activeReferencePreset.summaryLabel
+  const previewSummaryItems = [
+    selectedFluxModelOption?.label ?? formState.modelId,
+    activeReferenceSummary,
+    selectedFluxSafetyOption?.label ?? `Safety ${formState.safetyTolerance}`,
+    normalizedSeedValue ? `Seed ${normalizedSeedValue}` : 'Random seed',
+    formState.enablePromptUpsampling ? 'Prompt upsampling on' : 'Prompt upsampling off',
+    hasReferenceImage
+      ? `${configuredReferenceCount} reference${configuredReferenceCount === 1 ? '' : 's'} ready`
+      : 'Reference image required',
+  ]
+  const generationInputSignature = buildGenerationInputSignature({
+    prompt: promptOutput.finalPrompt,
+    formState,
+    referenceFile: selectedReferenceFile,
+    stagedReferenceCrop,
+    additionalReferenceImages,
+  })
+  const isGeneratedResultStale = Boolean(
+    generatedImage && generatedImage.inputSignature !== generationInputSignature,
+  )
+  const canGenerate = Boolean(hasReferenceImage && token && !isGenerating)
 
   useEffect(() => {
     localStorage.setItem(IMAGE_RECREATION_PROMPTS_STORAGE_KEY, JSON.stringify(formState))
@@ -454,12 +594,69 @@ export default function ImageRecreationPromptsPage() {
   }, [copyFeedback])
 
   useEffect(() => {
+    additionalReferenceImagesRef.current = additionalReferenceImages
+  }, [additionalReferenceImages])
+
+  useEffect(() => {
     return () => {
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current)
+      revokeUniqueObjectUrls([previewUrlRef.current, sourcePreviewUrlRef.current])
+      if (generatedPreviewUrlRef.current) {
+        URL.revokeObjectURL(generatedPreviewUrlRef.current)
       }
+      revokeAdditionalReferencePreviews(additionalReferenceImagesRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!expandedPreview) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setExpandedPreview(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [expandedPreview])
+
+  function clearGeneratedResult(options?: { preserveError?: boolean }) {
+    if (generatedPreviewUrlRef.current) {
+      URL.revokeObjectURL(generatedPreviewUrlRef.current)
+      generatedPreviewUrlRef.current = null
+    }
+
+    setExpandedPreview(null)
+    setGeneratedImage(null)
+
+    if (!options?.preserveError) {
+      setGenerationError(null)
+    }
+  }
+
+  function invalidatePendingGeneration() {
+    generationRequestRef.current += 1
+    setIsGenerating(false)
+  }
+
+  function clearAdditionalReferenceImages() {
+    setExpandedPreview(null)
+    setAdditionalReferenceImages((current) => {
+      revokeAdditionalReferencePreviews(current)
+      return []
+    })
+
+    if (additionalReferenceInputRef.current) {
+      additionalReferenceInputRef.current.value = ''
+    }
+  }
 
   function updateForm<K extends keyof Omit<ImageRecreationFormState, 'presetId'>>(
     field: K,
@@ -472,19 +669,82 @@ export default function ImageRecreationPromptsPage() {
         [field]: value,
       }),
     )
+    setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function clearReferencePreview() {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = null
-    }
+    invalidatePendingGeneration()
+    revokeUniqueObjectUrls([previewUrlRef.current, sourcePreviewUrlRef.current])
+    previewUrlRef.current = null
+    sourcePreviewUrlRef.current = null
 
+    setExpandedPreview(null)
+    setReferenceSourceFile(null)
+    setReferenceSourcePreviewUrl(null)
+    setSelectedReferenceFile(null)
     setReferencePreviewUrl(null)
+    setStagedReferenceCrop(null)
+    setIsReferenceCropEditorOpen(false)
+    setIsDragging(false)
+    clearGeneratedResult()
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  function appendAdditionalReferenceFiles(fileList: FileList | File[]) {
+    const imageFiles = Array.from(fileList).filter((file) => file.type.startsWith('image/'))
+    if (!imageFiles.length) return
+
+    const remainingSlots = Math.max(0, MAX_ADDITIONAL_REFERENCE_IMAGES - additionalReferenceImages.length)
+    const acceptedFiles = imageFiles.slice(0, remainingSlots)
+
+    if (!acceptedFiles.length) {
+      setGenerationError(
+        'FLUX.2 accepts up to 8 total references: 1 primary image plus up to 7 supporting references.',
+      )
+      return
+    }
+
+    if (acceptedFiles.length < imageFiles.length) {
+      setGenerationError(
+        'FLUX.2 accepts up to 8 total references. Extra supporting images beyond the first 7 were ignored.',
+      )
+    } else {
+      setGenerationError(null)
+    }
+
+    const nextImages = acceptedFiles.map((file, index) => ({
+      id: `${file.name}-${file.lastModified}-${additionalReferenceImages.length + index}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }))
+
+    setAdditionalReferenceImages((current) => [...current, ...nextImages])
+    setCopyFeedback(null)
+  }
+
+  function handleAdditionalReferenceInputChange(event: ChangeEvent<HTMLInputElement>) {
+    if (!event.target.files?.length) return
+    appendAdditionalReferenceFiles(event.target.files)
+    event.target.value = ''
+  }
+
+  function removeAdditionalReferenceImage(id: string) {
+    setAdditionalReferenceImages((current) => {
+      const nextImages = current.filter((image) => image.id !== id)
+      const removedImages = current.filter((image) => image.id === id)
+      const removedPreviewUrls = new Set(removedImages.map((image) => image.previewUrl))
+      setExpandedPreview((existing) =>
+        existing && removedPreviewUrls.has(existing.previewUrl) ? null : existing,
+      )
+      revokeAdditionalReferencePreviews(removedImages)
+      return nextImages
+    })
+    setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function attachReferenceImage(file: File) {
@@ -492,14 +752,74 @@ export default function ImageRecreationPromptsPage() {
 
     const objectUrl = URL.createObjectURL(file)
     previewUrlRef.current = objectUrl
+    sourcePreviewUrlRef.current = objectUrl
+    setReferenceSourceFile(file)
+    setReferenceSourcePreviewUrl(objectUrl)
+    setSelectedReferenceFile(file)
     setReferencePreviewUrl(objectUrl)
+    setStagedReferenceCrop(null)
+    setIsReferenceCropEditorOpen(true)
     setIsDragging(false)
+    setGenerationError(null)
+  }
+
+  function restoreSourceReferencePreview() {
+    if (!referenceSourceFile || !referenceSourcePreviewUrl) return
+
+    invalidatePendingGeneration()
+
+    if (previewUrlRef.current && previewUrlRef.current !== sourcePreviewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+    }
+
+    previewUrlRef.current = referenceSourcePreviewUrl
+    setSelectedReferenceFile(referenceSourceFile)
+    setReferencePreviewUrl(referenceSourcePreviewUrl)
+    setStagedReferenceCrop(null)
+    setIsReferenceCropEditorOpen(false)
+    setCopyFeedback(null)
+    setGenerationError(null)
+  }
+
+  function handleOpenReferenceCropEditor() {
+    if (!canStageReferenceCrop) return
+    setIsReferenceCropEditorOpen(true)
+    setCopyFeedback(null)
+    setGenerationError(null)
+  }
+
+  function handleCloseReferenceCropEditor() {
+    setIsReferenceCropEditorOpen(false)
+  }
+
+  function handleConfirmReferenceCrop(cropSelection: ReferenceCropSelection) {
+    invalidatePendingGeneration()
+
+    if (previewUrlRef.current && previewUrlRef.current !== sourcePreviewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+    }
+
+    const croppedPreviewUrl = URL.createObjectURL(cropSelection.file)
+    previewUrlRef.current = croppedPreviewUrl
+
+    setSelectedReferenceFile(cropSelection.file)
+    setReferencePreviewUrl(croppedPreviewUrl)
+    setStagedReferenceCrop({
+      presetId: cropSelection.presetId,
+      label: cropSelection.label,
+      width: cropSelection.width,
+      height: cropSelection.height,
+    })
+    setIsReferenceCropEditorOpen(false)
+    setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function handlePresetChange(nextPresetId: PromptPresetId) {
     if (nextPresetId === 'custom') return
     setFormState(normalizeFormStateForUi(createFormStateFromPreset(nextPresetId)))
     setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function handleSceneCategoryChange(nextSceneCategory: ImageRecreationFormState['sceneCategory']) {
@@ -520,6 +840,7 @@ export default function ImageRecreationPromptsPage() {
       }),
     )
     setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function handleReferenceHasPeopleChange(nextReferenceHasPeople: boolean) {
@@ -540,6 +861,7 @@ export default function ImageRecreationPromptsPage() {
       }),
     )
     setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function handlePeopleHandlingChange(nextPeopleHandling: PeopleHandlingId) {
@@ -552,6 +874,7 @@ export default function ImageRecreationPromptsPage() {
       }),
     )
     setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function handlePeoplePresenceChange(nextPeoplePresence: ImageRecreationFormState['peoplePresence']) {
@@ -563,6 +886,7 @@ export default function ImageRecreationPromptsPage() {
       }),
     )
     setCopyFeedback(null)
+    setGenerationError(null)
   }
 
   function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -603,19 +927,145 @@ export default function ImageRecreationPromptsPage() {
     }
   }
 
+  async function handleGenerateImage() {
+    if (!selectedReferenceFile) {
+      setGenerationError('Upload a reference image before generating with FLUX.2.')
+      return
+    }
+
+    if (!token) {
+      setGenerationError('You must be logged in to generate images with FLUX.2.')
+      return
+    }
+
+    if (normalizedSeedValue && !/^-?\d+$/.test(normalizedSeedValue)) {
+      setGenerationError('Seed must be a whole number.')
+      return
+    }
+
+    const nextRequestId = generationRequestRef.current + 1
+    generationRequestRef.current = nextRequestId
+    setIsGenerating(true)
+    setGenerationError(null)
+
+    try {
+      const response = await generateFluxEditedImage(
+        promptOutput.finalPrompt,
+        selectedReferenceFile,
+        token,
+        {
+          additionalReferenceImages: additionalReferenceImages.map(({ file }) => file),
+          modelId: formState.modelId,
+          width: stagedReferenceCrop?.width,
+          height: stagedReferenceCrop?.height,
+          safetyTolerance: Number(formState.safetyTolerance),
+          promptUpsampling: formState.enablePromptUpsampling,
+          seed: normalizedSeedValue || undefined,
+        },
+      )
+      const objectUrl = URL.createObjectURL(response.blob)
+
+      if (generationRequestRef.current !== nextRequestId) {
+        URL.revokeObjectURL(objectUrl)
+        return
+      }
+
+      clearGeneratedResult({ preserveError: true })
+      generatedPreviewUrlRef.current = objectUrl
+      setGeneratedImage({
+        previewUrl: objectUrl,
+        fileName: response.fileName,
+        contentType: response.contentType,
+        inputSignature: generationInputSignature,
+        model: response.model,
+        requestId: response.requestId,
+        cost: response.cost,
+        inputMegapixels: response.inputMegapixels,
+        outputMegapixels: response.outputMegapixels,
+        referenceCount: 1 + additionalReferenceImages.length,
+      })
+    } catch (error) {
+      if (generationRequestRef.current !== nextRequestId) {
+        return
+      }
+
+      setGenerationError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate image with FLUX.2.',
+      )
+    } finally {
+      if (generationRequestRef.current === nextRequestId) {
+        setIsGenerating(false)
+      }
+    }
+  }
+
+  function handleDownloadGeneratedImage() {
+    if (!generatedImage) return
+
+    const anchor = document.createElement('a')
+    anchor.href = generatedImage.previewUrl
+    anchor.download = generatedImage.fileName
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  }
+
+  function openImageInNewTab(previewUrl: string) {
+    window.open(previewUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  function handleOpenGeneratedImage() {
+    if (!generatedImage) return
+
+    openImageInNewTab(generatedImage.previewUrl)
+  }
+
+  function handleExpandImage(preview: ExpandedPreview) {
+    setExpandedPreview(preview)
+  }
+
+  function handleCloseExpandedPreview() {
+    setExpandedPreview(null)
+  }
+
+  function handleOpenExpandedPreviewInNewTab() {
+    if (!expandedPreview) return
+    openImageInNewTab(expandedPreview.previewUrl)
+  }
+
   function handleReset() {
     setFormState(createFormStateFromPreset(DEFAULT_PROMPT_PRESET_ID))
     setCopyFeedback(null)
+    setGenerationError(null)
+    clearAdditionalReferenceImages()
     clearReferencePreview()
   }
+
+  const stagedReferenceDimensions = stagedReferenceCrop
+    ? `${stagedReferenceCrop.width} × ${stagedReferenceCrop.height}`
+    : null
+  const stagedReferenceDescriptor = stagedReferenceCrop
+    ? `${stagedReferenceCrop.label} at ${stagedReferenceDimensions}`
+    : null
+  const referenceStageTitle = stagedReferenceCrop
+    ? `${stagedReferenceCrop.label} is staged`
+    : 'Original reference is active'
+  const referenceStageDescription = stagedReferenceDimensions
+    ? `FLUX will receive the staged ${stagedReferenceDimensions} crop instead of the untouched upload.`
+    : 'FLUX will receive the original uploaded image dimensions unless you stage one of the shared crop presets first.'
+  const fluxFootnote = stagedReferenceDescriptor
+    ? `Primary reference staged as ${stagedReferenceDescriptor}. FLUX receives that crop file directly.`
+    : 'Using the original uploaded reference dimensions. Stage one of the shared crop presets above if you want to lock the framing before FLUX runs.'
 
   return (
     <div className="irp-page">
       <header className="irp-hero">
         <div className="irp-hero-nav">
           <div className="irp-hero-note">
-            <strong>Rules engine first</strong>
-            <span>No backend calls, no AI rewrite, and no hidden scene invention in v1.</span>
+            <strong>Rules engine + FLUX.2</strong>
+            <span>Prompt building stays local; the reference image only goes to the backend when you generate.</span>
           </div>
           <Link className="irp-nav-link" to="/">
             Back Home
@@ -668,50 +1118,54 @@ export default function ImageRecreationPromptsPage() {
               {referencePreviewUrl ? (
                 <div className="irp-reference-selected">
                   <div className="irp-reference-stage">
-                    <div className="irp-reference-overlay">
-                      <button
-                        type="button"
-                        className="irp-reference-icon-btn"
-                        aria-label="Replace image"
-                        title="Replace image"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path
-                            d="M4 7h4l1.4-2h5.2L16 7h4v10H4V7zm8 8.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="1.8"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="irp-reference-icon-btn irp-reference-icon-btn--danger"
-                        aria-label="Remove image"
-                        title="Remove image"
-                        onClick={clearReferencePreview}
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path
-                            d="M6 7h12m-9 0V5h6v2m-7 3v6m4-6v6m4-9-1 11H9L8 7"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="1.8"
-                          />
-                        </svg>
-                      </button>
-                    </div>
                     <img
                       className="irp-reference-image"
                       src={referencePreviewUrl}
                       alt="Selected reference preview"
                     />
-                    <div className="irp-reference-chip">Preview only</div>
+                    <div className="irp-reference-chip">
+                      {hasStagedReferenceCrop ? activeReferenceSummary : 'Original reference'}
+                    </div>
+                  </div>
+                  <div className="irp-reference-tools">
+                    <div
+                      className={`irp-reference-note${hasStagedReferenceCrop ? ' irp-reference-note--exact' : ''}`}
+                      role="status"
+                    >
+                      <strong>{referenceStageTitle}</strong>
+                      <span>{referenceStageDescription}</span>
+                    </div>
+                    <div className="irp-reference-actions">
+                      <button
+                        type="button"
+                        className="irp-btn irp-btn-secondary"
+                        onClick={handleOpenReferenceCropEditor}
+                      >
+                        {hasStagedReferenceCrop ? 'Edit crop' : 'Crop image'}
+                      </button>
+                      <button
+                        type="button"
+                        className="irp-btn irp-btn-ghost"
+                        onClick={restoreSourceReferencePreview}
+                        disabled={!hasStagedReferenceCrop}
+                      >
+                        Use original
+                      </button>
+                      <button
+                        type="button"
+                        className="irp-btn irp-btn-secondary"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Replace image
+                      </button>
+                      <button
+                        type="button"
+                        className="irp-btn irp-btn-ghost"
+                        onClick={clearReferencePreview}
+                      >
+                        Remove image
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -744,7 +1198,7 @@ export default function ImageRecreationPromptsPage() {
                   </div>
                   <div className="irp-drop-zone-copy">
                     <strong>{isDragging ? 'Drop reference image here' : 'Click or drag a reference image here'}</strong>
-                    <span>JPG, PNG, or WebP. Preview only. No upload, no analysis.</span>
+                    <span>JPG, PNG, or WebP. Preview locally first, then send it to FLUX.2 only when you click generate.</span>
                   </div>
                 </div>
               )}
@@ -927,19 +1381,6 @@ export default function ImageRecreationPromptsPage() {
               helperText="Choose a clean digital look, an editorial film stock, or a more nostalgic vintage treatment."
               onChange={(value) => updateForm('filterLook', value)}
             />
-            <div className="irp-callout irp-callout--camera">
-              <strong>Vintage-ready combos</strong>
-              <p>Quick starting points if you want analog travel/editorial character without guessing through the whole gear stack.</p>
-              <div className="irp-combo-grid">
-                {VINTAGE_COMBO_NOTES.map((combo) => (
-                  <div key={combo.title} className="irp-combo-card">
-                    <span className="irp-combo-title">{combo.title}</span>
-                    <span className="irp-combo-recipe">{combo.recipe}</span>
-                    <span className="irp-combo-note">{combo.note}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
             <SelectField
               id="irp-lighting"
               label="Lighting / time of day"
@@ -958,11 +1399,168 @@ export default function ImageRecreationPromptsPage() {
             />
           </section>
 
-          <section className="irp-panel">
+          <section className="irp-panel irp-panel--flux">
+            <div className="irp-panel-header">
+              <div>
+                <p className="irp-panel-kicker">FLUX.2 controls</p>
+                <h2>Decide how BFL should run the edit</h2>
+                <p className="irp-panel-lede">
+                  Keep this section literal and operational. One control, one decision, one clear row.
+                </p>
+              </div>
+            </div>
+
+            <div className="irp-control-stack">
+              <div className="irp-control-row">
+                <SelectField
+                  id="irp-flux-model"
+                  label="FLUX model"
+                  value={formState.modelId}
+                  options={FLUX_MODEL_OPTIONS}
+                  helperText="Pro Preview tracks BFL’s newest pro edits, Pro stays pinned for reproducibility, and Flex is ready for deeper tuning later."
+                  onChange={(value) => updateForm('modelId', value)}
+                />
+              </div>
+              <div className="irp-control-row">
+                <div className="irp-field">
+                  <span className="irp-field-label">Primary reference sizing</span>
+                  <span className="irp-field-helper">
+                    Crop and sizing now live on the upload card above. The active staged reference is what FLUX receives.
+                  </span>
+                  <div className="irp-control-readout" aria-label="Primary reference sizing">
+                    <strong>{activeReferenceSummary}</strong>
+                    <span>
+                      {hasStagedReferenceCrop
+                        ? 'Width and height are sent from the staged shared crop preset.'
+                        : 'No preset crop is staged, so FLUX uses the original uploaded reference dimensions.'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="irp-control-row">
+                <SelectField
+                  id="irp-flux-safety"
+                  label="Safety tolerance"
+                  value={formState.safetyTolerance}
+                  options={FLUX_SAFETY_TOLERANCE_OPTIONS}
+                  helperText="BFL documents this from 0 to 5, with 0 as the strictest moderation posture."
+                  onChange={(value) => updateForm('safetyTolerance', value)}
+                />
+              </div>
+              <div className="irp-control-row">
+                <label className="irp-field" htmlFor="irp-flux-seed">
+                  <span className="irp-field-label">Seed</span>
+                  <span className="irp-field-helper">
+                    Optional whole number for reproducible reruns when you want to compare prompt changes against a stable seed.
+                  </span>
+                  <input
+                    id="irp-flux-seed"
+                    aria-label="Seed"
+                    className="irp-input"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="-?[0-9]*"
+                    placeholder="Leave blank for random"
+                    value={formState.seedValue}
+                    onChange={(event) => updateForm('seedValue', event.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="irp-control-row">
+                <CheckboxField
+                  id="irp-flux-prompt-upsampling"
+                  label="Enable prompt upsampling"
+                  checked={formState.enablePromptUpsampling}
+                  helperText="Use BFL’s prompt upsampling when you want the model to expand the request. Leave it off when your handcrafted prompt should stay literal."
+                  onChange={(value) => updateForm('enablePromptUpsampling', value)}
+                />
+              </div>
+            </div>
+
+            <div className="irp-supporting-panel">
+              <div className="irp-supporting-header">
+                <div>
+                  <span className="irp-inline-card-label">Supporting reference images</span>
+                  <p className="irp-supporting-copy">
+                    Add up to 7 extra images for pose, product, texture, object, or color guidance. The main reference above stays required.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="irp-btn irp-btn-secondary"
+                  onClick={() => additionalReferenceInputRef.current?.click()}
+                >
+                  Add supporting references
+                </button>
+              </div>
+
+              <input
+                ref={additionalReferenceInputRef}
+                className="irp-file-input"
+                type="file"
+                accept="image/*"
+                multiple
+                aria-label="Add supporting reference images"
+                onChange={handleAdditionalReferenceInputChange}
+              />
+
+              <div className="irp-preview-meta">
+                <span>{additionalReferenceImages.length} / 7 supporting references</span>
+                <span>FLUX.2 supports up to 8 total references via API</span>
+              </div>
+
+              {additionalReferenceImages.length ? (
+                <div className="irp-supporting-grid">
+                  {additionalReferenceImages.map((image, index) => (
+                    <figure key={image.id} className="irp-supporting-card">
+                      <figcaption className="irp-generated-label">
+                        Supporting reference {index + 1}
+                      </figcaption>
+                      <div className="irp-supporting-stage">
+                        <button
+                          type="button"
+                          className="irp-reference-icon-btn irp-supporting-remove"
+                          aria-label={`Remove ${image.file.name}`}
+                          title={`Remove ${image.file.name}`}
+                          onClick={() => removeAdditionalReferenceImage(image.id)}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                              d="M6 7h12m-9 0V5h6v2m-7 3v6m4-6v6m4-9-1 11H9L8 7"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.8"
+                            />
+                          </svg>
+                        </button>
+                        <img
+                          className="irp-supporting-image"
+                          src={image.previewUrl}
+                          alt={`Supporting reference ${index + 1}`}
+                        />
+                      </div>
+                      <span className="irp-supporting-file">{image.file.name}</span>
+                    </figure>
+                  ))}
+                </div>
+              ) : (
+                <p className="irp-supporting-empty">
+                  No supporting references added yet. Use them when the main image needs extra pose, color, texture, or subject guidance.
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="irp-panel irp-panel--final">
             <div className="irp-panel-header">
               <div>
                 <p className="irp-panel-kicker">Extra instructions</p>
-                <h2>Add final guidance carefully</h2>
+                <h2>Final pass before generation</h2>
+                <p className="irp-panel-lede">
+                  This is the last editable layer before the exact FLUX prompt below. Keep it sparse and surgical.
+                </p>
               </div>
             </div>
 
@@ -988,28 +1586,309 @@ export default function ImageRecreationPromptsPage() {
             <div>
               <p className="irp-panel-kicker">Live prompt preview</p>
               <h2>Generator-ready output</h2>
+              <p className="irp-panel-lede">
+                This is the exact prompt sent to FLUX.2. Review the controls summary, then generate from the same surface.
+              </p>
             </div>
-            <div className="irp-action-row">
-              <button type="button" className="irp-btn irp-btn-primary" onClick={handleCopyPrompt}>
+            <div className="irp-action-row irp-action-row--preview">
+              <button
+                type="button"
+                className="irp-btn irp-btn-primary irp-btn-primary--preview"
+                onClick={handleGenerateImage}
+                disabled={!canGenerate}
+                aria-disabled={!canGenerate}
+                title={
+                  !hasReferenceImage
+                    ? 'Upload one reference image to unlock FLUX.2 generation.'
+                    : !token
+                      ? 'Log in to generate with FLUX.2.'
+                      : undefined
+                }
+              >
+                {isGenerating
+                  ? 'Generating with FLUX.2…'
+                  : hasReferenceImage
+                    ? 'Generate with FLUX.2'
+                    : 'Upload a reference image to unlock FLUX.2'}
+              </button>
+              <button
+                type="button"
+                className="irp-btn irp-btn-secondary irp-btn-secondary--preview"
+                onClick={handleCopyPrompt}
+              >
                 Copy prompt
               </button>
-              <button type="button" className="irp-btn irp-btn-secondary" onClick={handleReset}>
+              <button
+                type="button"
+                className="irp-btn irp-btn-ghost irp-btn-ghost--preview"
+                onClick={handleReset}
+              >
                 Reset
               </button>
             </div>
           </div>
 
-          {copyFeedback ? <p className="irp-copy-feedback">{copyFeedback}</p> : null}
+          <div className="irp-preview-shell">
+            <div className="irp-preview-topline">
+              <div className="irp-preview-summary" aria-label="FLUX.2 configuration summary">
+                {previewSummaryItems.map((item) => (
+                  <span key={item} className="irp-block-pill">
+                    {item}
+                  </span>
+                ))}
+              </div>
+              {copyFeedback ? <p className="irp-copy-feedback">{copyFeedback}</p> : null}
+            </div>
 
-          <textarea
-            className="irp-preview-textarea"
-            readOnly
-            aria-label="Final prompt preview"
-            value={promptOutput.finalPrompt}
-            rows={16}
-          />
+            <div className="irp-preview-status-stack">
+              {!hasReferenceImage ? (
+                <p className="irp-status irp-status--locked" role="status" aria-live="polite">
+                  FLUX.2 generation stays locked until exactly one reference image is uploaded.
+                </p>
+              ) : null}
+              {generationError ? (
+                <p className="irp-status irp-status--error" role="status" aria-live="polite">
+                  {generationError}
+                </p>
+              ) : null}
+              {isGenerating ? (
+                <p className="irp-status irp-status--loading" role="status" aria-live="polite">
+                  Sending the current prompt and reference image through the backend proxy, polling BFL, and loading the result.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="irp-preview-stage">
+              <div className="irp-preview-stage-header">
+                <div>
+                  <span className="irp-inline-card-label">Exact prompt sent to FLUX.2</span>
+                  <p className="irp-preview-stage-copy">
+                    The builder output below is sent unchanged through the backend proxy.
+                  </p>
+                </div>
+                <span className="irp-preview-stage-caption">
+                  {promptOutput.finalPrompt.length.toLocaleString()} characters
+                </span>
+              </div>
+              <textarea
+                className="irp-preview-textarea"
+                readOnly
+                aria-label="Final prompt preview"
+                value={promptOutput.finalPrompt}
+                rows={16}
+              />
+            </div>
+
+            <div className="irp-preview-foot">
+              <p className="irp-flux-note">{fluxFootnote}</p>
+            </div>
+          </div>
+
+          {generatedImage ? (
+            <section className="irp-generated-panel" aria-label="Generated image result">
+              <div className="irp-generated-header">
+                <div>
+                  <p className="irp-panel-kicker">FLUX.2 result</p>
+                  <h3>Generated image preview</h3>
+                </div>
+                <div className="irp-action-row">
+                  <button
+                    type="button"
+                    className="irp-btn irp-btn-secondary"
+                    onClick={handleOpenGeneratedImage}
+                  >
+                    Open full image
+                  </button>
+                  <button
+                    type="button"
+                    className="irp-btn irp-btn-secondary"
+                    onClick={handleDownloadGeneratedImage}
+                  >
+                    Download image
+                  </button>
+                  <button
+                    type="button"
+                    className="irp-btn irp-btn-secondary"
+                    onClick={handleGenerateImage}
+                    disabled={!canGenerate}
+                  >
+                    Regenerate
+                  </button>
+                  <button
+                    type="button"
+                    className="irp-btn irp-btn-ghost"
+                    onClick={() => clearGeneratedResult()}
+                  >
+                    Clear result
+                  </button>
+                </div>
+              </div>
+
+              {isGeneratedResultStale ? (
+                <div className="irp-callout irp-callout--warning" role="status">
+                  <strong>Inputs changed after generation</strong>
+                  <p>Update the result by regenerating so the preview matches the current prompt, FLUX settings, and reference image set.</p>
+                </div>
+              ) : null}
+
+              <div className="irp-preview-meta">
+                {generatedImage.model ? <span>{generatedImage.model}</span> : null}
+                <span>{generatedImage.referenceCount} reference{generatedImage.referenceCount === 1 ? '' : 's'}</span>
+                {generatedImage.cost !== null ? <span>{generatedImage.cost} credits</span> : null}
+                {generatedImage.outputMegapixels !== null ? (
+                  <span>{generatedImage.outputMegapixels} MP output</span>
+                ) : null}
+                {generatedImage.requestId ? <span>Request {generatedImage.requestId}</span> : null}
+              </div>
+
+              <div className="irp-generated-grid">
+                {referencePreviewUrl ? (
+                  <figure className="irp-generated-card">
+                    <figcaption className="irp-generated-card-header">
+                      <span className="irp-generated-label">Primary reference</span>
+                      <button
+                        type="button"
+                        className="irp-generated-expand-btn"
+                        aria-label="Expand primary reference"
+                        onClick={() =>
+                          handleExpandImage({
+                            title: 'Primary reference',
+                            alt: 'Reference image used for FLUX.2 generation',
+                            previewUrl: referencePreviewUrl,
+                            description: activeReferenceSummary,
+                          })
+                        }
+                      >
+                        Expand
+                      </button>
+                    </figcaption>
+                    <div className="irp-generated-stage">
+                      <img
+                        className="irp-generated-image"
+                        src={referencePreviewUrl}
+                        alt="Reference image used for FLUX.2 generation"
+                      />
+                    </div>
+                  </figure>
+                ) : null}
+
+                {additionalReferenceImages.map((image, index) => (
+                  <figure key={image.id} className="irp-generated-card">
+                    <figcaption className="irp-generated-card-header">
+                      <span className="irp-generated-label">Supporting reference {index + 1}</span>
+                      <button
+                        type="button"
+                        className="irp-generated-expand-btn"
+                        aria-label={`Expand supporting reference ${index + 1}`}
+                        onClick={() =>
+                          handleExpandImage({
+                            title: `Supporting reference ${index + 1}`,
+                            alt: `Supporting reference ${index + 1}`,
+                            previewUrl: image.previewUrl,
+                            description: image.file.name,
+                          })
+                        }
+                      >
+                        Expand
+                      </button>
+                    </figcaption>
+                    <div className="irp-generated-stage">
+                      <img
+                        className="irp-generated-image"
+                        src={image.previewUrl}
+                        alt={`Supporting reference ${index + 1}`}
+                      />
+                    </div>
+                  </figure>
+                ))}
+
+                <figure className="irp-generated-card">
+                  <figcaption className="irp-generated-card-header">
+                    <span className="irp-generated-label">Generated image</span>
+                    <button
+                      type="button"
+                      className="irp-generated-expand-btn"
+                      aria-label="Expand generated image"
+                      onClick={() =>
+                        handleExpandImage({
+                          title: 'Generated image',
+                          alt: 'Generated FLUX.2 preview',
+                          previewUrl: generatedImage.previewUrl,
+                          description: generatedImage.fileName,
+                        })
+                      }
+                    >
+                      Expand
+                    </button>
+                  </figcaption>
+                  <div className="irp-generated-stage">
+                    <img
+                      className="irp-generated-image"
+                      src={generatedImage.previewUrl}
+                      alt="Generated FLUX.2 preview"
+                    />
+                  </div>
+                </figure>
+              </div>
+            </section>
+          ) : null}
         </section>
       </div>
+      <ReferenceImageCropModal
+        isOpen={isReferenceCropEditorOpen}
+        sourceFile={referenceSourceFile}
+        sourcePreviewUrl={referenceSourcePreviewUrl}
+        initialPresetId={stagedReferenceCrop?.presetId ?? 'original'}
+        onClose={handleCloseReferenceCropEditor}
+        onUseOriginal={restoreSourceReferencePreview}
+        onConfirm={handleConfirmReferenceCrop}
+      />
+      {expandedPreview ? (
+        <div
+          className="irp-expanded-modal-overlay"
+          role="presentation"
+          onClick={handleCloseExpandedPreview}
+        >
+          <div
+            className="irp-expanded-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Expanded image preview"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="irp-expanded-modal__header">
+              <div>
+                <p className="irp-panel-kicker">Expanded preview</p>
+                <h3>{expandedPreview.title}</h3>
+                <p className="irp-expanded-modal__copy">{expandedPreview.description}</p>
+              </div>
+              <div className="irp-expanded-modal__actions">
+                <button
+                  type="button"
+                  className="irp-btn irp-btn-secondary"
+                  onClick={handleOpenExpandedPreviewInNewTab}
+                >
+                  Open in new tab
+                </button>
+                <button
+                  type="button"
+                  className="irp-btn irp-btn-ghost"
+                  onClick={handleCloseExpandedPreview}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="irp-expanded-modal__stage">
+              <img
+                className="irp-expanded-modal__image"
+                src={expandedPreview.previewUrl}
+                alt={expandedPreview.alt}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

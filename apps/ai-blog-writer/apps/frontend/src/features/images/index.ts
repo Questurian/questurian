@@ -8,14 +8,17 @@ export {
   processImageOnly,
   generateSocialImageFromFeatured,
   uploadSocialImage,
+  generateFluxEditedImage,
 } from './api/imagesApi';
 export type {
   UploadImageResponse,
   UploadProgress,
   GenerateSocialImageResponse,
   UploadSocialImageResponse,
+  FluxEditImageResponse,
 } from './api/imagesApi';
 export {
+  calculateDefaultCrop,
   VARIANT_SPECS,
   VARIANT_SEQUENCE,
   initializeCropStates,

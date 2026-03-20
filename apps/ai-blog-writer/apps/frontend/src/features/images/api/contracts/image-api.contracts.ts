@@ -57,3 +57,14 @@ export interface UploadSocialImageResponse {
   width: number;
   height: number;
 }
+
+export interface FluxEditImageResponse {
+  blob: Blob;
+  fileName: string;
+  contentType: string;
+  requestId: string | null;
+  model: string | null;
+  cost: number | null;
+  inputMegapixels: number | null;
+  outputMegapixels: number | null;
+}
