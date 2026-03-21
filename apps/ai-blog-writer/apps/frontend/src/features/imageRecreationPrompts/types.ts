@@ -32,6 +32,7 @@ export type PeoplePresenceId =
   | 'dense-crowd'
 
 export type PeopleHandlingId =
+  | 'match-reference-people-handling'
   | 'keep-every-person-as-is'
   | 'keep-same-people-small-natural-changes'
   | 'keep-same-people-small-repositioning'
@@ -54,6 +55,7 @@ export type CrowdCharacterId =
   | 'understated-neutral-crowd'
 
 export type PrimarySubjectEmphasisId =
+  | 'match-reference-subject-balance'
   | 'environment-first'
   | 'landmark-first'
   | 'person-first'
@@ -122,14 +124,22 @@ export type LensPresetId =
   | '45mm-equivalent-medium-format'
 
 export type CaptureStyleId =
+  | 'match-reference-style'
   | 'editorial'
   | 'natural-documentary'
+  | 'moody-documentary'
   | 'luxury-campaign'
+  | 'hospitality-editorial'
   | 'travel-photography'
   | 'street-photography'
+  | 'cinematic-still'
   | 'fine-art-landscape'
   | 'filmic-vintage'
   | 'real-estate-architecture-clean'
+  | 'interior-design-editorial'
+  | 'food-editorial'
+  | 'commercial-product'
+  | 'brand-social-content'
   | 'casual-candid'
 
 export type ShotPerspectiveId =
@@ -181,6 +191,7 @@ export type FilterLookId =
   | 'leica-natural'
 
 export type LightingId =
+  | 'match-reference-lighting'
   | 'clear-bright-midday-sun'
   | 'soft-morning-light'
   | 'golden-hour'
@@ -191,12 +202,18 @@ export type LightingId =
   | 'dramatic-storm-light'
   | 'hazy-afternoon-light'
   | 'backlit-sunlight'
+  | 'indoor-general'
+  | 'indoor-production'
   | 'window-light'
   | 'night-city-lights'
   | 'mixed-urban-lighting'
   | 'flat-neutral-daylight'
 
-export type PreservationStrengthId = 'strict' | 'balanced' | 'flexible'
+export type PreservationStrengthId =
+  | 'match-reference-preservation'
+  | 'strict'
+  | 'balanced'
+  | 'flexible'
 
 export type AllowedVariationId =
   | 'no-variation'
@@ -206,11 +223,13 @@ export type AllowedVariationId =
   | 'minor-secondary-detail-changes'
 
 export type EnvironmentEnhancementId =
+  | 'match-reference-environment'
   | 'minimal'
   | 'moderate-realism-boost'
   | 'strong-realism-boost'
 
 export type FluxModelId =
+  | 'flux-2-max'
   | 'flux-2-pro-preview'
   | 'flux-2-pro'
   | 'flux-2-flex'

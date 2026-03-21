@@ -1109,6 +1109,106 @@ def test_flux_edit_supports_model_size_and_extra_references(monkeypatch):
     assert base64.b64decode(calls["payload"]["input_image_3"]) == b"chair-bytes"
 
 
+def test_flux_edit_supports_flux_max_model(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setenv("BFL_API_KEY", "test-bfl-key")
+    monkeypatch.setenv("BFL_BASE_URL", "https://api.bfl.ai")
+
+    calls = {
+        "payload": None,
+        "poll_count": 0,
+    }
+
+    class FakeResponse:
+        def __init__(
+            self,
+            status_code: int,
+            *,
+            json_body=None,
+            text: str = "",
+            content: bytes = b"",
+            headers: dict | None = None,
+        ):
+            self.status_code = status_code
+            self._json_body = json_body
+            self.text = text
+            self.content = content
+            self.headers = headers or {}
+
+        def json(self):
+            if self._json_body is None:
+                raise ValueError("No JSON body")
+            return self._json_body
+
+    class FakeAsyncClient:
+        def __init__(self, timeout: float, follow_redirects: bool = False):
+            self.timeout = timeout
+            self.follow_redirects = follow_redirects
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url: str, headers: dict, json: dict):
+            assert self.timeout == 30.0
+            assert url == "https://api.bfl.ai/v1/flux-2-max"
+            assert headers["x-key"] == "test-bfl-key"
+            calls["payload"] = json
+            return FakeResponse(
+                200,
+                json_body={
+                    "id": "task_max",
+                    "polling_url": "https://api.bfl.ai/v1/get_result?id=task_max",
+                },
+            )
+
+        async def get(self, url: str, headers: dict | None = None):
+            if url == "https://api.bfl.ai/v1/get_result?id=task_max":
+                calls["poll_count"] += 1
+                return FakeResponse(
+                    200,
+                    json_body={
+                        "id": "task_max",
+                        "status": "Ready",
+                        "result": {"sample": "https://delivery.bfl.ai/max.png"},
+                    },
+                )
+
+            assert url == "https://delivery.bfl.ai/max.png"
+            return FakeResponse(
+                200,
+                content=b"max-bytes",
+                headers={"content-type": "image/png"},
+            )
+
+    monkeypatch.setattr(
+        "app.features.images.bfl_client.httpx.AsyncClient",
+        FakeAsyncClient,
+    )
+
+    response = client.post(
+        "/images/flux-edit",
+        data={
+            "prompt": "Preserve the base scene and blend styling from the other references.",
+            "model_id": "flux-2-max",
+        },
+        files={
+            "reference_image": ("reference.png", b"reference-bytes", "image/png"),
+        },
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.content == b"max-bytes"
+    assert response.headers["x-bfl-model"] == "flux-2-max"
+    assert calls["poll_count"] == 1
+    assert calls["payload"]["disable_pup"] is True
+    assert "prompt_upsampling" not in calls["payload"]
+    assert base64.b64decode(calls["payload"]["input_image"]) == b"reference-bytes"
+
+
 def test_flux_edit_rejects_partial_dimensions():
     client = TestClient(app)
 

@@ -102,7 +102,7 @@ export default function LandingPage() {
             </svg>
           </div>
           <h2>Image Recreation Prompts</h2>
-          <p>Build polished image-recreation prompts that stay anchored to a reference image, block invented subjects, and preserve the original scene correctly.</p>
+          <p>Upload 1 primary photo and up to 7 extra reference photos, then run FLUX.2 Max, Pro, or Flex edits from one prompt-building screen.</p>
           <span className="landing-card-action">
             Open Tool
             <svg className="landing-card-action-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

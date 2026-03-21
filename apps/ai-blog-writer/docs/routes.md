@@ -141,3 +141,4 @@ Primary flow: upload one Location Manager export JSON per run. The export must i
 | `/prompt2blog/stage-article` | Auth required | Prompt2Blog stage article editor page |
 | `/keyword-intel` | Auth required | Keyword-intel page |
 | `/url2blog` | Auth required | URL2Blog page |
+| `/image-recreation-prompts` | Auth required | Image recreation prompts page |

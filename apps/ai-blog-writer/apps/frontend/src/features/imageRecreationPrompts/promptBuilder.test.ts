@@ -51,6 +51,32 @@ describe('buildImageRecreationPrompt', () => {
     expect(result.finalPrompt).not.toContain('do not introduce new light sources')
   })
 
+  it('supports indoor production lighting language in the final prompt', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset('couple-travel-photo'),
+      lighting: 'indoor-production',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Use a controlled indoor production-lighting setup with believable key, fill, and practical-light balance while keeping the result grounded as a real photograph rather than a synthetic studio render.',
+    )
+  })
+
+  it('supports keeping the reference lighting unchanged', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      lighting: 'match-reference-lighting',
+    })
+    const lightingBlock = result.blocks.find((block) => block.id === 'lighting-description')
+
+    expect(result.finalPrompt).toContain(
+      'Keep the reference lighting setup essentially as-is. Do not push the image toward a different time of day, weather mood, or artificial lighting scheme unless the rest of the scene already supports it.',
+    )
+    expect(lightingBlock?.text).toContain(
+      'Keep the reference lighting conditions aligned with the source image.',
+    )
+  })
+
   it('reinterprets the camera viewpoint when a non-reference shot perspective is selected', () => {
     const result = buildImageRecreationPrompt({
       ...createFormStateFromPreset(),
@@ -122,6 +148,52 @@ describe('buildImageRecreationPrompt', () => {
     )
     expect(result.finalPrompt).toContain(
       'Use a Kodachrome 64-inspired palette with rich travel color, warm editorial nostalgia, and slide-film clarity.',
+    )
+  })
+
+  it('supports newer capture styles like food editorial in the compact prompt', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      captureStyle: 'food-editorial',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Recreate it as a true-to-life food editorial photograph captured with Sony A7R V and 24mm f/1.4.',
+    )
+  })
+
+  it('supports leaving capture style unchanged', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      captureStyle: 'match-reference-style',
+    })
+    const styleBlock = result.blocks.find((block) => block.id === 'style-description')
+
+    expect(result.finalPrompt).toContain(
+      'Recreate it as a true-to-life photograph captured with Sony A7R V and 24mm f/1.4.',
+    )
+    expect(result.finalPrompt).not.toContain(
+      'true-to-life match reference / no change photograph',
+    )
+    expect(styleBlock?.text).toContain(
+      'Keep the overall photographic treatment aligned with the reference image.',
+    )
+  })
+
+  it('supports leaving people handling unchanged', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset('couple-travel-photo'),
+      peopleHandling: 'match-reference-people-handling',
+      primarySubjectEmphasis: 'match-reference-subject-balance',
+      preservationStrength: 'match-reference-preservation',
+      environmentEnhancement: 'match-reference-environment',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Keep the same two people without forcing extra removals, additions, or recasting.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Do not push additional environment enhancement beyond the reference image.',
     )
   })
 

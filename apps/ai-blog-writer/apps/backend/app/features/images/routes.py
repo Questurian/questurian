@@ -36,7 +36,12 @@ router = APIRouter(prefix="/images", tags=["images"])
 logger = logging.getLogger("images.routes")
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
-ALLOWED_BFL_MODEL_IDS = {"flux-2-pro-preview", "flux-2-pro", "flux-2-flex"}
+ALLOWED_BFL_MODEL_IDS = {
+    "flux-2-max",
+    "flux-2-pro-preview",
+    "flux-2-pro",
+    "flux-2-flex",
+}
 MAX_BFL_ADDITIONAL_REFERENCE_IMAGES = 7
 MIN_BFL_DIMENSION = 64
 BFL_DIMENSION_MULTIPLE = 16
@@ -1660,7 +1665,7 @@ async def flux_edit_image(
     ),
     model_id: Optional[str] = Form(
         None,
-        description="Optional FLUX.2 model override such as flux-2-pro-preview, flux-2-pro, or flux-2-flex",
+        description="Optional FLUX.2 model override such as flux-2-max, flux-2-pro-preview, flux-2-pro, or flux-2-flex",
     ),
     width: Optional[int] = Form(
         None,
@@ -1684,7 +1689,7 @@ async def flux_edit_image(
     ),
     authorization: Optional[str] = Header(None),
 ) -> Response:
-    """Proxy a single-reference FLUX.2 edit and return the generated image bytes."""
+    """Proxy a FLUX.2 edit request with optional multi-reference inputs."""
     _extract_bearer_token(authorization)
     valid_prompt = _validate_flux_prompt(prompt)
     valid_model_id = _validate_flux_model_id(model_id)

@@ -28,6 +28,13 @@ export const DEFAULT_PROMPT_PRESET_ID = 'famous-landmark-no-people' as const
 
 export const FLUX_MODEL_OPTIONS: SelectOption<FluxModelId>[] = [
   {
+    id: 'flux-2-max',
+    label: 'FLUX.2 Max',
+    description:
+      'Highest-precision FLUX.2 editing endpoint. Best when multi-reference fidelity matters more than speed or cost.',
+    prompt: '',
+  },
+  {
     id: 'flux-2-pro-preview',
     label: 'FLUX.2 Pro Preview',
     description:
@@ -45,7 +52,7 @@ export const FLUX_MODEL_OPTIONS: SelectOption<FluxModelId>[] = [
     id: 'flux-2-flex',
     label: 'FLUX.2 Flex',
     description:
-      'Same editing flow, but with the FLEX model family for finer-grained controls and future guidance/steps tuning.',
+      'Same multi-reference editing flow, but with the FLEX model family for finer-grained controls and future guidance/steps tuning.',
     prompt: '',
   },
 ]
@@ -352,6 +359,14 @@ export const PEOPLE_PRESENCE_OPTIONS: SelectOption<PeoplePresenceId>[] = [
 
 export const PEOPLE_HANDLING_OPTIONS: SelectOption<PeopleHandlingId>[] = [
   {
+    id: 'match-reference-people-handling',
+    label: 'Match reference / no change',
+    description:
+      'Do not force a people-handling rule. Let the reference image and other settings determine whether people stay, leave, or stay secondary.',
+    prompt:
+      'Do not force a specific people-handling rule beyond what the reference image and the other selected controls already imply. Keep human presence consistent with the source image unless another explicit setting changes it.',
+  },
+  {
     id: 'keep-every-person-as-is',
     label: 'Keep every person as-is',
     description: 'No added people, no removed people, no identity changes.',
@@ -491,6 +506,13 @@ export const CROWD_CHARACTER_OPTIONS: SelectOption<CrowdCharacterId>[] = [
 ]
 
 export const PRIMARY_SUBJECT_OPTIONS: SelectOption<PrimarySubjectEmphasisId>[] = [
+  {
+    id: 'match-reference-subject-balance',
+    label: 'Match reference / no change',
+    description: 'Do not force a new focal hierarchy. Keep the same subject-environment balance already present in the image.',
+    prompt:
+      'Do not force a new focal hierarchy. Keep the same subject, landmark, person, and environment balance that the reference image already establishes.',
+  },
   {
     id: 'environment-first',
     label: 'Environment first',
@@ -965,6 +987,13 @@ export const LENS_PRESET_GROUPS: OptionGroup<LensPresetId>[] = [
 
 export const CAPTURE_STYLE_OPTIONS: SelectOption<CaptureStyleId>[] = [
   {
+    id: 'match-reference-style',
+    label: 'Match reference / no change',
+    description: 'Keep the existing photographic treatment instead of steering the image toward a stronger style.',
+    prompt:
+      'Keep the reference image’s existing photographic treatment essentially as-is. Do not push it toward a more editorial, cinematic, commercial, documentary, or stylized finish unless another control explicitly requires it.',
+  },
+  {
     id: 'editorial',
     label: 'Editorial',
     description: 'Polished publication-ready realism with controlled styling.',
@@ -979,11 +1008,25 @@ export const CAPTURE_STYLE_OPTIONS: SelectOption<CaptureStyleId>[] = [
       'Keep the result grounded, observational, and documentary in feel, with realism taking priority over stylization.',
   },
   {
+    id: 'moody-documentary',
+    label: 'Moody documentary',
+    description: 'Grounded documentary realism with more atmosphere, shadow shape, and tonal mood.',
+    prompt:
+      'Keep the result grounded and documentary in feel, but allow more atmospheric shadow shape, tonal depth, and restrained mood without drifting into theatrical stylization.',
+  },
+  {
     id: 'luxury-campaign',
     label: 'Luxury campaign',
     description: 'Premium commercial polish that still feels camera-real.',
     prompt:
       'Keep the result premium and aspirational with a luxury-travel polish that still feels like a real camera photograph.',
+  },
+  {
+    id: 'hospitality-editorial',
+    label: 'Hospitality editorial',
+    description: 'Premium hotel, resort, and dining photography with polished but believable warmth.',
+    prompt:
+      'Keep the result grounded in hospitality-editorial photography with polished warmth, inviting detail, and premium but believable hotel, resort, or dining presentation.',
   },
   {
     id: 'travel-photography',
@@ -998,6 +1041,13 @@ export const CAPTURE_STYLE_OPTIONS: SelectOption<CaptureStyleId>[] = [
     description: 'Reportage-style realism with public-space energy.',
     prompt:
       'Keep the result rooted in authentic street-photography energy with believable public-space timing and observation.',
+  },
+  {
+    id: 'cinematic-still',
+    label: 'Cinematic still',
+    description: 'Film-frame atmosphere with controlled drama while staying photographic and real.',
+    prompt:
+      'Keep the result grounded in cinematic-still photography with controlled atmosphere, deliberate tonal shape, and film-frame drama while still reading as a believable real photograph.',
   },
   {
     id: 'fine-art-landscape',
@@ -1019,6 +1069,34 @@ export const CAPTURE_STYLE_OPTIONS: SelectOption<CaptureStyleId>[] = [
     description: 'Clean architecture-driven rendering with corrected realism.',
     prompt:
       'Keep the result clean, precise, and architecture-forward with realistic surfaces, lines, and well-controlled detail.',
+  },
+  {
+    id: 'interior-design-editorial',
+    label: 'Interior design editorial',
+    description: 'Refined interiors photography with materials, styling, and composition detail leading the frame.',
+    prompt:
+      'Keep the result grounded in interior-design editorial photography with refined material rendering, thoughtful styling emphasis, and polished composition without losing realism.',
+  },
+  {
+    id: 'food-editorial',
+    label: 'Food editorial',
+    description: 'Magazine-style food and dining imagery with appetizing realism and controlled styling.',
+    prompt:
+      'Keep the result grounded in food-editorial photography with appetizing realism, controlled styling, and believable texture, garnish, plating, and table detail.',
+  },
+  {
+    id: 'commercial-product',
+    label: 'Commercial product',
+    description: 'Clean product-focused photography with strong material clarity and controlled commercial polish.',
+    prompt:
+      'Keep the result grounded in commercial product photography with clean product emphasis, strong material clarity, and polished but believable commercial finish.',
+  },
+  {
+    id: 'brand-social-content',
+    label: 'Brand social content',
+    description: 'Modern polished content style for launches, campaigns, and brand storytelling.',
+    prompt:
+      'Keep the result grounded in polished brand-social-content photography with modern clarity, platform-friendly composition, and clean campaign energy without looking synthetic.',
   },
   {
     id: 'casual-candid',
@@ -1372,6 +1450,13 @@ export const FILTER_LOOK_OPTIONS = FILTER_LOOK_GROUPS.flatMap((group) => group.o
 
 export const LIGHTING_OPTIONS: SelectOption<LightingId>[] = [
   {
+    id: 'match-reference-lighting',
+    label: 'Match reference / no change',
+    description: 'Keep the existing lighting mood and direction instead of steering toward a new time of day or setup.',
+    prompt:
+      'Keep the reference lighting setup essentially as-is. Do not push the image toward a different time of day, weather mood, or artificial lighting scheme unless the rest of the scene already supports it.',
+  },
+  {
     id: 'clear-bright-midday-sun',
     label: 'Clear sunny day',
     description: 'Bright direct daylight with clean visibility and crisp shadows.',
@@ -1442,6 +1527,20 @@ export const LIGHTING_OPTIONS: SelectOption<LightingId>[] = [
       'Use realistic backlit sunlight with controlled flare, believable rim light, and preserved scene detail.',
   },
   {
+    id: 'indoor-general',
+    label: 'Indoor general',
+    description: 'Natural-looking indoor light without a stylized production setup.',
+    prompt:
+      'Use believable indoor ambient light with natural room falloff, realistic practical-light influence, and restrained contrast that still feels like a real interior photograph.',
+  },
+  {
+    id: 'indoor-production',
+    label: 'Indoor production',
+    description: 'Controlled indoor lighting with a polished production or editorial setup.',
+    prompt:
+      'Use a controlled indoor production-lighting setup with believable key, fill, and practical-light balance while keeping the result grounded as a real photograph rather than a synthetic studio render.',
+  },
+  {
     id: 'window-light',
     label: 'Window light',
     description: 'Natural indoor light entering through windows.',
@@ -1472,6 +1571,13 @@ export const LIGHTING_OPTIONS: SelectOption<LightingId>[] = [
 ]
 
 export const PRESERVATION_STRENGTH_OPTIONS: SelectOption<PreservationStrengthId>[] = [
+  {
+    id: 'match-reference-preservation',
+    label: 'Match reference / no change',
+    description: 'Do not add extra preservation pressure beyond the normal reference anchoring already in the prompt.',
+    prompt:
+      'Do not add extra preservation pressure beyond the normal reference anchoring rules. Keep the image faithful to the source without pushing it toward a stricter or looser preservation mode.',
+  },
   {
     id: 'strict',
     label: 'Strict',
@@ -1533,6 +1639,13 @@ export const ALLOWED_VARIATION_OPTIONS: SelectOption<AllowedVariationId>[] = [
 ]
 
 export const ENVIRONMENT_ENHANCEMENT_OPTIONS: SelectOption<EnvironmentEnhancementId>[] = [
+  {
+    id: 'match-reference-environment',
+    label: 'Match reference / no change',
+    description: 'Do not push additional realism enhancement beyond what the source image already has.',
+    prompt:
+      'Do not push extra environmental realism enhancement. Keep the atmosphere, surface detail, haze, and depth treatment close to the reference image unless other selected controls require a change.',
+  },
   {
     id: 'minimal',
     label: 'Minimal',

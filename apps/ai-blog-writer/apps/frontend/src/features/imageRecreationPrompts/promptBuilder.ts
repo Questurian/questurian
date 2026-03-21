@@ -72,6 +72,10 @@ function resolveReferencePeopleAnchorPrompt(state: ImageRecreationFormState): st
 }
 
 function resolvePrimarySubjectPrompt(state: ImageRecreationFormState): string {
+  if (state.primarySubjectEmphasis === 'match-reference-subject-balance') {
+    return 'Do not force a new focal hierarchy. Keep the same subject-environment balance the reference image already establishes.'
+  }
+
   if (
     state.peoplePresence === 'no-people' &&
     state.primarySubjectEmphasis === 'person-first' &&
@@ -107,6 +111,36 @@ function resolveCenteredCompositionPrompt(state: ImageRecreationFormState): stri
   }
 
   return CENTER_MAIN_SUBJECT_PROMPT
+}
+
+function resolveLightingLeadSentence(state: ImageRecreationFormState): string {
+  const lighting = LIGHTING_MAP[state.lighting]
+
+  if (state.lighting === 'match-reference-lighting') {
+    return 'Keep the reference lighting conditions aligned with the source image.'
+  }
+
+  return `Match ${lighting.label.toLowerCase()} lighting conditions.`
+}
+
+function resolveStyleLeadSentence(state: ImageRecreationFormState): string {
+  const style = CAPTURE_STYLE_MAP[state.captureStyle]
+
+  if (state.captureStyle === 'match-reference-style') {
+    return 'Keep the overall photographic treatment aligned with the reference image.'
+  }
+
+  return `Keep the overall treatment grounded in ${style.label.toLowerCase()}.`
+}
+
+function resolveCompactStyleSentence(state: ImageRecreationFormState): string {
+  const style = CAPTURE_STYLE_MAP[state.captureStyle]
+
+  if (state.captureStyle === 'match-reference-style') {
+    return ''
+  }
+
+  return `Recreate it as a true-to-life ${style.label.toLowerCase()} photograph captured with`
 }
 
 function buildSceneSpecificPrompt(state: ImageRecreationFormState): string {
@@ -281,6 +315,10 @@ function resolveCompactPeopleSentence(state: ImageRecreationFormState): string {
   }
 
   switch (state.peopleHandling) {
+    case 'match-reference-people-handling':
+      return state.peoplePresence === 'no-people'
+        ? 'Keep the scene people-free unless another selected rule explicitly changes that.'
+        : `Keep the same ${PEOPLE_PRESENCE_MAP[state.peoplePresence].label.toLowerCase()} without forcing extra removals, additions, or recasting.`
     case 'keep-every-person-as-is':
       return `Keep the same ${PEOPLE_PRESENCE_MAP[state.peoplePresence].label.toLowerCase()} and do not add, remove, or replace any people.`
     case 'keep-same-people-small-natural-changes':
@@ -379,6 +417,8 @@ function resolveCompactVariationSentence(state: ImageRecreationFormState): strin
 
 function resolveCompactEnvironmentSentence(state: ImageRecreationFormState): string {
   switch (state.environmentEnhancement) {
+    case 'match-reference-environment':
+      return 'Do not push additional environment enhancement beyond the reference image.'
     case 'minimal':
       return 'Apply restrained realism cleanup only.'
     case 'moderate-realism-boost':
@@ -505,6 +545,10 @@ function buildPeopleSpecificPrompt(state: ImageRecreationFormState): string {
 }
 
 function resolvePreservationPrompt(state: ImageRecreationFormState): string {
+  if (state.preservationStrength === 'match-reference-preservation') {
+    return 'Do not add extra preservation pressure beyond the normal reference anchoring rules. Keep the image faithful to the source without forcing a stricter or looser preservation mode.'
+  }
+
   if (!usesPeopleOverride(state)) {
     return PRESERVATION_STRENGTH_MAP[state.preservationStrength].prompt
   }
@@ -736,7 +780,7 @@ export function buildImageRecreationPrompt(
       id: 'lighting-description',
       title: 'Lighting description',
       text: joinSentences([
-        `Match ${lighting.label.toLowerCase()} lighting conditions.`,
+        resolveLightingLeadSentence(state),
         lighting.prompt,
         'Keep shadows, highlights, and atmospheric depth physically believable.',
         'If the lighting introduces stronger highlights or deeper shadowing, keep the shadow geometry, softness, density, bounce, and falloff natural to the scene.',
@@ -746,7 +790,7 @@ export function buildImageRecreationPrompt(
       id: 'style-description',
       title: 'Style description',
       text: joinSentences([
-        `Keep the overall treatment grounded in ${style.label.toLowerCase()}.`,
+        resolveStyleLeadSentence(state),
         style.prompt,
         filterLook.prompt,
       ]),
@@ -801,7 +845,9 @@ export function buildImageRecreationPrompt(
       resolveCompactHumanDetailSentence(state),
     ]),
     joinSentences([
-      `Recreate it as a true-to-life ${style.label.toLowerCase()} photograph captured with ${camera.label} and ${lens.label}.`,
+      state.captureStyle === 'match-reference-style'
+        ? `Recreate it as a true-to-life photograph captured with ${camera.label} and ${lens.label}.`
+        : `Recreate it as a true-to-life ${style.label.toLowerCase()} photograph captured with ${camera.label} and ${lens.label}.`,
       lighting.prompt,
       state.filterLook === 'neutral-no-filter' ? '' : filterLook.prompt,
       resolveCompactEnvironmentSentence(state),

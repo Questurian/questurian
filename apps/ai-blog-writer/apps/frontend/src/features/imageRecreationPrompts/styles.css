@@ -494,6 +494,19 @@
   display: block;
 }
 
+.irp-reference-stage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 0.95rem;
+  align-items: stretch;
+}
+
+.irp-reference-stage-row.is-dragging .irp-reference-add-card {
+  border-color: rgba(196, 107, 51, 0.45);
+  box-shadow: 0 16px 32px -24px rgba(196, 107, 51, 0.42);
+  transform: translateY(-1px);
+}
+
 .irp-reference-stage {
   position: relative;
   display: grid;
@@ -506,6 +519,65 @@
     radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 42%),
     linear-gradient(180deg, rgba(22, 25, 24, 0.92), rgba(44, 48, 46, 0.82));
   box-shadow: 0 18px 32px -26px rgba(31, 38, 35, 0.46);
+}
+
+.irp-reference-add-card {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.85rem;
+  min-height: min(72vh, 34rem);
+  padding: 1rem;
+  border: 1.5px dashed rgba(41, 95, 90, 0.28);
+  border-radius: 1.2rem;
+  background:
+    linear-gradient(180deg, rgba(41, 95, 90, 0.06), rgba(196, 107, 51, 0.07)),
+    rgba(255, 255, 255, 0.5);
+  color: var(--irp-ink);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.irp-reference-add-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(196, 107, 51, 0.45);
+  box-shadow: 0 16px 32px -24px rgba(196, 107, 51, 0.42);
+}
+
+.irp-reference-add-icon {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 1.05rem;
+  border: 1px solid rgba(41, 95, 90, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--irp-secondary);
+}
+
+.irp-reference-add-icon svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.irp-reference-add-copy {
+  display: grid;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.irp-reference-add-copy strong {
+  color: var(--irp-ink);
+  font-size: 0.98rem;
+}
+
+.irp-reference-add-copy span {
+  color: var(--irp-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
 .irp-reference-overlay {
@@ -1402,6 +1474,14 @@
 
   .irp-reference-stage {
     min-height: min(62vh, 26rem);
+  }
+
+  .irp-reference-stage-row {
+    grid-template-columns: 1fr;
+  }
+
+  .irp-reference-add-card {
+    min-height: 10rem;
   }
 
   .irp-reference-image {

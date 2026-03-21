@@ -151,6 +151,22 @@ describe('ImageRecreationPromptsPage', () => {
       ),
     ).toBeInTheDocument()
     expect(screen.getByText('People controls are locked')).toBeInTheDocument()
+    expect(screen.getByText('Reference photos are live on this screen')).toBeInTheDocument()
+  })
+
+  it('includes FLUX.2 Max as a selectable model option', () => {
+    renderPage()
+
+    fireEvent.change(screen.getByLabelText('FLUX model'), {
+      target: { value: 'flux-2-max' },
+    })
+
+    expect(screen.getByLabelText('FLUX model')).toHaveValue('flux-2-max')
+    expect(
+      screen.getByText(
+        'Highest-precision FLUX.2 editing endpoint. Best when multi-reference fidelity matters more than speed or cost.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('updates the form and preview when a preset is selected', async () => {
@@ -199,6 +215,90 @@ describe('ImageRecreationPromptsPage', () => {
 
     expect(
       screen.getByText('People should feel more like everyday locals than destination tourists.'),
+    ).toBeInTheDocument()
+  })
+
+  it('includes indoor and no-change lighting options', () => {
+    renderPage()
+
+    fireEvent.change(screen.getByLabelText('Lighting / time of day'), {
+      target: { value: 'indoor-production' },
+    })
+
+    expect(
+      screen.getByText(
+        'Controlled indoor lighting with a polished production or editorial setup.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Lighting / time of day'), {
+      target: { value: 'match-reference-lighting' },
+    })
+
+    expect(
+      screen.getByText(
+        'Keep the existing lighting mood and direction instead of steering toward a new time of day or setup.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('includes expanded capture style options for interiors, food, product, and cinematic looks', () => {
+    renderPage()
+
+    fireEvent.change(screen.getByLabelText('Capture style'), {
+      target: { value: 'food-editorial' },
+    })
+
+    expect(
+      screen.getByText(
+        'Magazine-style food and dining imagery with appetizing realism and controlled styling.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Capture style'), {
+      target: { value: 'cinematic-still' },
+    })
+
+    expect(
+      screen.getByText(
+        'Film-frame atmosphere with controlled drama while staying photographic and real.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Capture style'), {
+      target: { value: 'match-reference-style' },
+    })
+
+    expect(
+      screen.getByText(
+        'Keep the existing photographic treatment instead of steering the image toward a stronger style.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('includes neutral no-change options for people handling and related rule controls', () => {
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, people are visible' }))
+
+    fireEvent.change(screen.getByLabelText('People handling'), {
+      target: { value: 'match-reference-people-handling' },
+    })
+
+    expect(
+      screen.getByText(
+        'Do not force a people-handling rule. Let the reference image and other settings determine whether people stay, leave, or stay secondary.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Primary subject emphasis'), {
+      target: { value: 'match-reference-subject-balance' },
+    })
+
+    expect(
+      screen.getByText(
+        'Do not force a new focal hierarchy. Keep the same subject-environment balance already present in the image.',
+      ),
     ).toBeInTheDocument()
   })
 
@@ -357,7 +457,7 @@ describe('ImageRecreationPromptsPage', () => {
   it('adds and removes supporting reference images locally', async () => {
     renderPage()
 
-    const supportingInput = screen.getByLabelText('Add supporting reference images')
+    const supportingInput = screen.getByLabelText('Add reference photos')
     const firstSupportingFile = new File(['texture'], 'texture-reference.png', { type: 'image/png' })
     const secondSupportingFile = new File(['chair'], 'chair-reference.jpg', { type: 'image/jpeg' })
 
@@ -373,7 +473,7 @@ describe('ImageRecreationPromptsPage', () => {
       'src',
       'blob:chair-reference.jpg',
     )
-    expect(screen.getByText('2 / 7 supporting references')).toBeInTheDocument()
+    expect(screen.getByText('2 / 7 extra reference photos')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Remove texture-reference\.png/i }))
 
@@ -385,7 +485,45 @@ describe('ImageRecreationPromptsPage', () => {
       'src',
       'blob:chair-reference.jpg',
     )
-    expect(screen.getByText('1 / 7 supporting references')).toBeInTheDocument()
+    expect(screen.getByText('1 / 7 extra reference photos')).toBeInTheDocument()
+  })
+
+  it('shows a visible plus tile for extra reference photos next to the main reference', async () => {
+    renderPage()
+
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
+
+    expect(screen.getByRole('button', { name: 'Add extra reference photo' })).toBeInTheDocument()
+    expect(screen.getByText('Add photo')).toBeInTheDocument()
+  })
+
+  it('adds extra reference photos when files are dropped after the primary image is set', async () => {
+    renderPage()
+
+    await uploadPrimaryReference()
+    useOriginalReferenceFromCropper()
+
+    const stageRow = screen.getByAltText('Selected reference preview').closest('.irp-reference-stage-row')
+    expect(stageRow).not.toBeNull()
+
+    fireEvent.drop(stageRow as Element, {
+      dataTransfer: {
+        files: [
+          new File(['texture'], 'texture-reference.png', { type: 'image/png' }),
+          new File(['chair'], 'chair-reference.jpg', { type: 'image/jpeg' }),
+        ],
+      },
+    })
+
+    expect(await screen.findByAltText('Supporting reference 1')).toHaveAttribute(
+      'src',
+      'blob:texture-reference.png',
+    )
+    expect(screen.getByAltText('Supporting reference 2')).toHaveAttribute(
+      'src',
+      'blob:chair-reference.jpg',
+    )
   })
 
   it('copies the generated prompt to the clipboard', async () => {
@@ -433,7 +571,7 @@ describe('ImageRecreationPromptsPage', () => {
       target: { value: '4242' },
     })
     fireEvent.click(screen.getByRole('checkbox', { name: /Enable prompt upsampling/i }))
-    fireEvent.change(screen.getByLabelText('Add supporting reference images'), {
+    fireEvent.change(screen.getByLabelText('Add reference photos'), {
       target: {
         files: [
           new File(['texture'], 'texture-reference.png', { type: 'image/png' }),

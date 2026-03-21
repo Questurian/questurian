@@ -495,6 +495,7 @@ export default function ImageRecreationPromptsPage() {
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [isSupportingDragging, setIsSupportingDragging] = useState(false)
   const [referenceSourceFile, setReferenceSourceFile] = useState<File | null>(null)
   const [referenceSourcePreviewUrl, setReferenceSourcePreviewUrl] = useState<string | null>(null)
   const [selectedReferenceFile, setSelectedReferenceFile] = useState<File | null>(null)
@@ -648,6 +649,7 @@ export default function ImageRecreationPromptsPage() {
 
   function clearAdditionalReferenceImages() {
     setExpandedPreview(null)
+    setIsSupportingDragging(false)
     setAdditionalReferenceImages((current) => {
       revokeAdditionalReferencePreviews(current)
       return []
@@ -729,7 +731,25 @@ export default function ImageRecreationPromptsPage() {
   function handleAdditionalReferenceInputChange(event: ChangeEvent<HTMLInputElement>) {
     if (!event.target.files?.length) return
     appendAdditionalReferenceFiles(event.target.files)
+    setIsSupportingDragging(false)
     event.target.value = ''
+  }
+
+  function handleSupportingDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsSupportingDragging(false)
+    if (!event.dataTransfer.files?.length) return
+    appendAdditionalReferenceFiles(event.dataTransfer.files)
+  }
+
+  function handleSupportingDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsSupportingDragging(true)
+  }
+
+  function handleSupportingDragLeave(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsSupportingDragging(false)
   }
 
   function removeAdditionalReferenceImage(id: string) {
@@ -895,13 +915,27 @@ export default function ImageRecreationPromptsPage() {
     attachReferenceImage(file)
   }
 
+  function distributeReferenceDrop(fileList: FileList | File[]) {
+    const imageFiles = Array.from(fileList).filter((file) => file.type.startsWith('image/'))
+    if (!imageFiles.length) return
+
+    if (!selectedReferenceFile) {
+      const [primaryReference, ...additionalReferences] = imageFiles
+      attachReferenceImage(primaryReference)
+      if (additionalReferences.length) {
+        appendAdditionalReferenceFiles(additionalReferences)
+      }
+      return
+    }
+
+    appendAdditionalReferenceFiles(imageFiles)
+  }
+
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
     setIsDragging(false)
-
-    const file = event.dataTransfer.files[0]
-    if (!file || !file.type.startsWith('image/')) return
-    attachReferenceImage(file)
+    if (!event.dataTransfer.files?.length) return
+    distributeReferenceDrop(event.dataTransfer.files)
   }
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
@@ -1064,8 +1098,8 @@ export default function ImageRecreationPromptsPage() {
       <header className="irp-hero">
         <div className="irp-hero-nav">
           <div className="irp-hero-note">
-            <strong>Rules engine + FLUX.2</strong>
-            <span>Prompt building stays local; the reference image only goes to the backend when you generate.</span>
+            <strong>Multi-reference FLUX.2</strong>
+            <span>Upload 1 primary photo plus up to 7 extra reference photos for a single FLUX.2 edit.</span>
           </div>
           <Link className="irp-nav-link" to="/">
             Back Home
@@ -1077,8 +1111,8 @@ export default function ImageRecreationPromptsPage() {
             Image recreation <span className="irp-highlight">prompts</span>
           </h1>
           <p className="irp-lede">
-            Build camera-real image-recreation prompts that stay anchored to the reference image,
-            preserve the original scene correctly, and explicitly block the most common prompt failures.
+            Build camera-real image-recreation prompts, anchor them to one primary photo, add extra
+            reference photos when needed, and send the whole set through FLUX.2 from one screen.
           </p>
         </div>
       </header>
@@ -1087,7 +1121,7 @@ export default function ImageRecreationPromptsPage() {
           <section className="irp-panel">
             <div className="irp-panel-header">
               <div>
-                <p className="irp-panel-kicker">Reference + preset</p>
+                <p className="irp-panel-kicker">Reference Photos + Preset</p>
                 <h2>Start from a real reference</h2>
               </div>
             </div>
@@ -1103,7 +1137,7 @@ export default function ImageRecreationPromptsPage() {
 
             <div className="irp-reference-panel">
               <div className="irp-reference-copy">
-                <span className="irp-inline-card-label">Reference image preview</span>
+                <span className="irp-inline-card-label">Primary reference photo</span>
               </div>
 
               <input
@@ -1117,15 +1151,50 @@ export default function ImageRecreationPromptsPage() {
 
               {referencePreviewUrl ? (
                 <div className="irp-reference-selected">
-                  <div className="irp-reference-stage">
-                    <img
-                      className="irp-reference-image"
-                      src={referencePreviewUrl}
-                      alt="Selected reference preview"
-                    />
-                    <div className="irp-reference-chip">
-                      {hasStagedReferenceCrop ? activeReferenceSummary : 'Original reference'}
+                  <div
+                    className={`irp-reference-stage-row${isDragging ? ' is-dragging' : ''}`}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                  >
+                    <div className="irp-reference-stage">
+                      <img
+                        className="irp-reference-image"
+                        src={referencePreviewUrl}
+                        alt="Selected reference preview"
+                      />
+                      <div className="irp-reference-chip">
+                        {hasStagedReferenceCrop ? activeReferenceSummary : 'Original reference'}
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      className="irp-reference-add-card"
+                      aria-label="Add extra reference photo"
+                      onClick={() => additionalReferenceInputRef.current?.click()}
+                    >
+                      <span className="irp-reference-add-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <path
+                            d="M12 5v14M5 12h14"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.9"
+                          />
+                        </svg>
+                      </span>
+                      <span className="irp-reference-add-copy">
+                        <strong>Add photo</strong>
+                        <span>
+                          {additionalReferenceImages.length
+                            ? `${additionalReferenceImages.length} extra photo${additionalReferenceImages.length === 1 ? '' : 's'} added`
+                            : 'Add another reference right next to the main one'}
+                        </span>
+                      </span>
+                    </button>
                   </div>
                   <div className="irp-reference-tools">
                     <div
@@ -1355,7 +1424,7 @@ export default function ImageRecreationPromptsPage() {
               label="Capture style"
               value={formState.captureStyle}
               options={CAPTURE_STYLE_OPTIONS}
-              helperText="Use this to steer the editorial tone, travel feel, documentary energy, or campaign polish of the shot."
+              helperText="Use this to steer the editorial tone, documentary mood, travel feel, interiors polish, food/product styling, cinematic atmosphere, brand/commercial finish, or leave the current treatment alone."
               onChange={(value) => updateForm('captureStyle', value)}
             />
             <SelectField
@@ -1410,6 +1479,20 @@ export default function ImageRecreationPromptsPage() {
               </div>
             </div>
 
+            <div className="irp-callout irp-callout--people" role="status">
+              <strong>Reference photos are live on this screen</strong>
+              <p>
+                Upload 1 primary photo, add up to 7 extra reference photos, and run one
+                multi-reference FLUX.2 edit from this page.
+              </p>
+              <div className="irp-block-summary" aria-label="Reference photo capabilities">
+                <span className="irp-block-pill">1 primary photo</span>
+                <span className="irp-block-pill">7 extra reference photos</span>
+                <span className="irp-block-pill">8 total via API</span>
+                <span className="irp-block-pill">Best fidelity: FLUX.2 Max</span>
+              </div>
+            </div>
+
             <div className="irp-control-stack">
               <div className="irp-control-row">
                 <SelectField
@@ -1417,7 +1500,7 @@ export default function ImageRecreationPromptsPage() {
                   label="FLUX model"
                   value={formState.modelId}
                   options={FLUX_MODEL_OPTIONS}
-                  helperText="Pro Preview tracks BFL’s newest pro edits, Pro stays pinned for reproducibility, and Flex is ready for deeper tuning later."
+                  helperText="Max gives the strongest multi-reference precision, Pro Preview tracks BFL’s newest pro edits, Pro stays pinned for reproducibility, and Flex adds deeper control tuning."
                   onChange={(value) => updateForm('modelId', value)}
                 />
               </div>
@@ -1480,18 +1563,13 @@ export default function ImageRecreationPromptsPage() {
             <div className="irp-supporting-panel">
               <div className="irp-supporting-header">
                 <div>
-                  <span className="irp-inline-card-label">Supporting reference images</span>
+                  <span className="irp-inline-card-label">Reference photos</span>
                   <p className="irp-supporting-copy">
-                    Add up to 7 extra images for pose, product, texture, object, or color guidance. The main reference above stays required.
+                    Add up to 7 extra reference photos for pose, product, texture, object, or color guidance.
+                    The primary photo above stays required, and each extra image is sent to FLUX as
+                    `input_image_2` through `input_image_8`.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="irp-btn irp-btn-secondary"
-                  onClick={() => additionalReferenceInputRef.current?.click()}
-                >
-                  Add supporting references
-                </button>
               </div>
 
               <input
@@ -1500,18 +1578,28 @@ export default function ImageRecreationPromptsPage() {
                 type="file"
                 accept="image/*"
                 multiple
-                aria-label="Add supporting reference images"
+                aria-label="Add reference photos"
                 onChange={handleAdditionalReferenceInputChange}
               />
 
               <div className="irp-preview-meta">
-                <span>{additionalReferenceImages.length} / 7 supporting references</span>
-                <span>FLUX.2 supports up to 8 total references via API</span>
+                <span>{additionalReferenceImages.length} / 7 extra reference photos</span>
+                <span>8 total photos via API on FLUX.2 Max, Pro, and Flex</span>
+                <span>
+                  {formState.modelId === 'flux-2-max'
+                    ? 'FLUX.2 Max is active for strongest reference fidelity'
+                    : 'Switch to FLUX.2 Max when reference fidelity matters most'}
+                </span>
               </div>
 
-              {additionalReferenceImages.length ? (
-                <div className="irp-supporting-grid">
-                  {additionalReferenceImages.map((image, index) => (
+              <div
+                className={`irp-supporting-grid${isSupportingDragging ? ' is-dragging' : ''}`}
+                onDrop={handleSupportingDrop}
+                onDragOver={handleSupportingDragOver}
+                onDragLeave={handleSupportingDragLeave}
+              >
+                {additionalReferenceImages.length ? (
+                  additionalReferenceImages.map((image, index) => (
                     <figure key={image.id} className="irp-supporting-card">
                       <figcaption className="irp-generated-label">
                         Supporting reference {index + 1}
@@ -1543,13 +1631,14 @@ export default function ImageRecreationPromptsPage() {
                       </div>
                       <span className="irp-supporting-file">{image.file.name}</span>
                     </figure>
-                  ))}
-                </div>
-              ) : (
-                <p className="irp-supporting-empty">
-                  No supporting references added yet. Use them when the main image needs extra pose, color, texture, or subject guidance.
-                </p>
-              )}
+                  ))
+                ) : (
+                  <p className="irp-supporting-empty">
+                    No extra reference photos added yet. Use them when the main image needs extra pose,
+                    color, texture, or subject guidance. Use the plus card next to the main reference photo.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
 
