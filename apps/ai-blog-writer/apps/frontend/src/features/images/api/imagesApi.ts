@@ -5,6 +5,8 @@
 import type { ImageVariantType } from '../utils/imageProcessing';
 import { fluxEditApi } from './flux-edit.api';
 import { generateAltTextApi } from './alt-text/generate-alt-text.api';
+import { postJson } from './client/imageApiClient';
+import { parseErrorMessage } from './errors/image-api-error.utils';
 import type {
   FluxEditImageResponse,
   GenerateSocialImageResponse,
@@ -32,10 +34,11 @@ export async function uploadImageVariants(
   variantFiles: { type: ImageVariantType; file: File }[],
   externalRef: string,
   altText: string,
-  locationRef: number,
+  locationRef: number | undefined,
   token: string,
   photographerCredit: string,
-  onProgress?: (progress: UploadProgress) => void
+  onProgress?: (progress: UploadProgress) => void,
+  tags?: number[]
 ): Promise<UploadImageResponse> {
   return uploadVariantsApi({
     variantFiles,
@@ -45,6 +48,7 @@ export async function uploadImageVariants(
     token,
     photographerCredit,
     onProgress,
+    tags,
   });
 }
 
@@ -113,6 +117,22 @@ export async function uploadSocialImage(
     token,
     photographerCredit,
   });
+}
+
+/**
+ * Resolve tag names to IDs, creating any that don't exist in Payload.
+ */
+export async function resolveTagsByName(
+  names: string[],
+  token: string,
+): Promise<{ id: number; name: string }[]> {
+  const response = await postJson('/images/tags/resolve', { names }, token)
+  if (!response.ok) {
+    const message = await parseErrorMessage(response, 'Failed to resolve tags')
+    throw new Error(message)
+  }
+  const data = await response.json() as { tags: { id: number; name: string }[] }
+  return data.tags
 }
 
 export async function generateFluxEditedImage(

@@ -40,6 +40,7 @@ import {
 } from './features/locationDocuments'
 import { KeywordIntelPage } from './features/keywordIntel'
 import { ImageRecreationPromptsPage } from './features/imageRecreationPrompts'
+import { BatchUploadPage } from './features/batchUpload'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -99,6 +100,9 @@ export default function App() {
 
               {/* Image Recreation Prompts */}
               <Route path="image-recreation-prompts" element={<ImageRecreationPromptsPage />} />
+
+              {/* Batch Image Upload */}
+              <Route path="batch-upload" element={<BatchUploadPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

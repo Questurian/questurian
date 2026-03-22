@@ -1,7 +1,9 @@
 """Generate image alt text using Vertex AI Gemini vision capabilities."""
 
+import asyncio
 import logging
 import os
+from functools import partial
 
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
@@ -31,23 +33,11 @@ def _ensure_initialized():
     _initialized = True
 
 
-def generate_alt_text(
-    image_bytes: bytes, content_type: str, narrative_focus: str | None = None
-) -> str:
-    """
-    Generate descriptive alt text for an image using Gemini vision.
-
-    Args:
-        image_bytes: Raw image file bytes.
-        content_type: MIME type of the image (e.g., 'image/jpeg', 'image/png').
-
-    Returns:
-        A concise alt text string describing the image.
-    """
+def _generate_sync(image_bytes: bytes, content_type: str, narrative_focus: str | None) -> str:
+    """Blocking Vertex AI call — runs in a thread pool to avoid blocking the event loop."""
     _ensure_initialized()
 
     model = GenerativeModel(DEFAULT_MODEL)
-
     image_part = Part.from_data(data=image_bytes, mime_type=content_type)
 
     prompt = (
@@ -71,9 +61,23 @@ def generate_alt_text(
         )
 
     logger.info("Generating alt text with %s", DEFAULT_MODEL)
-
     response = model.generate_content([image_part, prompt])
     alt_text = response.text.strip().strip('"').strip("'")
-
     logger.info("Generated alt text: %s", alt_text)
     return alt_text
+
+
+async def generate_alt_text(
+    image_bytes: bytes, content_type: str, narrative_focus: str | None = None
+) -> str:
+    """
+    Generate descriptive alt text for an image using Gemini vision.
+
+    Runs the blocking Vertex AI call in a thread pool so it doesn't
+    block the FastAPI event loop. Raises TimeoutError after 20 seconds.
+    """
+    loop = asyncio.get_running_loop()
+    return await asyncio.wait_for(
+        loop.run_in_executor(None, partial(_generate_sync, image_bytes, content_type, narrative_focus)),
+        timeout=20.0,
+    )

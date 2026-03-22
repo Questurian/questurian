@@ -296,3 +296,40 @@ export async function validateImageResolution(
     };
   }
 }
+
+/**
+ * Parse photographer credit from filename format: author_series-slug-number.ext
+ *   "questurian_night-life-57.jpg"  → "Questurian"
+ *   "erik-odiin_airport-1.jpg"      → "Erik Odiin"
+ *   "maria_golden-hour-12.jpg"      → "Maria"
+ */
+export function parsePhotographerFromFilename(filename: string): string | null {
+  const base = filename.replace(/\.[^.]+$/, '');
+  if (!base.includes('_')) return null;
+  const authorSlug = base.split('_')[0];
+  if (!authorSlug) return null;
+  return authorSlug
+    .split('-')
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(' ');
+}
+
+/**
+ * Parse series slug from new filename format: author_series-slug-number.ext
+ *   "questurian_night-life-57.jpg"  → "night-life"
+ *   "erik-odiin_airport-1.jpg"      → "airport"
+ *   "juan-garcia-1.jpg"             → null (legacy format, no underscore)
+ */
+export function parseSeriesSlugFromFilename(filename: string): string | null {
+  const base = filename.replace(/\.[^.]+$/, '');
+  if (!base.includes('_')) return null;
+
+  const seriesPart = base.split('_')[1]; // e.g. "night-life-57"
+  if (!seriesPart) return null;
+
+  const parts = seriesPart.split('-');
+  const last = parts[parts.length - 1];
+  if (!/^\d+$/.test(last)) return null;
+
+  return parts.slice(0, -1).join('-'); // "night-life"
+}

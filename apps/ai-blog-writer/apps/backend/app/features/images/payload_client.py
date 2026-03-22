@@ -217,6 +217,7 @@ class PayloadClient:
         photographer_credit: str = "",
         media_set_id: Optional[str] = None,
         location_ref: Optional[int] = None,
+        tags: Optional[list] = None,
     ) -> str:
         """Upload a single image variant to Payload CMS media-assets."""
         url = f"{self.api_url}/api/media-assets"
@@ -258,6 +259,8 @@ class PayloadClient:
                 payload_obj['mediaSet'] = media_set_value
             if location_ref is not None:
                 payload_obj['locationRef'] = location_ref
+            if tags:
+                payload_obj['tags'] = tags
 
             payload_json = json.dumps(payload_obj)
             data = {
@@ -415,6 +418,7 @@ class PayloadClient:
         alt_text: str,
         external_ref: str,
         location_ref: Optional[int] = None,
+        tags: Optional[list] = None,
     ) -> str:
         """Create a MediaSet in Payload CMS."""
         url = f"{self.api_url}/api/media-sets"
@@ -428,6 +432,8 @@ class PayloadClient:
         }
         if location_ref is not None:
             payload['locationRef'] = location_ref
+        if tags:
+            payload['tags'] = tags
 
         logger.info("%s → %s | payload=%s", step, url, json.dumps(payload))
 
@@ -794,6 +800,59 @@ class PayloadClient:
             found.get('id') if found else "not found",
         )
         return found
+
+    async def find_or_create_tag(self, name: str) -> int:
+        """Find a tag by name in Payload, creating it if it doesn't exist. Returns tag ID."""
+        url = f"{self.api_url}/api/article-tags"
+        headers = self._get_headers()
+        step = f"find_or_create_tag({name!r})"
+
+        # Search by name first
+        params = {"where[name][equals]": name, "limit": 1}
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, headers=headers, params=params)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(step=step, message="Cannot connect to Payload CMS",
+                                     request_url=url, detail=str(e))
+        except httpx.TimeoutException:
+            raise PayloadUploadError(step=step, message="Payload CMS request timed out", request_url=url)
+
+        if response.status_code >= 400:
+            raise PayloadUploadError(step=step, message="Failed to search tags",
+                                     status_code=response.status_code,
+                                     response_body=response.text, request_url=url)
+
+        docs = response.json().get("docs", [])
+        if docs:
+            tag_id = docs[0].get("id")
+            logger.info("%s → found existing tag id=%s", step, tag_id)
+            return int(tag_id)
+
+        # Not found — create it
+        json_headers = {**headers, "Content-Type": "application/json"}
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(url, headers=json_headers, json={"name": name})
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(step=step, message="Cannot connect to Payload CMS",
+                                     request_url=url, detail=str(e))
+        except httpx.TimeoutException:
+            raise PayloadUploadError(step=step, message="Payload CMS request timed out", request_url=url)
+
+        if response.status_code >= 400:
+            parsed = _parse_payload_error(response.text)
+            raise PayloadUploadError(step=step, message="Failed to create tag",
+                                     status_code=response.status_code,
+                                     response_body=response.text, request_url=url, detail=parsed)
+
+        tag_id = response.json().get("doc", {}).get("id")
+        if not tag_id:
+            raise PayloadUploadError(step=step, message="Tag created but no ID returned",
+                                     response_body=response.text, request_url=url)
+
+        logger.info("%s → created new tag id=%s", step, tag_id)
+        return int(tag_id)
 
     async def delete_media_asset(self, asset_id: str) -> None:
         """Delete a media-asset by ID."""

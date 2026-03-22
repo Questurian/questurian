@@ -1,6 +1,7 @@
 """API routes for image processing and upload."""
 
 import asyncio
+import json
 import logging
 import os
 import re
@@ -368,16 +369,58 @@ def _validate_variant_types(variant_types: List[str]) -> None:
         )
 
 
-def _validate_location_ref(location_ref: int) -> int:
-    """Validate location reference for image metadata."""
-    if location_ref <= 0:
+def _normalize_tag_name(name: str) -> str:
+    """Normalize user input to a valid Payload tag name (kebab-case)."""
+    normalized = name.lower().strip()
+    normalized = re.sub(r'[^a-z0-9]+', '-', normalized)
+    return normalized.strip('-')
+
+
+def _validate_location_ref(location_ref: int) -> Optional[int]:
+    """Validate location reference for image metadata. Returns None when 0 (no location)."""
+    if location_ref < 0:
         _raise_http_error(
             status_code=400,
-            message="location_ref must be a positive integer",
+            message="location_ref must be a non-negative integer (0 = no location)",
             step="validate_location_ref",
             location_ref=location_ref,
         )
-    return location_ref
+    return location_ref if location_ref > 0 else None
+
+
+def _parse_tag_ids(tags_json: Optional[str]) -> List[int]:
+    """Parse JSON-encoded list of tag IDs. Returns empty list on None or parse failure."""
+    if not tags_json:
+        return []
+    try:
+        parsed = json.loads(tags_json)
+    except (json.JSONDecodeError, ValueError):
+        _raise_http_error(
+            status_code=400,
+            message="tags must be a JSON-encoded list of integer IDs",
+            step="parse_tag_ids",
+            tags=tags_json,
+        )
+    if not isinstance(parsed, list):
+        _raise_http_error(
+            status_code=400,
+            message="tags must be a JSON array",
+            step="parse_tag_ids",
+        )
+    result = []
+    for item in parsed:
+        if isinstance(item, int) and item > 0:
+            result.append(item)
+        elif isinstance(item, float) and item.is_integer() and item > 0:
+            result.append(int(item))
+        else:
+            _raise_http_error(
+                status_code=400,
+                message="Each tag ID must be a positive integer",
+                step="parse_tag_ids",
+                invalid_value=item,
+            )
+    return result
 
 
 def _validate_photographer_credit(photographer_credit: str) -> str:
@@ -961,6 +1004,33 @@ async def search_unsplash_images(
     )
 
 
+class ResolveTagsRequest(BaseModel):
+    names: List[str] = Field(..., description="Tag names to find or create")
+
+
+@router.post("/tags/resolve")
+async def resolve_tags(
+    request: ResolveTagsRequest,
+    authorization: Optional[str] = Header(None),
+):
+    """Find or create tags by name. Returns IDs for all provided names."""
+    jwt_token = _extract_bearer_token(authorization)
+    client = PayloadClient(jwt_token)
+
+    results = []
+    for raw_name in request.names:
+        normalized = _normalize_tag_name(raw_name)
+        if not normalized:
+            continue
+        try:
+            tag_id = await client.find_or_create_tag(normalized)
+            results.append({"id": tag_id, "name": normalized})
+        except PayloadUploadError as e:
+            raise HTTPException(status_code=502, detail=e.to_dict())
+
+    return {"tags": results}
+
+
 @router.post("/upload")
 async def upload_image(
     file: UploadFile = File(...),
@@ -1217,8 +1287,12 @@ async def upload_image_variants(
         description="Photographer credit for uploaded assets",
     ),
     location_ref: int = Form(
-        ...,
-        description="Payload location id to attach to uploaded images",
+        0,
+        description="Payload location id to attach to uploaded images (0 = no location)",
+    ),
+    tags: Optional[str] = Form(
+        None,
+        description="JSON-encoded list of integer tag IDs, e.g. '[1,2,3]'",
     ),
     authorization: Optional[str] = Header(None),
 ) -> JSONResponse:
@@ -1232,6 +1306,7 @@ async def upload_image_variants(
     jwt_token = _extract_bearer_token(authorization)
     valid_location_ref = _validate_location_ref(location_ref)
     valid_photographer_credit = _validate_photographer_credit(photographer_credit)
+    tag_ids = _parse_tag_ids(tags)
 
     if len(variants) != len(variant_types):
         _raise_http_error(
@@ -1305,6 +1380,7 @@ async def upload_image_variants(
                 alt_text=alt_text,
                 external_ref=external_ref,
                 location_ref=valid_location_ref,
+                tags=tag_ids or None,
             )
 
         for variant_type in UPLOAD_ORDER:
@@ -1327,6 +1403,7 @@ async def upload_image_variants(
                 photographer_credit=valid_photographer_credit,
                 media_set_id=media_set_id,
                 location_ref=valid_location_ref,
+                tags=tag_ids or None,
             )
             if not asset_id:
                 _raise_http_error(
@@ -1826,10 +1903,16 @@ async def generate_alt_text_endpoint(
     content_type = file.content_type or "image/jpeg"
 
     try:
-        alt_text = generate_alt_text(
+        alt_text = await generate_alt_text(
             image_bytes=content,
             content_type=content_type,
             narrative_focus=narrative_focus.strip() or None,
+        )
+    except TimeoutError:
+        _raise_http_error(
+            status_code=504,
+            message="Alt text generation timed out",
+            step="generate_alt_text",
         )
     except HTTPException:
         raise

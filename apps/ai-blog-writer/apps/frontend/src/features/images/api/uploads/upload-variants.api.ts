@@ -7,10 +7,11 @@ type UploadVariantsParams = {
   variantFiles: { type: ImageVariantType; file: File }[];
   externalRef: string;
   altText: string;
-  locationRef: number;
+  locationRef?: number;
   token: string;
   photographerCredit: string;
   onProgress?: (progress: UploadProgress) => void;
+  tags?: number[];
 };
 
 export async function uploadVariantsApi({
@@ -21,6 +22,7 @@ export async function uploadVariantsApi({
   token,
   photographerCredit,
   onProgress,
+  tags,
 }: UploadVariantsParams): Promise<UploadImageResponse> {
   onProgress?.({
     status: 'uploading',
@@ -38,7 +40,12 @@ export async function uploadVariantsApi({
   formData.append('external_ref', externalRef);
   formData.append('alt_text', altText);
   formData.append('photographer_credit', photographerCredit.trim());
-  formData.append('location_ref', String(locationRef));
+  if (locationRef && locationRef > 0) {
+    formData.append('location_ref', String(locationRef));
+  }
+  if (tags && tags.length > 0) {
+    formData.append('tags', JSON.stringify(tags));
+  }
 
   onProgress?.({
     status: 'uploading',

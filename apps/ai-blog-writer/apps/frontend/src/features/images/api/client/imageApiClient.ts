@@ -3,7 +3,8 @@ export const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:40
 export async function postFormData(
   path: string,
   formData: FormData,
-  token?: string
+  token?: string,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const headers: Record<string, string> = {};
 
@@ -15,6 +16,7 @@ export async function postFormData(
     method: 'POST',
     headers,
     body: formData,
+    signal,
   });
 }
 
