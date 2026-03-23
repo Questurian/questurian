@@ -111,6 +111,26 @@ export default function LandingPage() {
           </span>
         </Link>
 
+        <Link to="/batch-image-recreation" className="landing-card landing-card--batch-image-recreation">
+          <div className="landing-card-icon">
+            <svg className="landing-card-main-icon" aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="3" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="13" y="3" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="2" y="14" width="9" height="7" rx="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="13" y="14" width="9" height="7" rx="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M7 7l1.5 1.5L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h2>Batch Image Recreation</h2>
+          <p>Drop multiple reference photos, pick a FLUX.2 model, write one prompt — generate a single recreated image using all references.</p>
+          <span className="landing-card-action">
+            Open Tool
+            <svg className="landing-card-action-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+        </Link>
+
         <Link to="/single-type-listicles" className="landing-card landing-card--single-listicles">
           <div className="landing-card-icon">
             <svg className="landing-card-main-icon" aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

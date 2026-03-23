@@ -318,7 +318,8 @@ export function parseMarkdownToBlocks(markdown: string): ContentBlock[] {
 export function attachEditorialBlocksToContentBlocks(
   blocks: ContentBlock[],
   ranges: Array<{ id: string; startLine: number; endLine: number }>,
-  editorialBlocks: EditorialBlock[]
+  editorialBlocks: EditorialBlock[],
+  respectNullPlacement = false
 ): EditorialBlock[] {
   if (!editorialBlocks.length) return []
 
@@ -332,6 +333,11 @@ export function attachEditorialBlocksToContentBlocks(
   }
 
   return normalizeEditorialBlocks(editorialBlocks).map((block) => {
+    // Keep explicit "before all content" placement when caller signals existing positions are trusted.
+    if (respectNullPlacement && block.afterBlockId === null) {
+      return block
+    }
+
     if (
       block.afterBlockId
       && blocks.some((contentBlock) => contentBlock.id === block.afterBlockId)

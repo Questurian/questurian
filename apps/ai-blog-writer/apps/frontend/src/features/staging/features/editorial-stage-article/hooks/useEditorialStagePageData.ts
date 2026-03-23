@@ -99,7 +99,8 @@ export function useEditorialStagePageData({
       parsedDetails.ranges,
       hasMeaningfulExistingPlacement
         ? existingEditorialBlocks
-        : fallbackEditorialBlocks
+        : fallbackEditorialBlocks,
+      hasMeaningfulExistingPlacement
     )
 
     let payloadMetadataPatch: Partial<StagedArticle> = {}
@@ -339,7 +340,7 @@ export function useEditorialStagePageData({
         setError(null)
         const [locationsRes, mediaRes] = await Promise.all([
           fetchLocations(token, { limit: 200 }),
-          fetchMediaAssets(token, { limit: 50, mimeType: 'image/' }),
+          fetchMediaAssets(token, { limit: 200, mimeType: 'image/' }),
         ])
 
         setLocations(locationsRes.docs || [])

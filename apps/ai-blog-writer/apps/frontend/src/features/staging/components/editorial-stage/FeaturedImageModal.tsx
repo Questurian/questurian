@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Masonry from 'react-masonry-css'
 import { ImageUpload, type UploadImageResponse } from '../../../../features/images'
 import type {
@@ -149,6 +149,33 @@ export function FeaturedImageModal({
     getImageUrl,
   } = actions
   const modalTitleId = 'featured-image-modal-title'
+  const PAGE_SIZE = 20
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  // Reset display count when search changes or tab switches to payload
+  useEffect(() => {
+    setDisplayCount(PAGE_SIZE)
+  }, [imageSearch, featuredImageSource])
+
+  // IntersectionObserver — load more when sentinel enters the modal's scroll container
+  useEffect(() => {
+    if (featuredImageSource !== 'payload') return
+    const el = sentinelRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setDisplayCount((prev) => prev + PAGE_SIZE)
+        }
+      },
+      { root: modalRef.current, threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [featuredImageSource, filteredFeaturedImageAssets.length, displayCount])
 
   useEffect(() => {
     if (!show || publishedToPayload) return
@@ -168,6 +195,7 @@ export function FeaturedImageModal({
   return (
     <div className="stage-article-modal-overlay" role="presentation" onClick={onClose}>
       <div
+        ref={modalRef}
         className="stage-article-modal"
         role="dialog"
         aria-modal="true"
@@ -241,34 +269,35 @@ export function FeaturedImageModal({
             </div>
 
             <div className="stage-article-modal-grid">
-              {filteredFeaturedImageAssets
-                .map(img => (
-                  <button
-                    key={img.id}
-                    type="button"
-                    className={`stage-article-modal-image ${selectedFeaturedImage?.id === img.id ? 'selected' : ''}`}
-                    onClick={() => {
-                      const preferredAsset = findPreferredVariantAsset(
-                        img.id,
-                        FEATURED_IMAGE_VARIANT
-                      )
-                      if (!preferredAsset) return
-                      updateStagedArticle({ featuredImageId: preferredAsset.id })
-                      onClose()
-                    }}
-                  >
-                    <img
-                      src={getImageUrl(img)}
-                      alt={getMediaAssetAltText(img) || img.filename}
-                      loading="lazy"
-                    />
-                    <span className="stage-article-modal-image-name">{img.filename}</span>
-                    {selectedFeaturedImage?.id === img.id && (
-                      <div className="stage-article-modal-selected-badge">✓</div>
-                    )}
-                  </button>
-                ))}
+              {filteredFeaturedImageAssets.slice(0, displayCount).map(img => (
+                <button
+                  key={img.id}
+                  type="button"
+                  className={`stage-article-modal-image ${selectedFeaturedImage?.id === img.id ? 'selected' : ''}`}
+                  onClick={() => {
+                    // img is already an editorial-variant asset (from filteredFeaturedImageAssets).
+                    // findPreferredVariantAsset is a best-effort lookup; fall back to img itself.
+                    const resolvedAsset = findPreferredVariantAsset(img.id, FEATURED_IMAGE_VARIANT) ?? img
+                    updateStagedArticle({ featuredImageId: resolvedAsset.id })
+                    onClose()
+                  }}
+                >
+                  <img
+                    src={getImageUrl(img)}
+                    alt={getMediaAssetAltText(img) || img.filename}
+                    loading="lazy"
+                  />
+                  <span className="stage-article-modal-image-name">{img.filename}</span>
+                  {selectedFeaturedImage?.id === img.id && (
+                    <div className="stage-article-modal-selected-badge">✓</div>
+                  )}
+                </button>
+              ))}
             </div>
+
+            {displayCount < filteredFeaturedImageAssets.length && (
+              <div ref={sentinelRef} style={{ height: '2px', margin: '0.5rem 0' }} />
+            )}
 
             {filteredFeaturedImageAssets.length === 0 && (
               <div className="stage-article-modal-empty">

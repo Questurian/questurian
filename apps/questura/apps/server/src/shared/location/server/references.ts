@@ -3,6 +3,7 @@ import type { CollectionSlug, Payload } from 'payload'
 type LocationReferenceTarget = {
   slug: CollectionSlug
   label: string
+  hasSharedNeighborhoods?: boolean
 }
 
 export const LOCATION_REFERENCE_TARGETS: LocationReferenceTarget[] = [
@@ -12,9 +13,9 @@ export const LOCATION_REFERENCE_TARGETS: LocationReferenceTarget[] = [
   { slug: 'accommodations', label: 'Accommodations' },
   { slug: 'nightlife', label: 'Nightlife' },
   { slug: 'attractions', label: 'Attractions' },
-  { slug: 'articles', label: 'Articles' },
-  { slug: 'single-type-listicles', label: 'Single Type Listicles' },
-  { slug: 'listicle-itineraries', label: 'Listicle Itineraries' },
+  { slug: 'articles', label: 'Articles', hasSharedNeighborhoods: true },
+  { slug: 'single-type-listicles', label: 'Single Type Listicles', hasSharedNeighborhoods: true },
+  { slug: 'listicle-itineraries', label: 'Listicle Itineraries', hasSharedNeighborhoods: true },
 ]
 
 export const findLocationReferences = async (
@@ -58,20 +59,22 @@ export const findLocationReferences = async (
         references.add(target.label)
       }
 
-      const bySharedNeighborhood = await payload.find({
-        collection: target.slug,
-        where: {
-          sharedNeighborhoods: {
-            in: [locationId],
+      if (target.hasSharedNeighborhoods) {
+        const bySharedNeighborhood = await payload.find({
+          collection: target.slug,
+          where: {
+            sharedNeighborhoods: {
+              in: [locationId],
+            },
           },
-        },
-        limit: 1,
-        depth: 0,
-        overrideAccess: true,
-      })
+          limit: 1,
+          depth: 0,
+          overrideAccess: true,
+        })
 
-      if (bySharedNeighborhood.totalDocs > 0) {
-        references.add(target.label)
+        if (bySharedNeighborhood.totalDocs > 0) {
+          references.add(target.label)
+        }
       }
     }
   }

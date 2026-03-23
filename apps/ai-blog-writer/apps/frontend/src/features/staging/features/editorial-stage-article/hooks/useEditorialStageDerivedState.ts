@@ -65,12 +65,15 @@ export function useEditorialStageDerivedState({
   )
 
   const selectedFeaturedImage = useMemo(
-    () => (
-      stagedArticle.featuredImageId
-        ? findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
-        : null
-    ),
-    [stagedArticle.featuredImageId, findPreferredVariantAsset]
+    () => {
+      if (!stagedArticle.featuredImageId) return null
+      return (
+        findPreferredVariantAsset(stagedArticle.featuredImageId, FEATURED_IMAGE_VARIANT)
+        ?? mediaAssets.find((a) => a.id === stagedArticle.featuredImageId)
+        ?? null
+      )
+    },
+    [stagedArticle.featuredImageId, findPreferredVariantAsset, mediaAssets]
   )
   const hasFeaturedImageSelection = Boolean(stagedArticle.featuredImageId)
 

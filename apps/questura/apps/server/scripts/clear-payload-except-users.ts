@@ -77,7 +77,7 @@ async function main() {
   const resolvedConfig = await config
   const userCollection =
     typeof resolvedConfig.admin?.user === 'string' ? resolvedConfig.admin.user : 'users'
-  const preservedCollections = new Set([userCollection, 'currencies'])
+  const preservedCollections = new Set([userCollection, 'currencies', 'locations'])
 
   const allCollections = (resolvedConfig.collections ?? [])
     .map((collection) => collection.slug)

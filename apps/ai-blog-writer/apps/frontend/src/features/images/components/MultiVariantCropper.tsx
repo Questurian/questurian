@@ -147,7 +147,6 @@ export function MultiVariantCropper({
         file.name,
         fileNamePrefix
       );
-      setErrorMsg('Uploading...');
       onConfirm(variantFiles);
     } catch (error) {
       console.error('Error processing variants:', error);

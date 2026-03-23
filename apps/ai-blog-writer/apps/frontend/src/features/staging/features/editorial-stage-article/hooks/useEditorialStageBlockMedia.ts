@@ -225,7 +225,8 @@ export function useEditorialStageBlockMedia({
   }, [])
 
   const findPreferredVariantAsset = useCallback((assetId: number, preferredVariant: MediaVariant): MediaAsset | null => {
-    const selectedAsset = mediaAssets.find((asset) => asset.id === assetId)
+    const allKnownAssets = [...mediaAssets, ...imgBlockAssets]
+    const selectedAsset = allKnownAssets.find((asset) => asset.id === assetId)
     if (!selectedAsset) return null
 
     const mediaSetId = getRelationshipId(selectedAsset.mediaSet)
@@ -233,7 +234,7 @@ export function useEditorialStageBlockMedia({
       return selectedAsset
     }
 
-    const preferred = mediaAssets.find((asset) => {
+    const preferred = allKnownAssets.find((asset) => {
       const candidateMediaSetId = getRelationshipId(asset.mediaSet)
       return candidateMediaSetId !== null
         && String(candidateMediaSetId) === String(mediaSetId)
@@ -241,7 +242,7 @@ export function useEditorialStageBlockMedia({
     })
 
     return preferred || selectedAsset
-  }, [mediaAssets])
+  }, [mediaAssets, imgBlockAssets])
 
   const runBlockUnsplashSearch = useCallback(async () => {
     setIsSearchingUnsplashBlock(true)
