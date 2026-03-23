@@ -218,7 +218,6 @@ export function buildStandardArticleStructuredDataTemplate(input: StandardArticl
   const articleImageUrl = normalizeAbsoluteUrl(stagedArticle.seoSection?.openGraph.imageUrl || '')
     || normalizeAbsoluteUrl(stagedArticle.seoSection?.twitterCard.imageUrl || '')
   const schemaDateModified = toSchemaDate(stagedArticle.payloadUpdatedAt)
-    || toSchemaDate(stagedArticle.updatedAt)
     || toSchemaDate(stagedArticle.createdAt)
   const schemaDatePublished = stagedArticle.payloadStatus === 'published'
     ? toSchemaDate(stagedArticle.payloadPublishedAt)

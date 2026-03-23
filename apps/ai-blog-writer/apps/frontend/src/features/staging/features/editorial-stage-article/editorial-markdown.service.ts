@@ -1,7 +1,12 @@
 import type { CreateArticlePayload } from '../../api'
 import type { EditorialBlock } from '../../types'
 import {
+  EDITORIAL_MAX_FAQ_ITEMS,
   EDITORIAL_MAX_TAKEAWAYS,
+  FAQ_COMPONENT,
+  FAQ_LABEL,
+  HIGHLIGHT_CALLOUT_COMPONENT,
+  HIGHLIGHT_CALLOUT_LABEL,
   IN_THE_KNOW_COMPONENT,
   IN_THE_KNOW_LABEL,
   KEY_TAKEAWAYS_COMPONENT,
@@ -12,7 +17,17 @@ import {
 import type { SupportedEditorialComponent } from './types'
 
 export type PayloadContentBlock = NonNullable<CreateArticlePayload['contentBlocks']>[number]
-export type SupportedPayloadBlockType = 'key-takeaway' | 'pull-quote' | 'in-the-know'
+export type SupportedPayloadBlockType =
+  | 'key-takeaway'
+  | 'pull-quote'
+  | 'in-the-know'
+  | 'highlight-callout'
+  | 'faq'
+
+export type FAQItem = {
+  question: string
+  answer: string
+}
 
 export type EditorialPublishValidation =
   | {
@@ -94,11 +109,17 @@ export function extractEditorialBlocks(markdown: string): {
       continue
     }
 
+    const blockMarkdown = blockLines.join('\n').trim()
+    if (!getEditorialBlockBody(blockMarkdown)) {
+      index = cursor + 1
+      continue
+    }
+
     editorialBlocks.push({
       id: `editorial_${index}_${editorialBlocks.length}`,
       component,
       label,
-      markdown: blockLines.join('\n').trim(),
+      markdown: blockMarkdown,
       anchorLine: bodyLines.length,
       afterBlockId: null,
       placeAfterImage: false,
@@ -162,6 +183,26 @@ export function normalizeEditorialComponentKey(component: string): string {
   ) {
     return IN_THE_KNOW_COMPONENT
   }
+  if (
+    normalized === 'highlight_callout'
+    || normalized === 'highlight'
+    || normalized === 'highlight_box'
+    || normalized === 'highlight_callout_box'
+    || normalized === 'highlightcallout'
+  ) {
+    return HIGHLIGHT_CALLOUT_COMPONENT
+  }
+  if (
+    normalized === 'faq_block'
+    || normalized === 'faq'
+    || normalized === 'faqs'
+    || normalized === 'frequently_asked_questions'
+    || normalized === 'qa_block'
+    || normalized === 'q_and_a_block'
+    || normalized === 'qanda_block'
+  ) {
+    return FAQ_COMPONENT
+  }
   return normalized
 }
 
@@ -204,10 +245,17 @@ function parseEditorialFrame(
       return
     }
 
-    const labelMatch = line.match(/^\[!EDITORIAL-BLOCK-LABEL\|([^\]]+)\]$/i)
+    const labelMatch = line.match(/^\[!EDITORIAL-BLOCK-LABEL\|([^\]]*)\]\s*(.*)$/i)
     if (labelMatch) {
       hasLabelMarker = true
-      labelFromMarker = labelMatch[1].trim()
+      const capturedLabel = labelMatch[1].trim()
+      if (capturedLabel) {
+        labelFromMarker = capturedLabel
+      }
+      const trailingText = labelMatch[2]?.trim()
+      if (trailingText) {
+        bodyLines.push(trailingText)
+      }
       return
     }
 
@@ -316,6 +364,71 @@ export function buildCanonicalInTheKnowMarkdown(
   ].join('\n')
 }
 
+export function buildCanonicalHighlightCalloutMarkdown(
+  label: string,
+  rawText: string,
+  options?: {
+    useFallbackText?: boolean
+  }
+): string {
+  const normalizedLabel = label.trim() || HIGHLIGHT_CALLOUT_LABEL
+  const useFallbackText = options?.useFallbackText ?? true
+  const text = rawText.trim()
+  const normalizedText = text || (useFallbackText ? 'Add highlight text before publishing.' : '')
+
+  return [
+    `> [!EDITORIAL-BLOCK-START|${HIGHLIGHT_CALLOUT_COMPONENT}]`,
+    `> [!EDITORIAL-BLOCK-LABEL|${normalizedLabel}]`,
+    `> [!EDITORIAL-BOX|${HIGHLIGHT_CALLOUT_COMPONENT}]`,
+    `> **Component:** ${normalizedLabel}`,
+    ...normalizedText.split('\n').map((line) => `> ${line}`),
+    `> [!EDITORIAL-BLOCK-END|${HIGHLIGHT_CALLOUT_COMPONENT}]`,
+  ].join('\n')
+}
+
+export function buildCanonicalFAQMarkdown(
+  label: string,
+  rawItems: FAQItem[],
+  options?: {
+    useFallbackItems?: boolean
+  }
+): string {
+  const normalizedLabel = label.trim() || FAQ_LABEL
+  const useFallbackItems = options?.useFallbackItems ?? true
+  const normalizedItems = rawItems
+    .map((item) => ({
+      question: item.question.trim(),
+      answer: item.answer.trim(),
+    }))
+    .filter((item) => item.question.length > 0 || item.answer.length > 0)
+
+  const items = useFallbackItems
+    ? normalizedItems.length >= 2
+      ? normalizedItems.slice(0, EDITORIAL_MAX_FAQ_ITEMS)
+      : [
+          ...normalizedItems,
+          ...Array.from({ length: Math.max(0, 2 - normalizedItems.length) }, (_, index) => ({
+            question: `Add FAQ question ${normalizedItems.length + index + 1}?`,
+            answer: 'Add answer before publishing.',
+          })),
+        ].slice(0, EDITORIAL_MAX_FAQ_ITEMS)
+    : normalizedItems.length > 0
+      ? normalizedItems.slice(0, EDITORIAL_MAX_FAQ_ITEMS)
+      : [{ question: '', answer: '' }, { question: '', answer: '' }]
+
+  return [
+    `> [!EDITORIAL-BLOCK-START|${FAQ_COMPONENT}]`,
+    `> [!EDITORIAL-BLOCK-LABEL|${normalizedLabel}]`,
+    `> [!EDITORIAL-BOX|${FAQ_COMPONENT}]`,
+    `> **Component:** ${normalizedLabel}`,
+    ...items.flatMap((item) => ([
+      `> **Q:** ${item.question}`,
+      `> A: ${item.answer}`,
+    ])),
+    `> [!EDITORIAL-BLOCK-END|${FAQ_COMPONENT}]`,
+  ].join('\n')
+}
+
 export function buildDefaultEditorialTemplate(
   component: SupportedEditorialComponent
 ): {
@@ -333,6 +446,20 @@ export function buildDefaultEditorialTemplate(
     return {
       label: IN_THE_KNOW_LABEL,
       markdown: buildCanonicalInTheKnowMarkdown(IN_THE_KNOW_LABEL, ''),
+    }
+  }
+
+  if (component === HIGHLIGHT_CALLOUT_COMPONENT) {
+    return {
+      label: HIGHLIGHT_CALLOUT_LABEL,
+      markdown: buildCanonicalHighlightCalloutMarkdown(HIGHLIGHT_CALLOUT_LABEL, ''),
+    }
+  }
+
+  if (component === FAQ_COMPONENT) {
+    return {
+      label: FAQ_LABEL,
+      markdown: buildCanonicalFAQMarkdown(FAQ_LABEL, []),
     }
   }
 
@@ -455,6 +582,187 @@ export function parseInTheKnowEditorialBlock(block: EditorialBlock): {
   }
 }
 
+export function parseHighlightCalloutEditorialBlock(block: EditorialBlock): {
+  label: string
+  text: string
+  hasStartMarker: boolean
+  hasEndMarker: boolean
+  hasLabelMarker: boolean
+  hasBoxMarker: boolean
+  hasComponentLine: boolean
+  correctedMarkdown: string
+} {
+  const frame = parseEditorialFrame(block, HIGHLIGHT_CALLOUT_COMPONENT)
+  const text = frame.bodyLines
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+    .trim()
+  const label = frame.label || HIGHLIGHT_CALLOUT_LABEL
+  const correctedMarkdown = buildCanonicalHighlightCalloutMarkdown(label, text)
+
+  return {
+    label,
+    text,
+    hasStartMarker: frame.hasStartMarker,
+    hasEndMarker: frame.hasEndMarker,
+    hasLabelMarker: frame.hasLabelMarker,
+    hasBoxMarker: frame.hasBoxMarker,
+    hasComponentLine: frame.hasComponentLine,
+    correctedMarkdown,
+  }
+}
+
+function normalizeFAQContentLine(line: string): string {
+  return line
+    .trim()
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^\d+\.\s+/, '')
+    .replace(/^#{1,6}\s+/, '')
+    .trim()
+}
+
+function stripFAQInlineFormatting(line: string): string {
+  return line
+    .trim()
+    .replace(/^\*\*((?:q|question|a|answer)(?:\s*\d+)?)\s*:\*\*\s*/i, '$1: ')
+    .replace(/^__((?:q|question|a|answer)(?:\s*\d+)?)\s*:__\s*/i, '$1: ')
+    .replace(/^\*\*(.+)\*\*$/, '$1')
+    .replace(/^__(.+)__$/, '$1')
+    .trim()
+}
+
+function extractFAQQuestionText(line: string): string | null {
+  const normalizedLine = stripFAQInlineFormatting(normalizeFAQContentLine(line))
+  const labeledQuestion = normalizedLine.match(
+    /^(?:q|question)(?:\s*\d+)?\s*:\s*(.+)$/i
+  )
+  if (labeledQuestion) {
+    return labeledQuestion[1].trim() || null
+  }
+  return /\?$/.test(normalizedLine) ? normalizedLine : null
+}
+
+function extractFAQAnswerText(line: string): string | null {
+  const normalizedLine = stripFAQInlineFormatting(normalizeFAQContentLine(line))
+  const labeledAnswer = normalizedLine.match(
+    /^(?:a|answer)(?:\s*\d+)?\s*:\s*(.+)$/i
+  )
+  if (labeledAnswer) {
+    return labeledAnswer[1].trim() || null
+  }
+  return null
+}
+
+export function parseFAQEditorialBlock(block: EditorialBlock): {
+  label: string
+  items: FAQItem[]
+  hasStartMarker: boolean
+  hasEndMarker: boolean
+  hasLabelMarker: boolean
+  hasBoxMarker: boolean
+  hasComponentLine: boolean
+  correctedMarkdown: string
+} {
+  const frame = parseEditorialFrame(block, FAQ_COMPONENT)
+  const lines = frame.bodyLines
+    .map(normalizeFAQContentLine)
+    .filter((line) => (
+      Boolean(line)
+      && !/^(placement|why)\s*:/i.test(line)
+      && !/^\*\*(placement|why):\*\*/i.test(line)
+    ))
+
+  let items: FAQItem[] = []
+  let currentQuestion = ''
+  let currentAnswerLines: string[] = []
+
+  const pushCurrentItem = () => {
+    const question = currentQuestion.trim()
+    const answer = currentAnswerLines.join(' ').trim()
+    if (question && answer) {
+      items.push({ question, answer })
+    }
+    currentQuestion = ''
+    currentAnswerLines = []
+  }
+
+  lines.forEach((line) => {
+    const normalizedLine = line.replace(/^\s*>\s?/, '').trim()
+    const normalizedText = stripFAQInlineFormatting(normalizedLine)
+    const questionText = extractFAQQuestionText(normalizedLine)
+    if (questionText) {
+      pushCurrentItem()
+      currentQuestion = questionText
+      return
+    }
+
+    const answerText = extractFAQAnswerText(normalizedLine)
+    if (answerText) {
+      if (!currentQuestion) {
+        currentQuestion = 'Add FAQ question?'
+      }
+      currentAnswerLines.push(answerText)
+      return
+    }
+
+    const sameLineQA = normalizedText.match(/^(.+\?)\s+(.+)$/)
+    if (sameLineQA) {
+      pushCurrentItem()
+      items.push({
+        question: sameLineQA[1].trim(),
+        answer: sameLineQA[2].trim(),
+      })
+      return
+    }
+
+    if (currentQuestion) {
+      currentAnswerLines.push(normalizedText)
+    }
+  })
+
+  pushCurrentItem()
+
+  if (items.length < 2) {
+    const fallbackItems: FAQItem[] = []
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const question = extractFAQQuestionText(lines[index])
+      if (!question) continue
+
+      const nextLine = lines[index + 1]
+      if (!nextLine) continue
+
+      const answer = extractFAQAnswerText(nextLine) || stripFAQInlineFormatting(nextLine)
+      if (!answer || extractFAQQuestionText(nextLine)) continue
+
+      fallbackItems.push({
+        question,
+        answer,
+      })
+      index += 1
+    }
+
+    if (fallbackItems.length > items.length) {
+      items = fallbackItems
+    }
+  }
+
+  const label = frame.label || FAQ_LABEL
+  const correctedMarkdown = buildCanonicalFAQMarkdown(label, items)
+
+  return {
+    label,
+    items,
+    hasStartMarker: frame.hasStartMarker,
+    hasEndMarker: frame.hasEndMarker,
+    hasLabelMarker: frame.hasLabelMarker,
+    hasBoxMarker: frame.hasBoxMarker,
+    hasComponentLine: frame.hasComponentLine,
+    correctedMarkdown,
+  }
+}
+
 export function validateEditorialBlockForPublish(block: EditorialBlock): EditorialPublishValidation {
   const component = normalizeEditorialComponentKey(block.component)
 
@@ -547,6 +855,68 @@ export function validateEditorialBlockForPublish(block: EditorialBlock): Editori
       },
       correctedMarkdown: parsed.correctedMarkdown,
       mappedPayloadBlockType: 'in-the-know',
+    }
+  }
+
+  if (component === HIGHLIGHT_CALLOUT_COMPONENT) {
+    const parsed = parseHighlightCalloutEditorialBlock(block)
+    const missingParts: string[] = []
+
+    if (!parsed.hasStartMarker) missingParts.push('start marker')
+    if (!parsed.hasLabelMarker) missingParts.push('label marker')
+    if (!parsed.hasBoxMarker) missingParts.push('box marker')
+    if (!parsed.hasComponentLine) missingParts.push('component line')
+    if (!parsed.hasEndMarker) missingParts.push('end marker')
+    if (!parsed.text) missingParts.push('text')
+
+    if (missingParts.length > 0) {
+      return {
+        status: 'invalid',
+        message: `Block markdown incorrect (${missingParts.join(', ')})`,
+        correctedMarkdown: parsed.correctedMarkdown,
+      }
+    }
+
+    return {
+      status: 'supported',
+      payloadBlock: {
+        blockType: 'highlight-callout',
+        label: parsed.label,
+        text: parsed.text,
+      },
+      correctedMarkdown: parsed.correctedMarkdown,
+      mappedPayloadBlockType: 'highlight-callout',
+    }
+  }
+
+  if (component === FAQ_COMPONENT) {
+    const parsed = parseFAQEditorialBlock(block)
+    const missingParts: string[] = []
+
+    if (!parsed.hasStartMarker) missingParts.push('start marker')
+    if (!parsed.hasLabelMarker) missingParts.push('label marker')
+    if (!parsed.hasBoxMarker) missingParts.push('box marker')
+    if (!parsed.hasComponentLine) missingParts.push('component line')
+    if (!parsed.hasEndMarker) missingParts.push('end marker')
+    if (parsed.items.length < 2) missingParts.push('at least two FAQ items')
+
+    if (missingParts.length > 0) {
+      return {
+        status: 'invalid',
+        message: `Block markdown incorrect (${missingParts.join(', ')})`,
+        correctedMarkdown: parsed.correctedMarkdown,
+      }
+    }
+
+    return {
+      status: 'supported',
+      payloadBlock: {
+        blockType: 'faq',
+        label: parsed.label,
+        items: parsed.items.slice(0, EDITORIAL_MAX_FAQ_ITEMS),
+      },
+      correctedMarkdown: parsed.correctedMarkdown,
+      mappedPayloadBlockType: 'faq',
     }
   }
 

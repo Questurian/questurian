@@ -22,7 +22,9 @@ import type {
 } from '../types'
 import {
   CONTENT_BLOCK_VARIANT,
+  FEATURED_IMAGE_HEIGHT,
   FEATURED_IMAGE_VARIANT,
+  FEATURED_IMAGE_WIDTH,
   IMG_BLOCK_MIN_HEIGHT,
   IMG_BLOCK_MIN_WIDTH,
   IMG_BLOCK_VARIANT,
@@ -45,16 +47,19 @@ import { useEditorialStageFeaturedMedia } from './useEditorialStageFeaturedMedia
 import { useEditorialStageBlockMedia } from './useEditorialStageBlockMedia'
 
 type PublishResult = { success: boolean; message: string } | null
+const FEATURED_PAYLOAD_PAGE_LIMIT = 50
 
 type UseEditorialStageMediaParams = {
   token: string | null | undefined
   stagedArticle: StagedArticle | null
   locations: Location[]
   mediaAssets: MediaAsset[]
+  mergeMediaAssetsIntoState: (assets: MediaAsset[]) => void
   fetchMediaAssets: (
     token?: string,
     params?: {
       limit?: number
+      page?: number
       mimeType?: string
       minWidth?: number
       minHeight?: number
@@ -62,7 +67,7 @@ type UseEditorialStageMediaParams = {
       height?: number
       id?: number
     }
-  ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
+  ) => Promise<{ docs: MediaAsset[]; totalDocs: number; totalPages: number }>
   fetchExternalImageSource: (
     input: {
       sourceUrl: string
@@ -109,6 +114,7 @@ export function useEditorialStageMedia({
   stagedArticle,
   locations,
   mediaAssets,
+  mergeMediaAssetsIntoState,
   fetchMediaAssets,
   fetchExternalImageSource,
   searchPexelsImages,
@@ -124,6 +130,10 @@ export function useEditorialStageMedia({
   const [externalImageCropError, setExternalImageCropError] = useState<string | null>(null)
   const [externalImageUploadProgress, setExternalImageUploadProgress] = useState<UploadProgress | null>(null)
   const [isUploadingExternalImageVariants, setIsUploadingExternalImageVariants] = useState(false)
+  const [featuredPayloadPage, setFeaturedPayloadPage] = useState(0)
+  const [featuredPayloadTotalPages, setFeaturedPayloadTotalPages] = useState(1)
+  const [isLoadingFeaturedPayloadAssets, setIsLoadingFeaturedPayloadAssets] = useState(false)
+  const [featuredPayloadAssetsError, setFeaturedPayloadAssetsError] = useState<string | null>(null)
 
   const resetExternalImportState = useCallback(() => {
     setExternalImageCropDraft(null)
@@ -145,8 +155,9 @@ export function useEditorialStageMedia({
   const refreshMediaAssets = useCallback(async () => {
     if (!token) return
     const response = await fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
+    mergeMediaAssetsIntoState(response.docs || [])
     block.mergeMediaAssetsIntoState(response.docs || [])
-  }, [token, fetchMediaAssets, block])
+  }, [token, fetchMediaAssets, mergeMediaAssetsIntoState, block])
 
   useEffect(() => {
     if (!token || !stagedArticle?.featuredImageId) return
@@ -164,6 +175,7 @@ export function useEditorialStageMedia({
           id: featuredAssetId,
         })
         if (isCancelled) return
+        mergeMediaAssetsIntoState(response.docs || [])
         block.mergeMediaAssetsIntoState(response.docs || [])
       } catch {
         // Keep UI fallback in place if this targeted hydration fails.
@@ -175,7 +187,7 @@ export function useEditorialStageMedia({
     return () => {
       isCancelled = true
     }
-  }, [token, stagedArticle?.featuredImageId, mediaAssets, fetchMediaAssets, block])
+  }, [token, stagedArticle?.featuredImageId, mediaAssets, fetchMediaAssets, mergeMediaAssetsIntoState, block])
 
   const featured = useEditorialStageFeaturedMedia({
     stagedArticleId: stagedArticle?.id ?? 'staged-article',
@@ -184,6 +196,64 @@ export function useEditorialStageMedia({
     searchUnsplashImages,
     resetExternalImportState,
   })
+
+  const loadMoreFeaturedPayloadAssets = useCallback(async () => {
+    if (!token) return
+    if (isLoadingFeaturedPayloadAssets) return
+    if (featuredPayloadPage >= featuredPayloadTotalPages) return
+
+    const nextPage = featuredPayloadPage + 1
+
+    try {
+      setIsLoadingFeaturedPayloadAssets(true)
+      setFeaturedPayloadAssetsError(null)
+      const response = await fetchMediaAssets(token, {
+        limit: FEATURED_PAYLOAD_PAGE_LIMIT,
+        page: nextPage,
+        mimeType: 'image/',
+        width: FEATURED_IMAGE_WIDTH,
+        height: FEATURED_IMAGE_HEIGHT,
+      })
+
+      const docs = response.docs || []
+      mergeMediaAssetsIntoState(docs)
+      setFeaturedPayloadPage(nextPage)
+      setFeaturedPayloadTotalPages(response.totalPages || featuredPayloadTotalPages)
+    } catch (error) {
+      setFeaturedPayloadAssetsError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load featured images from Payload.'
+      )
+    } finally {
+      setIsLoadingFeaturedPayloadAssets(false)
+    }
+  }, [
+    token,
+    isLoadingFeaturedPayloadAssets,
+    featuredPayloadPage,
+    featuredPayloadTotalPages,
+    fetchMediaAssets,
+    mergeMediaAssetsIntoState,
+  ])
+
+  useEffect(() => {
+    if (!featured.showImageModal) return
+    if (featured.featuredImageSource !== 'payload') return
+    if (featuredPayloadPage > 0) return
+
+    void loadMoreFeaturedPayloadAssets()
+  }, [
+    featured.showImageModal,
+    featured.featuredImageSource,
+    featuredPayloadPage,
+    loadMoreFeaturedPayloadAssets,
+  ])
+
+  useEffect(() => {
+    if (featured.showImageModal && featured.featuredImageSource === 'payload') return
+    setFeaturedPayloadAssetsError(null)
+  }, [featured.showImageModal, featured.featuredImageSource])
 
   const refreshModalImgBlockAssets = useCallback(async (
     mode: BlockImageModalMode,
@@ -206,9 +276,10 @@ export function useEditorialStageMedia({
       height,
     })
     const docs = response.docs || []
+    mergeMediaAssetsIntoState(docs)
     block.setImgBlockAssets(docs)
     block.mergeMediaAssetsIntoState(docs)
-  }, [token, fetchMediaAssets, block])
+  }, [token, fetchMediaAssets, mergeMediaAssetsIntoState, block])
 
   const handleUploadComplete = useCallback((result: UploadImageResponse) => {
     const featuredAssetId = pickVariantAssetId(result.variantAssetIds, FEATURED_IMAGE_VARIANT)
@@ -545,6 +616,10 @@ export function useEditorialStageMedia({
   return {
     featured: {
       ...featured,
+      hasMoreFeaturedPayloadAssets: featuredPayloadPage < featuredPayloadTotalPages,
+      isLoadingFeaturedPayloadAssets,
+      featuredPayloadAssetsError,
+      loadMoreFeaturedPayloadAssets,
       handleImportFeaturedExternalImage,
       handleUploadComplete,
     },

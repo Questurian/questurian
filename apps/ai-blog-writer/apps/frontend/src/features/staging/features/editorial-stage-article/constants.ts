@@ -61,7 +61,12 @@ export const PULL_QUOTE_COMPONENT = 'pull_quote'
 export const PULL_QUOTE_LABEL = 'Pull Quote'
 export const IN_THE_KNOW_COMPONENT = 'in_the_know_box'
 export const IN_THE_KNOW_LABEL = 'In The Know'
+export const HIGHLIGHT_CALLOUT_COMPONENT = 'highlight_callout'
+export const HIGHLIGHT_CALLOUT_LABEL = 'Highlight Callout'
+export const FAQ_COMPONENT = 'faq_block'
+export const FAQ_LABEL = 'FAQ'
 export const EDITORIAL_MAX_TAKEAWAYS = 5
+export const EDITORIAL_MAX_FAQ_ITEMS = 5
 
 export const IMAGE_PICKER_OPTIONS: ReadonlyArray<{
   mode: BlockImageModalMode
@@ -92,7 +97,18 @@ export const EDITORIAL_PICKER_OPTIONS: ReadonlyArray<{
   { component: PULL_QUOTE_COMPONENT, label: 'Quote' },
   { component: KEY_TAKEAWAYS_COMPONENT, label: 'Key Takeaways' },
   { component: IN_THE_KNOW_COMPONENT, label: 'In The Know' },
+  { component: HIGHLIGHT_CALLOUT_COMPONENT, label: 'Highlight Callout' },
+  { component: FAQ_COMPONENT, label: 'FAQ' },
 ]
+
+export function getEditorialComponentDefaultLabel(component: string): string {
+  if (component === PULL_QUOTE_COMPONENT) return PULL_QUOTE_LABEL
+  if (component === KEY_TAKEAWAYS_COMPONENT) return KEY_TAKEAWAYS_LABEL
+  if (component === IN_THE_KNOW_COMPONENT) return IN_THE_KNOW_LABEL
+  if (component === HIGHLIGHT_CALLOUT_COMPONENT) return HIGHLIGHT_CALLOUT_LABEL
+  if (component === FAQ_COMPONENT) return FAQ_LABEL
+  return 'Editorial Block'
+}
 
 export function resolveEditorModelName(value?: string): EditorModelName {
   if (value === 'gemini-2.5-flash') return value

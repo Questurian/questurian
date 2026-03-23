@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import Masonry from 'react-masonry-css'
 import { ImageUpload, type UploadImageResponse } from '../../../../features/images'
 import type {
@@ -31,6 +31,10 @@ type FeaturedImageModalPayloadProps = {
   setImageSearch: (value: string) => void
   filteredFeaturedImageAssets: MediaAsset[]
   selectedFeaturedImage: MediaAsset | null
+  hasMoreFeaturedPayloadAssets: boolean
+  isLoadingFeaturedPayloadAssets: boolean
+  featuredPayloadAssetsError: string | null
+  loadMoreFeaturedPayloadAssets: () => Promise<void>
 }
 
 type FeaturedImageModalUploadProps = {
@@ -104,6 +108,10 @@ export function FeaturedImageModal({
     setImageSearch,
     filteredFeaturedImageAssets,
     selectedFeaturedImage,
+    hasMoreFeaturedPayloadAssets,
+    isLoadingFeaturedPayloadAssets,
+    featuredPayloadAssetsError,
+    loadMoreFeaturedPayloadAssets,
   } = payload
   const {
     featuredImageExternalRef,
@@ -149,33 +157,35 @@ export function FeaturedImageModal({
     getImageUrl,
   } = actions
   const modalTitleId = 'featured-image-modal-title'
-  const PAGE_SIZE = 20
-  const [displayCount, setDisplayCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const modalRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
 
-  // Reset display count when search changes or tab switches to payload
-  useEffect(() => {
-    setDisplayCount(PAGE_SIZE)
-  }, [imageSearch, featuredImageSource])
-
-  // IntersectionObserver — load more when sentinel enters the modal's scroll container
+  // IntersectionObserver — load more when sentinel enters the grid's scroll container
   useEffect(() => {
     if (featuredImageSource !== 'payload') return
+    if (featuredPayloadAssetsError) return
+    if (!hasMoreFeaturedPayloadAssets || isLoadingFeaturedPayloadAssets) return
     const el = sentinelRef.current
     if (!el) return
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          setDisplayCount((prev) => prev + PAGE_SIZE)
+          void loadMoreFeaturedPayloadAssets()
         }
       },
-      { root: modalRef.current, threshold: 0.1 }
+      { root: gridRef.current, threshold: 0.1 }
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [featuredImageSource, filteredFeaturedImageAssets.length, displayCount])
+  }, [
+    featuredImageSource,
+    filteredFeaturedImageAssets.length,
+    featuredPayloadAssetsError,
+    hasMoreFeaturedPayloadAssets,
+    isLoadingFeaturedPayloadAssets,
+    loadMoreFeaturedPayloadAssets,
+  ])
 
   useEffect(() => {
     if (!show || publishedToPayload) return
@@ -195,7 +205,6 @@ export function FeaturedImageModal({
   return (
     <div className="stage-article-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        ref={modalRef}
         className="stage-article-modal"
         role="dialog"
         aria-modal="true"
@@ -268,8 +277,8 @@ export function FeaturedImageModal({
               />
             </div>
 
-            <div className="stage-article-modal-grid">
-              {filteredFeaturedImageAssets.slice(0, displayCount).map(img => (
+            <div ref={gridRef} className="stage-article-modal-grid">
+              {filteredFeaturedImageAssets.map(img => (
                 <button
                   key={img.id}
                   type="button"
@@ -293,18 +302,45 @@ export function FeaturedImageModal({
                   )}
                 </button>
               ))}
+              {hasMoreFeaturedPayloadAssets && (
+                <div ref={sentinelRef} style={{ height: '2px', gridColumn: '1 / -1' }} />
+              )}
             </div>
 
-            {displayCount < filteredFeaturedImageAssets.length && (
-              <div ref={sentinelRef} style={{ height: '2px', margin: '0.5rem 0' }} />
+            {featuredPayloadAssetsError && (
+              <div className="stage-article-modal-empty">
+                <p>{featuredPayloadAssetsError}</p>
+                <button
+                  type="button"
+                  className="stage-article-modal-done"
+                  style={{ marginTop: '0.75rem' }}
+                  onClick={() => void loadMoreFeaturedPayloadAssets()}
+                >
+                  Retry
+                </button>
+              </div>
             )}
 
-            {filteredFeaturedImageAssets.length === 0 && (
+            {isLoadingFeaturedPayloadAssets && filteredFeaturedImageAssets.length === 0 && (
+              <div className="stage-article-modal-empty">
+                <p>Loading featured images from Payload...</p>
+              </div>
+            )}
+
+            {!isLoadingFeaturedPayloadAssets
+              && !hasMoreFeaturedPayloadAssets
+              && filteredFeaturedImageAssets.length === 0 && (
               <div className="stage-article-modal-empty">
                 <p>
                   No editorial ({FEATURED_IMAGE_WIDTH}x{FEATURED_IMAGE_HEIGHT}) images
                   match the current search.
                 </p>
+              </div>
+            )}
+
+            {isLoadingFeaturedPayloadAssets && filteredFeaturedImageAssets.length > 0 && (
+              <div className="stage-article-modal-empty">
+                <p>Loading more featured images...</p>
               </div>
             )}
 

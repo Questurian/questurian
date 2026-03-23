@@ -2,7 +2,12 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { EditorialBlock } from '../../types'
 import {
+  EDITORIAL_MAX_FAQ_ITEMS,
   EDITORIAL_MAX_TAKEAWAYS,
+  FAQ_COMPONENT,
+  FAQ_LABEL,
+  HIGHLIGHT_CALLOUT_COMPONENT,
+  HIGHLIGHT_CALLOUT_LABEL,
   IN_THE_KNOW_COMPONENT,
   IN_THE_KNOW_LABEL,
   KEY_TAKEAWAYS_COMPONENT,
@@ -11,11 +16,15 @@ import {
   PULL_QUOTE_LABEL,
 } from '../../features/editorial-stage-article/constants'
 import {
+  buildCanonicalFAQMarkdown,
+  buildCanonicalHighlightCalloutMarkdown,
   buildCanonicalInTheKnowMarkdown,
   buildCanonicalKeyTakeawaysMarkdown,
   buildCanonicalPullQuoteMarkdown,
   getEditorialBlockBody,
   normalizeEditorialComponentKey,
+  parseFAQEditorialBlock,
+  parseHighlightCalloutEditorialBlock,
   parseInTheKnowEditorialBlock,
   parseKeyTakeawayEditorialBlock,
   parsePullQuoteEditorialBlock,
@@ -59,10 +68,23 @@ export function renderEditorialBlockCard(
   const inTheKnowParsed = normalizedComponent === IN_THE_KNOW_COMPONENT
     ? parseInTheKnowEditorialBlock(block)
     : null
+  const highlightCalloutParsed = normalizedComponent === HIGHLIGHT_CALLOUT_COMPONENT
+    ? parseHighlightCalloutEditorialBlock(block)
+    : null
+  const faqParsed = normalizedComponent === FAQ_COMPONENT
+    ? parseFAQEditorialBlock(block)
+    : null
   const isKeyTakeaways = normalizedComponent === KEY_TAKEAWAYS_COMPONENT
   const isPullQuote = normalizedComponent === PULL_QUOTE_COMPONENT
   const isInTheKnow = normalizedComponent === IN_THE_KNOW_COMPONENT
-  const supportsStructuredEditor = isKeyTakeaways || isPullQuote || isInTheKnow
+  const isHighlightCallout = normalizedComponent === HIGHLIGHT_CALLOUT_COMPONENT
+  const isFAQ = normalizedComponent === FAQ_COMPONENT
+  const supportsStructuredEditor =
+    isKeyTakeaways
+    || isPullQuote
+    || isInTheKnow
+    || isHighlightCallout
+    || isFAQ
   const isEditMode = Boolean(options?.canEdit && options?.onChangeMarkdown)
   const keyTakeawaysLabel = keyTakeawaysParsed?.label || block.label || KEY_TAKEAWAYS_LABEL
   const keyTakeawaysDraftItems = keyTakeawaysParsed?.rawItems.length
@@ -72,6 +94,21 @@ export function renderEditorialBlockCard(
   const pullQuoteText = pullQuoteParsed?.quoteText || ''
   const inTheKnowLabel = inTheKnowParsed?.label || block.label || IN_THE_KNOW_LABEL
   const inTheKnowText = inTheKnowParsed?.text || ''
+  const highlightCalloutLabel = highlightCalloutParsed?.label || block.label || HIGHLIGHT_CALLOUT_LABEL
+  const highlightCalloutText = highlightCalloutParsed?.text || ''
+  const faqLabel = faqParsed?.label || block.label || FAQ_LABEL
+  const faqDraftItems = faqParsed?.items.length
+    ? [
+        ...faqParsed.items,
+        ...Array.from({ length: Math.max(0, 2 - faqParsed.items.length) }, () => ({
+          question: '',
+          answer: '',
+        })),
+      ]
+    : [
+        { question: '', answer: '' },
+        { question: '', answer: '' },
+      ]
   return (
     <article key={block.id} className={`block-card editorial-card ${isEditMode ? 'editing' : ''}`}>
       <div className="block-card-header">
@@ -396,6 +433,167 @@ export function renderEditorialBlockCard(
             </>
           )}
 
+          {isHighlightCallout && (
+            <>
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Label</label>
+                <input
+                  type="text"
+                  className="editorial-field-input"
+                  value={highlightCalloutLabel}
+                  onChange={(event) => options?.onChangeMarkdown?.(
+                    buildCanonicalHighlightCalloutMarkdown(
+                      event.target.value,
+                      highlightCalloutText,
+                      { useFallbackText: false }
+                    )
+                  )}
+                  placeholder={HIGHLIGHT_CALLOUT_LABEL}
+                />
+              </div>
+
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Body Text</label>
+                <textarea
+                  className="editorial-field-textarea"
+                  value={highlightCalloutText}
+                  onChange={(event) => options?.onChangeMarkdown?.(
+                    buildCanonicalHighlightCalloutMarkdown(
+                      highlightCalloutLabel,
+                      event.target.value,
+                      { useFallbackText: false }
+                    )
+                  )}
+                  rows={4}
+                  placeholder="Add highlight callout text"
+                />
+              </div>
+            </>
+          )}
+
+          {isFAQ && (
+            <>
+              <div className="editorial-field-group">
+                <div className="editorial-field-row">
+                  <label className="editorial-field-label">Label</label>
+                  <span className="editorial-field-meta">
+                    {faqDraftItems.filter((item) => item.question.trim() && item.answer.trim()).length}
+                    {' / '}
+                    {EDITORIAL_MAX_FAQ_ITEMS}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  className="editorial-field-input"
+                  value={faqLabel}
+                  onChange={(event) => options?.onChangeMarkdown?.(
+                    buildCanonicalFAQMarkdown(
+                      event.target.value,
+                      faqDraftItems,
+                      { useFallbackItems: false }
+                    )
+                  )}
+                  placeholder={FAQ_LABEL}
+                />
+              </div>
+
+              <div className="editorial-field-group">
+                <label className="editorial-field-label">Questions and Answers</label>
+                <div className="editorial-takeaway-list">
+                  {faqDraftItems.map((item, itemIndex) => (
+                    <div key={`${block.id}_faq_${itemIndex}`} className="editorial-field-group">
+                      <div className="editorial-field-row">
+                        <span className="editorial-field-meta">FAQ {itemIndex + 1}</span>
+                        <button
+                          type="button"
+                          className="editorial-inline-btn danger"
+                          onClick={() => {
+                            const nextItems = faqDraftItems.filter((_, index) => index !== itemIndex)
+                            options?.onChangeMarkdown?.(
+                              buildCanonicalFAQMarkdown(
+                                faqLabel,
+                                nextItems.length >= 2
+                                  ? nextItems
+                                  : [
+                                      ...nextItems,
+                                      ...Array.from({ length: Math.max(0, 2 - nextItems.length) }, () => ({
+                                        question: '',
+                                        answer: '',
+                                      })),
+                                    ],
+                                { useFallbackItems: false }
+                              )
+                            )
+                          }}
+                          disabled={faqDraftItems.length <= 2}
+                          title="Remove FAQ item"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        className="editorial-field-input"
+                        value={item.question}
+                        onChange={(event) => {
+                          const nextItems = [...faqDraftItems]
+                          nextItems[itemIndex] = {
+                            ...nextItems[itemIndex],
+                            question: event.target.value,
+                          }
+                          options?.onChangeMarkdown?.(
+                            buildCanonicalFAQMarkdown(
+                              faqLabel,
+                              nextItems,
+                              { useFallbackItems: false }
+                            )
+                          )
+                        }}
+                        placeholder="Question"
+                      />
+                      <textarea
+                        className="editorial-field-textarea"
+                        value={item.answer}
+                        onChange={(event) => {
+                          const nextItems = [...faqDraftItems]
+                          nextItems[itemIndex] = {
+                            ...nextItems[itemIndex],
+                            answer: event.target.value,
+                          }
+                          options?.onChangeMarkdown?.(
+                            buildCanonicalFAQMarkdown(
+                              faqLabel,
+                              nextItems,
+                              { useFallbackItems: false }
+                            )
+                          )
+                        }}
+                        rows={3}
+                        placeholder="Answer"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="editorial-field-actions">
+                  <button
+                    type="button"
+                    className="editorial-inline-btn"
+                    onClick={() => options?.onChangeMarkdown?.(
+                      buildCanonicalFAQMarkdown(
+                        faqLabel,
+                        [...faqDraftItems, { question: '', answer: '' }],
+                        { useFallbackItems: false }
+                      )
+                    )}
+                    disabled={faqDraftItems.length >= EDITORIAL_MAX_FAQ_ITEMS}
+                  >
+                    Add FAQ item
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
           <p className="editorial-editor-hint">
             Schema editor keeps block markers and component wiring in the required format.
           </p>
@@ -436,6 +634,23 @@ export function renderEditorialBlockCard(
         <section className="editorial-preview-card editorial-preview-in-the-know">
           <h4>{inTheKnowParsed.label || IN_THE_KNOW_LABEL}</h4>
           <p>{inTheKnowParsed.text}</p>
+        </section>
+      ) : highlightCalloutParsed && highlightCalloutParsed.text ? (
+        <section className="editorial-preview-card editorial-preview-in-the-know">
+          <h4>{highlightCalloutParsed.label || HIGHLIGHT_CALLOUT_LABEL}</h4>
+          <p>{highlightCalloutParsed.text}</p>
+        </section>
+      ) : faqParsed && faqParsed.items.length > 0 ? (
+        <section className="editorial-preview-card editorial-preview-key-takeaways">
+          <h4>{faqParsed.label || FAQ_LABEL}</h4>
+          <ul>
+            {faqParsed.items.map((item, itemIndex) => (
+              <li key={`${block.id}_faq_preview_${itemIndex}`}>
+                <strong>{item.question}</strong>
+                <p style={{ margin: '0.35rem 0 0' }}>{item.answer}</p>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : previewMarkdown ? (
         <div className="block-preview">

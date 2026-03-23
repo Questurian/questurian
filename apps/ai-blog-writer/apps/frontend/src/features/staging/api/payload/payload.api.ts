@@ -77,6 +77,7 @@ export async function fetchMediaAssets(
   token?: string,
   params?: {
     limit?: number
+    page?: number
     mimeType?: string
     variant?: MediaAsset['variant']
     minWidth?: number
@@ -85,26 +86,30 @@ export async function fetchMediaAssets(
     height?: number
     id?: number
   },
-): Promise<{ docs: MediaAsset[]; totalDocs: number }> {
-  const queryParams = new URLSearchParams()
-  queryParams.append('limit', String(params?.limit || 50))
-  if (params?.mimeType) queryParams.append('where[mimeType][like]', params.mimeType)
-  if (params?.variant) queryParams.append('where[variant][equals]', params.variant)
-  if (params?.minWidth) {
-    queryParams.append('where[width][greater_than_equal]', String(params.minWidth))
-  }
-  if (params?.minHeight) {
-    queryParams.append('where[height][greater_than_equal]', String(params.minHeight))
-  }
-  if (params?.width) {
-    queryParams.append('where[width][equals]', String(params.width))
-  }
-  if (params?.height) {
-    queryParams.append('where[height][equals]', String(params.height))
-  }
-  if (params?.id) {
-    queryParams.append('where[id][equals]', String(params.id))
+): Promise<{ docs: MediaAsset[]; totalDocs: number; totalPages: number }> {
+  const buildQuery = (page: number) => {
+    const queryParams = new URLSearchParams()
+    queryParams.append('limit', String(params?.limit || 50))
+    queryParams.append('page', String(page))
+    if (params?.mimeType) queryParams.append('where[mimeType][like]', params.mimeType)
+    if (params?.variant) queryParams.append('where[variant][equals]', params.variant)
+    if (params?.minWidth) {
+      queryParams.append('where[width][greater_than_equal]', String(params.minWidth))
+    }
+    if (params?.minHeight) {
+      queryParams.append('where[height][greater_than_equal]', String(params.minHeight))
+    }
+    if (params?.width) {
+      queryParams.append('where[width][equals]', String(params.width))
+    }
+    if (params?.height) {
+      queryParams.append('where[height][equals]', String(params.height))
+    }
+    if (params?.id) {
+      queryParams.append('where[id][equals]', String(params.id))
+    }
+    return queryParams.toString()
   }
 
-  return payloadRequest(`/api/media-assets?${queryParams.toString()}`, token)
+  return payloadRequest(`/api/media-assets?${buildQuery(params?.page || 1)}`, token)
 }

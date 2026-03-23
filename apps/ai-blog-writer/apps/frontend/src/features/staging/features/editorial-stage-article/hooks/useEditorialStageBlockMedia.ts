@@ -34,6 +34,7 @@ type UseEditorialStageBlockMediaParams = {
     token?: string,
     params?: {
       limit?: number
+      page?: number
       mimeType?: string
       minWidth?: number
       minHeight?: number
@@ -41,7 +42,7 @@ type UseEditorialStageBlockMediaParams = {
       height?: number
       id?: number
     }
-  ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
+  ) => Promise<{ docs: MediaAsset[]; totalDocs: number; totalPages: number }>
   searchPexelsImages: (
     query: string,
     params?: {

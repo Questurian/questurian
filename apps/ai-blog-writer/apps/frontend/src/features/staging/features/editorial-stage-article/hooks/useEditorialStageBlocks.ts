@@ -2,11 +2,7 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { MediaAsset } from '../../../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../../../types'
 import {
-  IN_THE_KNOW_COMPONENT,
-  IN_THE_KNOW_LABEL,
-  KEY_TAKEAWAYS_LABEL,
-  PULL_QUOTE_COMPONENT,
-  PULL_QUOTE_LABEL,
+  getEditorialComponentDefaultLabel,
   resolveEditorModelName,
 } from '../constants'
 import {
@@ -77,12 +73,7 @@ export function useEditorialStageBlocks({
     const correctedComponent = startMatch
       ? normalizeEditorialComponentKey(startMatch[1])
       : normalizeEditorialComponentKey(target.component)
-    const defaultLabel =
-      correctedComponent === PULL_QUOTE_COMPONENT
-        ? PULL_QUOTE_LABEL
-        : correctedComponent === IN_THE_KNOW_COMPONENT
-          ? IN_THE_KNOW_LABEL
-          : KEY_TAKEAWAYS_LABEL
+    const defaultLabel = getEditorialComponentDefaultLabel(correctedComponent)
     const correctedLabel = labelMatch?.[1]?.trim() || target.label || defaultLabel
 
     const updatedEditorialBlocks = stagedArticle.editorialBlocks.map((block) =>

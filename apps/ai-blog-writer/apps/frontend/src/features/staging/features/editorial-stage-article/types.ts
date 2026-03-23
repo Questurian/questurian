@@ -34,6 +34,7 @@ export type EditorialStageArticleApi = {
     token?: string,
     params?: {
       limit?: number
+      page?: number
       mimeType?: string
       minWidth?: number
       minHeight?: number
@@ -41,7 +42,7 @@ export type EditorialStageArticleApi = {
       height?: number
       id?: number
     }
-  ) => Promise<{ docs: MediaAsset[]; totalDocs: number }>
+  ) => Promise<{ docs: MediaAsset[]; totalDocs: number; totalPages: number }>
   createArticle: (
     payload: CreateArticlePayload,
     token: string
@@ -174,3 +175,5 @@ export type SupportedEditorialComponent =
   | 'key_takeaways_box'
   | 'pull_quote'
   | 'in_the_know_box'
+  | 'highlight_callout'
+  | 'faq_block'

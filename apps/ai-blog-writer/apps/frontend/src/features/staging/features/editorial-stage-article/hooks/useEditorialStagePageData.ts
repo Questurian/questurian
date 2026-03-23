@@ -7,7 +7,7 @@ import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema
 import { DEFAULT_TRIP_INTENT } from '../../../../trip-intent'
 import type { EditorialStageArticleApi } from '../types'
 import { DEFAULT_EDITOR_MODEL_NAME, resolveEditorModelName } from '../constants'
-import { extractEditorialBlocks } from '../editorial-markdown.service'
+import { extractEditorialBlocks, getEditorialBlockBody } from '../editorial-markdown.service'
 import {
   attachEditorialBlocksToContentBlocks,
   composeArticleMarkdown,
@@ -25,6 +25,8 @@ import {
 } from '../services/editorial-stage-storage.service'
 import { buildPayloadArticleMetadataPatch } from '../services/payload-article-metadata.service'
 import { mergeMediaAssetLists } from '../media-utils'
+
+const MEDIA_ASSET_PAGE_LIMIT = 200
 
 type UseEditorialStagePageDataParams = {
   storageKey: string
@@ -77,7 +79,7 @@ export function useEditorialStagePageData({
     const existingEditorialBlocks = migrateEditorialBlocksForStandaloneMedia(
       existing.editorialBlocks || [],
       normalizedBlocksResult.mediaBlockIdByLegacyAnchorId
-    )
+    ).filter((block) => getEditorialBlockBody(block.markdown).trim().length > 0)
     const hasMeaningfulExistingPlacement = hasMeaningfulEditorialPlacement(
       existingEditorialBlocks,
       normalizedBlocks
@@ -340,7 +342,7 @@ export function useEditorialStagePageData({
         setError(null)
         const [locationsRes, mediaRes] = await Promise.all([
           fetchLocations(token, { limit: 200 }),
-          fetchMediaAssets(token, { limit: 200, mimeType: 'image/' }),
+          fetchMediaAssets(token, { limit: MEDIA_ASSET_PAGE_LIMIT, page: 1, mimeType: 'image/' }),
         ])
 
         setLocations(locationsRes.docs || [])

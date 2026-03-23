@@ -71,6 +71,19 @@ export type CreateArticlePayload = {
         label: string
         text: string
       }
+    | {
+        blockType: 'highlight-callout'
+        label: string
+        text: string
+      }
+    | {
+        blockType: 'faq'
+        label: string
+        items: Array<{
+          question: string
+          answer: string
+        }>
+      }
   >
   seoSection?: {
     seoTitle?: string

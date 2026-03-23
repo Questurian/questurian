@@ -21,6 +21,10 @@ type BuildFeaturedModalViewInput = {
   setImageSearch: Dispatch<SetStateAction<string>>
   filteredFeaturedImageAssets: MediaAsset[]
   selectedFeaturedImage: MediaAsset | null
+  hasMoreFeaturedPayloadAssets: boolean
+  isLoadingFeaturedPayloadAssets: boolean
+  featuredPayloadAssetsError: string | null
+  loadMoreFeaturedPayloadAssets: () => Promise<void>
   selectedLocation?: Location
   featuredImageExternalRef: string
   featuredImageFileNamePrefix: string
@@ -77,6 +81,10 @@ export function buildFeaturedModalView(input: BuildFeaturedModalViewInput): Feat
       setImageSearch: input.setImageSearch,
       filteredFeaturedImageAssets: input.filteredFeaturedImageAssets,
       selectedFeaturedImage: input.selectedFeaturedImage,
+      hasMoreFeaturedPayloadAssets: input.hasMoreFeaturedPayloadAssets,
+      isLoadingFeaturedPayloadAssets: input.isLoadingFeaturedPayloadAssets,
+      featuredPayloadAssetsError: input.featuredPayloadAssetsError,
+      loadMoreFeaturedPayloadAssets: input.loadMoreFeaturedPayloadAssets,
     },
     upload: {
       selectedLocation: input.selectedLocation,

@@ -138,6 +138,10 @@ type UseEditorialStageLoadedArticleViewsParams = {
   pexelsFeaturedPerPage: number
   setPexelsFeaturedPerPage: Dispatch<SetStateAction<number>>
   isImportingFeaturedExternalImage: boolean
+  hasMoreFeaturedPayloadAssets: boolean
+  isLoadingFeaturedPayloadAssets: boolean
+  featuredPayloadAssetsError: string | null
+  loadMoreFeaturedPayloadAssets: () => Promise<void>
   handleImportFeaturedExternalImage: (
     photo: UnsplashPhoto | PexelsPhoto,
     provider: 'unsplash' | 'pexels'
@@ -381,6 +385,10 @@ export function useEditorialStageLoadedArticleViews(
     unsplashFeaturedError: params.unsplashFeaturedError,
     unsplashFeaturedResults: params.unsplashFeaturedResults,
     isImportingFeaturedExternalImage: params.isImportingFeaturedExternalImage,
+    hasMoreFeaturedPayloadAssets: params.hasMoreFeaturedPayloadAssets,
+    isLoadingFeaturedPayloadAssets: params.isLoadingFeaturedPayloadAssets,
+    featuredPayloadAssetsError: params.featuredPayloadAssetsError,
+    loadMoreFeaturedPayloadAssets: params.loadMoreFeaturedPayloadAssets,
     handleImportFeaturedExternalImage: params.handleImportFeaturedExternalImage,
     pexelsFeaturedQuery: params.pexelsFeaturedQuery,
     setPexelsFeaturedQuery: params.setPexelsFeaturedQuery,
