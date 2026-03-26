@@ -36,6 +36,8 @@ type BuildBlockModalViewInput = {
   setBlockImageSearch: Dispatch<SetStateAction<string>>
   isLoadingImgBlockAssets: boolean
   imgBlockAssetsError: string | null
+  hasMoreImgBlockAssets: boolean
+  loadMoreImgBlockAssets: () => Promise<void>
   filteredBlockImageAssets: MediaAsset[]
   selectedImgBlockAssetIds: number[]
   toggleImgBlockAssetSelection: (assetId: number, requiredCount: number) => void
@@ -122,6 +124,8 @@ export function buildBlockModalView(input: BuildBlockModalViewInput): BlockModal
       setBlockImageSearch: input.setBlockImageSearch,
       isLoadingImgBlockAssets: input.isLoadingImgBlockAssets,
       imgBlockAssetsError: input.imgBlockAssetsError,
+      hasMoreImgBlockAssets: input.hasMoreImgBlockAssets,
+      loadMoreImgBlockAssets: input.loadMoreImgBlockAssets,
       filteredBlockImageAssets: input.filteredBlockImageAssets,
       selectedImgBlockAssetIds: input.selectedImgBlockAssetIds,
       toggleImgBlockAssetSelection: input.toggleImgBlockAssetSelection,

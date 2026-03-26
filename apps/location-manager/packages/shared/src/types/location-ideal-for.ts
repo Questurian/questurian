@@ -1,7 +1,7 @@
 import type { LocationCategory } from "./location-category";
 
 export const DINING_IDEAL_FOR_TAGS = [
-  "Large Groups & Parties",
+  "Large Groups",
   "Birthdays & Celebrations",
   "Breakfast",
   "Brunch",
@@ -29,6 +29,7 @@ export const DINING_IDEAL_FOR_TAGS = [
   "Late-Night & Party Scene",
   "Live Music",
   "Lunch",
+  "Quick Bites",
   "Pre-Theater",
   "Private Dining",
   "Catch-Up Conversations",
@@ -36,8 +37,12 @@ export const DINING_IDEAL_FOR_TAGS = [
   "Late-Night Cravings",
   "Takeout & Delivery",
   "Outdoor Seating",
+  "Scenic Views",
+  "Rooftop Dining",
+  "Waterfront Dining",
   "Special Occasions",
   "Experiential Dining",
+  "Tasting Menu",
   "Walk-In Friendly",
   "Sports Bar",
 ] as const;
@@ -53,6 +58,8 @@ export const NIGHTLIFE_IDEAL_FOR_TAGS = [
   "Sports Bar",
   "Bar Seating",
   "Outdoor Seating",
+  "Scenic Views",
+  "Rooftop Drinks",
   "Solo Night Out",
   "Budget-Friendly",
 ] as const;
@@ -134,7 +141,7 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
         "Family-Friendly",
         "First Dates",
         "Impressing Visitors",
-        "Large Groups & Parties",
+        "Large Groups",
         "Pre-Theater",
         "Private Dining",
         "Catch-Up Conversations",
@@ -154,6 +161,7 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
         "Late-Night & Party Scene",
         "Late-Night Cravings",
         "Lunch",
+        "Quick Bites",
       ],
     },
     {
@@ -166,6 +174,7 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
         "Fine Dining",
         "Healthy Eating",
         "Tapas & Small Plates",
+        "Tasting Menu",
       ],
     },
     {
@@ -185,6 +194,9 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
         "BYOB-Friendly",
         "Bar Seating",
         "Outdoor Seating",
+        "Scenic Views",
+        "Rooftop Dining",
+        "Waterfront Dining",
         "Takeout & Delivery",
         "Walk-In Friendly",
       ],
@@ -215,6 +227,8 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
         "Sports Bar",
         "Bar Seating",
         "Outdoor Seating",
+        "Scenic Views",
+        "Rooftop Drinks",
         "Budget-Friendly",
       ],
     },

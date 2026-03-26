@@ -8,10 +8,13 @@ import {
   DialogTitle,
 } from "@client/components/ui/dialog";
 import { Button } from "@client/components/ui/button";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft, RotateCcw, RotateCw } from "lucide-react";
 import { type ImageVariantType, VARIANT_SPECS } from "@questurian/lm-shared";
 import { useToast } from "@client/shared/hooks/useToast";
-import { createMultiVariantImages } from "@client/shared/lib/image-processing";
+import {
+  createMultiVariantImages,
+  createRotatedSourceImage,
+} from "@client/shared/lib/image-processing";
 import type { CropState } from "@client/shared/types/location-media.types";
 
 interface MultiVariantCropperModalProps {
@@ -45,6 +48,7 @@ export function MultiVariantCropperModal({
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
   // Initialize crop states for all variants
   const [cropStates, setCropStates] = useState<Record<ImageVariantType, CropState>>(() => createInitialCropStates());
@@ -68,6 +72,7 @@ export function MultiVariantCropperModal({
   useEffect(() => {
     setCurrentVariantIndex(0);
     setIsProcessing(false);
+    setRotation(0);
     setCropStates(createInitialCropStates());
   }, [file]);
 
@@ -95,6 +100,30 @@ export function MultiVariantCropperModal({
   const onCropAreaChange = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     updateVariantState(currentVariantType, { croppedAreaPixels, completed: true });
   }, [currentVariantType, updateVariantState]);
+
+  const applyRotation = (nextRotation: number) => {
+    if (nextRotation === rotation) {
+      return;
+    }
+
+    const shouldNotifyReset = currentVariantIndex > 0 || variantSequence.some(
+      (type, index) => index !== currentVariantIndex && cropStates[type].croppedAreaPixels !== null
+    );
+
+    setRotation(nextRotation);
+    setCropStates(createInitialCropStates());
+    setCurrentVariantIndex(0);
+
+    if (shouldNotifyReset) {
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast("Rotation changed. Existing crop selections were reset.", centerPosition);
+    }
+  };
+
+  const handleRotate = (direction: "left" | "right") => {
+    const delta = direction === "left" ? -90 : 90;
+    applyRotation((rotation + delta + 360) % 360);
+  };
 
   const saveCurrentCrop = () => {
     if (!currentState.croppedAreaPixels) {
@@ -152,15 +181,15 @@ export function MultiVariantCropperModal({
     setIsProcessing(true);
 
     try {
-      // Generate all variant files
-      const variantFiles = await createMultiVariantImages(
-        previewUrl,
-        cropStates,
-        file.name
-      );
+      const normalizedRotation = ((rotation % 360) + 360) % 360;
+      const [sourceFile, variantFiles] = await Promise.all([
+        normalizedRotation === 0
+          ? Promise.resolve(file)
+          : createRotatedSourceImage(previewUrl, file.name, normalizedRotation),
+        createMultiVariantImages(previewUrl, cropStates, file.name, normalizedRotation),
+      ]);
 
-      // Return source file + variants
-      onConfirm(file, variantFiles);
+      onConfirm(sourceFile, variantFiles);
     } catch (error) {
       console.error("Error processing variants:", error);
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -198,10 +227,11 @@ export function MultiVariantCropperModal({
             <div className="relative h-[48vh] md:h-[460px]">
               {previewUrl && (
                 <Cropper
-                  key={`${fileIdentity}:${currentVariantType}`}
+                  key={`${fileIdentity}:${currentVariantType}:${rotation}`}
                   image={previewUrl}
                   crop={currentState.crop}
                   zoom={currentState.zoom}
+                  rotation={rotation}
                   aspect={currentSpec.ratio}
                   onCropChange={onCropChange}
                   onZoomChange={onZoomChange}
@@ -212,6 +242,54 @@ export function MultiVariantCropperModal({
                   showGrid={true}
                 />
               )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Orientation</p>
+                <p className="text-xs text-muted-foreground">
+                  Rotate the image here before locking in the crops.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRotate("left")}
+                  disabled={isProcessing}
+                >
+                  <RotateCcw className="mr-1.5 h-4 w-4" />
+                  Rotate Left
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRotate("right")}
+                  disabled={isProcessing}
+                >
+                  <RotateCw className="mr-1.5 h-4 w-4" />
+                  Rotate Right
+                </Button>
+                {rotation !== 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => applyRotation(0)}
+                    disabled={isProcessing}
+                  >
+                    Reset
+                  </Button>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {rotation}°
+                </span>
+              </div>
             </div>
           </div>
 
@@ -261,6 +339,7 @@ export function MultiVariantCropperModal({
               Crop Tips
             </h4>
             <ul className="space-y-1 text-xs text-blue-400">
+              <li>• Rotate first if the source image is sideways or upside down</li>
               <li>• Keep the main subject centered inside the target frame</li>
               <li>• Use Previous or the progress pills to adjust an earlier crop</li>
               <li>• The primary button advances one crop at a time until final confirmation</li>

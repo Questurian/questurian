@@ -1280,6 +1280,51 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.stage-article-modal-context-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 246, 240, 0.92));
+}
+
+.stage-article-modal-context-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(140, 106, 61, 0.12);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stage-article-modal-context-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.stage-article-modal-context-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stage-article-modal-context-value {
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
 .stage-article-modal-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -1422,9 +1467,77 @@
   color: var(--muted);
 }
 
+.stage-article-modal-status-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(140, 106, 61, 0.14);
+  border-radius: calc(var(--radius-md) + 2px);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 244, 237, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.stage-article-modal-status-bar.error {
+  border-color: rgba(171, 72, 72, 0.2);
+  background:
+    linear-gradient(135deg, rgba(255, 248, 248, 0.98), rgba(252, 238, 238, 0.96));
+}
+
+.stage-article-modal-status-bar.loading {
+  border-color: rgba(140, 106, 61, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 252, 246, 0.98), rgba(250, 244, 231, 0.96));
+}
+
+.stage-article-modal-status-bar.complete {
+  border-color: rgba(70, 119, 93, 0.18);
+  background:
+    linear-gradient(135deg, rgba(247, 253, 249, 0.98), rgba(238, 248, 241, 0.96));
+}
+
+.stage-article-modal-status-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.stage-article-modal-status-eyebrow {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stage-article-modal-status-message {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.stage-article-modal-status-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.stage-article-modal-status-actions .stage-article-modal-done {
+  padding: 0.55rem 0.9rem;
+  font-size: 0.8rem;
+}
+
 .stage-article-modal-footer {
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--border);
 }
@@ -1444,6 +1557,18 @@
 
 .stage-article-modal-done:hover {
   background: var(--accent-hover);
+}
+
+.stage-article-modal-done.secondary {
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.stage-article-modal-done.secondary:hover {
+  background: var(--surface-1);
+  border-color: var(--border-strong);
 }
 
 /* React Easy Crop Styles */
@@ -2856,12 +2981,30 @@
     padding: var(--space-3) var(--space-5);
   }
 
+  .stage-article-modal-context-bar {
+    padding: var(--space-3) var(--space-5);
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .stage-article-source-tab {
     flex: 1 1 calc(50% - var(--space-2));
   }
 
+  .stage-article-modal-status-bar {
+    padding: var(--space-4);
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stage-article-modal-status-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .stage-article-modal-footer {
     padding: var(--space-3) var(--space-5);
+    flex-wrap: wrap;
   }
 
   .stage-article-modal-image img {

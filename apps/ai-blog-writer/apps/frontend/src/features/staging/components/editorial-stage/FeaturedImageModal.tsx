@@ -159,6 +159,63 @@ export function FeaturedImageModal({
   const modalTitleId = 'featured-image-modal-title'
   const sentinelRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+  const featuredPayloadStatus = featuredPayloadAssetsError
+    ? {
+        tone: 'error',
+        eyebrow: 'Payload Load Failed',
+        message: featuredPayloadAssetsError,
+        actionLabel: 'Retry',
+      }
+    : isLoadingFeaturedPayloadAssets && filteredFeaturedImageAssets.length === 0
+      ? {
+          tone: 'loading',
+          eyebrow: 'Loading',
+          message: 'Loading featured images from Payload...',
+        }
+      : !isLoadingFeaturedPayloadAssets
+          && !hasMoreFeaturedPayloadAssets
+          && filteredFeaturedImageAssets.length === 0
+        ? {
+            tone: 'complete',
+            eyebrow: 'No Matches',
+            message: `No editorial (${FEATURED_IMAGE_WIDTH}x${FEATURED_IMAGE_HEIGHT}) images match the current search.`,
+          }
+        : isLoadingFeaturedPayloadAssets && filteredFeaturedImageAssets.length > 0
+          ? {
+              tone: 'loading',
+              eyebrow: 'Loading More',
+              message: 'Loading more featured images...',
+            }
+          : !featuredPayloadAssetsError
+              && hasMoreFeaturedPayloadAssets
+              && !isLoadingFeaturedPayloadAssets
+              && filteredFeaturedImageAssets.length > 0
+            ? {
+                tone: 'neutral',
+                eyebrow: 'More Available',
+                message: 'More featured Payload images are available.',
+                actionLabel: 'Load More Images',
+              }
+            : !featuredPayloadAssetsError
+                && hasMoreFeaturedPayloadAssets
+                && !isLoadingFeaturedPayloadAssets
+                && filteredFeaturedImageAssets.length === 0
+              ? {
+                  tone: 'neutral',
+                  eyebrow: 'Keep Browsing',
+                  message: 'No loaded featured images match yet. Load more to keep searching.',
+                  actionLabel: 'Load More Images',
+                }
+              : !featuredPayloadAssetsError
+                  && !hasMoreFeaturedPayloadAssets
+                  && !isLoadingFeaturedPayloadAssets
+                  && filteredFeaturedImageAssets.length > 0
+                ? {
+                    tone: 'complete',
+                    eyebrow: 'End of Results',
+                    message: 'No more featured Payload images are available.',
+                  }
+                : null
 
   // IntersectionObserver — load more when sentinel enters the grid's scroll container
   useEffect(() => {
@@ -174,7 +231,11 @@ export function FeaturedImageModal({
           void loadMoreFeaturedPayloadAssets()
         }
       },
-      { root: gridRef.current, threshold: 0.1 }
+      {
+        root: gridRef.current,
+        rootMargin: '0px 0px 320px 0px',
+        threshold: 0,
+      }
     )
     observer.observe(el)
     return () => observer.disconnect()
@@ -261,9 +322,15 @@ export function FeaturedImageModal({
             From Pexels
           </button>
         </div>
-        <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
-          Required featured variant: {featuredImageRequirementLabel}
-        </p>
+        <div className="stage-article-modal-context-bar">
+          <span className="stage-article-modal-context-chip">Featured</span>
+          <div className="stage-article-modal-context-copy">
+            <span className="stage-article-modal-context-label">Payload Requirement</span>
+            <strong className="stage-article-modal-context-value">
+              {featuredImageRequirementLabel}
+            </strong>
+          </div>
+        </div>
 
         {featuredImageSource === 'payload' && (
           <>
@@ -305,49 +372,35 @@ export function FeaturedImageModal({
               {hasMoreFeaturedPayloadAssets && (
                 <div ref={sentinelRef} style={{ height: '2px', gridColumn: '1 / -1' }} />
               )}
+              {featuredPayloadStatus && (
+                <div className={`stage-article-modal-status-bar ${featuredPayloadStatus.tone}`}>
+                  <div className="stage-article-modal-status-copy">
+                    <span className="stage-article-modal-status-eyebrow">
+                      {featuredPayloadStatus.eyebrow}
+                    </span>
+                    <p className="stage-article-modal-status-message">
+                      {featuredPayloadStatus.message}
+                    </p>
+                  </div>
+                  {featuredPayloadStatus.actionLabel && (
+                    <div className="stage-article-modal-status-actions">
+                      <button
+                        type="button"
+                        className="stage-article-modal-done secondary"
+                        onClick={() => void loadMoreFeaturedPayloadAssets()}
+                      >
+                        {featuredPayloadStatus.actionLabel}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-
-            {featuredPayloadAssetsError && (
-              <div className="stage-article-modal-empty">
-                <p>{featuredPayloadAssetsError}</p>
-                <button
-                  type="button"
-                  className="stage-article-modal-done"
-                  style={{ marginTop: '0.75rem' }}
-                  onClick={() => void loadMoreFeaturedPayloadAssets()}
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {isLoadingFeaturedPayloadAssets && filteredFeaturedImageAssets.length === 0 && (
-              <div className="stage-article-modal-empty">
-                <p>Loading featured images from Payload...</p>
-              </div>
-            )}
-
-            {!isLoadingFeaturedPayloadAssets
-              && !hasMoreFeaturedPayloadAssets
-              && filteredFeaturedImageAssets.length === 0 && (
-              <div className="stage-article-modal-empty">
-                <p>
-                  No editorial ({FEATURED_IMAGE_WIDTH}x{FEATURED_IMAGE_HEIGHT}) images
-                  match the current search.
-                </p>
-              </div>
-            )}
-
-            {isLoadingFeaturedPayloadAssets && filteredFeaturedImageAssets.length > 0 && (
-              <div className="stage-article-modal-empty">
-                <p>Loading more featured images...</p>
-              </div>
-            )}
 
             <div className="stage-article-modal-footer">
               <button
                 type="button"
-                className="stage-article-modal-done"
+                className="stage-article-modal-done secondary"
                 onClick={onClose}
               >
                 Done

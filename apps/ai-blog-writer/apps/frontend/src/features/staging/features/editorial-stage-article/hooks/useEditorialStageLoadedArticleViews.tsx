@@ -161,6 +161,8 @@ type UseEditorialStageLoadedArticleViewsParams = {
   imgBlockAssets: MediaAsset[]
   isLoadingImgBlockAssets: boolean
   imgBlockAssetsError: string | null
+  hasMoreImgBlockAssets: boolean
+  loadMoreImgBlockAssets: () => Promise<void>
   selectedImgBlockAssetIds: number[]
   toggleImgBlockAssetSelection: (assetId: number, requiredCount: number) => void
   imgBlockCaption: string
@@ -427,6 +429,8 @@ export function useEditorialStageLoadedArticleViews(
     setBlockImageSearch: params.setBlockImageSearch,
     isLoadingImgBlockAssets: params.isLoadingImgBlockAssets,
     imgBlockAssetsError: params.imgBlockAssetsError,
+    hasMoreImgBlockAssets: params.hasMoreImgBlockAssets,
+    loadMoreImgBlockAssets: params.loadMoreImgBlockAssets,
     filteredBlockImageAssets,
     selectedImgBlockAssetIds: params.selectedImgBlockAssetIds,
     toggleImgBlockAssetSelection: params.toggleImgBlockAssetSelection,

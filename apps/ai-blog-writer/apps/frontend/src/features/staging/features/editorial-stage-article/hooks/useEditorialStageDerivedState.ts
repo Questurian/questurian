@@ -160,7 +160,7 @@ export function useEditorialStageDerivedState({
       ? imgTrioRequirementLabel
       : singleImageRequirementLabel
 
-  const blockImageSearchableAssets = isMultiImageModal ? imgBlockAssets : mediaAssets
+  const blockImageSearchableAssets = blockImageModal ? imgBlockAssets : mediaAssets
   const blockImageDimensionFilteredAssets = blockImageSearchableAssets.filter((img) => {
     if (isImgBlockModal) return hasExactImgBlockDimensions(img)
     if (isImgTrioModal) return hasExactImgTrioDimensions(img, imgTrioFormat)

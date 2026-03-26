@@ -45,6 +45,22 @@ vi.mock('./ReferenceImageCropModal', () => ({
         >
           Save open graph crop
         </button>
+        <button
+          type="button"
+          onClick={() =>
+            onConfirm({
+              presetId: 'thumbnail',
+              label: 'Thumbnail crop',
+              width: 1200,
+              height: 800,
+              file: new File(['cropped'], 'staged-thumbnail.webp', {
+                type: 'image/webp',
+              }),
+            })
+          }
+        >
+          Save thumbnail crop
+        </button>
       </div>
     )
   },
@@ -95,6 +111,13 @@ function saveOpenGraphCropFromCropper() {
   const cropper = screen.getByRole('dialog', { name: 'Reference image crop editor' })
   fireEvent.click(
     within(cropper).getByRole('button', { name: 'Save open graph crop' }),
+  )
+}
+
+function saveThumbnailCropFromCropper() {
+  const cropper = screen.getByRole('dialog', { name: 'Reference image crop editor' })
+  fireEvent.click(
+    within(cropper).getByRole('button', { name: 'Save thumbnail crop' }),
   )
 }
 
@@ -599,8 +622,8 @@ describe('ImageRecreationPromptsPage', () => {
     )
     expect(requestBody.get('reference_image')).toBeInstanceOf(File)
     expect(requestBody.get('model_id')).toBe('flux-2-flex')
-    expect(requestBody.get('width')).toBe('1200')
-    expect(requestBody.get('height')).toBe('630')
+    expect(requestBody.get('width')).toBeNull()
+    expect(requestBody.get('height')).toBeNull()
     expect(requestBody.get('safety_tolerance')).toBe('4')
     expect(requestBody.get('prompt_upsampling')).toBe('true')
     expect(requestBody.get('seed')).toBe('4242')
@@ -768,6 +791,70 @@ describe('ImageRecreationPromptsPage', () => {
     expect(requestBody.get('width')).toBeNull()
     expect(requestBody.get('height')).toBeNull()
     expect((requestBody.get('reference_image') as File).name).toBe('travel-photo.jpg')
+  })
+
+  it('omits width and height for staged presets that are not FLUX-compatible', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('png-bytes', {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Disposition': 'inline; filename="flux-preview.png"',
+        },
+      }),
+    )
+
+    renderPage()
+
+    await uploadPrimaryReference()
+    saveOpenGraphCropFromCropper()
+
+    expect(screen.getByLabelText('Primary reference sizing')).toHaveTextContent(
+      'FLUX output size is left automatic because 1200 × 630 is not divisible by 16.',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Generate with FLUX.2/i }))
+
+    await screen.findByAltText('Generated FLUX.2 preview')
+
+    const [, requestInit] = vi.mocked(fetch).mock.calls[0]
+    const requestBody = requestInit?.body as FormData
+
+    expect(requestBody.get('width')).toBeNull()
+    expect(requestBody.get('height')).toBeNull()
+    expect((requestBody.get('reference_image') as File).name).toBe('staged-open-graph.webp')
+  })
+
+  it('includes width and height for staged presets that are FLUX-compatible', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('png-bytes', {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Disposition': 'inline; filename="flux-preview.png"',
+        },
+      }),
+    )
+
+    renderPage()
+
+    await uploadPrimaryReference()
+    saveThumbnailCropFromCropper()
+
+    expect(screen.getByLabelText('Primary reference sizing')).toHaveTextContent(
+      'Width and height are sent from the staged shared crop preset.',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Generate with FLUX.2/i }))
+
+    await screen.findByAltText('Generated FLUX.2 preview')
+
+    const [, requestInit] = vi.mocked(fetch).mock.calls[0]
+    const requestBody = requestInit?.body as FormData
+
+    expect(requestBody.get('width')).toBe('1200')
+    expect(requestBody.get('height')).toBe('800')
+    expect((requestBody.get('reference_image') as File).name).toBe('staged-thumbnail.webp')
   })
 
   it('shows a non-blocking warning when people presence overrides the scene recommendation', async () => {

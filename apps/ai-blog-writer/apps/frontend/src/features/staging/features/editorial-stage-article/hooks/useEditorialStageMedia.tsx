@@ -25,8 +25,6 @@ import {
   FEATURED_IMAGE_HEIGHT,
   FEATURED_IMAGE_VARIANT,
   FEATURED_IMAGE_WIDTH,
-  IMG_BLOCK_MIN_HEIGHT,
-  IMG_BLOCK_MIN_WIDTH,
   IMG_BLOCK_VARIANT,
   IMG_PAIR_REQUIRED_IMAGE_COUNT,
   IMG_TRIO_DEFAULT_FORMAT,
@@ -38,7 +36,6 @@ import {
   buildExternalImportRef,
   buildExternalPhotographerCredit,
   buildImageFileNamePrefix,
-  getImgTrioDimensions,
   getPexelsPhotoImportUrl,
   getUnsplashPhotoImportUrl,
   pickVariantAssetId,
@@ -260,26 +257,9 @@ export function useEditorialStageMedia({
     trioFormat: ImgTrioFormat
   ) => {
     if (!token || mode === 'default') return
-
-    let width = IMG_BLOCK_MIN_WIDTH
-    let height = IMG_BLOCK_MIN_HEIGHT
-    if (mode === 'img-trio') {
-      const dims = getImgTrioDimensions(trioFormat)
-      width = dims.width
-      height = dims.height
-    }
-
-    const response = await fetchMediaAssets(token, {
-      limit: 200,
-      mimeType: 'image/',
-      width,
-      height,
-    })
-    const docs = response.docs || []
-    mergeMediaAssetsIntoState(docs)
-    block.setImgBlockAssets(docs)
-    block.mergeMediaAssetsIntoState(docs)
-  }, [token, fetchMediaAssets, mergeMediaAssetsIntoState, block])
+    void trioFormat
+    await block.reloadImgBlockAssets()
+  }, [token, block])
 
   const handleUploadComplete = useCallback((result: UploadImageResponse) => {
     const featuredAssetId = pickVariantAssetId(result.variantAssetIds, FEATURED_IMAGE_VARIANT)

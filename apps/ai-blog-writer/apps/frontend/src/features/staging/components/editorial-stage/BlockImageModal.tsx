@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { useEffect, useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import Masonry from 'react-masonry-css'
 import { ImageUpload, type UploadImageResponse } from '../../../../features/images'
 import type {
@@ -55,6 +55,8 @@ type BlockImageModalPayloadProps = {
   setBlockImageSearch: Dispatch<SetStateAction<string>>
   isLoadingImgBlockAssets: boolean
   imgBlockAssetsError: string | null
+  hasMoreImgBlockAssets: boolean
+  loadMoreImgBlockAssets: () => Promise<void>
   filteredBlockImageAssets: MediaAsset[]
   selectedImgBlockAssetIds: number[]
   toggleImgBlockAssetSelection: (assetId: number, requiredCount: number) => void
@@ -161,6 +163,8 @@ export function BlockImageModal({
     setBlockImageSearch,
     isLoadingImgBlockAssets,
     imgBlockAssetsError,
+    hasMoreImgBlockAssets,
+    loadMoreImgBlockAssets,
     filteredBlockImageAssets,
     selectedImgBlockAssetIds,
     toggleImgBlockAssetSelection,
@@ -218,6 +222,47 @@ export function BlockImageModal({
     getImageUrl,
   } = actions
   const modalTitleId = 'block-image-modal-title'
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const blockRequirementSummary = isImgBlockModal
+    ? `Select exactly ${IMG_PAIR_REQUIRED_IMAGE_COUNT} images. ${imgPairRequirementLabel}`
+    : isImgTrioModal
+      ? `Select exactly ${IMG_TRIO_REQUIRED_IMAGE_COUNT} images. ${imgTrioRequirementLabel}`
+      : singleImageRequirementLabel
+
+  useEffect(() => {
+    if (!show || publishedToPayload || !blockImageModal) return
+    if (blockImageSource !== 'payload') return
+    if (imgBlockAssetsError) return
+    if (!hasMoreImgBlockAssets || isLoadingImgBlockAssets) return
+
+    const el = sentinelRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMoreImgBlockAssets()
+        }
+      },
+      {
+        root: gridRef.current,
+        rootMargin: '0px 0px 320px 0px',
+        threshold: 0,
+      }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [
+    blockImageModal,
+    blockImageSource,
+    hasMoreImgBlockAssets,
+    imgBlockAssetsError,
+    isLoadingImgBlockAssets,
+    loadMoreImgBlockAssets,
+    publishedToPayload,
+    show,
+  ])
 
   useEffect(() => {
     if (!show || publishedToPayload || !blockImageModal) return
@@ -233,6 +278,70 @@ export function BlockImageModal({
   }, [show, publishedToPayload, blockImageModal, onClose])
 
   if (!show || publishedToPayload || !blockImageModal) return null
+
+  const noBlockImageResultsMessage = isImgBlockModal
+    ? `No ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT} images match the current search.`
+    : isImgTrioModal
+      ? `No ${imgTrioDimensions.width}x${imgTrioDimensions.height} images match the current search.`
+      : `No ${CONTENT_BLOCK_VARIANT} (${CONTENT_BLOCK_WIDTH}x${CONTENT_BLOCK_HEIGHT}) images match the current search.`
+  const blockPayloadStatus = imgBlockAssetsError
+    ? {
+        tone: 'error',
+        eyebrow: 'Payload Load Failed',
+        message: imgBlockAssetsError,
+        actionLabel: 'Retry',
+      }
+    : isLoadingImgBlockAssets && filteredBlockImageAssets.length === 0
+      ? {
+          tone: 'loading',
+          eyebrow: 'Loading',
+          message: 'Loading images from Payload...',
+        }
+      : !isLoadingImgBlockAssets
+          && !imgBlockAssetsError
+          && filteredBlockImageAssets.length === 0
+          && !hasMoreImgBlockAssets
+        ? {
+            tone: 'complete',
+            eyebrow: 'No Matches',
+            message: noBlockImageResultsMessage,
+          }
+        : !imgBlockAssetsError
+            && hasMoreImgBlockAssets
+            && !isLoadingImgBlockAssets
+            && filteredBlockImageAssets.length === 0
+          ? {
+              tone: 'neutral',
+              eyebrow: 'Keep Browsing',
+              message: 'No loaded Payload images match yet. Load more to keep searching.',
+              actionLabel: 'Load More Images',
+            }
+          : isLoadingImgBlockAssets && filteredBlockImageAssets.length > 0
+            ? {
+                tone: 'loading',
+                eyebrow: 'Loading More',
+                message: 'Loading more Payload images...',
+              }
+            : !imgBlockAssetsError
+                && !isLoadingImgBlockAssets
+                && hasMoreImgBlockAssets
+                && filteredBlockImageAssets.length > 0
+              ? {
+                  tone: 'neutral',
+                  eyebrow: 'More Available',
+                  message: 'More Payload images are available.',
+                  actionLabel: 'Load More Images',
+                }
+              : !imgBlockAssetsError
+                  && !isLoadingImgBlockAssets
+                  && !hasMoreImgBlockAssets
+                  && filteredBlockImageAssets.length > 0
+                ? {
+                    tone: 'complete',
+                    eyebrow: 'End of Results',
+                    message: 'No more Payload images are available for this picker.',
+                  }
+                : null
 
   return (
     <div className="stage-article-modal-overlay" role="presentation" onClick={onClose}>
@@ -313,22 +422,17 @@ export function BlockImageModal({
 
         {blockImageSource === 'payload' && (
           <>
-            {!isMultiImageModal && (
-              <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
-                Required block variant: {singleImageRequirementLabel}
-              </p>
-            )}
-            {isImgBlockModal && (
-              <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
-                Select exactly {IMG_PAIR_REQUIRED_IMAGE_COUNT} images. Required variant: {imgPairRequirementLabel}
-              </p>
-            )}
-
-            {isImgTrioModal && (
-              <p style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem', color: '#6b6b6b' }}>
-                Select exactly {IMG_TRIO_REQUIRED_IMAGE_COUNT} images. Required variant: {imgTrioRequirementLabel}
-              </p>
-            )}
+            <div className="stage-article-modal-context-bar">
+              <span className="stage-article-modal-context-chip">
+                {isImgBlockModal ? 'Img Pair' : isImgTrioModal ? 'Img Trio' : 'Single Image'}
+              </span>
+              <div className="stage-article-modal-context-copy">
+                <span className="stage-article-modal-context-label">Payload Requirement</span>
+                <strong className="stage-article-modal-context-value">
+                  {blockRequirementSummary}
+                </strong>
+              </div>
+            </div>
 
             {isImgTrioModal && (
               <div className="stage-article-modal-search" style={{ marginBottom: '0.5rem' }}>
@@ -365,19 +469,7 @@ export function BlockImageModal({
               />
             </div>
 
-            {isMultiImageModal && isLoadingImgBlockAssets && (
-              <div className="stage-article-modal-empty">
-                <p>Loading filtered image assets...</p>
-              </div>
-            )}
-
-            {isMultiImageModal && imgBlockAssetsError && (
-              <div className="stage-article-modal-empty">
-                <p>{imgBlockAssetsError}</p>
-              </div>
-            )}
-
-            <div className="stage-article-modal-grid">
+            <div ref={gridRef} className="stage-article-modal-grid">
               {filteredBlockImageAssets
                 .map(img => (
                   <button
@@ -424,19 +516,33 @@ export function BlockImageModal({
                     )}
                   </button>
                 ))}
+              {hasMoreImgBlockAssets && (
+                <div ref={sentinelRef} style={{ height: '2px', gridColumn: '1 / -1' }} />
+              )}
+              {blockPayloadStatus && (
+                <div className={`stage-article-modal-status-bar ${blockPayloadStatus.tone}`}>
+                  <div className="stage-article-modal-status-copy">
+                    <span className="stage-article-modal-status-eyebrow">
+                      {blockPayloadStatus.eyebrow}
+                    </span>
+                    <p className="stage-article-modal-status-message">
+                      {blockPayloadStatus.message}
+                    </p>
+                  </div>
+                  {blockPayloadStatus.actionLabel && (
+                    <div className="stage-article-modal-status-actions">
+                      <button
+                        type="button"
+                        className="stage-article-modal-done secondary"
+                        onClick={() => void loadMoreImgBlockAssets()}
+                      >
+                        {blockPayloadStatus.actionLabel}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-
-            {!isLoadingImgBlockAssets && !imgBlockAssetsError && filteredBlockImageAssets.length === 0 && (
-              <div className="stage-article-modal-empty">
-                <p>
-                  {isImgBlockModal
-                    ? `No ${IMG_BLOCK_MIN_WIDTH}x${IMG_BLOCK_MIN_HEIGHT} images match the current search.`
-                    : isImgTrioModal
-                      ? `No ${imgTrioDimensions.width}x${imgTrioDimensions.height} images match the current search.`
-                      : `No ${CONTENT_BLOCK_VARIANT} (${CONTENT_BLOCK_WIDTH}x${CONTENT_BLOCK_HEIGHT}) images match the current search.`}
-                </p>
-              </div>
-            )}
 
             <div className="stage-article-modal-footer">
               {isMultiImageModal && (
@@ -451,7 +557,7 @@ export function BlockImageModal({
               )}
               <button
                 type="button"
-                className="stage-article-modal-done"
+                className="stage-article-modal-done secondary"
                 onClick={onClose}
               >
                 Cancel

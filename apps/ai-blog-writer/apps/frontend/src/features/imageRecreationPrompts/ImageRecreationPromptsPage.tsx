@@ -448,10 +448,34 @@ type AdditionalReferencePreview = {
 type StagedReferenceCrop = Omit<ReferenceCropSelection, 'file'>
 
 const MAX_ADDITIONAL_REFERENCE_IMAGES = 7
+const MIN_FLUX_DIMENSION = 64
+const FLUX_DIMENSION_MULTIPLE = 16
 
 function buildFileSignature(file: File | null): string | null {
   if (!file) return null
   return [file.name, file.type, file.size, file.lastModified].join(':')
+}
+
+function isFluxCompatibleDimension(value: number): boolean {
+  return (
+    Number.isFinite(value) &&
+    value >= MIN_FLUX_DIMENSION &&
+    value % FLUX_DIMENSION_MULTIPLE === 0
+  )
+}
+
+function getFluxOutputDimensions(
+  stagedReferenceCrop: StagedReferenceCrop | null,
+): { width: number; height: number } | null {
+  if (!stagedReferenceCrop) return null
+
+  return isFluxCompatibleDimension(stagedReferenceCrop.width) &&
+    isFluxCompatibleDimension(stagedReferenceCrop.height)
+    ? {
+        width: stagedReferenceCrop.width,
+        height: stagedReferenceCrop.height,
+      }
+    : null
 }
 
 function buildGenerationInputSignature(args: {
@@ -554,6 +578,8 @@ export default function ImageRecreationPromptsPage() {
   const normalizedSeedValue = formState.seedValue.trim()
   const configuredReferenceCount = (hasReferenceImage ? 1 : 0) + additionalReferenceImages.length
   const hasStagedReferenceCrop = Boolean(stagedReferenceCrop)
+  const fluxOutputDimensions = getFluxOutputDimensions(stagedReferenceCrop)
+  const hasExplicitFluxOutputDimensions = Boolean(fluxOutputDimensions)
   const activeReferencePreset = getReferenceCropPreset(stagedReferenceCrop?.presetId ?? 'original')
   const activeReferenceSummary = stagedReferenceCrop
     ? `${stagedReferenceCrop.label} · ${stagedReferenceCrop.width} × ${stagedReferenceCrop.height}`
@@ -990,8 +1016,8 @@ export default function ImageRecreationPromptsPage() {
         {
           additionalReferenceImages: additionalReferenceImages.map(({ file }) => file),
           modelId: formState.modelId,
-          width: stagedReferenceCrop?.width,
-          height: stagedReferenceCrop?.height,
+          width: fluxOutputDimensions?.width,
+          height: fluxOutputDimensions?.height,
           safetyTolerance: Number(formState.safetyTolerance),
           promptUpsampling: formState.enablePromptUpsampling,
           seed: normalizedSeedValue || undefined,
@@ -1087,10 +1113,14 @@ export default function ImageRecreationPromptsPage() {
     ? `${stagedReferenceCrop.label} is staged`
     : 'Original reference is active'
   const referenceStageDescription = stagedReferenceDimensions
-    ? `FLUX will receive the staged ${stagedReferenceDimensions} crop instead of the untouched upload.`
+    ? hasExplicitFluxOutputDimensions
+      ? `FLUX will receive the staged ${stagedReferenceDimensions} crop instead of the untouched upload.`
+      : `FLUX will receive the staged ${stagedReferenceDimensions} crop, but output size stays automatic because FLUX only accepts explicit dimensions in multiples of 16.`
     : 'FLUX will receive the original uploaded image dimensions unless you stage one of the shared crop presets first.'
   const fluxFootnote = stagedReferenceDescriptor
-    ? `Primary reference staged as ${stagedReferenceDescriptor}. FLUX receives that crop file directly.`
+    ? hasExplicitFluxOutputDimensions
+      ? `Primary reference staged as ${stagedReferenceDescriptor}. FLUX receives that crop file directly.`
+      : `Primary reference staged as ${stagedReferenceDescriptor}. FLUX receives that crop file directly, but width and height are left automatic because that preset size is not divisible by 16.`
     : 'Using the original uploaded reference dimensions. Stage one of the shared crop presets above if you want to lock the framing before FLUX runs.'
 
   return (
@@ -1513,8 +1543,10 @@ export default function ImageRecreationPromptsPage() {
                   <div className="irp-control-readout" aria-label="Primary reference sizing">
                     <strong>{activeReferenceSummary}</strong>
                     <span>
-                      {hasStagedReferenceCrop
+                      {hasStagedReferenceCrop && hasExplicitFluxOutputDimensions
                         ? 'Width and height are sent from the staged shared crop preset.'
+                        : hasStagedReferenceCrop && stagedReferenceDimensions
+                          ? `This staged preset is used for framing only. FLUX output size is left automatic because ${stagedReferenceDimensions} is not divisible by 16.`
                         : 'No preset crop is staged, so FLUX uses the original uploaded reference dimensions.'}
                     </span>
                   </div>

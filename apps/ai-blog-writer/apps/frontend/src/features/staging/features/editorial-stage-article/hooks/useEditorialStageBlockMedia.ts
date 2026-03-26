@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   MediaAsset,
   PexelsPhoto,
@@ -26,6 +26,8 @@ import {
   mergeMediaAssetLists,
 } from '../media-utils'
 import { searchExternalPhotos } from '../services/editorial-stage-image-search.service'
+
+const BLOCK_PAYLOAD_PAGE_LIMIT = 60
 
 type UseEditorialStageBlockMediaParams = {
   token: string | null | undefined
@@ -80,6 +82,8 @@ export function useEditorialStageBlockMedia({
   const [imgBlockAssets, setImgBlockAssets] = useState<MediaAsset[]>([])
   const [isLoadingImgBlockAssets, setIsLoadingImgBlockAssets] = useState(false)
   const [imgBlockAssetsError, setImgBlockAssetsError] = useState<string | null>(null)
+  const [imgBlockPayloadPage, setImgBlockPayloadPage] = useState(0)
+  const [imgBlockPayloadTotalPages, setImgBlockPayloadTotalPages] = useState(1)
   const [selectedImgBlockAssetIds, setSelectedImgBlockAssetIds] = useState<number[]>([])
   const [imgBlockCaption, setImgBlockCaption] = useState('')
   const [imgTrioFormat, setImgTrioFormat] = useState<ImgTrioFormat>(IMG_TRIO_DEFAULT_FORMAT)
@@ -96,10 +100,170 @@ export function useEditorialStageBlockMedia({
   const [pexelsBlockOrientation, setPexelsBlockOrientation] = useState<PexelsOrientationOption>('')
   const [pexelsBlockPerPage, setPexelsBlockPerPage] = useState<number>(18)
   const [isImportingBlockExternalImage, setIsImportingBlockExternalImage] = useState(false)
+  const imgBlockAssetsRef = useRef<MediaAsset[]>([])
+  const mediaAssetsRef = useRef<MediaAsset[]>(mediaAssets)
+  const selectedImgBlockAssetIdsRef = useRef<number[]>([])
+
+  useEffect(() => {
+    imgBlockAssetsRef.current = imgBlockAssets
+  }, [imgBlockAssets])
+
+  useEffect(() => {
+    mediaAssetsRef.current = mediaAssets
+  }, [mediaAssets])
+
+  useEffect(() => {
+    selectedImgBlockAssetIdsRef.current = selectedImgBlockAssetIds
+  }, [selectedImgBlockAssetIds])
 
   const mergeMediaAssetsIntoState = useCallback((assets: MediaAsset[]) => {
-    setImgBlockAssets((existingAssets) => mergeMediaAssetLists(existingAssets, assets))
+    setImgBlockAssets((existingAssets) => {
+      const mergedAssets = mergeMediaAssetLists(existingAssets, assets)
+      imgBlockAssetsRef.current = mergedAssets
+      return mergedAssets
+    })
   }, [])
+
+  const replaceImgBlockAssets = useCallback((
+    assets: MediaAsset[],
+    pagination?: {
+      page: number
+      totalPages: number
+    }
+  ) => {
+    imgBlockAssetsRef.current = assets
+    setImgBlockAssets(assets)
+    if (pagination) {
+      setImgBlockPayloadPage(pagination.page)
+      setImgBlockPayloadTotalPages(pagination.totalPages)
+    }
+  }, [])
+
+  const buildPayloadRequestParams = useCallback(() => {
+    if (!blockImageModal) return null
+
+    const request: {
+      limit: number
+      mimeType: string
+      width?: number
+      height?: number
+    } = {
+      limit: BLOCK_PAYLOAD_PAGE_LIMIT,
+      mimeType: 'image/',
+    }
+
+    if (blockImageModal.mode === 'img') {
+      request.width = IMG_BLOCK_MIN_WIDTH
+      request.height = IMG_BLOCK_MIN_HEIGHT
+      return request
+    }
+
+    if (blockImageModal.mode === 'img-trio') {
+      const dims = getImgTrioDimensions(imgTrioFormat)
+      request.width = dims.width
+      request.height = dims.height
+    }
+
+    return request
+  }, [blockImageModal, imgTrioFormat])
+
+  const fetchImgBlockPayloadPage = useCallback(async (
+    page: number,
+    options?: {
+      reset?: boolean
+    }
+  ) => {
+    const request = buildPayloadRequestParams()
+    if (!token || !blockImageModal || !request) return
+
+    setIsLoadingImgBlockAssets(true)
+    setImgBlockAssetsError(null)
+
+    try {
+      const response = await fetchMediaAssets(token, {
+        ...request,
+        page,
+      })
+      const docs = response.docs || []
+      const selectedSeedAssets = options?.reset
+        ? mediaAssetsRef.current.filter((asset) =>
+            selectedImgBlockAssetIdsRef.current.includes(asset.id)
+          )
+        : []
+      const mergedAssets = mergeMediaAssetLists(
+        options?.reset ? selectedSeedAssets : imgBlockAssetsRef.current,
+        docs
+      )
+
+      replaceImgBlockAssets(mergedAssets, {
+        page,
+        totalPages: response.totalPages || 1,
+      })
+
+      if (blockImageModal.mode !== 'default') {
+        const requiredCount = blockImageModal.mode === 'img-trio'
+          ? IMG_TRIO_REQUIRED_IMAGE_COUNT
+          : IMG_PAIR_REQUIRED_IMAGE_COUNT
+        const allowedAssetIds = new Set(mergedAssets.map((asset) => asset.id))
+        setSelectedImgBlockAssetIds((current) =>
+          current.filter((id) => allowedAssetIds.has(id)).slice(0, requiredCount)
+        )
+      }
+    } catch (err) {
+      if (options?.reset) {
+        const selectedSeedAssets = mediaAssetsRef.current.filter((asset) =>
+          selectedImgBlockAssetIdsRef.current.includes(asset.id)
+        )
+        replaceImgBlockAssets(selectedSeedAssets, {
+          page: 0,
+          totalPages: 1,
+        })
+      }
+
+      setImgBlockAssetsError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load Payload images.'
+      )
+    } finally {
+      setIsLoadingImgBlockAssets(false)
+    }
+  }, [
+    blockImageModal,
+    buildPayloadRequestParams,
+    fetchMediaAssets,
+    replaceImgBlockAssets,
+    token,
+  ])
+
+  const reloadImgBlockAssets = useCallback(async () => {
+    if (!blockImageModal || !token) return
+
+    const selectedSeedAssets = mediaAssetsRef.current.filter((asset) =>
+      selectedImgBlockAssetIdsRef.current.includes(asset.id)
+    )
+    replaceImgBlockAssets(selectedSeedAssets, {
+      page: 0,
+      totalPages: 1,
+    })
+    await fetchImgBlockPayloadPage(1, { reset: true })
+  }, [blockImageModal, fetchImgBlockPayloadPage, replaceImgBlockAssets, token])
+
+  const loadMoreImgBlockAssets = useCallback(async () => {
+    if (!blockImageModal || !token) return
+    if (isLoadingImgBlockAssets) return
+    if (imgBlockPayloadPage >= imgBlockPayloadTotalPages && imgBlockPayloadPage > 0) return
+
+    const nextPage = imgBlockPayloadPage + 1
+    await fetchImgBlockPayloadPage(nextPage)
+  }, [
+    blockImageModal,
+    fetchImgBlockPayloadPage,
+    imgBlockPayloadPage,
+    imgBlockPayloadTotalPages,
+    isLoadingImgBlockAssets,
+    token,
+  ])
 
   const closeBlockImageModal = useCallback(() => {
     setBlockImageSource('payload')
@@ -107,6 +271,10 @@ export function useEditorialStageBlockMedia({
     setSelectedImgBlockAssetIds([])
     setImgBlockCaption('')
     setImgTrioFormat(IMG_TRIO_DEFAULT_FORMAT)
+    replaceImgBlockAssets([], {
+      page: 0,
+      totalPages: 1,
+    })
     setImgBlockAssetsError(null)
     setIsLoadingImgBlockAssets(false)
     setIsImportingBlockExternalImage(false)
@@ -123,7 +291,7 @@ export function useEditorialStageBlockMedia({
     setUnsplashBlockOrientation('')
     setUnsplashBlockPerPage(18)
     resetExternalImportState()
-  }, [resetExternalImportState])
+  }, [replaceImgBlockAssets, resetExternalImportState])
 
   const openBlockImageModal = useCallback((
     blockId: string,
@@ -149,6 +317,10 @@ export function useEditorialStageBlockMedia({
     setUnsplashBlockOrientation('')
     setUnsplashBlockPerPage(18)
     setIsImportingBlockExternalImage(false)
+    replaceImgBlockAssets([], {
+      page: 0,
+      totalPages: 1,
+    })
     resetExternalImportState()
     clearOpenImagePickerTarget()
     setBlockImageModal({
@@ -157,61 +329,32 @@ export function useEditorialStageBlockMedia({
       mode,
       replaceExistingBlock: options?.replaceExistingBlock === true,
     })
-  }, [clearOpenImagePickerTarget, resetExternalImportState])
+  }, [clearOpenImagePickerTarget, replaceImgBlockAssets, resetExternalImportState])
+
+  const blockPayloadRequestKey = blockImageModal
+    ? `${blockImageModal.blockId}:${blockImageModal.mode}:${blockImageModal.mode === 'img-trio' ? imgTrioFormat : 'default'}`
+    : ''
 
   useEffect(() => {
-    if (!blockImageModal || blockImageModal.mode === 'default') return
+    if (!blockImageModal) return
+    if (blockImageSource !== 'payload') return
+
     if (!token) {
-      setImgBlockAssets([])
+      replaceImgBlockAssets([], {
+        page: 0,
+        totalPages: 1,
+      })
       setSelectedImgBlockAssetIds([])
       return
     }
 
-    const loadFilteredAssets = async () => {
-      setIsLoadingImgBlockAssets(true)
-      setImgBlockAssetsError(null)
+    void reloadImgBlockAssets()
+  }, [blockImageSource, blockPayloadRequestKey, reloadImgBlockAssets, replaceImgBlockAssets, token, blockImageModal])
 
-      let width = IMG_BLOCK_MIN_WIDTH
-      let height = IMG_BLOCK_MIN_HEIGHT
-      if (blockImageModal.mode === 'img-trio') {
-        const dims = getImgTrioDimensions(imgTrioFormat)
-        width = dims.width
-        height = dims.height
-      }
-
-      try {
-        const response = await fetchMediaAssets(token, {
-          limit: 200,
-          mimeType: 'image/',
-          width,
-          height,
-        })
-        const docs = response.docs || []
-        setImgBlockAssets(docs)
-        const allowedAssetIds = new Set(docs.map((asset) => asset.id))
-        const requiredCount = blockImageModal.mode === 'img-trio'
-          ? IMG_TRIO_REQUIRED_IMAGE_COUNT
-          : IMG_PAIR_REQUIRED_IMAGE_COUNT
-        setSelectedImgBlockAssetIds((current) =>
-          current
-            .filter((id) => allowedAssetIds.has(id))
-            .slice(0, requiredCount)
-        )
-      } catch (err) {
-        setImgBlockAssets([])
-        setSelectedImgBlockAssetIds([])
-        setImgBlockAssetsError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to load filtered image assets'
-        )
-      } finally {
-        setIsLoadingImgBlockAssets(false)
-      }
-    }
-
-    void loadFilteredAssets()
-  }, [blockImageModal, token, fetchMediaAssets, imgTrioFormat])
+  useEffect(() => {
+    if (blockImageSource === 'payload') return
+    setImgBlockAssetsError(null)
+  }, [blockImageSource])
 
   const toggleImgBlockAssetSelection = useCallback((assetId: number, requiredCount: number) => {
     setSelectedImgBlockAssetIds((current) => {
@@ -312,9 +455,11 @@ export function useEditorialStageBlockMedia({
     blockImagePhotographerCredit,
     setBlockImagePhotographerCredit,
     imgBlockAssets,
-    setImgBlockAssets,
     isLoadingImgBlockAssets,
     imgBlockAssetsError,
+    hasMoreImgBlockAssets: imgBlockPayloadPage < imgBlockPayloadTotalPages,
+    loadMoreImgBlockAssets,
+    reloadImgBlockAssets,
     selectedImgBlockAssetIds,
     setSelectedImgBlockAssetIds,
     toggleImgBlockAssetSelection,
