@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, Clock, Music2 } from 'lucide-react';
@@ -70,6 +70,26 @@ const NIGHTLIFE_SECTION_ORDER: NightlifeFormSection[] = [
   'space',
   'scene',
   'contact',
+];
+
+const STEP1_FIELDS: Array<keyof AddNightlifeFormData> = ['name', 'location'];
+const ENTITIES_FIELDS: Array<keyof AddNightlifeFormData> = ['googleUrl', 'placeId', 'latitude', 'longitude'];
+const CORE_FIELDS: Array<keyof AddNightlifeFormData> = ['clubType', 'music', 'idealFor'];
+const SPACE_FIELDS: Array<keyof AddNightlifeFormData> = ['priceTier', 'venueType', 'venueSize', 'spaceLayout', 'vibe', 'peakHours'];
+const SCENE_FIELDS: Array<keyof AddNightlifeFormData> = [
+  'musicFormat',
+  'touristPresence',
+  'energyLevel',
+  'vipAndBottleService',
+  'crowdProfile',
+  'dressCode',
+];
+const CONTACT_FIELDS: Array<keyof AddNightlifeFormData> = [
+  'countryCode',
+  'phone',
+  'website',
+  'reserveUrl',
+  'daytimeRestaurant',
 ];
 
 const NIGHTLIFE_FORM_DEFAULT_VALUES: AddNightlifeFormData = {
@@ -167,6 +187,38 @@ function clearNightlifeDraftFromStorage() {
   } catch {
     // Ignore storage deletion failures.
   }
+}
+
+function getSectionFields(section: NightlifeFormSection): Array<keyof AddNightlifeFormData> {
+  switch (section) {
+    case 'step1':
+      return STEP1_FIELDS;
+    case 'entities':
+      return ENTITIES_FIELDS;
+    case 'core':
+      return CORE_FIELDS;
+    case 'space':
+      return SPACE_FIELDS;
+    case 'scene':
+      return SCENE_FIELDS;
+    case 'contact':
+      return CONTACT_FIELDS;
+    default:
+      return [];
+  }
+}
+
+function findFirstErrorSection(
+  errors: FieldErrors<AddNightlifeFormData>
+): NightlifeFormSection | null {
+  for (const section of NIGHTLIFE_SECTION_ORDER) {
+    const sectionHasError = getSectionFields(section).some((fieldName) => Boolean(errors[fieldName]));
+    if (sectionHasError) {
+      return section;
+    }
+  }
+
+  return null;
 }
 
 function OptionSelect({ label, options, value, onChange, error }: OptionTableProps) {
@@ -378,12 +430,20 @@ export function AddNightlifeLocation() {
     setActiveSection(section);
   };
 
-  const goToNextSection = () => {
+  const goToNextSection = async () => {
     const currentIndex = NIGHTLIFE_SECTION_ORDER.indexOf(activeSection);
     const nextSection = NIGHTLIFE_SECTION_ORDER[currentIndex + 1];
-    if (nextSection) {
-      goToSection(nextSection);
+    if (!nextSection) return;
+
+    const currentSectionFields = getSectionFields(activeSection);
+    if (currentSectionFields.length > 0) {
+      const isValid = await form.trigger(currentSectionFields, { shouldFocus: true });
+      if (!isValid) {
+        return;
+      }
     }
+
+    goToSection(nextSection);
   };
 
   const goToPreviousSection = () => {
@@ -541,9 +601,6 @@ export function AddNightlifeLocation() {
 
     const nightlifeDetails = {
       name: data.name,
-      core: {
-        idealFor: data.idealFor,
-      },
       price_tier: data.priceTier,
       club_type: data.clubType,
       music,
@@ -606,6 +663,13 @@ export function AddNightlifeLocation() {
         },
       }
     );
+  };
+
+  const onInvalidSubmit = (errors: FieldErrors<AddNightlifeFormData>) => {
+    const firstErrorSection = findFirstErrorSection(errors);
+    if (firstErrorSection && firstErrorSection !== activeSection) {
+      setActiveSection(firstErrorSection);
+    }
   };
 
   return (
@@ -671,7 +735,7 @@ export function AddNightlifeLocation() {
             </div>
           )}
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit, onInvalidSubmit)} className="space-y-5">
           {activeSection === 'step1' && (
           <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
             <SectionHeader
@@ -789,7 +853,7 @@ export function AddNightlifeLocation() {
               <Button type="button" variant="outline" onClick={goToPreviousSection}>
                 Previous
               </Button>
-              <Button type="button" onClick={goToNextSection}>
+              <Button type="button" onClick={() => void goToNextSection()}>
                 Next
               </Button>
             </div>
@@ -834,7 +898,7 @@ export function AddNightlifeLocation() {
               <Button type="button" variant="outline" onClick={goToPreviousSection}>
                 Previous
               </Button>
-              <Button type="button" onClick={goToNextSection}>
+              <Button type="button" onClick={() => void goToNextSection()}>
                 Next
               </Button>
             </div>
@@ -901,7 +965,7 @@ export function AddNightlifeLocation() {
               <Button type="button" variant="outline" onClick={goToPreviousSection}>
                 Previous
               </Button>
-              <Button type="button" onClick={goToNextSection}>
+              <Button type="button" onClick={() => void goToNextSection()}>
                 Next
               </Button>
             </div>
@@ -965,7 +1029,7 @@ export function AddNightlifeLocation() {
               <Button type="button" variant="outline" onClick={goToPreviousSection}>
                 Previous
               </Button>
-              <Button type="button" onClick={goToNextSection}>
+              <Button type="button" onClick={() => void goToNextSection()}>
                 Next
               </Button>
             </div>

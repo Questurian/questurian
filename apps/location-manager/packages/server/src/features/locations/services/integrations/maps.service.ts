@@ -9,7 +9,7 @@ import {
 import {
   findPotentialDuplicateLocations,
   getLocationByIdForUpdate,
-  saveLocation,
+  saveLocationOrThrow,
   updateLocationById,
 } from "../../repositories/core";
 import { getInstagramEmbedsByLocationId } from "../../repositories/content";
@@ -662,10 +662,7 @@ export class MapsService {
       return this.buildLocationResponseById(mergedId, duplicate);
     }
 
-    const savedId = saveLocation(entry);
-    if (!savedId || typeof savedId !== 'number') {
-      throw new BadRequestError("Failed to save location to database");
-    }
+    const savedId = saveLocationOrThrow(entry);
 
     // Auto-fetch TripAdvisor place data for non-nightlife categories only.
     if (entry.tripadvisorLocationId && category !== "nightlife") {

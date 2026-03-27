@@ -3,6 +3,7 @@ import { join, dirname, isAbsolute, resolve } from "path";
 import { existsSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "url";
 import { splitLocationsToEntities } from "./migrations/split-locations-to-entities";
+import { clearInvalidNightlifeIdealFor } from "./migrations/clear-invalid-nightlife-ideal-for";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -60,6 +61,13 @@ export function initDb() {
 
   // Strict schema path only: entities + category-isolated tables + entity-referenced content tables.
   splitLocationsToEntities(database);
+
+  const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
+  if (nightlifeIdealForCleanup.cleared > 0) {
+    console.log(
+      `🧹 Cleared invalid nightlife Ideal For selections for ${nightlifeIdealForCleanup.cleared} location(s)`
+    );
+  }
 }
 
 export function getDb(): Database {

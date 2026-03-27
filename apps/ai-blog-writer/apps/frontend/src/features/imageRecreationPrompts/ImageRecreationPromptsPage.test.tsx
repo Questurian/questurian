@@ -165,7 +165,7 @@ describe('ImageRecreationPromptsPage', () => {
     )
     expect(
       screen.getByText(
-        'Start by locking the kind of scene this actually is: landscape, landmark, city, portrait, architecture, mural, market, cafe, nightlife, and so on.',
+        'Start by locking the kind of scene this actually is: landmark, street, market, restaurant interior, cafe exterior, plated food, hotel, beach, portrait, and so on.',
       ),
     ).toBeInTheDocument()
     expect(
@@ -213,17 +213,28 @@ describe('ImageRecreationPromptsPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('includes expanded travel scene categories like street art and market scenes', () => {
+  it('includes expanded travel scene categories for restaurant interiors and plated food', () => {
     renderPage()
 
     fireEvent.change(screen.getByLabelText('Scene category'), {
-      target: { value: 'street-art-mural' },
+      target: { value: 'restaurant-interior' },
     })
 
-    expect(screen.getByLabelText('Scene category')).toHaveValue('street-art-mural')
+    expect(screen.getByLabelText('Scene category')).toHaveValue('restaurant-interior')
     expect(
       screen.getByText(
-        'Street-art scene built around a mural, painted wall, or graphic public artwork.',
+        'Dining-room travel image shaped by tables, seating, lighting, and hospitality detail.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Scene category'), {
+      target: { value: 'plated-food-close-up' },
+    })
+
+    expect(screen.getByLabelText('Scene category')).toHaveValue('plated-food-close-up')
+    expect(
+      screen.getByText(
+        'Single plated dish or hero food shot where plating, garnish, and texture are the main subject.',
       ),
     ).toBeInTheDocument()
   })

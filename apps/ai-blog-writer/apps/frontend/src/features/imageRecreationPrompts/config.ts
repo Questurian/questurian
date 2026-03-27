@@ -185,12 +185,138 @@ export const SCENE_CATEGORY_OPTIONS: SceneCategoryOption[] = [
     recommendedPeoplePresence: 'small-group',
   },
   {
+    id: 'restaurant-interior',
+    label: 'Restaurant interior',
+    description: 'Dining-room travel image shaped by tables, seating, lighting, and hospitality detail.',
+    prompt:
+      'Preserve the dining-room layout, table spacing, lighting mood, materials, and the believable hospitality character of the restaurant interior.',
+    helperText: 'Best for bistros, tasting rooms, destination restaurants, and indoor dining spaces.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'restaurant-exterior',
+    label: 'Restaurant exterior',
+    description: 'Street-facing restaurant photo built around facade, terrace, signage, and curbside context.',
+    prompt:
+      'Preserve the facade, awnings, terrace or sidewalk setup, signage placement, and the real street context of the restaurant exterior.',
+    helperText: 'Use for storefront restaurants, patios, corner bistros, and travel dining exteriors.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'cafe-interior',
+    label: 'Cafe interior',
+    description: 'Cafe interior with counter, seating, pastries, coffee bar, or cozy hospitality detail.',
+    prompt:
+      'Preserve the counter layout, seating density, pastry or coffee-bar setup, and the authentic lived-in feel of the cafe interior.',
+    helperText: 'Best for espresso bars, brunch cafes, bakery cafes, and compact indoor coffee spaces.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'cafe-exterior',
+    label: 'Cafe exterior',
+    description: 'Sidewalk or street-facing cafe image built around facade, small tables, awnings, and pedestrian context.',
+    prompt:
+      'Preserve the storefront, outdoor tables, awnings, menu boards, and the real sidewalk rhythm of the cafe exterior.',
+    helperText: 'Use for travel cafe terraces, street-corner cafes, and destination coffee exteriors.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
     id: 'cafe-restaurant-scene',
-    label: 'Cafe / restaurant scene',
-    description: 'Dining or cafe setting where tables, seating, and hospitality details shape the frame.',
+    label: 'Cafe / restaurant general',
+    description: 'Broad dining or cafe scene when the image is not specifically about the facade, interior, or food close-up.',
     prompt:
       'Preserve the table layout, seating rhythm, interior or terrace setup, and the real hospitality context of the original scene.',
-    helperText: 'Best for cafes, patios, dining terraces, and restaurant travel images.',
+    helperText: 'Use this when the scene is dining-related but does not fit a more specific restaurant, cafe, or food category.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'plated-food-close-up',
+    label: 'Plated food close-up',
+    description: 'Single plated dish or hero food shot where plating, garnish, and texture are the main subject.',
+    prompt:
+      'Preserve the exact dish identity, plating arrangement, garnish, plateware, and appetizing texture realism.',
+    helperText: 'Best for hero dishes, desserts, entrees, and close-up restaurant plates.',
+    recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'tabletop-food-spread',
+    label: 'Tabletop food spread',
+    description: 'Multi-dish tabletop scene with several plates, shared courses, or a full meal spread.',
+    prompt:
+      'Preserve the exact tabletop arrangement, plate count, servingware, spacing, and the believable dining context of the spread.',
+    helperText: 'Use for brunch spreads, tapas tables, shared meals, and top-down dining setups.',
+    recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'coffee-drinks-table',
+    label: 'Coffee / drinks table',
+    description: 'Coffee or drinks-focused travel image built around cups, glasses, saucers, or a small cafe-table setup.',
+    prompt:
+      'Preserve the cups, glasses, foam or crema, tabletop styling, and the authentic cafe-table context without turning it into a generic product shot.',
+    helperText: 'Best for espresso, cappuccino, aperitivo, cocktails at a cafe table, and drinks-with-view shots.',
+    recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'bakery-pastry-display',
+    label: 'Bakery / pastry display',
+    description: 'Bakery case, pastry counter, or dessert display built around repetition, texture, and edible detail.',
+    prompt:
+      'Preserve the pastry arrangement, tray or case structure, texture realism, and the inviting display logic of the bakery scene.',
+    helperText: 'Use for croissant counters, gelato cases, dessert displays, and pastry close-ups.',
+    recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'bar-cocktail-scene',
+    label: 'Bar / cocktail scene',
+    description: 'Bar or cocktail setting shaped by bottles, glassware, counter surfaces, and nightlife hospitality mood.',
+    prompt:
+      'Preserve the bar layout, bottle display, glassware, counter materials, and the believable hospitality mood of the scene.',
+    helperText: 'Best for cocktail bars, hotel bars, wine bars, and drinks-led nightlife travel photos.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'hotel-lobby-interior',
+    label: 'Hotel lobby interior',
+    description: 'Hotel lobby or reception interior where seating, front desk, lighting, and circulation define the space.',
+    prompt:
+      'Preserve the lobby layout, seating clusters, reception or concierge area, materials, and the premium hospitality feel of the interior.',
+    helperText: 'Use for boutique-hotel lobbies, reception spaces, and resort common areas.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'hotel-room-interior',
+    label: 'Hotel room interior',
+    description: 'Guest room or suite interior shaped by bed, furniture, window view, and hospitality styling.',
+    prompt:
+      'Preserve the room layout, bed and furniture placement, window relationship, styling details, and the believable scale of the hotel room.',
+    helperText: 'Best for hotel rooms, suites, boutique stays, and hospitality room reveals.',
+    recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'spa-wellness-interior',
+    label: 'Spa / wellness interior',
+    description: 'Wellness or spa interior driven by treatment-room calm, materials, water, and relaxation details.',
+    prompt:
+      'Preserve the spa layout, treatment or lounge details, material palette, and the calm hospitality atmosphere of the wellness interior.',
+    helperText: 'Use for spas, hammams, sauna lounges, and wellness spaces.',
+    recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'poolside-resort-scene',
+    label: 'Poolside / resort scene',
+    description: 'Resort pool or beach-club scene shaped by loungers, umbrellas, water edge, and leisure atmosphere.',
+    prompt:
+      'Preserve the pool geometry, loungers, umbrellas, water reflections, and the believable resort atmosphere of the scene.',
+    helperText: 'Best for resort pools, beach clubs, cabanas, and vacation leisure setups.',
+    recommendedPeoplePresence: 'small-group',
+  },
+  {
+    id: 'boutique-shopfront',
+    label: 'Boutique / shopfront',
+    description: 'Travel retail facade or boutique storefront with display windows, signage, and pedestrian context.',
+    prompt:
+      'Preserve the storefront geometry, window displays, signage, and the real street context of the boutique exterior.',
+    helperText: 'Use for independent shops, souvenir stores, concept boutiques, and shopping streets.',
     recommendedPeoplePresence: 'small-group',
   },
   {
@@ -228,6 +354,15 @@ export const SCENE_CATEGORY_OPTIONS: SceneCategoryOption[] = [
       'Preserve the interior layout, architectural lines, material realism, and the original sense of volume and scale.',
     helperText: 'Best for lobbies, rooms, corridors, and designed interior spaces.',
     recommendedPeoplePresence: 'no-people',
+  },
+  {
+    id: 'museum-gallery-interior',
+    label: 'Museum / gallery interior',
+    description: 'Museum, gallery, or cultural interior built around walls, display spacing, lighting, and visitor flow.',
+    prompt:
+      'Preserve the gallery layout, wall spacing, display or artwork placement, lighting, and the authentic cultural-space atmosphere.',
+    helperText: 'Best for museums, galleries, exhibition halls, and cultural interiors.',
+    recommendedPeoplePresence: 'small-group',
   },
   {
     id: 'portrait',

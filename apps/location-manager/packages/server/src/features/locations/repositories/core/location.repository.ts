@@ -11,13 +11,21 @@ import {
   getLocationCategoryById,
   getLocationsByCategory,
 } from "./location-read.repository";
-import { saveLocation as saveLocationRecord, updateLocationById } from "./location-write.repository";
+import {
+  saveLocation as saveLocationRecord,
+  saveLocationOrThrow as saveLocationRecordOrThrow,
+  updateLocationById,
+} from "./location-write.repository";
 
 /**
  * Save a new location or update an existing one (upsert by category + name + address).
  */
 export function saveLocation(location: Location): number | boolean {
   return saveLocationRecord(ensureLocationSlug(location));
+}
+
+export function saveLocationOrThrow(location: Location): number {
+  return saveLocationRecordOrThrow(ensureLocationSlug(location));
 }
 
 export {

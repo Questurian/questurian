@@ -17,13 +17,12 @@ import {
 } from "./location-typed-write.repository";
 import { toTypedLocationParams } from "./location-write.types";
 
-export function saveLocation(location: Location): number | boolean {
+function saveLocationInternal(location: Location): number {
   const db = getDb();
+  const category = parseCategory(location.category);
+  db.run("BEGIN TRANSACTION");
 
   try {
-    const category = parseCategory(location.category);
-    db.run("BEGIN TRANSACTION");
-
     const existingId = findExistingEntityId(db, category, location);
     const entityId = existingId ?? insertEntity(db, category, location);
 
@@ -38,6 +37,18 @@ export function saveLocation(location: Location): number | boolean {
     return entityId;
   } catch (error) {
     db.run("ROLLBACK");
+    throw error;
+  }
+}
+
+export function saveLocationOrThrow(location: Location): number {
+  return saveLocationInternal(location);
+}
+
+export function saveLocation(location: Location): number | boolean {
+  try {
+    return saveLocationInternal(location);
+  } catch (error) {
     console.error("Error saving location to DB:", error);
     return false;
   }

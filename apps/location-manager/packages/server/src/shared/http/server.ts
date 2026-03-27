@@ -3,6 +3,25 @@ import { HttpError } from '../core/errors/http-error';
 
 export const app = new Hono();
 
+interface HttpErrorLike {
+  statusCode: number;
+  message: string;
+  code?: string;
+  details?: unknown;
+}
+
+function isHttpErrorLike(error: unknown): error is HttpErrorLike {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as Partial<HttpErrorLike>;
+  return (
+    typeof candidate.statusCode === 'number' &&
+    typeof candidate.message === 'string'
+  );
+}
+
 // Health check endpoint
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'location-manager-api' });
@@ -12,7 +31,7 @@ app.get('/health', (c) => {
 app.onError((err, c) => {
   console.error("Error:", err);
 
-  if (err instanceof HttpError) {
+  if (err instanceof HttpError || isHttpErrorLike(err)) {
     return c.json(
       {
         success: false,

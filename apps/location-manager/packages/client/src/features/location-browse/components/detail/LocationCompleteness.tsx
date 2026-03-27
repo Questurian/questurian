@@ -88,7 +88,7 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         {
           key: "idealFor",
           label: "Ideal For",
-          present: hasIdealFor || nightlifeDetails.idealFor.length > 0,
+          present: hasIdealFor,
         },
         { key: "nightlife.music", label: "Music", present: nightlifeDetails.music.length > 0 },
         { key: "nightlife.venueType", label: "Venue Type", present: Boolean(nightlifeDetails.venueType) },

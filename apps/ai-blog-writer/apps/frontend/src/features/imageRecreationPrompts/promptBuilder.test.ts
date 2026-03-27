@@ -162,6 +162,20 @@ describe('buildImageRecreationPrompt', () => {
     )
   })
 
+  it('supports newer travel dining scene categories like plated food close-ups', () => {
+    const result = buildImageRecreationPrompt({
+      ...createFormStateFromPreset(),
+      sceneCategory: 'plated-food-close-up',
+    })
+
+    expect(result.finalPrompt).toContain(
+      'Preserve the exact dish identity, plating arrangement, garnish, plateware, and appetizing texture realism.',
+    )
+    expect(result.finalPrompt).toContain(
+      'Preserve the exact dish identity, plating, garnish, plateware, and edible texture so the result still reads as the same meal rather than a different recipe.',
+    )
+  })
+
   it('supports leaving capture style unchanged', () => {
     const result = buildImageRecreationPrompt({
       ...createFormStateFromPreset(),

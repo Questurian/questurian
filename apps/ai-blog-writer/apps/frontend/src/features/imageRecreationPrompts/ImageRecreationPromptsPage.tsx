@@ -1317,7 +1317,7 @@ export default function ImageRecreationPromptsPage() {
               label="Scene category"
               value={formState.sceneCategory}
               options={SCENE_CATEGORY_OPTIONS}
-              helperText="Start by locking the kind of scene this actually is: landscape, landmark, city, portrait, architecture, mural, market, cafe, nightlife, and so on."
+              helperText="Start by locking the kind of scene this actually is: landmark, street, market, restaurant interior, cafe exterior, plated food, hotel, beach, portrait, and so on."
               onChange={handleSceneCategoryChange}
             />
             <BinaryChoiceField

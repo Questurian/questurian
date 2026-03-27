@@ -181,12 +181,39 @@ function buildSceneSpecificPrompt(state: ImageRecreationFormState): string {
       return 'Keep the mural or street-art wall readable, grounded, and faithful to the original artwork instead of turning it into generic background texture.'
     case 'market-food-stall':
       return 'Preserve the real stall layout, display density, and market rhythm so the scene still feels like an authentic market rather than a styled set.'
+    case 'restaurant-interior':
+    case 'cafe-interior':
+      return 'Keep the seating layout, table spacing, counter rhythm, materials, and hospitality atmosphere faithful to the original interior.'
+    case 'restaurant-exterior':
+    case 'cafe-exterior':
+    case 'boutique-shopfront':
+      return 'Preserve the facade, signage, terrace or sidewalk setup, and the real street context so the place still reads as the same travel stop.'
     case 'cafe-restaurant-scene':
       return 'Keep the seating layout, table spacing, service setup, and dining atmosphere faithful to the original scene.'
+    case 'plated-food-close-up':
+      return 'Preserve the exact dish identity, plating, garnish, plateware, and edible texture so the result still reads as the same meal rather than a different recipe.'
+    case 'tabletop-food-spread':
+      return 'Preserve the tabletop arrangement, dish count, servingware, and meal structure so the spread still reads as the same dining moment.'
+    case 'coffee-drinks-table':
+      return 'Keep the cups, glassware, tabletop styling, and drink texture grounded in the original cafe or bar setting instead of turning it into a generic ad render.'
+    case 'bakery-pastry-display':
+      return 'Preserve the pastry arrangement, display geometry, and appetizing texture detail so the bakery scene stays specific and believable.'
+    case 'bar-cocktail-scene':
+      return 'Keep the bar layout, glassware, bottle display, and nightlife hospitality mood grounded in the original venue.'
+    case 'hotel-lobby-interior':
+      return 'Preserve the lobby circulation, seating clusters, reception elements, and premium hospitality feel of the original interior.'
+    case 'hotel-room-interior':
+      return 'Keep the bed placement, furniture layout, window relationship, and believable hospitality styling of the original room.'
+    case 'spa-wellness-interior':
+      return 'Preserve the calm spa layout, material palette, and wellness atmosphere without turning the space into a generic luxury render.'
+    case 'poolside-resort-scene':
+      return 'Keep the pool geometry, loungers, umbrellas, water behavior, and relaxed resort atmosphere anchored to the original scene.'
     case 'rooftop-terrace-view':
       return 'Preserve the elevated viewpoint, terrace edge geometry, and the real relationship between the platform and the surrounding view.'
     case 'nightlife-neon-scene':
       return 'Keep the nightlife scene grounded in real signage, street layout, and practical after-dark atmosphere instead of exaggerated club-style staging.'
+    case 'museum-gallery-interior':
+      return 'Preserve the gallery layout, display spacing, lighting, and visitor rhythm so the cultural space still reads as the same place.'
     default:
       return ''
   }
@@ -278,24 +305,42 @@ function resolveCrowdCharacterPrompt(state: ImageRecreationFormState): string {
 function resolveCompactSceneSentence(
   state: ImageRecreationFormState,
   sceneLabel: string,
+  scenePrompt: string,
+  sceneSpecificPrompt: string,
 ): string {
   if (allowsAddedPeople(state)) {
-    return `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while allowing human presence to expand naturally if needed.`
+    return joinSentences([
+      scenePrompt,
+      sceneSpecificPrompt,
+      `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while allowing human presence to expand naturally if needed.`,
+    ])
   }
 
   if (allowsPeopleReduction(state)) {
-    return `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while allowing only slight thinning of the existing people.`
+    return joinSentences([
+      scenePrompt,
+      sceneSpecificPrompt,
+      `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while allowing only slight thinning of the existing people.`,
+    ])
   }
 
   if (removesAllPeople(state)) {
-    return `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while removing all human presence from the frame.`
+    return joinSentences([
+      scenePrompt,
+      sceneSpecificPrompt,
+      `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while removing all human presence from the frame.`,
+    ])
   }
 
   if (allowsPeopleRecasting(state)) {
-    return `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while allowing the human cast to be reinterpreted to match the selected people presence.`
+    return joinSentences([
+      scenePrompt,
+      sceneSpecificPrompt,
+      `Keep the ${sceneLabel.toLowerCase()} scene structure, composition anchor, and subject hierarchy intact while allowing the human cast to be reinterpreted to match the selected people presence.`,
+    ])
   }
 
-  return `Keep the ${sceneLabel.toLowerCase()} scene structure, composition, and subject hierarchy faithful to the reference image.`
+  return joinSentences([scenePrompt, sceneSpecificPrompt])
 }
 
 function resolveCompactPerspectiveSentence(state: ImageRecreationFormState): string {
@@ -725,6 +770,7 @@ export function buildImageRecreationPrompt(
   const peopleCanBeReduced = allowsPeopleReduction(state)
   const peopleAreRemoved = removesAllPeople(state)
   const peopleCanBeRecast = allowsPeopleRecasting(state)
+  const sceneSpecificPrompt = buildSceneSpecificPrompt(state)
 
   const blocks: PromptBlock[] = [
     {
@@ -751,7 +797,7 @@ export function buildImageRecreationPrompt(
             ? 'Preserve the original structure of the scene and the composition anchor, but allow the entire human cast to be reinterpreted to match the selected people setting naturally.'
           : 'Preserve the original structure of the scene and the original subject count.',
         scene.prompt,
-        buildSceneSpecificPrompt(state),
+        sceneSpecificPrompt,
         resolvePrimarySubjectPrompt(state),
         resolvePreservationPrompt(state),
         resolveCenteredCompositionPrompt(state),
@@ -834,7 +880,7 @@ export function buildImageRecreationPrompt(
     joinSentences([
       'Use the uploaded reference image as the exact subject, composition base, and scene category.',
       resolveReferencePeopleAnchorPrompt(state),
-      resolveCompactSceneSentence(state, scene.label),
+      resolveCompactSceneSentence(state, scene.label, scene.prompt, sceneSpecificPrompt),
       resolveCompactPerspectiveSentence(state),
       resolveCompactPreservationSentence(state),
       state.centerMainSubject ? CENTER_MAIN_SUBJECT_PROMPT : '',

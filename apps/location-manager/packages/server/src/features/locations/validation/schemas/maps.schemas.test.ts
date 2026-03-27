@@ -56,7 +56,22 @@ describe("maps create schema category rules", () => {
       ...basePayload,
       category: "nightlife",
       type: "nightclub",
-      idealFor: ["Friends' Night Out"],
+      idealFor: ["Friends Night"],
+      nightlifeDetails: {
+        vibe: "high-energy",
+        dressCode: "smart-casual",
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("accepts nightlife payload with newly added nightlife idealFor tags", () => {
+    const result = createMapsSchema.safeParse({
+      ...basePayload,
+      category: "nightlife",
+      type: "nightclub",
+      idealFor: ["Wild Night", "DJ Night", "Late-Night Eats"],
       nightlifeDetails: {
         vibe: "high-energy",
         dressCode: "smart-casual",

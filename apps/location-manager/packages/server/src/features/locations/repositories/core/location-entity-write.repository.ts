@@ -1,6 +1,39 @@
 import type { Location, LocationCategory } from "../../models/location";
 import type { DbClient, UpdatePlan } from "./location-write.types";
 
+function entitySlugExists(db: DbClient, slug: string): boolean {
+  const existing = db.query(`
+    SELECT id
+    FROM entities
+    WHERE slug = $slug
+    LIMIT 1
+  `).get({
+    $slug: slug,
+  }) as { id: number } | undefined;
+
+  return Boolean(existing);
+}
+
+function resolveUniqueEntitySlug(db: DbClient, slug: string | null | undefined): string | null {
+  if (!slug) {
+    return null;
+  }
+
+  if (!entitySlugExists(db, slug)) {
+    return slug;
+  }
+
+  let suffix = 2;
+  let candidate = `${slug}-${suffix}`;
+
+  while (entitySlugExists(db, candidate)) {
+    suffix += 1;
+    candidate = `${slug}-${suffix}`;
+  }
+
+  return candidate;
+}
+
 export function findExistingEntityId(
   db: DbClient,
   category: LocationCategory,
@@ -72,6 +105,8 @@ export function updateExistingEntity(db: DbClient, entityId: number, location: L
 }
 
 export function insertEntity(db: DbClient, category: LocationCategory, location: Location): number {
+  const resolvedSlug = resolveUniqueEntitySlug(db, location.slug || null);
+
   db.query(`
     INSERT INTO entities (
       category,
@@ -142,7 +177,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
     $website: location.website || null,
     $email: location.email || null,
     $neighborhood_description: location.neighborhoodDescription || null,
-    $slug: location.slug || null,
+    $slug: resolvedSlug,
     $place_id: location.placeId || null,
     $tripadvisor_url: location.tripadvisorUrl || null,
     $tripadvisor_location_id: location.tripadvisorLocationId || null,
