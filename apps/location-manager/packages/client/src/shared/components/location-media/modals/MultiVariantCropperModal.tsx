@@ -25,6 +25,116 @@ interface MultiVariantCropperModalProps {
 }
 
 const variantSequence: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'social', 'editorial', 'portrait', 'hero'];
+const STRAIGHTEN_MIN = -20;
+const STRAIGHTEN_MAX = 20;
+const STRAIGHTEN_STEP = 0.1;
+
+function clampStraightenAngle(angle: number): number {
+  return Math.min(STRAIGHTEN_MAX, Math.max(STRAIGHTEN_MIN, Number(angle.toFixed(1))));
+}
+
+function normalizeDegrees(angle: number): number {
+  return ((angle % 360) + 360) % 360;
+}
+
+function formatDegrees(angle: number): string {
+  if (Math.abs(angle) < 0.05) {
+    return "0°";
+  }
+
+  return `${angle > 0 ? "+" : ""}${angle.toFixed(1)}°`;
+}
+
+interface StraightenDialProps {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  disabled?: boolean;
+  onChange: (value: number) => void;
+}
+
+function StraightenDial({
+  value,
+  min,
+  max,
+  step,
+  disabled = false,
+  onChange,
+}: StraightenDialProps) {
+  const tickValues = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+  const progress = ((value - min) / (max - min)) * 100;
+  const activeLeft = value >= 0 ? 50 : progress;
+  const activeWidth = Math.abs(progress - 50);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-end justify-between gap-3 text-xs">
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">Straighten</p>
+          <p className="text-muted-foreground">Fine tune the horizon with small angle adjustments.</p>
+        </div>
+        <span className="rounded-full border border-border bg-background px-2.5 py-1 font-semibold text-foreground tabular-nums">
+          {formatDegrees(value)}
+        </span>
+      </div>
+
+      <div className="rounded-xl border border-border bg-background/80 px-3 py-4">
+        <div className="relative h-16">
+          <div className="pointer-events-none absolute inset-x-3 top-1/2 h-1 -translate-y-1/2">
+            <div className="absolute inset-0 rounded-full bg-border/70" />
+            <div
+              className="absolute top-0 h-full rounded-full bg-blue-500/80"
+              style={{
+                left: `${activeLeft}%`,
+                width: `${activeWidth}%`,
+              }}
+            />
+          </div>
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-7 w-px -translate-x-1/2 -translate-y-1/2 bg-foreground/70" />
+
+          <div className="pointer-events-none absolute inset-x-3 top-1/2 flex -translate-y-1/2 justify-between">
+            {tickValues.map((tickValue) => {
+              const isCenter = tickValue === 0;
+              const isMajor = tickValue % 5 === 0;
+
+              return (
+                <span
+                  key={tickValue}
+                  className={`block w-px rounded-full ${
+                    isCenter
+                      ? "h-7 bg-foreground/80"
+                      : isMajor
+                        ? "h-5 bg-foreground/45"
+                        : "h-3 bg-foreground/20"
+                  }`}
+                />
+              );
+            })}
+          </div>
+
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(event) => onChange(Number(event.target.value))}
+            disabled={disabled}
+            aria-label="Straighten image"
+            className="absolute inset-0 z-10 h-full w-full cursor-ew-resize appearance-none bg-transparent focus:outline-none disabled:cursor-not-allowed [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-0 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:shadow-[0_0_0_5px_rgba(59,130,246,0.2)] [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:shadow-[0_0_0_5px_rgba(59,130,246,0.2)] [&::-moz-range-track]:bg-transparent"
+          />
+        </div>
+
+        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>{min}°</span>
+          <span className="rounded-full border border-border px-2 py-0.5 text-foreground/80">Level</span>
+          <span>{max}°</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function createInitialCropStates(): Record<ImageVariantType, CropState> {
   return {
@@ -48,7 +158,8 @@ export function MultiVariantCropperModal({
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [rotation, setRotation] = useState(0);
+  const [baseRotation, setBaseRotation] = useState(0);
+  const [straightenAngle, setStraightenAngle] = useState(0);
 
   // Initialize crop states for all variants
   const [cropStates, setCropStates] = useState<Record<ImageVariantType, CropState>>(() => createInitialCropStates());
@@ -58,6 +169,7 @@ export function MultiVariantCropperModal({
   const currentSpec = VARIANT_SPECS[currentVariantType];
   const totalVariants = variantSequence.length;
   const fileIdentity = `${file.name}:${file.lastModified}:${file.size}`;
+  const rotation = baseRotation + straightenAngle;
 
   // Create preview URL when file changes
   useEffect(() => {
@@ -72,7 +184,8 @@ export function MultiVariantCropperModal({
   useEffect(() => {
     setCurrentVariantIndex(0);
     setIsProcessing(false);
-    setRotation(0);
+    setBaseRotation(0);
+    setStraightenAngle(0);
     setCropStates(createInitialCropStates());
   }, [file]);
 
@@ -101,8 +214,13 @@ export function MultiVariantCropperModal({
     updateVariantState(currentVariantType, { croppedAreaPixels, completed: true });
   }, [currentVariantType, updateVariantState]);
 
-  const applyRotation = (nextRotation: number) => {
-    if (nextRotation === rotation) {
+  const applyOrientation = useCallback((nextBaseRotation: number, nextStraightenAngle: number) => {
+    const normalizedStraightenAngle = clampStraightenAngle(nextStraightenAngle);
+
+    if (
+      Math.abs(nextBaseRotation - baseRotation) < 0.001 &&
+      Math.abs(normalizedStraightenAngle - straightenAngle) < 0.001
+    ) {
       return;
     }
 
@@ -110,19 +228,24 @@ export function MultiVariantCropperModal({
       (type, index) => index !== currentVariantIndex && cropStates[type].croppedAreaPixels !== null
     );
 
-    setRotation(nextRotation);
+    setBaseRotation(nextBaseRotation);
+    setStraightenAngle(normalizedStraightenAngle);
     setCropStates(createInitialCropStates());
     setCurrentVariantIndex(0);
 
     if (shouldNotifyReset) {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast("Rotation changed. Existing crop selections were reset.", centerPosition);
+      showToast("Orientation changed. Existing crop selections were reset.", centerPosition);
     }
-  };
+  }, [baseRotation, cropStates, currentVariantIndex, showToast, straightenAngle]);
 
   const handleRotate = (direction: "left" | "right") => {
     const delta = direction === "left" ? -90 : 90;
-    applyRotation((rotation + delta + 360) % 360);
+    applyOrientation(baseRotation + delta, straightenAngle);
+  };
+
+  const handleStraightenChange = (nextAngle: number) => {
+    applyOrientation(baseRotation, nextAngle);
   };
 
   const saveCurrentCrop = () => {
@@ -181,7 +304,7 @@ export function MultiVariantCropperModal({
     setIsProcessing(true);
 
     try {
-      const normalizedRotation = ((rotation % 360) + 360) % 360;
+      const normalizedRotation = normalizeDegrees(rotation);
       const [sourceFile, variantFiles] = await Promise.all([
         normalizedRotation === 0
           ? Promise.resolve(file)
@@ -227,7 +350,7 @@ export function MultiVariantCropperModal({
             <div className="relative h-[48vh] md:h-[460px]">
               {previewUrl && (
                 <Cropper
-                  key={`${fileIdentity}:${currentVariantType}:${rotation}`}
+                  key={`${fileIdentity}:${currentVariantType}:${baseRotation}`}
                   image={previewUrl}
                   crop={currentState.crop}
                   zoom={currentState.zoom}
@@ -246,49 +369,70 @@ export function MultiVariantCropperModal({
           </div>
 
           <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">Orientation</p>
-                <p className="text-xs text-muted-foreground">
-                  Rotate the image here before locking in the crops.
-                </p>
-              </div>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Orientation</p>
+                  <p className="text-xs text-muted-foreground">
+                    Use the 90° buttons for sideways photos, then straighten like the iPhone photo editor.
+                  </p>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRotate("left")}
-                  disabled={isProcessing}
-                >
-                  <RotateCcw className="mr-1.5 h-4 w-4" />
-                  Rotate Left
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRotate("right")}
-                  disabled={isProcessing}
-                >
-                  <RotateCw className="mr-1.5 h-4 w-4" />
-                  Rotate Right
-                </Button>
-                {rotation !== 0 && (
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => applyRotation(0)}
+                    onClick={() => handleRotate("left")}
                     disabled={isProcessing}
                   >
-                    Reset
+                    <RotateCcw className="mr-1.5 h-4 w-4" />
+                    Rotate Left
                   </Button>
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {rotation}°
-                </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRotate("right")}
+                    disabled={isProcessing}
+                  >
+                    <RotateCw className="mr-1.5 h-4 w-4" />
+                    Rotate Right
+                  </Button>
+                  {(baseRotation !== 0 || straightenAngle !== 0) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => applyOrientation(0, 0)}
+                      disabled={isProcessing}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-end">
+                <StraightenDial
+                  value={straightenAngle}
+                  min={STRAIGHTEN_MIN}
+                  max={STRAIGHTEN_MAX}
+                  step={STRAIGHTEN_STEP}
+                  onChange={handleStraightenChange}
+                  disabled={isProcessing}
+                />
+
+                <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-background/80 px-4 py-3 text-sm">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Straighten</p>
+                    <p className="font-semibold tabular-nums text-foreground">{formatDegrees(straightenAngle)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Total rotation</p>
+                    <p className="font-semibold tabular-nums text-foreground">{formatDegrees(rotation)}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -339,7 +483,7 @@ export function MultiVariantCropperModal({
               Crop Tips
             </h4>
             <ul className="space-y-1 text-xs text-blue-400">
-              <li>• Rotate first if the source image is sideways or upside down</li>
+              <li>• Rotate first if the source image is sideways or upside down, then use the dial to straighten it</li>
               <li>• Keep the main subject centered inside the target frame</li>
               <li>• Use Previous or the progress pills to adjust an earlier crop</li>
               <li>• The primary button advances one crop at a time until final confirmation</li>

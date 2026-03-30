@@ -152,6 +152,7 @@ export type MediaAssetOption = {
   alt?: string
   alt_text?: string
   altText?: string
+  mediaSet?: number | string | { id?: number | string } | null
   url?: string
   variant?: string
 }
@@ -209,6 +210,7 @@ export type RelatedItemOption = {
   location?: string
   locationRef?: number | { id?: number } | null
   status?: string
+  idealFor?: string[]
   gallery?: Array<{
     image?: number | GalleryImageObject
   }>

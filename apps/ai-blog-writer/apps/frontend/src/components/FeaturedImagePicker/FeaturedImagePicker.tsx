@@ -30,6 +30,7 @@ import {
   getUnsplashPhotoImportUrl,
   pickVariantAssetId,
 } from '../../features/staging/features/editorial-stage-article/media-utils'
+import { filterAssetsWithMediaSet } from './featuredImagePicker.utils'
 import './FeaturedImagePicker.css'
 
 type ActiveTab = 'payload' | 'upload' | 'unsplash' | 'pexels'
@@ -196,9 +197,10 @@ export function FeaturedImagePicker({
 
   if (!isOpen) return null
 
+  const payloadAssetsWithMediaSet = filterAssetsWithMediaSet(payloadAssets)
   const searchablePayloadAssets = payloadVariant
-    ? payloadAssets.filter((asset) => asset.variant === payloadVariant)
-    : payloadAssets
+    ? payloadAssetsWithMediaSet.filter((asset) => asset.variant === payloadVariant)
+    : payloadAssetsWithMediaSet
 
   const filteredAssets = payloadSearch.trim()
     ? searchablePayloadAssets.filter((a) => {
@@ -523,6 +525,10 @@ export function FeaturedImagePicker({
                 />
               </div>
 
+              <p className="fip-masonry-header">
+                Only images uploaded through the variant workflow are shown here.
+              </p>
+
               {payloadError && <p className="fip-error">{payloadError}</p>}
 
               {isLoadingPayload ? (
@@ -534,8 +540,8 @@ export function FeaturedImagePicker({
                       {payloadSearch
                         ? 'No images match your search.'
                         : payloadVariant
-                          ? `No ${payloadVariant} images found.`
-                          : 'No images found.'}
+                          ? `No ${payloadVariant} images uploaded through the variant workflow found.`
+                          : 'No variant-workflow images found.'}
                     </p>
                   ) : (
                     filteredAssets.map((asset) => (

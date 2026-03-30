@@ -73,6 +73,7 @@ describe("key locations completeness", () => {
     const basic = transformLocationToBasicResponse(location);
 
     expect(basic.category).toBe("key_locations");
+    expect(basic.locationKey).toBe("peru|lima|callao");
     expect(basic.country).toBe("peru");
     expect(basic.type).toBe("airport");
     expect(basic.isComplete).toBe(true);

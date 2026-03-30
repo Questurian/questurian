@@ -789,6 +789,7 @@ export function transformLocationToBasicResponse(
     name: location.name,
     title: location.title ?? null,
     location: location.locationKey ? formatLocationForDisplay(location.locationKey) : null,
+    locationKey: location.locationKey || null,
     country,
     category,
     type: location.type || null,

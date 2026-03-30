@@ -236,6 +236,7 @@ export interface LocationBasic {
   name: string;
   title: string | null;
   location: string | null;
+  locationKey: string | null;
   country: string | null;
   category: LocationCategory;
   type: string | null;

@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection, useResetSyncState } from "@client/shared/services/api/hooks/usePayloadSync";
 import { useLocationsBasic } from "@client/shared/services/api/hooks";
+import { payloadApi } from "@client/shared/services/api/payload.api";
 import { useToast } from "@client/shared/hooks/useToast";
 import { Button } from "@client/components/ui/button";
 import { Breadcrumbs } from "@client/shared/components/layout";
@@ -32,20 +34,34 @@ import {
   Rocket,
   XCircle,
 } from "lucide-react";
+import { formatLocationName } from "@questurian/lm-shared";
 import type { Category, PayloadSyncCategory } from "@client/shared/services/api/types";
 import type { SyncStatusResponse } from "@client/shared/services/api/types/payload.types";
+import {
+  buildFacetOptions,
+  extractPayloadSyncLocationScope,
+  matchesFacetFilter,
+} from "@client/features/admin/utils/payload-sync-filter-utils";
 
 type StatusFilter = "all" | "synced" | "ready" | "incomplete" | "needs_resync" | "failed" | "unsupported";
 
 const UNSPECIFIED_COUNTRY_FILTER = "__unspecified_country__";
-const UNSPECIFIED_TYPE_FILTER = "__unspecified__";
+const UNSPECIFIED_CITY_FILTER = "__unspecified_city__";
+const UNSPECIFIED_NEIGHBORHOOD_FILTER = "__unspecified_neighborhood__";
+const UNSPECIFIED_TYPE_FILTER = "__unspecified_type__";
 type CountryFilter = "all" | typeof UNSPECIFIED_COUNTRY_FILTER | string;
+type CityFilter = "all" | typeof UNSPECIFIED_CITY_FILTER | string;
+type NeighborhoodFilter = "all" | typeof UNSPECIFIED_NEIGHBORHOOD_FILTER | string;
 type LocationTypeFilter = "all" | typeof UNSPECIFIED_TYPE_FILTER | string;
 
 interface LocationWithSyncStatus {
   locationId: number;
   title: string;
+  location: string | null;
+  locationKey: string | null;
   country: string | null;
+  city: string | null;
+  neighborhood: string | null;
   category: Category;
   type: string | null;
   isComplete: boolean;
@@ -98,15 +114,23 @@ function formatLabel(value: string): string {
 }
 
 function matchesCountryFilter(country: string | null, filter: CountryFilter): boolean {
-  if (filter === "all") {
-    return true;
+  return matchesFacetFilter(country, filter, UNSPECIFIED_COUNTRY_FILTER);
+}
+
+function matchesCityFilter(city: string | null, filter: CityFilter): boolean {
+  return matchesFacetFilter(city, filter, UNSPECIFIED_CITY_FILTER);
+}
+
+function matchesNeighborhoodFilter(neighborhood: string | null, filter: NeighborhoodFilter): boolean {
+  return matchesFacetFilter(neighborhood, filter, UNSPECIFIED_NEIGHBORHOOD_FILTER);
+}
+
+function formatActiveScopePart(value: string, unspecifiedValue: string, unspecifiedLabel: string): string {
+  if (value === unspecifiedValue) {
+    return unspecifiedLabel;
   }
 
-  if (filter === UNSPECIFIED_COUNTRY_FILTER) {
-    return !country;
-  }
-
-  return country === filter;
+  return formatLocationName(value);
 }
 
 function getEmptyStateMessage(statusFilter: StatusFilter): string {
@@ -136,12 +160,16 @@ export function PayloadSync() {
   const { data: connectionStatus, isLoading: isConnecting, refetch: testConnection } = usePayloadConnection();
   const resetSyncMutation = useResetSyncState();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
   const [syncingId, setSyncingId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>("all");
+  const [cityFilter, setCityFilter] = useState<CityFilter>("all");
+  const [neighborhoodFilter, setNeighborhoodFilter] = useState<NeighborhoodFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [locationTypeFilter, setLocationTypeFilter] = useState<LocationTypeFilter>("all");
+  const [bulkSyncProgress, setBulkSyncProgress] = useState<{ completed: number; total: number } | null>(null);
 
   const [showLoadError, setShowLoadError] = useState(false);
   const [showSyncErrors, setShowSyncErrors] = useState(false);
@@ -168,11 +196,20 @@ export function PayloadSync() {
   const allLocationsWithStatus = useMemo<LocationWithSyncStatus[]>(() => {
     return (locationsBasicData?.locations ?? []).map((location) => {
       const syncStatus = syncStatusMap.get(location.id);
-      const fallbackCountry = location.location?.split(" > ")[0]?.trim() || null;
+      const locationScope = extractPayloadSyncLocationScope({
+        location: location.location,
+        locationKey: location.locationKey,
+        country: location.country,
+      });
+
       return {
         locationId: location.id,
         title: location.title || location.name,
-        country: location.country?.trim() || fallbackCountry,
+        location: locationScope.location,
+        locationKey: locationScope.locationKey,
+        country: locationScope.country,
+        city: locationScope.city,
+        neighborhood: locationScope.neighborhood,
         category: location.category,
         type: location.type?.trim() || null,
         isComplete: location.isComplete,
@@ -183,37 +220,31 @@ export function PayloadSync() {
     });
   }, [locationsBasicData, syncStatusMap]);
 
-  const countryOptions = useMemo(() => {
-    const countryCountMap = new Map<string, number>();
-    let unspecifiedCount = 0;
+  const locationHierarchyBaseData = useMemo(() => {
+    let filtered = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, statusFilter));
 
-    const categoryScoped = categoryFilter === "all"
-      ? allLocationsWithStatus
-      : allLocationsWithStatus.filter((item) => item.category === categoryFilter);
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((item) => item.category === categoryFilter);
+    }
 
-    categoryScoped.forEach((item) => {
-      const normalizedCountry = item.country?.trim();
-      if (!normalizedCountry) {
-        unspecifiedCount += 1;
-        return;
+    if (locationTypeFilter !== "all") {
+      if (locationTypeFilter === UNSPECIFIED_TYPE_FILTER) {
+        filtered = filtered.filter((item) => !item.type);
+      } else {
+        filtered = filtered.filter((item) => item.type === locationTypeFilter);
       }
-      const current = countryCountMap.get(normalizedCountry) ?? 0;
-      countryCountMap.set(normalizedCountry, current + 1);
-    });
+    }
 
-    const options = Array.from(countryCountMap.entries())
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([value, count]) => ({
-        value,
-        label: formatLabel(value),
-        count,
-      }));
+    return filtered;
+  }, [allLocationsWithStatus, categoryFilter, locationTypeFilter, statusFilter]);
 
-    return {
-      options,
-      unspecifiedCount,
-    };
-  }, [allLocationsWithStatus, categoryFilter]);
+  const countryOptions = useMemo(() => {
+    return buildFacetOptions(
+      locationHierarchyBaseData,
+      (item) => item.country,
+      (value) => formatLocationName(value)
+    );
+  }, [locationHierarchyBaseData]);
 
   useEffect(() => {
     if (countryFilter === "all") {
@@ -233,38 +264,119 @@ export function PayloadSync() {
     }
   }, [countryFilter, countryOptions]);
 
-  const locationTypeOptions = useMemo(() => {
-    const typeCountMap = new Map<string, number>();
-    let unspecifiedCount = 0;
+  const isCityFilterEnabled =
+    countryFilter !== "all" && countryFilter !== UNSPECIFIED_COUNTRY_FILTER;
 
-    const countryScoped = (categoryFilter === "all"
-      ? allLocationsWithStatus
-      : allLocationsWithStatus.filter((item) => item.category === categoryFilter))
-      .filter((item) => matchesCountryFilter(item.country, countryFilter));
+  const cityOptions = useMemo(() => {
+    if (!isCityFilterEnabled) {
+      return { options: [], unspecifiedCount: 0 };
+    }
 
-    countryScoped.forEach((item) => {
-      const normalizedType = item.type?.trim();
-      if (!normalizedType) {
-        unspecifiedCount += 1;
-        return;
+    return buildFacetOptions(
+      locationHierarchyBaseData.filter((item) => matchesCountryFilter(item.country, countryFilter)),
+      (item) => item.city,
+      (value) => formatLocationName(value)
+    );
+  }, [countryFilter, isCityFilterEnabled, locationHierarchyBaseData]);
+
+  useEffect(() => {
+    if (!isCityFilterEnabled) {
+      if (cityFilter !== "all") {
+        setCityFilter("all");
       }
-      const current = typeCountMap.get(normalizedType) ?? 0;
-      typeCountMap.set(normalizedType, current + 1);
-    });
+      if (neighborhoodFilter !== "all") {
+        setNeighborhoodFilter("all");
+      }
+      return;
+    }
 
-    const options = Array.from(typeCountMap.entries())
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([value, count]) => ({
-        value,
-        label: formatLabel(value),
-        count,
-      }));
+    if (cityFilter === "all") {
+      return;
+    }
 
-    return {
-      options,
-      unspecifiedCount,
-    };
-  }, [allLocationsWithStatus, categoryFilter, countryFilter]);
+    if (cityFilter === UNSPECIFIED_CITY_FILTER) {
+      if (cityOptions.unspecifiedCount === 0) {
+        setCityFilter("all");
+      }
+      return;
+    }
+
+    const stillExists = cityOptions.options.some((option) => option.value === cityFilter);
+    if (!stillExists) {
+      setCityFilter("all");
+    }
+  }, [cityFilter, cityOptions, isCityFilterEnabled, neighborhoodFilter]);
+
+  const isNeighborhoodFilterEnabled =
+    isCityFilterEnabled && cityFilter !== "all" && cityFilter !== UNSPECIFIED_CITY_FILTER;
+
+  const neighborhoodOptions = useMemo(() => {
+    if (!isNeighborhoodFilterEnabled) {
+      return { options: [], unspecifiedCount: 0 };
+    }
+
+    return buildFacetOptions(
+      locationHierarchyBaseData
+        .filter((item) => matchesCountryFilter(item.country, countryFilter))
+        .filter((item) => matchesCityFilter(item.city, cityFilter)),
+      (item) => item.neighborhood,
+      (value) => formatLocationName(value)
+    );
+  }, [cityFilter, countryFilter, isNeighborhoodFilterEnabled, locationHierarchyBaseData]);
+
+  useEffect(() => {
+    if (!isNeighborhoodFilterEnabled) {
+      if (neighborhoodFilter !== "all") {
+        setNeighborhoodFilter("all");
+      }
+      return;
+    }
+
+    if (neighborhoodFilter === "all") {
+      return;
+    }
+
+    if (neighborhoodFilter === UNSPECIFIED_NEIGHBORHOOD_FILTER) {
+      if (neighborhoodOptions.unspecifiedCount === 0) {
+        setNeighborhoodFilter("all");
+      }
+      return;
+    }
+
+    const stillExists = neighborhoodOptions.options.some((option) => option.value === neighborhoodFilter);
+    if (!stillExists) {
+      setNeighborhoodFilter("all");
+    }
+  }, [isNeighborhoodFilterEnabled, neighborhoodFilter, neighborhoodOptions]);
+
+  const locationTypeBaseData = useMemo(() => {
+    let filtered = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, statusFilter));
+
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((item) => item.category === categoryFilter);
+    }
+
+    filtered = filtered.filter((item) => matchesCountryFilter(item.country, countryFilter));
+    filtered = filtered.filter((item) => matchesCityFilter(item.city, cityFilter));
+    filtered = filtered.filter((item) => matchesNeighborhoodFilter(item.neighborhood, neighborhoodFilter));
+
+    return filtered;
+  }, [
+    allLocationsWithStatus,
+    categoryFilter,
+    cityFilter,
+    countryFilter,
+    neighborhoodFilter,
+    statusFilter,
+  ]);
+
+  const locationTypeOptions = useMemo(() => {
+    return buildFacetOptions(
+      locationTypeBaseData,
+      (item) => item.type,
+      (value) => formatLabel(value)
+    );
+  }, [locationTypeBaseData]);
 
   useEffect(() => {
     if (locationTypeFilter === "all") {
@@ -284,19 +396,18 @@ export function PayloadSync() {
     }
   }, [locationTypeFilter, locationTypeOptions]);
 
-  // Filter by status, category, country, and location type
+  // Filter by status, category, location scope, and location type
   const filteredData = useMemo(() => {
     let filtered = allLocationsWithStatus.filter((item) => matchesStatusFilter(item, statusFilter));
 
-    // Filter by category
     if (categoryFilter !== "all") {
-      filtered = filtered.filter(item => item.category === categoryFilter);
+      filtered = filtered.filter((item) => item.category === categoryFilter);
     }
 
-    // Filter by country
     filtered = filtered.filter((item) => matchesCountryFilter(item.country, countryFilter));
+    filtered = filtered.filter((item) => matchesCityFilter(item.city, cityFilter));
+    filtered = filtered.filter((item) => matchesNeighborhoodFilter(item.neighborhood, neighborhoodFilter));
 
-    // Filter by location type
     if (locationTypeFilter !== "all") {
       if (locationTypeFilter === UNSPECIFIED_TYPE_FILTER) {
         filtered = filtered.filter((item) => !item.type);
@@ -306,7 +417,15 @@ export function PayloadSync() {
     }
 
     return filtered;
-  }, [allLocationsWithStatus, categoryFilter, countryFilter, locationTypeFilter, statusFilter]);
+  }, [
+    allLocationsWithStatus,
+    categoryFilter,
+    cityFilter,
+    countryFilter,
+    locationTypeFilter,
+    neighborhoodFilter,
+    statusFilter,
+  ]);
 
   const hasSyncErrors = useMemo(
     () => filteredData.some((item) => item.syncState?.error_message),
@@ -351,11 +470,67 @@ export function PayloadSync() {
     return { total, synced, ready, incomplete, needsResync, failed, unsupported };
   }, [allLocationsWithStatus]);
 
+  const syncableFilteredCount = useMemo(
+    () => filteredData.filter(
+      (item) =>
+        isPayloadSyncCategory(item.category) &&
+        (!item.synced || item.needsResync)
+    ).length,
+    [filteredData]
+  );
+
   const hasActiveFilters =
     statusFilter !== "all" ||
     categoryFilter !== "all" ||
     countryFilter !== "all" ||
+    cityFilter !== "all" ||
+    neighborhoodFilter !== "all" ||
     locationTypeFilter !== "all";
+
+  const activeLocationScopeLabel = useMemo(() => {
+    const parts: string[] = [];
+
+    if (countryFilter !== "all") {
+      parts.push(formatActiveScopePart(countryFilter, UNSPECIFIED_COUNTRY_FILTER, "Unspecified country"));
+    }
+
+    if (cityFilter !== "all") {
+      parts.push(formatActiveScopePart(cityFilter, UNSPECIFIED_CITY_FILTER, "Unspecified city"));
+    }
+
+    if (neighborhoodFilter !== "all") {
+      parts.push(
+        formatActiveScopePart(
+          neighborhoodFilter,
+          UNSPECIFIED_NEIGHBORHOOD_FILTER,
+          "Unspecified neighborhood"
+        )
+      );
+    }
+
+    return parts.length > 0 ? parts.join(" / ") : "All locations";
+  }, [cityFilter, countryFilter, neighborhoodFilter]);
+
+  const usesScopedBulkSync =
+    statusFilter !== "all" ||
+    locationTypeFilter !== "all" ||
+    countryFilter !== "all" ||
+    cityFilter !== "all" ||
+    neighborhoodFilter !== "all";
+
+  const isBulkSyncing = syncAllMutation.isPending || bulkSyncProgress !== null;
+
+  const syncAllButtonLabel = useMemo(() => {
+    if (bulkSyncProgress) {
+      return `Syncing ${bulkSyncProgress.completed}/${bulkSyncProgress.total}...`;
+    }
+
+    if (syncAllMutation.isPending) {
+      return "Syncing...";
+    }
+
+    return usesScopedBulkSync ? `Sync Filtered (${syncableFilteredCount})` : "Sync All";
+  }, [bulkSyncProgress, syncAllMutation.isPending, syncableFilteredCount, usesScopedBulkSync]);
 
   const toggleStatusFilter = (nextFilter: StatusFilter) => {
     if (nextFilter === "all") {
@@ -363,6 +538,15 @@ export function PayloadSync() {
       return;
     }
     setStatusFilter((current) => (current === nextFilter ? "all" : nextFilter));
+  };
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setCategoryFilter("all");
+    setCountryFilter("all");
+    setCityFilter("all");
+    setNeighborhoodFilter("all");
+    setLocationTypeFilter("all");
   };
 
   const handleSyncLocation = async (locationId: number, category: Category) => {
@@ -385,9 +569,59 @@ export function PayloadSync() {
       showToast("Payload sync does not support this category.", { x: window.innerWidth / 2, y: 100 });
       return;
     }
+
     const syncCategory: PayloadSyncCategory | undefined =
       category && isPayloadSyncCategory(category) ? category : undefined;
-    await syncAllMutation.mutateAsync(syncCategory);
+
+    if (!usesScopedBulkSync) {
+      await syncAllMutation.mutateAsync(syncCategory);
+      return;
+    }
+
+    const syncTargets = filteredData.filter(
+      (item) => isPayloadSyncCategory(item.category) && (!item.synced || item.needsResync)
+    );
+
+    if (syncTargets.length === 0) {
+      return;
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    setBulkSyncProgress({ completed: 0, total: syncTargets.length });
+
+    try {
+      for (let index = 0; index < syncTargets.length; index += 1) {
+        const item = syncTargets[index]!;
+        setSyncingId(item.locationId);
+
+        const result = await payloadApi.syncLocation(item.locationId);
+        if (result.status === "success") {
+          successCount += 1;
+        } else {
+          failureCount += 1;
+        }
+
+        setBulkSyncProgress({ completed: index + 1, total: syncTargets.length });
+      }
+
+      showToast(
+        failureCount > 0
+          ? `Synced ${successCount} locations. ${failureCount} failed.`
+          : `Synced ${successCount} locations.`,
+        { x: window.innerWidth / 2, y: 100 }
+      );
+    } catch (syncError) {
+      showToast(
+        syncError instanceof Error ? syncError.message : "Failed to sync filtered locations.",
+        { x: window.innerWidth / 2, y: 100 }
+      );
+    } finally {
+      setSyncingId(null);
+      setBulkSyncProgress(null);
+      await queryClient.invalidateQueries({ queryKey: ["payload-sync-status"] });
+    }
   };
 
   const getSyncStatusBadge = (item: LocationWithSyncStatus) => {
@@ -421,15 +655,6 @@ export function PayloadSync() {
     return null;
   };
 
-  const syncableFilteredCount = useMemo(
-    () => filteredData.filter(
-      (item) =>
-        isPayloadSyncCategory(item.category) &&
-        (!item.synced || item.needsResync)
-    ).length,
-    [filteredData]
-  );
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
@@ -455,9 +680,9 @@ export function PayloadSync() {
               variant="outline"
               size="sm"
               onClick={handleSyncAll}
-              disabled={syncAllMutation.isPending || syncableFilteredCount === 0}
+              disabled={isBulkSyncing || syncableFilteredCount === 0}
             >
-              {syncAllMutation.isPending ? "Syncing..." : "Sync All"}
+              {syncAllButtonLabel}
             </Button>
 
             {/* Reset Sync State Button */}
@@ -603,135 +828,214 @@ export function PayloadSync() {
         </div>
 
         {/* Controls */}
-        <div className="flex gap-4 mb-6 flex-wrap">
-          <div className="flex-1 min-w-[220px]">
-            <label className="block text-sm font-medium mb-1">Status</label>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  <span className="inline-flex items-center gap-2">
-                    <ListFilter className="h-4 w-4" />
-                    All Statuses
-                  </span>
-                </SelectItem>
-                <SelectItem value="synced">
-                  <span className="inline-flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Synced
-                  </span>
-                </SelectItem>
-                <SelectItem value="ready">
-                  <span className="inline-flex items-center gap-2">
-                    <Rocket className="h-4 w-4 text-blue-500" />
-                    Ready for Sync (Complete Fields)
-                  </span>
-                </SelectItem>
-                <SelectItem value="incomplete">
-                  <span className="inline-flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    Incomplete (Missing Fields)
-                  </span>
-                </SelectItem>
-                <SelectItem value="needs_resync">
-                  <span className="inline-flex items-center gap-2">
-                    <RefreshCw className="h-4 w-4 text-orange-500" />
-                    Needs Resync
-                  </span>
-                </SelectItem>
-                <SelectItem value="failed">
-                  <span className="inline-flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-red-500" />
-                    Failed
-                  </span>
-                </SelectItem>
-                <SelectItem value="unsupported">
-                  <span className="inline-flex items-center gap-2">
-                    <Ban className="h-4 w-4 text-muted-foreground" />
-                    Unsupported Category
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="mb-6 space-y-4">
+          <div className="grid gap-4 xl:grid-cols-3">
+            <div className="min-w-[220px]">
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <span className="inline-flex items-center gap-2">
+                      <ListFilter className="h-4 w-4" />
+                      All Statuses
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="synced">
+                    <span className="inline-flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      Synced
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="ready">
+                    <span className="inline-flex items-center gap-2">
+                      <Rocket className="h-4 w-4 text-blue-500" />
+                      Ready for Sync (Complete Fields)
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="incomplete">
+                    <span className="inline-flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      Incomplete (Missing Fields)
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="needs_resync">
+                    <span className="inline-flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 text-orange-500" />
+                      Needs Resync
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="failed">
+                    <span className="inline-flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      Failed
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="unsupported">
+                    <span className="inline-flex items-center gap-2">
+                      <Ban className="h-4 w-4 text-muted-foreground" />
+                      Unsupported Category
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="min-w-[220px]">
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as Category | "all")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="dining">Dining</SelectItem>
+                  <SelectItem value="accommodations">Accommodations</SelectItem>
+                  <SelectItem value="attractions">Attractions</SelectItem>
+                  <SelectItem value="nightlife">Nightlife</SelectItem>
+                  <SelectItem value="key_locations">Key Locations</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="min-w-[220px]">
+              <label className="block text-sm font-medium mb-1">Location Type</label>
+              <Select value={locationTypeFilter} onValueChange={(value) => setLocationTypeFilter(value as LocationTypeFilter)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by location type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {locationTypeOptions.options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label} ({option.count})
+                    </SelectItem>
+                  ))}
+                  {locationTypeOptions.unspecifiedCount > 0 && (
+                    <SelectItem value={UNSPECIFIED_TYPE_FILTER}>
+                      Unspecified ({locationTypeOptions.unspecifiedCount})
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="flex-1 min-w-[220px]">
-            <label className="block text-sm font-medium mb-1">Category</label>
-            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as Category | "all")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="dining">Dining</SelectItem>
-                <SelectItem value="accommodations">Accommodations</SelectItem>
-                <SelectItem value="attractions">Attractions</SelectItem>
-                <SelectItem value="nightlife">Nightlife</SelectItem>
-                <SelectItem value="key_locations">Key Locations</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex-1 min-w-[220px]">
-            <label className="block text-sm font-medium mb-1">Country</label>
-            <Select value={countryFilter} onValueChange={(value) => setCountryFilter(value as CountryFilter)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by country" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Countries</SelectItem>
-                {countryOptions.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label} ({option.count})
-                  </SelectItem>
-                ))}
-                {countryOptions.unspecifiedCount > 0 && (
-                  <SelectItem value={UNSPECIFIED_COUNTRY_FILTER}>
-                    Unspecified ({countryOptions.unspecifiedCount})
-                  </SelectItem>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Location Scope</p>
+                <p className="text-sm text-muted-foreground">
+                  Drill from country to city to neighborhood.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground">
+                  {filteredData.length} in view
+                </span>
+                <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs text-foreground">
+                  {activeLocationScopeLabel}
+                </span>
+                {hasActiveFilters && (
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    Clear Filters
+                  </Button>
                 )}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </div>
 
-          <div className="flex-1 min-w-[220px]">
-            <label className="block text-sm font-medium mb-1">Location Type</label>
-            <Select value={locationTypeFilter} onValueChange={(value) => setLocationTypeFilter(value as LocationTypeFilter)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by location type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {locationTypeOptions.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label} ({option.count})
-                  </SelectItem>
-                ))}
-                {locationTypeOptions.unspecifiedCount > 0 && (
-                  <SelectItem value={UNSPECIFIED_TYPE_FILTER}>
-                    Unspecified ({locationTypeOptions.unspecifiedCount})
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="grid gap-4 xl:grid-cols-3">
+              <div className="min-w-[220px]">
+                <label className="block text-sm font-medium mb-1">Country</label>
+                <Select
+                  value={countryFilter}
+                  onValueChange={(value) => {
+                    setCountryFilter(value as CountryFilter);
+                    setCityFilter("all");
+                    setNeighborhoodFilter("all");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Countries</SelectItem>
+                    {countryOptions.options.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label} ({option.count})
+                      </SelectItem>
+                    ))}
+                    {countryOptions.unspecifiedCount > 0 && (
+                      <SelectItem value={UNSPECIFIED_COUNTRY_FILTER}>
+                        Unspecified ({countryOptions.unspecifiedCount})
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="flex items-end ml-auto">
-            {hasActiveFilters && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStatusFilter("all");
-                  setCategoryFilter("all");
-                  setCountryFilter("all");
-                  setLocationTypeFilter("all");
-                }}
-              >
-                Clear Filters
-              </Button>
-            )}
+              <div className="min-w-[220px]">
+                <label className="block text-sm font-medium mb-1">City</label>
+                <Select
+                  value={cityFilter}
+                  onValueChange={(value) => {
+                    setCityFilter(value as CityFilter);
+                    setNeighborhoodFilter("all");
+                  }}
+                  disabled={!isCityFilterEnabled || (cityOptions.options.length === 0 && cityOptions.unspecifiedCount === 0)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={!isCityFilterEnabled ? "Select country first" : "All cities"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {cityOptions.options.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label} ({option.count})
+                      </SelectItem>
+                    ))}
+                    {cityOptions.unspecifiedCount > 0 && (
+                      <SelectItem value={UNSPECIFIED_CITY_FILTER}>
+                        Unspecified ({cityOptions.unspecifiedCount})
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="min-w-[220px]">
+                <label className="block text-sm font-medium mb-1">Neighborhood</label>
+                <Select
+                  value={neighborhoodFilter}
+                  onValueChange={(value) => setNeighborhoodFilter(value as NeighborhoodFilter)}
+                  disabled={
+                    !isNeighborhoodFilterEnabled ||
+                    (neighborhoodOptions.options.length === 0 && neighborhoodOptions.unspecifiedCount === 0)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={!isNeighborhoodFilterEnabled ? "Select city first" : "All neighborhoods"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Neighborhoods</SelectItem>
+                    {neighborhoodOptions.options.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label} ({option.count})
+                      </SelectItem>
+                    ))}
+                    {neighborhoodOptions.unspecifiedCount > 0 && (
+                      <SelectItem value={UNSPECIFIED_NEIGHBORHOOD_FILTER}>
+                        Unspecified ({neighborhoodOptions.unspecifiedCount})
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -789,8 +1093,15 @@ export function PayloadSync() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {item.locationId}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-                      {item.title}
+                    <td className="px-6 py-4 text-sm font-medium text-foreground">
+                      <div className="max-w-[20rem]">
+                        <div>{item.title}</div>
+                        {item.location && (
+                          <div className="mt-1 text-xs font-normal text-muted-foreground">
+                            {item.location}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {formatLabel(item.category)}
@@ -814,7 +1125,7 @@ export function PayloadSync() {
                         {item.syncState && (
                           <Button
                             onClick={() => resetSyncMutation.mutate(item.locationId)}
-                            disabled={resetSyncMutation.isPending}
+                            disabled={resetSyncMutation.isPending || isBulkSyncing}
                             variant="ghost"
                             size="sm"
                           >
@@ -824,6 +1135,7 @@ export function PayloadSync() {
                         <Button
                           onClick={() => handleSyncLocation(item.locationId, item.category)}
                           disabled={
+                            isBulkSyncing ||
                             !isPayloadSyncCategory(item.category) ||
                             syncingId === item.locationId ||
                             (item.synced && !item.needsResync)

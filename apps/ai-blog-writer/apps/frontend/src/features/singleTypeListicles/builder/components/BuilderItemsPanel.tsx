@@ -43,6 +43,21 @@ const MEDIA_MODE_OPTIONS: Array<{ value: MediaMode; label: string }> = [
   { value: 'both', label: 'Photos + Instagram' },
 ]
 
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .map((entry) => entry.trim())
+}
+
+function getRelatedItemIdealFor(relatedItem: RelatedItemOption | null): string[] {
+  if (!relatedItem) return []
+
+  const raw = relatedItem as RelatedItemOption & Record<string, unknown>
+  return readStringArray(raw.idealFor ?? raw.ideal_for)
+}
+
 function getAvailableMediaModeOptions(hasPhotos: boolean, hasInstagram: boolean): Array<{ value: MediaMode; label: string }> {
   if (hasPhotos && hasInstagram) return MEDIA_MODE_OPTIONS
   if (hasPhotos) return MEDIA_MODE_OPTIONS.filter((option) => option.value === 'photos')
@@ -217,6 +232,9 @@ export function BuilderItemsPanel({
 
           const firstItemPhoto = photoObjects[0]
           const firstItemPhotoUrl = firstItemPhoto ? resolveImageUrl(firstItemPhoto) : undefined
+          const idealForValues = draft.listicleType === 'dining'
+            ? getRelatedItemIdealFor(selectedRelatedItem)
+            : []
           const isFirstItem = index === 0
           const isLastItem = index === draft.items.length - 1
           const selectedPhotoPreviews = item.selectedPhotos
@@ -324,6 +342,19 @@ export function BuilderItemsPanel({
                       </div>
                       {copyErrorItemId === item.id ? (
                         <p className="stl-legacy-note">Clipboard blocked. Select the text field and press Cmd/Ctrl+C.</p>
+                      ) : null}
+                      {draft.listicleType === 'dining' ? (
+                        <label className="stl-field">
+                          <span>Ideal For</span>
+                          <textarea
+                            className="stl-readonly-field"
+                            value={idealForValues.join(', ')}
+                            readOnly
+                            rows={idealForValues.length > 2 ? 3 : 2}
+                            placeholder="No ideal-for tags saved for this restaurant."
+                          />
+                          <p className="stl-legacy-note">View only. Update the related dining entry to change this.</p>
+                        </label>
                       ) : null}
                     </>
                   ) : null}

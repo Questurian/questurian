@@ -1496,7 +1496,11 @@ async def generate_social_image(
     authorization: Optional[str] = Header(None),
 ) -> JSONResponse:
     """
-    Regenerate the open_graph (1200x630) variant from the featured image media set.
+    Regenerate the open_graph (1200x630) variant from the featured image.
+
+    When the featured asset belongs to a media set, prefer the best source asset in
+    that set. Legacy/orphan assets without a media set still generate from the
+    selected featured asset directly.
 
     Returns the generated asset bunny_original_url for strict SEO social image usage.
     """
@@ -1527,27 +1531,27 @@ async def generate_social_image(
 
         raw_media_set_id = featured_asset.get("mediaSet")
         if raw_media_set_id is None:
-            _raise_http_error(
-                status_code=400,
-                message=(
-                    "Featured image must belong to a media set. "
-                    "Re-select a featured image uploaded through the variant workflow."
-                ),
-                step="validate_featured_media_set",
-                featured_asset_id=featured_asset_id,
+            source_asset = featured_asset
+            external_ref = (
+                f"social-og-featured-{featured_asset_id}-{int(time.time() * 1000)}"
             )
-        media_set_id = str(raw_media_set_id)
-
-        media_set_assets = await client.list_media_assets_by_media_set(media_set_id)
-        source_asset = _select_social_source_asset(media_set_assets)
-        if not source_asset:
-            _raise_http_error(
-                status_code=400,
-                message="No source assets found in featured image media set",
-                step="select_source_asset",
-                featured_asset_id=featured_asset_id,
-                media_set_id=media_set_id,
+            media_set_id = await client.create_media_set(
+                title=f"Social OG featured {featured_asset_id}",
+                alt_text="",
+                external_ref=external_ref,
             )
+        else:
+            media_set_id = str(raw_media_set_id)
+            media_set_assets = await client.list_media_assets_by_media_set(media_set_id)
+            source_asset = _select_social_source_asset(media_set_assets)
+            if not source_asset:
+                _raise_http_error(
+                    status_code=400,
+                    message="No source assets found in featured image media set",
+                    step="select_source_asset",
+                    featured_asset_id=featured_asset_id,
+                    media_set_id=media_set_id,
+                )
         source_asset_id = source_asset["id"]
 
         source_buffer = await _download_media_asset_file(

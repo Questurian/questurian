@@ -40,7 +40,7 @@ export interface ProcessImageOnlyResponse {
 export interface GenerateSocialImageResponse {
   success: boolean;
   featuredAssetId: string;
-  mediaSetId: string;
+  mediaSetId: string | null;
   sourceAssetId: string;
   generatedAssetId: string;
   generatedImageUrl: string;

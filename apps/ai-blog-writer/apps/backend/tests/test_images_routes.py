@@ -702,26 +702,122 @@ def test_generate_social_image_rejects_non_positive_featured_asset_id():
     assert detail["featured_asset_id"] == 0
 
 
-def test_generate_social_image_rejects_featured_asset_without_media_set(monkeypatch):
+def test_generate_social_image_supports_featured_asset_without_media_set(
+    monkeypatch,
+):
     client = TestClient(app)
 
-    async def fake_get_media_asset(self, asset_id: str | int):
-        assert str(asset_id) == "88"
-        return {
-            "id": "88",
-            "filename": "orphan_image.webp",
-            "mediaSet": None,
-            "variant": "editorial",
-            "width": 1600,
-            "height": 1200,
-            "bunny_original_url": None,
-            "url": None,
-        }
+    async def fake_get_media_asset_after_upload(self, asset_id: str | int):
+        if str(asset_id) == "88":
+            return {
+                "id": "88",
+                "filename": "orphan_image.webp",
+                "mediaSet": None,
+                "variant": "editorial",
+                "width": 1600,
+                "height": 1200,
+                "bunny_original_url": None,
+                "url": None,
+            }
+        if str(asset_id) == "889":
+            return {
+                "id": "889",
+                "filename": "orphan_image_open_graph.webp",
+                "mediaSet": None,
+                "variant": "open_graph",
+                "width": 1200,
+                "height": 630,
+                "bunny_original_url": "https://cdn.example.com/orphan_image_open_graph.webp",
+                "url": None,
+            }
+        return None
+
+    async def fake_list_media_assets(self, media_set_id: str | int):
+        raise AssertionError(
+            "list_media_assets_by_media_set should not be called for orphan assets"
+        )
+
+    async def fake_create_media_set(
+        self,
+        title: str,
+        alt_text: str,
+        external_ref: str,
+        location_ref: int | None = None,
+        tags: list | None = None,
+    ):
+        assert title == "Social OG featured 88"
+        assert alt_text == ""
+        assert external_ref.startswith("social-og-featured-88-")
+        assert location_ref is None
+        assert tags is None
+        return "ms_social_88"
+
+    async def fake_upload_image(
+        self,
+        variant,
+        alt_text: str,
+        photographer_credit: str = "",
+        media_set_id: str | None = None,
+        location_ref: int | None = None,
+    ):
+        assert variant.variant_type.value == "open_graph"
+        assert media_set_id == "ms_social_88"
+        return "889"
+
+    async def fake_download_media_asset_file(
+        *,
+        payload_client,
+        jwt_token: str,
+        filename: str,
+    ):
+        assert filename == "orphan_image.webp"
+        return b"source-image"
+
+    def fake_process_single_variant(
+        source_buffer: bytes,
+        original_filename: str,
+        variant_type: ImageVariantType,
+        quality: int = 85,
+    ):
+        assert source_buffer == b"source-image"
+        assert original_filename == "orphan_image.webp"
+        return ProcessedVariant(
+            variant_type=variant_type,
+            buffer=b"og-bytes",
+            filename="orphan_image_open_graph.webp",
+            width=1200,
+            height=630,
+            content_type="image/webp",
+            file_size=123,
+        )
 
     monkeypatch.setattr(
         PayloadClient,
         "get_media_asset_by_id",
-        fake_get_media_asset,
+        fake_get_media_asset_after_upload,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "list_media_assets_by_media_set",
+        fake_list_media_assets,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "create_media_set",
+        fake_create_media_set,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "upload_image",
+        fake_upload_image,
+    )
+    monkeypatch.setattr(
+        "app.features.images.routes._download_media_asset_file",
+        fake_download_media_asset_file,
+    )
+    monkeypatch.setattr(
+        "app.features.images.routes.process_single_variant",
+        fake_process_single_variant,
     )
 
     response = client.post(
@@ -730,10 +826,14 @@ def test_generate_social_image_rejects_featured_asset_without_media_set(monkeypa
         headers=_auth_headers(),
     )
 
-    assert response.status_code == 400
-    detail = response.json()["detail"]
-    assert detail["step"] == "validate_featured_media_set"
-    assert detail["featured_asset_id"] == 88
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["featuredAssetId"] == "88"
+    assert payload["mediaSetId"] == "ms_social_88"
+    assert payload["sourceAssetId"] == "88"
+    assert payload["generatedAssetId"] == "889"
+    assert payload["generatedImageUrl"] == "https://cdn.example.com/orphan_image_open_graph.webp"
 
 
 def test_generate_social_image_requires_generated_bunny_url(monkeypatch):

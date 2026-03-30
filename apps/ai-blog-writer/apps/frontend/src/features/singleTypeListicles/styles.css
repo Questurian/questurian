@@ -596,6 +596,16 @@
   min-height: 96px;
 }
 
+.stl-readonly-field {
+  background: #f7f9fc;
+  color: #465064;
+}
+
+.stl-field textarea.stl-readonly-field {
+  min-height: 72px;
+  resize: none;
+}
+
 .stl-multi-select {
   min-height: 132px;
 }

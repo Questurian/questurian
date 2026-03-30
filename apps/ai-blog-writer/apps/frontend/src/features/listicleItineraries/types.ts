@@ -199,6 +199,7 @@ export type MediaAssetOption = {
   alt?: string
   alt_text?: string
   altText?: string
+  mediaSet?: number | string | { id?: number | string } | null
   url?: string
   variant?: string
 }

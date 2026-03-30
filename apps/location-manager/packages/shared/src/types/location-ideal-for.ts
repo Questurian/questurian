@@ -19,6 +19,7 @@ export const DINING_IDEAL_FOR_TAGS = [
   "Craft Beer",
   "Craft Cocktails",
   "Wine Bars",
+  "Wine Lovers",
   "Bar Seating",
   "Trendy Hot Spots",
   "Fine Dining",
@@ -195,6 +196,7 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
         "Sports Bar",
         "Trendy Hot Spots",
         "Wine Bars",
+        "Wine Lovers",
       ],
     },
     {

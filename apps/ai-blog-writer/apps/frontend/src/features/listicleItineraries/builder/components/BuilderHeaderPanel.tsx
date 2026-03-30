@@ -57,6 +57,7 @@ export function BuilderHeaderPanel({
       alt: asset.alt,
       alt_text: asset.alt_text,
       altText: asset.altText,
+      mediaSet: asset.mediaSet,
       variant: asset.variant as MediaAsset['variant'],
     })),
     [mediaAssets],
@@ -89,6 +90,7 @@ export function BuilderHeaderPanel({
           alt: asset.alt,
           alt_text: asset.alt_text,
           altText: asset.altText,
+          mediaSet: asset.mediaSet,
           variant: asset.variant,
         })
       } catch {
