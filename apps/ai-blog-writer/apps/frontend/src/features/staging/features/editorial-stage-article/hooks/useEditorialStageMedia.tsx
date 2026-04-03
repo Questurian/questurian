@@ -40,11 +40,40 @@ import {
   getUnsplashPhotoImportUrl,
   pickVariantAssetId,
 } from '../media-utils'
+import { getBlockMediaPayload } from '../workflow.service'
 import { useEditorialStageFeaturedMedia } from './useEditorialStageFeaturedMedia'
 import { useEditorialStageBlockMedia } from './useEditorialStageBlockMedia'
 
 type PublishResult = { success: boolean; message: string } | null
 const FEATURED_PAYLOAD_PAGE_LIMIT = 50
+
+function getReferencedBlockAssetIds(blocks: StagedArticle['blocks'] | undefined): number[] {
+  if (!blocks?.length) return []
+
+  const assetIds = new Set<number>()
+
+  blocks.forEach((block) => {
+    const mediaPayload = getBlockMediaPayload(block)
+    if (!mediaPayload) return
+
+    if (mediaPayload.type === 'single') {
+      assetIds.add(mediaPayload.imageAfter)
+      return
+    }
+
+    if (mediaPayload.type === 'pair') {
+      assetIds.add(mediaPayload.imgPairAfter.imageOne)
+      assetIds.add(mediaPayload.imgPairAfter.imageTwo)
+      return
+    }
+
+    assetIds.add(mediaPayload.imgTrioAfter.imageOne)
+    assetIds.add(mediaPayload.imgTrioAfter.imageTwo)
+    assetIds.add(mediaPayload.imgTrioAfter.imageThree)
+  })
+
+  return Array.from(assetIds).filter((assetId) => Number.isFinite(assetId) && assetId > 0)
+}
 
 type UseEditorialStageMediaParams = {
   token: string | null | undefined
@@ -148,13 +177,63 @@ export function useEditorialStageMedia({
     clearOpenImagePickerTarget,
     resetExternalImportState,
   })
+  const mergeBlockMediaAssetsIntoState = block.mergeMediaAssetsIntoState
 
   const refreshMediaAssets = useCallback(async () => {
     if (!token) return
     const response = await fetchMediaAssets(token, { limit: 50, mimeType: 'image/' })
     mergeMediaAssetsIntoState(response.docs || [])
-    block.mergeMediaAssetsIntoState(response.docs || [])
-  }, [token, fetchMediaAssets, mergeMediaAssetsIntoState, block])
+    mergeBlockMediaAssetsIntoState(response.docs || [])
+  }, [token, fetchMediaAssets, mergeMediaAssetsIntoState, mergeBlockMediaAssetsIntoState])
+
+  useEffect(() => {
+    if (!token || !stagedArticle?.blocks.length) return
+
+    const loadedAssetIds = new Set(mediaAssets.map((asset) => asset.id))
+    const missingBlockAssetIds = getReferencedBlockAssetIds(stagedArticle.blocks).filter(
+      (assetId) => !loadedAssetIds.has(assetId)
+    )
+
+    if (!missingBlockAssetIds.length) return
+
+    let isCancelled = false
+
+    const hydrateMissingBlockAssets = async () => {
+      const responses = await Promise.all(
+        missingBlockAssetIds.map(async (assetId) => {
+          try {
+            return await fetchMediaAssets(token, {
+              limit: 1,
+              id: assetId,
+            })
+          } catch {
+            return null
+          }
+        })
+      )
+
+      if (isCancelled) return
+
+      const hydratedAssets = responses.flatMap((response) => response?.docs || [])
+      if (!hydratedAssets.length) return
+
+      mergeMediaAssetsIntoState(hydratedAssets)
+      mergeBlockMediaAssetsIntoState(hydratedAssets)
+    }
+
+    void hydrateMissingBlockAssets()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [
+    token,
+    stagedArticle?.blocks,
+    mediaAssets,
+    fetchMediaAssets,
+    mergeMediaAssetsIntoState,
+    mergeBlockMediaAssetsIntoState,
+  ])
 
   useEffect(() => {
     if (!token || !stagedArticle?.featuredImageId) return
@@ -173,7 +252,7 @@ export function useEditorialStageMedia({
         })
         if (isCancelled) return
         mergeMediaAssetsIntoState(response.docs || [])
-        block.mergeMediaAssetsIntoState(response.docs || [])
+        mergeBlockMediaAssetsIntoState(response.docs || [])
       } catch {
         // Keep UI fallback in place if this targeted hydration fails.
       }
@@ -184,7 +263,14 @@ export function useEditorialStageMedia({
     return () => {
       isCancelled = true
     }
-  }, [token, stagedArticle?.featuredImageId, mediaAssets, fetchMediaAssets, mergeMediaAssetsIntoState, block])
+  }, [
+    token,
+    stagedArticle?.featuredImageId,
+    mediaAssets,
+    fetchMediaAssets,
+    mergeMediaAssetsIntoState,
+    mergeBlockMediaAssetsIntoState,
+  ])
 
   const featured = useEditorialStageFeaturedMedia({
     stagedArticleId: stagedArticle?.id ?? 'staged-article',

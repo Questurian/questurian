@@ -19,7 +19,9 @@ type BuilderHeaderPanelProps = {
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
+  onIntroAiAutoWrite: () => Promise<void>
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
+  isIntroAiGenerating: boolean
   isLocked: boolean
   onContinueStep2: () => void
   onUpdateStep2: () => void
@@ -33,7 +35,9 @@ export function BuilderHeaderPanel({
   locationRef,
   mediaAssets,
   updateHeader,
+  onIntroAiAutoWrite,
   onIntroAiRewrite,
+  isIntroAiGenerating,
   isLocked,
   onContinueStep2,
   onUpdateStep2,
@@ -180,7 +184,23 @@ export function BuilderHeaderPanel({
         </div>
 
         <label className="stl-field">
-          <span>Intro *</span>
+          <div className="stl-field-label-row">
+            <span>Intro *</span>
+            <div className="stl-inline-actions">
+              <button
+                type="button"
+                className="stl-btn stl-btn-secondary"
+                onClick={() => void onIntroAiAutoWrite()}
+                disabled={isIntroAiGenerating}
+              >
+                {isIntroAiGenerating
+                  ? 'Writing...'
+                  : draft.header.introMarkdown.trim()
+                    ? 'Regenerate'
+                    : 'Auto Write'}
+              </button>
+            </div>
+          </div>
           <MarkdownBlockEditor
             blockId={`${draft.draftId}_header_intro`}
             value={draft.header.introMarkdown}

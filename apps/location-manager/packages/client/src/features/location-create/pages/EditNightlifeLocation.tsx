@@ -7,8 +7,17 @@ import { z } from "zod";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
+import {
+  NightlifeMultiOptionTable,
+  NightlifeSingleOptionTable,
+} from "@client/shared/components/forms";
 import { Breadcrumbs } from "@client/shared/components/layout";
 import { ErrorAlert } from "@client/shared/components/ui";
+import {
+  buildNightlifeDetails,
+  parseNightlifeDetails,
+} from "@client/shared/lib/nightlife-details";
+import { toggleNightlifeMusicSelection } from "@client/shared/lib/nightlife-music";
 import {
   locationsApi,
   useLocationById,
@@ -42,7 +51,6 @@ import {
   SPACE_LAYOUT_VALUES,
   TOURIST_PRESENCE_OPTIONS,
   TOURIST_PRESENCE_VALUES,
-  type NightlifeOption,
   VENUE_SIZE_OPTIONS,
   VENUE_SIZE_VALUES,
   VENUE_TYPE_OPTIONS,
@@ -63,48 +71,6 @@ const editNightlifeSchema = addNightlifeSchema.extend({
 
 type EditNightlifeFormData = z.infer<typeof editNightlifeSchema>;
 type MultiField = "music" | "spaceLayout" | "vibe" | "musicFormat" | "dressCode";
-
-type UnknownRecord = Record<string, unknown>;
-
-interface OptionTableProps {
-  label: string;
-  options: NightlifeOption[];
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-}
-
-interface MultiOptionTableProps {
-  label: string;
-  options: NightlifeOption[];
-  values: string[];
-  onToggle: (value: string) => void;
-  error?: string;
-}
-
-interface ParsedNightlifeDetails {
-  name: string | null;
-  priceTier: string | null;
-  clubType: string | null;
-  music: string[];
-  venueType: string | null;
-  venueSize: string | null;
-  spaceLayout: string[];
-  vibe: string[];
-  peakHours: string | null;
-  touristPresence: string | null;
-  musicFormat: string[];
-  dressCode: string[];
-  energyLevel: string | null;
-  vipAndBottleService: string | null;
-  crowdProfile: string | null;
-  location: string | null;
-  phone: string | null;
-  hours: string | null;
-  website: string | null;
-  reserveUrl: string | null;
-  daytimeRestaurant: string | null;
-}
 
 const COUNTRY_OPTIONS = [
   { value: "PE", label: "Peru (PE)" },
@@ -155,92 +121,6 @@ function normalizeAddress(address: string) {
 
 function buildPrefillSignature(name: string, address: string) {
   return `${name.trim().toLowerCase()}|${normalizeAddress(address).toLowerCase()}`;
-}
-
-function asRecord(value: unknown): UnknownRecord | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-  return value as UnknownRecord;
-}
-
-function asString(value: unknown): string | null {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return null;
-}
-
-function asStringArray(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => asString(item))
-      .filter((item): item is string => Boolean(item));
-  }
-
-  const single = asString(value);
-  return single ? [single] : [];
-}
-
-function getNestedValue(record: UnknownRecord | null, path: string[]): unknown {
-  if (!record) return undefined;
-
-  let current: unknown = record;
-  for (const key of path) {
-    const nextRecord = asRecord(current);
-    if (!nextRecord) return undefined;
-    current = nextRecord[key];
-  }
-
-  return current;
-}
-
-function getSectionValue(
-  details: UnknownRecord | null,
-  section: "theSpace" | "theScene",
-  key: string
-): unknown {
-  const raw = getNestedValue(details, ["details", section, key]);
-  const rawRecord = asRecord(raw);
-  if (rawRecord && "value" in rawRecord) {
-    return rawRecord.value;
-  }
-  return raw;
-}
-
-function parseNightlifeDetails(details: unknown): ParsedNightlifeDetails {
-  const root = asRecord(details);
-  const touristPresenceValue =
-    getSectionValue(root, "theScene", "touristPresence") ??
-    getSectionValue(root, "theSpace", "touristPresence");
-
-  return {
-    name: asString(getNestedValue(root, ["name"])),
-    priceTier: asString(getNestedValue(root, ["price_tier"])),
-    clubType: asString(getNestedValue(root, ["club_type"])),
-    music: asStringArray(getNestedValue(root, ["music"])),
-    venueType: asString(getSectionValue(root, "theSpace", "venueType")),
-    venueSize: asString(getSectionValue(root, "theSpace", "venueSize")),
-    spaceLayout: asStringArray(getSectionValue(root, "theSpace", "spaceLayout")),
-    vibe: asStringArray(getSectionValue(root, "theSpace", "vibe")),
-    peakHours: asString(getSectionValue(root, "theSpace", "peakHours")),
-    touristPresence: asString(touristPresenceValue),
-    musicFormat: asStringArray(getSectionValue(root, "theScene", "musicFormat")),
-    dressCode: asStringArray(getSectionValue(root, "theScene", "dressCode")),
-    energyLevel: asString(getSectionValue(root, "theScene", "energyLevel")),
-    vipAndBottleService: asString(getSectionValue(root, "theScene", "vipAndBottleService")),
-    crowdProfile: asString(getSectionValue(root, "theScene", "crowdProfile")),
-    location: asString(getNestedValue(root, ["location"])),
-    phone: asString(getNestedValue(root, ["phone"])),
-    hours: asString(getNestedValue(root, ["hours"])),
-    website: asString(getNestedValue(root, ["website"])),
-    reserveUrl: asString(getNestedValue(root, ["reserve_url"])),
-    daytimeRestaurant: asString(getNestedValue(root, ["daytime_restaurant"])),
-  };
 }
 
 function pickSingleOption<T extends readonly string[]>(
@@ -364,93 +244,6 @@ function mapLocationToNightlifeFormValues(location: LocationResponse): EditNight
   };
 }
 
-function OptionSelect({ label, options, value, onChange, error }: OptionTableProps) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <div className="rounded-md border border-border overflow-hidden">
-        <table className="w-full text-xs">
-          <thead className="bg-muted/40">
-            <tr>
-              <th className="text-left px-2 py-1.5 font-medium">Option</th>
-              <th className="text-left px-2 py-1.5 font-medium">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {options.map((option) => (
-              <tr
-                key={option.value}
-                className={value === option.value ? "bg-primary/10" : "border-t border-border"}
-              >
-                <td className="px-2 py-1.5 font-medium">{option.label}</td>
-                <td className="px-2 py-1.5 text-muted-foreground">{option.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
-
-function MultiOptionTable({ label, options, values, onToggle, error }: MultiOptionTableProps) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="rounded-md border border-border overflow-hidden">
-        <table className="w-full text-xs">
-          <thead className="bg-muted/40">
-            <tr>
-              <th className="text-left px-2 py-1.5 font-medium w-24">Select</th>
-              <th className="text-left px-2 py-1.5 font-medium w-44">Option</th>
-              <th className="text-left px-2 py-1.5 font-medium">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {options.map((option) => {
-              const isChecked = values.includes(option.value);
-              return (
-                <tr
-                  key={option.value}
-                  className={
-                    isChecked ? "bg-primary/10 border-t border-border" : "border-t border-border"
-                  }
-                >
-                  <td className="px-2 py-1.5">
-                    <label className="inline-flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => onToggle(option.value)}
-                      />
-                      <span className="text-[11px]">{isChecked ? "Selected" : "Select"}</span>
-                    </label>
-                  </td>
-                  <td className="px-2 py-1.5 font-medium">{option.label}</td>
-                  <td className="px-2 py-1.5 text-muted-foreground">{option.description}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
-
 export function EditNightlifeLocation() {
   const navigate = useNavigate();
   const { id, category } = useParams<{ id: string; category: LocationCategory }>();
@@ -504,9 +297,12 @@ export function EditNightlifeLocation() {
 
   const toggleMultiOption = (field: MultiField, value: string) => {
     const currentValues = (form.getValues(field) || []) as string[];
-    const nextValues = currentValues.includes(value)
-      ? currentValues.filter((item) => item !== value)
-      : [...currentValues, value];
+    const nextValues =
+      field === "music"
+        ? toggleNightlifeMusicSelection(currentValues, value)
+        : currentValues.includes(value)
+          ? currentValues.filter((item) => item !== value)
+          : [...currentValues, value];
 
     form.setValue(field, nextValues as EditNightlifeFormData[MultiField], {
       shouldDirty: true,
@@ -630,35 +426,29 @@ export function EditNightlifeLocation() {
       ? buildOperationHoursSummary(operationHoursValue)
       : operationHoursValue;
 
-    const nightlifeDetails = {
+    const nightlifeDetails = buildNightlifeDetails({
       name: data.name,
-      price_tier: data.priceTier,
-      club_type: data.clubType,
+      priceTier: data.priceTier,
+      clubType: data.clubType,
       music,
-      details: {
-        theSpace: {
-          venueType: { label: "Venue Type", value: data.venueType },
-          venueSize: { label: "Venue Size", value: data.venueSize },
-          spaceLayout: { label: "Layout", value: spaceLayout },
-          vibe: { label: "Vibe", value: vibe },
-          peakHours: { label: "Peak Hours", value: data.peakHours },
-        },
-        theScene: {
-          musicFormat: { label: "Music", value: musicFormat },
-          touristPresence: { label: "Tourist Presence", value: data.touristPresence },
-          dressCode: { label: "Dress Code", value: dressCode },
-          energyLevel: { label: "Energy Level", value: data.energyLevel },
-          vipAndBottleService: { label: "VIP & Bottle Service", value: data.vipAndBottleService },
-          crowdProfile: { label: "Age Range", value: data.crowdProfile },
-        },
-      },
+      venueType: data.venueType,
+      venueSize: data.venueSize,
+      spaceLayout,
+      vibe,
+      peakHours: data.peakHours,
+      touristPresence: data.touristPresence,
+      musicFormat,
+      dressCode,
+      energyLevel: data.energyLevel,
+      vipAndBottleService: data.vipAndBottleService,
+      crowdProfile: data.crowdProfile,
       location: normalizedAddress,
       phone: data.phone || "",
       hours: nightlifeHours,
       website: data.website || "",
-      reserve_url: data.reserveUrl || "",
-      daytime_restaurant: Number(data.daytimeRestaurant),
-    };
+      reserveUrl: data.reserveUrl || "",
+      daytimeRestaurant: data.daytimeRestaurant,
+    });
 
     updateLocation(
       {
@@ -854,7 +644,7 @@ export function EditNightlifeLocation() {
           <section className="space-y-4">
             <h2 className="text-xs font-semibold tracking-wide text-foreground">Core</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Venue Category"
                 options={CLUB_TYPE_OPTIONS}
                 value={form.watch("clubType")}
@@ -869,7 +659,7 @@ export function EditNightlifeLocation() {
               />
             </div>
 
-            <MultiOptionTable
+            <NightlifeMultiOptionTable
               label="Music"
               options={MUSIC_OPTIONS}
               values={form.watch("music")}
@@ -881,7 +671,7 @@ export function EditNightlifeLocation() {
           <section className="space-y-4">
             <h2 className="text-xs font-semibold tracking-wide text-foreground">The Space</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Price Tier"
                 options={PRICE_TIER_OPTIONS}
                 value={form.watch("priceTier")}
@@ -894,7 +684,7 @@ export function EditNightlifeLocation() {
                 }
                 error={form.formState.errors.priceTier?.message}
               />
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Venue Type"
                 options={VENUE_TYPE_OPTIONS}
                 value={form.watch("venueType")}
@@ -907,7 +697,7 @@ export function EditNightlifeLocation() {
                 }
                 error={form.formState.errors.venueType?.message}
               />
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Venue Size"
                 options={VENUE_SIZE_OPTIONS}
                 value={form.watch("venueSize")}
@@ -922,7 +712,7 @@ export function EditNightlifeLocation() {
               />
             </div>
 
-            <MultiOptionTable
+            <NightlifeMultiOptionTable
               label="Layout"
               options={SPACE_LAYOUT_OPTIONS}
               values={form.watch("spaceLayout")}
@@ -930,7 +720,7 @@ export function EditNightlifeLocation() {
               error={form.formState.errors.spaceLayout?.message as string | undefined}
             />
 
-            <MultiOptionTable
+            <NightlifeMultiOptionTable
               label="Vibe"
               options={VIBE_OPTIONS}
               values={form.watch("vibe")}
@@ -939,7 +729,7 @@ export function EditNightlifeLocation() {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Peak Hours"
                 options={PEAK_HOURS_OPTIONS}
                 value={form.watch("peakHours")}
@@ -957,7 +747,7 @@ export function EditNightlifeLocation() {
 
           <section className="space-y-4">
             <h2 className="text-xs font-semibold tracking-wide text-foreground">The Scene</h2>
-            <MultiOptionTable
+            <NightlifeMultiOptionTable
               label="Music Format"
               options={MUSIC_FORMAT_OPTIONS}
               values={form.watch("musicFormat")}
@@ -966,7 +756,7 @@ export function EditNightlifeLocation() {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Tourist Presence"
                 options={TOURIST_PRESENCE_OPTIONS}
                 value={form.watch("touristPresence")}
@@ -979,7 +769,7 @@ export function EditNightlifeLocation() {
                 }
                 error={form.formState.errors.touristPresence?.message}
               />
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Energy Level"
                 options={ENERGY_LEVEL_OPTIONS}
                 value={form.watch("energyLevel")}
@@ -992,7 +782,7 @@ export function EditNightlifeLocation() {
                 }
                 error={form.formState.errors.energyLevel?.message}
               />
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="VIP & Bottle Service"
                 options={VIP_BOTTLE_SERVICE_OPTIONS}
                 value={form.watch("vipAndBottleService")}
@@ -1009,7 +799,7 @@ export function EditNightlifeLocation() {
                 }
                 error={form.formState.errors.vipAndBottleService?.message}
               />
-              <OptionSelect
+              <NightlifeSingleOptionTable
                 label="Crowd Profile (Age Range)"
                 options={CROWD_PROFILE_OPTIONS}
                 value={form.watch("crowdProfile")}
@@ -1024,7 +814,7 @@ export function EditNightlifeLocation() {
               />
             </div>
 
-            <MultiOptionTable
+            <NightlifeMultiOptionTable
               label="Dress Code"
               options={DRESS_CODE_OPTIONS}
               values={form.watch("dressCode")}

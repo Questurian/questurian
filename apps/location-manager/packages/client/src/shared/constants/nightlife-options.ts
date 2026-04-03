@@ -1,0 +1,393 @@
+export interface NightlifeOption {
+  value: string;
+  label: string;
+  description: string;
+}
+
+export const NO_MUSIC_VALUE = "No Music / Ambience Only";
+
+export const PRICE_TIER_VALUES = ["$", "$$", "$$$", "$$$$"] as const;
+export const PRICE_TIER_OPTIONS: NightlifeOption[] = [
+  { value: "$", label: "$", description: "Entry-level pricing; affordable drinks and cover." },
+  { value: "$$", label: "$$", description: "Moderate pricing; standard nightclub spend." },
+  { value: "$$$", label: "$$$", description: "Premium pricing; elevated drinks, tables, and service." },
+  { value: "$$$$", label: "$$$$", description: "Luxury pricing; top-tier VIP and bottle-service spend." },
+];
+
+export const CLUB_TYPE_VALUES = [
+  "Bar",
+  "Cocktail Bar",
+  "Wine Bar",
+  "Sports Bar",
+  "Tavern",
+  "Brewpub / Taproom",
+  "Whiskey Bar",
+  "Piano Bar",
+  "Karaoke Bar",
+  "Tiki Bar",
+  "Hookah Lounge",
+  "Cigar Lounge",
+  "Pub / Gastropub",
+  "Speakeasy",
+  "Night Club",
+  "Lounge Club",
+  "Cocktail Club",
+  "Live Music Club",
+  "Dance Club",
+  "Rooftop Club",
+  "Beach Club",
+  "After-Hours Club",
+] as const;
+export const CLUB_TYPE_OPTIONS: NightlifeOption[] = [
+  { value: "Bar", label: "Bar", description: "General nightlife bar format focused on drinks and social flow." },
+  { value: "Cocktail Bar", label: "Cocktail Bar", description: "Cocktail-first concept with mixology-led experience." },
+  { value: "Wine Bar", label: "Wine Bar", description: "Wine-forward bar concept with slower social pacing and tasting-led identity." },
+  { value: "Sports Bar", label: "Sports Bar", description: "Game-day and broadcast-driven bar atmosphere." },
+  { value: "Tavern", label: "Tavern", description: "Traditional drinks-led venue with neighborhood social identity." },
+  { value: "Brewpub / Taproom", label: "Brewpub / Taproom", description: "Beer-focused concept with tap-led selection and casual flow." },
+  { value: "Whiskey Bar", label: "Whiskey Bar", description: "Spirits-specialist bar centered on whiskey-led menu depth." },
+  { value: "Piano Bar", label: "Piano Bar", description: "Live piano entertainment with lounge-style nightlife pacing." },
+  { value: "Karaoke Bar", label: "Karaoke Bar", description: "Singing-led social format with participatory nightlife energy." },
+  { value: "Tiki Bar", label: "Tiki Bar", description: "Theme-forward tropical cocktail concept with playful ambiance." },
+  { value: "Hookah Lounge", label: "Hookah Lounge", description: "Lounge venue built around hookah service and longer dwell times." },
+  { value: "Cigar Lounge", label: "Cigar Lounge", description: "Premium cigar-and-spirits environment with relaxed upscale tone." },
+  { value: "Pub / Gastropub", label: "Pub / Gastropub", description: "Pub culture format with food-and-drink balance." },
+  { value: "Speakeasy", label: "Speakeasy", description: "Hidden/curated bar concept with intimate ambiance." },
+  { value: "Night Club", label: "Night Club", description: "Classic high-energy dance-focused nightlife venue." },
+  { value: "Lounge Club", label: "Lounge Club", description: "Comfort-first seating with music-driven social scene." },
+  { value: "Cocktail Club", label: "Cocktail Club", description: "Cocktail program-led nightlife with curated ambiance." },
+  { value: "Live Music Club", label: "Live Music Club", description: "Performance-forward venue with bands or live acts." },
+  { value: "Dance Club", label: "Dance Club", description: "Dance-floor-centric format with strong DJ rotation." },
+  { value: "Rooftop Club", label: "Rooftop Club", description: "Elevated rooftop environment with skyline positioning." },
+  { value: "Beach Club", label: "Beach Club", description: "Coastal/open-air club format, often seasonal and destination-led." },
+  { value: "After-Hours Club", label: "After-Hours Club", description: "Late-night continuation format with peak post-midnight traffic." },
+];
+
+export const MUSIC_VALUES = [
+  NO_MUSIC_VALUE,
+  "House",
+  "EDM",
+  "Techno",
+  "Afro House",
+  "Latin House",
+  "Reggaeton",
+  "Hip-Hop",
+  "R&B",
+  "Pop",
+  "Rock",
+  "Alternative",
+  "Indie",
+  "Open Format",
+  "Commercial",
+  "Disco/Funk",
+  "Salsa",
+  "Latin Mix",
+  "Live DJ Sets",
+  "Live Band",
+  "Vinyl-Driven Ambience",
+] as const;
+export const MUSIC_OPTIONS: NightlifeOption[] = [
+  { value: NO_MUSIC_VALUE, label: "No Music / Ambience Only", description: "Conversation-led venue with no programmed music beyond ambient room tone." },
+  { value: "House", label: "House", description: "Four-on-the-floor dance music with broad club appeal." },
+  { value: "EDM", label: "EDM", description: "Festival-style electronic sets with high drops and crowd energy." },
+  { value: "Techno", label: "Techno", description: "Underground, driving electronic rhythm format." },
+  { value: "Afro House", label: "Afro House", description: "Percussive house with global rhythmic influence." },
+  { value: "Latin House", label: "Latin House", description: "House structure blended with Latin groove patterns." },
+  { value: "Reggaeton", label: "Reggaeton", description: "Urban Latin mainstream nightlife staple." },
+  { value: "Hip-Hop", label: "Hip-Hop", description: "Rap-driven club sets with strong peak-hour pull." },
+  { value: "R&B", label: "R&B", description: "Melodic, groove-driven format for lounge-to-club transitions." },
+  { value: "Pop", label: "Pop", description: "Mainstream crossover tracks for broad crowd compatibility." },
+  { value: "Rock", label: "Rock", description: "Guitar-driven rock sets suited to live rooms and crossover nightlife venues." },
+  { value: "Alternative", label: "Alt / Alternative", description: "Alt-leaning programming with indie, modern rock, and niche crossover appeal." },
+  { value: "Indie", label: "Indie", description: "Indie rock and indie pop selections for trend-forward, music-first crowds." },
+  { value: "Open Format", label: "Open Format", description: "Multi-genre DJ programming for mixed audiences." },
+  { value: "Commercial", label: "Commercial", description: "High-recognition chart-focused party tracks." },
+  { value: "Disco/Funk", label: "Disco/Funk", description: "Retro dance and groove-forward selections." },
+  { value: "Salsa", label: "Salsa", description: "Partner-dance Latin format with social dance focus." },
+  { value: "Latin Mix", label: "Latin Mix", description: "Blended Latin genres for broad regional appeal." },
+  { value: "Live DJ Sets", label: "Live DJ Sets", description: "Program built around active live DJ performance." },
+  { value: "Live Band", label: "Live Band", description: "Band-led music format with stage-performance cadence." },
+  { value: "Vinyl-Driven Ambience", label: "Vinyl-Driven Ambience", description: "Low-volume vinyl-led soundtrack shaping mood rather than dance-floor momentum." },
+];
+
+export const VENUE_TYPE_VALUES = [
+  "Bar",
+  "Cocktail Bar",
+  "Sports Bar",
+  "Dive Bar",
+  "Wine Bar",
+  "Tavern",
+  "Brewpub / Taproom",
+  "Whiskey Bar",
+  "Piano Bar",
+  "Karaoke Bar",
+  "Tiki Bar",
+  "Hookah Lounge",
+  "Cigar Lounge",
+  "Arcade Bar",
+  "Pub / Gastropub",
+  "Speakeasy",
+  "Nightclub",
+  "Lounge",
+  "Rooftop Bar",
+  "Rooftop Venue",
+  "Beach Bar",
+  "Beach Venue",
+  "Warehouse Venue",
+  "Live Music Venue",
+  "Supper Club",
+  "Cocktail Bar + Dance Floor",
+] as const;
+export const VENUE_TYPE_OPTIONS: NightlifeOption[] = [
+  { value: "Bar", label: "Bar", description: "General nightlife bar setting with social-first flow." },
+  { value: "Cocktail Bar", label: "Cocktail Bar", description: "Cocktail-focused venue with curated drink program." },
+  { value: "Sports Bar", label: "Sports Bar", description: "Broadcast-led nightlife venue with game-night demand." },
+  { value: "Dive Bar", label: "Dive Bar", description: "Casual low-key bar with relaxed service style." },
+  { value: "Wine Bar", label: "Wine Bar", description: "Wine-forward nightlife venue with conversation-led pacing." },
+  { value: "Tavern", label: "Tavern", description: "Classic neighborhood tavern format anchored in regular local trade." },
+  { value: "Brewpub / Taproom", label: "Brewpub / Taproom", description: "Tap-focused beer venue with casual nighttime social traffic." },
+  { value: "Whiskey Bar", label: "Whiskey Bar", description: "Spirits-specialist venue with whiskey-led premium positioning." },
+  { value: "Piano Bar", label: "Piano Bar", description: "Live piano nightlife concept with conversation-forward ambiance." },
+  { value: "Karaoke Bar", label: "Karaoke Bar", description: "Performance-participation venue centered on karaoke programming." },
+  { value: "Tiki Bar", label: "Tiki Bar", description: "Thematic tropical-style bar with escapist nightlife identity." },
+  { value: "Hookah Lounge", label: "Hookah Lounge", description: "Lounge format with hookah service and slower social cadence." },
+  { value: "Cigar Lounge", label: "Cigar Lounge", description: "Refined cigar-and-spirits venue with premium low-noise atmosphere." },
+  { value: "Arcade Bar", label: "Arcade Bar", description: "Games + drinks concept combining nightlife and social play." },
+  { value: "Pub / Gastropub", label: "Pub / Gastropub", description: "Pub format balancing social drinks and food service." },
+  { value: "Speakeasy", label: "Speakeasy", description: "Intimate hidden-concept bar with curated experience." },
+  { value: "Nightclub", label: "Nightclub", description: "Core nightlife format centered on music and dancing." },
+  { value: "Lounge", label: "Lounge", description: "Social lounge setting with lower dance-floor emphasis." },
+  { value: "Rooftop Bar", label: "Rooftop Bar", description: "Open skyline bar concept with evening destination pull." },
+  { value: "Rooftop Venue", label: "Rooftop Venue", description: "Open skyline concept with destination appeal." },
+  { value: "Beach Bar", label: "Beach Bar", description: "Coastal bar environment with open-air nightlife flow." },
+  { value: "Beach Venue", label: "Beach Venue", description: "Outdoor/coastal nightlife setting." },
+  { value: "Warehouse Venue", label: "Warehouse Venue", description: "Industrial large-format event/club environment." },
+  { value: "Live Music Venue", label: "Live Music Venue", description: "Stage-forward venue with artist programming." },
+  { value: "Supper Club", label: "Supper Club", description: "Dinner-to-nightlife hybrid experience." },
+  { value: "Cocktail Bar + Dance Floor", label: "Cocktail + Dance", description: "Balanced bar program with active dance area." },
+];
+
+export const VENUE_SIZE_VALUES = ["Intimate", "Small", "Medium", "Large", "Massive"] as const;
+export const VENUE_SIZE_OPTIONS: NightlifeOption[] = [
+  { value: "Intimate", label: "Intimate", description: "Boutique capacity, highly personal atmosphere." },
+  { value: "Small", label: "Small", description: "Lower-capacity room with focused crowd density." },
+  { value: "Medium", label: "Medium", description: "Balanced capacity for regular weekly programming." },
+  { value: "Large", label: "Large", description: "High-capacity nightlife venue with major peak swings." },
+  { value: "Massive", label: "Massive", description: "Flagship-scale venue built for large event nights." },
+];
+
+export const SPACE_LAYOUT_VALUES = [
+  "Indoor",
+  "Outdoor Patio",
+  "Rooftop",
+  "Open-Air",
+  "Multi-Room",
+  "Main Dance Floor",
+  "VIP Rooms",
+  "Terrace",
+  "Poolside",
+] as const;
+export const SPACE_LAYOUT_OPTIONS: NightlifeOption[] = [
+  { value: "Indoor", label: "Indoor", description: "Fully enclosed climate-controlled club area." },
+  { value: "Outdoor Patio", label: "Outdoor Patio", description: "Open-air side zone for social flow and breaks." },
+  { value: "Rooftop", label: "Rooftop", description: "Elevated outdoor platform with skyline draw." },
+  { value: "Open-Air", label: "Open-Air", description: "Non-enclosed concept with natural airflow." },
+  { value: "Multi-Room", label: "Multi-Room", description: "Multiple rooms with differentiated programming." },
+  { value: "Main Dance Floor", label: "Main Dance Floor", description: "Primary performance and crowd concentration area." },
+  { value: "VIP Rooms", label: "VIP Rooms", description: "Dedicated premium seating/experience sections." },
+  { value: "Terrace", label: "Terrace", description: "Semi-open exterior zone with seated standing mix." },
+  { value: "Poolside", label: "Poolside", description: "Pool-adjacent nightlife setup, often seasonal." },
+];
+
+export const VIBE_VALUES = [
+  "Upscale",
+  "Exclusive",
+  "High-Energy",
+  "Underground",
+  "Trendy",
+  "Luxury",
+  "Casual",
+  "Cozy",
+  "Vintage",
+  "Old-School",
+  "Rustic",
+  "Industrial",
+  "Eclectic",
+  "Dark & Moody",
+  "Playful",
+  "Refined",
+  "Laid-Back",
+  "Intimate",
+  "Romantic",
+  "Bohemian",
+  "Neighborhood Hangout",
+  "Party-Driven",
+  "Retro",
+  "Sophisticated",
+  "Lively",
+  "Chic",
+  "Immersive",
+  "Artistic",
+  "Local Favorite",
+  "Tourist Hotspot",
+] as const;
+export const VIBE_OPTIONS: NightlifeOption[] = [
+  { value: "Upscale", label: "Upscale", description: "Premium visual and service cues throughout the venue." },
+  { value: "Exclusive", label: "Exclusive", description: "High-selectivity door and VIP-centric experience." },
+  { value: "High-Energy", label: "High-Energy", description: "Consistently intense dance-floor and crowd momentum." },
+  { value: "Underground", label: "Underground", description: "Alternative scene identity with niche programming." },
+  { value: "Trendy", label: "Trendy", description: "Current social buzz and style-forward crowd profile." },
+  { value: "Luxury", label: "Luxury", description: "Top-tier finishes, pricing, and guest expectation level." },
+  { value: "Casual", label: "Casual", description: "Relaxed atmosphere with lower barrier to entry." },
+  { value: "Cozy", label: "Cozy", description: "Warm, close-knit setting with comfort-first social dynamics." },
+  { value: "Vintage", label: "Vintage", description: "Classic-era visual cues shape the identity and ambiance." },
+  { value: "Old-School", label: "Old-School", description: "Traditional nightlife character with timeless format choices." },
+  { value: "Rustic", label: "Rustic", description: "Natural textured design language with grounded neighborhood tone." },
+  { value: "Industrial", label: "Industrial", description: "Raw warehouse-inspired finishes and urban edge." },
+  { value: "Eclectic", label: "Eclectic", description: "Mixed-style creative atmosphere with unconventional personality." },
+  { value: "Dark & Moody", label: "Dark & Moody", description: "Low-light intimate ambiance with atmospheric intensity." },
+  { value: "Playful", label: "Playful", description: "Fun-forward, social, and activity-led nightlife mood." },
+  { value: "Refined", label: "Refined", description: "Subtle upscale polish with restrained premium character." },
+  { value: "Laid-Back", label: "Laid-Back", description: "Easygoing pace with low-pressure social atmosphere." },
+  { value: "Intimate", label: "Intimate", description: "Smaller-scale setting designed for close social interaction." },
+  { value: "Romantic", label: "Romantic", description: "Mood-forward ambiance suited for date-night crowd." },
+  { value: "Bohemian", label: "Bohemian", description: "Creative eclectic style with relaxed nightlife identity." },
+  { value: "Neighborhood Hangout", label: "Neighborhood Hangout", description: "Reliable local go-to with regular repeat guests." },
+  { value: "Party-Driven", label: "Party-Driven", description: "Celebration-focused energy with event-night emphasis." },
+  { value: "Retro", label: "Retro", description: "Throwback aesthetic and music influences shape the atmosphere." },
+  { value: "Sophisticated", label: "Sophisticated", description: "Refined social experience with polished crowd behavior." },
+  { value: "Lively", label: "Lively", description: "Consistently active social flow without full club intensity." },
+  { value: "Chic", label: "Chic", description: "Fashion-forward, design-led environment with modern style cues." },
+  { value: "Immersive", label: "Immersive", description: "Experience-driven design, production, and sensory focus." },
+  { value: "Artistic", label: "Artistic", description: "Creative direction-led aesthetic and programming." },
+  { value: "Local Favorite", label: "Local Favorite", description: "Primarily supported by regular local audience." },
+  { value: "Tourist Hotspot", label: "Tourist Hotspot", description: "Strong visitor demand and destination reputation." },
+];
+
+export const PEAK_HOURS_VALUES = [
+  "8:00 PM - 10:00 PM",
+  "9:00 PM - 11:00 PM",
+  "10:00 PM - 12:00 AM",
+  "10:30 PM - 12:30 AM",
+  "11:00 PM - 1:00 AM",
+  "11:30 PM - 1:30 AM",
+  "12:00 AM - 2:00 AM",
+  "12:30 AM - 2:30 AM",
+  "1:00 AM - 3:30 AM",
+  "2:00 AM - 4:00 AM",
+  "3:00 AM - 5:00 AM",
+  "4:00 AM - 6:00 AM",
+] as const;
+export const PEAK_HOURS_OPTIONS: NightlifeOption[] = [
+  { value: "8:00 PM - 10:00 PM", label: "8 PM - 10 PM", description: "Happy-hour to early-evening crowd peak." },
+  { value: "9:00 PM - 11:00 PM", label: "9 PM - 11 PM", description: "Early social nightlife demand window." },
+  { value: "10:00 PM - 12:00 AM", label: "10 PM - 12 AM", description: "Early-night peak window." },
+  { value: "10:30 PM - 12:30 AM", label: "10:30 PM - 12:30 AM", description: "Bridge window into midnight demand." },
+  { value: "11:00 PM - 1:00 AM", label: "11 PM - 1 AM", description: "Mainstream pre-midnight/midnight ramp." },
+  { value: "11:30 PM - 1:30 AM", label: "11:30 PM - 1:30 AM", description: "Late-evening ramp with crossover to peak." },
+  { value: "12:00 AM - 2:00 AM", label: "12 AM - 2 AM", description: "Core midnight demand block." },
+  { value: "12:30 AM - 2:30 AM", label: "12:30 AM - 2:30 AM", description: "Post-midnight sustained traffic window." },
+  { value: "1:00 AM - 3:30 AM", label: "1 AM - 3:30 AM", description: "Late-night heavy-intensity traffic window." },
+  { value: "2:00 AM - 4:00 AM", label: "2 AM - 4 AM", description: "After-peak continuity period." },
+  { value: "3:00 AM - 5:00 AM", label: "3 AM - 5 AM", description: "Deep late-night/after-hours primary period." },
+  { value: "4:00 AM - 6:00 AM", label: "4 AM - 6 AM", description: "Extended after-hours closeout window." },
+];
+
+export const TOURIST_PRESENCE_VALUES = ["Very Low", "Low", "Medium", "High", "Very High"] as const;
+export const TOURIST_PRESENCE_OPTIONS: NightlifeOption[] = [
+  { value: "Very Low", label: "Very Low", description: "Almost entirely local regular audience." },
+  { value: "Low", label: "Low", description: "Primarily local with limited visitor traffic." },
+  { value: "Medium", label: "Medium", description: "Balanced local and visitor mix." },
+  { value: "High", label: "High", description: "Frequent tourist presence across peak nights." },
+  { value: "Very High", label: "Very High", description: "Destination-level tourist concentration." },
+];
+
+export const MUSIC_FORMAT_VALUES = [
+  "Open Format",
+  "Genre-Focused",
+  "Resident DJs",
+  "Guest DJs",
+  "International Headliners",
+  "Live DJ + Live Act Hybrid",
+  "Live Band Program",
+  "Theme Nights",
+] as const;
+export const MUSIC_FORMAT_OPTIONS: NightlifeOption[] = [
+  { value: "Open Format", label: "Open Format", description: "Flexible genre-mixing based on crowd response." },
+  { value: "Genre-Focused", label: "Genre Focused", description: "Consistent genre identity per night/venue." },
+  { value: "Resident DJs", label: "Resident DJs", description: "Core local resident roster anchors programming." },
+  { value: "Guest DJs", label: "Guest DJs", description: "Rotating invited DJs lead set variation." },
+  { value: "International Headliners", label: "International Headliners", description: "Global touring talent drives demand spikes." },
+  { value: "Live DJ + Live Act Hybrid", label: "DJ + Live Hybrid", description: "Mixed format with DJ sets and live performers." },
+  { value: "Live Band Program", label: "Live Band Program", description: "Night program primarily band/performance based." },
+  { value: "Theme Nights", label: "Theme Nights", description: "Format changes by scheduled theme concept." },
+];
+
+export const DRESS_CODE_VALUES = [
+  "Casual",
+  "Smart Casual",
+  "Upscale",
+  "Dress to Impress",
+  "Elegant",
+  "No Sportswear",
+  "Strict Door Policy",
+  "Theme-Based",
+] as const;
+export const DRESS_CODE_OPTIONS: NightlifeOption[] = [
+  { value: "Casual", label: "Casual", description: "Relaxed dress expectations with minimal restrictions." },
+  { value: "Smart Casual", label: "Smart Casual", description: "Clean social attire expected; moderate restrictions." },
+  { value: "Upscale", label: "Upscale", description: "Polished style expected across guest profile." },
+  { value: "Dress to Impress", label: "Dress to Impress", description: "High-style visual standard encouraged at entry." },
+  { value: "Elegant", label: "Elegant", description: "Formal-leaning evening attire expectations." },
+  { value: "No Sportswear", label: "No Sportswear", description: "Athletic apparel restricted or discouraged." },
+  { value: "Strict Door Policy", label: "Strict Door Policy", description: "Door staff applies selective attire screening." },
+  { value: "Theme-Based", label: "Theme-Based", description: "Dress guidance tied to specific event nights." },
+];
+
+export const ENERGY_LEVEL_VALUES = ["Low", "Medium", "High", "Very High"] as const;
+export const ENERGY_LEVEL_OPTIONS: NightlifeOption[] = [
+  { value: "Low", label: "Low", description: "Conversation-first, low-intensity atmosphere." },
+  { value: "Medium", label: "Medium", description: "Balanced social + dance energy." },
+  { value: "High", label: "High", description: "Dance-heavy and crowd-dense momentum." },
+  { value: "Very High", label: "Very High", description: "Maximum intensity, peak performance atmosphere." },
+];
+
+export const VIP_BOTTLE_SERVICE_VALUES = [
+  "No",
+  "Limited",
+  "Yes",
+  "Yes (Premium Tables)",
+  "Request Only",
+] as const;
+export const VIP_BOTTLE_SERVICE_OPTIONS: NightlifeOption[] = [
+  { value: "No", label: "No", description: "No dedicated bottle-service offering." },
+  { value: "Limited", label: "Limited", description: "Small or occasional bottle-service availability." },
+  { value: "Yes", label: "Yes", description: "Standard bottle-service is actively available." },
+  { value: "Yes (Premium Tables)", label: "Yes (Premium)", description: "Premium-tier tables/bundles drive primary VIP sales." },
+  { value: "Request Only", label: "Request Only", description: "Bottle service offered by pre-arrangement or inquiry." },
+];
+
+export const CROWD_PROFILE_VALUES = [
+  "18-24",
+  "21-30",
+  "25-35",
+  "25-40",
+  "20-40",
+  "30-45",
+  "Mixed",
+] as const;
+export const CROWD_PROFILE_OPTIONS: NightlifeOption[] = [
+  { value: "18-24", label: "18-24", description: "Younger-entry segment emphasis." },
+  { value: "21-30", label: "21-30", description: "Young professional nightlife segment." },
+  { value: "25-35", label: "25-35", description: "Core urban professional audience." },
+  { value: "25-40", label: "25-40", description: "Mature mixed professional audience with broad nightlife preferences." },
+  { value: "20-40", label: "20-40", description: "Broad mixed-age nightlife audience." },
+  { value: "30-45", label: "30-45", description: "Mature premium audience segment." },
+  { value: "Mixed", label: "Mixed", description: "No dominant age profile; balanced age distribution." },
+];
+
+export const DAYTIME_RESTAURANT_VALUES = ["0", "1"] as const;
+export const DAYTIME_RESTAURANT_OPTIONS: NightlifeOption[] = [
+  { value: "0", label: "No", description: "No daytime restaurant operation." },
+  { value: "1", label: "Yes", description: "Has daytime restaurant operation." },
+];

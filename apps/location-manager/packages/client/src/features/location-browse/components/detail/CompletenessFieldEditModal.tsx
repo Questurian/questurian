@@ -10,7 +10,11 @@ import {
   DialogFooter,
 } from "@client/components/ui/dialog";
 import { Button, Input, Textarea, Label } from "@client/components/ui";
-import { TaxonomyLocationEditor } from "@client/shared/components/forms";
+import {
+  NightlifeMultiOptionTable,
+  NightlifeSingleOptionTable,
+  TaxonomyLocationEditor,
+} from "@client/shared/components/forms";
 import {
   Select,
   SelectContent,
@@ -30,6 +34,32 @@ import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import { Copy, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { isValidLocationKey } from "@client/shared/lib/taxonomy-location";
 import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
+import type { NightlifeOption } from "@client/shared/constants/nightlife-options";
+import {
+  CLUB_TYPE_OPTIONS,
+  CROWD_PROFILE_OPTIONS,
+  DAYTIME_RESTAURANT_OPTIONS,
+  DRESS_CODE_OPTIONS,
+  ENERGY_LEVEL_OPTIONS,
+  MUSIC_FORMAT_OPTIONS,
+  MUSIC_OPTIONS,
+  PEAK_HOURS_OPTIONS,
+  PRICE_TIER_OPTIONS,
+  SPACE_LAYOUT_OPTIONS,
+  TOURIST_PRESENCE_OPTIONS,
+  VENUE_SIZE_OPTIONS,
+  VENUE_TYPE_OPTIONS,
+  VIP_BOTTLE_SERVICE_OPTIONS,
+  VIBE_OPTIONS,
+} from "@client/shared/constants/nightlife-options";
+import {
+  buildNightlifeFieldUpdatePayload,
+  getNightlifeFieldDraftValue,
+  isNightlifeFieldKey,
+  isNightlifeMultiFieldKey,
+  type NightlifeFieldKey,
+} from "@client/shared/lib/nightlife-details";
+import { toggleNightlifeMusicSelection } from "@client/shared/lib/nightlife-music";
 import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy";
 
 interface FieldDef {
@@ -68,6 +98,27 @@ const TIMEZONE_OPTIONS = [
   { value: "America/Rio_Branco", label: "America/Rio_Branco (Brazil)" },
   { value: "America/Argentina/Buenos_Aires", label: "America/Argentina/Buenos_Aires (Argentina)" },
 ] as const;
+
+const NIGHTLIFE_SINGLE_FIELD_OPTIONS: Partial<Record<NightlifeFieldKey, NightlifeOption[]>> = {
+  "nightlife.clubType": CLUB_TYPE_OPTIONS,
+  "nightlife.venueType": VENUE_TYPE_OPTIONS,
+  "nightlife.venueSize": VENUE_SIZE_OPTIONS,
+  "nightlife.peakHours": PEAK_HOURS_OPTIONS,
+  "nightlife.priceTier": PRICE_TIER_OPTIONS,
+  "nightlife.touristPresence": TOURIST_PRESENCE_OPTIONS,
+  "nightlife.energyLevel": ENERGY_LEVEL_OPTIONS,
+  "nightlife.vipAndBottleService": VIP_BOTTLE_SERVICE_OPTIONS,
+  "nightlife.crowdProfile": CROWD_PROFILE_OPTIONS,
+  "nightlife.daytimeRestaurant": DAYTIME_RESTAURANT_OPTIONS,
+};
+
+const NIGHTLIFE_MULTI_FIELD_OPTIONS: Partial<Record<NightlifeFieldKey, NightlifeOption[]>> = {
+  "nightlife.music": MUSIC_OPTIONS,
+  "nightlife.spaceLayout": SPACE_LAYOUT_OPTIONS,
+  "nightlife.vibe": VIBE_OPTIONS,
+  "nightlife.musicFormat": MUSIC_FORMAT_OPTIONS,
+  "nightlife.dressCode": DRESS_CODE_OPTIONS,
+};
 
 const DAYS = [
   "Sunday",
@@ -334,6 +385,7 @@ export function CompletenessFieldEditModal({
   const [cuisinesDraft, setCuisinesDraft] = useState<string[]>(
     Array.isArray(locationDetail.tripadvisorCuisines) ? locationDetail.tripadvisorCuisines : []
   );
+  const [nightlifeMultiDraft, setNightlifeMultiDraft] = useState<string[]>([]);
   const [taxonomyLocationKey, setTaxonomyLocationKey] = useState(
     locationDetail.locationKey?.trim() ?? ""
   );
@@ -352,6 +404,31 @@ export function CompletenessFieldEditModal({
     : null;
   const canGenerateNeighborhoodDescription = Boolean(
     locationDetail.district?.trim() || locationDetail.locationKey?.split("|")[2]?.trim()
+  );
+
+  const getInitialNightlifeValue = useCallback(
+    (fieldKey: NightlifeFieldKey): string | string[] => {
+      const draft = getNightlifeFieldDraftValue(locationDetail.nightlifeDetails, fieldKey);
+
+      if (
+        fieldKey === "nightlife.clubType" &&
+        typeof draft === "string" &&
+        draft.trim().length === 0
+      ) {
+        return locationDetail.type?.trim() ?? "";
+      }
+
+      if (
+        fieldKey === "nightlife.priceTier" &&
+        typeof draft === "string" &&
+        draft.trim().length === 0
+      ) {
+        return locationDetail.priceLevel?.trim() ?? "";
+      }
+
+      return draft;
+    },
+    [locationDetail.nightlifeDetails, locationDetail.priceLevel, locationDetail.type]
   );
 
   const {
@@ -384,6 +461,18 @@ export function CompletenessFieldEditModal({
       setValue(getInitialValue(field, locationDetail));
     }
   }, [open, field, locationDetail]);
+
+  useEffect(() => {
+    if (!open || !isNightlifeFieldKey(field.key)) return;
+
+    const draft = getInitialNightlifeValue(field.key);
+    if (isNightlifeMultiFieldKey(field.key)) {
+      setNightlifeMultiDraft(Array.isArray(draft) ? draft : []);
+      return;
+    }
+
+    setValue(typeof draft === "string" ? draft : "");
+  }, [open, field, getInitialNightlifeValue]);
 
   useEffect(() => {
     if (open && field.key === "idealFor") {
@@ -632,6 +721,48 @@ export function CompletenessFieldEditModal({
       return;
     }
 
+    if (isNightlifeFieldKey(field.key)) {
+      const draftValue = isNightlifeMultiFieldKey(field.key) ? nightlifeMultiDraft : value;
+      const hasValue = Array.isArray(draftValue)
+        ? draftValue.length > 0
+        : draftValue.trim().length > 0;
+
+      if (!hasValue) {
+        const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        showToast(
+          isNightlifeMultiFieldKey(field.key)
+            ? `Select at least one ${field.label.toLowerCase()} option`
+            : `Select an option for ${field.label.toLowerCase()}`,
+          centerPosition
+        );
+        return;
+      }
+
+      updateLocation(
+        {
+          category: locationDetail.category,
+          id: locationDetail.id,
+          data: buildNightlifeFieldUpdatePayload(
+            locationDetail.nightlifeDetails,
+            field.key,
+            draftValue
+          ),
+        },
+        {
+          onSuccess: () => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast(`${field.label} saved`, centerPosition);
+            onOpenChange(false);
+          },
+          onError: (err) => {
+            const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            showToast(err.message || `Failed to save ${field.label}`, centerPosition);
+          },
+        }
+      );
+      return;
+    }
+
     if (field.key === "cuisines") {
       updateLocation(
         {
@@ -701,6 +832,37 @@ export function CompletenessFieldEditModal({
   })).filter((group) => group.options.length > 0);
 
   const renderInput = () => {
+    if (isNightlifeFieldKey(field.key)) {
+      if (isNightlifeMultiFieldKey(field.key)) {
+        return (
+          <NightlifeMultiOptionTable
+            label={field.label}
+            options={NIGHTLIFE_MULTI_FIELD_OPTIONS[field.key] ?? []}
+            values={nightlifeMultiDraft}
+            onToggle={(selectedValue) =>
+              setNightlifeMultiDraft((prev) =>
+                field.key === "nightlife.music"
+                  ? toggleNightlifeMusicSelection(prev, selectedValue)
+                  : prev.includes(selectedValue)
+                    ? prev.filter((item) => item !== selectedValue)
+                    : [...prev, selectedValue]
+              )
+            }
+          />
+        );
+      }
+
+      return (
+        <NightlifeSingleOptionTable
+          label={field.label}
+          options={NIGHTLIFE_SINGLE_FIELD_OPTIONS[field.key] ?? []}
+          value={value}
+          onChange={setValue}
+          placeholder={`Select ${field.label.toLowerCase()}`}
+        />
+      );
+    }
+
     switch (field.key) {
       case "category":
         return (
@@ -1176,50 +1338,63 @@ export function CompletenessFieldEditModal({
     parsedLat <= 90 &&
     parsedLng >= -180 &&
     parsedLng <= 180;
-  const canSave =
-    field.key === "media"
-      ? true
-      : field.key === "contactUrl"
-        ? Boolean(locationDetail.source?.name?.trim() && locationDetail.source?.address?.trim())
-        : field.key === "coordinates"
-          ? hasValidCoordinates
-        : field.key === "locationKey" || field.key === "district"
-          ? taxonomyLocationKey.trim().length === 0 || isValidLocationKey(taxonomyLocationKey.trim())
-        : field.key === "cuisines"
-          ? true
-        : field.key === "idealFor"
-          ? idealForDraft.length > 0
-        : field.key === "operationHours"
-          ? true
-        : payload !== null;
+  const canSave = (() => {
+    if (field.key === "media") return true;
+    if (field.key === "contactUrl") {
+      return Boolean(locationDetail.source?.name?.trim() && locationDetail.source?.address?.trim());
+    }
+    if (isNightlifeFieldKey(field.key)) {
+      return isNightlifeMultiFieldKey(field.key)
+        ? nightlifeMultiDraft.length > 0
+        : value.trim().length > 0;
+    }
+    if (field.key === "coordinates") return hasValidCoordinates;
+    if (field.key === "locationKey" || field.key === "district") {
+      return taxonomyLocationKey.trim().length === 0 || isValidLocationKey(taxonomyLocationKey.trim());
+    }
+    if (field.key === "cuisines") return true;
+    if (field.key === "idealFor") return idealForDraft.length > 0;
+    if (field.key === "operationHours") return true;
+    return payload !== null;
+  })();
 
-  const description =
-    field.key === "media"
-      ? "Edit below in the Images/Instagram section."
-      : field.key === "contactUrl"
-        ? "Google URL is generated from Name + Source Address. Click Save to regenerate."
-        : field.key === "type" && locationDetail.category === "dining"
-          ? "Venue format only. Use cuisines for food identity and dishes."
-          : field.key === "cuisines"
-            ? "Food identity only. Choose cuisine, dish, or food style tags."
-        : field.key === "neighborhoodDescription"
-          ? "Write a short neighborhood overview, or use AI to draft one from the current district and location context before saving."
-        : field.key === "locationKey" || field.key === "district"
-          ? "Use the builder to set country, city, and barrio/district. New taxonomy keys save as approved."
-        : field.key === "operationHours"
-          ? "Set opening hours for each day. Use Closed or add one or more time ranges."
-        : field.key === "coordinates"
-          ? "Use decimal latitude/longitude values. Latitude: -90 to 90, longitude: -180 to 180."
-        : field.key === "slug"
-          ? "Slug is system-managed in this flow. Update related core fields to generate it."
-          : field.present
-            ? `Update the current ${field.label.toLowerCase()} for this location.`
-            : `Add or update the missing ${field.label.toLowerCase()} for this location.`;
+  const description = (() => {
+    if (field.key === "media") {
+      return "Edit below in the Images/Instagram section.";
+    }
+    if (field.key === "contactUrl") {
+      return "Google URL is generated from Name + Source Address. Click Save to regenerate.";
+    }
+    if (field.key === "type" && locationDetail.category === "dining") {
+      return "Venue format only. Use cuisines for food identity and dishes.";
+    }
+    if (field.key === "cuisines") {
+      return "Food identity only. Choose cuisine, dish, or food style tags.";
+    }
+    if (field.key === "neighborhoodDescription") {
+      return "Write a short neighborhood overview, or use AI to draft one from the current district and location context before saving.";
+    }
+    if (field.key === "locationKey" || field.key === "district") {
+      return "Use the builder to set country, city, and barrio/district. New taxonomy keys save as approved.";
+    }
+    if (field.key === "operationHours") {
+      return "Set opening hours for each day. Use Closed or add one or more time ranges.";
+    }
+    if (field.key === "coordinates") {
+      return "Use decimal latitude/longitude values. Latitude: -90 to 90, longitude: -180 to 180.";
+    }
+    if (field.key === "slug") {
+      return "Slug is system-managed in this flow. Update related core fields to generate it.";
+    }
+    return field.present
+      ? `Update the current ${field.label.toLowerCase()} for this location.`
+      : `Add or update the missing ${field.label.toLowerCase()} for this location.`;
+  })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={
-        field.key === "operationHours"
+        field.key === "operationHours" || isNightlifeFieldKey(field.key)
           ? "max-w-2xl max-h-[90vh] overflow-y-auto"
           : field.key === "neighborhoodDescription"
             ? "sm:max-w-lg"
@@ -1238,7 +1413,11 @@ export function CompletenessFieldEditModal({
             <p>Source Name: {locationDetail.source?.name || "Missing"}</p>
             <p>Source Address: {locationDetail.source?.address || "Missing"}</p>
           </div>
-        ) : field.key === "operationHours" || field.key === "locationKey" || field.key === "district" || field.key === "coordinates" ? (
+        ) : field.key === "operationHours" ||
+            field.key === "locationKey" ||
+            field.key === "district" ||
+            field.key === "coordinates" ||
+            isNightlifeFieldKey(field.key) ? (
           <div className="space-y-4 py-2">
             {renderInput()}
           </div>

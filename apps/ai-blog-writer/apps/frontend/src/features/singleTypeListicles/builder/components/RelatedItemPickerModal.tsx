@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
 import type { RelatedItemOption } from '../../types'
 import { getRelatedPhotoObjects, resolveImageUrl } from '../utils/item-media.utils'
 
@@ -34,9 +35,10 @@ export function RelatedItemPickerModal({ isOpen, items, selectedItemId, onSelect
 
   const lowerQuery = query.toLowerCase()
   const filtered = items.filter(
-    (item) =>
-      item.title.toLowerCase().includes(lowerQuery) ||
-      (item.location ?? '').toLowerCase().includes(lowerQuery),
+    (item) => {
+      const displayLabel = getRelatedItemDisplayLabel(item).toLowerCase()
+      return displayLabel.includes(lowerQuery) || (item.location ?? '').toLowerCase().includes(lowerQuery)
+    },
   )
 
   function handleOverlayClick(event: React.MouseEvent<HTMLDivElement>) {
@@ -75,9 +77,17 @@ export function RelatedItemPickerModal({ isOpen, items, selectedItemId, onSelect
             type="button"
             className={`stl-picker-card stl-picker-card--unset${selectedItemId === null ? ' stl-picker-card--selected' : ''}`}
             onClick={() => handleSelect(null)}
+            aria-label="None"
           >
-            <span>✕</span>
-            <span>None</span>
+            <div className="stl-picker-card__media">
+              <div className="stl-picker-card__thumb--empty stl-picker-card__thumb--unset">
+                <span className="stl-picker-card__unset-icon">✕</span>
+              </div>
+            </div>
+            <div className="stl-picker-card__caption stl-picker-card__caption--unset">
+              <span className="stl-picker-card__name">None</span>
+              <span className="stl-picker-card__location">Clear related item</span>
+            </div>
           </button>
 
           {filtered.length === 0 && (
@@ -89,29 +99,37 @@ export function RelatedItemPickerModal({ isOpen, items, selectedItemId, onSelect
             const firstPhoto = photos[0]
             const thumbUrl = firstPhoto ? resolveImageUrl(firstPhoto) : undefined
             const isSelected = item.id === selectedItemId
+            const displayLabel = getRelatedItemDisplayLabel(item)
+            const cardLabel = item.location && item.location !== displayLabel
+              ? `${displayLabel} - ${item.location}`
+              : displayLabel
 
             return (
               <button
                 key={item.id}
                 type="button"
-                className={`stl-picker-card${isSelected ? ' stl-picker-card--selected' : ''}`}
+                className={`stl-picker-card stl-picker-card--related-item${isSelected ? ' stl-picker-card--selected' : ''}`}
                 onClick={() => handleSelect(item.id)}
+                aria-label={cardLabel}
+                title={cardLabel}
               >
-                {thumbUrl ? (
-                  <img
-                    src={thumbUrl}
-                    alt={item.title}
-                    className="stl-picker-card__thumb"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="stl-picker-card__thumb--empty">🖼</div>
-                )}
-                <div className="stl-picker-card__info">
-                  <span className="stl-picker-card__name">{item.title}</span>
-                  {item.location && (
-                    <span className="stl-picker-card__location">{item.location}</span>
+                <div className="stl-picker-card__media">
+                  {thumbUrl ? (
+                    <img
+                      src={thumbUrl}
+                      alt={displayLabel}
+                      className="stl-picker-card__thumb"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="stl-picker-card__thumb--empty">🖼</div>
                   )}
+                </div>
+                <div className="stl-picker-card__caption">
+                  <span className="stl-picker-card__name">{displayLabel}</span>
+                  {item.location && item.location !== displayLabel ? (
+                    <span className="stl-picker-card__location">{item.location}</span>
+                  ) : null}
                 </div>
               </button>
             )

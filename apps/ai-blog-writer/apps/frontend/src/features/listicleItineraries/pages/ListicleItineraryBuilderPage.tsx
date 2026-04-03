@@ -18,6 +18,12 @@ import { useItinerarySubmit } from '../builder/hooks/useItinerarySubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
 import { saveDraft } from '../storage'
 import {
+  applyItineraryGeneratedContent,
+  buildItineraryGenerateListicleContentRequest,
+  getItineraryAutoWriteTargetIds,
+  getItineraryIntroTargetId,
+} from '../builder/services/ai-autowrite.service'
+import {
   buildItineraryAiArticleContext,
   getItineraryAiArticleTitle,
 } from '../builder/services/ai-rewrite.service'
@@ -34,7 +40,7 @@ import {
   serializeStructuredDataTemplate,
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
-import { generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import '../styles.css'
 
 type AiRewriteInput = {
@@ -58,6 +64,8 @@ export default function ListicleItineraryBuilderPage() {
   const [result, setResult] = useState<string | null>(null)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
+  const [activeAiTargetId, setActiveAiTargetId] = useState<string | null>(null)
+  const [isAutoWritingEmptyFields, setIsAutoWritingEmptyFields] = useState(false)
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -171,31 +179,210 @@ export default function ListicleItineraryBuilderPage() {
     return title
   }, [draft])
 
-  const rewriteDraftBlockWithAi = useCallback(async (input: AiRewriteInput): Promise<string> => {
+  const applyGeneratedListicleContent = useCallback((response: Awaited<ReturnType<typeof generateListicleContentWithAi>>) => {
+    setDraft((current) => {
+      if (!current) return current
+      return applyItineraryGeneratedContent(current, response)
+    })
+  }, [setDraft])
+
+  const buildGenerationRequest = useCallback((params: {
+    targetIds: string[]
+    customInstruction?: string
+    skipExisting?: boolean
+    includeArticleContext?: boolean
+    currentContentByTargetId?: Record<string, string>
+  }) => {
     if (!draft) {
       throw new Error('Draft is not loaded yet.')
     }
 
-    const currentContent = input.currentContent.trim()
-    if (!currentContent) {
-      throw new Error('Add starter text before using AI rewrite.')
-    }
-
-    const response = await rewriteBlockWithAi({
-      prompt: input.prompt.trim(),
-      blockContent: currentContent,
+    const request = buildItineraryGenerateListicleContentRequest({
+      draft,
+      relatedByBlockType,
+      locations,
+      targetIds: params.targetIds,
       modelName: resolveEditorAssistModelName(draft.editorModelName),
-      articleTitle: getItineraryAiArticleTitle(draft),
-      articleContext: input.includeWholeArticleContext ? buildItineraryAiArticleContext(draft) : undefined,
+      customInstruction: params.customInstruction,
+      skipExisting: params.skipExisting,
+      includeArticleContext: params.includeArticleContext,
     })
 
-    const rewrittenContent = response.rewritten_content?.trim()
-    if (!rewrittenContent) {
-      throw new Error('AI returned empty block content.')
+    if (request.targets.length < 1) {
+      throw new Error('Select related items before using AI generation.')
     }
 
-    return rewrittenContent
-  }, [draft])
+    if (params.currentContentByTargetId) {
+      request.targets = request.targets.map((target) => ({
+        ...target,
+        currentContent: params.currentContentByTargetId?.[target.targetId] ?? target.currentContent,
+      }))
+    }
+
+    return request
+  }, [draft, locations, relatedByBlockType])
+
+  const runSingleTargetGeneration = useCallback(async (params: {
+    targetId: string
+    currentContent?: string
+    customInstruction?: string
+    includeArticleContext?: boolean
+  }): Promise<string> => {
+    const request = buildGenerationRequest({
+      targetIds: [params.targetId],
+      customInstruction: params.customInstruction,
+      includeArticleContext: params.includeArticleContext,
+      currentContentByTargetId: params.currentContent
+        ? { [params.targetId]: params.currentContent }
+        : undefined,
+    })
+
+    const response = await generateListicleContentWithAi(request)
+    const targetResult = response.results[params.targetId]
+
+    if (!targetResult) {
+      throw new Error('AI generation returned no result for the requested field.')
+    }
+
+    if (targetResult.status === 'generated' && targetResult.markdown?.trim()) {
+      return targetResult.markdown.trim()
+    }
+
+    if (targetResult.status === 'skipped' && targetResult.markdown?.trim()) {
+      return targetResult.markdown.trim()
+    }
+
+    throw new Error(
+      targetResult.error_message
+      || targetResult.validation_errors[0]
+      || 'AI generation failed for this field.',
+    )
+  }, [buildGenerationRequest])
+
+  const rewriteDraftBlockWithAi = useCallback(async (input: AiRewriteInput): Promise<string> => {
+    return runSingleTargetGeneration({
+      targetId: input.blockId,
+      currentContent: input.currentContent,
+      customInstruction: input.prompt.trim(),
+      includeArticleContext: input.includeWholeArticleContext,
+    })
+  }, [runSingleTargetGeneration])
+
+  const autoWriteIntro = useCallback(async (): Promise<void> => {
+    if (!draft) return
+
+    const targetId = getItineraryIntroTargetId(draft)
+    onError('')
+    setResult(null)
+    setActiveAiTargetId(targetId)
+
+    try {
+      const markdown = await runSingleTargetGeneration({
+        targetId,
+        currentContent: draft.header.introMarkdown,
+        includeArticleContext: true,
+      })
+
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          header: {
+            ...current.header,
+            introMarkdown: markdown,
+            introJsonText: '',
+          },
+        }
+      })
+      setResult(draft.header.introMarkdown.trim() ? 'Intro regenerated with AI.' : 'Intro written with AI.')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to write intro with AI.')
+    } finally {
+      setActiveAiTargetId(null)
+    }
+  }, [draft, onError, runSingleTargetGeneration, setDraft])
+
+  const autoWriteStopBlurb = useCallback(async (itemId: string): Promise<void> => {
+    if (!draft) return
+
+    const item = draft.items.find((entry) => entry.id === itemId)
+    if (!item) {
+      onError('Selected stop was not found.')
+      return
+    }
+
+    const targetId = `${itemId}_blurb`
+    onError('')
+    setResult(null)
+    setActiveAiTargetId(targetId)
+
+    try {
+      const markdown = await runSingleTargetGeneration({
+        targetId,
+        currentContent: item.blurbMarkdown,
+        includeArticleContext: true,
+      })
+
+      actions.updateItem(itemId, (current) => ({
+        ...current,
+        blurbMarkdown: markdown,
+        blurbJsonText: '',
+      }))
+      setResult(item.blurbMarkdown.trim() ? 'Stop blurb regenerated with AI.' : 'Stop blurb written with AI.')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to write stop blurb with AI.')
+    } finally {
+      setActiveAiTargetId(null)
+    }
+  }, [actions, draft, onError, runSingleTargetGeneration])
+
+  const autoWriteEmptyFields = useCallback(async (): Promise<void> => {
+    if (!draft) return
+
+    const targetIds = getItineraryAutoWriteTargetIds(draft, relatedByBlockType)
+    if (targetIds.length < 1) {
+      onError('')
+      setResult('No empty intro or blurbs to auto write.')
+      return
+    }
+
+    onError('')
+    setResult(null)
+    setIsAutoWritingEmptyFields(true)
+
+    try {
+      const request = buildGenerationRequest({
+        targetIds,
+        skipExisting: true,
+        includeArticleContext: true,
+      })
+      const response = await generateListicleContentWithAi(request)
+      applyGeneratedListicleContent(response)
+
+      const generatedCount = Object.values(response.results)
+        .filter((entry) => entry.status === 'generated' && entry.markdown?.trim())
+        .length
+      const failedResult = Object.values(response.results).find((entry) => entry.status === 'error')
+
+      if (generatedCount > 0) {
+        setResult(`Auto-wrote ${generatedCount} empty field${generatedCount === 1 ? '' : 's'}.`)
+      } else {
+        setResult('No empty intro or blurbs needed new AI copy.')
+      }
+
+      if (failedResult) {
+        onError(
+          failedResult.error_message
+          || failedResult.validation_errors[0]
+          || 'One or more fields failed AI generation.',
+        )
+      }
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to auto write empty fields.')
+    } finally {
+      setIsAutoWritingEmptyFields(false)
+    }
+  }, [applyGeneratedListicleContent, buildGenerationRequest, draft, onError, relatedByBlockType])
 
   const generateSeoWithAi = useCallback(async (target: SeoAiTarget = 'all'): Promise<void> => {
     if (!draft) return
@@ -370,7 +557,9 @@ export default function ListicleItineraryBuilderPage() {
               locationRef={actions.selectedLocationRefId}
               mediaAssets={mediaAssets}
               updateHeader={actions.updateHeader}
+              onIntroAiAutoWrite={autoWriteIntro}
               onIntroAiRewrite={rewriteDraftBlockWithAi}
+              isIntroAiGenerating={activeAiTargetId === getItineraryIntroTargetId(draft)}
               isLocked={isStep2LockedView}
               onContinueStep2={actions.handleContinueStep2}
               onUpdateStep2={actions.handleUpdateStep2}
@@ -389,7 +578,9 @@ export default function ListicleItineraryBuilderPage() {
               onMoveItem={actions.moveItem}
               onRemoveItem={actions.removeItem}
               onUpdateItem={actions.updateItem}
+              onStopBlurbAiAutoWrite={autoWriteStopBlurb}
               onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
+              activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
               isLocked={isStep3LockedView}
               onContinueStep3={actions.handleContinueStep3}
               onUpdateStep3={actions.handleUpdateStep3}
@@ -429,7 +620,10 @@ export default function ListicleItineraryBuilderPage() {
           editorModelName={draft.editorModelName}
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
+          isAutoWritingEmptyFields={isAutoWritingEmptyFields}
+          canAutoWriteEmptyFields={Boolean(isStep1LockedView && isStep2LockedView && getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0)}
           stepIssues={progress.stepIssues}
+          onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}
           onSyncToPayload={() => submit('draft')}
         />

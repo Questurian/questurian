@@ -1,5 +1,6 @@
-import { convertMarkdownToLexical, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
+import { convertMarkdownToLexical, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
 import { appendScopedLocationWhere, getArticleLocationScope } from '../locationScope/scope'
+import { normalizeRelatedItems } from '../shared/related-items/normalizeRelatedItems'
 import type { LocationScope } from '../locationScope/types'
 import type {
   ItineraryBlockType,
@@ -126,7 +127,7 @@ export async function fetchRelatedItems(
     token,
   )
 
-  return response.docs || []
+  return normalizeRelatedItems(response.docs || [])
 }
 
 export async function markdownToLexical(markdown: string): Promise<Record<string, unknown>> {
@@ -137,4 +138,4 @@ export async function markdownToLexical(markdown: string): Promise<Record<string
   return result.data as Record<string, unknown>
 }
 
-export { generateTitleWithAi, rewriteBlockWithAi }
+export { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi }

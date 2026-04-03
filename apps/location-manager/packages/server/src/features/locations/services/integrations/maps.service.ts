@@ -362,11 +362,16 @@ export class MapsService {
       tripadvisorLocationId: entry.tripadvisorLocationId,
     });
 
-    if (candidates.length === 0) {
+    const entryCategory = validateCategory(entry.category);
+    const sameCategoryCandidates = candidates.filter(
+      (candidate) => candidate.category === entryCategory
+    );
+
+    if (sameCategoryCandidates.length === 0) {
       return null;
     }
 
-    const scoredCandidates = candidates
+    const scoredCandidates = sameCategoryCandidates
       .map((candidate) => ({
         candidate,
         score: this.scoreDuplicateCandidate(entry, candidate),
@@ -655,7 +660,8 @@ export class MapsService {
       this.taxonomyService.ensureTaxonomyEntry(entry.locationKey);
     }
 
-    // Duplicate handling: merge missing fields on same place; reject exact duplicates.
+    // Duplicate handling only applies within the same category.
+    // Cross-category entries (for example dining + nightlife) are allowed as separate docs.
     const duplicate = this.findDuplicateCandidate(entry);
     if (duplicate) {
       const mergedId = await this.mergeDuplicateLocation(duplicate, entry);
@@ -664,8 +670,8 @@ export class MapsService {
 
     const savedId = saveLocationOrThrow(entry);
 
-    // Auto-fetch TripAdvisor place data for non-nightlife categories only.
-    if (entry.tripadvisorLocationId && category !== "nightlife") {
+    // Auto-fetch TripAdvisor place data whenever a TripAdvisor location ID is available.
+    if (entry.tripadvisorLocationId) {
       try {
         await this.tripAdvisorPlaceService.fetchAndMergePlaceData(savedId, entry.tripadvisorLocationId);
       } catch (error) {

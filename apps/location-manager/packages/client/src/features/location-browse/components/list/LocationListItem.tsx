@@ -31,10 +31,31 @@ interface LocationListItemProps {
 
 function formatLocationSegmentForSearch(segment: string): string {
   return segment
-    .split("-")
+    .trim()
+    .split(/[\s-]+/)
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+function getLocationSegmentsForSearch(location: LocationBasic): string[] {
+  const rawLocation = location.locationKey?.trim() || location.location?.trim() || "";
+
+  if (!rawLocation) {
+    return [];
+  }
+
+  const delimiter = rawLocation.includes("|")
+    ? "|"
+    : rawLocation.includes(">")
+      ? ">"
+      : null;
+
+  const segments = delimiter ? rawLocation.split(delimiter) : [rawLocation];
+
+  return segments
+    .map((segment) => formatLocationSegmentForSearch(segment))
+    .filter(Boolean);
 }
 
 function buildSearchQueries(location: LocationBasic): {
@@ -43,14 +64,9 @@ function buildSearchQueries(location: LocationBasic): {
   instagram: string;
 } {
   const title = (location.title || location.name || "").trim();
-  const locationSegments = (location.location || "")
-    .split("|")
-    .map((segment) => segment.trim())
-    .filter(Boolean)
-    .map(formatLocationSegmentForSearch);
-
-  const [country, city] = locationSegments;
-  const baseQuery = [title, city, country].filter(Boolean).join(" ").trim() || title;
+  const [countryFromLocation, city] = getLocationSegmentsForSearch(location);
+  const country = countryFromLocation || (location.country ? formatLocationSegmentForSearch(location.country) : "");
+  const baseQuery = [title, city, country].filter(Boolean).join(", ").trim() || title;
 
   return {
     google: baseQuery,

@@ -12,7 +12,10 @@ type BuilderSidebarProps = {
   editorModelName: EditorAssistModelName
   onEditorModelChange: (modelName: string) => void
   isSaving: boolean
+  isAutoWritingEmptyFields: boolean
+  canAutoWriteEmptyFields: boolean
   stepIssues: string[]
+  onAutoWriteEmptyFields: () => Promise<void>
   onSaveLocalDraft: () => Promise<void>
   onSyncToPayload: () => Promise<void>
 }
@@ -25,7 +28,10 @@ export function BuilderSidebar({
   editorModelName,
   onEditorModelChange,
   isSaving,
+  isAutoWritingEmptyFields,
+  canAutoWriteEmptyFields,
   stepIssues,
+  onAutoWriteEmptyFields,
   onSaveLocalDraft,
   onSyncToPayload,
 }: BuilderSidebarProps) {
@@ -72,6 +78,14 @@ export function BuilderSidebar({
           </select>
         </label>
         <div className="stl-summary-actions">
+          <button
+            type="button"
+            className="stl-btn stl-btn-secondary"
+            onClick={() => void onAutoWriteEmptyFields()}
+            disabled={isSaving || isAutoWritingEmptyFields || !canAutoWriteEmptyFields}
+          >
+            {isAutoWritingEmptyFields ? 'Writing Empty Fields...' : 'Auto Write Empty Fields'}
+          </button>
           <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={isSaving}>
             Save Local Draft (Browser)
           </button>

@@ -19,12 +19,6 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-try:
-    import vertexai
-    from vertexai import generative_models as gm
-except Exception:  # pragma: no cover - optional runtime dependency
-    vertexai = None
-    gm = None
 
 from app.core import (
     get_all_runs,
@@ -38,7 +32,7 @@ from app.core import (
     write_stage_result,
     write_status,
 )
-from utils import get_vertex_llm
+from utils import get_vertex_llm, invoke_google_grounded_text
 from .graph import run_url2blog_pipeline_graph
 from .storage import (
     get_all_completed_articles,
@@ -63,7 +57,6 @@ URL2BLOG_ALLOWED_EXECUTION_PROFILES = (
 URL2BLOG_DEFAULT_EXECUTION_PROFILE = "standard"
 URL2BLOG_DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GROUNDED_MODEL = "gemini-2.5-flash-lite"
-DEFAULT_VERTEX_LOCATION = "us-central1"
 SHORT_ARTICLE_WORD_THRESHOLD = 450
 DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS = 3
 MIN_EXPANDED_WORD_DELTA = 80
@@ -92,7 +85,6 @@ URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS = 3
 URL2BLOG_EDITORIAL_RECHECK_MIN_QUALITY_SCORE = 8.0
 URL2BLOG_EDITORIAL_RECHECK_MIN_FACT_SCORE = 8.0
 URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN = 0.5
-_vertexai_grounding_initialized = False
 _json_parse_tracking_ctx: contextvars.ContextVar[dict[str, Any] | None] = (
     contextvars.ContextVar("url2blog_json_parse_tracking", default=None)
 )
@@ -1777,97 +1769,6 @@ def _ngram_overlap_ratio(
     return overlap_hits / rewritten_total
 
 
-def _ensure_vertexai_grounding_initialized() -> bool:
-    """Initialize Vertex AI for grounded Google Search usage."""
-    global _vertexai_grounding_initialized
-
-    if _vertexai_grounding_initialized:
-        return True
-    if vertexai is None or gm is None:
-        return False
-
-    project = os.getenv("GOOGLE_CLOUD_PROJECT", "").strip()
-    if not project:
-        return False
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_VERTEX_LOCATION).strip()
-
-    try:
-        vertexai.init(project=project, location=location)
-    except Exception:
-        logger.warning(
-            "URL2Blog pipeline v2: failed to initialize Vertex grounding",
-            exc_info=True,
-        )
-        return False
-
-    _vertexai_grounding_initialized = True
-    return True
-
-
-def _extract_urls_from_nested(value: Any) -> list[str]:
-    """Extract URLs recursively from nested dict/list/string values."""
-    collected: list[str] = []
-
-    if isinstance(value, dict):
-        for nested in value.values():
-            collected.extend(_extract_urls_from_nested(nested))
-        return collected
-
-    if isinstance(value, list):
-        for nested in value:
-            collected.extend(_extract_urls_from_nested(nested))
-        return collected
-
-    if isinstance(value, str):
-        candidates = re.findall(r"https?://[^\s\"'<>]+", value)
-        for candidate in candidates:
-            cleaned = candidate.rstrip(".,);]")
-            if cleaned:
-                collected.append(cleaned)
-    return collected
-
-
-def _extract_grounded_urls_from_response(response: Any, max_urls: int = 12) -> list[str]:
-    """Extract grounded source URLs from a Gemini response payload."""
-    if response is None:
-        return []
-
-    urls: list[str] = []
-    seen: set[str] = set()
-
-    try:
-        response_dict = response.to_dict()
-        for url in _extract_urls_from_nested(response_dict.get("candidates", [])):
-            if url in seen:
-                continue
-            seen.add(url)
-            urls.append(url)
-            if len(urls) >= max_urls:
-                return urls
-    except Exception:
-        pass
-
-    try:
-        candidates = getattr(response, "candidates", []) or []
-        for candidate in candidates:
-            candidate_dict = (
-                candidate.to_dict() if hasattr(candidate, "to_dict") else {}
-            )
-            for url in _extract_urls_from_nested(
-                candidate_dict.get("grounding_metadata", {})
-            ):
-                if url in seen:
-                    continue
-                seen.add(url)
-                urls.append(url)
-                if len(urls) >= max_urls:
-                    return urls
-    except Exception:
-        pass
-
-    return urls
-
-
 def _invoke_google_grounded_json(
     prompt: str,
     *,
@@ -1876,64 +1777,23 @@ def _invoke_google_grounded_json(
     model_name: str | None = None,
 ) -> tuple[dict[str, Any], str, list[str]]:
     """Invoke Gemini with Google Search grounding and parse JSON output."""
-    if not _ensure_vertexai_grounding_initialized() or gm is None:
-        return {}, "", []
-
-    strict_prompt = (
-        f"{prompt}\n\n"
-        "CRITICAL OUTPUT RULE:\n"
-        "Return ONLY one valid JSON object.\n"
-        "No prose, no markdown, no code fences."
-    )
-    effective_max_tokens = _resolve_max_tokens(max_tokens)
-
     grounded_model_name = _resolve_grounded_model(model_name)
-
-    def _generate_with_model(
-        resolved_model_name: str,
-    ) -> tuple[Any, str | None]:
-        try:
-            model = gm.GenerativeModel(resolved_model_name)
-            retrieval_tool = gm.Tool.from_google_search_retrieval(
-                gm.grounding.GoogleSearchRetrieval(
-                    dynamic_retrieval_config=gm.grounding.DynamicRetrievalConfig(
-                        mode=gm.grounding.DynamicRetrievalConfig.Mode.MODE_DYNAMIC,
-                        dynamic_threshold=0.35,
-                    )
-                )
-            )
-            generated = model.generate_content(
-                strict_prompt,
-                generation_config=gm.GenerationConfig(
-                    temperature=temperature,
-                    max_output_tokens=effective_max_tokens,
-                ),
-                tools=[retrieval_tool],
-            )
-            return generated, None
-        except Exception as exc:  # pragma: no cover - network/runtime dependent
-            return None, str(exc)
-
-    response, first_error = _generate_with_model(grounded_model_name)
-    if response is None and grounded_model_name != DEFAULT_GROUNDED_MODEL:
-        logger.warning(
-            "URL2Blog pipeline v2: grounded enrichment failed on %s, retrying with %s",
-            grounded_model_name,
-            DEFAULT_GROUNDED_MODEL,
-        )
-        response, _ = _generate_with_model(DEFAULT_GROUNDED_MODEL)
-
-    if response is None:
-        logger.warning(
-            "URL2Blog pipeline v2: grounded enrichment failed",
-            extra={"model_name": grounded_model_name, "error": first_error or "unknown"},
-        )
+    grounded = invoke_google_grounded_text(
+        (
+            f"{prompt}\n\n"
+            "CRITICAL OUTPUT RULE:\n"
+            "Return ONLY one valid JSON object.\n"
+            "No prose, no markdown, no code fences."
+        ),
+        model_name=grounded_model_name,
+        fallback_model_name=DEFAULT_GROUNDED_MODEL,
+        max_tokens=_resolve_max_tokens(max_tokens),
+        temperature=temperature,
+    )
+    if grounded is None:
         return {}, "", []
 
-    try:
-        raw_response = _safe_str(getattr(response, "text", ""))
-    except Exception:
-        raw_response = ""
+    raw_response = _safe_str(grounded.text)
     parsed, parse_error = _extract_json_from_response(raw_response)
     if parse_error or not parsed:
         logger.warning(
@@ -1942,8 +1802,7 @@ def _invoke_google_grounded_json(
         )
         parsed = {}
 
-    grounded_urls = _extract_grounded_urls_from_response(response)
-    return parsed, raw_response, grounded_urls
+    return parsed, raw_response, grounded.source_urls
 
 
 def _build_excerpt(text: str, limit: int = 320) -> str:

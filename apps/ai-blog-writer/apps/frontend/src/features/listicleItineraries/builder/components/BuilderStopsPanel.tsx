@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import {
   BLOCK_TYPE_OPTIONS,
@@ -49,7 +50,9 @@ type BuilderStopsPanelProps = {
     updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
     options?: { cascadeSchedule?: boolean },
   ) => void
+  onStopBlurbAiAutoWrite: (itemId: string) => Promise<void>
   onStopBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
+  activeAiItemId: string | null
   isLocked: boolean
   onContinueStep3: () => void
   onUpdateStep3: () => void
@@ -85,7 +88,9 @@ export function BuilderStopsPanel({
   onMoveItem,
   onRemoveItem,
   onUpdateItem,
+  onStopBlurbAiAutoWrite,
   onStopBlurbAiRewrite,
+  activeAiItemId,
   isLocked,
   onContinueStep3,
   onUpdateStep3,
@@ -230,6 +235,7 @@ export function BuilderStopsPanel({
               : undefined
             const firstItemPhoto = photoObjects[0]
             const firstItemPhotoUrl = firstItemPhoto ? resolveImageUrl(firstItemPhoto) : undefined
+            const selectedRelatedItemLabel = getRelatedItemDisplayLabel(selectedRelatedItem)
             const isLastItem = index === draft.items.length - 1
             const selectedPhotoPreviews = item.selectedPhotos
               .map((photoId) => {
@@ -307,7 +313,7 @@ export function BuilderStopsPanel({
                             {firstItemPhotoUrl && (
                               <img src={firstItemPhotoUrl} alt="" />
                             )}
-                            <span className="stl-picker-trigger__label">{selectedRelatedItem.title}</span>
+                            <span className="stl-picker-trigger__label">{selectedRelatedItemLabel}</span>
                           </>
                         ) : (
                           <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
@@ -323,7 +329,7 @@ export function BuilderStopsPanel({
                           <input
                             type="text"
                             className="stl-copyable-item-input"
-                            value={selectedRelatedItem.title}
+                            value={selectedRelatedItemLabel}
                             readOnly
                             onFocus={(event) => event.currentTarget.select()}
                             onClick={(event) => event.currentTarget.select()}
@@ -332,7 +338,7 @@ export function BuilderStopsPanel({
                           <button
                             type="button"
                             className={`stl-btn ${copiedItemId === item.id ? 'stl-btn-success' : 'stl-btn-secondary'} stl-copyable-item-btn`}
-                            onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItem.title)}
+                            onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItemLabel)}
                           >
                             {copiedItemId === item.id ? 'Copied' : 'Copy'}
                           </button>
@@ -583,7 +589,23 @@ export function BuilderStopsPanel({
                 </div>
 
                 <label className="stl-field">
-                  <span>Blurb *</span>
+                  <div className="stl-field-label-row">
+                    <span>Blurb *</span>
+                    <div className="stl-inline-actions">
+                      <button
+                        type="button"
+                        className="stl-btn stl-btn-secondary"
+                        onClick={() => void onStopBlurbAiAutoWrite(item.id)}
+                        disabled={activeAiItemId === item.id}
+                      >
+                        {activeAiItemId === item.id
+                          ? 'Writing...'
+                          : item.blurbMarkdown.trim()
+                            ? 'Regenerate'
+                            : 'Auto Write'}
+                      </button>
+                    </div>
+                  </div>
                   <MarkdownBlockEditor
                     blockId={`${item.id}_blurb`}
                     value={item.blurbMarkdown}

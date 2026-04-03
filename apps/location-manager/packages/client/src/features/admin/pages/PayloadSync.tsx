@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSyncStatus, useSyncLocation, useSyncAll, usePayloadConnection, useResetSyncState } from "@client/shared/services/api/hooks/usePayloadSync";
+import { useSyncStatus, useSyncLocation, usePayloadConnection, useResetSyncState } from "@client/shared/services/api/hooks/usePayloadSync";
 import { useLocationsBasic } from "@client/shared/services/api/hooks";
 import { payloadApi } from "@client/shared/services/api/payload.api";
 import { useToast } from "@client/shared/hooks/useToast";
@@ -35,11 +35,13 @@ import {
   XCircle,
 } from "lucide-react";
 import { formatLocationName } from "@questurian/lm-shared";
-import type { Category, PayloadSyncCategory } from "@client/shared/services/api/types";
+import type { Category } from "@client/shared/services/api/types";
 import type { SyncStatusResponse } from "@client/shared/services/api/types/payload.types";
 import {
   buildFacetOptions,
   extractPayloadSyncLocationScope,
+  isPayloadSyncCategory,
+  isReadyForPayloadBulkSync,
   matchesFacetFilter,
 } from "@client/features/admin/utils/payload-sync-filter-utils";
 
@@ -68,14 +70,6 @@ interface LocationWithSyncStatus {
   synced: boolean;
   needsResync: boolean;
   syncState?: SyncStatusResponse["syncState"];
-}
-
-function isPayloadSyncCategory(category: Category): category is PayloadSyncCategory {
-  return category === "dining" ||
-    category === "accommodations" ||
-    category === "attractions" ||
-    category === "nightlife" ||
-    category === "key_locations";
 }
 
 function matchesStatusFilter(item: LocationWithSyncStatus, filter: StatusFilter): boolean {
@@ -156,7 +150,6 @@ export function PayloadSync() {
   const { data: statusData, isLoading, error } = useSyncStatus();
   const { data: locationsBasicData, isLoading: isLoadingLocationsBasic } = useLocationsBasic();
   const syncLocationMutation = useSyncLocation();
-  const syncAllMutation = useSyncAll();
   const { data: connectionStatus, isLoading: isConnecting, refetch: testConnection } = usePayloadConnection();
   const resetSyncMutation = useResetSyncState();
   const { showToast } = useToast();
@@ -471,11 +464,7 @@ export function PayloadSync() {
   }, [allLocationsWithStatus]);
 
   const syncableFilteredCount = useMemo(
-    () => filteredData.filter(
-      (item) =>
-        isPayloadSyncCategory(item.category) &&
-        (!item.synced || item.needsResync)
-    ).length,
+    () => filteredData.filter((item) => isReadyForPayloadBulkSync(item)).length,
     [filteredData]
   );
 
@@ -511,26 +500,17 @@ export function PayloadSync() {
     return parts.length > 0 ? parts.join(" / ") : "All locations";
   }, [cityFilter, countryFilter, neighborhoodFilter]);
 
-  const usesScopedBulkSync =
-    statusFilter !== "all" ||
-    locationTypeFilter !== "all" ||
-    countryFilter !== "all" ||
-    cityFilter !== "all" ||
-    neighborhoodFilter !== "all";
-
-  const isBulkSyncing = syncAllMutation.isPending || bulkSyncProgress !== null;
+  const isBulkSyncing = bulkSyncProgress !== null;
 
   const syncAllButtonLabel = useMemo(() => {
     if (bulkSyncProgress) {
       return `Syncing ${bulkSyncProgress.completed}/${bulkSyncProgress.total}...`;
     }
 
-    if (syncAllMutation.isPending) {
-      return "Syncing...";
-    }
-
-    return usesScopedBulkSync ? `Sync Filtered (${syncableFilteredCount})` : "Sync All";
-  }, [bulkSyncProgress, syncAllMutation.isPending, syncableFilteredCount, usesScopedBulkSync]);
+    return hasActiveFilters
+      ? `Sync Filtered (${syncableFilteredCount})`
+      : `Sync All Ready (${syncableFilteredCount})`;
+  }, [bulkSyncProgress, hasActiveFilters, syncableFilteredCount]);
 
   const toggleStatusFilter = (nextFilter: StatusFilter) => {
     if (nextFilter === "all") {
@@ -564,23 +544,7 @@ export function PayloadSync() {
   };
 
   const handleSyncAll = async () => {
-    const category = categoryFilter !== "all" ? categoryFilter : undefined;
-    if (category && !isPayloadSyncCategory(category)) {
-      showToast("Payload sync does not support this category.", { x: window.innerWidth / 2, y: 100 });
-      return;
-    }
-
-    const syncCategory: PayloadSyncCategory | undefined =
-      category && isPayloadSyncCategory(category) ? category : undefined;
-
-    if (!usesScopedBulkSync) {
-      await syncAllMutation.mutateAsync(syncCategory);
-      return;
-    }
-
-    const syncTargets = filteredData.filter(
-      (item) => isPayloadSyncCategory(item.category) && (!item.synced || item.needsResync)
-    );
+    const syncTargets = filteredData.filter((item) => isReadyForPayloadBulkSync(item));
 
     if (syncTargets.length === 0) {
       return;

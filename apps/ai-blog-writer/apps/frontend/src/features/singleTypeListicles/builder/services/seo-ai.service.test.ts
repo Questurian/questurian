@@ -92,4 +92,48 @@ describe('singleTypeListicles seo ai service', () => {
     expect(blogDescription).not.toMatch(/^discover\s+/i)
     expect(entityDescription).not.toMatch(/^discover\s+/i)
   })
+
+  it('repairs missing commas between structured-data array elements', () => {
+    const aiResponse = `{
+      "structuredData": {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BlogPosting",
+            "headline": "Best Cafes in Lima"
+          }
+          {
+            "@type": "ItemList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "item": {
+                  "@type": "Restaurant",
+                  "name": "Cafe One"
+                }
+              }
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "item": {
+                  "@type": "Restaurant",
+                  "name": "Cafe Two"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }`
+
+    const patch = parseSeoAiPatch(aiResponse)
+    const structuredData = JSON.parse(patch.structuredData || '{}') as Record<string, unknown>
+    const graph = Array.isArray(structuredData['@graph']) ? structuredData['@graph'] : []
+    const itemList = graph[1] as Record<string, unknown> | undefined
+    const itemListElement = Array.isArray(itemList?.itemListElement) ? itemList.itemListElement : []
+
+    expect(graph).toHaveLength(2)
+    expect(itemListElement).toHaveLength(2)
+  })
 })

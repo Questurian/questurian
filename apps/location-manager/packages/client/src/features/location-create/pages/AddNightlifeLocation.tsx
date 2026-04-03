@@ -7,6 +7,8 @@ import { Input } from '@client/components/ui/input';
 import { Label } from '@client/components/ui/label';
 import { Button } from '@client/components/ui/button';
 import { FormTagMultiSelect } from '@client/shared/components/forms';
+import { buildNightlifeDetails } from '@client/shared/lib/nightlife-details';
+import { toggleNightlifeMusicSelection } from '@client/shared/lib/nightlife-music';
 import { locationsApi } from '@client/shared/services/api';
 import { useCreateLocation } from '@client/shared/services/api/hooks';
 import { addNightlifeSchema, type AddNightlifeFormData } from '../validation/add-nightlife.schema';
@@ -89,6 +91,7 @@ const CONTACT_FIELDS: Array<keyof AddNightlifeFormData> = [
   'phone',
   'website',
   'reserveUrl',
+  'tripadvisorUrl',
   'daytimeRestaurant',
 ];
 
@@ -113,6 +116,7 @@ const NIGHTLIFE_FORM_DEFAULT_VALUES: AddNightlifeFormData = {
   location: '',
   phone: '',
   hours: '',
+  tripadvisorUrl: '',
   website: '',
   reserveUrl: '',
   district: '',
@@ -418,7 +422,8 @@ export function AddNightlifeLocation() {
     hasValue(form.watch('phone')) &&
     hasValue(form.watch('website')) &&
     !form.formState.errors.phone &&
-    !form.formState.errors.website;
+    !form.formState.errors.website &&
+    !form.formState.errors.tripadvisorUrl;
 
   const canOpenSection = (section: NightlifeFormSection) => {
     if (section === 'step1') return true;
@@ -471,9 +476,12 @@ export function AddNightlifeLocation() {
 
   const toggleMultiOption = (field: MultiField, value: string) => {
     const currentValues = (form.getValues(field) || []) as string[];
-    const nextValues = currentValues.includes(value)
-      ? currentValues.filter((item) => item !== value)
-      : [...currentValues, value];
+    const nextValues =
+      field === 'music'
+        ? toggleNightlifeMusicSelection(currentValues, value)
+        : currentValues.includes(value)
+          ? currentValues.filter((item) => item !== value)
+          : [...currentValues, value];
 
     form.setValue(field, nextValues as AddNightlifeFormData[MultiField], {
       shouldDirty: true,
@@ -599,35 +607,29 @@ export function AddNightlifeLocation() {
       ? buildOperationHoursSummary(operationHoursValue)
       : operationHoursValue;
 
-    const nightlifeDetails = {
+    const nightlifeDetails = buildNightlifeDetails({
       name: data.name,
-      price_tier: data.priceTier,
-      club_type: data.clubType,
+      priceTier: data.priceTier,
+      clubType: data.clubType,
       music,
-      details: {
-        theSpace: {
-          venueType: { label: 'Venue Type', value: data.venueType },
-          venueSize: { label: 'Venue Size', value: data.venueSize },
-          spaceLayout: { label: 'Layout', value: spaceLayout },
-          vibe: { label: 'Vibe', value: vibe },
-          peakHours: { label: 'Peak Hours', value: data.peakHours },
-        },
-        theScene: {
-          musicFormat: { label: 'Music', value: musicFormat },
-          touristPresence: { label: 'Tourist Presence', value: data.touristPresence },
-          dressCode: { label: 'Dress Code', value: dressCode },
-          energyLevel: { label: 'Energy Level', value: data.energyLevel },
-          vipAndBottleService: { label: 'VIP & Bottle Service', value: data.vipAndBottleService },
-          crowdProfile: { label: 'Age Range', value: data.crowdProfile },
-        },
-      },
+      venueType: data.venueType,
+      venueSize: data.venueSize,
+      spaceLayout,
+      vibe,
+      peakHours: data.peakHours,
+      touristPresence: data.touristPresence,
+      musicFormat,
+      dressCode,
+      energyLevel: data.energyLevel,
+      vipAndBottleService: data.vipAndBottleService,
+      crowdProfile: data.crowdProfile,
       location: normalizedAddress,
       phone: data.phone || '',
       hours: nightlifeHours,
       website: data.website || '',
-      reserve_url: data.reserveUrl || '',
-      daytime_restaurant: Number(data.daytimeRestaurant),
-    };
+      reserveUrl: data.reserveUrl || '',
+      daytimeRestaurant: data.daytimeRestaurant,
+    });
 
     createLocation(
       {
@@ -648,6 +650,7 @@ export function AddNightlifeLocation() {
         lat: Number.isFinite(latValue) ? latValue : undefined,
         lng: Number.isFinite(lngValue) ? lngValue : undefined,
         operationHours: hasStructuredHours ? operationHoursValue : undefined,
+        tripadvisorUrl: data.tripadvisorUrl || undefined,
         nightlifeDetails,
       },
       {
@@ -1112,6 +1115,16 @@ export function AddNightlifeLocation() {
                 <Input placeholder="https://example.com/nebula/reserve" {...form.register('reserveUrl')} />
                 {form.formState.errors.reserveUrl && (
                   <p className="text-xs text-destructive">{form.formState.errors.reserveUrl.message}</p>
+                )}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>TripAdvisor URL (Optional)</Label>
+                <Input placeholder="https://www.tripadvisor.com/..." {...form.register('tripadvisorUrl')} />
+                <p className="text-xs text-muted-foreground">
+                  Used to extract the TripAdvisor location ID. If TripAdvisor returns hours after create, it will replace the saved schedule.
+                </p>
+                {form.formState.errors.tripadvisorUrl && (
+                  <p className="text-xs text-destructive">{form.formState.errors.tripadvisorUrl.message}</p>
                 )}
               </div>
             </div>

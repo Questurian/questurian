@@ -1,0 +1,176 @@
+import { beforeEach, describe, expect, mock, test } from "bun:test";
+
+const createFromMapsMock = mock(async () => ({
+  name: "Nebula",
+  title: null,
+  address: "123 Main St, Lima",
+  url: "",
+  category: "nightlife" as const,
+  type: null,
+}));
+const generateGoogleMapsUrlMock = mock(() => "https://www.google.com/maps");
+const findPotentialDuplicateLocationsMock = mock(() => []);
+const getLocationByIdForUpdateMock = mock(() => null as any);
+const saveLocationOrThrowMock = mock(() => 101);
+const updateLocationByIdMock = mock(() => true);
+const getInstagramEmbedsByLocationIdMock = mock(() => []);
+const getUploadsByLocationIdMock = mock(() => []);
+const transformLocationToResponseMock = mock((location) => location as any);
+
+mock.module("../geocoding/location-geocoding.helper", () => ({
+  createFromMaps: createFromMapsMock,
+  generateGoogleMapsUrl: generateGoogleMapsUrlMock,
+}));
+
+mock.module("../../repositories/core", () => ({
+  findPotentialDuplicateLocations: findPotentialDuplicateLocationsMock,
+  getLocationByIdForUpdate: getLocationByIdForUpdateMock,
+  saveLocationOrThrow: saveLocationOrThrowMock,
+  updateLocationById: updateLocationByIdMock,
+}));
+
+mock.module("../../repositories/content", () => ({
+  getInstagramEmbedsByLocationId: getInstagramEmbedsByLocationIdMock,
+  getUploadsByLocationId: getUploadsByLocationIdMock,
+}));
+
+mock.module("../../utils/location-utils", () => ({
+  transformLocationToResponse: transformLocationToResponseMock,
+}));
+
+const { MapsService } = await import("./maps.service");
+
+describe("MapsService nightlife TripAdvisor auto-fetch", () => {
+  beforeEach(() => {
+    createFromMapsMock.mockReset();
+    generateGoogleMapsUrlMock.mockReset();
+    findPotentialDuplicateLocationsMock.mockReset();
+    getLocationByIdForUpdateMock.mockReset();
+    saveLocationOrThrowMock.mockReset();
+    updateLocationByIdMock.mockReset();
+    getInstagramEmbedsByLocationIdMock.mockReset();
+    getUploadsByLocationIdMock.mockReset();
+    transformLocationToResponseMock.mockReset();
+
+    createFromMapsMock.mockResolvedValue({
+      name: "Nebula",
+      title: null,
+      address: "123 Main St, Lima",
+      url: "",
+      category: "nightlife",
+      type: null,
+    });
+    generateGoogleMapsUrlMock.mockReturnValue("https://www.google.com/maps");
+    findPotentialDuplicateLocationsMock.mockReturnValue([]);
+    getLocationByIdForUpdateMock.mockReturnValue(null);
+    saveLocationOrThrowMock.mockReturnValue(101);
+    updateLocationByIdMock.mockReturnValue(true);
+    getInstagramEmbedsByLocationIdMock.mockReturnValue([]);
+    getUploadsByLocationIdMock.mockReturnValue([]);
+    transformLocationToResponseMock.mockImplementation((location) => location as any);
+  });
+
+  test("nightlife create with TripAdvisor URL triggers place auto-fetch", async () => {
+    const fetchAndMergePlaceDataMock = mock(async () => true);
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: fetchAndMergePlaceDataMock } as any
+    );
+
+    await service.addMapsLocation(
+      {
+        name: "Nebula",
+        title: "Nebula",
+        address: "123 Main St, Lima",
+        category: "nightlife",
+        tripadvisorUrl:
+          "https://www.tripadvisor.com/Restaurant_Review-g294316-d23520604-Reviews-Asu-Lima_Lima_Region.html",
+      },
+      "nightlife"
+    );
+
+    expect(fetchAndMergePlaceDataMock).toHaveBeenCalledTimes(1);
+    expect(fetchAndMergePlaceDataMock).toHaveBeenCalledWith(101, "23520604");
+  });
+
+  test("allows a same-place entry when the existing document is in a different category", async () => {
+    findPotentialDuplicateLocationsMock.mockReturnValue([
+      {
+        id: 77,
+        name: "Nebula",
+        title: "Nebula",
+        address: "123 Main St, Lima",
+        url: "https://example.com/dining/nebula",
+        category: "dining",
+        type: "restaurant",
+      },
+    ]);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.addMapsLocation(
+      {
+        name: "Nebula",
+        title: "Nebula",
+        address: "123 Main St, Lima",
+        category: "nightlife",
+      },
+      "nightlife"
+    );
+
+    expect(saveLocationOrThrowMock).toHaveBeenCalledTimes(1);
+    expect(updateLocationByIdMock).not.toHaveBeenCalled();
+  });
+
+  test("still merges same-category duplicates instead of creating a second record", async () => {
+    findPotentialDuplicateLocationsMock.mockReturnValue([
+      {
+        id: 77,
+        name: "Nebula",
+        title: "Nebula",
+        address: "123 Main St, Lima",
+        url: "https://example.com/nightlife/nebula",
+        category: "nightlife",
+        type: null,
+        idealForJson: null,
+      },
+    ]);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.addMapsLocation(
+      {
+        name: "Nebula",
+        title: "Nebula",
+        address: "123 Main St, Lima",
+        category: "nightlife",
+        idealFor: ["Late-Night Drinks"],
+      },
+      "nightlife"
+    );
+
+    expect(updateLocationByIdMock).toHaveBeenCalledTimes(1);
+    expect(updateLocationByIdMock).toHaveBeenCalledWith(
+      77,
+      expect.objectContaining({
+        idealForJson: JSON.stringify(["Late-Night Drinks"]),
+      })
+    );
+    expect(saveLocationOrThrowMock).not.toHaveBeenCalled();
+  });
+});

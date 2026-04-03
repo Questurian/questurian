@@ -1,4 +1,5 @@
 import type { SeoSection } from '../types'
+import { extractJsonObjectFromAiResponse } from './seo-ai-json-repair'
 
 type SeoFieldKey =
   | 'seoTitle'
@@ -227,38 +228,7 @@ const isValidAbsoluteUrl = (value: string): boolean => {
   }
 }
 
-function extractJsonPayload(value: string): Record<string, unknown> {
-  const trimmed = value.trim()
-  if (!trimmed) {
-    throw new Error('AI returned empty SEO response.')
-  }
-
-  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  const directCandidate = fencedMatch?.[1]?.trim() || trimmed
-
-  try {
-    const parsed = JSON.parse(directCandidate)
-    const record = asRecord(parsed)
-    if (record) return record
-  } catch {
-    // Continue to bracket extraction fallback.
-  }
-
-  const start = directCandidate.indexOf('{')
-  const end = directCandidate.lastIndexOf('}')
-  if (start < 0 || end <= start) {
-    throw new Error('AI did not return valid SEO JSON.')
-  }
-
-  try {
-    const parsed = JSON.parse(directCandidate.slice(start, end + 1))
-    const record = asRecord(parsed)
-    if (!record) throw new Error('JSON root must be an object.')
-    return record
-  } catch (err) {
-    throw new Error(err instanceof Error ? `AI SEO JSON parse failed: ${err.message}` : 'AI SEO JSON parse failed.')
-  }
-}
+const extractJsonPayload = extractJsonObjectFromAiResponse
 
 function normalizeStructuredData(value: unknown): string | undefined {
   if (asRecord(value)) {

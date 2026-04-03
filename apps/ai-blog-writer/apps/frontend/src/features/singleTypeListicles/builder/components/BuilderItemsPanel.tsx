@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import { getBlockTypeForListicleType } from '../../api'
 import type { ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
@@ -29,7 +30,9 @@ type BuilderItemsPanelProps = {
   moveItem: (itemId: string, direction: 'up' | 'down') => void
   removeItem: (itemId: string) => void
   updateItem: (itemId: string, updater: (item: ListicleItemBlock) => ListicleItemBlock) => void
+  onItemBlurbAiAutoWrite: (itemId: string) => Promise<void>
   onItemBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
+  activeAiItemId: string | null
   isLocked: boolean
   onContinueStep3: () => void
   onUpdateStep3: () => void
@@ -78,7 +81,9 @@ export function BuilderItemsPanel({
   moveItem,
   removeItem,
   updateItem,
+  onItemBlurbAiAutoWrite,
   onItemBlurbAiRewrite,
+  activeAiItemId,
   isLocked,
   onContinueStep3,
   onUpdateStep3,
@@ -235,6 +240,7 @@ export function BuilderItemsPanel({
           const idealForValues = draft.listicleType === 'dining'
             ? getRelatedItemIdealFor(selectedRelatedItem)
             : []
+          const selectedRelatedItemLabel = getRelatedItemDisplayLabel(selectedRelatedItem)
           const isFirstItem = index === 0
           const isLastItem = index === draft.items.length - 1
           const selectedPhotoPreviews = item.selectedPhotos
@@ -310,7 +316,7 @@ export function BuilderItemsPanel({
                           {firstItemPhotoUrl && (
                             <img src={firstItemPhotoUrl} alt="" />
                           )}
-                          <span className="stl-picker-trigger__label">{selectedRelatedItem.title}</span>
+                          <span className="stl-picker-trigger__label">{selectedRelatedItemLabel}</span>
                         </>
                       ) : (
                         <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
@@ -326,7 +332,7 @@ export function BuilderItemsPanel({
                         <input
                           type="text"
                           className="stl-copyable-item-input"
-                          value={selectedRelatedItem.title}
+                          value={selectedRelatedItemLabel}
                           readOnly
                           onFocus={(event) => event.currentTarget.select()}
                           onClick={(event) => event.currentTarget.select()}
@@ -335,7 +341,7 @@ export function BuilderItemsPanel({
                         <button
                           type="button"
                           className={`stl-btn ${copiedItemId === item.id ? 'stl-btn-success' : 'stl-btn-secondary'} stl-copyable-item-btn`}
-                          onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItem.title)}
+                          onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItemLabel)}
                         >
                           {copiedItemId === item.id ? 'Copied' : 'Copy'}
                         </button>
@@ -519,7 +525,23 @@ export function BuilderItemsPanel({
               {selectedRelatedItem ? (
                 <>
                   <label className="stl-field">
-                    <span>Blurb *</span>
+                    <div className="stl-field-label-row">
+                      <span>Blurb *</span>
+                      <div className="stl-inline-actions">
+                        <button
+                          type="button"
+                          className="stl-btn stl-btn-secondary"
+                          onClick={() => void onItemBlurbAiAutoWrite(item.id)}
+                          disabled={activeAiItemId === item.id}
+                        >
+                          {activeAiItemId === item.id
+                            ? 'Writing...'
+                            : item.blurbMarkdown.trim()
+                              ? 'Regenerate'
+                              : 'Auto Write'}
+                        </button>
+                      </div>
+                    </div>
                     <MarkdownBlockEditor
                       blockId={`${item.id}_blurb`}
                       value={item.blurbMarkdown}

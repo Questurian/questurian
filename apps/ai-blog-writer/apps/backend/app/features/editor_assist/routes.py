@@ -5,15 +5,25 @@ Provides lightweight AI rewrite actions for staging block editors.
 """
 import logging
 import re
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from utils import get_vertex_llm
+from utils import get_vertex_llm, invoke_google_grounded_text
 from .graph import (
     run_editor_assist_generate_title_graph,
+    run_editor_assist_listicle_generation_graph,
     run_editor_assist_rewrite_graph,
+)
+from .listicle_writer import (
+    ListicleArticleType,
+    ListicleCategory,
+    ListicleWriterTarget,
+    build_generation_prompt,
+    build_retry_prompt,
+    strip_generation_fence,
+    validate_generated_text,
 )
 
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
@@ -120,6 +130,42 @@ class GenerateTitleResponse(BaseModel):
     title: str
 
 
+class GenerateListicleTargetRequest(BaseModel):
+    target_id: str = Field(min_length=1, max_length=200)
+    field_type: Literal["intro", "blurb"]
+    category: ListicleCategory | None = None
+    display_name: str | None = Field(default=None, max_length=240)
+    research_subject: str | None = Field(default=None, max_length=240)
+    location_label: str | None = Field(default=None, max_length=300)
+    current_content: str = Field(default="", max_length=MAX_BLOCK_CHARS)
+    supporting_context: str | None = Field(default=None, max_length=12000)
+
+
+class GenerateListicleContentRequest(BaseModel):
+    article_title: str = Field(min_length=1, max_length=MAX_ARTICLE_TITLE_CHARS)
+    article_type: ListicleArticleType
+    location_label: str = Field(min_length=1, max_length=300)
+    article_context: str | None = Field(default=None, max_length=MAX_ARTICLE_CONTEXT_CHARS)
+    model_name: str | None = Field(default=None, max_length=120)
+    custom_instruction: str | None = Field(default=None, max_length=MAX_PROMPT_CHARS)
+    skip_existing: bool = False
+    targets: list[GenerateListicleTargetRequest] = Field(default_factory=list)
+
+
+class GenerateListicleTargetResponse(BaseModel):
+    target_id: str
+    status: Literal["generated", "skipped", "error"]
+    markdown: str | None = None
+    model_used: str
+    source_urls: list[str] = Field(default_factory=list)
+    validation_errors: list[str] = Field(default_factory=list)
+    error_message: str | None = None
+
+
+class GenerateListicleContentResponse(BaseModel):
+    results: dict[str, GenerateListicleTargetResponse]
+
+
 def _extract_generated_title(raw_response: str) -> str:
     # Strip any stray envelope tags the model may have included
     cleaned = re.sub(r"<<<[A-Z_]+>>>", "", raw_response, flags=re.I).strip()
@@ -183,6 +229,186 @@ async def generate_title(request: GenerateTitleRequest) -> GenerateTitleResponse
             status_code=502,
             detail="AI title generation graph failed",
         ) from exc
+
+
+def _resolve_grounded_model(model_name: str) -> str:
+    resolved = model_name.strip()
+    if resolved in {"gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"}:
+        return resolved
+    return "gemini-2.5-flash"
+
+
+def _merge_urls(*groups: list[str]) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        for url in group:
+            if url in seen:
+                continue
+            seen.add(url)
+            merged.append(url)
+    return merged
+
+
+def _to_listicle_writer_target(request_target: GenerateListicleTargetRequest) -> ListicleWriterTarget:
+    return ListicleWriterTarget(
+        target_id=request_target.target_id,
+        field_type=request_target.field_type,
+        category=request_target.category,
+        display_name=request_target.display_name,
+        research_subject=request_target.research_subject,
+        location_label=request_target.location_label,
+        current_content=request_target.current_content or "",
+        supporting_context=request_target.supporting_context or "",
+    )
+
+
+def _generate_single_listicle_target(
+    *,
+    article_title: str,
+    article_type: ListicleArticleType,
+    article_location: str,
+    article_context: str,
+    target: ListicleWriterTarget,
+    custom_instruction: str,
+    model_name: str,
+) -> GenerateListicleTargetResponse:
+    prompt = build_generation_prompt(
+        article_title=article_title,
+        article_type=article_type,
+        article_location=article_location,
+        target=target,
+        article_context=article_context,
+        custom_instruction=custom_instruction,
+    )
+    grounded_model = _resolve_grounded_model(model_name)
+    grounded = invoke_google_grounded_text(
+        prompt,
+        model_name=grounded_model,
+        fallback_model_name="gemini-2.5-flash",
+        max_tokens=1536,
+        temperature=0.15,
+    )
+    if grounded is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Grounded research is unavailable for listicle generation",
+        )
+
+    candidate = strip_generation_fence(grounded.text)
+    validation_errors = validate_generated_text(
+        field_type=target.field_type,
+        text=candidate,
+    )
+    source_urls = grounded.source_urls
+    model_used = grounded.model_name
+
+    if validation_errors:
+        retry_prompt = build_retry_prompt(
+            article_title=article_title,
+            article_type=article_type,
+            article_location=article_location,
+            target=target,
+            article_context=article_context,
+            custom_instruction=custom_instruction,
+            current_output=candidate,
+            validation_errors=validation_errors,
+        )
+        retry_grounded = invoke_google_grounded_text(
+            retry_prompt,
+            model_name=grounded_model,
+            fallback_model_name="gemini-2.5-flash",
+            max_tokens=1536,
+            temperature=0.1,
+        )
+        if retry_grounded is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Grounded research is unavailable for listicle generation",
+            )
+        candidate = strip_generation_fence(retry_grounded.text)
+        validation_errors = validate_generated_text(
+            field_type=target.field_type,
+            text=candidate,
+        )
+        source_urls = _merge_urls(source_urls, retry_grounded.source_urls)
+        model_used = retry_grounded.model_name
+
+    if validation_errors:
+        return GenerateListicleTargetResponse(
+            target_id=target.target_id,
+            status="error",
+            model_used=model_used,
+            source_urls=source_urls,
+            validation_errors=validation_errors,
+            error_message="Generated content failed validation after retry.",
+        )
+
+    return GenerateListicleTargetResponse(
+        target_id=target.target_id,
+        status="generated",
+        markdown=candidate,
+        model_used=model_used,
+        source_urls=source_urls,
+    )
+
+
+def _generate_listicle_content_impl(
+    request: GenerateListicleContentRequest,
+) -> GenerateListicleContentResponse:
+    article_title = request.article_title.strip()
+    article_location = request.location_label.strip()
+    article_context = request.article_context.strip() if request.article_context else ""
+    custom_instruction = request.custom_instruction.strip() if request.custom_instruction else ""
+
+    if not article_title:
+        raise HTTPException(status_code=400, detail="article_title is required")
+    if not article_location:
+        raise HTTPException(status_code=400, detail="location_label is required")
+    if not request.targets:
+        raise HTTPException(status_code=400, detail="At least one target is required")
+
+    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    results: dict[str, GenerateListicleTargetResponse] = {}
+
+    for request_target in request.targets:
+        target = _to_listicle_writer_target(request_target)
+        current_content = target.current_content.strip()
+        if request.skip_existing and current_content:
+            results[target.target_id] = GenerateListicleTargetResponse(
+                target_id=target.target_id,
+                status="skipped",
+                model_used=model_used,
+                markdown=current_content,
+            )
+            continue
+
+        try:
+            results[target.target_id] = _generate_single_listicle_target(
+                article_title=article_title,
+                article_type=request.article_type,
+                article_location=article_location,
+                article_context=article_context,
+                target=target,
+                custom_instruction=custom_instruction,
+                model_name=model_used,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.exception(
+                "Listicle generation failed for target %s: %s",
+                target.target_id,
+                exc,
+            )
+            results[target.target_id] = GenerateListicleTargetResponse(
+                target_id=target.target_id,
+                status="error",
+                model_used=model_used,
+                error_message=str(exc),
+            )
+
+    return GenerateListicleContentResponse(results=results)
 
 
 def _rewrite_block_impl(request: RewriteBlockRequest) -> RewriteBlockResponse:
@@ -260,4 +486,22 @@ async def rewrite_block(request: RewriteBlockRequest) -> RewriteBlockResponse:
         raise HTTPException(
             status_code=502,
             detail="AI rewrite graph failed",
+        ) from exc
+
+
+@router.post("/generate-listicle-content", response_model=GenerateListicleContentResponse)
+async def generate_listicle_content(
+    request: GenerateListicleContentRequest,
+) -> GenerateListicleContentResponse:
+    try:
+        return run_editor_assist_listicle_generation_graph(
+            step_runner=lambda: _generate_listicle_content_impl(request),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Editor Assist graph generate-listicle-content failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI listicle generation graph failed",
         ) from exc

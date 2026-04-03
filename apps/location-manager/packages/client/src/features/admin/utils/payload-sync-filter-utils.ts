@@ -1,4 +1,5 @@
 import { parseLocationKey, slugifyTaxonomyPart } from "../../../shared/lib/taxonomy-location";
+import type { PayloadSyncCategory } from "@client/shared/services/api/types";
 
 export interface PayloadSyncFilterOption {
   value: string;
@@ -18,6 +19,24 @@ export interface PayloadSyncLocationScope {
   city: string | null;
   neighborhood: string | null;
 }
+
+interface PayloadSyncCandidateState {
+  category: string;
+  isComplete: boolean;
+  synced: boolean;
+  needsResync: boolean;
+  syncState?: {
+    sync_status: "success" | "failed" | "pending";
+  };
+}
+
+const PAYLOAD_SYNC_CATEGORIES = new Set<PayloadSyncCategory>([
+  "dining",
+  "accommodations",
+  "attractions",
+  "nightlife",
+  "key_locations",
+]);
 
 function normalizeValue(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
@@ -59,6 +78,26 @@ export function extractPayloadSyncLocationScope(location: {
     city: normalizeValue(parsed.city) ?? parsedDisplayLocation.city,
     neighborhood: normalizeValue(parsed.neighborhood) ?? parsedDisplayLocation.neighborhood,
   };
+}
+
+export function isPayloadSyncCategory(category: string): category is PayloadSyncCategory {
+  return PAYLOAD_SYNC_CATEGORIES.has(category as PayloadSyncCategory);
+}
+
+export function isReadyForPayloadBulkSync(item: PayloadSyncCandidateState): boolean {
+  if (!isPayloadSyncCategory(item.category) || !item.isComplete) {
+    return false;
+  }
+
+  if (item.needsResync) {
+    return true;
+  }
+
+  if (item.synced) {
+    return false;
+  }
+
+  return item.syncState?.sync_status !== "failed" && item.syncState?.sync_status !== "pending";
 }
 
 export function buildFacetOptions<T>(

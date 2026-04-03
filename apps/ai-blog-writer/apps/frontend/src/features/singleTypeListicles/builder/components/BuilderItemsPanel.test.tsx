@@ -1,7 +1,13 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+/* @vitest-environment jsdom */
+import '@testing-library/jest-dom/vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BuilderItemsPanel } from './BuilderItemsPanel'
 import type { RelatedItemOption, SingleTypeListicleDraft } from '../../types'
+
+afterEach(() => {
+  cleanup()
+})
 
 vi.mock('../../../staging/features/markdown-editor', () => ({
   MarkdownBlockEditor: ({
@@ -103,7 +109,9 @@ function renderPanel(draft: SingleTypeListicleDraft, relatedItems: RelatedItemOp
       moveItem={vi.fn()}
       removeItem={vi.fn()}
       updateItem={vi.fn()}
+      onItemBlurbAiAutoWrite={vi.fn(async () => {})}
       onItemBlurbAiRewrite={vi.fn(async (_itemId: string, input: { currentContent: string }) => input.currentContent)}
+      activeAiItemId={null}
       isLocked={false}
       onContinueStep3={vi.fn()}
       onUpdateStep3={vi.fn()}
@@ -125,5 +133,11 @@ describe('BuilderItemsPanel', () => {
     renderPanel(buildDraft('accommodations'), [buildRelatedItem()])
 
     expect(screen.queryByRole('textbox', { name: /ideal for/i })).not.toBeInTheDocument()
+  })
+
+  it('shows auto-write as the primary AI action for empty blurbs', () => {
+    renderPanel(buildDraft('dining'), [buildRelatedItem()])
+
+    expect(screen.getByText('Auto Write')).toBeInTheDocument()
   })
 })

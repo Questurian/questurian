@@ -171,6 +171,68 @@ describe("TripAdvisorPlaceService meal-type enrichment", () => {
     );
   });
 
+  test("operation hours from TripAdvisor overwrite existing nightlife hours", () => {
+    getLocationByIdForUpdateMock.mockReturnValue({
+      id: 15,
+      category: "nightlife",
+      type: "cocktail-bar",
+      email: null,
+      neighborhoodDescription: null,
+      hoursJson: JSON.stringify({ monday: "20:00:00 - 02:00:00", currently_open: false }),
+      phoneNumber: null,
+      website: null,
+      tripadvisorMealTypesJson: null,
+      tripadvisorCuisinesJson: null,
+      tripadvisorFeaturesJson: null,
+      priceLevel: null,
+      district: null,
+      idealForJson: null,
+    });
+
+    const service = new TripAdvisorPlaceService({ SERPAPI_KEY: "test-key" } as any);
+    service.mergePlaceDataIntoLocation(15, {
+      operation_hours: {
+        monday: "21:00:00 - 03:00:00",
+        currently_open: true,
+      },
+    });
+
+    expect(updateLocationByIdMock).toHaveBeenCalledTimes(1);
+    expect(updateLocationByIdMock).toHaveBeenCalledWith(
+      15,
+      expect.objectContaining({
+        hoursJson: JSON.stringify({
+          monday: "21:00:00 - 03:00:00",
+          currently_open: true,
+        }),
+      })
+    );
+  });
+
+  test("missing TripAdvisor operation hours preserves existing nightlife hours", () => {
+    getLocationByIdForUpdateMock.mockReturnValue({
+      id: 16,
+      category: "nightlife",
+      type: "cocktail-bar",
+      email: "team@example.com",
+      neighborhoodDescription: "By the park",
+      hoursJson: JSON.stringify({ monday: "20:00:00 - 02:00:00", currently_open: false }),
+      phoneNumber: "+51 999 555 444",
+      website: "https://example.com/club",
+      tripadvisorMealTypesJson: JSON.stringify(["Dinner"]),
+      tripadvisorCuisinesJson: JSON.stringify(["Fusion"]),
+      tripadvisorFeaturesJson: JSON.stringify(["Reservations"]),
+      priceLevel: "$$$",
+      district: "Miraflores",
+      idealForJson: JSON.stringify(["Date Nights"]),
+    });
+
+    const service = new TripAdvisorPlaceService({ SERPAPI_KEY: "test-key" } as any);
+    service.mergePlaceDataIntoLocation(16, {});
+
+    expect(updateLocationByIdMock).toHaveBeenCalledTimes(0);
+  });
+
   test("auto-fetch path applies meal-type enrichment through merge", async () => {
     getLocationByIdForUpdateMock.mockReturnValue({
       id: 20,

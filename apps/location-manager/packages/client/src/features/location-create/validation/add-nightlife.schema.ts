@@ -53,6 +53,13 @@ export const addNightlifeSchema = z.object({
   location: z.string().min(1, "Location is required"),
   phone: z.string().trim().min(1, "Phone number is required"),
   hours: z.string().optional().or(z.literal("")),
+  tripadvisorUrl: z
+    .string()
+    .trim()
+    .url("TripAdvisor URL must be a valid URL")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
   website: z
     .string()
     .trim()

@@ -1,6 +1,8 @@
 import {
   buildFacetOptions,
   extractPayloadSyncLocationScope,
+  isPayloadSyncCategory,
+  isReadyForPayloadBulkSync,
   matchesFacetFilter,
 } from "./payload-sync-filter-utils";
 
@@ -79,5 +81,73 @@ describe("payload sync filter utils", () => {
     expect(matchesFacetFilter(null, "__unspecified__", "__unspecified__")).toBe(true);
     expect(matchesFacetFilter("lima", "lima", "__unspecified__")).toBe(true);
     expect(matchesFacetFilter("cusco", "lima", "__unspecified__")).toBe(false);
+  });
+
+  test("identifies payload-supported categories", () => {
+    expect(isPayloadSyncCategory("dining")).toBe(true);
+    expect(isPayloadSyncCategory("beaches")).toBe(false);
+  });
+
+  test("marks complete unsynced locations as ready for bulk sync", () => {
+    expect(
+      isReadyForPayloadBulkSync({
+        category: "dining",
+        isComplete: true,
+        synced: false,
+        needsResync: false,
+      })
+    ).toBe(true);
+  });
+
+  test("marks resync candidates as ready for bulk sync", () => {
+    expect(
+      isReadyForPayloadBulkSync({
+        category: "nightlife",
+        isComplete: true,
+        synced: true,
+        needsResync: true,
+        syncState: { sync_status: "success" },
+      })
+    ).toBe(true);
+  });
+
+  test("excludes incomplete, failed, pending, and unsupported rows from bulk sync", () => {
+    expect(
+      isReadyForPayloadBulkSync({
+        category: "dining",
+        isComplete: false,
+        synced: false,
+        needsResync: false,
+      })
+    ).toBe(false);
+
+    expect(
+      isReadyForPayloadBulkSync({
+        category: "dining",
+        isComplete: true,
+        synced: false,
+        needsResync: false,
+        syncState: { sync_status: "failed" },
+      })
+    ).toBe(false);
+
+    expect(
+      isReadyForPayloadBulkSync({
+        category: "dining",
+        isComplete: true,
+        synced: false,
+        needsResync: false,
+        syncState: { sync_status: "pending" },
+      })
+    ).toBe(false);
+
+    expect(
+      isReadyForPayloadBulkSync({
+        category: "beaches",
+        isComplete: true,
+        synced: false,
+        needsResync: false,
+      })
+    ).toBe(false);
   });
 });

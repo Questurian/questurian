@@ -75,4 +75,43 @@ describe('listicleItineraries seo ai service', () => {
     expect(blogDescription).not.toMatch(/^discover\s+/i)
     expect(entityDescription).not.toMatch(/^discover\s+/i)
   })
+
+  it('repairs missing commas between itinerary structured-data array elements', () => {
+    const aiResponse = `{
+      "structuredData": {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BlogPosting",
+            "headline": "One Day in Lima"
+          }
+          {
+            "@type": "Trip"
+          }
+          {
+            "@type": "ItemList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1
+              }
+              {
+                "@type": "ListItem",
+                "position": 2
+              }
+            ]
+          }
+        ]
+      }
+    }`
+
+    const patch = parseSeoAiPatch(aiResponse)
+    const structuredData = JSON.parse(patch.structuredData || '{}') as Record<string, unknown>
+    const graph = Array.isArray(structuredData['@graph']) ? structuredData['@graph'] : []
+    const itemList = graph[2] as Record<string, unknown> | undefined
+    const itemListElement = Array.isArray(itemList?.itemListElement) ? itemList.itemListElement : []
+
+    expect(graph).toHaveLength(3)
+    expect(itemListElement).toHaveLength(2)
+  })
 })

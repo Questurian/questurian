@@ -71,7 +71,7 @@ describe("maps create schema category rules", () => {
       ...basePayload,
       category: "nightlife",
       type: "nightclub",
-      idealFor: ["Wild Night", "DJ Night", "Late-Night Eats"],
+      idealFor: ["Casual Nights Out", "After-Work Drinks", "Rooftop Nights"],
       nightlifeDetails: {
         vibe: "high-energy",
         dressCode: "smart-casual",

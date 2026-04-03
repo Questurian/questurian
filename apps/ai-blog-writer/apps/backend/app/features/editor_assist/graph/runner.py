@@ -98,3 +98,13 @@ def run_editor_assist_rewrite_graph(
         node_name="editor_assist_rewrite_block",
         step_runner=step_runner,
     )
+
+
+def run_editor_assist_listicle_generation_graph(
+    *,
+    step_runner: Callable[[], T],
+) -> T:
+    return _run_editor_assist_graph(
+        node_name="editor_assist_generate_listicle_content",
+        step_runner=step_runner,
+    )

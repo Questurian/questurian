@@ -96,6 +96,7 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
         { key: "nightlife.spaceLayout", label: "Space Layout", present: nightlifeDetails.spaceLayout.length > 0 },
         { key: "nightlife.vibe", label: "Vibe", present: nightlifeDetails.vibe.length > 0 },
         { key: "nightlife.peakHours", label: "Peak Hours", present: Boolean(nightlifeDetails.peakHours) },
+        { key: "operationHours", label: "Hours", present: hasOperationHours },
         {
           key: "nightlife.priceTier",
           label: "Price Tier",
@@ -396,13 +397,6 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
   const [editField, setEditField] = useState<{ key: string; label: string; present: boolean } | null>(null);
 
   const getEditField = (field: { key: string; label: string; present: boolean }) => {
-    if (field.key.startsWith("nightlife.")) {
-      return {
-        key: "nightlifeDetails",
-        label: "Nightlife Profile",
-        present: field.present,
-      };
-    }
     if (field.key.startsWith("accommodations.")) {
       return {
         key: "accommodationsDetails",
