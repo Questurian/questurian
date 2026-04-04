@@ -18,6 +18,7 @@ import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
 import { useListicleSubmit } from '../builder/hooks/useListicleSubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
+import { useSerialTaskQueue } from '../../shared/hooks/useSerialTaskQueue'
 import {
   applySingleTypeListicleGeneratedContent,
   buildSingleTypeGenerateListicleContentRequest,
@@ -54,6 +55,9 @@ type AiRewriteInput = {
   includeWholeArticleContext: boolean
 }
 
+const AUTO_WRITE_EMPTY_FIELDS_JOB_ID = '__auto_write_empty_fields__'
+type AiJobVisualState = 'queued' | 'running'
+
 export default function SingleTypeListicleBuilderPage() {
   const { token } = useAuth()
   const navigate = useNavigate()
@@ -67,9 +71,9 @@ export default function SingleTypeListicleBuilderPage() {
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [isUploadingOgImage, setIsUploadingOgImage] = useState(false)
-  const [activeAiTargetId, setActiveAiTargetId] = useState<string | null>(null)
-  const [isAutoWritingEmptyFields, setIsAutoWritingEmptyFields] = useState(false)
+  const [aiJobVisualStateById, setAiJobVisualStateById] = useState<Record<string, AiJobVisualState>>({})
   const lastAutoStructuredDataRef = useRef<string>('')
+  const aiJobClearTimersRef = useRef<Record<string, number>>({})
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -92,6 +96,64 @@ export default function SingleTypeListicleBuilderPage() {
   useBuilderAutosave(draft)
 
   const { relatedItems, isLoadingRelated } = useRelatedItems({ token, draft, locations, onError })
+  const draftRef = useRef(draft)
+  const relatedItemsRef = useRef(relatedItems)
+  const locationsRef = useRef(locations)
+  const {
+    activeTaskId: activeAiWriteJobId,
+    queuedTaskIds: queuedAiWriteJobIds,
+    enqueueTask: enqueueAiWriteTask,
+  } = useSerialTaskQueue<string>()
+
+  useEffect(() => {
+    draftRef.current = draft
+  }, [draft])
+
+  useEffect(() => {
+    relatedItemsRef.current = relatedItems
+  }, [relatedItems])
+
+  useEffect(() => {
+    locationsRef.current = locations
+  }, [locations])
+
+  useEffect(() => {
+    return () => {
+      Object.values(aiJobClearTimersRef.current).forEach((timerId) => {
+        window.clearTimeout(timerId)
+      })
+      aiJobClearTimersRef.current = {}
+    }
+  }, [])
+
+  const markAiJobVisualState = useCallback((jobId: string, state: AiJobVisualState) => {
+    const existingTimer = aiJobClearTimersRef.current[jobId]
+    if (existingTimer) {
+      window.clearTimeout(existingTimer)
+      delete aiJobClearTimersRef.current[jobId]
+    }
+
+    setAiJobVisualStateById((current) => ({
+      ...current,
+      [jobId]: state,
+    }))
+  }, [])
+
+  const clearAiJobVisualState = useCallback((jobId: string) => {
+    const existingTimer = aiJobClearTimersRef.current[jobId]
+    if (existingTimer) {
+      window.clearTimeout(existingTimer)
+    }
+
+    aiJobClearTimersRef.current[jobId] = window.setTimeout(() => {
+      setAiJobVisualStateById((current) => {
+        const next = { ...current }
+        delete next[jobId]
+        return next
+      })
+      delete aiJobClearTimersRef.current[jobId]
+    }, 900)
+  }, [])
 
   const actions = useBuilderDraftActions({
     draft,
@@ -182,13 +244,6 @@ export default function SingleTypeListicleBuilderPage() {
     return title
   }, [draft])
 
-  const applyGeneratedListicleContent = useCallback((response: Awaited<ReturnType<typeof generateListicleContentWithAi>>) => {
-    setDraft((current) => {
-      if (!current) return current
-      return applySingleTypeListicleGeneratedContent(current, response)
-    })
-  }, [setDraft])
-
   const buildGenerationRequest = useCallback((params: {
     targetIds: string[]
     customInstruction?: string
@@ -196,16 +251,17 @@ export default function SingleTypeListicleBuilderPage() {
     includeArticleContext?: boolean
     currentContentByTargetId?: Record<string, string>
   }) => {
-    if (!draft) {
+    const currentDraft = draftRef.current
+    if (!currentDraft) {
       throw new Error('Draft is not loaded yet.')
     }
 
     const request = buildSingleTypeGenerateListicleContentRequest({
-      draft,
-      relatedItems,
-      locations,
+      draft: currentDraft,
+      relatedItems: relatedItemsRef.current,
+      locations: locationsRef.current,
       targetIds: params.targetIds,
-      modelName: resolveEditorAssistModelName(draft.editorModelName),
+      modelName: resolveEditorAssistModelName(currentDraft.editorModelName),
       customInstruction: params.customInstruction,
       skipExisting: params.skipExisting,
       includeArticleContext: params.includeArticleContext,
@@ -223,7 +279,7 @@ export default function SingleTypeListicleBuilderPage() {
     }
 
     return request
-  }, [draft, locations, relatedItems])
+  }, [])
 
   const runSingleTargetGeneration = useCallback(async (params: {
     targetId: string
@@ -272,120 +328,184 @@ export default function SingleTypeListicleBuilderPage() {
   }, [runSingleTargetGeneration])
 
   const autoWriteIntro = useCallback(async (): Promise<void> => {
-    if (!draft) return
+    const currentDraft = draftRef.current
+    if (!currentDraft) return
 
-    const targetId = getSingleTypeIntroTargetId(draft)
+    const draftId = currentDraft.draftId
+    const targetId = getSingleTypeIntroTargetId(currentDraft)
+
     onError('')
     setResult(null)
-    setActiveAiTargetId(targetId)
+    markAiJobVisualState(targetId, 'queued')
 
-    try {
-      const markdown = await runSingleTargetGeneration({
-        targetId,
-        currentContent: draft.header.introMarkdown,
-        includeArticleContext: true,
-      })
+    enqueueAiWriteTask({
+      id: targetId,
+      run: async () => {
+        const draftForRun = draftRef.current
+        if (!draftForRun || draftForRun.draftId !== draftId) return
 
-      setDraft((current) => {
-        if (!current) return current
-        return {
-          ...current,
-          header: {
-            ...current.header,
-            introMarkdown: markdown,
-            introJsonText: '',
-          },
+        onError('')
+        markAiJobVisualState(targetId, 'running')
+
+        try {
+          const hadExistingIntro = Boolean(draftForRun.header.introMarkdown.trim())
+          const markdown = await runSingleTargetGeneration({
+            targetId: getSingleTypeIntroTargetId(draftForRun),
+            currentContent: draftForRun.header.introMarkdown,
+            includeArticleContext: true,
+          })
+
+          if (draftRef.current?.draftId !== draftId) return
+
+          setDraft((current) => {
+            if (!current || current.draftId !== draftId) return current
+            return {
+              ...current,
+              header: {
+                ...current.header,
+                introMarkdown: markdown,
+                introJsonText: '',
+              },
+            }
+          })
+          setResult(hadExistingIntro ? 'Intro regenerated with AI.' : 'Intro written with AI.')
+        } catch (err) {
+          onError(err instanceof Error ? err.message : 'Failed to write intro with AI.')
+        } finally {
+          clearAiJobVisualState(targetId)
         }
-      })
-      setResult(draft.header.introMarkdown.trim() ? 'Intro regenerated with AI.' : 'Intro written with AI.')
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to write intro with AI.')
-    } finally {
-      setActiveAiTargetId(null)
-    }
-  }, [draft, onError, runSingleTargetGeneration, setDraft])
+      },
+    })
+  }, [clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, runSingleTargetGeneration, setDraft])
 
   const autoWriteItemBlurb = useCallback(async (itemId: string): Promise<void> => {
-    if (!draft) return
+    const currentDraft = draftRef.current
+    if (!currentDraft) return
 
-    const item = draft.items.find((entry) => entry.id === itemId)
-    if (!item) {
-      onError('Selected item was not found.')
-      return
-    }
-
+    const draftId = currentDraft.draftId
     const targetId = `${itemId}_blurb`
+
     onError('')
     setResult(null)
-    setActiveAiTargetId(targetId)
+    markAiJobVisualState(targetId, 'queued')
 
-    try {
-      const markdown = await runSingleTargetGeneration({
-        targetId,
-        currentContent: item.blurbMarkdown,
-        includeArticleContext: true,
-      })
+    enqueueAiWriteTask({
+      id: targetId,
+      run: async () => {
+        const draftForRun = draftRef.current
+        if (!draftForRun || draftForRun.draftId !== draftId) return
 
-      actions.updateItem(itemId, (current) => ({
-        ...current,
-        blurbMarkdown: markdown,
-        blurbJsonText: '',
-      }))
-      setResult(item.blurbMarkdown.trim() ? 'Item blurb regenerated with AI.' : 'Item blurb written with AI.')
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to write item blurb with AI.')
-    } finally {
-      setActiveAiTargetId(null)
-    }
-  }, [actions, draft, onError, runSingleTargetGeneration])
+        const item = draftForRun.items.find((entry) => entry.id === itemId)
+        if (!item) {
+          onError('Selected item was not found.')
+          return
+        }
+
+        onError('')
+        markAiJobVisualState(targetId, 'running')
+
+        try {
+          const hadExistingBlurb = Boolean(item.blurbMarkdown.trim())
+          const markdown = await runSingleTargetGeneration({
+            targetId,
+            currentContent: item.blurbMarkdown,
+            includeArticleContext: true,
+          })
+
+          if (draftRef.current?.draftId !== draftId) return
+
+          setDraft((current) => {
+            if (!current || current.draftId !== draftId) return current
+            return {
+              ...current,
+              items: current.items.map((currentItem) => (
+                currentItem.id === itemId
+                  ? {
+                      ...currentItem,
+                      blurbMarkdown: markdown,
+                      blurbJsonText: '',
+                    }
+                  : currentItem
+              )),
+            }
+          })
+          setResult(hadExistingBlurb ? 'Item blurb regenerated with AI.' : 'Item blurb written with AI.')
+        } catch (err) {
+          onError(err instanceof Error ? err.message : 'Failed to write item blurb with AI.')
+        } finally {
+          clearAiJobVisualState(targetId)
+        }
+      },
+    })
+  }, [clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, runSingleTargetGeneration, setDraft])
 
   const autoWriteEmptyFields = useCallback(async (): Promise<void> => {
-    if (!draft) return
+    const currentDraft = draftRef.current
+    if (!currentDraft) return
 
-    const targetIds = getSingleTypeAutoWriteTargetIds(draft, relatedItems)
-    if (targetIds.length < 1) {
-      onError('')
-      setResult('No empty intro or blurbs to auto write.')
-      return
-    }
+    const draftId = currentDraft.draftId
 
     onError('')
     setResult(null)
-    setIsAutoWritingEmptyFields(true)
+    markAiJobVisualState(AUTO_WRITE_EMPTY_FIELDS_JOB_ID, 'queued')
 
-    try {
-      const request = buildGenerationRequest({
-        targetIds,
-        skipExisting: true,
-        includeArticleContext: true,
-      })
-      const response = await generateListicleContentWithAi(request)
-      applyGeneratedListicleContent(response)
+    enqueueAiWriteTask({
+      id: AUTO_WRITE_EMPTY_FIELDS_JOB_ID,
+      run: async () => {
+        const draftForRun = draftRef.current
+        if (!draftForRun || draftForRun.draftId !== draftId) return
 
-      const generatedCount = Object.values(response.results)
-        .filter((entry) => entry.status === 'generated' && entry.markdown?.trim())
-        .length
-      const failedResult = Object.values(response.results).find((entry) => entry.status === 'error')
+        const targetIds = getSingleTypeAutoWriteTargetIds(draftForRun, relatedItemsRef.current)
 
-      if (generatedCount > 0) {
-        setResult(`Auto-wrote ${generatedCount} empty field${generatedCount === 1 ? '' : 's'}.`)
-      } else {
-        setResult('No empty intro or blurbs needed new AI copy.')
-      }
+        onError('')
+        markAiJobVisualState(AUTO_WRITE_EMPTY_FIELDS_JOB_ID, 'running')
 
-      if (failedResult) {
-        onError(
-          failedResult.error_message
-          || failedResult.validation_errors[0]
-          || 'One or more fields failed AI generation.',
-        )
-      }
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to auto write empty fields.')
-    } finally {
-      setIsAutoWritingEmptyFields(false)
-    }
-  }, [applyGeneratedListicleContent, buildGenerationRequest, draft, onError, relatedItems])
+        if (targetIds.length < 1) {
+          setResult('No empty intro or blurbs to auto write.')
+          return
+        }
+
+        try {
+          const request = buildGenerationRequest({
+            targetIds,
+            skipExisting: true,
+            includeArticleContext: true,
+          })
+          const response = await generateListicleContentWithAi(request)
+
+          if (draftRef.current?.draftId !== draftId) return
+
+          setDraft((current) => {
+            if (!current || current.draftId !== draftId) return current
+            return applySingleTypeListicleGeneratedContent(current, response)
+          })
+
+          const generatedCount = Object.values(response.results)
+            .filter((entry) => entry.status === 'generated' && entry.markdown?.trim())
+            .length
+          const failedResult = Object.values(response.results).find((entry) => entry.status === 'error')
+
+          if (generatedCount > 0) {
+            setResult(`Auto-wrote ${generatedCount} empty field${generatedCount === 1 ? '' : 's'}.`)
+          } else {
+            setResult('No empty intro or blurbs needed new AI copy.')
+          }
+
+          if (failedResult) {
+            onError(
+              failedResult.error_message
+              || failedResult.validation_errors[0]
+              || 'One or more fields failed AI generation.',
+            )
+          }
+        } catch (err) {
+          onError(err instanceof Error ? err.message : 'Failed to auto write empty fields.')
+        } finally {
+          clearAiJobVisualState(AUTO_WRITE_EMPTY_FIELDS_JOB_ID)
+        }
+      },
+    })
+  }, [buildGenerationRequest, clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, setDraft])
 
   const saveLocalDraft = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -587,6 +707,37 @@ export default function SingleTypeListicleBuilderPage() {
     )
   }
 
+  const introTargetId = getSingleTypeIntroTargetId(draft)
+  const introVisualState = aiJobVisualStateById[introTargetId]
+    ?? (activeAiWriteJobId === introTargetId ? 'running' : queuedAiWriteJobIds.includes(introTargetId) ? 'queued' : undefined)
+  const queuedIntroAiCount = introVisualState === 'queued'
+    ? Math.max(1, queuedAiWriteJobIds.filter((jobId) => jobId === introTargetId).length)
+    : 0
+
+  const queuedAiItemIds = Object.entries(aiJobVisualStateById)
+    .filter(([jobId, state]) => state === 'queued' && jobId.endsWith('_blurb'))
+    .map(([jobId]) => jobId.replace(/_blurb$/, ''))
+  const runningAiItemId = Object.entries(aiJobVisualStateById)
+    .find(([jobId, state]) => state === 'running' && jobId.endsWith('_blurb'))?.[0]
+    ?.replace(/_blurb$/, '')
+
+  const bulkVisualState = aiJobVisualStateById[AUTO_WRITE_EMPTY_FIELDS_JOB_ID]
+    ?? (activeAiWriteJobId === AUTO_WRITE_EMPTY_FIELDS_JOB_ID ? 'running' : queuedAiWriteJobIds.includes(AUTO_WRITE_EMPTY_FIELDS_JOB_ID) ? 'queued' : undefined)
+  const autoWriteEmptyFieldsQueueCount = bulkVisualState === 'queued'
+    ? Math.max(1, queuedAiWriteJobIds.filter((jobId) => jobId === AUTO_WRITE_EMPTY_FIELDS_JOB_ID).length)
+    : 0
+
+  const introAiStatus = introVisualState === 'running'
+    ? 'Waiting for AI response...'
+    : introVisualState === 'queued'
+      ? 'Queued. Waiting for earlier AI response...'
+      : null
+  const autoWriteEmptyFieldsStatus = bulkVisualState === 'running'
+    ? 'Waiting for AI response...'
+    : bulkVisualState === 'queued'
+      ? 'Queued. Waiting for earlier AI response...'
+      : null
+
   return (
     <div className="stl-page stl-single-type-page">
       <BuilderHero draft={draft} onDiscardLocalDraft={actions.handleDiscardLocalDraft} />
@@ -617,7 +768,9 @@ export default function SingleTypeListicleBuilderPage() {
               updateHeader={actions.updateHeader}
               onIntroAiAutoWrite={autoWriteIntro}
               onIntroAiRewrite={rewriteDraftBlockWithAi}
-              isIntroAiGenerating={activeAiTargetId === getSingleTypeIntroTargetId(draft)}
+              isIntroAiGenerating={activeAiWriteJobId === introTargetId}
+              introAiQueueCount={queuedIntroAiCount}
+              introAiStatus={introAiStatus}
               isLocked={isStep2Locked}
               onContinueStep2={actions.handleContinueStep2}
               onUpdateStep2={actions.handleUpdateStep2}
@@ -636,7 +789,8 @@ export default function SingleTypeListicleBuilderPage() {
               updateItem={actions.updateItem}
               onItemBlurbAiAutoWrite={autoWriteItemBlurb}
               onItemBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
-              activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
+              activeAiItemId={runningAiItemId ?? null}
+              queuedAiItemIds={queuedAiItemIds}
               isLocked={isStep3Locked}
               onContinueStep3={actions.handleContinueStep3}
               onUpdateStep3={actions.handleUpdateStep3}
@@ -668,7 +822,9 @@ export default function SingleTypeListicleBuilderPage() {
           editorModelName={draft.editorModelName}
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
-          isAutoWritingEmptyFields={isAutoWritingEmptyFields}
+          isAutoWritingEmptyFields={bulkVisualState === 'running'}
+          autoWriteEmptyFieldsQueueCount={autoWriteEmptyFieldsQueueCount}
+          autoWriteEmptyFieldsStatus={autoWriteEmptyFieldsStatus}
           canAutoWriteEmptyFields={isStep1Locked && isStep2Locked && getSingleTypeAutoWriteTargetIds(draft, relatedItems).length > 0}
           onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}

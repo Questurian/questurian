@@ -167,7 +167,7 @@ Create `.env.local` in the server root:
 
 ```env
 # Database (PostgreSQL)
-DATABASE_URL=postgresql://user:pass@localhost:5432/questura
+DATABASE_URI=postgresql://user:pass@localhost:5432/questura
 
 # Authentication
 JWT_SECRET=<random_32+_char_string>
@@ -194,6 +194,8 @@ BUNNY_STORAGE_ZONE_NAME=questurian
 # Frontend
 NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
 ```
+
+PostgreSQL must already be running on the configured host and port before `pnpm dev` starts. Payload can create the target database and push schema changes once it can reach a Postgres server, but it will exit immediately if nothing is listening at `DATABASE_URI`.
 
 ## Path Aliases
 
@@ -270,6 +272,11 @@ lsof -i :4000 | grep LISTEN | awk '{print $2}' | xargs kill -9
 ```bash
 pnpm generate:types  # Regenerate from collections
 ```
+
+**Postgres Connection Refused**
+- Check that `DATABASE_URI` points to a reachable Postgres server
+- Start PostgreSQL before running `pnpm dev`
+- If you are using a fresh local server, create the role/database from the URI or update the URI to match an existing role/database
 
 **Authentication Issues**
 - Check `.env.local` has `JWT_SECRET` or `PAYLOAD_SECRET`

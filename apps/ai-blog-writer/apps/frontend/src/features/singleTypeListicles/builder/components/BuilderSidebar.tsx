@@ -3,6 +3,7 @@ import type { EditorAssistModelName } from '../../../staging/api'
 import type { SingleTypeListicleDraft } from '../../types'
 import { isSeoCoreComplete } from '../validators/submit.validators'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
+import { AiJobButtonContent } from './AiJobButtonContent'
 
 type BuilderSidebarProps = {
   draft: SingleTypeListicleDraft
@@ -14,6 +15,8 @@ type BuilderSidebarProps = {
   onEditorModelChange: (modelName: string) => void
   isSaving: boolean
   isAutoWritingEmptyFields: boolean
+  autoWriteEmptyFieldsQueueCount: number
+  autoWriteEmptyFieldsStatus: string | null
   canAutoWriteEmptyFields: boolean
   onAutoWriteEmptyFields: () => Promise<void>
   onSaveLocalDraft: () => Promise<void>
@@ -30,6 +33,8 @@ export function BuilderSidebar({
   onEditorModelChange,
   isSaving,
   isAutoWritingEmptyFields,
+  autoWriteEmptyFieldsQueueCount,
+  autoWriteEmptyFieldsStatus,
   canAutoWriteEmptyFields,
   onAutoWriteEmptyFields,
   onSaveLocalDraft,
@@ -41,6 +46,13 @@ export function BuilderSidebar({
   const isStep1Locked = draft.step1_complete && !draft.in_update_mode
   const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
   const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
+  const autoWriteEmptyFieldsButtonClassName = [
+    'stl-btn',
+    'stl-btn-secondary',
+    'stl-btn-ai-state',
+    isAutoWritingEmptyFields ? 'stl-btn-ai-active' : '',
+    !isAutoWritingEmptyFields && autoWriteEmptyFieldsQueueCount > 0 ? 'stl-btn-ai-queued' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <aside className="stl-builder-sidebar">
@@ -90,12 +102,23 @@ export function BuilderSidebar({
         <div className="stl-summary-actions">
           <button
             type="button"
-            className="stl-btn stl-btn-secondary"
+            className={autoWriteEmptyFieldsButtonClassName}
             onClick={() => void onAutoWriteEmptyFields()}
             disabled={isSaving || isAutoWritingEmptyFields || !canAutoWriteEmptyFields}
           >
-            {isAutoWritingEmptyFields ? 'Writing Empty Fields...' : 'Auto Write Empty Fields'}
+            <AiJobButtonContent
+              isRunning={isAutoWritingEmptyFields}
+              isQueued={autoWriteEmptyFieldsQueueCount > 0}
+              runningLabel="Writing Empty Fields..."
+              queuedLabel={`Empty Fields Queued${autoWriteEmptyFieldsQueueCount > 1 ? ` (${autoWriteEmptyFieldsQueueCount})` : ''}`}
+              idleLabel="Auto Write Empty Fields"
+            />
           </button>
+          {autoWriteEmptyFieldsStatus ? (
+            <p className="stl-ai-job-note" role="status" aria-live="polite">
+              {autoWriteEmptyFieldsStatus}
+            </p>
+          ) : null}
           <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={isSaving}>
             Save Local Draft
           </button>

@@ -100,7 +100,14 @@ function buildRelatedItem(): RelatedItemOption {
   }
 }
 
-function renderPanel(draft: SingleTypeListicleDraft, relatedItems: RelatedItemOption[]) {
+function renderPanel(
+  draft: SingleTypeListicleDraft,
+  relatedItems: RelatedItemOption[],
+  options?: {
+    activeAiItemId?: string | null
+    queuedAiItemIds?: string[]
+  },
+) {
   return render(
     <BuilderItemsPanel
       draft={draft}
@@ -111,7 +118,8 @@ function renderPanel(draft: SingleTypeListicleDraft, relatedItems: RelatedItemOp
       updateItem={vi.fn()}
       onItemBlurbAiAutoWrite={vi.fn(async () => {})}
       onItemBlurbAiRewrite={vi.fn(async (_itemId: string, input: { currentContent: string }) => input.currentContent)}
-      activeAiItemId={null}
+      activeAiItemId={options?.activeAiItemId ?? null}
+      queuedAiItemIds={options?.queuedAiItemIds ?? []}
       isLocked={false}
       onContinueStep3={vi.fn()}
       onUpdateStep3={vi.fn()}
@@ -139,5 +147,13 @@ describe('BuilderItemsPanel', () => {
     renderPanel(buildDraft('dining'), [buildRelatedItem()])
 
     expect(screen.getByText('Auto Write')).toBeInTheDocument()
+  })
+
+  it('shows an inline waiting status while an item blurb is generating', () => {
+    renderPanel(buildDraft('dining'), [buildRelatedItem()], {
+      activeAiItemId: 'item-1',
+    })
+
+    expect(screen.getByText('Waiting for AI response...')).toBeInTheDocument()
   })
 })

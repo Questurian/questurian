@@ -5,6 +5,7 @@ import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/ap
 import type { MediaAsset } from '../../../staging/api/payload/payload.types'
 import type { MediaAssetOption, SingleTypeListicleDraft } from '../../types'
 import { resolveImageUrl } from '../utils/item-media.utils'
+import { AiJobButtonContent } from './AiJobButtonContent'
 
 type AiRewriteInput = {
   blockId: string
@@ -22,6 +23,8 @@ type BuilderHeaderPanelProps = {
   onIntroAiAutoWrite: () => Promise<void>
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
   isIntroAiGenerating: boolean
+  introAiQueueCount: number
+  introAiStatus: string | null
   isLocked: boolean
   onContinueStep2: () => void
   onUpdateStep2: () => void
@@ -38,6 +41,8 @@ export function BuilderHeaderPanel({
   onIntroAiAutoWrite,
   onIntroAiRewrite,
   isIntroAiGenerating,
+  introAiQueueCount,
+  introAiStatus,
   isLocked,
   onContinueStep2,
   onUpdateStep2,
@@ -115,6 +120,15 @@ export function BuilderHeaderPanel({
     : 'Select Featured Image...'
   const headerPreviewTitle = draft.title.trim() || 'Your article headline will appear here'
   const isPlaceholder = !featuredImageId
+  const introAiState = isIntroAiGenerating ? 'running' : introAiQueueCount > 0 ? 'queued' : 'idle'
+  const introAiButtonClassName = [
+    'stl-btn',
+    'stl-btn-secondary',
+    'stl-btn-ai-state',
+    'stl-btn-ai-inline',
+    introAiState === 'running' ? 'stl-btn-ai-active' : '',
+    introAiState === 'queued' ? 'stl-btn-ai-queued' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <section className="stl-panel">
@@ -183,39 +197,51 @@ export function BuilderHeaderPanel({
         </div>
 
         <label className="stl-field">
-          <div className="stl-field-label-row">
+          <div className="stl-field-label-row stl-ai-field-label-row">
             <span>Intro *</span>
-            <div className="stl-inline-actions">
+            <div className="stl-inline-actions stl-ai-field-actions">
               <button
                 type="button"
-                className="stl-btn stl-btn-secondary"
+                className={introAiButtonClassName}
                 onClick={() => void onIntroAiAutoWrite()}
                 disabled={isIntroAiGenerating}
               >
-                {isIntroAiGenerating
-                  ? 'Writing...'
-                  : draft.header.introMarkdown.trim()
-                    ? 'Regenerate'
-                    : 'Auto Write'}
+                <AiJobButtonContent
+                  isRunning={isIntroAiGenerating}
+                  isQueued={introAiQueueCount > 0}
+                  runningLabel="Writing..."
+                  queuedLabel={`Queued${introAiQueueCount > 1 ? ` (${introAiQueueCount})` : ''}`}
+                  idleLabel={draft.header.introMarkdown.trim() ? 'Regenerate' : 'Auto Write'}
+                />
               </button>
             </div>
           </div>
-          <MarkdownBlockEditor
-            blockId={`${draft.draftId}_header_intro`}
-            value={draft.header.introMarkdown}
-            onChange={(nextValue) =>
-              updateHeader({
-                introMarkdown: nextValue,
-                introJsonText: '',
-              })
-            }
-            showToolbar
-            enforceHeadingStructure={false}
-            onAiRewrite={onIntroAiRewrite}
-            placeholder="Write the listicle intro..."
-            className="stl-markdown-textarea"
-            rows={6}
-          />
+          <div className={`stl-ai-editor-shell stl-ai-editor-shell--${introAiState}`}>
+            {introAiState !== 'idle' ? (
+              <div className="stl-ai-editor-indicator" role="status" aria-live="polite">
+                <span className="stl-ai-editor-indicator-pill">
+                  <span className="stl-ai-editor-spinner" aria-hidden="true" />
+                  <span>{introAiStatus}</span>
+                </span>
+              </div>
+            ) : null}
+            <MarkdownBlockEditor
+              blockId={`${draft.draftId}_header_intro`}
+              value={draft.header.introMarkdown}
+              onChange={(nextValue) =>
+                updateHeader({
+                  introMarkdown: nextValue,
+                  introJsonText: '',
+                })
+              }
+              showToolbar
+              enforceHeadingStructure={false}
+              onAiRewrite={onIntroAiRewrite}
+              placeholder="Write the listicle intro..."
+              className="stl-markdown-textarea"
+              rows={6}
+            />
+          </div>
         </label>
         {!draft.header.introMarkdown.trim() && draft.header.introJsonText?.trim() ? (
           <p className="stl-legacy-note">

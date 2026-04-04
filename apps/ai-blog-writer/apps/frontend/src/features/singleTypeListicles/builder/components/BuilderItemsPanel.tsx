@@ -15,6 +15,7 @@ import {
 import { InstagramPickerModal } from './InstagramPickerModal'
 import { PhotoPickerModal } from './PhotoPickerModal'
 import { RelatedItemPickerModal } from './RelatedItemPickerModal'
+import { AiJobButtonContent } from './AiJobButtonContent'
 
 type AiRewriteInput = {
   blockId: string
@@ -33,6 +34,7 @@ type BuilderItemsPanelProps = {
   onItemBlurbAiAutoWrite: (itemId: string) => Promise<void>
   onItemBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
   activeAiItemId: string | null
+  queuedAiItemIds: string[]
   isLocked: boolean
   onContinueStep3: () => void
   onUpdateStep3: () => void
@@ -84,6 +86,7 @@ export function BuilderItemsPanel({
   onItemBlurbAiAutoWrite,
   onItemBlurbAiRewrite,
   activeAiItemId,
+  queuedAiItemIds,
   isLocked,
   onContinueStep3,
   onUpdateStep3,
@@ -256,6 +259,25 @@ export function BuilderItemsPanel({
             Math.max(photoPreviewCount - 1, 0),
           )
           const activePhotoPreview = selectedPhotoPreviews[activePhotoPreviewIndex]
+          const queuedAiCount = queuedAiItemIds.filter((queuedItemId) => queuedItemId === item.id).length
+          const aiStatusLabel = activeAiItemId === item.id
+            ? 'Waiting for AI response...'
+            : queuedAiCount > 0
+              ? 'Queued. Waiting for earlier AI response...'
+              : null
+          const aiState = activeAiItemId === item.id
+            ? 'running'
+            : queuedAiCount > 0
+              ? 'queued'
+              : 'idle'
+          const aiButtonClassName = [
+            'stl-btn',
+            'stl-btn-secondary',
+            'stl-btn-ai-state',
+            'stl-btn-ai-inline',
+            aiState === 'running' ? 'stl-btn-ai-active' : '',
+            aiState === 'queued' ? 'stl-btn-ai-queued' : '',
+          ].filter(Boolean).join(' ')
 
           return (
             <article key={item.id} className="stl-item-card">
@@ -525,40 +547,52 @@ export function BuilderItemsPanel({
               {selectedRelatedItem ? (
                 <>
                   <label className="stl-field">
-                    <div className="stl-field-label-row">
+                    <div className="stl-field-label-row stl-ai-field-label-row">
                       <span>Blurb *</span>
-                      <div className="stl-inline-actions">
+                      <div className="stl-inline-actions stl-ai-field-actions">
                         <button
                           type="button"
-                          className="stl-btn stl-btn-secondary"
+                          className={aiButtonClassName}
                           onClick={() => void onItemBlurbAiAutoWrite(item.id)}
                           disabled={activeAiItemId === item.id}
                         >
-                          {activeAiItemId === item.id
-                            ? 'Writing...'
-                            : item.blurbMarkdown.trim()
-                              ? 'Regenerate'
-                              : 'Auto Write'}
+                          <AiJobButtonContent
+                            isRunning={activeAiItemId === item.id}
+                            isQueued={queuedAiCount > 0}
+                            runningLabel="Writing..."
+                            queuedLabel={`Queued${queuedAiCount > 1 ? ` (${queuedAiCount})` : ''}`}
+                            idleLabel={item.blurbMarkdown.trim() ? 'Regenerate' : 'Auto Write'}
+                          />
                         </button>
                       </div>
                     </div>
-                    <MarkdownBlockEditor
-                      blockId={`${item.id}_blurb`}
-                      value={item.blurbMarkdown}
-                      onChange={(nextValue) =>
-                        updateItem(item.id, (current) => ({
-                          ...current,
-                          blurbMarkdown: nextValue,
-                          blurbJsonText: '',
-                        }))
-                      }
-                      showToolbar
-                      enforceHeadingStructure={false}
-                      onAiRewrite={(input) => onItemBlurbAiRewrite(item.id, input)}
-                      placeholder="Write why this item made the list..."
-                      className="stl-markdown-textarea"
-                      rows={5}
-                    />
+                    <div className={`stl-ai-editor-shell stl-ai-editor-shell--${aiState}`}>
+                      {aiState !== 'idle' && aiStatusLabel ? (
+                        <div className="stl-ai-editor-indicator" role="status" aria-live="polite">
+                          <span className="stl-ai-editor-indicator-pill">
+                            <span className="stl-ai-editor-spinner" aria-hidden="true" />
+                            <span>{aiStatusLabel}</span>
+                          </span>
+                        </div>
+                      ) : null}
+                      <MarkdownBlockEditor
+                        blockId={`${item.id}_blurb`}
+                        value={item.blurbMarkdown}
+                        onChange={(nextValue) =>
+                          updateItem(item.id, (current) => ({
+                            ...current,
+                            blurbMarkdown: nextValue,
+                            blurbJsonText: '',
+                          }))
+                        }
+                        showToolbar
+                        enforceHeadingStructure={false}
+                        onAiRewrite={(input) => onItemBlurbAiRewrite(item.id, input)}
+                        placeholder="Write why this item made the list..."
+                        className="stl-markdown-textarea"
+                        rows={5}
+                      />
+                    </div>
                   </label>
                   {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
                     <p className="stl-legacy-note">
