@@ -5,6 +5,7 @@ import {
   getPrompt2BlogDebug,
   getPrompt2BlogGuidelinePreview,
   getPrompt2BlogInputOptions,
+  type Prompt2BlogArticleTypeOption,
   getPrompt2BlogResult,
   getPrompt2BlogStatus,
   startPrompt2BlogRun,
@@ -138,6 +139,19 @@ type PipelineLogEntry = {
   message: string
 }
 
+type Prompt2BlogCleanupStat = {
+  inputChars: number
+  outputChars: number
+  removedLines: number
+}
+
+type Prompt2BlogCleanupStageData = {
+  sourceMaterialCount: number
+  cleanedSourcesCount: number
+  cleanupStats: Prompt2BlogCleanupStat[]
+  cleanedSources: string[]
+}
+
 const PIPELINE_STAGE_ORDER = [
   'queued',
   'stage_input_validate',
@@ -170,6 +184,48 @@ const PIPELINE_STAGE_LABELS: Record<string, string> = {
   stage_title: 'Generate final title',
   stage_finalize: 'Finalize markdown output',
   complete: 'Complete',
+}
+
+const CLEANUP_STAGE_KEY = 'stage_input_cleanup'
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, unknown>
+}
+
+function readNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
+function readCleanupStageData(
+  stages: Record<string, unknown> | null | undefined,
+): Prompt2BlogCleanupStageData | null {
+  const stagePayload = asRecord(stages?.[CLEANUP_STAGE_KEY])
+  const data = asRecord(stagePayload?.data)
+  if (!data) return null
+
+  const cleanupStats = Array.isArray(data.cleanup_stats)
+    ? data.cleanup_stats.map((entry) => {
+        const record = asRecord(entry)
+        return {
+          inputChars: readNumber(record?.input_chars),
+          outputChars: readNumber(record?.output_chars),
+          removedLines: readNumber(record?.removed_lines),
+        }
+      })
+    : []
+
+  return {
+    sourceMaterialCount: readNumber(data.source_material_count),
+    cleanedSourcesCount: readNumber(data.cleaned_sources_count),
+    cleanupStats,
+    cleanedSources: readStringArray(data.cleaned_sources),
+  }
 }
 
 function getPipelineStepStatus(
@@ -216,6 +272,125 @@ function findDefaultOption(options: Prompt2BlogInputOption[]): string {
   return options[0]?.id || ''
 }
 
+const ARTICLE_TYPE_GROUPS: Array<{
+  label: string
+  names: string[]
+}> = [
+  {
+    label: 'Travel Planning',
+    names: [
+      'Destination Guide',
+      'Itinerary Article',
+      'Where to Stay Guide',
+      'When to Visit Article',
+      'Hidden Gems Article',
+      'Best Of',
+      'Listicle',
+      'Roundup',
+    ],
+  },
+  {
+    label: 'Traveler Profiles',
+    names: [
+      'Budget Travel Guide',
+      'Luxury Travel Guide',
+      'Solo Travel Guide',
+      'Family Travel Guide',
+      'Digital Nomad Guide',
+      'Food Travel Guide',
+      'Adventure Guide',
+      'Travel Inspiration Piece',
+    ],
+  },
+  {
+    label: 'Logistics & Practical',
+    names: [
+      'Transportation Guide',
+      'Packing Guide',
+      'Visa & Entry Guide',
+      'Safety Guide',
+      'Cultural Etiquette Guide',
+      'Checklist',
+      'Cost Breakdown',
+      'Resource List',
+    ],
+  },
+  {
+    label: 'Editorial Formats',
+    names: [
+      'Explainer',
+      'Beginner\'s Guide',
+      'FAQ Article',
+      'How-to Guides',
+      'Comparison Article',
+      'Review',
+      'Myth-Busting Article',
+      'Feature Story',
+      'Travel Diary',
+      'In-depth Analysis',
+      'Opinion Piece',
+      'Interview',
+      'Case Study',
+      'News Article',
+      'Disqualifiers',
+      'Buyer\'s Guide',
+      'Survival Guide',
+    ],
+  },
+]
+
+const ARTICLE_TYPE_QUICK_PICK_NAMES = [
+  'Destination Guide',
+  'Itinerary Article',
+  'Hidden Gems Article',
+  'Food Travel Guide',
+  'Adventure Guide',
+  'Family Travel Guide',
+  'Solo Travel Guide',
+  'Budget Travel Guide',
+  'Luxury Travel Guide',
+  'Where to Stay Guide',
+]
+
+function buildGroupedArticleTypes(articleTypes: Prompt2BlogArticleTypeOption[]) {
+  const optionsByName = new Map(articleTypes.map((option) => [option.name, option]))
+  const groupedNames = new Set<string>()
+
+  const groups = ARTICLE_TYPE_GROUPS.map((group) => {
+    const options = group.names
+      .map((name) => optionsByName.get(name) || null)
+      .filter((option): option is Prompt2BlogArticleTypeOption => Boolean(option))
+
+    options.forEach((option) => groupedNames.add(option.name))
+
+    return {
+      label: group.label,
+      options,
+    }
+  }).filter((group) => group.options.length > 0)
+
+  const remaining = articleTypes
+    .filter((option) => !groupedNames.has(option.name))
+    .sort((left, right) => left.name.localeCompare(right.name))
+
+  if (remaining.length > 0) {
+    groups.push({
+      label: 'More Formats',
+      options: remaining,
+    })
+  }
+
+  return groups
+}
+
+function getArticleTypeQuickPicks(articleTypes: Prompt2BlogArticleTypeOption[]) {
+  const optionsByName = new Map(articleTypes.map((option) => [option.name, option]))
+
+  return ARTICLE_TYPE_QUICK_PICK_NAMES
+    .map((name) => optionsByName.get(name) || null)
+    .filter((option): option is Prompt2BlogArticleTypeOption => Boolean(option))
+}
+
 export default function Prompt2BlogPage() {
   const saved = useRef(loadSavedState())
   const savedRun = useRef(loadSavedRunState())
@@ -246,6 +421,19 @@ export default function Prompt2BlogPage() {
   const [guidelinePreview, setGuidelinePreview] =
     useState<Prompt2BlogGuidelinePreviewResponse | null>(null)
   const [guidelineLoading, setGuidelineLoading] = useState(false)
+  const articleTypeOptions = inputOptions?.article_types ?? []
+  const groupedArticleTypeOptions = useMemo(
+    () => buildGroupedArticleTypes(articleTypeOptions),
+    [articleTypeOptions],
+  )
+  const articleTypeQuickPicks = useMemo(
+    () => getArticleTypeQuickPicks(articleTypeOptions),
+    [articleTypeOptions],
+  )
+  const selectedArticleType = useMemo(
+    () => articleTypeOptions.find((option) => option.id === articleTypeId) || null,
+    [articleTypeId, articleTypeOptions],
+  )
 
   useEffect(() => {
     const state: P2BFormState = {
@@ -377,6 +565,9 @@ export default function Prompt2BlogPage() {
   const [pipelineDebugData, setPipelineDebugData] = useState<Record<string, unknown> | null>(null)
   const [pipelineLogs, setPipelineLogs] = useState<PipelineLogEntry[]>([])
   const [showPipelineDebug, setShowPipelineDebug] = useState(false)
+  const [showCleanupModal, setShowCleanupModal] = useState(false)
+  const [cleanupModalLoading, setCleanupModalLoading] = useState(false)
+  const [cleanupModalError, setCleanupModalError] = useState<string | null>(null)
   const lastObservedStageRef = useRef<string | null>(null)
   const resumedRunLoggedRef = useRef(false)
 
@@ -384,6 +575,20 @@ export default function Prompt2BlogPage() {
   const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const cleanupStageData = useMemo(
+    () => readCleanupStageData(pipelineDebugData),
+    [pipelineDebugData],
+  )
+  const cleanupStageIndex = PIPELINE_STAGE_ORDER.indexOf(CLEANUP_STAGE_KEY)
+  const currentPipelineStageIndex = pipelineStatus
+    ? PIPELINE_STAGE_ORDER.indexOf((pipelineStatus.stage || 'queued') as (typeof PIPELINE_STAGE_ORDER)[number])
+    : -1
+  const canOpenCleanupModal = Boolean(
+    pipelineRunId && (
+      sourceStep === 'pipeline_complete'
+      || currentPipelineStageIndex >= cleanupStageIndex
+    ),
+  )
 
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
     setPipelineLogs(prev => [
@@ -514,6 +719,9 @@ export default function Prompt2BlogPage() {
     setPipelineDebugData(null)
     setPipelineLogs([])
     setShowPipelineDebug(false)
+    setShowCleanupModal(false)
+    setCleanupModalLoading(false)
+    setCleanupModalError(null)
     setIsLoading(false)
     setLoadingLabel('')
     setError(null)
@@ -658,6 +866,51 @@ export default function Prompt2BlogPage() {
     }
   }, [appendPipelineLog, loadingLabel, pipelineRunId, sourceStep])
 
+  useEffect(() => {
+    if (!showCleanupModal) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowCleanupModal(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showCleanupModal])
+
+  const handleOpenCleanupModal = useCallback(async () => {
+    if (!pipelineRunId) return
+
+    setShowCleanupModal(true)
+    setCleanupModalError(null)
+
+    if (cleanupStageData) {
+      return
+    }
+
+    setCleanupModalLoading(true)
+    try {
+      const debugPayload = await getPrompt2BlogDebug(pipelineRunId)
+      if (debugPayload?.stages) {
+        setPipelineDebugData(debugPayload.stages)
+        if (!readCleanupStageData(debugPayload.stages)) {
+          setCleanupModalError('Cleanup stage data is not available for this run yet.')
+        }
+      } else {
+        setCleanupModalError('Cleanup stage data is not available for this run yet.')
+      }
+    } catch (err) {
+      setCleanupModalError(err instanceof Error ? err.message : 'Failed to load cleanup details.')
+    } finally {
+      setCleanupModalLoading(false)
+    }
+  }, [cleanupStageData, pipelineRunId])
+
+  const handleCloseCleanupModal = useCallback(() => {
+    setShowCleanupModal(false)
+  }, [])
+
   return (
     <div className="p2b-page">
       <header className="p2b-hero">
@@ -704,12 +957,42 @@ export default function Prompt2BlogPage() {
                   onChange={(event) => setArticleTypeId(event.target.value ? Number(event.target.value) : null)}
                 >
                   <option value="">Select article type</option>
-                  {(inputOptions?.article_types || []).map(option => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
+                  {groupedArticleTypeOptions.map((group) => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.options.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
+                {articleTypeQuickPicks.length > 0 ? (
+                  <div className="p2b-type-picker-meta">
+                    <span className="p2b-type-picker-label">Travel quick picks</span>
+                    <div className="p2b-type-chip-row" role="group" aria-label="Travel quick picks">
+                      {articleTypeQuickPicks.map((option) => {
+                        const isActive = articleTypeId === option.id
+
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            className={`p2b-type-chip${isActive ? ' is-active' : ''}`}
+                            onClick={() => setArticleTypeId(option.id)}
+                          >
+                            {option.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+                <p className={`p2b-field-hint${selectedArticleType ? ' is-selected' : ''}`}>
+                  {selectedArticleType
+                    ? selectedArticleType.definition
+                    : 'Choose from travel-first groups or use a quick pick for common trip formats.'}
+                </p>
               </div>
 
               <div className="p2b-field">
@@ -985,6 +1268,24 @@ export default function Prompt2BlogPage() {
               <div className="p2b-progress-grid">
                 {PIPELINE_STAGE_ORDER.map((step) => {
                   const status = getPipelineStepStatus(step, pipelineStatus)
+                  const isCleanupStep = step === CLEANUP_STAGE_KEY
+
+                  if (isCleanupStep && canOpenCleanupModal) {
+                    return (
+                      <button
+                        key={step}
+                        type="button"
+                        className={`p2b-progress-item p2b-progress-item--${status} p2b-progress-item--interactive`}
+                        onClick={() => void handleOpenCleanupModal()}
+                        aria-label="View clean source material details"
+                      >
+                        <strong>{PIPELINE_STAGE_LABELS[step] || step}</strong>
+                        <span>{status}</span>
+                        <small>View details</small>
+                      </button>
+                    )
+                  }
+
                   return (
                     <div key={step} className={`p2b-progress-item p2b-progress-item--${status}`}>
                       <strong>{PIPELINE_STAGE_LABELS[step] || step}</strong>
@@ -1080,6 +1381,94 @@ export default function Prompt2BlogPage() {
           </div>
         </form>
       </main>
+
+      {showCleanupModal && (
+        <div
+          className="p2b-modal-overlay"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              handleCloseCleanupModal()
+            }
+          }}
+        >
+          <div className="p2b-modal" role="dialog" aria-modal="true" aria-label="Clean source material details">
+            <div className="p2b-modal__header">
+              <div>
+                <p className="p2b-modal__eyebrow">Local Cleanup Stage</p>
+                <h3>Clean source material</h3>
+                <p className="p2b-modal__lede">
+                  This step is local code, not AI. It strips markup, removes common noise, and normalizes whitespace before synthesis.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="p2b-modal__close"
+                onClick={handleCloseCleanupModal}
+                aria-label="Close cleanup details"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p2b-modal__body">
+              {cleanupModalLoading ? (
+                <p className="p2b-modal__empty">Loading cleanup details...</p>
+              ) : cleanupModalError ? (
+                <p className="p2b-modal__error">{cleanupModalError}</p>
+              ) : cleanupStageData ? (
+                <>
+                  <div className="p2b-cleanup-summary">
+                    <div className="p2b-cleanup-summary__card">
+                      <span>Sources submitted</span>
+                      <strong>{cleanupStageData.sourceMaterialCount}</strong>
+                    </div>
+                    <div className="p2b-cleanup-summary__card">
+                      <span>Sources kept</span>
+                      <strong>{cleanupStageData.cleanedSourcesCount}</strong>
+                    </div>
+                    <div className="p2b-cleanup-summary__card">
+                      <span>Debug payload</span>
+                      <strong>{cleanupStageData.cleanedSources.length > 0 ? 'Text available' : 'Stats only'}</strong>
+                    </div>
+                  </div>
+
+                  <div className="p2b-cleanup-source-list">
+                    {cleanupStageData.cleanupStats.map((stats, index) => {
+                      const cleanedSource = cleanupStageData.cleanedSources[index] || ''
+
+                      return (
+                        <section key={`cleanup-source-${index}`} className="p2b-cleanup-source-card">
+                          <div className="p2b-cleanup-source-card__header">
+                            <div>
+                              <h4>Source {index + 1}</h4>
+                              <p>{stats.outputChars.toLocaleString()} chars after cleanup</p>
+                            </div>
+                            <div className="p2b-cleanup-stats">
+                              <span>Input: {stats.inputChars.toLocaleString()}</span>
+                              <span>Output: {stats.outputChars.toLocaleString()}</span>
+                              <span>Removed lines: {stats.removedLines.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <div className="p2b-cleanup-source-card__body">
+                            {cleanedSource ? (
+                              <pre>{cleanedSource}</pre>
+                            ) : (
+                              <p className="p2b-modal__empty">No cleaned text was stored for this source.</p>
+                            )}
+                          </div>
+                        </section>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <p className="p2b-modal__empty">Cleanup stage data is not available for this run yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

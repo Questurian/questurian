@@ -6,6 +6,7 @@ export type {
 } from './types/article-types.types'
 export type { Prompt2BlogSavedArticle, Prompt2BlogSyncStatusResponse } from './types/articles.types'
 export type {
+  Prompt2BlogArticleTypeOption,
   Prompt2BlogDebugResponse,
   Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOption,

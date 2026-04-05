@@ -29,6 +29,68 @@ function renderPage() {
   )
 }
 
+function createStoredPipelineResult() {
+  return {
+    message: 'Prompt2Blog pipeline v2 queued',
+    run_id: 'run-123',
+    pipeline_status: 'ready_for_staging',
+    article_type: {
+      id: 7,
+      name: 'Destination Guide',
+      definition: 'Comprehensive overview of a place for trip planning.',
+    },
+    guideline_meta: {
+      guideline: 'Lead with practical value.',
+      title_guideline: 'Keep titles clear and useful.',
+    },
+    improved_article: {
+      title: 'Sample destination guide',
+      content: 'Body content',
+    },
+    final_markdown: 'Sample destination guide',
+    quality_review: {
+      alignment_summary: 'Aligned',
+      improvements_applied: [],
+      remaining_gaps: [],
+      quality_summary: 'Strong result',
+      quality_scores: {
+        overall: 90,
+        guideline_coverage: 90,
+        informativeness: 90,
+        originality: 90,
+        brief_adherence: 90,
+        seo: 90,
+      },
+      constraint_checks: {
+        target_word_count_met: true,
+        paragraph_length_met: true,
+        cta_present: true,
+        primary_keyword_present: true,
+        secondary_keywords_present: true,
+        audience_match: true,
+        tone_match: true,
+      },
+      word_count_estimate: 900,
+      repair_applied: false,
+      editorial_augmentation_applied: false,
+      editorial_components_added: [],
+      editorial_augmentation_summary: '',
+      editorial_diagnostic: {
+        cognitive_load: 'strong',
+        narrative_density: 'strong',
+        emphasis_clarity: 'strong',
+        reading_behavior_risk: 'weak',
+      },
+      coverage: {
+        coverage_sufficient: true,
+        analysis: 'Sufficient',
+        missing_sections: [],
+      },
+      model_used: 'gemini-2.5-flash-lite',
+    },
+  }
+}
+
 describe('Prompt2BlogPage', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -37,8 +99,18 @@ describe('Prompt2BlogPage', () => {
       article_types: [
         {
           id: 7,
-          name: 'Travel Guide',
-          definition: 'Explain a destination for trip planning.',
+          name: 'Destination Guide',
+          definition: 'Comprehensive overview of a place for trip planning.',
+        },
+        {
+          id: 9,
+          name: 'Itinerary Article',
+          definition: 'Day-by-day or stop-by-stop planning format.',
+        },
+        {
+          id: 11,
+          name: 'FAQ Article',
+          definition: 'Question-driven education answering common queries.',
         },
       ],
       tones: [{ id: 'balanced', label: 'Balanced' }],
@@ -52,11 +124,11 @@ describe('Prompt2BlogPage', () => {
     })
     getPrompt2BlogGuidelinePreviewMock.mockResolvedValue({
       id: 7,
-      name: 'Travel Guide',
+      name: 'Destination Guide',
       guideline: 'Lead with practical value.',
       title_guideline: 'Keep titles clear and useful.',
-      guideline_file: 'Travel Guide.md',
-      title_guideline_file: 'Travel Guide.md',
+      guideline_file: 'Destination Guide.md',
+      title_guideline_file: 'Destination Guide.md',
     })
     startPrompt2BlogRunMock.mockResolvedValue({
       message: 'Prompt2Blog full run queued',
@@ -137,5 +209,62 @@ describe('Prompt2BlogPage', () => {
         }),
       )
     })
+  })
+
+  it('lets users choose a travel quick pick and shows the selected definition', async () => {
+    renderPage()
+
+    const quickPick = await screen.findByRole('button', { name: 'Itinerary Article' })
+    fireEvent.click(quickPick)
+
+    expect(screen.getByLabelText('Article Type')).toHaveValue('9')
+    expect(screen.getByText('Day-by-day or stop-by-stop planning format.')).toBeInTheDocument()
+  })
+
+  it('opens cleanup details from the pipeline step', async () => {
+    localStorage.setItem('p2b-run-state', JSON.stringify({
+      sourceStep: 'pipeline_complete',
+      pipelineRunId: 'run-123',
+      pipelineResult: createStoredPipelineResult(),
+    }))
+
+    getPrompt2BlogDebugMock.mockResolvedValue({
+      run_id: 'run-123',
+      status: {
+        run_id: 'run-123',
+        feature: 'prompt2blog',
+        state: 'completed',
+        stage: 'complete',
+        error: null,
+        updated_at: '2026-03-17T09:00:00Z',
+      },
+      stages: {
+        stage_input_cleanup: {
+          created_at: '2026-03-17T09:00:00Z',
+          data: {
+            source_material_count: 2,
+            cleaned_sources_count: 2,
+            cleanup_stats: [
+              { input_chars: 120, output_chars: 100, removed_lines: 1 },
+              { input_chars: 80, output_chars: 76, removed_lines: 0 },
+            ],
+            cleaned_sources: [
+              'Cleaned source one.',
+              'Cleaned source two.',
+            ],
+          },
+        },
+      },
+      output: null,
+    })
+
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'View clean source material details' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Clean source material details' })).toBeInTheDocument()
+    expect(getPrompt2BlogDebugMock).toHaveBeenCalledWith('run-123')
+    expect(screen.getByText('Cleaned source one.')).toBeInTheDocument()
+    expect(screen.getByText('Input: 120')).toBeInTheDocument()
   })
 })

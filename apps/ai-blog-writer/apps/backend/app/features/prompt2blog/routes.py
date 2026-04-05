@@ -1905,6 +1905,7 @@ def _prepare_full_pipeline_request(
                 "source_material_count": len(source_material),
                 "cleaned_sources_count": len(cleaned_sources),
                 "cleanup_stats": cleanup_stats,
+                "cleaned_sources": cleaned_sources,
             },
         },
     )
