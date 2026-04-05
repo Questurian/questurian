@@ -10,7 +10,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from utils import get_vertex_llm, invoke_google_grounded_text
+from utils import get_vertex_llm
 from .graph import (
     run_editor_assist_generate_title_graph,
     run_editor_assist_listicle_generation_graph,
@@ -28,6 +28,14 @@ from .listicle_writer import (
 
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
 logger = logging.getLogger(__name__)
+
+
+def invoke_google_grounded_text(*args: Any, **kwargs: Any) -> Any:
+    """Import grounding lazily so route modules stay importable under light test stubs."""
+    from utils import invoke_google_grounded_text as _invoke_google_grounded_text
+
+    return _invoke_google_grounded_text(*args, **kwargs)
+
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
 MAX_PROMPT_CHARS = 10000

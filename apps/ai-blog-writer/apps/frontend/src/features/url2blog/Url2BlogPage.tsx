@@ -12,6 +12,7 @@ import {
   type Url2BlogStageTrace,
   type Url2BlogStatusResponse,
 } from './api'
+import { normalizeArticleUrlInput } from './urlInput'
 import './styles.css'
 
 type WizardStep = 'input' | 'processing' | 'complete'
@@ -424,6 +425,7 @@ function groupPipelineTrace(trace: Url2BlogStageTrace[]) {
 
 export default function Url2BlogPage() {
   const [url, setUrl] = useState('')
+  const [inputError, setInputError] = useState<string | null>(null)
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId] = useState('')
   const [customNarrativeFocus, setCustomNarrativeFocus] = useState('')
@@ -457,11 +459,15 @@ export default function Url2BlogPage() {
     return parts.join('\n\n')
   }, [selectedNarrativeFocusPreset, customNarrativeFocus])
 
-  const pipelineMutation = useMutation<Url2BlogPipelineV2Response, Error, string>({
-    mutationFn: async (runId: string) => {
+  const pipelineMutation = useMutation<
+    Url2BlogPipelineV2Response,
+    Error,
+    { runId: string; url: string }
+  >({
+    mutationFn: async ({ runId, url: normalizedUrl }) => {
       return runUrl2BlogPipelineV2({
         run_id: runId,
-        url: url.trim(),
+        url: normalizedUrl,
         include_debug: includeDebug,
         narrative_focus: narrativeFocus.trim() || undefined,
         model_name: modelName,
@@ -558,9 +564,15 @@ export default function Url2BlogPage() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!url.trim()) return
+    const normalizedUrl = normalizeArticleUrlInput(url)
+    if (!normalizedUrl) {
+      setInputError('Enter a valid article URL. Bare domains are fine; we will add https:// for you.')
+      return
+    }
     const runId = createRunId()
 
+    setInputError(null)
+    setUrl(normalizedUrl)
     setActiveRunId(runId)
     setRunSubmittedAt(Date.now())
     setResult(null)
@@ -568,7 +580,7 @@ export default function Url2BlogPage() {
     setShowRaw(false)
     setShowTrace(false)
     pipelineMutation.reset()
-    pipelineMutation.mutate(runId)
+    pipelineMutation.mutate({ runId, url: normalizedUrl })
   }
 
   const handleStartOver = () => {
@@ -635,13 +647,23 @@ export default function Url2BlogPage() {
                 <label htmlFor="article-url">Article URL</label>
                 <input
                   id="article-url"
-                  type="url"
+                  type="text"
+                  inputMode="url"
                   placeholder="https://example.com/article"
                   value={url}
-                  onChange={(event) => setUrl(event.target.value)}
+                  onChange={(event) => {
+                    setUrl(event.target.value)
+                    if (inputError) {
+                      setInputError(null)
+                    }
+                  }}
                   className="url2blog-url-field"
                   autoFocus
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
+                {inputError ? <p className="url2blog-error">{inputError}</p> : null}
               </div>
               <div className="url2blog-url-input">
                 <label htmlFor="narrative-focus-preset">Narrative / Audience Focus (Optional)</label>

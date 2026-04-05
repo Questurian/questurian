@@ -26,6 +26,7 @@ from .article_types import (
     get_article_type_title_guideline,
     ensure_article_types_table,
 )
+from .http_ssl import resolve_httpx_verify
 
 __all__ = [
     # Database
@@ -55,4 +56,6 @@ __all__ = [
     "get_article_type_guideline",
     "get_article_type_title_guideline",
     "ensure_article_types_table",
+    # HTTP/TLS
+    "resolve_httpx_verify",
 ]

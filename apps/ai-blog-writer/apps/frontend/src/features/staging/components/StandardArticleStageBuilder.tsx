@@ -601,12 +601,12 @@ export function StandardArticleStageBuilder({
                   <span>Trip Intent *</span>
                   <div className="sab-stage-trip-intent-options stl-trip-intent-options">
                     {TRIP_INTENT_OPTIONS.map((intent) => {
-                      const isChecked = selectedTripIntent.includes(intent)
+                      const isChecked = selectedTripIntent.includes(intent.value)
                       const isDisabled = isStep1Locked || (isChecked && selectedTripIntent.length === 1)
 
                       return (
                         <label
-                          key={intent}
+                          key={intent.value}
                           className={`stl-trip-intent-option${isChecked ? ' is-selected' : ''}${isDisabled ? ' is-disabled' : ''}`}
                         >
                           <input
@@ -614,10 +614,13 @@ export function StandardArticleStageBuilder({
                             type="checkbox"
                             checked={isChecked}
                             disabled={isDisabled}
-                            aria-label={`Trip intent ${intent}`}
-                            onChange={(event) => handleTripIntentToggle(intent, event.target.checked)}
+                            aria-label={`Trip intent ${intent.label}`}
+                            onChange={(event) => handleTripIntentToggle(intent.value, event.target.checked)}
                           />
-                          <span className="stl-trip-intent-label">{intent}</span>
+                          <span className="stl-trip-intent-copy">
+                            <span className="stl-trip-intent-label">{intent.label}</span>
+                            <span className="stl-trip-intent-description">{intent.description}</span>
+                          </span>
                         </label>
                       )
                     })}

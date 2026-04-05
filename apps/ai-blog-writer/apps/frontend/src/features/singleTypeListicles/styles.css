@@ -1427,12 +1427,13 @@
 .stl-trip-intent-options {
   display: grid;
   gap: 0.55rem;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
 .stl-trip-intent-option {
-  display: inline-flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
   gap: 0.65rem;
   padding: 0.72rem 0.82rem;
   border: 1px solid #d5dce8;
@@ -1442,7 +1443,7 @@
   font-size: 0.94rem;
   font-weight: 500;
   font-family: 'IBM Plex Sans', sans-serif;
-  min-height: 46px;
+  min-height: 74px;
   cursor: pointer;
   transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
 }
@@ -1463,12 +1464,28 @@
   height: 1rem;
   accent-color: #2f4f8f;
   margin: 0;
+  margin-top: 0.15rem;
   flex: 0 0 auto;
+}
+
+.stl-trip-intent-copy {
+  display: grid;
+  gap: 0.18rem;
 }
 
 .stl-trip-intent-label {
   line-height: 1.2;
-  text-transform: capitalize;
+}
+
+.stl-trip-intent-description {
+  color: #63738c;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.stl-trip-intent-option.is-selected .stl-trip-intent-description {
+  color: #4a6289;
 }
 
 .stl-trip-intent-option.is-disabled {

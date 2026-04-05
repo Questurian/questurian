@@ -94,7 +94,9 @@ def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypat
         max_tokens: int = 4096,
         temperature: float = 0.05,
         model_name: str | None = None,
+        allow_truncated_repair: bool = True,
     ):
+        del allow_truncated_repair
         if (
             "target article-type guideline" in prompt
             or "URL2Blog QUALITY AUDIT" in prompt
@@ -405,7 +407,9 @@ def test_pipeline_v2_falls_back_to_original_when_rewrite_fields_missing(
         max_tokens: int = 4096,
         temperature: float = 0.05,
         model_name: str | None = None,
+        allow_truncated_repair: bool = True,
     ):
+        del allow_truncated_repair
         if (
             "target article-type guideline" in prompt
             or "URL2Blog QUALITY AUDIT" in prompt
@@ -539,7 +543,9 @@ def test_pipeline_v2_lean_profile_skips_optional_heavy_stages(client, monkeypatc
         max_tokens: int = 4096,
         temperature: float = 0.05,
         model_name: str | None = None,
+        allow_truncated_repair: bool = True,
     ):
+        del allow_truncated_repair
         if "URL2Blog HARD REWRITE" in prompt:
             captured["second_pass_called"] = True
             return ({}, "{}")
@@ -737,7 +743,9 @@ def test_pipeline_v2_includes_debug_payload_only_when_requested(client, monkeypa
         max_tokens: int = 4096,
         temperature: float = 0.05,
         model_name: str | None = None,
+        allow_truncated_repair: bool = True,
     ):
+        del allow_truncated_repair
         if (
             "target article-type guideline" in prompt
             or "URL2Blog QUALITY AUDIT" in prompt
@@ -1229,7 +1237,9 @@ def test_editorial_augmentation_adds_official_label_inside_existing_block():
     assert "[!EDITORIAL-BLOCK-END|highlight_callout]" in sanitized["augmented_content"]
 
 
-def test_invoke_json_llm_tracks_parse_recovery(monkeypatch):
+def test_invoke_json_llm_tracks_parse_recovery_when_truncated_repair_is_disabled(
+    monkeypatch,
+):
     responses = iter(
         [
             (
@@ -1270,6 +1280,7 @@ def test_invoke_json_llm_tracks_parse_recovery(monkeypatch):
             max_tokens=256,
             temperature=0.1,
             model_name="gemini-2.5-flash",
+            allow_truncated_repair=False,
         )
 
     assert parsed["classification"] == "When to Visit Article"
@@ -1279,7 +1290,7 @@ def test_invoke_json_llm_tracks_parse_recovery(monkeypatch):
     assert metrics["failures_by_stage"]["unit_test_stage"] == 1
 
 
-def test_invoke_json_llm_disables_truncated_repair_by_default(monkeypatch):
+def test_invoke_json_llm_can_disable_truncated_repair(monkeypatch):
     responses = iter(
         [
             (
@@ -1322,6 +1333,7 @@ def test_invoke_json_llm_disables_truncated_repair_by_default(monkeypatch):
             max_tokens=256,
             temperature=0.1,
             model_name="gemini-2.5-flash",
+            allow_truncated_repair=False,
         )
 
     assert parsed["classification"] == "When to Visit Article"

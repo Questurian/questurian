@@ -28,11 +28,12 @@ from app.core import (
     get_article_type_by_id,
     get_article_type_by_name,
     read_article_type_name_definitions,
+    resolve_httpx_verify,
     write_artifact,
     write_stage_result,
     write_status,
 )
-from utils import get_vertex_llm, invoke_google_grounded_text
+from utils import get_vertex_llm
 from .graph import run_url2blog_pipeline_graph
 from .storage import (
     get_all_completed_articles,
@@ -88,6 +89,14 @@ URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN = 0.5
 _json_parse_tracking_ctx: contextvars.ContextVar[dict[str, Any] | None] = (
     contextvars.ContextVar("url2blog_json_parse_tracking", default=None)
 )
+
+
+def invoke_google_grounded_text(*args: Any, **kwargs: Any) -> Any:
+    """Import grounding lazily so route modules stay importable under light test stubs."""
+    from utils import invoke_google_grounded_text as _invoke_google_grounded_text
+
+    return _invoke_google_grounded_text(*args, **kwargs)
+
 
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
@@ -3369,6 +3378,7 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
         async with httpx.AsyncClient(
             follow_redirects=True,
             timeout=30.0,
+            verify=resolve_httpx_verify(),
             headers={
                 "User-Agent": "Mozilla/5.0 (compatible; Questurian/1.0)",
                 "Accept": "text/html,application/xhtml+xml",
@@ -6070,7 +6080,6 @@ def _pipeline_v2_run_editorial_post_recheck_phase(
     guideline_payload = _safe_dict(context.get("guideline_payload"))
     rewrite = _safe_dict(context.get("rewrite"))
     source_fact_anchors = list(context.get("source_fact_anchors") or [])
-    external_context_points = list(context.get("external_context_points") or [])
     external_context_for_prompt = _safe_str(
         context.get("external_context_for_prompt")
     ) or "No external context collected."
