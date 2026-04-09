@@ -318,6 +318,8 @@ export type RelatedItemOption = {
   title: string
   location?: string
   locationRef?: number | { id?: number } | null
+  latitude?: number | string | null
+  longitude?: number | string | null
   status?: string
   gallery?: Array<{
     image?: number | GalleryImageObject

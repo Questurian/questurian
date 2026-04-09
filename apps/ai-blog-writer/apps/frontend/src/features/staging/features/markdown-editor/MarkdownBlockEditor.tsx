@@ -21,6 +21,7 @@ export function MarkdownBlockEditor({
   className = 'block-textarea',
   rows = 6,
   placeholder = '',
+  ariaLabel,
 }: MarkdownBlockEditorProps) {
   const resetTransientRef = useRef<() => void>(() => {})
 
@@ -90,6 +91,7 @@ export function MarkdownBlockEditor({
         onInput={(event) => resizeTextareaToContent(event.currentTarget)}
         rows={rows}
         placeholder={placeholder}
+        aria-label={ariaLabel}
       />
     )
   }
@@ -136,6 +138,7 @@ export function MarkdownBlockEditor({
         editorRef={state.editorRef}
         isEditorEmpty={state.isEditorEmpty}
         placeholder={placeholder}
+        ariaLabel={ariaLabel}
         onInput={toolbar.syncEditorToMarkdown}
         onKeyDown={toolbar.handleEditorKeyDown}
       />

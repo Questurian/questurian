@@ -11,7 +11,24 @@ vi.mock('../../../../components/FeaturedImagePicker', () => ({
 }))
 
 vi.mock('../../../staging/features/markdown-editor', () => ({
-  MarkdownBlockEditor: () => null,
+  MarkdownBlockEditor: ({
+    value,
+    onChange,
+    placeholder,
+    ariaLabel,
+  }: {
+    value: string
+    onChange: (nextValue: string) => void
+    placeholder?: string
+    ariaLabel?: string
+  }) => (
+    <textarea
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+    />
+  ),
 }))
 
 vi.mock('./InstagramPickerModal', () => ({
@@ -26,14 +43,68 @@ vi.mock('./RelatedItemPickerModal', () => ({
   RelatedItemPickerModal: () => null,
 }))
 
-const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> = {
-  'itinerary-dining': [],
-  'itinerary-accommodations': [],
-  'itinerary-attractions': [],
-  'itinerary-nightlife': [],
-  'itinerary-key-location': [],
-  'itinerary-tour-agency': [],
+function buildRelatedByBlockType(
+  overrides: Partial<Record<ItineraryBlockType, RelatedItemOption[]>> = {},
+): Record<ItineraryBlockType, RelatedItemOption[]> {
+  return {
+    'itinerary-dining': [],
+    'itinerary-accommodations': [],
+    'itinerary-attractions': [],
+    'itinerary-nightlife': [],
+    'itinerary-key-location': [],
+    'itinerary-tour-agency': [],
+    ...overrides,
+  }
 }
+
+const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> = buildRelatedByBlockType()
+
+const diningItems: RelatedItemOption[] = [
+  {
+    id: 201,
+    title: 'Cafe Andino',
+    location: 'Peru > Cusco',
+    latitude: -13.531,
+    longitude: -71.972,
+  },
+  {
+    id: 102,
+    title: 'San Pedro Market',
+    location: 'Peru > Cusco',
+    latitude: '-13.522',
+    longitude: '-71.982',
+  },
+]
+
+const hotelItems: RelatedItemOption[] = [
+  {
+    id: 201,
+    title: 'Hotel Sol',
+    location: 'Peru > Cusco',
+    latitude: -13.518,
+    longitude: -71.974,
+  },
+]
+
+const attractionItems: RelatedItemOption[] = [
+  {
+    id: 301,
+    title: 'Sacsayhuaman',
+    location: 'Peru > Cusco',
+    latitude: -13.509,
+    longitude: -71.982,
+  },
+]
+
+const keyLocationItems: RelatedItemOption[] = [
+  {
+    id: 101,
+    title: 'Cusco Airport',
+    location: 'Peru > Cusco',
+    latitude: -13.535,
+    longitude: -71.943,
+  },
+]
 
 function buildManualTourAgencyItem(): ItineraryItemBlock {
   return {
@@ -79,8 +150,49 @@ function buildDraft(): ListicleItineraryDraft {
   return draft
 }
 
-function Harness() {
-  const [draft, setDraft] = useState<ListicleItineraryDraft>(buildDraft())
+function buildDraftWithKeyLocations(): ListicleItineraryDraft {
+  return {
+    ...buildDraft(),
+    items: [
+      {
+        ...buildManualTourAgencyItem(),
+        keyLocations: [
+          {
+            id: 'existing-restaurant-row',
+            source: 'existing',
+            relatedCollection: 'dining',
+            relatedItem: 201,
+            title: '',
+            latitude: '',
+            longitude: '',
+          },
+          {
+            id: 'manual-overlook-row',
+            source: 'manual',
+            relatedCollection: null,
+            relatedItem: null,
+            title: 'Manual overlook',
+            latitude: '-13.51',
+            longitude: '-71.97',
+          },
+        ],
+      },
+    ],
+  }
+}
+
+type HarnessProps = {
+  initialDraft?: ListicleItineraryDraft
+  relatedItems?: Record<ItineraryBlockType, RelatedItemOption[]>
+  onStopBlurbAiAutoWrite?: (itemId: string) => Promise<void>
+}
+
+function Harness({
+  initialDraft = buildDraft(),
+  relatedItems = relatedByBlockType,
+  onStopBlurbAiAutoWrite = async () => {},
+}: HarnessProps = {}) {
+  const [draft, setDraft] = useState<ListicleItineraryDraft>(initialDraft)
 
   return (
     <BuilderStopsPanel
@@ -90,7 +202,7 @@ function Harness() {
       mediaAssets={[]}
       instagramPosts={[]}
       isLoadingRelated={false}
-      relatedByBlockType={relatedByBlockType}
+      relatedByBlockType={relatedItems}
       onAddItem={() => {}}
       onEndHereOnLastStop={() => {}}
       onMoveItem={() => {}}
@@ -101,7 +213,7 @@ function Harness() {
           items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
         }))
       }}
-      onStopBlurbAiAutoWrite={async () => {}}
+      onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite}
       onStopBlurbAiRewrite={async () => ''}
       activeAiItemId={null}
       isLocked={false}
@@ -114,6 +226,21 @@ function Harness() {
 }
 
 describe('BuilderStopsPanel', () => {
+  it('does not auto-write when the stop blurb editor is clicked', () => {
+    const onStopBlurbAiAutoWrite = vi.fn(async () => {})
+
+    render(<Harness onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite} />)
+
+    fireEvent.click(screen.getByRole('textbox', { name: /blurb for stop 1/i }))
+
+    expect(onStopBlurbAiAutoWrite).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /regenerate|auto write/i }))
+
+    expect(onStopBlurbAiAutoWrite).toHaveBeenCalledTimes(1)
+    expect(onStopBlurbAiAutoWrite).toHaveBeenCalledWith('tour-stop-1')
+  })
+
   it('updates manual tour-agency price, duration, and starting-point fields', async () => {
     const user = userEvent.setup()
 
@@ -134,5 +261,48 @@ describe('BuilderStopsPanel', () => {
     expect(screen.getByLabelText('Label')).toHaveValue('Plaza de Armas')
     expect(screen.getByLabelText('Latitude')).toHaveValue('-13.516')
     expect(screen.getByLabelText('Longitude')).toHaveValue('-71.978')
+  })
+
+  it('fills the starting point from an existing stop collection', async () => {
+    const user = userEvent.setup()
+    const relatedItems = buildRelatedByBlockType({
+      'itinerary-dining': diningItems,
+      'itinerary-accommodations': hotelItems,
+      'itinerary-attractions': attractionItems,
+      'itinerary-key-location': keyLocationItems,
+    })
+
+    render(<Harness relatedItems={relatedItems} />)
+
+    await user.click(screen.getByRole('button', { name: 'Choose Existing Stop' }))
+    await user.click(screen.getByRole('radio', { name: /Hotel Sol/ }))
+    await user.click(screen.getByRole('button', { name: 'Use Selected' }))
+
+    expect(screen.getByLabelText('Label')).toHaveValue('Hotel Sol')
+    expect(screen.getByLabelText('Latitude')).toHaveValue('-13.518')
+    expect(screen.getByLabelText('Longitude')).toHaveValue('-71.974')
+  })
+
+  it('adds checked existing stops across collections without dropping manual route points', async () => {
+    const user = userEvent.setup()
+    const relatedItems = buildRelatedByBlockType({
+      'itinerary-dining': diningItems,
+      'itinerary-accommodations': hotelItems,
+      'itinerary-attractions': attractionItems,
+      'itinerary-key-location': keyLocationItems,
+    })
+
+    render(<Harness initialDraft={buildDraftWithKeyLocations()} relatedItems={relatedItems} />)
+
+    await user.click(screen.getByRole('button', { name: 'Select Existing Stops' }))
+    expect(screen.getByRole('checkbox', { name: /Cafe Andino/ })).toBeChecked()
+    await user.click(screen.getByRole('checkbox', { name: /Hotel Sol/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Sacsayhuaman/ }))
+    await user.click(screen.getByRole('button', { name: 'Save Selection' }))
+
+    expect(screen.getByText('Cafe Andino')).toBeInTheDocument()
+    expect(screen.getByText('Hotel Sol')).toBeInTheDocument()
+    expect(screen.getByText('Sacsayhuaman')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Manual overlook')).toBeInTheDocument()
   })
 })

@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BuilderItemsPanel } from './BuilderItemsPanel'
 import type { RelatedItemOption, SingleTypeListicleDraft } from '../../types'
@@ -15,14 +15,16 @@ vi.mock('../../../staging/features/markdown-editor', () => ({
     value,
     onChange,
     placeholder,
+    ariaLabel,
   }: {
     blockId: string
     value: string
     onChange: (nextValue: string) => void
     placeholder?: string
+    ariaLabel?: string
   }) => (
     <textarea
-      aria-label={blockId}
+      aria-label={ariaLabel || blockId}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
@@ -106,6 +108,7 @@ function renderPanel(
   options?: {
     activeAiItemId?: string | null
     queuedAiItemIds?: string[]
+    onItemBlurbAiAutoWrite?: (itemId: string) => Promise<void>
   },
 ) {
   return render(
@@ -116,7 +119,7 @@ function renderPanel(
       moveItem={vi.fn()}
       removeItem={vi.fn()}
       updateItem={vi.fn()}
-      onItemBlurbAiAutoWrite={vi.fn(async () => {})}
+      onItemBlurbAiAutoWrite={options?.onItemBlurbAiAutoWrite ?? vi.fn(async () => {})}
       onItemBlurbAiRewrite={vi.fn(async (_itemId: string, input: { currentContent: string }) => input.currentContent)}
       activeAiItemId={options?.activeAiItemId ?? null}
       queuedAiItemIds={options?.queuedAiItemIds ?? []}
@@ -147,6 +150,20 @@ describe('BuilderItemsPanel', () => {
     renderPanel(buildDraft('dining'), [buildRelatedItem()])
 
     expect(screen.getByText('Auto Write')).toBeInTheDocument()
+  })
+
+  it('does not auto-write when the blurb editor is clicked', () => {
+    const onItemBlurbAiAutoWrite = vi.fn(async () => {})
+    renderPanel(buildDraft('dining'), [buildRelatedItem()], { onItemBlurbAiAutoWrite })
+
+    fireEvent.click(screen.getByRole('textbox', { name: /blurb for item 1/i }))
+
+    expect(onItemBlurbAiAutoWrite).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /auto write/i }))
+
+    expect(onItemBlurbAiAutoWrite).toHaveBeenCalledTimes(1)
+    expect(onItemBlurbAiAutoWrite).toHaveBeenCalledWith('item-1')
   })
 
   it('shows an inline waiting status while an item blurb is generating', () => {

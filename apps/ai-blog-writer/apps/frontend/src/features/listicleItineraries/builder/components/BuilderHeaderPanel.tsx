@@ -183,7 +183,7 @@ export function BuilderHeaderPanel({
           )}
         </div>
 
-        <label className="stl-field">
+        <div className="stl-field">
           <div className="stl-field-label-row">
             <span>Intro *</span>
             <div className="stl-inline-actions">
@@ -216,8 +216,9 @@ export function BuilderHeaderPanel({
             placeholder="Write the itinerary intro..."
             className="stl-markdown-textarea"
             rows={6}
+            ariaLabel="Intro"
           />
-        </label>
+        </div>
         {!draft.header.introMarkdown.trim() && draft.header.introJsonText?.trim() ? (
           <p className="stl-legacy-note">
             Existing intro is stored in Payload as Lexical JSON. Editing here will replace it with markdown-converted content.

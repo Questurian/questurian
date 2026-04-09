@@ -22,6 +22,7 @@ import type {
   RelatedItemOption,
   TourAgencyKeyLocationRow,
   TourAgencyPriceTier,
+  TourAgencyStartingPoint,
 } from '../../types'
 import {
   isManualItineraryBlockType as isManualBlockType,
@@ -37,6 +38,7 @@ import {
   resolveInstagramPreviewUrl,
   resolveImageUrl,
 } from '../utils/item-media.utils'
+import { ExistingStopPickerModal, type ExistingStopPickerOption } from './ExistingStopPickerModal'
 import { InstagramPickerModal } from './InstagramPickerModal'
 import { PhotoPickerModal } from './PhotoPickerModal'
 import { RelatedItemPickerModal } from './RelatedItemPickerModal'
@@ -93,14 +95,16 @@ type ActivePicker =
   | { type: 'photos'; itemId: string }
   | { type: 'instagram'; itemId: string }
   | { type: 'manual-instagram'; itemId: string }
+  | { type: 'starting-point-existing-stop'; itemId: string }
+  | { type: 'route-existing-stops'; itemId: string }
   | null
 
-const TOUR_AGENCY_KEY_LOCATION_COLLECTION_OPTIONS: Array<{
+const TOUR_AGENCY_EXISTING_STOP_COLLECTION_OPTIONS: Array<{
   value: RelatedItemCollection
   label: string
 }> = [
   { value: 'dining', label: 'Dining' },
-  { value: 'accommodations', label: 'Accommodations' },
+  { value: 'accommodations', label: 'Hotels' },
   { value: 'attractions', label: 'Attractions' },
   { value: 'nightlife', label: 'Nightlife' },
   { value: 'key-locations', label: 'Key Locations' },
@@ -127,6 +131,148 @@ function getRelatedItemsForCollection(
 ): RelatedItemOption[] {
   if (!collection) return []
   return relatedByBlockType[relatedCollectionToBlockType(collection)] || []
+}
+
+function buildExistingStopSelectionKey(collection: RelatedItemCollection, itemId: number): string {
+  return `${collection}:${itemId}`
+}
+
+function canUseExistingItemAsStartingPoint(item: RelatedItemOption): boolean {
+  const latitude = toCoordinateText(item.latitude).trim()
+  const longitude = toCoordinateText(item.longitude).trim()
+  return Boolean(
+    latitude
+    && longitude
+    && Number.isFinite(Number(latitude))
+    && Number.isFinite(Number(longitude))
+  )
+}
+
+function buildExistingStopOptions(
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): ExistingStopPickerOption[] {
+  return TOUR_AGENCY_EXISTING_STOP_COLLECTION_OPTIONS.flatMap(({ value, label }) => (
+    getRelatedItemsForCollection(relatedByBlockType, value).map((item) => ({
+      selectionKey: buildExistingStopSelectionKey(value, item.id),
+      collection: value,
+      collectionLabel: label,
+      item,
+      canUseAsStartingPoint: canUseExistingItemAsStartingPoint(item),
+    }))
+  ))
+}
+
+function toCoordinateText(value: number | string | null | undefined): string {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : ''
+  }
+
+  return typeof value === 'string' ? value : ''
+}
+
+function buildStartingPointFromExistingStop(item: RelatedItemOption): TourAgencyStartingPoint {
+  return {
+    label: getRelatedItemDisplayLabel(item),
+    latitude: toCoordinateText(item.latitude),
+    longitude: toCoordinateText(item.longitude),
+  }
+}
+
+function normalizeTextForCompare(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function getSelectedStartingPointExistingStopKey(
+  startingPoint: TourAgencyStartingPoint,
+  existingStopOptions: ExistingStopPickerOption[],
+): string | null {
+  const label = normalizeTextForCompare(startingPoint.label)
+  if (!label) return null
+
+  const latitude = startingPoint.latitude.trim()
+  const longitude = startingPoint.longitude.trim()
+  const match = existingStopOptions.find((option) => {
+    if (!option.canUseAsStartingPoint) return false
+    const optionStartingPoint = buildStartingPointFromExistingStop(option.item)
+    const optionLabel = normalizeTextForCompare(optionStartingPoint.label)
+    if (optionLabel !== label) return false
+
+    const optionLatitude = optionStartingPoint.latitude.trim()
+    const optionLongitude = optionStartingPoint.longitude.trim()
+    if (!latitude && !longitude) return true
+    return optionLatitude === latitude && optionLongitude === longitude
+  })
+
+  return match?.selectionKey ?? null
+}
+
+function getExistingRouteSelectionKey(location: TourAgencyKeyLocationRow): string | null {
+  if (
+    location.source !== 'existing'
+    || !location.relatedCollection
+    || typeof location.relatedItem !== 'number'
+  ) {
+    return null
+  }
+
+  return buildExistingStopSelectionKey(location.relatedCollection, location.relatedItem)
+}
+
+function getSelectedExistingRouteKeys(item: ItineraryItemBlock): string[] {
+  return item.keyLocations
+    .map((location) => getExistingRouteSelectionKey(location))
+    .filter((selectionKey): selectionKey is string => Boolean(selectionKey))
+}
+
+function findExistingStopOptionForRow(
+  existingStopOptions: ExistingStopPickerOption[],
+  location: TourAgencyKeyLocationRow,
+): ExistingStopPickerOption | null {
+  const selectionKey = getExistingRouteSelectionKey(location)
+  if (!selectionKey) return null
+  return existingStopOptions.find((option) => option.selectionKey === selectionKey) || null
+}
+
+function buildRoutePointRowsFromSelection(
+  item: ItineraryItemBlock,
+  selectedKeys: string[],
+  existingStopOptions: ExistingStopPickerOption[],
+): TourAgencyKeyLocationRow[] {
+  const availableKeys = new Set(existingStopOptions.map((option) => option.selectionKey))
+  const selectedKeySet = new Set(selectedKeys)
+  const nextRows: TourAgencyKeyLocationRow[] = []
+
+  item.keyLocations.forEach((location) => {
+    const selectionKey = getExistingRouteSelectionKey(location)
+    if (!selectionKey) {
+      nextRows.push(location)
+      return
+    }
+
+    if (!availableKeys.has(selectionKey)) {
+      nextRows.push(location)
+      return
+    }
+
+    if (selectedKeySet.has(selectionKey)) {
+      nextRows.push(location)
+      selectedKeySet.delete(selectionKey)
+    }
+  })
+
+  selectedKeys.forEach((selectionKey) => {
+    if (!selectedKeySet.has(selectionKey)) return
+    const selectedOption = existingStopOptions.find((option) => option.selectionKey === selectionKey)
+    if (!selectedOption) return
+
+    nextRows.push({
+      ...createKeyLocationRow(item.id, 'existing'),
+      relatedCollection: selectedOption.collection,
+      relatedItem: selectedOption.item.id,
+    })
+  })
+
+  return nextRows
 }
 
 function formatTourDurationLabel(hours: number): string {
@@ -190,6 +336,8 @@ export function BuilderStopsPanel({
   const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
   const activeInstagramPicker = activePicker?.type === 'instagram' ? activePicker : null
   const activeManualInstagramPicker = activePicker?.type === 'manual-instagram' ? activePicker : null
+  const activeStartingPointExistingStopPicker = activePicker?.type === 'starting-point-existing-stop' ? activePicker : null
+  const activeRouteExistingStopsPicker = activePicker?.type === 'route-existing-stops' ? activePicker : null
 
   useEffect(() => {
     if (!copiedItemId) return
@@ -331,6 +479,15 @@ export function BuilderStopsPanel({
             const firstItemPhoto = photoObjects[0]
             const firstItemPhotoUrl = firstItemPhoto ? resolveImageUrl(firstItemPhoto) : undefined
             const selectedRelatedItemLabel = getRelatedItemDisplayLabel(selectedRelatedItem)
+            const existingStopOptions = buildExistingStopOptions(relatedByBlockType)
+            const selectedStartingPointExistingStopKey = getSelectedStartingPointExistingStopKey(
+              item.startingPoint,
+              existingStopOptions,
+            )
+            const selectedStartingPointExistingStop = selectedStartingPointExistingStopKey
+              ? existingStopOptions.find((option) => option.selectionKey === selectedStartingPointExistingStopKey) || null
+              : null
+            const selectedExistingRouteKeys = getSelectedExistingRouteKeys(item)
             const isLastItem = index === draft.items.length - 1
             const selectedPhotoPreviews = item.selectedPhotos
               .map((photoId) => {
@@ -544,7 +701,35 @@ export function BuilderStopsPanel({
 
                     <div className="stl-grid stl-grid-2">
                       <div className="stl-field">
-                        <span>Starting Point</span>
+                        <div className="stl-field-label-row">
+                          <span>Starting Point</span>
+                          <button
+                            type="button"
+                            className="stl-btn stl-btn-secondary stl-btn-xs"
+                            onClick={() => setActivePicker({ type: 'starting-point-existing-stop', itemId: item.id })}
+                            disabled={existingStopOptions.length < 1}
+                          >
+                            Choose Existing Stop
+                          </button>
+                        </div>
+                        <p className="stl-legacy-note">
+                          Pull from dining, hotels, attractions, nightlife, or key locations. You can still edit the fields after picking.
+                        </p>
+                        {selectedStartingPointExistingStop ? (
+                          <div className="stl-tour-existing-point">
+                            <div className="stl-tour-existing-point__meta">
+                              <span className="stl-tour-existing-point__badge">
+                                {selectedStartingPointExistingStop.collectionLabel}
+                              </span>
+                              <strong>{getRelatedItemDisplayLabel(selectedStartingPointExistingStop.item)}</strong>
+                            </div>
+                            {selectedStartingPointExistingStop.item.location ? (
+                              <p className="stl-tour-existing-point__location">
+                                {selectedStartingPointExistingStop.item.location}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
                         <div className="stl-grid stl-grid-3">
                           <label className="stl-field">
                             <span>Label</span>
@@ -691,14 +876,10 @@ export function BuilderStopsPanel({
                           <button
                             type="button"
                             className="stl-btn stl-btn-secondary"
-                            onClick={() =>
-                              onUpdateItem(item.id, (current) => ({
-                                ...current,
-                                keyLocations: [...current.keyLocations, createKeyLocationRow(item.id, 'existing')],
-                              }))
-                            }
+                            onClick={() => setActivePicker({ type: 'route-existing-stops', itemId: item.id })}
+                            disabled={existingStopOptions.length < 1}
                           >
-                            Add Existing Item
+                            Select Existing Stops
                           </button>
                           <button
                             type="button"
@@ -714,24 +895,26 @@ export function BuilderStopsPanel({
                           </button>
                         </div>
                       </div>
+                      <p className="stl-legacy-note">
+                        Keep route points simple: bulk-pick existing stops, then add only the custom coordinates you still need.
+                      </p>
 
                       {item.keyLocations.length < 1 ? (
                         <p className="stl-legacy-note">Add existing stops or manual coordinates for the route.</p>
                       ) : (
                         <div className="stl-tour-key-locations">
                           {item.keyLocations.map((location, locationIndex) => {
-                            const relatedOptionsForRow = getRelatedItemsForCollection(
-                              relatedByBlockType,
-                              location.relatedCollection,
-                            )
-                            const selectedRelatedKeyLocation = relatedOptionsForRow.find(
-                              (entry) => entry.id === location.relatedItem,
-                            ) || null
+                            const selectedExistingStop = findExistingStopOptionForRow(existingStopOptions, location)
 
                             return (
                               <div key={location.id} className="stl-tour-key-location-row">
                                 <div className="stl-tour-key-location-row__header">
-                                  <strong>Route Point {locationIndex + 1}</strong>
+                                  <div className="stl-tour-key-location-row__title">
+                                    <strong>Route Point {locationIndex + 1}</strong>
+                                    <span className="stl-tour-key-location-row__kind">
+                                      {location.source === 'existing' ? 'Existing stop' : 'Manual point'}
+                                    </span>
+                                  </div>
                                   <button
                                     type="button"
                                     className="stl-btn stl-btn-danger stl-btn-xs"
@@ -746,95 +929,29 @@ export function BuilderStopsPanel({
                                   </button>
                                 </div>
 
-                                <div className="stl-grid stl-grid-2">
-                                  <label className="stl-field">
-                                    <span>Source</span>
-                                    <select
-                                      value={location.source}
-                                      onChange={(event) =>
-                                        onUpdateItem(item.id, (current) => ({
-                                          ...current,
-                                          keyLocations: current.keyLocations.map((entry) => (
-                                            entry.id !== location.id
-                                              ? entry
-                                              : {
-                                                  ...entry,
-                                                  source: event.target.value as TourAgencyKeyLocationRow['source'],
-                                                  relatedCollection: event.target.value === 'existing' ? 'key-locations' : null,
-                                                  relatedItem: null,
-                                                  title: '',
-                                                  latitude: '',
-                                                  longitude: '',
-                                                }
-                                          )),
-                                        }))
-                                      }
-                                    >
-                                      <option value="existing">Existing item</option>
-                                      <option value="manual">Manual coordinates</option>
-                                    </select>
-                                  </label>
-
-                                  {location.source === 'existing' ? (
-                                    <label className="stl-field">
-                                      <span>Collection</span>
-                                      <select
-                                        value={location.relatedCollection ?? ''}
-                                        onChange={(event) =>
-                                          onUpdateItem(item.id, (current) => ({
-                                            ...current,
-                                            keyLocations: current.keyLocations.map((entry) => (
-                                              entry.id !== location.id
-                                                ? entry
-                                                : {
-                                                    ...entry,
-                                                    relatedCollection: event.target.value as RelatedItemCollection,
-                                                    relatedItem: null,
-                                                  }
-                                            )),
-                                          }))
-                                        }
-                                      >
-                                        {TOUR_AGENCY_KEY_LOCATION_COLLECTION_OPTIONS.map((option) => (
-                                          <option key={option.value} value={option.value}>
-                                            {option.label}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
-                                  ) : null}
-                                </div>
-
                                 {location.source === 'existing' ? (
-                                  <label className="stl-field">
-                                    <span>Existing Item</span>
-                                    <select
-                                      value={location.relatedItem ?? ''}
-                                      onChange={(event) =>
-                                        onUpdateItem(item.id, (current) => ({
-                                          ...current,
-                                          keyLocations: current.keyLocations.map((entry) => (
-                                            entry.id !== location.id
-                                              ? entry
-                                              : {
-                                                  ...entry,
-                                                  relatedItem: event.target.value ? Number(event.target.value) : null,
-                                                }
-                                          )),
-                                        }))
-                                      }
-                                    >
-                                      <option value="">Select item...</option>
-                                      {relatedOptionsForRow.map((option) => (
-                                        <option key={option.id} value={option.id}>
-                                          {getRelatedItemDisplayLabel(option)}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    {selectedRelatedKeyLocation?.location ? (
-                                      <p className="stl-legacy-note">{selectedRelatedKeyLocation.location}</p>
+                                  <div className="stl-tour-existing-point">
+                                    <div className="stl-tour-existing-point__meta">
+                                      <span className="stl-tour-existing-point__badge">
+                                        {selectedExistingStop?.collectionLabel || location.relatedCollection || 'Existing'}
+                                      </span>
+                                      <strong>
+                                        {selectedExistingStop
+                                          ? getRelatedItemDisplayLabel(selectedExistingStop.item)
+                                          : 'Saved item is unavailable'}
+                                      </strong>
+                                    </div>
+                                    {selectedExistingStop?.item.location ? (
+                                      <p className="stl-tour-existing-point__location">
+                                        {selectedExistingStop.item.location}
+                                      </p>
                                     ) : null}
-                                  </label>
+                                    {!selectedExistingStop ? (
+                                      <p className="stl-legacy-note">
+                                        This existing stop is outside the current itinerary scope or no longer published.
+                                      </p>
+                                    ) : null}
+                                  </div>
                                 ) : (
                                   <div className="stl-grid stl-grid-3">
                                     <label className="stl-field">
@@ -1146,7 +1263,7 @@ export function BuilderStopsPanel({
                   </div>
                 </div>
 
-                <label className="stl-field">
+                <div className="stl-field">
                   <div className="stl-field-label-row">
                     <span>Blurb *</span>
                     <div className="stl-inline-actions">
@@ -1180,8 +1297,9 @@ export function BuilderStopsPanel({
                     placeholder="Write editorial context for this stop..."
                     className="stl-markdown-textarea"
                     rows={5}
+                    ariaLabel={`Blurb for stop ${index + 1}`}
                   />
-                </label>
+                </div>
                 {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
                   <p className="stl-legacy-note">This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.</p>
                 ) : null}
@@ -1209,6 +1327,47 @@ export function BuilderStopsPanel({
                         selectedInstagramPost: null,
                       }
                     })
+                  }
+                  onClose={() => setActivePicker(null)}
+                />
+
+                <ExistingStopPickerModal
+                  isOpen={activeStartingPointExistingStopPicker?.itemId === item.id}
+                  items={existingStopOptions}
+                  mode="single"
+                  title="Choose Starting Point"
+                  description="Use an existing dining stop, hotel, attraction, nightlife venue, or key location with coordinates."
+                  selectedKeys={selectedStartingPointExistingStopKey ? [selectedStartingPointExistingStopKey] : []}
+                  confirmLabel="Use Selected"
+                  emptyMessage="No existing stops match this itinerary."
+                  searchPlaceholder="Search dining, hotels, attractions, nightlife, or key locations..."
+                  requireCoordinates
+                  onConfirm={(keys) => {
+                    const selected = existingStopOptions.find((option) => option.selectionKey === keys[0])
+                    if (!selected) return
+                    onUpdateItem(item.id, (current) => ({
+                      ...current,
+                      startingPoint: buildStartingPointFromExistingStop(selected.item),
+                    }))
+                  }}
+                  onClose={() => setActivePicker(null)}
+                />
+
+                <ExistingStopPickerModal
+                  isOpen={activeRouteExistingStopsPicker?.itemId === item.id}
+                  items={existingStopOptions}
+                  mode="multiple"
+                  title="Select Existing Stops"
+                  description="Pick from published dining, hotels, attractions, nightlife, and key locations in one list."
+                  selectedKeys={selectedExistingRouteKeys}
+                  confirmLabel="Save Selection"
+                  emptyMessage="No existing stops match this itinerary."
+                  searchPlaceholder="Search all existing stops..."
+                  onConfirm={(keys) =>
+                    onUpdateItem(item.id, (current) => ({
+                      ...current,
+                      keyLocations: buildRoutePointRowsFromSelection(current, keys, existingStopOptions),
+                    }))
                   }
                   onClose={() => setActivePicker(null)}
                 />

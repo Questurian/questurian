@@ -546,7 +546,7 @@ export function BuilderItemsPanel({
 
               {selectedRelatedItem ? (
                 <>
-                  <label className="stl-field">
+                  <div className="stl-field">
                     <div className="stl-field-label-row stl-ai-field-label-row">
                       <span>Blurb *</span>
                       <div className="stl-inline-actions stl-ai-field-actions">
@@ -591,9 +591,10 @@ export function BuilderItemsPanel({
                         placeholder="Write why this item made the list..."
                         className="stl-markdown-textarea"
                         rows={5}
+                        ariaLabel={`Blurb for item ${index + 1}`}
                       />
                     </div>
-                  </label>
+                  </div>
                   {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
                     <p className="stl-legacy-note">
                       This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.

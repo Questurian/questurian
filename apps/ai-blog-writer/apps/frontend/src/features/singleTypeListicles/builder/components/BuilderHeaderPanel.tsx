@@ -196,7 +196,7 @@ export function BuilderHeaderPanel({
           )}
         </div>
 
-        <label className="stl-field">
+        <div className="stl-field">
           <div className="stl-field-label-row stl-ai-field-label-row">
             <span>Intro *</span>
             <div className="stl-inline-actions stl-ai-field-actions">
@@ -240,9 +240,10 @@ export function BuilderHeaderPanel({
               placeholder="Write the listicle intro..."
               className="stl-markdown-textarea"
               rows={6}
+              ariaLabel="Intro"
             />
           </div>
-        </label>
+        </div>
         {!draft.header.introMarkdown.trim() && draft.header.introJsonText?.trim() ? (
           <p className="stl-legacy-note">
             Existing intro is stored in Payload as Lexical JSON. Editing here will replace it with markdown-converted content.

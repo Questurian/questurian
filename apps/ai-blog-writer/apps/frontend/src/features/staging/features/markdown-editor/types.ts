@@ -36,4 +36,5 @@ export type MarkdownBlockEditorProps = {
   className?: string
   rows?: number
   placeholder?: string
+  ariaLabel?: string
 }

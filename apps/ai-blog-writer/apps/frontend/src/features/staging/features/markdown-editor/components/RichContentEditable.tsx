@@ -5,6 +5,7 @@ type RichContentEditableProps = {
   editorRef: MutableRefObject<HTMLDivElement | null>
   isEditorEmpty: boolean
   placeholder: string
+  ariaLabel?: string
   onInput: () => void
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
 }
@@ -13,6 +14,7 @@ export function RichContentEditable({
   editorRef,
   isEditorEmpty,
   placeholder,
+  ariaLabel,
   onInput,
   onKeyDown,
 }: RichContentEditableProps) {
@@ -38,6 +40,7 @@ export function RichContentEditable({
       className={`block-rich-editor ${isEditorEmpty ? 'is-empty' : ''}`}
       contentEditable
       role="textbox"
+      aria-label={ariaLabel}
       aria-multiline="true"
       spellCheck={false}
       autoCorrect="off"
