@@ -18,6 +18,7 @@ export function CoreFieldsSection({ form, locationTypes, isLoadingTypes, categor
     label: group.label,
     options: group.tags.map((tag) => ({ value: tag, label: tag })),
   }));
+  const shouldShowIdealFor = category !== "attractions" && idealForOptionGroups.length > 0;
   const typeLabel = category === "dining" ? "Type of Establishment" : "Type";
   const typeDescription =
     category === "dining"
@@ -95,15 +96,17 @@ export function CoreFieldsSection({ form, locationTypes, isLoadingTypes, categor
         <SelectItem value="$$$$">$$$$</SelectItem>
       </FormSelect>
 
-      <FormTagMultiSelect
-        name="idealFor"
-        label="Ideal For"
-        control={form.control}
-        optionGroups={idealForOptionGroups}
-        maxSelections={4}
-        description="Choose 1 to 4 tags"
-        allowDirectTagArrayInput
-      />
+      {shouldShowIdealFor && (
+        <FormTagMultiSelect
+          name="idealFor"
+          label="Ideal For"
+          control={form.control}
+          optionGroups={idealForOptionGroups}
+          maxSelections={4}
+          description="Choose 1 to 4 tags"
+          allowDirectTagArrayInput
+        />
+      )}
     </div>
   );
 }

@@ -98,20 +98,7 @@ export const ACCOMMODATIONS_IDEAL_FOR_TAGS = [
   "First-Time Visitors",
 ] as const;
 
-export const ATTRACTIONS_IDEAL_FOR_TAGS = [
-  "Families",
-  "Solo",
-  "Couples",
-  "Budget Travelers",
-  "History Buffs",
-  "Rainy Day",
-  "Nature Lovers",
-  "Outdoor Lovers",
-  "Culture Seekers",
-  "First-Time Visitors",
-  "Photography Spots",
-  "Kid-Friendly",
-] as const;
+export const ATTRACTIONS_IDEAL_FOR_TAGS = [] as const;
 
 export const KEY_LOCATIONS_IDEAL_FOR_TAGS = [
   "First-Time Visitors",
@@ -305,35 +292,7 @@ export const IDEAL_FOR_TAG_GROUPS_BY_CATEGORY = {
       ],
     },
   ] satisfies readonly IdealForTagGroup<AccommodationsIdealForTag>[],
-  attractions: [
-    {
-      label: "Audience",
-      tags: [
-        "Families",
-        "Solo",
-        "Couples",
-        "Kid-Friendly",
-        "First-Time Visitors",
-      ],
-    },
-    {
-      label: "Interests",
-      tags: [
-        "History Buffs",
-        "Culture Seekers",
-        "Nature Lovers",
-        "Outdoor Lovers",
-        "Photography Spots",
-      ],
-    },
-    {
-      label: "Practical",
-      tags: [
-        "Budget Travelers",
-        "Rainy Day",
-      ],
-    },
-  ] satisfies readonly IdealForTagGroup<AttractionsIdealForTag>[],
+  attractions: [] satisfies readonly IdealForTagGroup<AttractionsIdealForTag>[],
   key_locations: [
     {
       label: "Arrival & Departure",

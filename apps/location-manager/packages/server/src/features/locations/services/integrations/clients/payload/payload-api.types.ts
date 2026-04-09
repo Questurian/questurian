@@ -5,6 +5,8 @@ export type PayloadCollection =
   | "nightlife"
   | "key-locations";
 
+export type PayloadRelationshipId = string | number;
+
 export type PayloadMediaVariantType =
   | "thumbnail"
   | "square"
@@ -123,7 +125,7 @@ export interface PayloadLocationCreateResponse {
 }
 
 export interface PayloadGalleryItem {
-  image: string;
+  image: PayloadRelationshipId;
   altText?: string;
   caption?: string;
 }
@@ -153,7 +155,7 @@ export interface PayloadInstagramPostResponse {
 }
 
 export interface PayloadInstagramGalleryItem {
-  post: string;
+  post: PayloadRelationshipId;
 }
 
 export interface PayloadNightlifeDetails {
@@ -224,6 +226,65 @@ export interface PayloadMediaSetQueryResponse {
     externalRef?: string;
   }>;
   totalDocs?: number;
+}
+
+export interface PayloadMediaSetSearchQueryDoc {
+  id: string | number;
+  title: string;
+  alt_text?: string | null;
+  photographer_credit?: string | null;
+  status?: string | null;
+  location?: string | null;
+  locationRef?: unknown;
+  updatedAt?: string | null;
+  variants?: Partial<
+    Record<
+      PayloadMediaVariantType,
+      | {
+          id?: string | number;
+          url?: string | null;
+          alt_text?: string | null;
+          updatedAt?: string | null;
+        }
+      | null
+    >
+  >;
+}
+
+export interface PayloadMediaSetSearchResponse {
+  docs: PayloadMediaSetSearchQueryDoc[];
+  totalDocs?: number;
+  totalPages?: number;
+  page?: number;
+  limit?: number;
+  hasNextPage?: boolean;
+  hasPrevPage?: boolean;
+  nextPage?: number | null;
+  prevPage?: number | null;
+}
+
+export interface PayloadMediaSetListItem {
+  id: string;
+  title: string;
+  altText: string | null;
+  photographerCredit: string | null;
+  status: string | null;
+  location: string | null;
+  locationRef: string | null;
+  previewUrl: string | null;
+  updatedAt: string | null;
+}
+
+export interface PayloadMediaSetListResponse {
+  docs: PayloadMediaSetListItem[];
+  totalDocs: number;
+  totalPages: number;
+  page: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  nextPage: number | null;
+  prevPage: number | null;
 }
 
 export interface PayloadEntryData {

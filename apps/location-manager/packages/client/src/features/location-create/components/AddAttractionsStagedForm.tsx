@@ -5,9 +5,7 @@ import { Link } from "react-router-dom";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
-import { FormTagMultiSelect } from "@client/shared/components/forms";
 import { OperationHoursModal } from "./OperationHoursModal";
-import { getIdealForOptionGroups } from "../constants/ai-prompt-template";
 import type { AddAttractionsFormData } from "../validation/add-attractions.schema";
 
 type AttractionsFormSection = "step1" | "entities" | "profile" | "visitContact";
@@ -48,7 +46,6 @@ export function AddAttractionsStagedForm({
   locationTypes,
   isLoadingTypes,
 }: AddAttractionsStagedFormProps) {
-  const idealForOptionGroups = getIdealForOptionGroups("attractions");
   const [activeSection, setActiveSection] = useState<AttractionsFormSection>("step1");
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [operationHoursModalOpen, setOperationHoursModalOpen] = useState(false);
@@ -62,11 +59,8 @@ export function AddAttractionsStagedForm({
   const profileComplete =
     hasValue(form.watch("type")) &&
     hasValue(form.watch("priceLevel")) &&
-    hasValue(form.watch("bookingRequired")) &&
-    (form.watch("idealFor")?.length ?? 0) > 0;
-  const visitContactComplete =
-    hasValue(form.watch("website")) &&
-    hasValue(form.watch("hours"));
+    hasValue(form.watch("bookingRequired"));
+  const visitContactComplete = hasValue(form.watch("hours"));
 
   const flowSections: Array<{
     key: AttractionsFormSection;
@@ -112,16 +106,12 @@ export function AddAttractionsStagedForm({
         "type",
         "priceLevel",
         "bookingRequired",
-        "idealFor",
       ]);
       if (!isValid) return;
     }
 
     if (activeSection === "visitContact") {
-      const isValid = await form.trigger([
-        "website",
-        "hours",
-      ]);
+      const isValid = await form.trigger(["hours"]);
       if (!isValid) return;
     }
 
@@ -390,16 +380,6 @@ export function AddAttractionsStagedForm({
                   </div>
                 </div>
 
-                <FormTagMultiSelect
-                  name="idealFor"
-                  label="Ideal For"
-                  control={form.control}
-                  optionGroups={idealForOptionGroups}
-                  maxSelections={4}
-                  description="Choose 1 to 4 tags"
-                  allowDirectTagArrayInput
-                />
-
                 <div className="flex justify-between border-t border-border/70 pt-4">
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>
                     Previous
@@ -457,7 +437,7 @@ export function AddAttractionsStagedForm({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Website</Label>
+                    <Label>Website (optional)</Label>
                     <Input placeholder="https://example.com" {...form.register("website")} />
                     {form.formState.errors.website && (
                       <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>

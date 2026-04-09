@@ -48,19 +48,17 @@ export function useRelatedItems({
     })
       .then((scope) => {
         if (cancelled) return []
-        return Promise.all(BLOCK_TYPE_OPTIONS.map((option) => (
-          fetchRelatedItems(option.value, primaryLocation, authToken, scope)
+        return Promise.all(BLOCK_TYPE_OPTIONS.map(async (option) => (
+          [option.value, await fetchRelatedItems(option.value, primaryLocation, authToken, scope)] as const
         )))
       })
       .then((docsByType) => {
         if (cancelled) return
-        setRelatedByBlockType({
-          'itinerary-dining': docsByType[0] || [],
-          'itinerary-accommodations': docsByType[1] || [],
-          'itinerary-attractions': docsByType[2] || [],
-          'itinerary-nightlife': docsByType[3] || [],
-          'itinerary-key-location': docsByType[4] || [],
+        const next = { ...EMPTY_RELATED_BY_BLOCK_TYPE }
+        docsByType.forEach(([blockType, docs]) => {
+          next[blockType] = docs || []
         })
+        setRelatedByBlockType(next)
       })
       .catch((err: unknown) => {
         if (cancelled) return

@@ -540,6 +540,28 @@
   background: #fafbfd;
 }
 
+.stl-tour-key-locations {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.stl-tour-key-location-row {
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  padding: 0.9rem;
+  background: #fff;
+}
+
+.stl-tour-key-location-row__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 .stl-item-header {
   display: flex;
   justify-content: space-between;
@@ -976,6 +998,67 @@
 .stl-copyable-item-btn {
   flex-shrink: 0;
   min-width: 82px;
+}
+
+.stl-tour-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d8e0ee;
+  background: #f3f7ff;
+  color: #30486f;
+  border-radius: 999px;
+  padding: 0.18rem 0.58rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stl-field .stl-tour-duration-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  margin-top: 0.08rem;
+}
+
+.stl-field .stl-tour-duration-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c8d6eb 0%, #97b0d3 100%);
+}
+
+.stl-field .stl-tour-duration-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #315387;
+  background: #fff;
+  margin-top: -5px;
+  box-shadow: 0 1px 4px rgba(24, 39, 64, 0.25);
+}
+
+.stl-field .stl-tour-duration-slider::-moz-range-track {
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c8d6eb 0%, #97b0d3 100%);
+}
+
+.stl-field .stl-tour-duration-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #315387;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(24, 39, 64, 0.25);
 }
 
 .stl-title-input-wrap {

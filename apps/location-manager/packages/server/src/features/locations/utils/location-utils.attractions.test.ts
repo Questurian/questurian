@@ -19,7 +19,6 @@ function buildAttractionsDetails(overrides?: Partial<Record<string, unknown>>): 
         monday: "9:00 AM - 10:00 PM",
       },
       booking_required: false,
-      ideal_for: ["Families", "History Buffs"],
     },
     contact: {
       website: "https://example.com/larco-museum",
@@ -56,7 +55,6 @@ function buildAttractionsLocation(
     website: "https://example.com/larco-museum",
     lat: -12.0718,
     lng: -77.0708,
-    idealForJson: JSON.stringify(["Families", "History Buffs"]),
     attractionsDetailsJson: JSON.stringify(buildAttractionsDetails()),
     hoursJson: JSON.stringify({
       monday: "9:00 AM - 10:00 PM",
@@ -81,16 +79,44 @@ describe("attractions completeness", () => {
     expect(basic.isComplete).toBe(true);
   });
 
+  test("marks attractions location complete when website is missing", () => {
+    const location = buildAttractionsLocation({
+      website: null,
+      attractionsDetailsJson: JSON.stringify(
+        buildAttractionsDetails({
+          contact: {
+            phone: "+51 1 461-1312",
+          },
+        })
+      ),
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.category).toBe("attractions");
+    expect(basic.isComplete).toBe(true);
+  });
+
+  test("treats selected Payload media sets as satisfying media completeness", () => {
+    const location = buildAttractionsLocation({
+      uploadsCount: 0,
+      selectedPayloadMediaSetIdsJson: JSON.stringify(["media-1", "media-2"]),
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.category).toBe("attractions");
+    expect(basic.isComplete).toBe(true);
+  });
+
   test("marks attractions location incomplete when representative required fields are missing", () => {
     const incompleteDetails = buildAttractionsDetails({
       visit: {
         hours: {},
-        ideal_for: [],
       },
     });
 
     const location = buildAttractionsLocation({
-      idealForJson: JSON.stringify([]),
       website: null,
       attractionsDetailsJson: JSON.stringify(incompleteDetails),
     });

@@ -16,7 +16,6 @@ const validBaseForm = {
   type: "museum",
   priceLevel: "$$",
   bookingRequired: "no",
-  idealFor: ["Families", "History Buffs"],
   website: "https://example.com/larco-museum",
   phone: "+51 1 461-1312",
   tripadvisorUrl: "",
@@ -45,12 +44,19 @@ describe("add attractions schema", () => {
     expect(result.success).toBe(true);
   });
 
+  test("accepts a staged attractions payload without a website", () => {
+    const result = addAttractionsSchema.safeParse({
+      ...validBaseForm,
+      website: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
   test("rejects missing required fields", () => {
     const result = addAttractionsSchema.safeParse({
       ...validBaseForm,
       name: "",
       type: "",
-      website: "",
       placeId: "",
     });
 

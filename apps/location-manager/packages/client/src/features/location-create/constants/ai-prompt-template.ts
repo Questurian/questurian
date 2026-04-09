@@ -17,7 +17,15 @@ const CATEGORY_ORDER: LocationCategory[] = [
   "key_locations",
 ];
 
+function categoryUsesIdealFor(category: LocationCategory) {
+  return category === "dining" || category === "nightlife";
+}
+
 export function getIdealForOptionGroups(category: LocationCategory) {
+  if (!categoryUsesIdealFor(category)) {
+    return [];
+  }
+
   return getIdealForGroups(category).map((group) => ({
     label: group.label,
     options: group.tags.map((tag) => ({ value: tag, label: tag })),
@@ -37,10 +45,14 @@ function renderTagGroupsForCategory(category: LocationCategory): string {
 
 function buildIdealForInstructions(category?: LocationCategory | null): string {
   if (category) {
+    if (!categoryUsesIdealFor(category)) {
+      return "";
+    }
     return `Use only ${CATEGORY_LABELS[category]} tags:\n${renderTagGroupsForCategory(category)}`;
   }
 
   return CATEGORY_ORDER
+    .filter(categoryUsesIdealFor)
     .map((itemCategory) => {
       return `### ${CATEGORY_LABELS[itemCategory]} tags\n${renderTagGroupsForCategory(itemCategory)}`;
     })
@@ -53,6 +65,21 @@ export function buildAiPromptTemplate(category?: LocationCategory | null): strin
     : '- **category** (string) - One of: "dining", "accommodations", "attractions", "nightlife", "key_locations"';
 
   const categoryExample = category || "dining";
+  const exampleUsesIdealFor = categoryUsesIdealFor(categoryExample);
+  const requiredIdealForLine = category
+    ? categoryUsesIdealFor(category)
+      ? '- **idealFor** (array) - 1 to 4 tags from the matching category list'
+      : ""
+    : '- **idealFor** (array, dining/nightlife only) - 1 to 4 tags from the matching category list';
+  const idealForSection = buildIdealForInstructions(category);
+  const idealForRules = category
+    ? categoryUsesIdealFor(category)
+      ? "- Each item's `idealFor` must use tags from that item's `category` only.\n- Never mix tags across categories.\n- Keep `idealFor` unique (no duplicates)."
+      : '- Do not include `idealFor` for this category.'
+    : "- Include `idealFor` only for dining and nightlife items.\n- Each dining/nightlife item's `idealFor` must use tags from that item's `category` only.\n- Never mix tags across categories.\n- Keep `idealFor` unique (no duplicates).";
+  const exampleIdealFor = exampleUsesIdealFor
+    ? `,\n    "idealFor": ["${getIdealForTags(categoryExample)[0]}"]`
+    : "";
 
   return `I need you to generate a JSON array for batch uploading locations. Here's the format:
 
@@ -60,15 +87,13 @@ export function buildAiPromptTemplate(category?: LocationCategory | null): strin
 - **name** (string) - Location name
 - **address** (string) - Full address including city and country
 ${categoryLine}
-- **idealFor** (array) - 1 to 4 tags from the matching category list
+${requiredIdealForLine}
 
 ## Ideal For Tags (category-specific):
-${buildIdealForInstructions(category)}
+${idealForSection || "- Not used for this category."}
 
 ## Validation Rules:
-- Each item's \`idealFor\` must use tags from that item's \`category\` only.
-- Never mix tags across categories.
-- Keep \`idealFor\` unique (no duplicates).
+${idealForRules}
 
 ## Optional Fields:
 - **type** (string) - Specific type like "Italian Restaurant", "Boutique Hotel", "Museum", etc.
@@ -80,8 +105,7 @@ ${buildIdealForInstructions(category)}
   {
     "name": "Sample Location",
     "address": "123 Example St, Lima, Peru",
-    "category": "${categoryExample}",
-    "idealFor": ["${getIdealForTags(categoryExample)[0]}"]
+    "category": "${categoryExample}"${exampleIdealFor}
   }
 ]
 \`\`\`

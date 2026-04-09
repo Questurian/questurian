@@ -29,6 +29,7 @@ import { default as default_9739aa4b220e84974ee24f4ce24d3c63 } from 'src/feature
 import { default as default_444dd2aa16c5667764a640ed79907f9b } from 'src/features/articles/single-type-listicles/components/SingleTypeListicleBlocksField.tsx'
 import { default as default_dbe32a1110eb14bcc41bcec846a474cc } from 'src/features/articles/listicle-itineraries/components/field-components/SmartField.tsx'
 import { default as default_862520890ca0122f1e3baa9bb63831a1 } from 'src/features/articles/listicle-itineraries/components/layout/Step1Wrapper.tsx'
+import { default as default_c90814eca9314677fb6b2ff5230d1804 } from 'src/features/articles/listicle-itineraries/components/field-components/TourDurationSliderField.tsx'
 import { default as default_ea3c86191e6591892c46d34d0d8e1556 } from 'src/features/media/components/MediaSetPreview.tsx'
 import { default as default_c633d405ce31378e38cad4d5550baee0 } from 'src/features/data/instagram/components/InstagramPostPreview.tsx'
 
@@ -64,6 +65,7 @@ export const importMap = {
   "src/features/articles/single-type-listicles/components/SingleTypeListicleBlocksField.tsx#default": default_444dd2aa16c5667764a640ed79907f9b,
   "src/features/articles/listicle-itineraries/components/field-components/SmartField.tsx#default": default_dbe32a1110eb14bcc41bcec846a474cc,
   "src/features/articles/listicle-itineraries/components/layout/Step1Wrapper.tsx#default": default_862520890ca0122f1e3baa9bb63831a1,
+  "src/features/articles/listicle-itineraries/components/field-components/TourDurationSliderField.tsx#default": default_c90814eca9314677fb6b2ff5230d1804,
   "src/features/media/components/MediaSetPreview.tsx#default": default_ea3c86191e6591892c46d34d0d8e1556,
   "src/features/data/instagram/components/InstagramPostPreview.tsx#default": default_c633d405ce31378e38cad4d5550baee0
 }

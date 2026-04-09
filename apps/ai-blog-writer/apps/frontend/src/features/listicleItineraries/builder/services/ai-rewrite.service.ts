@@ -6,6 +6,7 @@ const ITINERARY_BLOCK_LABELS: Record<ItineraryItemBlock['blockType'], string> = 
   'itinerary-attractions': 'Attractions',
   'itinerary-nightlife': 'Nightlife',
   'itinerary-key-location': 'Key Location',
+  'itinerary-tour-agency': 'Tour Agency',
 }
 
 function buildSection(label: string, content: string): string | null {
@@ -44,8 +45,13 @@ export function buildItineraryAiArticleContext(draft: ListicleItineraryDraft): s
   }
 
   draft.items.forEach((item, index) => {
+    const itemReferenceLabel = item.title.trim()
+      ? ` (${item.title.trim()})`
+      : item.item
+        ? ` (#${item.item})`
+        : ''
     const blurbSection = buildSection(
-      `Stop ${index + 1}: ${ITINERARY_BLOCK_LABELS[item.blockType]} at ${buildStopTimeLabel(item)}${item.item ? ` (#${item.item})` : ''}`,
+      `Stop ${index + 1}: ${ITINERARY_BLOCK_LABELS[item.blockType]} at ${buildStopTimeLabel(item)}${itemReferenceLabel}`,
       item.blurbMarkdown,
     )
 

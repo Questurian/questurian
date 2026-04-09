@@ -268,6 +268,27 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
+  const parseSelectedPayloadMediaSetIds = (
+    selectedPayloadMediaSetIdsJson?: string | null
+  ): string[] | null => {
+    if (!selectedPayloadMediaSetIdsJson) return null;
+
+    try {
+      const parsed = JSON.parse(selectedPayloadMediaSetIdsJson);
+      if (!Array.isArray(parsed)) return null;
+
+      const normalized = parsed
+        .filter((id): id is string => typeof id === "string")
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0);
+
+      if (normalized.length === 0) return null;
+      return Array.from(new Set(normalized));
+    } catch {
+      return null;
+    }
+  };
+
   return {
     id: location.id!,
     title: location.title || null,
@@ -280,6 +301,9 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     tripadvisorUrl: location.tripadvisorUrl || null,
     tripadvisorLocationId: location.tripadvisorLocationId || null,
     payload_location_ref: location.payload_location_ref || null,
+    selectedPayloadMediaSetIds: parseSelectedPayloadMediaSetIds(
+      location.selectedPayloadMediaSetIdsJson || null
+    ),
     neighborhoodDescription: location.neighborhoodDescription || null,
     idealFor: parseIdealFor(location.idealForJson || null),
     nightlifeDetails: parseNightlifeDetails(location.nightlifeDetailsJson || null),
@@ -540,10 +564,6 @@ export function transformLocationToBasicResponse(
     accommodationsString(location.priceLevel);
   const attractionsVisitHours = attractionsSectionValue("visit", "hours");
   const attractionsBookingRequired = attractionsSectionValue("visit", "booking_required");
-  const attractionsIdealFor = attractionsSectionValue("visit", "ideal_for");
-  const attractionsWebsite =
-    accommodationsString(attractionsSectionValue("contact", "website")) ||
-    accommodationsString(location.website);
   const keyLocationsType =
     keyLocationsString(keyLocationsValue("location_type")) ||
     keyLocationsString(location.type);
@@ -560,7 +580,19 @@ export function transformLocationToBasicResponse(
 
   const hasTitle = Boolean(location.title?.trim());
   const hasType = Boolean(location.type?.trim());
-  const hasMedia = location.uploadsCount > 0 || location.instagramEmbedsCount > 0;
+  const hasSelectedPayloadMediaSets = (() => {
+    if (!location.selectedPayloadMediaSetIdsJson) return false;
+    try {
+      const parsed = JSON.parse(location.selectedPayloadMediaSetIdsJson);
+      return Array.isArray(parsed) && parsed.some((id) => typeof id === "string" && id.trim().length > 0);
+    } catch {
+      return false;
+    }
+  })();
+  const hasMedia =
+    location.uploadsCount > 0 ||
+    location.instagramEmbedsCount > 0 ||
+    hasSelectedPayloadMediaSets;
   const hasAddress = Boolean(location.address?.trim());
   const hasCountryCode = Boolean(location.countryCode?.trim());
   const hasPhoneNumber =
@@ -572,7 +604,6 @@ export function transformLocationToBasicResponse(
     Boolean(location.website?.trim()) ||
     (isNightlife && Boolean(nightlifeWebsite)) ||
     (isAccommodations && Boolean(accommodationsWebsite)) ||
-    (isAttractions && Boolean(attractionsWebsite)) ||
     (isKeyLocations && Boolean(keyLocationsWebsite));
   const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
   const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
@@ -629,8 +660,6 @@ export function transformLocationToBasicResponse(
   const hasAttractionsType = Boolean(attractionsType);
   const hasAttractionsPricing = Boolean(attractionsPricing);
   const hasAttractionsBookingRequired = accommodationsBooleanPresent(attractionsBookingRequired);
-  const hasAttractionsIdealFor =
-    hasIdealFor || accommodationsArrayHasValues(attractionsIdealFor);
   const hasAttractionsVisitHours = (() => {
     if (hasOperationHours) return true;
     if (!attractionsVisitHours) return false;
@@ -758,9 +787,7 @@ export function transformLocationToBasicResponse(
         hasAttractionsType &&
         hasAttractionsPricing &&
         hasAttractionsBookingRequired &&
-        hasAttractionsIdealFor &&
-        hasAttractionsVisitHours &&
-        hasWebsite
+        hasAttractionsVisitHours
       )
     : isKeyLocations
       ? (

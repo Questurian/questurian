@@ -49,6 +49,19 @@ function buildDraft(): ListicleItineraryDraft {
         timePeriod: 'AM',
         durationHours: 1,
         durationMinutes: '30',
+        title: '',
+        operator: '',
+        price: '',
+        url: '',
+        tourDuration: 1,
+        startingPoint: {
+          label: '',
+          latitude: '',
+          longitude: '',
+        },
+        keyLocations: [],
+        image: null,
+        instagramPost: null,
         blurbMarkdown: '',
       },
       {
@@ -63,6 +76,19 @@ function buildDraft(): ListicleItineraryDraft {
         timePeriod: 'PM',
         durationHours: 1,
         durationMinutes: '0',
+        title: '',
+        operator: '',
+        price: '',
+        url: '',
+        tourDuration: 1,
+        startingPoint: {
+          label: '',
+          latitude: '',
+          longitude: '',
+        },
+        keyLocations: [],
+        image: null,
+        instagramPost: null,
         blurbMarkdown: 'Existing lunch copy',
       },
     ],
@@ -136,6 +162,7 @@ function buildRelatedByBlockType(): Record<string, RelatedItemOption[]> {
         instagramGallery: [],
       },
     ],
+    'itinerary-tour-agency': [],
   }
 }
 
@@ -216,5 +243,49 @@ describe('listicleItineraries ai autowrite service', () => {
     expect(nextDraft.header.introMarkdown).toBe('Weekend intro')
     expect(nextDraft.items[0]?.blurbMarkdown).toBe('Bridge blurb')
     expect(nextDraft.items[1]?.blurbMarkdown).toBe('Existing lunch copy')
+  })
+
+  it('formats manual tour-agency context with tiered price, hour duration, and coordinate starting point', () => {
+    const draft = buildDraft()
+    draft.items = [{
+      id: 'tour-stop',
+      blockType: 'itinerary-tour-agency',
+      item: null,
+      mediaMode: 'photos',
+      selectedPhotos: [],
+      selectedInstagramPost: null,
+      timeHour: 8,
+      timeMinute: '00',
+      timePeriod: 'AM',
+      durationHours: 1,
+      durationMinutes: '0',
+      title: 'Sacred Valley Day Tour',
+      operator: 'Andes Routes',
+      price: '$$$',
+      url: 'https://example.com/tours/sacred-valley',
+      tourDuration: 8,
+      startingPoint: {
+        label: 'Plaza de Armas',
+        latitude: '-13.516',
+        longitude: '-71.978',
+      },
+      keyLocations: [],
+      image: null,
+      instagramPost: null,
+      blurbMarkdown: '',
+      blurbJsonText: '',
+    }]
+
+    const request = buildItineraryGenerateListicleContentRequest({
+      draft,
+      relatedByBlockType: buildRelatedByBlockType(),
+      locations: buildLocations(),
+      targetIds: ['tour-stop_blurb'],
+      modelName: 'gemini-2.5-flash',
+    })
+
+    expect(request.targets[0]?.supportingContext).toContain('Price: $$$')
+    expect(request.targets[0]?.supportingContext).toContain('Tour duration: 8 hours')
+    expect(request.targets[0]?.supportingContext).toContain('Starting point: Plaza de Armas (-13.516, -71.978)')
   })
 })

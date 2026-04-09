@@ -3,12 +3,27 @@ import { normalizeDocResponse } from "./payload-http.client";
 import { PayloadAuthClient } from "./payload-auth.client";
 import type {
   PayloadMediaSetData,
+  PayloadMediaSetListItem,
+  PayloadMediaSetListResponse,
   PayloadMediaSetQueryResponse,
   PayloadMediaSetResponse,
+  PayloadMediaSetSearchQueryDoc,
+  PayloadMediaSetSearchResponse,
+  PayloadMediaVariantType,
 } from "./payload-api.types";
 
 export class PayloadMediaSetsClient {
   constructor(private readonly authClient: PayloadAuthClient) {}
+
+  private static readonly PREVIEW_VARIANT_ORDER: PayloadMediaVariantType[] = [
+    "square",
+    "thumbnail",
+    "wide",
+    "portrait",
+    "hero",
+    "open_graph",
+    "editorial",
+  ];
 
   private extractRelationshipId(value: unknown): string | null {
     if (value === null || value === undefined) return null;
@@ -20,6 +35,51 @@ export class PayloadMediaSetsClient {
       }
     }
     return null;
+  }
+
+  private toAbsoluteUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+
+    try {
+      return new URL(url, this.authClient.getApiUrl()).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private getPreviewUrl(doc: PayloadMediaSetSearchQueryDoc): string | null {
+    const variants = doc.variants;
+    if (!variants || typeof variants !== "object") {
+      return null;
+    }
+
+    for (const variantKey of PayloadMediaSetsClient.PREVIEW_VARIANT_ORDER) {
+      const variant = variants[variantKey];
+      if (!variant || typeof variant !== "object") {
+        continue;
+      }
+
+      const url = typeof variant.url === "string" ? variant.url : null;
+      if (url) {
+        return this.toAbsoluteUrl(url);
+      }
+    }
+
+    return null;
+  }
+
+  private normalizeMediaSetListItem(doc: PayloadMediaSetSearchQueryDoc): PayloadMediaSetListItem {
+    return {
+      id: String(doc.id),
+      title: doc.title,
+      altText: doc.alt_text ?? null,
+      photographerCredit: doc.photographer_credit ?? null,
+      status: doc.status ?? null,
+      location: doc.location ?? null,
+      locationRef: this.extractRelationshipId(doc.locationRef),
+      previewUrl: this.getPreviewUrl(doc),
+      updatedAt: doc.updatedAt ?? null,
+    };
   }
 
   async findMediaSetByExternalRef(externalRef: string): Promise<string | null> {
@@ -182,7 +242,10 @@ export class PayloadMediaSetsClient {
     }
 
     const rawResult = await response.json();
-    const normalized = normalizeDocResponse<{ variants?: Record<string, unknown> }>(
+    const normalized = normalizeDocResponse<{
+      id?: string | number;
+      variants?: Record<string, unknown>;
+    }>(
       rawResult,
       "media-set fetch"
     );
@@ -197,6 +260,108 @@ export class PayloadMediaSetsClient {
       .filter((id): id is string => !!id);
 
     return Array.from(new Set(assetIds));
+  }
+
+  async searchMediaSets(params: {
+    query?: string;
+    page?: number;
+    limit?: number;
+    ids?: string[];
+  }): Promise<PayloadMediaSetListResponse> {
+    if (!this.authClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const token = await this.authClient.ensureAuthenticated();
+    const apiUrl = this.authClient.getApiUrl();
+    const trimmedQuery = params.query?.trim() ?? "";
+    const ids = Array.from(new Set((params.ids ?? []).map((id) => id.trim()).filter(Boolean)));
+    const page = params.page && params.page > 0 ? params.page : 1;
+    const limit = params.limit && params.limit > 0 ? params.limit : 24;
+    const searchParams = new URLSearchParams({
+      depth: "2",
+    });
+
+    if (ids.length > 0) {
+      searchParams.set("where[id][in]", ids.join(","));
+      searchParams.set("limit", String(ids.length));
+      searchParams.set("page", "1");
+    } else {
+      searchParams.set("limit", String(limit));
+      searchParams.set("page", String(page));
+      searchParams.set("sort", "-updatedAt");
+
+      if (trimmedQuery) {
+        searchParams.set("where[or][0][title][contains]", trimmedQuery);
+        searchParams.set("where[or][1][alt_text][contains]", trimmedQuery);
+        searchParams.set("where[or][2][photographer_credit][contains]", trimmedQuery);
+        searchParams.set("where[or][3][externalRef][contains]", trimmedQuery);
+      }
+    }
+
+    const url = `${apiUrl}/api/media-sets?${searchParams.toString()}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `JWT ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Payload] Media-set search failed", {
+        query: trimmedQuery,
+        ids,
+        page,
+        limit,
+        status: response.status,
+        errorText,
+      });
+      throw new Error(`Payload media-set search failed: ${response.status} - ${errorText}`);
+    }
+
+    const result = (await response.json()) as PayloadMediaSetSearchResponse;
+    const docs = (result.docs ?? []).map((doc) => this.normalizeMediaSetListItem(doc));
+
+    const orderedDocs =
+      ids.length > 0
+        ? ids
+            .map((id) => docs.find((doc) => doc.id === id) ?? null)
+            .filter((doc): doc is PayloadMediaSetListItem => doc !== null)
+        : docs;
+
+    const effectiveLimit = ids.length > 0
+      ? orderedDocs.length
+      : result.limit ?? limit;
+    const effectiveTotalDocs = ids.length > 0
+      ? orderedDocs.length
+      : result.totalDocs ?? orderedDocs.length;
+    const effectivePage = ids.length > 0 ? 1 : result.page ?? page;
+    const effectiveTotalPages = ids.length > 0
+      ? 1
+      : result.totalPages ?? Math.max(1, Math.ceil(effectiveTotalDocs / Math.max(effectiveLimit, 1)));
+    const hasPrevPage = ids.length > 0
+      ? false
+      : result.hasPrevPage ?? effectivePage > 1;
+    const hasNextPage = ids.length > 0
+      ? false
+      : result.hasNextPage ?? effectivePage < effectiveTotalPages;
+
+    return {
+      docs: orderedDocs,
+      totalDocs: effectiveTotalDocs,
+      totalPages: effectiveTotalPages,
+      page: effectivePage,
+      limit: effectiveLimit,
+      hasNextPage,
+      hasPrevPage,
+      nextPage: ids.length > 0
+        ? null
+        : result.nextPage ?? (hasNextPage ? effectivePage + 1 : null),
+      prevPage: ids.length > 0
+        ? null
+        : result.prevPage ?? (hasPrevPage ? effectivePage - 1 : null),
+    };
   }
 
   async findOrCreateMediaSet(data: PayloadMediaSetData): Promise<string> {

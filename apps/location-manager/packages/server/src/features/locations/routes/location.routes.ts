@@ -11,7 +11,11 @@ import {
 import { listLocationsQuerySchema, deleteLocationIdSchema } from "../validation/schemas/locations.schemas";
 import { taxonomyLocationKeyParamsSchema } from "../validation/schemas/taxonomy.schemas";
 import { createCorrectionSchema, deleteCorrectionParamsSchema } from "../validation/schemas/taxonomy-correction.schemas";
-import { syncLocationIdSchema, syncAllSchema } from "../validation/schemas/payload.schemas";
+import {
+  syncLocationIdSchema,
+  syncAllSchema,
+  payloadMediaSetsQuerySchema,
+} from "../validation/schemas/payload.schemas";
 import type { LocationCategory } from "../models/location";
 import { getLocationByIdForUpdate } from "../repositories/core";
 
@@ -41,7 +45,7 @@ import {
   checkLeadsApiHealth,
 
   // Integration
-  postSyncLocation, postSyncAll, getSyncStatus, getTestConnection, deletePayloadSyncState,
+  postSyncLocation, postSyncAll, getSyncStatus, getPayloadMediaSets, getTestConnection, deletePayloadSyncState,
 } from "../controllers";
 
 const CATEGORY_ROUTES: readonly LocationCategory[] = [
@@ -239,6 +243,11 @@ app.post(
   "/api/payload/sync-all",
   validateBody(syncAllSchema),
   postSyncAll
+);
+app.get(
+  "/api/payload/media-sets",
+  validateQuery(payloadMediaSetsQuerySchema),
+  getPayloadMediaSets
 );
 app.get("/api/payload/sync-status", getSyncStatus);
 app.get("/api/payload/sync-status/:id", getSyncStatus);

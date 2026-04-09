@@ -8,7 +8,7 @@ import pytest
 from fastapi import BackgroundTasks
 from pydantic import ValidationError
 
-from app.core import clear_all_runs, read_status
+from app.core import clear_all_runs, read_stage_result, read_status
 
 # Avoid importing heavyweight external LLM clients during route-module import.
 utils_stub = types.ModuleType("utils")
@@ -17,6 +17,86 @@ utils_stub.parse_json_response = lambda value: json.loads(value)
 sys.modules.setdefault("utils", utils_stub)
 
 import app.features.prompt2blog.routes as prompt2blog_routes
+
+
+PERU_SOURCE_SAMPLE = """Machu Picchu, Peru
+IS IT SAFE TO TRAVEL TO PERU (2026 UPDATE)
+March 31, 2026
+
+Many travelers love the idea of Peru – Machu Picchu, Lima, the Andes, Inca culture, llamas – but is it safe to travel to Peru?
+
+Safe Travel to Peru: What You Need to Know
+
+Travelers to Peru should keep the following tips in mind as they explore the country:
+
+Check the State Department’s safety ratings and enroll in STEP
+Be very intentional about the transportation you take around the country
+Have a well-defined plan for visiting Machu Picchu, including packing appropriate clothing
+Take precautions to avoid intestinal diseases
+Be aware of your surroundings, particularly in Lima
+Understand Peru’s drug laws
+Buy travel insurance
+
+Peru’s Safety Ratings
+
+The most authoritative and useful source for American travelers is the State Department, which gives Peru a highly conditional level-two rating – exercise increased caution.
+
+The good news is that Machu Picchu and the area surrounding it is safe, and that there are safe ways of getting from Lima to Cusco.
+
+One easy way to enhance your safety in Peru is to enroll in STEP, the State Department's safety-monitoring program.
+
+Getting to Machu Picchu
+
+As mentioned, taking the train to Machu Picchu is one of the safest and most scenic ways of getting to this iconic UNESCO World Heritage Site.
+
+If you have time, spend a day in Cusco to get acclimated to its 11,000 feet of altitude.
+
+Here are some additional safety tips for trekking around Machu Picchu:
+
+Walking sticks are fine, but pointed ends must be covered with rubber tips.
+Bring and use insect repellent.
+Dress for mountain conditions, with multiple layers of warm clothing.
+Bring water and a rain jacket, even if it looks like a sunny day.
+
+LEARN MORE ABOUT OUR TRAVEL INSURANCE PLANS
+
+Health Guidelines for Peru Travel
+
+Yellow fever is a real risk in Peru, so make sure you’re vaccinated before traveling there.
+
+Clean water is also an issue. Recommendations include:
+
+Drink boiled water or bottled water with sealed lids
+Avoid ice cubes
+Avoid raw and undercooked food, such as salads
+
+Travel Insurance
+
+Berkshire Hathaway Travel Protection has a wide range of products to protect your Peruvian vacation, including:
+
+AdrenalineCare®, for adventure travel
+LuxuryCare®, for luxury travel
+ExactCare Extra®, for travel insurance plus flight protection
+
+Questions About Travel Insurance?
+CHECK OUT THE GUIDE
+
+Company
+About Us
+Customer Reviews
+Plans
+ExactCare
+LuxuryCare
+Resources
+Blog
+Contact
+assist@bhtp.com
+844-411-2487
+
+© Berkshire Hathaway Specialty Insurance Company, 2014 - 2026
+
+The full coverage terms and details, including limitations and exclusions, are contained in the travel insurance policy.
+BBB travel insurance review"""
 
 
 def _response_payload(response) -> dict:
@@ -48,6 +128,41 @@ def _seed_completed_run(run_id: str) -> None:
             },
         },
     )
+
+
+def _build_prompt2blog_request(source_material: list[str]) -> prompt2blog_routes.Prompt2BlogInputRequest:
+    return prompt2blog_routes.Prompt2BlogInputRequest(
+        article_type_id=7,
+        source_material=source_material,
+        article_goal="Explain whether Peru is a safe destination for travelers.",
+        target_reader="U.S. travelers planning Peru trips",
+        destination_context="Peru",
+        tone_id="practical",
+        length_id="medium",
+        brand_voice_id="questurian-default",
+        include_debug=True,
+        enable_editorial_augmentation=False,
+        model_name="gemini-2.5-flash-lite",
+    )
+
+
+def _stub_option_context() -> dict[str, object]:
+    return {
+        "tone": {"id": "practical"},
+        "length": {"id": "medium"},
+        "brand_voice": {"id": "questurian-default"},
+        "creativity_level": "medium",
+    }
+
+
+def _stub_writing_brief(request, option_context, cleaned_sources):  # noqa: ANN001
+    return {
+        "goal": request.article_goal,
+        "formatting": {"target_word_count": 900},
+        "raw_input": {
+            "blobs": [{"content": source} for source in cleaned_sources],
+        },
+    }
 
 
 def test_prompt2blog_storage_endpoints_without_http_client():
@@ -187,3 +302,249 @@ def test_prompt2blog_guideline_preview_endpoint_returns_selected_type(monkeypatc
     assert payload["name"] == "Explainer"
     assert isinstance(payload["guideline"], str)
     assert isinstance(payload["title_guideline"], str)
+
+
+def test_prompt2blog_cleanup_stage_uses_ai_payload_and_keeps_travel_facts(monkeypatch):
+    clear_all_runs(feature="prompt2blog")
+    run_id = f"p2b-{uuid4()}"
+
+    cleaned_text = """IS IT SAFE TO TRAVEL TO PERU (2026 UPDATE)
+March 31, 2026
+
+Many travelers love the idea of Peru – Machu Picchu, Lima, the Andes, Inca culture, llamas – but is it safe to travel to Peru?
+
+Safe Travel to Peru: What You Need to Know
+
+Travelers to Peru should keep the following tips in mind as they explore the country:
+
+Check the State Department’s safety ratings and enroll in STEP
+Be very intentional about the transportation you take around the country
+Have a well-defined plan for visiting Machu Picchu, including packing appropriate clothing
+Take precautions to avoid intestinal diseases
+Be aware of your surroundings, particularly in Lima
+Understand Peru’s drug laws
+
+Peru’s Safety Ratings
+
+The most authoritative and useful source for American travelers is the State Department, which gives Peru a highly conditional level-two rating – exercise increased caution.
+
+The good news is that Machu Picchu and the area surrounding it is safe, and that there are safe ways of getting from Lima to Cusco.
+
+One easy way to enhance your safety in Peru is to enroll in STEP, the State Department's safety-monitoring program.
+
+Getting to Machu Picchu
+
+As mentioned, taking the train to Machu Picchu is one of the safest and most scenic ways of getting to this iconic UNESCO World Heritage Site.
+
+If you have time, spend a day in Cusco to get acclimated to its 11,000 feet of altitude.
+
+Here are some additional safety tips for trekking around Machu Picchu:
+
+Walking sticks are fine, but pointed ends must be covered with rubber tips.
+Bring and use insect repellent.
+Dress for mountain conditions, with multiple layers of warm clothing.
+Bring water and a rain jacket, even if it looks like a sunny day.
+
+Health Guidelines for Peru Travel
+
+Yellow fever is a real risk in Peru, so make sure you’re vaccinated before traveling there.
+
+Clean water is also an issue. Recommendations include:
+
+Drink boiled water or bottled water with sealed lids
+Avoid ice cubes
+Avoid raw and undercooked food, such as salads"""
+
+    monkeypatch.setattr(prompt2blog_routes, "_resolve_input_options", lambda request: _stub_option_context())
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "_build_writing_brief_from_input",
+        _stub_writing_brief,
+    )
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "_invoke_text_llm",
+        lambda **kwargs: "Synthesized source material",
+    )
+
+    def _fake_cleanup_llm(*, prompt, **kwargs):  # noqa: ANN001
+        assert "Machu Picchu" in prompt
+        return (
+            {
+                "title": "IS IT SAFE TO TRAVEL TO PERU (2026 UPDATE)",
+                "published_at": "March 31, 2026",
+                "cleaned_text": cleaned_text,
+                "removed_blocks": [
+                    {
+                        "label": "Travel insurance CTA",
+                        "reason": "Promotional upsell unrelated to the factual safety guidance.",
+                        "excerpt": "LEARN MORE ABOUT OUR TRAVEL INSURANCE PLANS",
+                    },
+                    {
+                        "label": "Insurance products",
+                        "reason": "Product marketing section for Berkshire Hathaway travel insurance plans.",
+                        "excerpt": "Berkshire Hathaway Travel Protection has a wide range of products to protect your Peruvian vacation, including:",
+                    },
+                    {
+                        "label": "Footer navigation",
+                        "reason": "Site navigation and company footer links are boilerplate.",
+                        "excerpt": "Company About Us Customer Reviews Plans ExactCare LuxuryCare Resources Blog Contact assist@bhtp.com 844-411-2487",
+                    },
+                    {
+                        "label": "Legal disclaimer",
+                        "reason": "Policy disclaimer and legal copy are not useful source material for the article.",
+                        "excerpt": "The full coverage terms and details, including limitations and exclusions, are contained in the travel insurance policy.",
+                    },
+                ],
+            },
+            "{}",
+        )
+
+    monkeypatch.setattr(prompt2blog_routes, "_invoke_json_llm", _fake_cleanup_llm)
+
+    runtime_request = prompt2blog_routes._prepare_full_pipeline_request(
+        run_id,
+        _build_prompt2blog_request([PERU_SOURCE_SAMPLE]),
+    )
+
+    assert runtime_request.raw_sources == [cleaned_text]
+
+    cleanup_stage = read_stage_result(run_id, "stage_input_cleanup")
+    assert cleanup_stage["data"]["cleanup_mode"] == "ai_always_aggressive_v1"
+    assert cleanup_stage["data"]["model_name"] == "gemini-2.5-flash-lite"
+    assert cleanup_stage["data"]["cleaned_sources"] == [cleaned_text]
+
+    source = cleanup_stage["data"]["sources"][0]
+    assert source["fallback_used"] is False
+    assert source["title"] == "IS IT SAFE TO TRAVEL TO PERU (2026 UPDATE)"
+    assert source["published_at"] == "March 31, 2026"
+    assert "Clean water is also an issue." in source["cleaned_text"]
+    assert "Travel Insurance" not in source["cleaned_text"]
+    assert "Berkshire Hathaway Travel Protection" not in source["cleaned_text"]
+    assert source["removed_blocks"][0]["label"] == "Travel insurance CTA"
+    assert cleanup_stage["data"]["cleanup_stats"][0]["removed_lines"] == 4
+
+    clear_all_runs(feature="prompt2blog")
+
+
+def test_prompt2blog_cleanup_falls_back_to_precleaned_text_when_ai_cleanup_fails(monkeypatch):
+    clear_all_runs(feature="prompt2blog")
+    run_id = f"p2b-{uuid4()}"
+    source_text = """Cookie banner
+https://example.com/privacy
+Main travel safety guidance stays here.
+
+Keep this logistics paragraph."""
+
+    monkeypatch.setattr(prompt2blog_routes, "_resolve_input_options", lambda request: _stub_option_context())
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "_build_writing_brief_from_input",
+        _stub_writing_brief,
+    )
+
+    captured_prompt: dict[str, str] = {}
+
+    def _fake_synthesize_llm(**kwargs):  # noqa: ANN001
+        captured_prompt["prompt"] = kwargs["prompt"]
+        return "Synthesized source material"
+
+    monkeypatch.setattr(prompt2blog_routes, "_invoke_text_llm", _fake_synthesize_llm)
+
+    def _raising_cleanup_llm(**kwargs):  # noqa: ANN001
+        raise RuntimeError("Invalid JSON")
+
+    monkeypatch.setattr(prompt2blog_routes, "_invoke_json_llm", _raising_cleanup_llm)
+
+    runtime_request = prompt2blog_routes._prepare_full_pipeline_request(
+        run_id,
+        _build_prompt2blog_request([source_text]),
+    )
+    expected_fallback, _ = prompt2blog_routes._preclean_source_text(source_text)
+
+    assert runtime_request.raw_sources == [expected_fallback]
+    assert expected_fallback in captured_prompt["prompt"]
+
+    cleanup_stage = read_stage_result(run_id, "stage_input_cleanup")
+    source = cleanup_stage["data"]["sources"][0]
+    assert source["fallback_used"] is True
+    assert source["cleaned_text"] == expected_fallback
+    assert source["removed_blocks"] == []
+
+    clear_all_runs(feature="prompt2blog")
+
+
+def test_prompt2blog_cleanup_chunks_long_sources_and_merges_duplicates(monkeypatch):
+    clear_all_runs(feature="prompt2blog")
+    run_id = f"p2b-{uuid4()}"
+    segment_one = ("Chunk one factual sentence about Peru logistics. " * 220).strip()
+    segment_two = ("Chunk two factual sentence about Peru health guidance. " * 220).strip()
+    long_source = f"{segment_one}\n\n{segment_two}"
+
+    monkeypatch.setattr(prompt2blog_routes, "_resolve_input_options", lambda request: _stub_option_context())
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "_build_writing_brief_from_input",
+        _stub_writing_brief,
+    )
+    monkeypatch.setattr(
+        prompt2blog_routes,
+        "_invoke_text_llm",
+        lambda **kwargs: "Synthesized source material",
+    )
+
+    cleanup_prompts: list[str] = []
+
+    def _fake_chunk_cleanup_llm(*, prompt, **kwargs):  # noqa: ANN001
+        cleanup_prompts.append(prompt)
+        if "chunk 1 of 2" in prompt:
+            return (
+                {
+                    "title": "Long Peru Source",
+                    "published_at": "",
+                    "cleaned_text": "Shared boundary paragraph.\n\nChunk one facts.",
+                    "removed_blocks": [
+                        {
+                            "label": "CTA",
+                            "reason": "Marketing copy",
+                            "excerpt": "Learn more today",
+                        }
+                    ],
+                },
+                "{}",
+            )
+        return (
+            {
+                "title": "",
+                "published_at": "",
+                "cleaned_text": "Shared boundary paragraph.\n\nChunk two facts.",
+                "removed_blocks": [
+                    {
+                        "label": "Footer",
+                        "reason": "Boilerplate links",
+                        "excerpt": "Company Contact Legal",
+                    }
+                ],
+            },
+            "{}",
+        )
+
+    monkeypatch.setattr(prompt2blog_routes, "_invoke_json_llm", _fake_chunk_cleanup_llm)
+
+    runtime_request = prompt2blog_routes._prepare_full_pipeline_request(
+        run_id,
+        _build_prompt2blog_request([long_source]),
+    )
+    expected_cleaned = "Shared boundary paragraph.\n\nChunk one facts.\n\nChunk two facts."
+
+    assert runtime_request.raw_sources == [expected_cleaned]
+    assert len(cleanup_prompts) == 2
+
+    cleanup_stage = read_stage_result(run_id, "stage_input_cleanup")
+    source = cleanup_stage["data"]["sources"][0]
+    assert source["fallback_used"] is False
+    assert source["cleaned_text"] == expected_cleaned
+    assert source["title"] == "Long Peru Source"
+    assert len(source["removed_blocks"]) == 2
+
+    clear_all_runs(feature="prompt2blog")

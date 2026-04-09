@@ -30,6 +30,7 @@ import { useUpdateUploadPhotographerCredit } from "@client/shared/services/api/h
 import { AddInstagramEmbedForm } from "./forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "./forms/AddUploadFilesForm";
 import { MultiVariantCropperModal } from "./modals/MultiVariantCropperModal";
+import { PayloadMediaSetSelector } from "./PayloadMediaSetSelector";
 import { ImageLightbox } from "./ui/ImageLightbox";
 
 interface LocationMediaGalleryProps {
@@ -506,6 +507,10 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
             })}
           </ul>
         </div>
+      )}
+
+      {locationDetail.category === "attractions" && (
+        <PayloadMediaSetSelector locationDetail={locationDetail} />
       )}
 
       {/* Instagram and Upload Forms */}

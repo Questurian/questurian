@@ -66,6 +66,7 @@ export interface UpdateMapsRequest {
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string;
+  selectedPayloadMediaSetIds?: string[] | null;
   idealFor?: string[];
   nightlifeDetails?: Record<string, unknown> | string | null;
   accommodationsDetails?: Record<string, unknown> | string | null;

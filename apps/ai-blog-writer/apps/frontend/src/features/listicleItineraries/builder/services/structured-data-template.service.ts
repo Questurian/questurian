@@ -1,9 +1,12 @@
 import type {
+  InstagramPostOption,
   ItineraryBlockType,
   ItineraryItemBlock,
   ListicleItineraryDraft,
+  MediaAssetOption,
   RelatedItemOption,
 } from '../../types'
+import { isManualItineraryBlockType, relatedCollectionToBlockType } from '../../types'
 import {
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
@@ -38,6 +41,14 @@ const toFiniteNumber = (value: unknown): number | undefined => {
   }
   return undefined
 }
+
+const isLatitude = (value: number | undefined): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90
+)
+
+const isLongitude = (value: number | undefined): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180
+)
 
 const isValidAbsoluteHttpUrl = (value: string): boolean => {
   if (!value.trim()) return false
@@ -263,6 +274,7 @@ export const ITINERARY_STOP_SCHEMA_TYPE: Record<ItineraryBlockType, string> = {
   'itinerary-attractions': 'TouristAttraction',
   'itinerary-nightlife': 'NightClub',
   'itinerary-key-location': 'Place',
+  'itinerary-tour-agency': 'TouristTrip',
 }
 
 const ITINERARY_STOP_ALLOWED_SCHEMA_TYPES: Record<ItineraryBlockType, string[]> = {
@@ -295,6 +307,12 @@ const ITINERARY_STOP_ALLOWED_SCHEMA_TYPES: Record<ItineraryBlockType, string[]> 
     'Place',
     'LocalBusiness',
   ],
+  'itinerary-tour-agency': [
+    'TouristTrip',
+    'Trip',
+    'Service',
+    'TravelAgency',
+  ],
 }
 
 function getStopTypeLabel(blockType: ItineraryBlockType): string {
@@ -309,6 +327,8 @@ function getStopTypeLabel(blockType: ItineraryBlockType): string {
       return 'Nightlife'
     case 'itinerary-key-location':
       return 'Key Location'
+    case 'itinerary-tour-agency':
+      return 'Tour Agency'
     default:
       return 'Stop'
   }
@@ -419,6 +439,90 @@ function resolveSelectedInstagramPermalink(
   return resolveInstagramPermalink(selectedPost)
 }
 
+function resolveManualImageUrl(
+  itineraryItem: ItineraryItemBlock,
+  mediaAssets: MediaAssetOption[],
+): string | undefined {
+  if (!itineraryItem.image) return undefined
+  const selectedAsset = mediaAssets.find((asset) => asset.id === itineraryItem.image)
+  return selectedAsset ? resolveImageUrl(selectedAsset) : undefined
+}
+
+function resolveManualInstagramPermalink(
+  itineraryItem: ItineraryItemBlock,
+  instagramPosts: InstagramPostOption[],
+): string | undefined {
+  if (!itineraryItem.instagramPost) return undefined
+  const selectedPost = instagramPosts.find((post) => post.id === itineraryItem.instagramPost)
+  return selectedPost ? resolveInstagramPermalink(selectedPost) : undefined
+}
+
+function resolveManualStartingPoint(itineraryItem: ItineraryItemBlock): Record<string, unknown> | undefined {
+  const latitude = toFiniteNumber(itineraryItem.startingPoint.latitude)
+  const longitude = toFiniteNumber(itineraryItem.startingPoint.longitude)
+
+  if (!isLatitude(latitude) || !isLongitude(longitude)) {
+    return undefined
+  }
+
+  return compactValue({
+    '@type': 'Place',
+    name: normalizeText(itineraryItem.startingPoint.label),
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude,
+      longitude,
+    },
+  }) as Record<string, unknown>
+}
+
+function buildManualKeyLocationEntities(
+  itineraryItem: ItineraryItemBlock,
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): Array<Record<string, unknown>> {
+  return itineraryItem.keyLocations
+    .map((location) => {
+      if (location.source === 'existing') {
+        if (!location.relatedCollection || !location.relatedItem) {
+          return null
+        }
+
+        const blockType = relatedCollectionToBlockType(location.relatedCollection)
+        const relatedItem = (relatedByBlockType[blockType] || [])
+          .find((entry) => entry.id === location.relatedItem)
+        if (!relatedItem || !isRecord(relatedItem)) {
+          return null
+        }
+
+        return compactValue({
+          '@type': 'Place',
+          name: resolveEntityName(relatedItem) || normalizeText(relatedItem.title),
+          geo: resolveEntityGeo(relatedItem),
+        }) as Record<string, unknown>
+      }
+
+      const name = normalizeText(location.title)
+      const latitude = toFiniteNumber(location.latitude)
+      const longitude = toFiniteNumber(location.longitude)
+      if (!name) {
+        return null
+      }
+
+      return compactValue({
+        '@type': 'Place',
+        name,
+        geo: latitude !== undefined && longitude !== undefined
+          ? {
+              '@type': 'GeoCoordinates',
+              latitude,
+              longitude,
+            }
+          : undefined,
+      }) as Record<string, unknown>
+    })
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry))
+}
+
 function resolveTripTime(value: {
   date: string | undefined
   hour: number
@@ -437,31 +541,64 @@ function resolveTripTime(value: {
 function buildStopEntity(input: {
   itineraryItem: ItineraryItemBlock
   relatedItem?: RelatedItemOption
+  mediaAssets?: MediaAssetOption[]
+  instagramPosts?: InstagramPostOption[]
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
   position: number
   includeUrlFields: boolean
 }): Record<string, unknown> {
   const {
     itineraryItem,
     relatedItem,
+    mediaAssets = [],
+    instagramPosts = [],
+    relatedByBlockType,
     position,
     includeUrlFields,
   } = input
+  const isManualStop = isManualItineraryBlockType(itineraryItem.blockType)
   const source = relatedItem && isRecord(relatedItem) ? relatedItem : null
   const schemaType = getSchemaTypeForItineraryBlockType(itineraryItem.blockType)
-  const itemName = source ? resolveEntityName(source) : undefined
+  const itemName = isManualStop
+    ? normalizeText(itineraryItem.title)
+    : source
+      ? resolveEntityName(source)
+      : undefined
   const itemDescription = toStructuredDescription(
     extractDraftText(itineraryItem.blurbMarkdown, itineraryItem.blurbJsonText),
   )
   const itemAddress = source ? resolveEntityAddress(source) : undefined
-  const itemWebsite = source ? resolveEntityWebsite(source) : undefined
+  const itemWebsite = isManualStop
+    ? normalizeAbsoluteUrl(itineraryItem.url)
+    : source
+      ? resolveEntityWebsite(source)
+      : undefined
   const itemPhone = source ? resolveEntityPhone(source) : undefined
-  const itemPriceRange = source ? resolveEntityPriceRange(source) : undefined
+  const itemPriceRange = isManualStop
+    ? normalizeText(itineraryItem.price)
+    : source
+      ? resolveEntityPriceRange(source)
+      : undefined
   const itemTypeLabel = source ? resolveEntityTypeLabel(source) : undefined
   const itemGeo = source ? resolveEntityGeo(source) : undefined
-  const itemImage = relatedItem ? resolveSelectedImageUrl(itineraryItem, relatedItem) : undefined
-  const itemInstagram = relatedItem ? resolveSelectedInstagramPermalink(itineraryItem, relatedItem) : undefined
+  const itemImage = isManualStop
+    ? resolveManualImageUrl(itineraryItem, mediaAssets)
+    : relatedItem
+      ? resolveSelectedImageUrl(itineraryItem, relatedItem)
+      : undefined
+  const itemInstagram = isManualStop
+    ? resolveManualInstagramPermalink(itineraryItem, instagramPosts)
+    : relatedItem
+      ? resolveSelectedInstagramPermalink(itineraryItem, relatedItem)
+      : undefined
   const cuisines = source ? pickStringArray(source, [['cuisines']]) : []
   const idealFor = source ? pickStringArray(source, [['idealFor'], ['nightlifeDetails', 'core', 'idealFor']]) : []
+  const providerName = normalizeText(itineraryItem.operator)
+  const startingPoint = resolveManualStartingPoint(itineraryItem)
+  const keyLocationEntities = buildManualKeyLocationEntities(itineraryItem, relatedByBlockType)
+  const keyLocationKeywords = keyLocationEntities
+    .map((location) => normalizeText(location.name))
+    .filter((location): location is string => Boolean(location))
 
   const entity: Record<string, unknown> = {
     '@type': schemaType,
@@ -476,8 +613,29 @@ function buildStopEntity(input: {
     geo: itemGeo,
     priceRange: itemPriceRange,
     servesCuisine: cuisines.length > 0 ? cuisines : undefined,
-    keywords: idealFor.length > 0 ? idealFor.join(', ') : undefined,
+    keywords: isManualStop
+      ? keyLocationKeywords.join(', ') || undefined
+      : idealFor.length > 0
+        ? idealFor.join(', ')
+        : undefined,
     category: itemTypeLabel || getStopTypeLabel(itineraryItem.blockType),
+    provider: isManualStop && providerName
+      ? {
+          '@type': 'Organization',
+          name: providerName,
+        }
+      : undefined,
+    departureLocation: isManualStop ? startingPoint : undefined,
+    itinerary: isManualStop && keyLocationEntities.length > 0
+      ? {
+          '@type': 'ItemList',
+          itemListElement: keyLocationEntities.map((location, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            item: location,
+          })),
+        }
+      : undefined,
   }
 
   if (includeUrlFields && !entity.url && itemInstagram && isValidAbsoluteHttpUrl(itemInstagram)) {
@@ -490,9 +648,11 @@ function buildStopEntity(input: {
 export function buildListicleItineraryStructuredDataTemplate(input: {
   draft: ListicleItineraryDraft
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
+  mediaAssets?: MediaAssetOption[]
+  instagramPosts?: InstagramPostOption[]
   publisherConfig?: ItinerarySchemaPublisherConfig
 }): Record<string, unknown> {
-  const { draft, relatedByBlockType } = input
+  const { draft, relatedByBlockType, mediaAssets = [], instagramPosts = [] } = input
   const publisherConfig = input.publisherConfig ?? getItinerarySchemaPublisherConfig()
   const canonicalUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.url)
   const blogPostingId = canonicalUrl
@@ -536,6 +696,9 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
     const stopEntity = buildStopEntity({
       itineraryItem,
       relatedItem,
+      mediaAssets,
+      instagramPosts,
+      relatedByBlockType,
       position,
       includeUrlFields: Boolean(canonicalUrl),
     })

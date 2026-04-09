@@ -4,7 +4,14 @@ import type { SetURLSearchParams } from 'react-router-dom'
 import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
 import { createItinerary, markdownToLexical, updateItinerary } from '../../api'
 import { saveDraft } from '../../storage'
-import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
+import {
+  isManualItineraryBlockType,
+  type ItineraryBlockType,
+  type InstagramPostOption,
+  type ListicleItineraryDraft,
+  type MediaAssetOption,
+  type RelatedItemOption,
+} from '../../types'
 import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
 import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
 import { buildSeoPayload } from '../services/seo-section.service'
@@ -25,6 +32,8 @@ type UseItinerarySubmitParams = {
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
   selectedLocationRefId: number | null
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
+  mediaAssets: MediaAssetOption[]
+  instagramPosts: InstagramPostOption[]
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
   setResult: Dispatch<SetStateAction<string | null>>
@@ -41,6 +50,8 @@ export function useItinerarySubmit({
   setDraft,
   selectedLocationRefId,
   relatedByBlockType,
+  mediaAssets,
+  instagramPosts,
   setSearchParams,
   onError,
   setResult,
@@ -100,6 +111,8 @@ export function useItinerarySubmit({
                 status: 'published',
               },
               relatedByBlockType,
+              mediaAssets,
+              instagramPosts,
               publisherConfig: schemaPublisherConfig,
             }),
           ),
@@ -133,6 +146,67 @@ export function useItinerarySubmit({
       const payloadItems = [] as Array<Record<string, unknown>>
       for (let index = 0; index < submitDraft.items.length; index += 1) {
         const item = submitDraft.items[index]
+
+        const blurb = item.blurbMarkdown.trim()
+          ? await markdownToLexical(item.blurbMarkdown)
+          : readLexicalFromJsonText(item.blurbJsonText || '', `Item ${index + 1} blurb`)
+
+        if (!item.blurbMarkdown.trim() && !item.blurbJsonText?.trim()) {
+          throw new Error(`Item ${index + 1} blurb is required (markdown or lexical JSON)`)
+        }
+
+        if (isManualItineraryBlockType(item.blockType)) {
+          const startingPointLabel = item.startingPoint.label.trim()
+          const startingPointLatitude = item.startingPoint.latitude.trim()
+          const startingPointLongitude = item.startingPoint.longitude.trim()
+          const startingPoint = startingPointLabel || startingPointLatitude || startingPointLongitude
+            ? {
+                label: startingPointLabel || undefined,
+                latitude: startingPointLatitude ? Number(startingPointLatitude) : undefined,
+                longitude: startingPointLongitude ? Number(startingPointLongitude) : undefined,
+              }
+            : undefined
+
+          payloadItems.push({
+            blockType: item.blockType,
+            timeHour: item.timeHour,
+            timeMinute: item.timeMinute,
+            timePeriod: item.timePeriod,
+            durationHours: item.durationHours,
+            durationMinutes: item.durationMinutes,
+            title: item.title.trim(),
+            operator: item.operator.trim(),
+            price: item.price || undefined,
+            url: item.url.trim(),
+            tourDuration: item.tourDuration,
+            startingPoint,
+            keyLocations: item.keyLocations.map((location) => (
+              location.source === 'existing'
+                ? {
+                    id: location.id,
+                    source: location.source,
+                    relatedItem: location.relatedCollection && location.relatedItem
+                      ? {
+                          relationTo: location.relatedCollection,
+                          value: location.relatedItem,
+                        }
+                      : undefined,
+                  }
+                : {
+                    id: location.id,
+                    source: location.source,
+                    title: location.title.trim() || undefined,
+                    latitude: location.latitude.trim() ? Number(location.latitude) : undefined,
+                    longitude: location.longitude.trim() ? Number(location.longitude) : undefined,
+                  }
+            )),
+            image: item.image || undefined,
+            instagramPost: item.instagramPost || undefined,
+            blurb,
+          })
+          continue
+        }
+
         if (!item.item) {
           throw new Error(`Item ${index + 1} is missing related entry selection`)
         }
@@ -141,14 +215,6 @@ export function useItinerarySubmit({
         const selectedRelated = relatedOptions.find((entry) => entry.id === item.item)
         if (!selectedRelated) {
           throw new Error(`Item ${index + 1} selected related entry is unavailable for current itinerary filters`)
-        }
-
-        const blurb = item.blurbMarkdown.trim()
-          ? await markdownToLexical(item.blurbMarkdown)
-          : readLexicalFromJsonText(item.blurbJsonText || '', `Item ${index + 1} blurb`)
-
-        if (!item.blurbMarkdown.trim() && !item.blurbJsonText?.trim()) {
-          throw new Error(`Item ${index + 1} blurb is required (markdown or lexical JSON)`)
         }
 
         payloadItems.push({
@@ -212,6 +278,8 @@ export function useItinerarySubmit({
               seoSection: seoSectionForSubmit,
             },
             relatedByBlockType,
+            mediaAssets,
+            instagramPosts,
             publisherConfig: schemaPublisherConfig,
           }),
         )

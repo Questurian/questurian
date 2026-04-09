@@ -9,7 +9,8 @@
     "build": "echo 'No build step needed for Bun'",
     "lint": "echo 'Lint intentionally skipped for lm-server (TypeScript baseline not yet clean)'",
     "test": "bun test",
-    "seed:key-locations": "bun run src/features/locations/scripts/import-key-locations.ts"
+    "seed:key-locations": "bun run src/features/locations/scripts/import-key-locations.ts",
+    "cleanup:attractions-ideal-for": "bun run scripts/reset-attractions-ideal-for.ts"
   },
   "dependencies": {
     "@questurian/lm-shared": "workspace:*",

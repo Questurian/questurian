@@ -34,6 +34,7 @@ export function AddLocationForm({
   hideCategoryField = false,
 }: AddLocationFormProps) {
   const idealForOptionGroups = getIdealForOptionGroups(selectedCategory || "dining");
+  const shouldShowIdealFor = idealForOptionGroups.length > 0;
   const categoryLabelByValue: Record<LocationCategory, string> = {
     dining: "Dining",
     accommodations: "Accommodations",
@@ -42,7 +43,7 @@ export function AddLocationForm({
     key_locations: "Key Locations",
   };
   const idealForDescription =
-    selectedCategory === "dining" || selectedCategory === "attractions"
+    selectedCategory === "dining" || selectedCategory === "nightlife"
       ? "Choose 1 to 4 tags"
       : "Optional: choose up to 4 tags";
 
@@ -127,15 +128,17 @@ export function AddLocationForm({
                 ))}
               </FormSelect>
             )}
-            <FormTagMultiSelect
-              name="idealFor"
-              label="Ideal For"
-              control={form.control}
-              optionGroups={idealForOptionGroups}
-              maxSelections={4}
-              description={idealForDescription}
-              allowDirectTagArrayInput
-            />
+            {shouldShowIdealFor && (
+              <FormTagMultiSelect
+                name="idealFor"
+                label="Ideal For"
+                control={form.control}
+                optionGroups={idealForOptionGroups}
+                maxSelections={4}
+                description={idealForDescription}
+                allowDirectTagArrayInput
+              />
+            )}
           </section>
 
           <section className="space-y-4">

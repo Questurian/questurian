@@ -22,7 +22,11 @@ function validateCategoryIdealFor(
   idealFor: string[] | undefined,
   ctx: z.RefinementCtx
 ) {
-  const requiresIdealFor = category === "dining" || category === "attractions";
+  if (category === "attractions") {
+    return;
+  }
+
+  const requiresIdealFor = category === "dining" || category === "nightlife";
 
   if (requiresIdealFor && (!idealFor || idealFor.length === 0)) {
     ctx.addIssue({

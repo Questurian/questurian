@@ -24,7 +24,32 @@ export const syncAllSchema = z.object({
   category: payloadSyncCategorySchema.optional()
 });
 
+export const payloadMediaSetsQuerySchema = z.object({
+  query: z
+    .string()
+    .trim()
+    .transform((value) => value || undefined)
+    .optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().max(50).optional(),
+  ids: z
+    .string()
+    .trim()
+    .transform((value) => {
+      if (!value) return undefined;
+
+      const ids = value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      return ids.length > 0 ? ids : undefined;
+    })
+    .optional(),
+});
+
 // Type exports
 export type SyncLocationIdDto = z.infer<typeof syncLocationIdSchema>;
 export type SyncAllDto = z.infer<typeof syncAllSchema>;
 export type PayloadSyncCategoryDto = z.infer<typeof payloadSyncCategorySchema>;
+export type PayloadMediaSetsQueryDto = z.infer<typeof payloadMediaSetsQuerySchema>;

@@ -1,4 +1,9 @@
-import type { ListicleItineraryDraft, RelatedItemOption } from '../../types'
+import type {
+  InstagramPostOption,
+  ListicleItineraryDraft,
+  MediaAssetOption,
+  RelatedItemOption,
+} from '../../types'
 import {
   buildListicleItineraryStructuredDataTemplate,
   validateListicleItineraryStructuredDataShape,
@@ -48,6 +53,19 @@ function buildDraft(): ListicleItineraryDraft {
         timePeriod: 'AM',
         durationHours: 1,
         durationMinutes: '0',
+        title: '',
+        operator: '',
+        price: '',
+        url: '',
+        tourDuration: 1,
+        startingPoint: {
+          label: '',
+          latitude: '',
+          longitude: '',
+        },
+        keyLocations: [],
+        image: null,
+        instagramPost: null,
         blurbMarkdown: 'Discover a top brunch stop in Barranco.',
         blurbJsonText: '',
       },
@@ -63,6 +81,19 @@ function buildDraft(): ListicleItineraryDraft {
         timePeriod: 'AM',
         durationHours: 2,
         durationMinutes: '0',
+        title: '',
+        operator: '',
+        price: '',
+        url: '',
+        tourDuration: 1,
+        startingPoint: {
+          label: '',
+          latitude: '',
+          longitude: '',
+        },
+        keyLocations: [],
+        image: null,
+        instagramPost: null,
         blurbMarkdown: 'Explore iconic views and cultural highlights.',
         blurbJsonText: '',
       },
@@ -101,6 +132,7 @@ function buildRelatedByType(): Record<ListicleItineraryDraft['items'][number]['b
     'itinerary-attractions': [{ id: 202, title: 'Scenic Mirador' }],
     'itinerary-nightlife': [],
     'itinerary-key-location': [],
+    'itinerary-tour-agency': [],
   }
 }
 
@@ -177,5 +209,117 @@ describe('listicleItineraries structured data template', () => {
       draft,
     })
     expect(shapeIssues).toEqual([])
+  })
+
+  it('serializes manual tour-agency key locations and instagram permalink', () => {
+    const draft = buildDraft()
+    draft.items = [
+      {
+        id: 'tour-stop',
+        blockType: 'itinerary-tour-agency',
+        item: null,
+        mediaMode: 'photos',
+        selectedPhotos: [],
+        selectedInstagramPost: null,
+        timeHour: 1,
+        timeMinute: '00',
+        timePeriod: 'PM',
+        durationHours: 4,
+        durationMinutes: '0',
+        title: 'Sacred Valley Day Tour',
+        operator: 'Andes Routes',
+        price: '$$',
+        url: 'https://example.com/tours/sacred-valley',
+        tourDuration: 8,
+        startingPoint: {
+          label: 'Cusco Historic Center',
+          latitude: '-13.5319',
+          longitude: '-71.9675',
+        },
+        keyLocations: [
+          {
+            id: 'row-1',
+            source: 'existing',
+            relatedCollection: 'attractions',
+            relatedItem: 202,
+            title: '',
+            latitude: '',
+            longitude: '',
+          },
+          {
+            id: 'row-2',
+            source: 'manual',
+            relatedCollection: null,
+            relatedItem: null,
+            title: 'Maras lookout',
+            latitude: '-13.3283',
+            longitude: '-72.1594',
+          },
+        ],
+        image: 501,
+        instagramPost: 42,
+        blurbMarkdown: 'A scenic full-day circuit through the Sacred Valley.',
+        blurbJsonText: '',
+      },
+    ]
+
+    const mediaAssets: MediaAssetOption[] = [
+      {
+        id: 501,
+        filename: 'tour.jpg',
+        url: 'https://example.com/media/tour.jpg',
+      },
+    ]
+    const instagramPosts: InstagramPostOption[] = [
+      {
+        id: 42,
+        title: 'Sacred Valley Reel',
+        embedCode: '<blockquote data-instgrm-permalink="https://www.instagram.com/p/ABC123/"></blockquote>',
+      },
+    ]
+
+    const structuredData = buildListicleItineraryStructuredDataTemplate({
+      draft,
+      relatedByBlockType: buildRelatedByType(),
+      mediaAssets,
+      instagramPosts,
+      publisherConfig: {
+        siteName: 'Questurian',
+        logoUrl: 'https://example.com/logo.png',
+        defaultAuthorName: 'Questurian Team',
+      },
+    })
+
+    const graph = Array.isArray(structuredData['@graph']) ? structuredData['@graph'] : []
+    const itemListNode = graph.find((node) => (
+      node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'ItemList'
+    )) as Record<string, unknown> | undefined
+    const itemListElement = Array.isArray(itemListNode?.itemListElement) ? itemListNode.itemListElement : []
+    const manualStop = itemListElement[0] as Record<string, unknown> | undefined
+    const manualStopEntity = manualStop?.item as Record<string, unknown> | undefined
+    const itinerary = manualStopEntity?.itinerary as Record<string, unknown> | undefined
+    const itineraryStops = Array.isArray(itinerary?.itemListElement) ? itinerary.itemListElement : []
+    const secondRoutePoint = itineraryStops[1] as Record<string, unknown> | undefined
+    const secondRoutePlace = secondRoutePoint?.item as Record<string, unknown> | undefined
+    const secondRouteGeo = secondRoutePlace?.geo as Record<string, unknown> | undefined
+    const departureLocation = manualStopEntity?.departureLocation as Record<string, unknown> | undefined
+    const departureGeo = departureLocation?.geo as Record<string, unknown> | undefined
+
+    expect(manualStopEntity?.sameAs).toEqual(['https://www.instagram.com/p/ABC123/'])
+    expect(manualStopEntity?.image).toBe('https://example.com/media/tour.jpg')
+    expect(manualStopEntity?.priceRange).toBe('$$')
+    expect(departureLocation?.name).toBe('Cusco Historic Center')
+    expect(departureGeo).toEqual({
+      '@type': 'GeoCoordinates',
+      latitude: -13.5319,
+      longitude: -71.9675,
+    })
+    expect(itineraryStops).toHaveLength(2)
+    expect(secondRoutePlace?.name).toBe('Maras lookout')
+    expect(secondRouteGeo).toEqual({
+      '@type': 'GeoCoordinates',
+      latitude: -13.3283,
+      longitude: -72.1594,
+    })
   })
 })

@@ -18,11 +18,19 @@ const idealForTagsSchema = z
     message: "Ideal For tags must be unique",
   });
 
+const selectedPayloadMediaSetIdsSchema = z
+  .array(z.string().trim().min(1, "Payload media-set ID cannot be empty"))
+  .max(20, "Select up to 20 Payload media sets")
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: "Payload media-set IDs must be unique",
+  });
+
 function validateIdealForTagsForCategory(
   category: LocationCategory,
   tags: string[] | undefined,
   ctx: z.RefinementCtx
 ) {
+  if (category === "attractions") return;
   if (!tags) return;
 
   tags.forEach((tag, index) => {
@@ -125,7 +133,7 @@ export const createMapsSchema = z.object({
   }
 
   if (
-    (data.category === "dining" || data.category === "attractions" || data.category === "nightlife") &&
+    (data.category === "dining" || data.category === "nightlife") &&
     (!data.idealFor || data.idealFor.length === 0)
   ) {
     ctx.addIssue({
@@ -177,6 +185,7 @@ export const patchMapsSchema = z.object({
   keyLocationsDetails: recordOrStringSchema.optional().or(z.literal("")).transform(val => val === "" ? null : val),
   priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  selectedPayloadMediaSetIds: selectedPayloadMediaSetIdsSchema.optional().nullable(),
   operationHours: recordOrStringSchema.optional(),
   tripadvisorMealTypes: z.union([
     z.array(z.string().trim()),
@@ -228,6 +237,7 @@ export const patchMapsSchema = z.object({
          data.accommodationsDetails !== undefined ||
          data.attractionsDetails !== undefined ||
          data.keyLocationsDetails !== undefined ||
+         data.selectedPayloadMediaSetIds !== undefined ||
          data.operationHours !== undefined ||
          data.priceLevel !== undefined ||
          data.tripadvisorMealTypes !== undefined ||

@@ -54,6 +54,73 @@ const formatMinutes = (minutes: number): string => {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }
 
+const isValidAbsoluteUrl = (value: unknown): boolean => {
+  if (typeof value !== 'string' || !value.trim()) return false
+
+  try {
+    new URL(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const tourAgencyPriceTiers = ['$', '$$', '$$$', '$$$$'] as const
+
+const isTourAgencyPriceTier = (value: unknown): value is (typeof tourAgencyPriceTiers)[number] => (
+  typeof value === 'string' && tourAgencyPriceTiers.includes(value as (typeof tourAgencyPriceTiers)[number])
+)
+
+const isLatitude = (value: unknown): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90
+)
+
+const isLongitude = (value: unknown): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180
+)
+
+const tourAgencyKeyLocationCollections = [
+  'dining',
+  'accommodations',
+  'attractions',
+  'nightlife',
+  'key-locations',
+] as const
+
+type TourAgencyKeyLocationCollection = (typeof tourAgencyKeyLocationCollections)[number]
+
+const isTourAgencyKeyLocationCollection = (
+  value: unknown,
+): value is TourAgencyKeyLocationCollection => (
+  typeof value === 'string'
+  && tourAgencyKeyLocationCollections.includes(value as TourAgencyKeyLocationCollection)
+)
+
+const normalizePolymorphicRelationship = (value: unknown): {
+  relationTo: TourAgencyKeyLocationCollection
+  id: string | number
+} | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const relationTo = record.relationTo
+  if (!isTourAgencyKeyLocationCollection(relationTo)) {
+    return null
+  }
+
+  const relationshipId = normalizeRelationshipId('value' in record ? record.value : record)
+  if (relationshipId === null) {
+    return null
+  }
+
+  return {
+    relationTo,
+    id: relationshipId,
+  }
+}
+
 export const ListicleItineraries: CollectionConfig = {
   slug: 'listicle-itineraries',
   labels: {
@@ -231,6 +298,7 @@ export const ListicleItineraries: CollectionConfig = {
 
         const computed: ComputedBlock[] = []
         const sourceItemCache = new Map<string, Record<string, unknown> | null>()
+        const instagramPostCache = new Map<string, boolean>()
 
         for (let i = 0; i < itemsValue.length; i++) {
           const block = itemsValue[i]
@@ -272,6 +340,124 @@ export const ListicleItineraries: CollectionConfig = {
                 itineraryStartMinutes,
               )}-${formatMinutes(itineraryEndMinutes)}.`,
             )
+          }
+
+          if (blockType === 'itinerary-tour-agency') {
+            const titleValue = typeof block.title === 'string' ? block.title.trim() : ''
+            const operatorValue = typeof block.operator === 'string' ? block.operator.trim() : ''
+            const priceValue = block.price
+            const urlValue = typeof block.url === 'string' ? block.url.trim() : ''
+            const tourDurationValue = Number(block.tourDuration)
+            const startingPoint = block.startingPoint && typeof block.startingPoint === 'object'
+              ? block.startingPoint as Record<string, unknown>
+              : null
+            const startingPointLabel = typeof startingPoint?.label === 'string' ? startingPoint.label.trim() : ''
+            const startingPointLatitude = Number(startingPoint?.latitude)
+            const startingPointLongitude = Number(startingPoint?.longitude)
+            const hasStartingPoint = Boolean(
+              startingPointLabel
+              || startingPoint?.latitude !== undefined
+              || startingPoint?.longitude !== undefined,
+            )
+            const instagramPostId = normalizeRelationshipId(block.instagramPost)
+            const keyLocationRows = Array.isArray(block.keyLocations)
+              ? block.keyLocations as Record<string, unknown>[]
+              : []
+
+            if (!titleValue) {
+              throw new Error(`Item ${i + 1} must include a tour title.`)
+            }
+
+            if (!operatorValue) {
+              throw new Error(`Item ${i + 1} must include a tour operator.`)
+            }
+
+            if (!urlValue || !isValidAbsoluteUrl(urlValue)) {
+              throw new Error(`Item ${i + 1} must include a valid absolute URL.`)
+            }
+
+            if (priceValue !== undefined && priceValue !== null && priceValue !== '' && !isTourAgencyPriceTier(priceValue)) {
+              throw new Error(`Item ${i + 1} price must be $, $$, $$$, or $$$$.`)
+            }
+
+            if (!Number.isInteger(tourDurationValue) || tourDurationValue < 1 || tourDurationValue > 24) {
+              throw new Error(`Item ${i + 1} must include a tour duration between 1 and 24 hours.`)
+            }
+
+            if (hasStartingPoint && (!isLatitude(startingPointLatitude) || !isLongitude(startingPointLongitude))) {
+              throw new Error(`Item ${i + 1} starting point must include valid latitude and longitude.`)
+            }
+
+            if (instagramPostId !== null) {
+              const cacheKey = relationshipIdToKey(instagramPostId)
+
+              if (!instagramPostCache.has(cacheKey)) {
+                try {
+                  await req.payload.findByID({
+                    collection: 'instagram-posts',
+                    id: instagramPostId,
+                    depth: 0,
+                  })
+                  instagramPostCache.set(cacheKey, true)
+                } catch {
+                  instagramPostCache.set(cacheKey, false)
+                }
+              }
+
+              if (!instagramPostCache.get(cacheKey)) {
+                throw new Error(`Item ${i + 1} Instagram embed could not be loaded.`)
+              }
+            }
+
+            for (let rowIndex = 0; rowIndex < keyLocationRows.length; rowIndex += 1) {
+              const row = keyLocationRows[rowIndex]
+              const rowSource = typeof row.source === 'string' ? row.source : ''
+
+              if (rowSource === 'existing') {
+                const relationship = normalizePolymorphicRelationship(row.relatedItem)
+
+                if (!relationship) {
+                  throw new Error(
+                    `Item ${i + 1} key location ${rowIndex + 1} must select an existing travel item.`,
+                  )
+                }
+
+                const cacheKey = `${relationship.relationTo}:${relationshipIdToKey(relationship.id)}`
+                if (!sourceItemCache.has(cacheKey)) {
+                  const sourceItem = await fetchListicleSourceItem(req, relationship.relationTo, relationship.id)
+                  sourceItemCache.set(cacheKey, sourceItem)
+                }
+
+                if (!sourceItemCache.get(cacheKey)) {
+                  throw new Error(
+                    `Item ${i + 1} key location ${rowIndex + 1} references an item that could not be loaded.`,
+                  )
+                }
+
+                continue
+              }
+
+              if (rowSource === 'manual') {
+                const manualTitle = typeof row.title === 'string' ? row.title.trim() : ''
+                const latitude = Number(row.latitude)
+                const longitude = Number(row.longitude)
+
+                if (!manualTitle || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                  throw new Error(
+                    `Item ${i + 1} key location ${rowIndex + 1} must include a title, latitude, and longitude.`,
+                  )
+                }
+
+                continue
+              }
+
+              throw new Error(
+                `Item ${i + 1} key location ${rowIndex + 1} must be marked as existing or manual.`,
+              )
+            }
+
+            computed.push({ start: blockStart, end: blockEnd, blockType, index: i })
+            continue
           }
 
           const sourceCollection = getSourceCollectionForBlockType(blockType)

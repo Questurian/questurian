@@ -74,6 +74,7 @@ export function updateExistingEntity(db: DbClient, entityId: number, location: L
       tripadvisor_url = $tripadvisor_url,
       tripadvisor_location_id = $tripadvisor_location_id,
       payload_location_ref = $payload_location_ref,
+      selected_payload_media_set_ids_json = $selected_payload_media_set_ids_json,
       reviews_enabled = COALESCE($reviews_enabled, reviews_enabled),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = $id
@@ -97,6 +98,7 @@ export function updateExistingEntity(db: DbClient, entityId: number, location: L
     $tripadvisor_url: location.tripadvisorUrl || null,
     $tripadvisor_location_id: location.tripadvisorLocationId || null,
     $payload_location_ref: location.payload_location_ref || null,
+    $selected_payload_media_set_ids_json: location.selectedPayloadMediaSetIdsJson || null,
     $reviews_enabled:
       location.reviewsEnabled == null
         ? null
@@ -130,6 +132,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       tripadvisor_url,
       tripadvisor_location_id,
       payload_location_ref,
+      selected_payload_media_set_ids_json,
       reviews_enabled,
       created_at,
       updated_at
@@ -156,6 +159,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       $tripadvisor_url,
       $tripadvisor_location_id,
       $payload_location_ref,
+      $selected_payload_media_set_ids_json,
       $reviews_enabled,
       CURRENT_TIMESTAMP,
       CURRENT_TIMESTAMP
@@ -182,6 +186,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
     $tripadvisor_url: location.tripadvisorUrl || null,
     $tripadvisor_location_id: location.tripadvisorLocationId || null,
     $payload_location_ref: location.payload_location_ref || null,
+    $selected_payload_media_set_ids_json: location.selectedPayloadMediaSetIdsJson || null,
     $reviews_enabled: location.reviewsEnabled === false ? 0 : 1,
   });
 
@@ -280,6 +285,10 @@ export function buildEntityUpdatePlan(id: number, updates: Partial<Location>): U
   if (updates.payload_location_ref !== undefined) {
     setClause.push("payload_location_ref = $payload_location_ref");
     params.$payload_location_ref = updates.payload_location_ref;
+  }
+  if (updates.selectedPayloadMediaSetIdsJson !== undefined) {
+    setClause.push("selected_payload_media_set_ids_json = $selected_payload_media_set_ids_json");
+    params.$selected_payload_media_set_ids_json = updates.selectedPayloadMediaSetIdsJson;
   }
   if (updates.reviewsFetchedAt !== undefined) {
     setClause.push("reviews_fetched_at = $reviews_fetched_at");

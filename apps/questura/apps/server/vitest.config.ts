@@ -16,6 +16,7 @@ export default defineConfig({
     reporters: 'dot',
     include: [
       'src/shared/lib/*.test.ts',
+      'src/features/**/*.test.ts',
     ],
   },
 })

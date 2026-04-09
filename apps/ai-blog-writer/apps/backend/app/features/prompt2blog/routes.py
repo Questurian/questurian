@@ -65,20 +65,12 @@ PROMPT2BLOG_TONES_DIR = PROMPT2BLOG_OPTIONS_DIR / "tones"
 PROMPT2BLOG_LENGTHS_DIR = PROMPT2BLOG_OPTIONS_DIR / "lengths"
 PROMPT2BLOG_BRAND_VOICES_DIR = PROMPT2BLOG_OPTIONS_DIR / "brand-voices"
 PROMPT2BLOG_CREATIVITY_LEVELS = {"low", "medium", "high"}
-PROMPT2BLOG_NOISE_PATTERNS = (
-    "cookie",
-    "privacy policy",
-    "terms of service",
-    "advertisement",
-    "sponsored",
-    "subscribe",
-    "sign up",
-    "all rights reserved",
-    "share this",
-    "follow us",
-    "related articles",
-    "accept all",
-)
+PROMPT2BLOG_CLEANUP_MODE = "ai_always_aggressive_v1"
+PROMPT2BLOG_CLEANUP_CHUNKING_CHAR_THRESHOLD = 18_000
+PROMPT2BLOG_CLEANUP_CHUNK_TARGET_CHARS = 12_000
+PROMPT2BLOG_CLEANUP_MAX_OUTPUT_TOKENS = 8_192
+PROMPT2BLOG_CLEANUP_MAX_REMOVED_BLOCKS = 10
+PROMPT2BLOG_CLEANUP_REMOVED_EXCERPT_CHARS = 220
 PROMPT2BLOG_GUIDELINE_FILE_ALIASES = {
     "opinionpiece": "opinionpieces",
     "interview": "interviewarticles",
@@ -96,6 +88,76 @@ SYNTHESIZE_PROMPT = (
     "Return plain text only. No JSON.\n\n"
     "--- SOURCES ---\n"
 )
+
+P2B_SOURCE_CLEANUP_PROMPT = """You are cleaning source material for downstream travel article generation.
+
+This is a cleanup and extraction task, not a summarization task.
+
+Return strict JSON only:
+{{
+  "title": "string",
+  "published_at": "string",
+  "cleaned_text": "string",
+  "removed_blocks": [
+    {{
+      "label": "string",
+      "reason": "string",
+      "excerpt": "string"
+    }}
+  ]
+}}
+
+Hard rules:
+- Preserve factual article content in the original order whenever practical.
+- Keep travel advice, logistics, safety guidance, comparisons, health guidance, customs, and practical lists.
+- Remove navigation, footer/legal/privacy/cookie blocks, social/share prompts, contact/company lists, plan or product grids, embedded CTAs, underwriter/disclaimer copy, cross-sell sections, and self-promotional brand sections.
+- Remove decorative image captions unless they add factual value.
+- If a paragraph mixes factual guidance with promotion, preserve the factual portion and remove the promotional phrasing.
+- Do not rewrite this into a short summary.
+- cleaned_text must be plain text only, preserving paragraph and list structure where useful.
+- removed_blocks must contain at most 10 items.
+- Each removed_blocks excerpt must be 220 characters or fewer.
+- If title or published date is unclear, return an empty string for that field.
+- Do not invent facts, dates, or metadata.
+
+SOURCE MATERIAL:
+{source_text}
+"""
+
+P2B_SOURCE_CLEANUP_CHUNK_PROMPT = """You are cleaning chunk {chunk_index} of {chunk_count} from a longer source document for downstream travel article generation.
+
+This is a cleanup and extraction task, not a summarization task.
+
+Return strict JSON only:
+{{
+  "title": "string",
+  "published_at": "string",
+  "cleaned_text": "string",
+  "removed_blocks": [
+    {{
+      "label": "string",
+      "reason": "string",
+      "excerpt": "string"
+    }}
+  ]
+}}
+
+Hard rules:
+- Preserve factual article content in the original order within this chunk whenever practical.
+- Keep travel advice, logistics, safety guidance, comparisons, health guidance, customs, and practical lists.
+- Remove navigation, footer/legal/privacy/cookie blocks, social/share prompts, contact/company lists, plan or product grids, embedded CTAs, underwriter/disclaimer copy, cross-sell sections, and self-promotional brand sections.
+- Remove decorative image captions unless they add factual value.
+- If a paragraph mixes factual guidance with promotion, preserve the factual portion and remove the promotional phrasing.
+- Do not rewrite this into a short summary.
+- cleaned_text must be plain text only, preserving paragraph and list structure where useful.
+- removed_blocks must contain at most 10 items.
+- Each removed_blocks excerpt must be 220 characters or fewer.
+- Only return title or published_at if they are clearly visible in this chunk.
+- Do not invent facts, dates, or metadata.
+
+SOURCE CHUNK:
+{source_text}
+"""
 
 CLASSIFY_PROMPT = """You are an article-intent classification engine.
 
@@ -876,7 +938,7 @@ def _read_article_type_markdown(
     return fallback, None
 
 
-def _cleanup_source_text(raw_text: str) -> tuple[str, dict[str, int]]:
+def _preclean_source_text(raw_text: str) -> tuple[str, dict[str, int]]:
     text = unescape(raw_text or "")
     text = re.sub(r"(?is)<script.*?>.*?</script>", " ", text)
     text = re.sub(r"(?is)<style.*?>.*?</style>", " ", text)
@@ -890,10 +952,6 @@ def _cleanup_source_text(raw_text: str) -> tuple[str, dict[str, int]]:
         normalized = re.sub(r"\s+", " ", line).strip()
         if not normalized:
             cleaned_lines.append("")
-            continue
-        lower = normalized.lower()
-        if any(pattern in lower for pattern in PROMPT2BLOG_NOISE_PATTERNS):
-            removed_lines += 1
             continue
         if re.fullmatch(r"https?://\S+", normalized):
             removed_lines += 1
@@ -910,6 +968,226 @@ def _cleanup_source_text(raw_text: str) -> tuple[str, dict[str, int]]:
         "removed_lines": removed_lines,
     }
     return cleaned, stats
+
+
+def _truncate_cleanup_excerpt(value: str) -> str:
+    excerpt = _safe_str(value)
+    if len(excerpt) <= PROMPT2BLOG_CLEANUP_REMOVED_EXCERPT_CHARS:
+        return excerpt
+    return (
+        excerpt[: PROMPT2BLOG_CLEANUP_REMOVED_EXCERPT_CHARS - 1].rstrip()
+        + "…"
+    )
+
+
+def _sanitize_cleanup_text(value: Any) -> str:
+    text = _safe_str(value)
+    if not text:
+        return ""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _sanitize_removed_blocks(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+
+    removed_blocks: list[dict[str, str]] = []
+    for item in value:
+        if len(removed_blocks) >= PROMPT2BLOG_CLEANUP_MAX_REMOVED_BLOCKS:
+            break
+        record = _safe_dict(item)
+        label = _safe_str(record.get("label")) or "Removed block"
+        reason = _safe_str(record.get("reason")) or "Noise or promotional content"
+        excerpt = _truncate_cleanup_excerpt(_safe_str(record.get("excerpt")))
+        if not excerpt:
+            continue
+        removed_blocks.append(
+            {
+                "label": label,
+                "reason": reason,
+                "excerpt": excerpt,
+            }
+        )
+    return removed_blocks
+
+
+def _sanitize_cleanup_payload(parsed: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": _safe_str(parsed.get("title")),
+        "published_at": _safe_str(parsed.get("published_at")),
+        "cleaned_text": _sanitize_cleanup_text(parsed.get("cleaned_text")),
+        "removed_blocks": _sanitize_removed_blocks(parsed.get("removed_blocks")),
+    }
+
+
+def _chunk_source_text(text: str, max_chars: int) -> list[str]:
+    segments = [segment.strip() for segment in re.split(r"\n\s*\n", text) if segment.strip()]
+    if not segments:
+        stripped = text.strip()
+        return [stripped] if stripped else []
+
+    chunks: list[str] = []
+    current = ""
+
+    def _append_long_segment(segment: str) -> None:
+        words = segment.split()
+        if not words:
+            return
+        current_words = ""
+        for word in words:
+            candidate = f"{current_words} {word}".strip()
+            if current_words and len(candidate) > max_chars:
+                chunks.append(current_words)
+                current_words = word
+            else:
+                current_words = candidate
+        if current_words:
+            chunks.append(current_words)
+
+    for segment in segments:
+        if len(segment) > max_chars:
+            if current:
+                chunks.append(current)
+                current = ""
+            _append_long_segment(segment)
+            continue
+
+        candidate = f"{current}\n\n{segment}".strip() if current else segment
+        if current and len(candidate) > max_chars:
+            chunks.append(current)
+            current = segment
+        else:
+            current = candidate
+
+    if current:
+        chunks.append(current)
+
+    return chunks
+
+
+def _merge_chunked_cleanup_text(cleaned_chunks: list[str]) -> str:
+    merged_paragraphs: list[str] = []
+
+    for chunk in cleaned_chunks:
+        paragraphs = [segment.strip() for segment in re.split(r"\n\s*\n", chunk) if segment.strip()]
+        for paragraph in paragraphs:
+            normalized = _normalize_text(paragraph)
+            if not normalized:
+                continue
+            if merged_paragraphs:
+                last_normalized = _normalize_text(merged_paragraphs[-1])
+                if normalized == last_normalized:
+                    continue
+                if len(normalized) > 80 and normalized in last_normalized:
+                    continue
+                if len(last_normalized) > 80 and last_normalized in normalized:
+                    merged_paragraphs[-1] = paragraph
+                    continue
+            merged_paragraphs.append(paragraph)
+
+    return "\n\n".join(merged_paragraphs).strip()
+
+
+def _cleanup_source_with_ai(
+    *,
+    raw_text: str,
+    source_index: int,
+    model_name: str,
+) -> dict[str, Any]:
+    precleaned_text, preclean_stats = _preclean_source_text(raw_text)
+    fallback_payload = {
+        "source_index": source_index,
+        "input_chars": len(raw_text or ""),
+        "preclean_chars": len(precleaned_text),
+        "cleaned_chars": len(precleaned_text),
+        "fallback_used": True,
+        "title": "",
+        "published_at": "",
+        "cleaned_text": precleaned_text,
+        "removed_blocks": [],
+    }
+
+    if not precleaned_text:
+        return fallback_payload
+
+    chunks = (
+        _chunk_source_text(
+            precleaned_text,
+            max_chars=PROMPT2BLOG_CLEANUP_CHUNK_TARGET_CHARS,
+        )
+        if len(precleaned_text) >= PROMPT2BLOG_CLEANUP_CHUNKING_CHAR_THRESHOLD
+        else [precleaned_text]
+    )
+    if not chunks:
+        return fallback_payload
+
+    try:
+        cleaned_chunks: list[str] = []
+        removed_blocks: list[dict[str, str]] = []
+        title = ""
+        published_at = ""
+
+        for chunk_index, chunk in enumerate(chunks, start=1):
+            prompt_template = (
+                P2B_SOURCE_CLEANUP_CHUNK_PROMPT
+                if len(chunks) > 1
+                else P2B_SOURCE_CLEANUP_PROMPT
+            )
+            prompt = prompt_template.format(
+                chunk_index=chunk_index,
+                chunk_count=len(chunks),
+                source_text=chunk,
+            )
+            parsed, _ = _invoke_json_llm(
+                prompt=prompt,
+                max_tokens=PROMPT2BLOG_CLEANUP_MAX_OUTPUT_TOKENS,
+                temperature=0.1,
+                model_name=model_name,
+            )
+            cleanup_payload = _sanitize_cleanup_payload(parsed)
+            cleaned_text = _safe_str(cleanup_payload.get("cleaned_text"))
+            if not cleaned_text:
+                raise RuntimeError("AI cleanup returned empty cleaned_text")
+            cleaned_chunks.append(cleaned_text)
+            if not title:
+                title = _safe_str(cleanup_payload.get("title"))
+            if not published_at:
+                published_at = _safe_str(cleanup_payload.get("published_at"))
+
+            remaining_slots = PROMPT2BLOG_CLEANUP_MAX_REMOVED_BLOCKS - len(removed_blocks)
+            if remaining_slots > 0:
+                removed_blocks.extend(cleanup_payload["removed_blocks"][:remaining_slots])
+
+        cleaned_text = (
+            _merge_chunked_cleanup_text(cleaned_chunks)
+            if len(cleaned_chunks) > 1
+            else cleaned_chunks[0]
+        )
+        cleaned_text = _sanitize_cleanup_text(cleaned_text)
+        if not cleaned_text:
+            raise RuntimeError("Merged AI cleanup output was empty")
+
+        return {
+            "source_index": source_index,
+            "input_chars": len(raw_text or ""),
+            "preclean_chars": preclean_stats["output_chars"],
+            "cleaned_chars": len(cleaned_text),
+            "fallback_used": False,
+            "title": title,
+            "published_at": published_at,
+            "cleaned_text": cleaned_text,
+            "removed_blocks": removed_blocks,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Prompt2Blog AI cleanup failed for source %d: %s",
+            source_index,
+            exc,
+        )
+        return fallback_payload
 
 
 def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
@@ -1885,16 +2163,30 @@ def _prepare_full_pipeline_request(
         feature=FEATURE_NAME,
     )
 
+    cleanup_sources: list[dict[str, Any]] = []
     cleaned_sources: list[str] = []
-    cleanup_stats: list[dict[str, int]] = []
-    for source in source_material:
-        cleaned_text, stats = _cleanup_source_text(source)
-        cleanup_stats.append(stats)
+    for source_index, source in enumerate(source_material, start=1):
+        cleanup_source = _cleanup_source_with_ai(
+            raw_text=source,
+            source_index=source_index,
+            model_name=model_name,
+        )
+        cleanup_sources.append(cleanup_source)
+        cleaned_text = _safe_str(cleanup_source.get("cleaned_text"))
         if cleaned_text:
             cleaned_sources.append(cleaned_text)
 
     if not cleaned_sources:
         raise RuntimeError("All source_material entries were empty after cleanup.")
+
+    cleanup_stats = [
+        {
+            "input_chars": _safe_int(source.get("input_chars"), default=0),
+            "output_chars": _safe_int(source.get("cleaned_chars"), default=0),
+            "removed_lines": len(source.get("removed_blocks") or []),
+        }
+        for source in cleanup_sources
+    ]
 
     write_stage_result(
         run_id,
@@ -1902,8 +2194,11 @@ def _prepare_full_pipeline_request(
         {
             "created_at": _now_iso(),
             "data": {
+                "cleanup_mode": PROMPT2BLOG_CLEANUP_MODE,
+                "model_name": model_name,
                 "source_material_count": len(source_material),
                 "cleaned_sources_count": len(cleaned_sources),
+                "sources": cleanup_sources,
                 "cleanup_stats": cleanup_stats,
                 "cleaned_sources": cleaned_sources,
             },

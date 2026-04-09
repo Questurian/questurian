@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import {
@@ -9,13 +10,23 @@ import {
 } from '../constants/builder-options.constants'
 import type {
   DurationMinute,
+  InstagramPostOption,
   ItineraryBlockType,
   ItineraryItemBlock,
   ListicleItineraryDraft,
+  MediaAssetOption,
   MediaMode,
   Meridiem,
   QuarterMinute,
+  RelatedItemCollection,
   RelatedItemOption,
+  TourAgencyKeyLocationRow,
+  TourAgencyPriceTier,
+} from '../../types'
+import {
+  isManualItineraryBlockType as isManualBlockType,
+  relatedCollectionToBlockType,
+  TOUR_AGENCY_PRICE_TIERS,
 } from '../../types'
 import {
   getRelatedInstagramPostObjects,
@@ -39,6 +50,10 @@ type AiRewriteInput = {
 
 type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
+  token: string | null
+  locationRef: number | null
+  mediaAssets: MediaAssetOption[]
+  instagramPosts: InstagramPostOption[]
   isLoadingRelated: boolean
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
   onAddItem: () => void
@@ -77,10 +92,77 @@ type ActivePicker =
   | { type: 'item'; itemId: string }
   | { type: 'photos'; itemId: string }
   | { type: 'instagram'; itemId: string }
+  | { type: 'manual-instagram'; itemId: string }
   | null
+
+const TOUR_AGENCY_KEY_LOCATION_COLLECTION_OPTIONS: Array<{
+  value: RelatedItemCollection
+  label: string
+}> = [
+  { value: 'dining', label: 'Dining' },
+  { value: 'accommodations', label: 'Accommodations' },
+  { value: 'attractions', label: 'Attractions' },
+  { value: 'nightlife', label: 'Nightlife' },
+  { value: 'key-locations', label: 'Key Locations' },
+]
+
+function createKeyLocationRow(
+  itemId: string,
+  source: TourAgencyKeyLocationRow['source'],
+): TourAgencyKeyLocationRow {
+  return {
+    id: `${itemId}_key_location_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    source,
+    relatedCollection: source === 'existing' ? 'key-locations' : null,
+    relatedItem: null,
+    title: '',
+    latitude: '',
+    longitude: '',
+  }
+}
+
+function getRelatedItemsForCollection(
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+  collection: RelatedItemCollection | null,
+): RelatedItemOption[] {
+  if (!collection) return []
+  return relatedByBlockType[relatedCollectionToBlockType(collection)] || []
+}
+
+function formatTourDurationLabel(hours: number): string {
+  return `${hours} hour${hours === 1 ? '' : 's'}`
+}
+
+function resetItemForBlockType(item: ItineraryItemBlock, blockType: ItineraryBlockType): ItineraryItemBlock {
+  return {
+    ...item,
+    blockType,
+    item: null,
+    mediaMode: 'photos',
+    selectedPhotos: [],
+    selectedInstagramPost: null,
+    title: '',
+    operator: '',
+    price: '',
+    url: '',
+    tourDuration: 1,
+    startingPoint: {
+      label: '',
+      latitude: '',
+      longitude: '',
+    },
+    keyLocations: [],
+    image: null,
+    instagramPost: null,
+  }
+}
 
 export function BuilderStopsPanel({
   draft,
+  token,
+  locationRef,
+  mediaAssets,
+  instagramPosts,
   isLoadingRelated,
   relatedByBlockType,
   onAddItem,
@@ -102,10 +184,12 @@ export function BuilderStopsPanel({
   const [copyErrorItemId, setCopyErrorItemId] = useState<string | null>(null)
   const [photoPreviewIndexByItem, setPhotoPreviewIndexByItem] = useState<Record<string, number>>({})
   const [activeInstagramEmbedPreviewItemId, setActiveInstagramEmbedPreviewItemId] = useState<string | null>(null)
+  const [imagePickerItemId, setImagePickerItemId] = useState<string | null>(null)
 
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
   const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
   const activeInstagramPicker = activePicker?.type === 'instagram' ? activePicker : null
+  const activeManualInstagramPicker = activePicker?.type === 'manual-instagram' ? activePicker : null
 
   useEffect(() => {
     if (!copiedItemId) return
@@ -138,6 +222,10 @@ export function BuilderStopsPanel({
 
   useEffect(() => {
     draft.items.forEach((item) => {
+      if (isManualBlockType(item.blockType)) {
+        return
+      }
+
       const relatedOptions = relatedByBlockType[item.blockType] || []
       const selectedRelatedItem = relatedOptions.find((entry) => entry.id === item.item) || null
       const hasPhotos = getRelatedPhotoObjects(selectedRelatedItem).length > 0
@@ -211,27 +299,34 @@ export function BuilderStopsPanel({
 
         <div className="stl-list">
           {draft.items.map((item, index) => {
+            const isManualStop = isManualBlockType(item.blockType)
             const relatedOptions = relatedByBlockType[item.blockType] || []
             const selectedRelatedItem = relatedOptions.find((entry) => entry.id === item.item) || null
             const photoObjects = getRelatedPhotoObjects(selectedRelatedItem)
             const instagramPostObjects = getRelatedInstagramPostObjects(selectedRelatedItem)
             const hasPhotosAvailable = photoObjects.length > 0
             const hasInstagramAvailable = instagramPostObjects.length > 0
-            const availableMediaModeOptions = getAvailableMediaModeOptions(hasPhotosAvailable, hasInstagramAvailable)
+            const availableMediaModeOptions = isManualStop
+              ? []
+              : getAvailableMediaModeOptions(hasPhotosAvailable, hasInstagramAvailable)
             const effectiveMediaMode =
               availableMediaModeOptions.find((option) => option.value === item.mediaMode)?.value
               ?? availableMediaModeOptions[0]?.value
               ?? null
-            const modeNeedsPhotos = effectiveMediaMode ? requiresPhotos(effectiveMediaMode) : false
-            const modeNeedsInstagram = effectiveMediaMode ? requiresInstagram(effectiveMediaMode) : false
+            const modeNeedsPhotos = !isManualStop && effectiveMediaMode ? requiresPhotos(effectiveMediaMode) : false
+            const modeNeedsInstagram = !isManualStop && effectiveMediaMode ? requiresInstagram(effectiveMediaMode) : false
             const selectedInstagramPost = instagramPostObjects.find(
               (post) => post.id === item.selectedInstagramPost,
             ) || null
-            const selectedInstagramEmbedUrl = selectedInstagramPost
-              ? resolveInstagramEmbedUrl(selectedInstagramPost)
+            const selectedManualInstagramPost = instagramPosts.find(
+              (post) => post.id === item.instagramPost,
+            ) || null
+            const previewInstagramPost = isManualStop ? selectedManualInstagramPost : selectedInstagramPost
+            const selectedInstagramEmbedUrl = previewInstagramPost
+              ? resolveInstagramEmbedUrl(previewInstagramPost)
               : undefined
-            const selectedInstagramPreviewUrl = selectedInstagramPost
-              ? resolveInstagramPreviewUrl(selectedInstagramPost)
+            const selectedInstagramPreviewUrl = previewInstagramPost
+              ? resolveInstagramPreviewUrl(previewInstagramPost)
               : undefined
             const firstItemPhoto = photoObjects[0]
             const firstItemPhotoUrl = firstItemPhoto ? resolveImageUrl(firstItemPhoto) : undefined
@@ -244,6 +339,8 @@ export function BuilderStopsPanel({
                 return url ? { id: photoId, url } : null
               })
               .filter((entry): entry is { id: number; url: string } => Boolean(entry))
+            const selectedManualImage = mediaAssets.find((asset) => asset.id === item.image) || null
+            const selectedManualImageUrl = selectedManualImage ? resolveImageUrl(selectedManualImage) : undefined
             const photoPreviewCount = selectedPhotoPreviews.length
             const activePhotoPreviewIndex = Math.min(
               photoPreviewIndexByItem[item.id] ?? 0,
@@ -283,13 +380,10 @@ export function BuilderStopsPanel({
                     <select
                       value={item.blockType}
                       onChange={(event) =>
-                        onUpdateItem(item.id, (current) => ({
-                          ...current,
-                          blockType: event.target.value as ItineraryBlockType,
-                          item: null,
-                          selectedPhotos: [],
-                          selectedInstagramPost: null,
-                        }))
+                        onUpdateItem(item.id, (current) => resetItemForBlockType(
+                          current,
+                          event.target.value as ItineraryBlockType,
+                        ))
                       }
                     >
                       {BLOCK_TYPE_OPTIONS.map((blockType) => (
@@ -300,58 +394,522 @@ export function BuilderStopsPanel({
                     </select>
                   </label>
 
-                  <div className="stl-field">
-                    <span>Related Item *</span>
-                    <button
-                      type="button"
-                      className="stl-picker-trigger"
-                      onClick={() => setActivePicker({ type: 'item', itemId: item.id })}
-                    >
-                      <span className="stl-picker-trigger__preview">
-                        {selectedRelatedItem ? (
-                          <>
-                            {firstItemPhotoUrl && (
-                              <img src={firstItemPhotoUrl} alt="" />
-                            )}
-                            <span className="stl-picker-trigger__label">{selectedRelatedItemLabel}</span>
-                          </>
-                        ) : (
-                          <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
-                            Select item...
-                          </span>
-                        )}
-                      </span>
-                      <span className="stl-picker-trigger__caret">▼</span>
-                    </button>
-                    {selectedRelatedItem ? (
-                      <>
-                        <div className="stl-copyable-item-row">
-                          <input
-                            type="text"
-                            className="stl-copyable-item-input"
-                            value={selectedRelatedItemLabel}
-                            readOnly
-                            onFocus={(event) => event.currentTarget.select()}
-                            onClick={(event) => event.currentTarget.select()}
-                            aria-label="Selected related item title"
-                          />
-                          <button
-                            type="button"
-                            className={`stl-btn ${copiedItemId === item.id ? 'stl-btn-success' : 'stl-btn-secondary'} stl-copyable-item-btn`}
-                            onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItemLabel)}
-                          >
-                            {copiedItemId === item.id ? 'Copied' : 'Copy'}
-                          </button>
-                        </div>
-                        {copyErrorItemId === item.id ? (
-                          <p className="stl-legacy-note">Clipboard blocked. Select the text field and press Cmd/Ctrl+C.</p>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </div>
+                  {isManualStop ? (
+                    <label className="stl-field">
+                      <span>Tour Title *</span>
+                      <input
+                        type="text"
+                        value={item.title}
+                        onChange={(event) =>
+                          onUpdateItem(item.id, (current) => ({
+                            ...current,
+                            title: event.target.value,
+                          }))
+                        }
+                        placeholder="Ex. Sacred Valley day tour"
+                      />
+                    </label>
+                  ) : (
+                    <div className="stl-field">
+                      <span>Related Item *</span>
+                      <button
+                        type="button"
+                        className="stl-picker-trigger"
+                        onClick={() => setActivePicker({ type: 'item', itemId: item.id })}
+                      >
+                        <span className="stl-picker-trigger__preview">
+                          {selectedRelatedItem ? (
+                            <>
+                              {firstItemPhotoUrl && (
+                                <img src={firstItemPhotoUrl} alt="" />
+                              )}
+                              <span className="stl-picker-trigger__label">{selectedRelatedItemLabel}</span>
+                            </>
+                          ) : (
+                            <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                              Select item...
+                            </span>
+                          )}
+                        </span>
+                        <span className="stl-picker-trigger__caret">▼</span>
+                      </button>
+                      {selectedRelatedItem ? (
+                        <>
+                          <div className="stl-copyable-item-row">
+                            <input
+                              type="text"
+                              className="stl-copyable-item-input"
+                              value={selectedRelatedItemLabel}
+                              readOnly
+                              onFocus={(event) => event.currentTarget.select()}
+                              onClick={(event) => event.currentTarget.select()}
+                              aria-label="Selected related item title"
+                            />
+                            <button
+                              type="button"
+                              className={`stl-btn ${copiedItemId === item.id ? 'stl-btn-success' : 'stl-btn-secondary'} stl-copyable-item-btn`}
+                              onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItemLabel)}
+                            >
+                              {copiedItemId === item.id ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                          {copyErrorItemId === item.id ? (
+                            <p className="stl-legacy-note">Clipboard blocked. Select the text field and press Cmd/Ctrl+C.</p>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
-                {selectedRelatedItem ? (
+                {isManualStop ? (
+                  <>
+                    <div className="stl-grid stl-grid-2">
+                      <label className="stl-field">
+                        <span>Operator *</span>
+                        <input
+                          type="text"
+                          value={item.operator}
+                          onChange={(event) =>
+                            onUpdateItem(item.id, (current) => ({
+                              ...current,
+                              operator: event.target.value,
+                            }))
+                          }
+                          placeholder="Ex. Alpaca Expeditions"
+                        />
+                      </label>
+
+                      <label className="stl-field">
+                        <span>Price</span>
+                        <select
+                          value={item.price}
+                          onChange={(event) =>
+                            onUpdateItem(item.id, (current) => ({
+                              ...current,
+                              price: event.target.value as TourAgencyPriceTier | '',
+                            }))
+                          }
+                        >
+                          <option value="">Not specified</option>
+                          {TOUR_AGENCY_PRICE_TIERS.map((tier) => (
+                            <option key={tier} value={tier}>
+                              {tier}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="stl-grid stl-grid-2">
+                      <label className="stl-field">
+                        <span>URL *</span>
+                        <input
+                          type="url"
+                          value={item.url}
+                          onChange={(event) =>
+                            onUpdateItem(item.id, (current) => ({
+                              ...current,
+                              url: event.target.value,
+                            }))
+                          }
+                          placeholder="https://example.com/tour"
+                        />
+                      </label>
+
+                      <label className="stl-field">
+                        <div className="stl-field-label-row">
+                          <span>Tour Duration *</span>
+                          <span className="stl-tour-duration-badge">
+                            {formatTourDurationLabel(item.tourDuration)}
+                          </span>
+                        </div>
+                        <input
+                          className="stl-tour-duration-slider"
+                          type="range"
+                          min={1}
+                          max={24}
+                          step={1}
+                          value={item.tourDuration}
+                          onChange={(event) =>
+                            onUpdateItem(item.id, (current) => ({
+                              ...current,
+                              tourDuration: Number(event.target.value),
+                            }))
+                          }
+                          aria-label="Tour Duration"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="stl-grid stl-grid-2">
+                      <div className="stl-field">
+                        <span>Starting Point</span>
+                        <div className="stl-grid stl-grid-3">
+                          <label className="stl-field">
+                            <span>Label</span>
+                            <input
+                              type="text"
+                              value={item.startingPoint.label}
+                              onChange={(event) =>
+                                onUpdateItem(item.id, (current) => ({
+                                  ...current,
+                                  startingPoint: {
+                                    ...current.startingPoint,
+                                    label: event.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Ex. Plaza de Armas"
+                            />
+                          </label>
+                          <label className="stl-field">
+                            <span>Latitude</span>
+                            <input
+                              type="text"
+                              value={item.startingPoint.latitude}
+                              onChange={(event) =>
+                                onUpdateItem(item.id, (current) => ({
+                                  ...current,
+                                  startingPoint: {
+                                    ...current.startingPoint,
+                                    latitude: event.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="-13.5319"
+                            />
+                          </label>
+                          <label className="stl-field">
+                            <span>Longitude</span>
+                            <input
+                              type="text"
+                              value={item.startingPoint.longitude}
+                              onChange={(event) =>
+                                onUpdateItem(item.id, (current) => ({
+                                  ...current,
+                                  startingPoint: {
+                                    ...current.startingPoint,
+                                    longitude: event.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="-71.9675"
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="stl-field">
+                        <span>Instagram</span>
+                        {selectedManualInstagramPost ? (
+                          <button
+                            type="button"
+                            className="stl-picker-trigger stl-picker-trigger--instagram-preview"
+                            onClick={() => setActiveInstagramEmbedPreviewItemId(item.id)}
+                          >
+                            <span className="stl-picker-trigger__preview">
+                              {selectedInstagramPreviewUrl ? (
+                                <img src={selectedInstagramPreviewUrl} alt="" />
+                              ) : (
+                                <span className="stl-picker-trigger__thumb-empty" />
+                              )}
+                              <span className="stl-picker-trigger__label">{selectedManualInstagramPost.title}</span>
+                            </span>
+                            <span className="stl-picker-trigger__caret">Preview</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="stl-picker-trigger"
+                            onClick={() => setActivePicker({ type: 'manual-instagram', itemId: item.id })}
+                          >
+                            <span className="stl-picker-trigger__preview">
+                              <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                                Select Instagram post...
+                              </span>
+                            </span>
+                            <span className="stl-picker-trigger__caret">▼</span>
+                          </button>
+                        )}
+                        {selectedManualInstagramPost ? (
+                          <div className="stl-inline-actions">
+                            <button
+                              type="button"
+                              className="stl-btn stl-btn-secondary stl-btn-xs"
+                              onClick={() => setActivePicker({ type: 'manual-instagram', itemId: item.id })}
+                            >
+                              Change
+                            </button>
+                            <button
+                              type="button"
+                              className="stl-btn stl-btn-secondary stl-btn-xs"
+                              onClick={() =>
+                                onUpdateItem(item.id, (current) => ({
+                                  ...current,
+                                  instagramPost: null,
+                                }))
+                              }
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        ) : null}
+                        {instagramPosts.length < 1 ? (
+                          <p className="stl-legacy-note">No Instagram posts are loaded.</p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="stl-field">
+                      <span>Img</span>
+                      <button
+                        type="button"
+                        className="stl-picker-trigger"
+                        onClick={() => setImagePickerItemId(item.id)}
+                      >
+                        <span className="stl-picker-trigger__preview">
+                          {selectedManualImage ? (
+                            <>
+                              {selectedManualImageUrl && <img src={selectedManualImageUrl} alt="" />}
+                              <span className="stl-picker-trigger__label">{selectedManualImage.filename}</span>
+                            </>
+                          ) : (
+                            <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                              Select image...
+                            </span>
+                          )}
+                        </span>
+                        <span className="stl-picker-trigger__caret">▼</span>
+                      </button>
+                    </div>
+
+                    <div className="stl-field">
+                      <div className="stl-field-label-row">
+                        <span>Key Locations</span>
+                        <div className="stl-inline-actions">
+                          <button
+                            type="button"
+                            className="stl-btn stl-btn-secondary"
+                            onClick={() =>
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                keyLocations: [...current.keyLocations, createKeyLocationRow(item.id, 'existing')],
+                              }))
+                            }
+                          >
+                            Add Existing Item
+                          </button>
+                          <button
+                            type="button"
+                            className="stl-btn stl-btn-secondary"
+                            onClick={() =>
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                keyLocations: [...current.keyLocations, createKeyLocationRow(item.id, 'manual')],
+                              }))
+                            }
+                          >
+                            Add Manual Point
+                          </button>
+                        </div>
+                      </div>
+
+                      {item.keyLocations.length < 1 ? (
+                        <p className="stl-legacy-note">Add existing stops or manual coordinates for the route.</p>
+                      ) : (
+                        <div className="stl-tour-key-locations">
+                          {item.keyLocations.map((location, locationIndex) => {
+                            const relatedOptionsForRow = getRelatedItemsForCollection(
+                              relatedByBlockType,
+                              location.relatedCollection,
+                            )
+                            const selectedRelatedKeyLocation = relatedOptionsForRow.find(
+                              (entry) => entry.id === location.relatedItem,
+                            ) || null
+
+                            return (
+                              <div key={location.id} className="stl-tour-key-location-row">
+                                <div className="stl-tour-key-location-row__header">
+                                  <strong>Route Point {locationIndex + 1}</strong>
+                                  <button
+                                    type="button"
+                                    className="stl-btn stl-btn-danger stl-btn-xs"
+                                    onClick={() =>
+                                      onUpdateItem(item.id, (current) => ({
+                                        ...current,
+                                        keyLocations: current.keyLocations.filter((entry) => entry.id !== location.id),
+                                      }))
+                                    }
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+
+                                <div className="stl-grid stl-grid-2">
+                                  <label className="stl-field">
+                                    <span>Source</span>
+                                    <select
+                                      value={location.source}
+                                      onChange={(event) =>
+                                        onUpdateItem(item.id, (current) => ({
+                                          ...current,
+                                          keyLocations: current.keyLocations.map((entry) => (
+                                            entry.id !== location.id
+                                              ? entry
+                                              : {
+                                                  ...entry,
+                                                  source: event.target.value as TourAgencyKeyLocationRow['source'],
+                                                  relatedCollection: event.target.value === 'existing' ? 'key-locations' : null,
+                                                  relatedItem: null,
+                                                  title: '',
+                                                  latitude: '',
+                                                  longitude: '',
+                                                }
+                                          )),
+                                        }))
+                                      }
+                                    >
+                                      <option value="existing">Existing item</option>
+                                      <option value="manual">Manual coordinates</option>
+                                    </select>
+                                  </label>
+
+                                  {location.source === 'existing' ? (
+                                    <label className="stl-field">
+                                      <span>Collection</span>
+                                      <select
+                                        value={location.relatedCollection ?? ''}
+                                        onChange={(event) =>
+                                          onUpdateItem(item.id, (current) => ({
+                                            ...current,
+                                            keyLocations: current.keyLocations.map((entry) => (
+                                              entry.id !== location.id
+                                                ? entry
+                                                : {
+                                                    ...entry,
+                                                    relatedCollection: event.target.value as RelatedItemCollection,
+                                                    relatedItem: null,
+                                                  }
+                                            )),
+                                          }))
+                                        }
+                                      >
+                                        {TOUR_AGENCY_KEY_LOCATION_COLLECTION_OPTIONS.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  ) : null}
+                                </div>
+
+                                {location.source === 'existing' ? (
+                                  <label className="stl-field">
+                                    <span>Existing Item</span>
+                                    <select
+                                      value={location.relatedItem ?? ''}
+                                      onChange={(event) =>
+                                        onUpdateItem(item.id, (current) => ({
+                                          ...current,
+                                          keyLocations: current.keyLocations.map((entry) => (
+                                            entry.id !== location.id
+                                              ? entry
+                                              : {
+                                                  ...entry,
+                                                  relatedItem: event.target.value ? Number(event.target.value) : null,
+                                                }
+                                          )),
+                                        }))
+                                      }
+                                    >
+                                      <option value="">Select item...</option>
+                                      {relatedOptionsForRow.map((option) => (
+                                        <option key={option.id} value={option.id}>
+                                          {getRelatedItemDisplayLabel(option)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {selectedRelatedKeyLocation?.location ? (
+                                      <p className="stl-legacy-note">{selectedRelatedKeyLocation.location}</p>
+                                    ) : null}
+                                  </label>
+                                ) : (
+                                  <div className="stl-grid stl-grid-3">
+                                    <label className="stl-field">
+                                      <span>Title</span>
+                                      <input
+                                        type="text"
+                                        value={location.title}
+                                        onChange={(event) =>
+                                          onUpdateItem(item.id, (current) => ({
+                                            ...current,
+                                            keyLocations: current.keyLocations.map((entry) => (
+                                              entry.id !== location.id
+                                                ? entry
+                                                : {
+                                                    ...entry,
+                                                    title: event.target.value,
+                                                  }
+                                            )),
+                                          }))
+                                        }
+                                        placeholder="Ex. Scenic overlook"
+                                      />
+                                    </label>
+                                    <label className="stl-field">
+                                      <span>Latitude</span>
+                                      <input
+                                        type="text"
+                                        value={location.latitude}
+                                        onChange={(event) =>
+                                          onUpdateItem(item.id, (current) => ({
+                                            ...current,
+                                            keyLocations: current.keyLocations.map((entry) => (
+                                              entry.id !== location.id
+                                                ? entry
+                                                : {
+                                                    ...entry,
+                                                    latitude: event.target.value,
+                                                  }
+                                            )),
+                                          }))
+                                        }
+                                        placeholder="-13.5319"
+                                      />
+                                    </label>
+                                    <label className="stl-field">
+                                      <span>Longitude</span>
+                                      <input
+                                        type="text"
+                                        value={location.longitude}
+                                        onChange={(event) =>
+                                          onUpdateItem(item.id, (current) => ({
+                                            ...current,
+                                            keyLocations: current.keyLocations.map((entry) => (
+                                              entry.id !== location.id
+                                                ? entry
+                                                : {
+                                                    ...entry,
+                                                    longitude: event.target.value,
+                                                  }
+                                            )),
+                                          }))
+                                        }
+                                        placeholder="-71.9675"
+                                      />
+                                    </label>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : selectedRelatedItem ? (
                   <label className="stl-field">
                     <span>Media Mode *</span>
                     {availableMediaModeOptions.length > 0 ? (
@@ -386,7 +944,7 @@ export function BuilderStopsPanel({
                   <p className="stl-legacy-note">Select a related item to unlock media options and blurb.</p>
                 )}
 
-                {modeNeedsPhotos ? (
+                {!isManualStop && modeNeedsPhotos ? (
                   <div className="stl-field">
                     <span>Selected Photos * (1-6)</span>
                     {photoPreviewCount > 0 ? (
@@ -462,7 +1020,7 @@ export function BuilderStopsPanel({
                   </div>
                 ) : null}
 
-                {modeNeedsInstagram ? (
+                {!isManualStop && modeNeedsInstagram ? (
                   <div className="stl-field">
                     <span>Selected Instagram Post *</span>
                     {selectedInstagramPost ? (
@@ -668,6 +1226,31 @@ export function BuilderStopsPanel({
                   onClose={() => setActivePicker(null)}
                 />
 
+                <FeaturedImagePicker
+                  isOpen={imagePickerItemId === item.id}
+                  selectedId={item.image}
+                  token={token ?? ''}
+                  locationRef={locationRef}
+                  requireMediaSet={false}
+                  prefetchedPayloadAssets={mediaAssets.map((asset) => ({
+                    id: asset.id,
+                    filename: asset.filename,
+                    url: asset.url,
+                    alt: asset.alt,
+                    alt_text: asset.alt_text,
+                    altText: asset.altText,
+                    mediaSet: asset.mediaSet,
+                    variant: asset.variant as 'square' | 'portrait' | 'thumbnail' | 'wide' | 'hero' | 'open_graph' | 'editorial' | undefined,
+                  }))}
+                  onSelect={(mediaAssetId) =>
+                    onUpdateItem(item.id, (current) => ({
+                      ...current,
+                      image: mediaAssetId,
+                    }))
+                  }
+                  onClose={() => setImagePickerItemId(null)}
+                />
+
                 <InstagramPickerModal
                   isOpen={activeInstagramPicker?.itemId === item.id}
                   posts={instagramPostObjects}
@@ -676,6 +1259,19 @@ export function BuilderStopsPanel({
                     onUpdateItem(item.id, (current) => ({
                       ...current,
                       selectedInstagramPost: nextId,
+                    }))
+                  }
+                  onClose={() => setActivePicker(null)}
+                />
+
+                <InstagramPickerModal
+                  isOpen={activeManualInstagramPicker?.itemId === item.id}
+                  posts={instagramPosts}
+                  selectedPostId={item.instagramPost}
+                  onSelect={(nextId) =>
+                    onUpdateItem(item.id, (current) => ({
+                      ...current,
+                      instagramPost: nextId,
                     }))
                   }
                   onClose={() => setActivePicker(null)}
@@ -697,7 +1293,7 @@ export function BuilderStopsPanel({
                       aria-label="Instagram embed preview"
                     >
                       <div className="stl-picker-modal__header">
-                        <h3>{selectedInstagramPost?.title || 'Instagram Post Preview'}</h3>
+                        <h3>{previewInstagramPost?.title || 'Instagram Post Preview'}</h3>
                         <button
                           type="button"
                           className="stl-picker-modal__close"

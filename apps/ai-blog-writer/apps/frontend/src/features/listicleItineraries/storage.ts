@@ -1,10 +1,17 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
-import type { ListicleItineraryDraft } from './types'
+import {
+  isRelatedItemCollection,
+  isTourAgencyPriceTier,
+  type ItineraryItemBlock,
+  type ListicleItineraryDraft,
+  type TourAgencyKeyLocationRow,
+  type TourAgencyStartingPoint,
+} from './types'
 import { DEFAULT_TRIP_INTENT, normalizeTripIntent } from '../trip-intent'
 import { normalizeLocationIds } from '../locationScope/scope'
 
-const STORAGE_KEY = 'listicle_itineraries_staged_v4_exact_neighborhoods'
+const STORAGE_KEY = 'listicle_itineraries_staged_v6_tour_agency_normalized_fields'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -16,9 +23,149 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
   const nowIso = new Date().toISOString()
   const fallbackDraftId = `lit_migrated_${Date.now()}_${index}`
   const header = isRecord(value.header) ? value.header : {}
+  const normalizedDraftId =
+    typeof value.draftId === 'string' && value.draftId.trim() ? value.draftId : fallbackDraftId
+
+  const normalizeStoredKeyLocation = (
+    rowValue: unknown,
+    itemId: string,
+    rowIndex: number,
+  ): TourAgencyKeyLocationRow | null => {
+    if (!isRecord(rowValue)) return null
+
+    const relatedItemValue = isRecord(rowValue.relatedItem) ? rowValue.relatedItem : {}
+    const rawRelatedItem = rowValue.relatedItem
+
+    return {
+      id: typeof rowValue.id === 'string' && rowValue.id.trim()
+        ? rowValue.id
+        : `${itemId}_key_location_${rowIndex}`,
+      source: rowValue.source === 'manual' ? 'manual' : 'existing',
+      relatedCollection: isRelatedItemCollection(rowValue.relatedCollection)
+        ? rowValue.relatedCollection
+        : isRelatedItemCollection(relatedItemValue.relationTo)
+        ? relatedItemValue.relationTo
+        : null,
+      relatedItem: typeof rawRelatedItem === 'number'
+        ? rawRelatedItem
+        : typeof relatedItemValue.value === 'number'
+        ? relatedItemValue.value
+        : isRecord(relatedItemValue.value) && typeof relatedItemValue.value.id === 'number'
+          ? relatedItemValue.value.id
+          : null,
+      title: typeof rowValue.title === 'string' ? rowValue.title : '',
+      latitude:
+        typeof rowValue.latitude === 'string'
+          ? rowValue.latitude
+          : typeof rowValue.latitude === 'number'
+            ? String(rowValue.latitude)
+            : '',
+      longitude:
+        typeof rowValue.longitude === 'string'
+          ? rowValue.longitude
+          : typeof rowValue.longitude === 'number'
+            ? String(rowValue.longitude)
+            : '',
+    }
+  }
+
+  const normalizeStoredStartingPoint = (startingPointValue: unknown): TourAgencyStartingPoint => {
+    if (!isRecord(startingPointValue)) {
+      return {
+        label: '',
+        latitude: '',
+        longitude: '',
+      }
+    }
+
+    return {
+      label: typeof startingPointValue.label === 'string' ? startingPointValue.label : '',
+      latitude:
+        typeof startingPointValue.latitude === 'string'
+          ? startingPointValue.latitude
+          : typeof startingPointValue.latitude === 'number'
+            ? String(startingPointValue.latitude)
+            : '',
+      longitude:
+        typeof startingPointValue.longitude === 'string'
+          ? startingPointValue.longitude
+          : typeof startingPointValue.longitude === 'number'
+            ? String(startingPointValue.longitude)
+            : '',
+    }
+  }
+
+  const normalizeStoredItem = (itemValue: unknown, itemIndex: number): ItineraryItemBlock | null => {
+    if (!isRecord(itemValue)) return null
+
+    const itemId = typeof itemValue.id === 'string' && itemValue.id.trim()
+      ? itemValue.id
+      : `${normalizedDraftId}_item_${itemIndex}`
+
+    return {
+      id: itemId,
+      blockType:
+        itemValue.blockType === 'itinerary-accommodations'
+        || itemValue.blockType === 'itinerary-attractions'
+        || itemValue.blockType === 'itinerary-nightlife'
+        || itemValue.blockType === 'itinerary-key-location'
+        || itemValue.blockType === 'itinerary-tour-agency'
+          ? itemValue.blockType
+          : 'itinerary-dining',
+      item: typeof itemValue.item === 'number' ? itemValue.item : null,
+      mediaMode:
+        itemValue.mediaMode === 'instagram'
+        || itemValue.mediaMode === 'both'
+          ? itemValue.mediaMode
+          : 'photos',
+      selectedPhotos: Array.isArray(itemValue.selectedPhotos)
+        ? itemValue.selectedPhotos.filter((entry): entry is number => typeof entry === 'number')
+        : [],
+      selectedInstagramPost: typeof itemValue.selectedInstagramPost === 'number'
+        ? itemValue.selectedInstagramPost
+        : null,
+      timeHour: typeof itemValue.timeHour === 'number' ? itemValue.timeHour : 9,
+      timeMinute:
+        itemValue.timeMinute === '15'
+        || itemValue.timeMinute === '30'
+        || itemValue.timeMinute === '45'
+          ? itemValue.timeMinute
+          : '00',
+      timePeriod: itemValue.timePeriod === 'PM' ? 'PM' : 'AM',
+      durationHours: typeof itemValue.durationHours === 'number' ? itemValue.durationHours : 1,
+      durationMinutes:
+        itemValue.durationMinutes === '15'
+        || itemValue.durationMinutes === '30'
+        || itemValue.durationMinutes === '45'
+          ? itemValue.durationMinutes
+          : '0',
+      title: typeof itemValue.title === 'string' ? itemValue.title : '',
+      operator: typeof itemValue.operator === 'string' ? itemValue.operator : '',
+      price: isTourAgencyPriceTier(itemValue.price) ? itemValue.price : '',
+      url: typeof itemValue.url === 'string' ? itemValue.url : '',
+      tourDuration:
+        typeof itemValue.tourDuration === 'number'
+        && Number.isInteger(itemValue.tourDuration)
+        && itemValue.tourDuration >= 1
+        && itemValue.tourDuration <= 24
+          ? itemValue.tourDuration
+          : 1,
+      startingPoint: normalizeStoredStartingPoint(itemValue.startingPoint),
+      keyLocations: Array.isArray(itemValue.keyLocations)
+        ? itemValue.keyLocations
+            .map((row, rowIndex) => normalizeStoredKeyLocation(row, itemId, rowIndex))
+            .filter((row): row is TourAgencyKeyLocationRow => Boolean(row))
+        : [],
+      image: typeof itemValue.image === 'number' ? itemValue.image : null,
+      instagramPost: typeof itemValue.instagramPost === 'number' ? itemValue.instagramPost : null,
+      blurbMarkdown: typeof itemValue.blurbMarkdown === 'string' ? itemValue.blurbMarkdown : '',
+      blurbLexical: isRecord(itemValue.blurbLexical) ? itemValue.blurbLexical : undefined,
+      blurbJsonText: typeof itemValue.blurbJsonText === 'string' ? itemValue.blurbJsonText : '',
+    }
+  }
 
   return {
-    draftId: typeof value.draftId === 'string' && value.draftId.trim() ? value.draftId : fallbackDraftId,
+    draftId: normalizedDraftId,
     payloadId: typeof value.payloadId === 'number' ? value.payloadId : undefined,
     payloadStatus: value.payloadStatus === 'published' ? 'published' : value.payloadStatus === 'draft' ? 'draft' : undefined,
     payloadSlug: typeof value.payloadSlug === 'string' && value.payloadSlug.trim() ? value.payloadSlug : undefined,
@@ -69,7 +216,11 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       introJsonText: typeof header.introJsonText === 'string' ? header.introJsonText : '',
       featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
     },
-    items: Array.isArray(value.items) ? value.items as ListicleItineraryDraft['items'] : [],
+    items: Array.isArray(value.items)
+      ? value.items
+          .map((item, itemIndex) => normalizeStoredItem(item, itemIndex))
+          .filter((item): item is ItineraryItemBlock => Boolean(item))
+      : [],
     seoSection: normalizeSeoSection(value.seoSection ?? createEmptySeoSection()),
     status: value.status === 'published' ? 'published' : 'draft',
     articleType: 'listicle-itinerary',

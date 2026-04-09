@@ -52,6 +52,7 @@ type FeaturedImagePickerProps = {
   token: string
   locationRef: number | null
   payloadVariant?: MediaAsset['variant']
+  requireMediaSet?: boolean
   prefetchedPayloadAssets?: MediaAsset[]
   onSelect: (mediaAssetId: number) => void
   onClose: () => void
@@ -77,6 +78,7 @@ export function FeaturedImagePicker({
   token,
   locationRef,
   payloadVariant,
+  requireMediaSet = true,
   prefetchedPayloadAssets = [],
   onSelect,
   onClose,
@@ -197,10 +199,12 @@ export function FeaturedImagePicker({
 
   if (!isOpen) return null
 
-  const payloadAssetsWithMediaSet = filterAssetsWithMediaSet(payloadAssets)
+  const payloadAssetsForSelection = requireMediaSet
+    ? filterAssetsWithMediaSet(payloadAssets)
+    : payloadAssets
   const searchablePayloadAssets = payloadVariant
-    ? payloadAssetsWithMediaSet.filter((asset) => asset.variant === payloadVariant)
-    : payloadAssetsWithMediaSet
+    ? payloadAssetsForSelection.filter((asset) => asset.variant === payloadVariant)
+    : payloadAssetsForSelection
 
   const filteredAssets = payloadSearch.trim()
     ? searchablePayloadAssets.filter((a) => {

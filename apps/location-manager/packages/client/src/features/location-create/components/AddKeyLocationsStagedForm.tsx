@@ -67,7 +67,6 @@ export function AddKeyLocationsStagedForm({
     hasValue(form.watch("type")) &&
     hasValue(form.watch("status"));
   const operationsComplete =
-    hasValue(form.watch("website")) &&
     hasValue(form.watch("phone")) &&
     hasValue(form.watch("hours"));
 
@@ -421,7 +420,7 @@ export function AddKeyLocationsStagedForm({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Website</Label>
+                    <Label>Website (optional)</Label>
                     <Input placeholder="https://example.com" {...form.register("website")} />
                     {form.formState.errors.website && (
                       <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>

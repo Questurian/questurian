@@ -18,16 +18,6 @@ function asString(value: unknown): string | null {
   return null;
 }
 
-function asStringArray(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => asString(item))
-      .filter((item): item is string => Boolean(item));
-  }
-  const single = asString(value);
-  return single ? [single] : [];
-}
-
 function asBoolean(value: unknown): boolean | null {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") {
@@ -76,10 +66,9 @@ export interface AttractionsDetailsPayload extends Record<string, unknown> {
   visit: {
     hours: Record<string, unknown>;
     booking_required: boolean;
-    ideal_for: string[];
   };
   contact: {
-    website: string;
+    website?: string;
     phone: string | null;
     google_maps_url?: string;
   };
@@ -92,8 +81,7 @@ export interface BuildAttractionsDetailsInput {
   district?: string;
   hours: Record<string, unknown>;
   bookingRequired: boolean;
-  idealFor: string[];
-  website: string;
+  website?: string;
   phone?: string | null;
   googleUrl?: string;
 }
@@ -111,10 +99,9 @@ export function buildAttractionsDetails(
     visit: {
       hours: input.hours,
       booking_required: input.bookingRequired,
-      ideal_for: input.idealFor,
     },
     contact: {
-      website: input.website,
+      ...(input.website ? { website: input.website } : {}),
       phone: input.phone ?? null,
       ...(input.googleUrl ? { google_maps_url: input.googleUrl } : {}),
     },
@@ -127,7 +114,6 @@ export interface ParsedAttractionsDetails {
   pricing: string | null;
   locationKey: string | null;
   bookingRequired: boolean | null;
-  idealFor: string[];
   visitHours: Record<string, unknown> | null;
   hasVisitHours: boolean;
   website: string | null;
@@ -145,7 +131,6 @@ export function parseAttractionsDetails(details: unknown): ParsedAttractionsDeta
     pricing: asString(getNestedValue(root, ["core", "pricing"])),
     locationKey: asString(getNestedValue(root, ["core", "location_key"])),
     bookingRequired: asBoolean(getNestedValue(root, ["visit", "booking_required"])),
-    idealFor: asStringArray(getNestedValue(root, ["visit", "ideal_for"])),
     visitHours: asRecord(visitHoursRaw),
     hasVisitHours: hasVisitHoursValue(visitHoursRaw),
     website: asString(getNestedValue(root, ["contact", "website"])),

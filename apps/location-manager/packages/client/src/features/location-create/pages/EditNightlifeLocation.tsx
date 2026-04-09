@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Clock, Music2 } from "lucide-react";
 import { z } from "zod";
+import { NIGHTLIFE_IDEAL_FOR_TAGS } from "@questurian/lm-shared";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
@@ -80,6 +81,7 @@ const COUNTRY_OPTIONS = [
 
 const NIGHTLIFE_FORM_DEFAULT_VALUES: EditNightlifeFormData = {
   name: "",
+  idealFor: [NIGHTLIFE_IDEAL_FOR_TAGS[0]],
   priceTier: "$$$",
   clubType: "Cocktail Bar",
   music: ["House", "EDM"],

@@ -242,15 +242,47 @@ describe('Prompt2BlogPage', () => {
         stage_input_cleanup: {
           created_at: '2026-03-17T09:00:00Z',
           data: {
+            cleanup_mode: 'ai_always_aggressive_v1',
+            model_name: 'gemini-2.5-flash-lite',
             source_material_count: 2,
             cleaned_sources_count: 2,
             cleanup_stats: [
-              { input_chars: 120, output_chars: 100, removed_lines: 1 },
+              { input_chars: 120, output_chars: 100, removed_lines: 2 },
               { input_chars: 80, output_chars: 76, removed_lines: 0 },
             ],
             cleaned_sources: [
               'Cleaned source one.',
               'Cleaned source two.',
+            ],
+            sources: [
+              {
+                source_index: 1,
+                input_chars: 120,
+                preclean_chars: 110,
+                cleaned_chars: 100,
+                fallback_used: false,
+                title: 'Is It Safe to Travel to Peru (2026 Update)',
+                published_at: 'March 31, 2026',
+                cleaned_text: 'Cleaned source one.',
+                removed_blocks: [
+                  {
+                    label: 'Travel insurance CTA',
+                    reason: 'Promotional upsell unrelated to the travel guidance.',
+                    excerpt: 'LEARN MORE ABOUT OUR TRAVEL INSURANCE PLANS',
+                  },
+                ],
+              },
+              {
+                source_index: 2,
+                input_chars: 80,
+                preclean_chars: 76,
+                cleaned_chars: 76,
+                fallback_used: true,
+                title: '',
+                published_at: '',
+                cleaned_text: 'Cleaned source two.',
+                removed_blocks: [],
+              },
             ],
           },
         },
@@ -264,7 +296,13 @@ describe('Prompt2BlogPage', () => {
 
     expect(await screen.findByRole('dialog', { name: 'Clean source material details' })).toBeInTheDocument()
     expect(getPrompt2BlogDebugMock).toHaveBeenCalledWith('run-123')
+    expect(screen.getByText('ai_always_aggressive_v1')).toBeInTheDocument()
+    expect(screen.getByText('gemini-2.5-flash-lite')).toBeInTheDocument()
+    expect(screen.getByText('Is It Safe to Travel to Peru (2026 Update)')).toBeInTheDocument()
+    expect(screen.getByText('Travel insurance CTA')).toBeInTheDocument()
+    expect(screen.getByText('Fallback used')).toBeInTheDocument()
     expect(screen.getByText('Cleaned source one.')).toBeInTheDocument()
     expect(screen.getByText('Input: 120')).toBeInTheDocument()
+    expect(screen.getByText('No removed-block breakdown is available for fallback cleanup.')).toBeInTheDocument()
   })
 })

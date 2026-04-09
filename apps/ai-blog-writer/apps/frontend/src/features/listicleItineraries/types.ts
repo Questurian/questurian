@@ -10,6 +10,13 @@ export type ItineraryBlockType =
   | 'itinerary-attractions'
   | 'itinerary-nightlife'
   | 'itinerary-key-location'
+  | 'itinerary-tour-agency'
+
+export const TOUR_AGENCY_BLOCK_TYPE = 'itinerary-tour-agency'
+
+export function isManualItineraryBlockType(blockType: ItineraryBlockType): boolean {
+  return blockType === TOUR_AGENCY_BLOCK_TYPE
+}
 
 export type Meridiem = 'AM' | 'PM'
 
@@ -18,6 +25,40 @@ export type QuarterMinute = '00' | '15' | '30' | '45'
 export type DurationMinute = '0' | '15' | '30' | '45'
 
 export type MediaMode = 'photos' | 'instagram' | 'both'
+
+export type RelatedItemCollection =
+  | 'dining'
+  | 'accommodations'
+  | 'attractions'
+  | 'nightlife'
+  | 'key-locations'
+
+export type TourAgencyKeyLocationSource = 'existing' | 'manual'
+
+export const TOUR_AGENCY_PRICE_TIERS = ['$', '$$', '$$$', '$$$$'] as const
+
+export type TourAgencyPriceTier = (typeof TOUR_AGENCY_PRICE_TIERS)[number]
+
+export type TourAgencyStartingPoint = {
+  label: string
+  latitude: string
+  longitude: string
+}
+
+export type TourAgencyKeyLocationRow = {
+  id: string
+  source: TourAgencyKeyLocationSource
+  relatedCollection: RelatedItemCollection | null
+  relatedItem: number | null
+  title: string
+  latitude: string
+  longitude: string
+}
+
+export type PolymorphicRelatedItemValue = {
+  relationTo?: RelatedItemCollection | null
+  value?: number | { id?: number } | null
+}
 
 export type PayloadRichText = Record<string, unknown>
 
@@ -57,6 +98,15 @@ export type ItineraryItemBlock = {
   timePeriod: Meridiem
   durationHours: number
   durationMinutes: DurationMinute
+  title: string
+  operator: string
+  price: TourAgencyPriceTier | ''
+  url: string
+  tourDuration: number
+  startingPoint: TourAgencyStartingPoint
+  keyLocations: TourAgencyKeyLocationRow[]
+  image: number | null
+  instagramPost: number | null
   blurbMarkdown: string
   blurbLexical?: PayloadRichText
   blurbJsonText?: string
@@ -146,6 +196,26 @@ export type PayloadItineraryDoc = {
     mediaMode?: MediaMode
     selectedPhotos?: Array<number | { id?: number }>
     selectedInstagramPost?: number | { id?: number } | null
+    title?: string | null
+    operator?: string | null
+    price?: TourAgencyPriceTier | null
+    url?: string | null
+    tourDuration?: number | null
+    startingPoint?: {
+      label?: string | null
+      latitude?: number | null
+      longitude?: number | null
+    } | null
+    keyLocations?: Array<{
+      id?: string
+      source?: TourAgencyKeyLocationSource | null
+      relatedItem?: PolymorphicRelatedItemValue | null
+      title?: string | null
+      latitude?: number | null
+      longitude?: number | null
+    }> | null
+    image?: number | { id?: number } | null
+    instagramPost?: number | { id?: number } | null
     blurb?: PayloadRichText
   }>
   seoSection?: {
@@ -255,4 +325,38 @@ export type RelatedItemOption = {
   instagramGallery?: Array<{
     post?: number | InstagramPostOption
   }>
+}
+
+export function isRelatedItemCollection(value: unknown): value is RelatedItemCollection {
+  return (
+    value === 'dining'
+    || value === 'accommodations'
+    || value === 'attractions'
+    || value === 'nightlife'
+    || value === 'key-locations'
+  )
+}
+
+export function isTourAgencyPriceTier(value: unknown): value is TourAgencyPriceTier {
+  return (
+    value === '$'
+    || value === '$$'
+    || value === '$$$'
+    || value === '$$$$'
+  )
+}
+
+export function relatedCollectionToBlockType(collection: RelatedItemCollection): ItineraryBlockType {
+  switch (collection) {
+    case 'dining':
+      return 'itinerary-dining'
+    case 'accommodations':
+      return 'itinerary-accommodations'
+    case 'attractions':
+      return 'itinerary-attractions'
+    case 'nightlife':
+      return 'itinerary-nightlife'
+    case 'key-locations':
+      return 'itinerary-key-location'
+  }
 }

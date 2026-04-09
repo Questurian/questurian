@@ -3,7 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { editLocationSchema, type EditLocationFormData } from "../validation/edit-location.schema";
-import { useLocationById, useUpdateLocation, useLocationTypes } from "@client/shared/services/api";
+import {
+  useLocationById,
+  useUpdateLocation,
+  useLocationTypes,
+  type UpdateMapsRequest,
+} from "@client/shared/services/api";
 import type { LocationCategory } from "@shared/types/location-category";
 
 const VALID_CATEGORIES: readonly LocationCategory[] = [
@@ -36,7 +41,7 @@ export function useEditLocationForm() {
       name: "",
       address: "",
       title: "",
-      idealFor: [],
+      idealFor: undefined,
       type: undefined,
       priceLevel: "",
       locationKey: "",
@@ -64,7 +69,7 @@ export function useEditLocationForm() {
         name: location.source?.name || "",
         address: location.source?.address || "",
         title: location.title || "",
-        idealFor: location.idealFor || [],
+        idealFor: location.category === "attractions" ? undefined : (location.idealFor || []),
         type: location.type || undefined,
         priceLevel: location.priceLevel || "",
         locationKey: location.locationKey || "",
@@ -101,7 +106,7 @@ export function useEditLocationForm() {
 
     const updateData = Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined)
-    );
+    ) as UpdateMapsRequest;
     const taxonomyDirty = Boolean(
       form.formState.dirtyFields.locationKey ||
       form.formState.dirtyFields.district

@@ -43,3 +43,27 @@ export interface ConnectionStatusResponse {
   message?: string;
   error?: string;
 }
+
+export interface PayloadMediaSetItem {
+  id: string;
+  title: string;
+  altText: string | null;
+  photographerCredit: string | null;
+  status: string | null;
+  location: string | null;
+  locationRef: string | null;
+  previewUrl: string | null;
+  updatedAt: string | null;
+}
+
+export interface PayloadMediaSetsResponse {
+  mediaSets: PayloadMediaSetItem[];
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalDocs: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  nextPage: number | null;
+  prevPage: number | null;
+}

@@ -7,6 +7,7 @@ import { CollectionConfig } from 'payload'
 import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
+import { attractionTypeOptions } from '@/features/places/collections/details/AttractionDetails'
 
 export const Attractions: CollectionConfig = {
   slug: 'attractions',
@@ -50,17 +51,7 @@ export const Attractions: CollectionConfig = {
             {
               name: 'type',
               type: 'select',
-              options: [
-                { label: 'Museum', value: 'museum' },
-                { label: 'Beach', value: 'beach' },
-                { label: 'Hiking Trail', value: 'hiking-trail' },
-                { label: 'Historical Site', value: 'historical-site' },
-                { label: 'Adventure Park', value: 'adventure-park' },
-                { label: 'Gallery', value: 'gallery' },
-                { label: 'Monument', value: 'monument' },
-                { label: 'National Park', value: 'national-park' },
-                { label: 'Workshop/Class', value: 'workshop-class' },
-              ],
+              options: attractionTypeOptions,
               admin: { description: 'Type of attraction' },
             },
             {
@@ -74,18 +65,6 @@ export const Attractions: CollectionConfig = {
               ],
               admin: {
                 description: 'Price range indicator',
-              },
-            },
-          ],
-        },
-        {
-          label: 'Profile',
-          fields: [
-            {
-              name: 'idealFor',
-              type: 'json',
-              admin: {
-                description: 'String[] ideal-for tags',
               },
             },
           ],
@@ -124,7 +103,6 @@ export const Attractions: CollectionConfig = {
                           type: 'group',
                           fields: [
                             { name: 'bookingRequired', type: 'checkbox' },
-                            { name: 'idealFor', type: 'text', hasMany: true },
                           ],
                         },
                       ],

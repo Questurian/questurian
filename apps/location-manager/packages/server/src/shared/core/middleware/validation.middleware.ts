@@ -1,8 +1,8 @@
 import type { Context, Next } from "hono";
-import type { ZodSchema } from "zod";
+import type { ZodTypeAny } from "zod";
 import { ValidationError } from "../errors/http-error";
 
-export function validateBody<T>(schema: ZodSchema<T>) {
+export function validateBody<TSchema extends ZodTypeAny>(schema: TSchema) {
   return async (c: Context, next: Next) => {
     let body: unknown = null;
     try {
@@ -21,7 +21,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
   };
 }
 
-export function validateQuery<T>(schema: ZodSchema<T>) {
+export function validateQuery<TSchema extends ZodTypeAny>(schema: TSchema) {
   return async (c: Context, next: Next) => {
     try {
       const query = c.req.query();
@@ -37,7 +37,7 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
   };
 }
 
-export function validateParams<T>(schema: ZodSchema<T>) {
+export function validateParams<TSchema extends ZodTypeAny>(schema: TSchema) {
   return async (c: Context, next: Next) => {
     try {
       const params = c.req.param();

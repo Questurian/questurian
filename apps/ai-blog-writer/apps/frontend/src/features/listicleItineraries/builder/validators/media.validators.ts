@@ -1,4 +1,9 @@
-import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
+import {
+  isManualItineraryBlockType,
+  type ItineraryBlockType,
+  type ListicleItineraryDraft,
+  type RelatedItemOption,
+} from '../../types'
 import {
   getRelatedInstagramPostIds,
   getRelatedPhotoIds,
@@ -15,6 +20,10 @@ export function validateItemMediaSelections(
 
   for (let index = 0; index < draft.items.length; index += 1) {
     const item = draft.items[index]
+
+    if (isManualItineraryBlockType(item.blockType)) {
+      continue
+    }
 
     if (!item.item) {
       issues.push(`Item ${index + 1} is missing related entry selection`)

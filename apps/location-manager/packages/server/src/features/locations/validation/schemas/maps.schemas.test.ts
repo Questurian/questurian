@@ -133,19 +133,17 @@ describe("maps create schema category rules", () => {
     expect(result.success).toBe(false);
   });
 
-  test("accepts attractions payload with attractionsDetails and attractions idealFor", () => {
+  test("accepts attractions payload with attractionsDetails and no idealFor", () => {
     const result = createMapsSchema.safeParse({
       ...basePayload,
       category: "attractions",
       type: "museum",
-      idealFor: ["Families", "History Buffs"],
       attractionsDetails: {
         core: {
           attraction_type: "museum",
         },
         visit: {
           booking_required: false,
-          ideal_for: ["Families", "History Buffs"],
         },
       },
     });
@@ -153,16 +151,17 @@ describe("maps create schema category rules", () => {
     expect(result.success).toBe(true);
   });
 
-  test("rejects attractions payload when idealFor is missing", () => {
+  test("accepts attractions payload when idealFor is present because it is ignored", () => {
     const result = createMapsSchema.safeParse({
       ...basePayload,
       category: "attractions",
+      idealFor: ["Families"],
       attractionsDetails: {
         core: { attraction_type: "museum" },
       },
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   test("rejects attractions payload when attractionsDetails is missing", () => {
@@ -170,19 +169,6 @@ describe("maps create schema category rules", () => {
       ...basePayload,
       category: "attractions",
       idealFor: ["Families"],
-    });
-
-    expect(result.success).toBe(false);
-  });
-
-  test("rejects attractions payload with non-attractions idealFor tags", () => {
-    const result = createMapsSchema.safeParse({
-      ...basePayload,
-      category: "attractions",
-      idealFor: ["Date Nights"],
-      attractionsDetails: {
-        core: { attraction_type: "museum" },
-      },
     });
 
     expect(result.success).toBe(false);
@@ -303,6 +289,37 @@ describe("maps patch schema reviews toggle", () => {
   test("rejects invalid locationKey format on patch", () => {
     const result = patchMapsSchema.safeParse({
       locationKey: "Peru|Lima|Miraflores",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("accepts selectedPayloadMediaSetIds when unique and within limit", () => {
+    const result = patchMapsSchema.safeParse({
+      selectedPayloadMediaSetIds: ["media-1", "media-2", "media-3"],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.selectedPayloadMediaSetIds).toEqual([
+      "media-1",
+      "media-2",
+      "media-3",
+    ]);
+  });
+
+  test("rejects selectedPayloadMediaSetIds when duplicates are provided", () => {
+    const result = patchMapsSchema.safeParse({
+      selectedPayloadMediaSetIds: ["media-1", "media-1"],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects selectedPayloadMediaSetIds when more than twenty are provided", () => {
+    const result = patchMapsSchema.safeParse({
+      selectedPayloadMediaSetIds: Array.from({ length: 21 }, (_, index) => `media-${index}`),
     });
 
     expect(result.success).toBe(false);

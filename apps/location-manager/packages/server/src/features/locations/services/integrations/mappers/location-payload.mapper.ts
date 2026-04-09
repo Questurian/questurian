@@ -1,7 +1,11 @@
 import type { LocationResponse, LocationCategory } from "../../../models/location";
 import { BadRequestError } from "@shared/errors/http-error";
 import type { UploadedImagesResult } from "../types";
-import type { PayloadEntryData, PayloadNightlifeDetails } from "../clients/payload-api.client";
+import type {
+  PayloadEntryData,
+  PayloadNightlifeDetails,
+  PayloadRelationshipId,
+} from "../clients/payload-api.client";
 import { extractPhoneNumber, convertIsoToPhoneCountryCode } from "../utils";
 
 export type PayloadCollection = "dining" | "accommodations" | "attractions" | "nightlife" | "key-locations";
@@ -42,6 +46,47 @@ const WEEKDAY_LABELS: Record<string, string> = {
   saturday: "Saturday",
   sunday: "Sunday",
 };
+
+const MAX_ATTRACTION_GALLERY_ITEMS = 20;
+
+function dedupePreservingOrder(ids: string[]): string[] {
+  return Array.from(new Set(ids));
+}
+
+function toPayloadRelationshipId(id: string | number): PayloadRelationshipId {
+  if (typeof id === "number") {
+    return id;
+  }
+
+  const trimmed = id.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+
+  return trimmed;
+}
+
+function getGalleryImageIds(location: LocationResponse, uploadedImages: UploadedImagesResult): string[] {
+  const uploadedGalleryIds = uploadedImages.galleryImageIds;
+
+  if (location.category !== "attractions") {
+    return uploadedGalleryIds;
+  }
+
+  const selectedPayloadMediaSetIds = location.selectedPayloadMediaSetIds ?? [];
+  const combinedGalleryIds = dedupePreservingOrder([
+    ...uploadedGalleryIds,
+    ...selectedPayloadMediaSetIds,
+  ]);
+
+  if (combinedGalleryIds.length > MAX_ATTRACTION_GALLERY_ITEMS) {
+    throw new BadRequestError(
+      `Attractions gallery exceeds Payload max of ${MAX_ATTRACTION_GALLERY_ITEMS} items`
+    );
+  }
+
+  return combinedGalleryIds;
+}
 
 function normalizeOperationHoursForPayload(
   operationHours: Record<string, unknown> | null
@@ -213,7 +258,6 @@ function getAttractionsDetailsPayload(location: LocationResponse): Record<string
   const attractionType = asString(core?.attraction_type) ?? asString(location.type);
   const pricing = asString(core?.pricing) ?? asString(location.priceLevel);
   const bookingRequired = asBoolean(visit?.booking_required);
-  const idealFor = asStringArray(visit?.ideal_for ?? location.idealFor);
   const payloadCore = {
     ...(attractionType ? { attractionType } : {}),
     ...(pricing ? { pricing } : {}),
@@ -221,7 +265,6 @@ function getAttractionsDetailsPayload(location: LocationResponse): Record<string
 
   const payloadVisit = {
     ...(bookingRequired !== undefined ? { bookingRequired } : {}),
-    ...(idealFor ? { idealFor } : {}),
   };
   return {
     ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
@@ -328,16 +371,18 @@ function mapSharedPayloadFields(
   | "countryCodeIso"
   | "sourceName"
 > {
+  const galleryImageIds = getGalleryImageIds(location, uploadedImages);
+
   return {
     title: location.title || location.source.name,
     locationRef,
-    gallery: uploadedImages.galleryImageIds.map(id => ({
-      image: id,
+    gallery: galleryImageIds.map(id => ({
+      image: toPayloadRelationshipId(id),
       altText: "",
       caption: "",
     })),
     instagramGallery: uploadedImages.instagramPostIds.map(id => ({
-      post: id,
+      post: toPayloadRelationshipId(id),
     })),
     address: location.contact.url || "",
     countryCode: convertIsoToPhoneCountryCode(location.contact.countryCode || undefined) || "",
@@ -397,15 +442,19 @@ function mapAttractionsPayload(
   uploadedImages: UploadedImagesResult,
   locationRef: string
 ): PayloadEntryData {
+  const {
+    website,
+    ...sharedFields
+  } = mapSharedPayloadFields(location, uploadedImages, locationRef);
   const operationHours = normalizeOperationHoursForPayload(location.operationHours);
   const attractionsDetails = getAttractionsDetailsPayload(location);
 
   return {
-    ...mapSharedPayloadFields(location, uploadedImages, locationRef),
+    ...sharedFields,
     ...mapCategoryCommonPayloadFields(location),
     ...(location.locationKey ? { location: location.locationKey } : {}),
+    ...(location.contact.website?.trim() ? { website } : {}),
     ...(operationHours ? { operationHours } : {}),
-    ...(location.idealFor ? { idealFor: location.idealFor } : {}),
     ...(Object.keys(attractionsDetails).length > 0 ? { attractionsDetails } : {}),
   };
 }

@@ -11,6 +11,7 @@ import type {
   LocationOption,
   RelatedItemOption,
 } from '../../types'
+import { isManualItineraryBlockType, relatedCollectionToBlockType } from '../../types'
 import { buildItineraryAiArticleContext, getItineraryAiArticleTitle } from './ai-rewrite.service'
 
 const INTRO_TARGET_ID_SUFFIX = '_header_intro'
@@ -55,6 +56,8 @@ function mapBlockTypeToCategory(blockType: ItineraryBlockType): ListicleWriterCa
       return 'nightlife'
     case 'itinerary-key-location':
       return 'key_location'
+    case 'itinerary-tour-agency':
+      return 'attractions'
     case 'itinerary-dining':
     default:
       return 'dining'
@@ -75,6 +78,34 @@ function buildStopTimeLabel(item: ListicleItineraryDraft['items'][number]): stri
   return `${item.timeHour}:${item.timeMinute} ${item.timePeriod} (${durationParts.join(' ')})`
 }
 
+function buildManualKeyLocationContext(
+  item: ListicleItineraryDraft['items'][number],
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): string {
+  const labels = item.keyLocations.map((location) => {
+    if (location.source === 'existing') {
+      if (!location.relatedCollection || !location.relatedItem) {
+        return ''
+      }
+
+      const relatedItem = (relatedByBlockType[relatedCollectionToBlockType(location.relatedCollection)] || [])
+        .find((entry) => entry.id === location.relatedItem)
+
+      return relatedItem?.title?.trim()
+        || [location.relatedCollection, location.relatedItem].filter(Boolean).join(' #')
+    }
+
+    return [
+      location.title.trim(),
+      location.latitude.trim() && location.longitude.trim()
+        ? `(${location.latitude.trim()}, ${location.longitude.trim()})`
+        : '',
+    ].filter(Boolean).join(' ')
+  }).filter(Boolean)
+
+  return labels.join(', ')
+}
+
 export function getItineraryIntroTargetId(draft: ListicleItineraryDraft): string {
   return `${draft.draftId}${INTRO_TARGET_ID_SUFFIX}`
 }
@@ -86,6 +117,9 @@ function buildIntroTarget(
 ): GenerateListicleContentTarget {
   const selectedTitles = draft.items
     .map((item) => {
+      if (isManualItineraryBlockType(item.blockType)) {
+        return item.title.trim() || item.operator.trim() || ''
+      }
       const relatedOptions = relatedByBlockType[item.blockType] || []
       return relatedOptions.find((entry) => entry.id === item.item)?.title?.trim() || ''
     })
@@ -109,25 +143,46 @@ function buildIntroTarget(
 
 function buildStopTarget(
   draft: ListicleItineraryDraft,
-  relatedItem: RelatedItemOption,
   item: ListicleItineraryDraft['items'][number],
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
   articleLocationLabel: string,
 ): GenerateListicleContentTarget {
+  const manualTourDurationLabel = `${item.tourDuration} hour${item.tourDuration === 1 ? '' : 's'}`
+  const manualStartingPoint = [
+    item.startingPoint.label.trim(),
+    item.startingPoint.latitude.trim(),
+    item.startingPoint.longitude.trim(),
+  ]
+  const hasManualStartingPoint = manualStartingPoint.some(Boolean)
+  const formattedManualStartingPoint = hasManualStartingPoint
+    ? item.startingPoint.label.trim()
+      ? `${item.startingPoint.label.trim()} (${item.startingPoint.latitude.trim()}, ${item.startingPoint.longitude.trim()})`
+      : `${item.startingPoint.latitude.trim()}, ${item.startingPoint.longitude.trim()}`
+    : ''
+  const isManualStop = isManualItineraryBlockType(item.blockType)
+  const displayName = isManualStop
+    ? item.title.trim() || item.operator.trim() || 'Tour agency stop'
+    : undefined
   const supportingContext = [
     `Article title: ${draft.title.trim()}`,
     `Stop time: ${buildStopTimeLabel(item)}`,
     `Block category: ${mapBlockTypeToCategory(item.blockType)}`,
-    relatedItem.location?.trim() ? `Known item location: ${relatedItem.location.trim()}` : '',
-    `Media mode: ${item.mediaMode}`,
+    isManualStop ? `Operator: ${item.operator.trim() || 'Unknown'}` : '',
+    isManualStop && item.price ? `Price: ${item.price}` : '',
+    isManualStop ? `Tour duration: ${manualTourDurationLabel}` : '',
+    isManualStop && formattedManualStartingPoint ? `Starting point: ${formattedManualStartingPoint}` : '',
+    isManualStop && item.keyLocations.length > 0 ? `Key locations: ${buildManualKeyLocationContext(item, relatedByBlockType)}` : '',
+    isManualStop && item.url.trim() ? `Booking URL: ${item.url.trim()}` : '',
+    !isManualStop ? `Media mode: ${item.mediaMode}` : '',
   ].filter(Boolean).join('\n')
 
   return {
     targetId: `${item.id}_blurb`,
     fieldType: 'blurb',
     category: mapBlockTypeToCategory(item.blockType),
-    displayName: relatedItem.title,
-    researchSubject: relatedItem.title,
-    locationLabel: relatedItem.location?.trim() || articleLocationLabel,
+    displayName: displayName || 'Stop blurb',
+    researchSubject: displayName || 'Tour agency stop',
+    locationLabel: articleLocationLabel,
     currentContent: item.blurbMarkdown,
     supportingContext,
   }
@@ -144,10 +199,14 @@ export function getItineraryAutoWriteTargetIds(
 
   draft.items.forEach((item) => {
     if (item.blurbMarkdown.trim()) return
-    if (!item.item) return
-    const relatedOptions = relatedByBlockType[item.blockType] || []
-    const relatedItem = relatedOptions.find((entry) => entry.id === item.item)
-    if (!relatedItem) return
+    if (!isManualItineraryBlockType(item.blockType)) {
+      if (!item.item) return
+      const relatedOptions = relatedByBlockType[item.blockType] || []
+      const relatedItem = relatedOptions.find((entry) => entry.id === item.item)
+      if (!relatedItem) return
+    } else if (!item.title.trim() && !item.operator.trim()) {
+      return
+    }
     targetIds.push(`${item.id}_blurb`)
   })
 
@@ -185,11 +244,31 @@ export function buildItineraryGenerateListicleContentRequest(params: {
   }
 
   draft.items.forEach((item) => {
-    if (!item.item) return
-    const relatedOptions = relatedByBlockType[item.blockType] || []
-    const relatedItem = relatedOptions.find((entry) => entry.id === item.item)
-    if (!relatedItem) return
-    const target = buildStopTarget(draft, relatedItem, item, articleLocationLabel)
+    let target: GenerateListicleContentTarget | null = null
+
+    if (isManualItineraryBlockType(item.blockType)) {
+      target = buildStopTarget(draft, item, relatedByBlockType, articleLocationLabel)
+    } else {
+      if (!item.item) return
+      const relatedOptions = relatedByBlockType[item.blockType] || []
+      const relatedItem = relatedOptions.find((entry) => entry.id === item.item)
+      if (!relatedItem) return
+      target = {
+        ...buildStopTarget(draft, item, relatedByBlockType, articleLocationLabel),
+        displayName: relatedItem.title,
+        researchSubject: relatedItem.title,
+        locationLabel: relatedItem.location?.trim() || articleLocationLabel,
+        supportingContext: [
+          `Article title: ${draft.title.trim()}`,
+          `Stop time: ${buildStopTimeLabel(item)}`,
+          `Block category: ${mapBlockTypeToCategory(item.blockType)}`,
+          relatedItem.location?.trim() ? `Known item location: ${relatedItem.location.trim()}` : '',
+          `Media mode: ${item.mediaMode}`,
+        ].filter(Boolean).join('\n'),
+      }
+    }
+
+    if (!target) return
     if (targetIdSet.has(target.targetId)) {
       targets.push(target)
     }

@@ -104,6 +104,8 @@ export type {
   SyncAllResponse,
   GetSyncStatusResponse,
   ConnectionStatusResponse,
+  PayloadMediaSetItem,
+  PayloadMediaSetsResponse,
 } from "./payload.types";
 
 // Health types

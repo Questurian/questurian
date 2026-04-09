@@ -4,6 +4,7 @@ import { ItineraryAttractionsBlock } from './ItineraryAttractionsBlock'
 import { ItineraryDiningBlock } from './ItineraryDiningBlock'
 import { ItineraryKeyLocationsBlock } from './ItineraryKeyLocationsBlock'
 import { ItineraryNightlifeBlock } from './ItineraryNightlifeBlock'
+import { ItineraryTourAgencyBlock } from './ItineraryTourAgencyBlock'
 
 export {
   ItineraryAccommodationsBlock,
@@ -11,6 +12,7 @@ export {
   ItineraryDiningBlock,
   ItineraryKeyLocationsBlock,
   ItineraryNightlifeBlock,
+  ItineraryTourAgencyBlock,
 }
 
 export const listicleItineraryBlocks: Block[] = [
@@ -19,4 +21,5 @@ export const listicleItineraryBlocks: Block[] = [
   ItineraryAttractionsBlock,
   ItineraryNightlifeBlock,
   ItineraryKeyLocationsBlock,
+  ItineraryTourAgencyBlock,
 ]

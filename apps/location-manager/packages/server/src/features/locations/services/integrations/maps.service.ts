@@ -42,6 +42,8 @@ export interface GooglePrefillResult {
   operationHours: Record<string, unknown> | null;
 }
 
+const MAX_ATTRACTION_GALLERY_ITEMS = 20;
+
 export class MapsService {
   constructor(
     private readonly config: EnvConfig,
@@ -67,6 +69,23 @@ export class MapsService {
       return trimmed;
     }
     return JSON.stringify(input);
+  }
+
+  private normalizeSelectedPayloadMediaSetIds(
+    input?: string[] | null
+  ): string | null | undefined {
+    if (input === undefined) return undefined;
+    if (input === null) return null;
+
+    const normalized = Array.from(
+      new Set(
+        input
+          .map((id) => id.trim())
+          .filter((id) => id.length > 0)
+      )
+    );
+
+    return normalized.length > 0 ? JSON.stringify(normalized) : null;
   }
 
   private normalizeNightlifeDetails(
@@ -185,6 +204,7 @@ export class MapsService {
     category: LocationCategory,
     input?: string[]
   ): void {
+    if (category === "attractions") return;
     if (!input) return;
 
     const uniqueTags = Array.from(new Set(input.map((tag) => tag.trim()).filter(Boolean)));
@@ -276,6 +296,10 @@ export class MapsService {
       )
     );
     return JSON.stringify(normalized);
+  }
+
+  private shouldPersistIdealFor(category: LocationCategory): boolean {
+    return category !== "attractions";
   }
 
   private normalizeAddressForDuplicateCheck(address: string): string {
@@ -610,13 +634,17 @@ export class MapsService {
     if (payload.reviewsEnabled !== undefined) {
       entry.reviewsEnabled = payload.reviewsEnabled;
     }
-    this.validateIdealForTagsByCategory(category, payload.idealFor);
+    if (this.shouldPersistIdealFor(category)) {
+      this.validateIdealForTagsByCategory(category, payload.idealFor);
+    }
     const hoursJson = this.normalizeOperationHours(payload.operationHours);
     const nightlifeDetailsJson = this.normalizeNightlifeDetails(payload.nightlifeDetails);
     const accommodationsDetailsJson = this.normalizeAccommodationsDetails(payload.accommodationsDetails);
     const attractionsDetailsJson = this.normalizeAttractionsDetails(payload.attractionsDetails);
     const keyLocationsDetailsJson = this.normalizeKeyLocationsDetails(payload.keyLocationsDetails);
-    const idealForJson = this.normalizeIdealForTags(payload.idealFor);
+    const idealForJson = this.shouldPersistIdealFor(category)
+      ? this.normalizeIdealForTags(payload.idealFor)
+      : undefined;
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(payload.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(payload.tripadvisorCuisines);
     const tripadvisorFeaturesJson = this.normalizeTripadvisorList(payload.tripadvisorFeatures, {
@@ -719,18 +747,40 @@ export class MapsService {
     }
 
     // Perform partial update - only update provided fields
-    this.validateIdealForTagsByCategory(category, updates.idealFor);
+    if (this.shouldPersistIdealFor(category)) {
+      this.validateIdealForTagsByCategory(category, updates.idealFor);
+    }
     const hoursJson = this.normalizeOperationHours(updates.operationHours);
     const nightlifeDetailsJson = this.normalizeNightlifeDetails(updates.nightlifeDetails);
     const accommodationsDetailsJson = this.normalizeAccommodationsDetails(updates.accommodationsDetails);
     const attractionsDetailsJson = this.normalizeAttractionsDetails(updates.attractionsDetails);
     const keyLocationsDetailsJson = this.normalizeKeyLocationsDetails(updates.keyLocationsDetails);
-    const idealForJson = this.normalizeIdealForTags(updates.idealFor);
+    const idealForJson = this.shouldPersistIdealFor(category)
+      ? this.normalizeIdealForTags(updates.idealFor)
+      : undefined;
     const tripadvisorMealTypesJson = this.normalizeTripadvisorList(updates.tripadvisorMealTypes);
     const tripadvisorCuisinesJson = this.normalizeTripadvisorList(updates.tripadvisorCuisines);
     const tripadvisorFeaturesJson = this.normalizeTripadvisorList(updates.tripadvisorFeatures, {
       filterFeatures: true,
     });
+    const selectedPayloadMediaSetIdsJson = this.normalizeSelectedPayloadMediaSetIds(
+      updates.selectedPayloadMediaSetIds
+    );
+
+    if (category === "attractions" && selectedPayloadMediaSetIdsJson !== undefined) {
+      const uploadsCount = getUploadsByLocationId(id).length;
+      const selectedPayloadMediaSetCount = selectedPayloadMediaSetIdsJson
+        ? (JSON.parse(selectedPayloadMediaSetIdsJson) as string[]).length
+        : 0;
+
+      if (uploadsCount + selectedPayloadMediaSetCount > MAX_ATTRACTION_GALLERY_ITEMS) {
+        throw new BadRequestError(
+          `Attractions gallery supports up to ${MAX_ATTRACTION_GALLERY_ITEMS} Payload media sets total. ` +
+          `This location already has ${uploadsCount} upload${uploadsCount === 1 ? "" : "s"}.`
+        );
+      }
+    }
+
     const updateData = {
       ...(updates.name !== undefined && { name: updates.name }),
       ...(updates.address !== undefined && { address: updates.address }),
@@ -747,6 +797,7 @@ export class MapsService {
       ...(updates.website !== undefined && { website: updates.website }),
       ...(updates.email !== undefined && { email: updates.email }),
       ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
+      ...(selectedPayloadMediaSetIdsJson !== undefined && { selectedPayloadMediaSetIdsJson }),
       ...(idealForJson !== undefined && { idealForJson }),
       ...(nightlifeDetailsJson !== undefined && { nightlifeDetailsJson }),
       ...(accommodationsDetailsJson !== undefined && { accommodationsDetailsJson }),

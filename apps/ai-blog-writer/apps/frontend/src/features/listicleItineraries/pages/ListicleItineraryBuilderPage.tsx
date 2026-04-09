@@ -77,6 +77,7 @@ export default function ListicleItineraryBuilderPage() {
     isLoading,
     locations,
     mediaAssets,
+    instagramPosts,
   } = useBuilderBootstrap({
     token,
     payloadIdParam,
@@ -112,6 +113,8 @@ export default function ListicleItineraryBuilderPage() {
     setDraft,
     selectedLocationRefId: actions.selectedLocationRefId,
     relatedByBlockType,
+    mediaAssets,
+    instagramPosts,
     setSearchParams,
     onError,
     setResult,
@@ -128,10 +131,12 @@ export default function ListicleItineraryBuilderPage() {
       buildListicleItineraryStructuredDataTemplate({
         draft,
         relatedByBlockType,
+        mediaAssets,
+        instagramPosts,
         publisherConfig: schemaPublisherConfig,
       }),
     )
-  }, [draft, isStep4Ready, relatedByBlockType])
+  }, [draft, instagramPosts, isStep4Ready, mediaAssets, relatedByBlockType])
 
   useEffect(() => {
     if (!draft || !isStep4Ready || !canonicalStructuredData) return
@@ -209,7 +214,7 @@ export default function ListicleItineraryBuilderPage() {
     })
 
     if (request.targets.length < 1) {
-      throw new Error('Select related items before using AI generation.')
+      throw new Error('Add stop details before using AI generation.')
     }
 
     if (params.currentContentByTargetId) {
@@ -571,6 +576,10 @@ export default function ListicleItineraryBuilderPage() {
           {isStep1LockedView && isStep2LockedView ? (
             <BuilderStopsPanel
               draft={draft}
+              token={token ?? null}
+              locationRef={actions.selectedLocationRefId}
+              mediaAssets={mediaAssets}
+              instagramPosts={instagramPosts}
               isLoadingRelated={isLoadingRelated}
               relatedByBlockType={relatedByBlockType}
               onAddItem={actions.addItem}

@@ -27,6 +27,9 @@ export type {
   PayloadMediaSetVariant,
   PayloadMediaSetResponse,
   PayloadMediaSetQueryResponse,
+  PayloadMediaSetListItem,
+  PayloadMediaSetListResponse,
+  PayloadMediaSetSearchResponse,
   PayloadEntryData,
 } from "./payload/payload-api.types";
 import type {
@@ -36,6 +39,7 @@ import type {
   PayloadInstagramPostData,
   PayloadLocationCreateData,
   PayloadMediaSetData,
+  PayloadMediaSetListResponse,
 } from "./payload/payload-api.types";
 
 export class PayloadApiClient {
@@ -115,7 +119,13 @@ export class PayloadApiClient {
     return await this.entriesClient.updateEntry(collection, docId, data);
   }
 
-  async upsertEntry(collection: PayloadCollection, data: PayloadEntryData): Promise<PayloadEntryResponse> {
+  async upsertEntry(
+    collection: PayloadCollection,
+    data: PayloadEntryData,
+    options?: {
+      replaceGallery?: boolean;
+    }
+  ): Promise<PayloadEntryResponse> {
     if (!this.isConfigured()) {
       throw new ServiceUnavailableError("Payload CMS");
     }
@@ -124,7 +134,11 @@ export class PayloadApiClient {
       title: data.title,
     });
 
-    const { existingDocId, mergedData } = await this.galleryMerger.prepareUpsert(collection, data);
+    const { existingDocId, mergedData } = await this.galleryMerger.prepareUpsert(
+      collection,
+      data,
+      options
+    );
 
     if (existingDocId) {
       return await this.entriesClient.updateEntry(collection, existingDocId, mergedData);
@@ -156,6 +170,15 @@ export class PayloadApiClient {
 
   async getMediaSetVariantAssetIds(mediaSetId: string): Promise<string[]> {
     return await this.mediaSetsClient.getMediaSetVariantAssetIds(mediaSetId);
+  }
+
+  async searchMediaSets(params: {
+    query?: string;
+    page?: number;
+    limit?: number;
+    ids?: string[];
+  }): Promise<PayloadMediaSetListResponse> {
+    return await this.mediaSetsClient.searchMediaSets(params);
   }
 
   async findOrCreateMediaSet(data: PayloadMediaSetData): Promise<string> {

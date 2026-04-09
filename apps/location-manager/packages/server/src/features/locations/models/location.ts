@@ -66,6 +66,7 @@ export interface Location {
   tripadvisorUrl?: string | null;
   tripadvisorLocationId?: string | null;
   payload_location_ref?: string | null;  // Payload CMS location hierarchy ID
+  selectedPayloadMediaSetIdsJson?: string | null;
   // Reviews tracking fields
   reviewsFetchedAt?: string | null;      // Timestamp of last fetch
   reviewsCount?: number | null;          // Total merged reviews
@@ -149,6 +150,7 @@ export interface CreateMapsRequest {
   tripadvisorUrl?: string;
   email?: string;
   neighborhoodDescription?: string;
+  selectedPayloadMediaSetIds?: string[] | null;
   nightlifeDetails?: Record<string, unknown> | string;
   accommodationsDetails?: Record<string, unknown> | string;
   attractionsDetails?: Record<string, unknown> | string;
@@ -201,6 +203,7 @@ export interface LocationResponse {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
+  selectedPayloadMediaSetIds: string[] | null;
   neighborhoodDescription: string | null;
   idealFor: string[] | null;
   nightlifeDetails: Record<string, unknown> | null;

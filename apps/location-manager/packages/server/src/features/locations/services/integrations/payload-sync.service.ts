@@ -349,7 +349,9 @@ export class PayloadSyncService {
       return await this.payloadClient.updateEntry(collection, existingDocId, payloadData);
     }
 
-    return await this.payloadClient.createEntry(collection, payloadData);
+    return await this.payloadClient.upsertEntry(collection, payloadData, {
+      replaceGallery: collection === "attractions",
+    });
   }
 
   private isPayloadTypeSelectionError(errorMessage: string): boolean {

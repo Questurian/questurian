@@ -12,6 +12,7 @@ import type {
   GetSyncStatusResponse,
   SyncStatusResponse,
   ConnectionStatusResponse,
+  PayloadMediaSetsResponse,
 } from "./types/payload.types";
 
 export const payloadApi = {
@@ -47,6 +48,36 @@ export const payloadApi = {
 
     const response = await apiGet<GetSyncStatusResponse>(endpoint);
     return response.status;
+  },
+
+  /**
+   * Search existing Payload media sets
+   */
+  async getMediaSets(params?: {
+    query?: string;
+    page?: number;
+    limit?: number;
+    ids?: string[];
+  }): Promise<PayloadMediaSetsResponse> {
+    const searchParams: Record<string, string> = {};
+
+    if (params?.query) {
+      searchParams.query = params.query;
+    }
+
+    if (params?.page) {
+      searchParams.page = String(params.page);
+    }
+
+    if (params?.limit) {
+      searchParams.limit = String(params.limit);
+    }
+
+    if (params?.ids && params.ids.length > 0) {
+      searchParams.ids = params.ids.join(",");
+    }
+
+    return apiGet<PayloadMediaSetsResponse>(API_ENDPOINTS.PAYLOAD_MEDIA_SETS, searchParams);
   },
 
   /**

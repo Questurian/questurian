@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ATTRACTIONS_IDEAL_FOR_TAGS } from "@questurian/lm-shared";
 
 const PRICE_LEVEL_VALUES = ["free", "$", "$$", "$$$", "$$$$"] as const;
 const BOOKING_REQUIRED_VALUES = ["yes", "no"] as const;
@@ -61,14 +60,13 @@ export const addAttractionsSchema = z.object({
   type: z.string().trim().min(1, "Type is required"),
   priceLevel: z.enum(PRICE_LEVEL_VALUES),
   bookingRequired: z.enum(BOOKING_REQUIRED_VALUES),
-  idealFor: z
-    .array(z.enum(ATTRACTIONS_IDEAL_FOR_TAGS))
-    .min(1, "Select at least 1 Ideal For tag")
-    .max(4, "Select up to 4 Ideal For tags")
-    .refine((tags) => new Set(tags).size === tags.length, {
-      message: "Ideal For tags must be unique",
-    }),
-  website: z.string().trim().url("Website URL must be valid"),
+  website: z
+    .string()
+    .trim()
+    .url("Website URL must be valid")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
   phone: z.string().trim().optional().or(z.literal("")),
   tripadvisorUrl: z
     .string()

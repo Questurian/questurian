@@ -111,6 +111,7 @@ export interface LocationResponse {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
+  selectedPayloadMediaSetIds: string[] | null;
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
   attractionsDetails: Record<string, unknown> | null;

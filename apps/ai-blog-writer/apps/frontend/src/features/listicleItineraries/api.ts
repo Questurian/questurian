@@ -3,6 +3,7 @@ import { appendScopedLocationWhere, getArticleLocationScope } from '../locationS
 import { normalizeRelatedItems } from '../shared/related-items/normalizeRelatedItems'
 import type { LocationScope } from '../locationScope/types'
 import type {
+  InstagramPostOption,
   ItineraryBlockType,
   LocationOption,
   MediaAssetOption,
@@ -34,7 +35,7 @@ async function payloadRequest<T>(endpoint: string, token: string, init?: Request
 
 function relatedCollectionForBlockType(
   blockType: ItineraryBlockType,
-): 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key-locations' {
+): 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key-locations' | null {
   switch (blockType) {
     case 'itinerary-dining':
       return 'dining'
@@ -46,6 +47,8 @@ function relatedCollectionForBlockType(
       return 'nightlife'
     case 'itinerary-key-location':
       return 'key-locations'
+    case 'itinerary-tour-agency':
+      return null
   }
 }
 
@@ -97,11 +100,41 @@ export async function fetchLocations(token: string): Promise<LocationOption[]> {
   return allDocs
 }
 
-export async function fetchMediaAssets(token: string): Promise<MediaAssetOption[]> {
+export async function fetchMediaAssets(
+  token: string,
+  params?: { id?: number },
+): Promise<MediaAssetOption[]> {
+  const queryParams = new URLSearchParams()
+  queryParams.set('limit', '200')
+  queryParams.set('where[mimeType][like]', 'image/')
+  if (typeof params?.id === 'number') {
+    queryParams.set('where[id][equals]', String(params.id))
+  }
+
   const response = await payloadRequest<PayloadListResponse<MediaAssetOption>>(
-    `/api/media-assets?limit=200&where[mimeType][like]=image/`,
+    `/api/media-assets?${queryParams.toString()}`,
     token,
   )
+  return response.docs || []
+}
+
+export async function fetchInstagramPosts(
+  token: string,
+  params?: { id?: number },
+): Promise<InstagramPostOption[]> {
+  const queryParams = new URLSearchParams()
+  queryParams.set('depth', '1')
+  queryParams.set('limit', '200')
+
+  if (typeof params?.id === 'number') {
+    queryParams.set('where[id][equals]', String(params.id))
+  }
+
+  const response = await payloadRequest<PayloadListResponse<InstagramPostOption>>(
+    `/api/instagram-posts?${queryParams.toString()}`,
+    token,
+  )
+
   return response.docs || []
 }
 
@@ -112,6 +145,9 @@ export async function fetchRelatedItems(
   scope?: LocationScope,
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForBlockType(blockType)
+  if (!collection) {
+    return []
+  }
   const params = new URLSearchParams()
   params.set('depth', '2')
   params.set('limit', '200')

@@ -21,8 +21,12 @@ function hasMissingRequiredFields(locationDetail: LocationResponse): boolean {
   );
   const hasMedia =
     (locationDetail.uploads && locationDetail.uploads.length > 0) ||
-    (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0);
+    (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0) ||
+    (locationDetail.selectedPayloadMediaSetIds &&
+      locationDetail.selectedPayloadMediaSetIds.length > 0);
   const hasIdealFor = Boolean(Array.isArray(locationDetail.idealFor) && locationDetail.idealFor.length > 0);
+  const requiresIdealFor =
+    locationDetail.category === "dining" || locationDetail.category === "nightlife";
   const hasCuisines = Boolean(
     Array.isArray(locationDetail.tripadvisorCuisines) && locationDetail.tripadvisorCuisines.length > 0
   );
@@ -40,10 +44,10 @@ function hasMissingRequiredFields(locationDetail: LocationResponse): boolean {
     Boolean(locationDetail.ianaTimeId?.trim()),
     Boolean(contact.countryCode?.trim()),
     Boolean(contact.phoneNumber?.trim()),
-    Boolean(contact.website?.trim()),
+    locationDetail.category === "attractions" || Boolean(contact.website?.trim()),
     Boolean(contact.url?.trim()),
     Boolean(locationDetail.neighborhoodDescription?.trim()),
-    hasIdealFor,
+    !requiresIdealFor || hasIdealFor,
     hasCuisines,
     Boolean(locationDetail.priceLevel?.trim()),
     hasOperationHours,

@@ -50,7 +50,9 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
 
     const hasMedia =
       (locationDetail.uploads && locationDetail.uploads.length > 0) ||
-      (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0);
+      (locationDetail.instagram_embeds && locationDetail.instagram_embeds.length > 0) ||
+      (locationDetail.selectedPayloadMediaSetIds &&
+        locationDetail.selectedPayloadMediaSetIds.length > 0);
     const hasIdealFor = Boolean(Array.isArray(locationDetail.idealFor) && locationDetail.idealFor.length > 0);
     const hasCuisines = Boolean(
       Array.isArray(locationDetail.tripadvisorCuisines) && locationDetail.tripadvisorCuisines.length > 0
@@ -269,11 +271,6 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
           present: Boolean(locationDetail.priceLevel?.trim() || attractionsDetails.pricing),
         },
         {
-          key: "idealFor",
-          label: "Ideal For",
-          present: hasIdealFor || attractionsDetails.idealFor.length > 0,
-        },
-        {
           key: "attractions.bookingRequired",
           label: "Booking Required",
           present: attractionsDetails.bookingRequired !== null,
@@ -282,11 +279,6 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
           key: "operationHours",
           label: "Hours",
           present: hasOperationHours || attractionsDetails.hasVisitHours,
-        },
-        {
-          key: "website",
-          label: "Website",
-          present: Boolean(contact.website?.trim() || attractionsDetails.website),
         },
         { key: "media", label: "Images/Instagram", present: hasMedia },
       ];

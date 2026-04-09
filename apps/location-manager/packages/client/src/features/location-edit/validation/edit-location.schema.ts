@@ -23,7 +23,7 @@ export const editLocationSchema = z.object({
     .string()
     .max(200, "Title must be less than 200 characters")
     .optional(),
-  idealFor: idealForSchema,
+  idealFor: idealForSchema.optional(),
   type: z.string().optional().or(z.literal("")),
   locationKey: z
     .string()

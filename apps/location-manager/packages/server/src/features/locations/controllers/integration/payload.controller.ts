@@ -1,7 +1,11 @@
 import type { Context } from "hono";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
-import type { SyncLocationIdDto, SyncAllDto } from "../../validation/schemas/payload.schemas";
+import type {
+  SyncLocationIdDto,
+  SyncAllDto,
+  PayloadMediaSetsQueryDto,
+} from "../../validation/schemas/payload.schemas";
 import * as PayloadSyncRepo from "../../repositories/integration/payload-sync.repository";
 
 const container = ServiceContainer.getInstance();
@@ -50,6 +54,29 @@ export async function deletePayloadSyncState(c: Context) {
   PayloadSyncRepo.deleteSyncState(locationId);
 
   return c.json(successResponse({ reset: true, locationId: locationId ?? "all" }));
+}
+
+/**
+ * GET /api/payload/media-sets
+ * Search existing Payload media sets for attraction card selection
+ */
+export async function getPayloadMediaSets(c: Context) {
+  const query = c.get("validatedQuery") as PayloadMediaSetsQueryDto;
+  const result = await container.payloadApi.searchMediaSets(query);
+
+  return c.json(
+    successResponse({
+      mediaSets: result.docs,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      totalDocs: result.totalDocs,
+      hasNextPage: result.hasNextPage,
+      hasPrevPage: result.hasPrevPage,
+      nextPage: result.nextPage,
+      prevPage: result.prevPage,
+    })
+  );
 }
 
 /**

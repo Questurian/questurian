@@ -65,7 +65,13 @@ export const addKeyLocationsSchema = z.object({
   status: z.enum(KEY_LOCATION_STATUS_VALUES, {
     errorMap: () => ({ message: "Status is required" }),
   }),
-  website: z.string().trim().url("Website URL must be valid"),
+  website: z
+    .string()
+    .trim()
+    .url("Website URL must be valid")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
   phone: z
     .string()
     .trim()

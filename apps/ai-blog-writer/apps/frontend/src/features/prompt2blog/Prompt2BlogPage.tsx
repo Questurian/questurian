@@ -145,11 +145,32 @@ type Prompt2BlogCleanupStat = {
   removedLines: number
 }
 
+type Prompt2BlogCleanupRemovedBlock = {
+  label: string
+  reason: string
+  excerpt: string
+}
+
+type Prompt2BlogCleanupSource = {
+  sourceIndex: number
+  inputChars: number
+  precleanChars: number
+  cleanedChars: number
+  fallbackUsed: boolean
+  title: string
+  publishedAt: string
+  cleanedText: string
+  removedBlocks: Prompt2BlogCleanupRemovedBlock[]
+}
+
 type Prompt2BlogCleanupStageData = {
+  cleanupMode: string
+  modelName: string
   sourceMaterialCount: number
   cleanedSourcesCount: number
   cleanupStats: Prompt2BlogCleanupStat[]
   cleanedSources: string[]
+  sources: Prompt2BlogCleanupSource[]
 }
 
 const PIPELINE_STAGE_ORDER = [
@@ -197,9 +218,29 @@ function readNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
 }
 
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function readBoolean(value: unknown): boolean {
+  return typeof value === 'boolean' ? value : false
+}
+
 function readStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
+function readCleanupRemovedBlocks(value: unknown): Prompt2BlogCleanupRemovedBlock[] {
+  if (!Array.isArray(value)) return []
+  return value.map((entry) => {
+    const record = asRecord(entry)
+    return {
+      label: readString(record?.label),
+      reason: readString(record?.reason),
+      excerpt: readString(record?.excerpt),
+    }
+  }).filter((entry) => entry.label || entry.reason || entry.excerpt)
 }
 
 function readCleanupStageData(
@@ -220,11 +261,42 @@ function readCleanupStageData(
       })
     : []
 
+  const cleanedSources = readStringArray(data.cleaned_sources)
+  const sources = Array.isArray(data.sources)
+    ? data.sources.map((entry, index) => {
+        const record = asRecord(entry)
+        return {
+          sourceIndex: readNumber(record?.source_index) || index + 1,
+          inputChars: readNumber(record?.input_chars),
+          precleanChars: readNumber(record?.preclean_chars),
+          cleanedChars: readNumber(record?.cleaned_chars),
+          fallbackUsed: readBoolean(record?.fallback_used),
+          title: readString(record?.title),
+          publishedAt: readString(record?.published_at),
+          cleanedText: readString(record?.cleaned_text),
+          removedBlocks: readCleanupRemovedBlocks(record?.removed_blocks),
+        }
+      }).filter((entry) => entry.cleanedText || entry.inputChars > 0)
+    : cleanupStats.map((stats, index) => ({
+        sourceIndex: index + 1,
+        inputChars: stats.inputChars,
+        precleanChars: 0,
+        cleanedChars: stats.outputChars,
+        fallbackUsed: false,
+        title: '',
+        publishedAt: '',
+        cleanedText: cleanedSources[index] || '',
+        removedBlocks: [],
+      }))
+
   return {
+    cleanupMode: readString(data.cleanup_mode),
+    modelName: readString(data.model_name),
     sourceMaterialCount: readNumber(data.source_material_count),
     cleanedSourcesCount: readNumber(data.cleaned_sources_count),
     cleanupStats,
-    cleanedSources: readStringArray(data.cleaned_sources),
+    cleanedSources,
+    sources,
   }
 }
 
@@ -579,6 +651,9 @@ export default function Prompt2BlogPage() {
     () => readCleanupStageData(pipelineDebugData),
     [pipelineDebugData],
   )
+  const cleanupFallbackCount = cleanupStageData
+    ? cleanupStageData.sources.filter((source) => source.fallbackUsed).length
+    : 0
   const cleanupStageIndex = PIPELINE_STAGE_ORDER.indexOf(CLEANUP_STAGE_KEY)
   const currentPipelineStageIndex = pipelineStatus
     ? PIPELINE_STAGE_ORDER.indexOf((pipelineStatus.stage || 'queued') as (typeof PIPELINE_STAGE_ORDER)[number])
@@ -1394,10 +1469,14 @@ export default function Prompt2BlogPage() {
           <div className="p2b-modal" role="dialog" aria-modal="true" aria-label="Clean source material details">
             <div className="p2b-modal__header">
               <div>
-                <p className="p2b-modal__eyebrow">Local Cleanup Stage</p>
+                <p className="p2b-modal__eyebrow">
+                  {cleanupStageData?.cleanupMode ? 'AI Cleanup Stage' : 'Local Cleanup Stage'}
+                </p>
                 <h3>Clean source material</h3>
                 <p className="p2b-modal__lede">
-                  This step is local code, not AI. It strips markup, removes common noise, and normalizes whitespace before synthesis.
+                  {cleanupStageData?.cleanupMode
+                    ? 'This stage uses aggressive AI cleanup to strip promotional clutter, footer/legal blocks, and embedded CTAs while preserving source facts before synthesis.'
+                    : 'This step is local code, not AI. It strips markup, removes common noise, and normalizes whitespace before synthesis.'}
                 </p>
               </div>
               <button
@@ -1427,35 +1506,81 @@ export default function Prompt2BlogPage() {
                       <strong>{cleanupStageData.cleanedSourcesCount}</strong>
                     </div>
                     <div className="p2b-cleanup-summary__card">
-                      <span>Debug payload</span>
-                      <strong>{cleanupStageData.cleanedSources.length > 0 ? 'Text available' : 'Stats only'}</strong>
+                      <span>Cleanup mode</span>
+                      <strong>{cleanupStageData.cleanupMode || 'legacy_local'}</strong>
+                    </div>
+                    <div className="p2b-cleanup-summary__card">
+                      <span>Model</span>
+                      <strong>{cleanupStageData.modelName || 'N/A'}</strong>
+                    </div>
+                    <div className="p2b-cleanup-summary__card">
+                      <span>Fallbacks used</span>
+                      <strong>{cleanupFallbackCount}</strong>
                     </div>
                   </div>
 
                   <div className="p2b-cleanup-source-list">
-                    {cleanupStageData.cleanupStats.map((stats, index) => {
-                      const cleanedSource = cleanupStageData.cleanedSources[index] || ''
-
+                    {cleanupStageData.sources.map((source) => {
                       return (
-                        <section key={`cleanup-source-${index}`} className="p2b-cleanup-source-card">
+                        <section key={`cleanup-source-${source.sourceIndex}`} className="p2b-cleanup-source-card">
                           <div className="p2b-cleanup-source-card__header">
                             <div>
-                              <h4>Source {index + 1}</h4>
-                              <p>{stats.outputChars.toLocaleString()} chars after cleanup</p>
+                              <div className="p2b-cleanup-source-card__title-row">
+                                <h4>{source.title || `Source ${source.sourceIndex}`}</h4>
+                                <span className={`p2b-cleanup-pill ${source.fallbackUsed ? 'p2b-cleanup-pill--fallback' : ''}`}>
+                                  {source.fallbackUsed ? 'Fallback used' : 'AI cleaned'}
+                                </span>
+                              </div>
+                              <p>
+                                {source.publishedAt || 'No date detected'}
+                                {' · '}
+                                {source.cleanedChars.toLocaleString()} chars after cleanup
+                              </p>
                             </div>
                             <div className="p2b-cleanup-stats">
-                              <span>Input: {stats.inputChars.toLocaleString()}</span>
-                              <span>Output: {stats.outputChars.toLocaleString()}</span>
-                              <span>Removed lines: {stats.removedLines.toLocaleString()}</span>
+                              <span>Input: {source.inputChars.toLocaleString()}</span>
+                              <span>Pre-clean: {source.precleanChars.toLocaleString()}</span>
+                              <span>Output: {source.cleanedChars.toLocaleString()}</span>
+                              <span>Removed blocks: {source.removedBlocks.length.toLocaleString()}</span>
                             </div>
                           </div>
 
                           <div className="p2b-cleanup-source-card__body">
-                            {cleanedSource ? (
-                              <pre>{cleanedSource}</pre>
+                            {source.fallbackUsed && (
+                              <p className="p2b-cleanup-source-card__note">
+                                AI cleanup failed for this source, so the pipeline used the deterministic pre-cleaned text instead.
+                              </p>
+                            )}
+
+                            {source.cleanedText ? (
+                              <pre>{source.cleanedText}</pre>
                             ) : (
                               <p className="p2b-modal__empty">No cleaned text was stored for this source.</p>
                             )}
+
+                            <div className="p2b-cleanup-removed">
+                              <h5>Removed blocks</h5>
+                              {source.removedBlocks.length > 0 ? (
+                                <div className="p2b-cleanup-removed-list">
+                                  {source.removedBlocks.map((block, blockIndex) => (
+                                    <article
+                                      key={`cleanup-source-${source.sourceIndex}-block-${blockIndex}`}
+                                      className="p2b-cleanup-removed-item"
+                                    >
+                                      <strong>{block.label}</strong>
+                                      <p className="p2b-cleanup-removed-item__reason">{block.reason}</p>
+                                      <p className="p2b-cleanup-removed-item__excerpt">{block.excerpt}</p>
+                                    </article>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="p2b-modal__empty">
+                                  {source.fallbackUsed
+                                    ? 'No removed-block breakdown is available for fallback cleanup.'
+                                    : 'No removed blocks were recorded for this source.'}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </section>
                       )

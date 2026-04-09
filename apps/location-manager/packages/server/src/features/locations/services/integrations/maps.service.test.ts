@@ -9,12 +9,12 @@ const createFromMapsMock = mock(async () => ({
   type: null,
 }));
 const generateGoogleMapsUrlMock = mock(() => "https://www.google.com/maps");
-const findPotentialDuplicateLocationsMock = mock(() => []);
-const getLocationByIdForUpdateMock = mock(() => null as any);
+const findPotentialDuplicateLocationsMock = mock<() => any[]>(() => []);
+const getLocationByIdForUpdateMock = mock<(id?: number) => any>(() => null as any);
 const saveLocationOrThrowMock = mock(() => 101);
 const updateLocationByIdMock = mock(() => true);
-const getInstagramEmbedsByLocationIdMock = mock(() => []);
-const getUploadsByLocationIdMock = mock(() => []);
+const getInstagramEmbedsByLocationIdMock = mock<(id?: number) => any[]>(() => []);
+const getUploadsByLocationIdMock = mock<(id?: number) => any[]>(() => []);
 const transformLocationToResponseMock = mock((location) => location as any);
 
 mock.module("../geocoding/location-geocoding.helper", () => ({
@@ -172,5 +172,72 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
       })
     );
     expect(saveLocationOrThrowMock).not.toHaveBeenCalled();
+  });
+
+  test("dedupes and preserves selected Payload media set order on attraction updates", async () => {
+    const currentLocation = {
+      id: 88,
+      name: "Museum",
+      title: "Museum",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "attractions",
+      type: "museum",
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+    getUploadsByLocationIdMock.mockReturnValue([{ id: 1 }, { id: 2 }]);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(88, {
+      selectedPayloadMediaSetIds: [" media-1 ", "media-2", "media-1"],
+    } as any);
+
+    expect(updateLocationByIdMock).toHaveBeenCalledWith(
+      88,
+      expect.objectContaining({
+        selectedPayloadMediaSetIdsJson: JSON.stringify(["media-1", "media-2"]),
+      })
+    );
+  });
+
+  test("rejects attraction updates when uploads plus selected Payload media exceed the gallery limit", async () => {
+    const currentLocation = {
+      id: 89,
+      name: "Museum",
+      title: "Museum",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "attractions",
+      type: "museum",
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+    getUploadsByLocationIdMock.mockReturnValue(
+      Array.from({ length: 19 }, (_, index) => ({ id: index + 1 }))
+    );
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await expect(
+      service.updateMapsLocationById(89, {
+        selectedPayloadMediaSetIds: ["media-1", "media-2"],
+      } as any)
+    ).rejects.toThrow("Attractions gallery supports up to 20 Payload media sets total.");
+
+    expect(updateLocationByIdMock).not.toHaveBeenCalled();
   });
 });
