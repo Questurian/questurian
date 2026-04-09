@@ -185,10 +185,11 @@ export function StandardArticleStageBuilder({
     if (!isStep1Locked) issues.push('Lock Step 1 before syncing to Payload.')
     if (!isStep2Locked) issues.push('Lock Step 2 before syncing to Payload.')
     if (!isStep3Locked) issues.push('Lock Step 3 before syncing to Payload.')
+    if (!seoCoreComplete) issues.push('Add SEO title and meta description before syncing to Payload.')
     if (step3Issues.length > 0) issues.push(step3Issues[0])
     if (seoIssues.length > 0) issues.push(seoIssues[0])
     return issues
-  }, [isStep1Locked, isStep2Locked, isStep3Locked, seoIssues, step3Issues])
+  }, [isStep1Locked, isStep2Locked, isStep3Locked, seoCoreComplete, seoIssues, step3Issues])
 
   const setStageArticle = useCallback((updates: Partial<NonNullable<typeof stagedArticle>>) => {
     sidebarProps?.onUpdateStagedArticle(updates)

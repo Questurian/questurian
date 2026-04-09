@@ -25,6 +25,7 @@ import { Currencies } from './features/shared/currencies/collections/Currencies'
 import { Categories, Tags } from './features/shared/taxonomy/collections'
 import { SingleTypeListicles } from './features/articles/single-type-listicles/collections'
 import { ListicleItineraries } from './features/articles/listicle-itineraries/collections'
+import { HomepageFeaturedContent } from './features/homepage-featured-content'
 import { APP_CONFIG, APP_URLS } from './shared/config'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -43,6 +44,7 @@ export default buildConfig({
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
   collections: [Users, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, Locations, Categories, Tags, Accommodations, Dining, Attractions, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies],
+  globals: [HomepageFeaturedContent],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,
   typescript: {

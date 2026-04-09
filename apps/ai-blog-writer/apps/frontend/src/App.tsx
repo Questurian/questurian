@@ -38,6 +38,7 @@ import {
   LocationDocumentsPage,
   LocationDocumentBuilderPage,
 } from './features/locationDocuments'
+import { HomepageFeaturedContentPage } from './features/homepageFeaturedContent'
 import { KeywordIntelPage } from './features/keywordIntel'
 import { ImageRecreationPromptsPage } from './features/imageRecreationPrompts'
 import { BatchUploadPage } from './features/batchUpload'
@@ -95,6 +96,9 @@ export default function App() {
               {/* Location Documents */}
               <Route path="location-documents" element={<LocationDocumentsPage />} />
               <Route path="location-documents/builder" element={<LocationDocumentBuilderPage />} />
+
+              {/* Homepage Featured Content */}
+              <Route path="homepage-featured-content" element={<HomepageFeaturedContentPage />} />
 
               {/* Keyword Intel */}
               <Route path="keyword-intel" element={<KeywordIntelPage />} />

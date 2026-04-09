@@ -1,19 +1,18 @@
-/* Landing Page - Editorial Warmth Theme */
+/* Landing Page - Domain-first IA */
 
 .landing-page {
   min-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: clamp(1.25rem, 4vw, var(--space-8)) clamp(1rem, 3vw, var(--space-6));
+  padding: clamp(1.25rem, 4vw, var(--space-8)) clamp(1rem, 3vw, var(--space-6))
+    clamp(2.5rem, 6vw, var(--space-12));
   gap: clamp(var(--space-6), 5vw, var(--space-10));
 }
 
-/* Hero Section */
 .landing-hero {
   text-align: center;
-  max-width: 680px;
+  max-width: 720px;
   animation: fadeInUp 0.6s ease-out;
 }
 
@@ -64,17 +63,156 @@
   line-height: 1.7;
   color: var(--muted);
   margin: 0 auto;
-  max-width: 520px;
+  max-width: 560px;
 }
 
-/* Feature Cards Grid */
-.landing-options {
+.landing-sections {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--space-5), 4vw, var(--space-8));
+  max-width: 1180px;
+  width: 100%;
+  animation: fadeInUp 0.6s ease-out 0.15s backwards;
+}
+
+.landing-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.landing-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.landing-section-kicker {
+  margin: 0 0 var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.landing-section-header h2,
+.landing-subsection-header h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.15;
+}
+
+.landing-section-header h2 {
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+}
+
+.landing-section-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: clamp(var(--space-4), 3vw, var(--space-6));
-  max-width: 1100px;
+}
+
+.landing-section--secondary {
+  margin-top: var(--space-2);
+}
+
+.landing-secondary-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.94)),
+    var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl, 28px);
+  padding: clamp(var(--space-5), 4vw, var(--space-7));
+  box-shadow:
+    0 1px 2px var(--shadow-soft),
+    0 16px 44px -12px var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.landing-section-header--secondary {
+  margin-bottom: var(--space-1);
+}
+
+.landing-secondary-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
   width: 100%;
-  animation: fadeInUp 0.6s ease-out 0.15s backwards;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--ink);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-base),
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.landing-secondary-toggle:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-soft);
+  box-shadow: 0 12px 30px -18px var(--shadow-medium);
+}
+
+.landing-secondary-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.landing-secondary-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.landing-secondary-toggle-label {
+  font-weight: 700;
+}
+
+.landing-secondary-toggle-meta {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.landing-secondary-toggle-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.landing-secondary-toggle-icon path {
+  transition: transform var(--transition-base);
+}
+
+.landing-secondary-content {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--space-5), 4vw, var(--space-7));
+  padding-top: var(--space-2);
+}
+
+.landing-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.landing-subsection-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.landing-subsection-header h3 {
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
 }
 
 .landing-card {
@@ -85,7 +223,8 @@
   position: relative;
   background: var(--panel);
   border-radius: var(--radius-xl);
-  padding: clamp(var(--space-5), 4vw, var(--space-8)) clamp(var(--space-4), 3.5vw, var(--space-6));
+  padding: clamp(var(--space-5), 4vw, var(--space-8))
+    clamp(var(--space-4), 3.5vw, var(--space-6));
   border: 1px solid var(--border);
   box-shadow:
     0 1px 2px var(--shadow-soft),
@@ -108,7 +247,6 @@
   border-color: var(--card-accent-soft);
 }
 
-/* Decorative corner accent */
 .landing-card::before {
   content: '';
   position: absolute;
@@ -134,7 +272,6 @@
   opacity: 0.1;
 }
 
-/* Icon Container */
 .landing-card-icon {
   width: 64px;
   height: 64px;
@@ -158,10 +295,9 @@
   transform: scale(1.05);
 }
 
-/* Card Typography */
-.landing-card h2 {
+.landing-card h3 {
   font-family: var(--font-display);
-  font-size: clamp(1.45rem, 5vw, 1.75rem);
+  font-size: clamp(1.35rem, 4vw, 1.65rem);
   font-weight: 600;
   margin: 0;
   line-height: 1.2;
@@ -175,7 +311,6 @@
   font-size: 0.95rem;
 }
 
-/* Card Action Link */
 .landing-card-action {
   display: inline-flex;
   align-items: center;
@@ -202,7 +337,6 @@
   transform: translateX(4px);
 }
 
-/* Per-card color identity */
 .landing-card--youtube {
   --card-accent: var(--accent);
   --card-accent-soft: var(--accent-soft);
@@ -211,7 +345,7 @@
 
 .landing-card--reviews {
   --card-accent: var(--sage);
-  --card-accent-soft: var(--sage-soft);
+  --card-accent-soft: rgba(93, 122, 100, 0.12);
   --card-accent-softer: rgba(93, 122, 100, 0.06);
 }
 
@@ -239,6 +373,12 @@
   --card-accent-softer: rgba(41, 95, 90, 0.06);
 }
 
+.landing-card--batch-image-recreation {
+  --card-accent: #4b5563;
+  --card-accent-soft: rgba(75, 85, 99, 0.14);
+  --card-accent-softer: rgba(75, 85, 99, 0.06);
+}
+
 .landing-card--single-listicles {
   --card-accent: #b7791f;
   --card-accent-soft: rgba(183, 121, 31, 0.14);
@@ -263,36 +403,38 @@
   --card-accent-softer: rgba(109, 79, 194, 0.06);
 }
 
-/* Responsive: progressive enhancement */
-@media (min-width: 640px) {
-  .landing-options {
+@media (min-width: 700px) {
+  .landing-section-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
-  .landing-options {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  }
-
   .landing-hero h1 {
     font-size: clamp(2.5rem, 6vw, 4rem);
+  }
+
+  .landing-section-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-hero,
-  .landing-options,
+  .landing-sections,
   .landing-card,
   .landing-card::before,
   .landing-card-icon,
   .landing-card-action,
-  .landing-card-action-icon {
+  .landing-card-action-icon,
+  .landing-secondary-toggle,
+  .landing-secondary-toggle-icon path {
     animation: none;
     transition: none;
   }
 
-  .landing-card:hover {
+  .landing-card:hover,
+  .landing-secondary-toggle:hover {
     transform: none;
   }
 

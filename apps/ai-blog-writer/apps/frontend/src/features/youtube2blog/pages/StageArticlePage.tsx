@@ -1,4 +1,4 @@
-import EditorialStageArticlePage from '../../staging/components/EditorialStageArticlePage'
+import { StandardArticleStageBuilder } from '../../staging/components/StandardArticleStageBuilder'
 import { getArticleById, updateArticle } from '../../staging/api'
 import {
   fetchLocations,
@@ -23,7 +23,7 @@ export type {
 
 export default function StageArticlePage() {
   return (
-    <EditorialStageArticlePage
+    <StandardArticleStageBuilder
       storageKey="youtube2blog_staged_articles_v2"
       routes={{
         stagePath: '/youtube2blog/stage',
@@ -46,6 +46,8 @@ export default function StageArticlePage() {
         searchUnsplashImages,
         rewriteBlockWithAi,
       }}
+      featureLabel="YouTube2Blog"
+      heroDescription="Step through setup, featured image selection, article content blocks, and SEO before saving drafts or publishing to Payload."
       syncBehavior="draft-sync"
     />
   )
