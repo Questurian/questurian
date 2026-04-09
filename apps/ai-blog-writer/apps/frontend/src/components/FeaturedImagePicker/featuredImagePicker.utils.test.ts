@@ -1,4 +1,10 @@
-import { filterAssetsWithMediaSet, getMediaSetId, hasMediaSet } from './featuredImagePicker.utils'
+import {
+  filterAssetsWithMediaSet,
+  formatMediaSetLabel,
+  getMediaSetId,
+  hasMediaSet,
+  resolveMediaSetPreviewAssetId,
+} from './featuredImagePicker.utils'
 
 describe('featuredImagePicker utils', () => {
   it('extracts media set ids from payload relationship shapes', () => {
@@ -28,5 +34,22 @@ describe('featuredImagePicker utils', () => {
       { id: 2, filename: 'variant-wide.webp', mediaSet: 22 },
       { id: 3, filename: 'variant-editorial.webp', mediaSet: { id: '33' } },
     ])
+  })
+
+  it('formats a media-set label from available metadata', () => {
+    expect(formatMediaSetLabel({
+      title: 'Barranco murals',
+      location: 'Barranco, Lima',
+      alt_text: 'Street art at sunset',
+    })).toBe('Barranco murals · Barranco, Lima · Street art at sunset')
+  })
+
+  it('prefers a stable preview asset id from a media set', () => {
+    expect(resolveMediaSetPreviewAssetId({
+      variants: {
+        editorial: { id: 41, filename: 'editorial.webp' },
+        wide: { id: 42, filename: 'wide.webp' },
+      },
+    })).toBe(41)
   })
 })

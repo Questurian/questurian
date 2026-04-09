@@ -1,5 +1,5 @@
 import { payloadRequest } from '../client/http'
-import type { ArticleCategory, ArticleTag, Location, MediaAsset } from './payload.types'
+import type { ArticleCategory, ArticleTag, Location, MediaAsset, MediaSet } from './payload.types'
 
 export async function fetchLocations(
   token?: string,
@@ -112,4 +112,25 @@ export async function fetchMediaAssets(
   }
 
   return payloadRequest(`/api/media-assets?${buildQuery(params?.page || 1)}`, token)
+}
+
+export async function fetchMediaSets(
+  token?: string,
+  params?: {
+    limit?: number
+    page?: number
+    id?: number | string
+  },
+): Promise<{ docs: MediaSet[]; totalDocs: number; totalPages: number }> {
+  const queryParams = new URLSearchParams()
+  queryParams.append('depth', '2')
+  queryParams.append('limit', String(params?.limit || 50))
+  queryParams.append('page', String(params?.page || 1))
+  queryParams.append('sort', '-updatedAt')
+
+  if (params?.id !== undefined && params.id !== null) {
+    queryParams.append('where[id][equals]', String(params.id))
+  }
+
+  return payloadRequest(`/api/media-sets?${queryParams.toString()}`, token)
 }

@@ -57,3 +57,27 @@ export type MediaAsset = {
   width?: number
   height?: number
 }
+
+export type MediaSetVariantAsset = {
+  id: number
+  filename?: string | null
+  url?: string | null
+  alt_text?: string | null
+}
+
+export type MediaSet = {
+  id: number
+  title?: string | null
+  location?: string | null
+  alt_text?: string | null
+  status?: string | null
+  variants?: {
+    thumbnail?: number | MediaSetVariantAsset | null
+    square?: number | MediaSetVariantAsset | null
+    wide?: number | MediaSetVariantAsset | null
+    portrait?: number | MediaSetVariantAsset | null
+    hero?: number | MediaSetVariantAsset | null
+    open_graph?: number | MediaSetVariantAsset | null
+    editorial?: number | MediaSetVariantAsset | null
+  } | null
+}

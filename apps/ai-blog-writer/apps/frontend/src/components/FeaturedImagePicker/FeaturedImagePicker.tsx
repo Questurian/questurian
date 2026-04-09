@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useRef, useState } from 'react'
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ImageUpload,
   MultiVariantCropper,
@@ -19,8 +19,8 @@ import type {
   PexelsPhoto,
   UnsplashPhoto,
 } from '../../features/staging/api/external-images/external-images.types'
-import { fetchMediaAssets } from '../../features/staging/api/payload/payload.api'
-import type { MediaAsset } from '../../features/staging/api/payload/payload.types'
+import { fetchMediaAssets, fetchMediaSets } from '../../features/staging/api/payload/payload.api'
+import type { MediaAsset, MediaSet } from '../../features/staging/api/payload/payload.types'
 import {
   buildExternalAltText,
   buildExternalImportRef,
@@ -30,7 +30,13 @@ import {
   getUnsplashPhotoImportUrl,
   pickVariantAssetId,
 } from '../../features/staging/features/editorial-stage-article/media-utils'
-import { filterAssetsWithMediaSet } from './featuredImagePicker.utils'
+import {
+  filterAssetsWithMediaSet,
+  formatMediaSetLabel,
+  getMediaSetId,
+  resolveMediaSetPreviewAssetId,
+  resolveMediaSetPreviewUrl,
+} from './featuredImagePicker.utils'
 import './FeaturedImagePicker.css'
 
 type ActiveTab = 'payload' | 'upload' | 'unsplash' | 'pexels'
@@ -51,12 +57,16 @@ type FeaturedImagePickerProps = {
   selectedId: number | null
   token: string
   locationRef: number | null
+  payloadSourceMode?: 'assets' | 'mediaSets'
   payloadVariant?: MediaAsset['variant']
   requireMediaSet?: boolean
   prefetchedPayloadAssets?: MediaAsset[]
   onSelect: (mediaAssetId: number) => void
   onClose: () => void
 }
+
+const PAYLOAD_PAGE_SIZE = 48
+const EMPTY_PREFETCHED_PAYLOAD_ASSETS: MediaAsset[] = []
 
 function resolveAssetUrl(asset: MediaAsset): string {
   if (asset.url) return asset.url
@@ -72,25 +82,50 @@ function resolveExternalSourceUrl(
     : getPexelsPhotoImportUrl(photo as PexelsPhoto)
 }
 
+function appendUniqueAsset(assets: MediaAsset[], asset: MediaAsset | null | undefined): MediaAsset[] {
+  if (!asset) return assets
+  if (assets.some((entry) => entry.id === asset.id)) return assets
+  return [asset, ...assets]
+}
+
+function appendUniqueMediaSet(mediaSets: MediaSet[], mediaSet: MediaSet | null | undefined): MediaSet[] {
+  if (!mediaSet) return mediaSets
+  if (mediaSets.some((entry) => String(entry.id) === String(mediaSet.id))) return mediaSets
+  return [mediaSet, ...mediaSets]
+}
+
 export function FeaturedImagePicker({
   isOpen,
   selectedId,
   token,
   locationRef,
+  payloadSourceMode = 'assets',
   payloadVariant,
   requireMediaSet = true,
-  prefetchedPayloadAssets = [],
+  prefetchedPayloadAssets = EMPTY_PREFETCHED_PAYLOAD_ASSETS,
   onSelect,
   onClose,
 }: FeaturedImagePickerProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('payload')
+  const selectedPrefetchedAsset = useMemo(
+    () => (
+      selectedId === null
+        ? null
+        : prefetchedPayloadAssets.find((asset) => asset.id === selectedId) ?? null
+    ),
+    [prefetchedPayloadAssets, selectedId],
+  )
 
   // Payload tab
-  const [payloadAssets, setPayloadAssets] = useState<MediaAsset[]>(prefetchedPayloadAssets)
+  const [payloadAssets, setPayloadAssets] = useState<MediaAsset[]>([])
+  const [payloadMediaSets, setPayloadMediaSets] = useState<MediaSet[]>([])
   const [isLoadingPayload, setIsLoadingPayload] = useState(false)
   const [isBootstrappingPayload, setIsBootstrappingPayload] = useState(false)
+  const [payloadPage, setPayloadPage] = useState(1)
+  const [payloadTotalPages, setPayloadTotalPages] = useState(1)
   const [payloadSearch, setPayloadSearch] = useState('')
   const [payloadError, setPayloadError] = useState<string | null>(null)
+  const [fetchedSelectedAsset, setFetchedSelectedAsset] = useState<MediaAsset | null>(null)
 
   // Upload tab
   const [uploadAltText, setUploadAltText] = useState('')
@@ -118,12 +153,58 @@ export function FeaturedImagePicker({
   const [isUploadingExternalVariants, setIsUploadingExternalVariants] = useState(false)
 
   const overlayRef = useRef<HTMLDivElement>(null)
+  const selectedResolvedAsset = selectedPrefetchedAsset || fetchedSelectedAsset
 
   useEffect(() => {
-    if (prefetchedPayloadAssets.length > 0) {
-      setPayloadAssets(prefetchedPayloadAssets)
+    if (!isOpen) {
+      setPayloadAssets([])
+      setPayloadMediaSets([])
+      setPayloadPage(1)
+      setPayloadTotalPages(1)
+      setPayloadSearch('')
+      setPayloadError(null)
+      setIsLoadingPayload(false)
+      setIsBootstrappingPayload(false)
+      return
     }
-  }, [prefetchedPayloadAssets])
+
+    setPayloadAssets([])
+    setPayloadMediaSets([])
+    setPayloadPage(1)
+    setPayloadTotalPages(1)
+    setPayloadSearch('')
+    setPayloadError(null)
+  }, [isOpen, payloadSourceMode, payloadVariant])
+
+  useEffect(() => {
+    if (!isOpen || selectedId === null || selectedPrefetchedAsset || !token) {
+      setFetchedSelectedAsset(null)
+      return
+    }
+
+    let cancelled = false
+
+    const loadSelectedAsset = async () => {
+      try {
+        const response = await fetchMediaAssets(token, {
+          limit: 1,
+          id: selectedId,
+        })
+        if (cancelled) return
+        setFetchedSelectedAsset(response.docs[0] ?? null)
+      } catch {
+        if (!cancelled) {
+          setFetchedSelectedAsset(null)
+        }
+      }
+    }
+
+    void loadSelectedAsset()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, selectedId, selectedPrefetchedAsset, token])
 
   const resetExternalCropState = () => {
     setExternalCropDraft(null)
@@ -140,24 +221,65 @@ export function FeaturedImagePicker({
     let cancelled = false
 
     const loadPayloadAssets = async () => {
-      const hasPrefetchedPayload = prefetchedPayloadAssets.length > 0
       setPayloadError(null)
-
-      if (hasPrefetchedPayload) {
-        setPayloadAssets(prefetchedPayloadAssets)
-      } else {
-        setIsBootstrappingPayload(true)
-        setIsLoadingPayload(true)
-      }
+      setIsBootstrappingPayload(payloadPage === 1)
+      setIsLoadingPayload(true)
 
       try {
+        if (payloadSourceMode === 'mediaSets') {
+          const response = await fetchMediaSets(token, {
+            limit: PAYLOAD_PAGE_SIZE,
+            page: payloadPage,
+          })
+
+          let nextPayloadMediaSets = response.docs
+          const selectedMediaSetId = getMediaSetId(selectedResolvedAsset?.mediaSet)
+
+          if (
+            selectedMediaSetId !== null
+            && !nextPayloadMediaSets.some((mediaSet) => String(mediaSet.id) === String(selectedMediaSetId))
+          ) {
+            try {
+              const selectedMediaSetResponse = await fetchMediaSets(token, {
+                limit: 1,
+                id: selectedMediaSetId,
+              })
+              nextPayloadMediaSets = appendUniqueMediaSet(
+                nextPayloadMediaSets,
+                selectedMediaSetResponse.docs[0] ?? null,
+              )
+            } catch {
+              // Ignore missing selected media-set hydration and keep current page results.
+            }
+          }
+
+          if (cancelled) return
+          setPayloadMediaSets(nextPayloadMediaSets)
+          setPayloadAssets([])
+          setPayloadTotalPages(Math.max(response.totalPages || 1, 1))
+          return
+        }
+
         const response = await fetchMediaAssets(token, {
-          limit: 200,
+          limit: PAYLOAD_PAGE_SIZE,
+          page: payloadPage,
           mimeType: 'image/',
           variant: payloadVariant,
         })
+
+        let nextPayloadAssets = response.docs
+
+        if (
+          selectedId !== null
+          && !nextPayloadAssets.some((asset) => asset.id === selectedId)
+        ) {
+          nextPayloadAssets = appendUniqueAsset(nextPayloadAssets, selectedResolvedAsset)
+        }
+
         if (cancelled) return
-        setPayloadAssets(response.docs)
+        setPayloadAssets(nextPayloadAssets)
+        setPayloadMediaSets([])
+        setPayloadTotalPages(Math.max(response.totalPages || 1, 1))
       } catch (err) {
         if (cancelled) return
         setPayloadError(err instanceof Error ? err.message : 'Failed to load images')
@@ -174,7 +296,7 @@ export function FeaturedImagePicker({
     return () => {
       cancelled = true
     }
-  }, [isOpen, payloadVariant, prefetchedPayloadAssets, token])
+  }, [isOpen, payloadPage, payloadSourceMode, payloadVariant, selectedId, selectedResolvedAsset, token])
 
   useEffect(() => {
     if (isOpen) return
@@ -213,6 +335,16 @@ export function FeaturedImagePicker({
         return a.filename.toLowerCase().includes(q) || altText.includes(q)
       })
     : searchablePayloadAssets
+  const filteredMediaSets = payloadSearch.trim()
+    ? payloadMediaSets.filter((mediaSet) => {
+        const q = payloadSearch.toLowerCase()
+        return [mediaSet.title, mediaSet.location, mediaSet.alt_text]
+          .filter((value): value is string => Boolean(value?.trim()))
+          .some((value) => value.toLowerCase().includes(q))
+      })
+    : payloadMediaSets
+  const canGoToPreviousPayloadPage = payloadPage > 1
+  const canGoToNextPayloadPage = payloadPage < payloadTotalPages
 
   const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === overlayRef.current) onClose()
@@ -385,7 +517,10 @@ export function FeaturedImagePicker({
           ? 'Search Unsplash'
           : 'Search Pexels'
 
-  const shouldHoldPayloadTab = activeTab === 'payload' && isBootstrappingPayload && payloadAssets.length === 0
+  const payloadResultCount = payloadSourceMode === 'mediaSets'
+    ? payloadMediaSets.length
+    : payloadAssets.length
+  const shouldHoldPayloadTab = activeTab === 'payload' && isBootstrappingPayload && payloadResultCount === 0
 
   const renderExternalCropEditor = () => {
     if (!externalCropDraft) return null
@@ -523,14 +658,22 @@ export function FeaturedImagePicker({
                 <input
                   type="text"
                   className="fip-search-input"
-                  placeholder="Search by filename or alt text..."
+                  placeholder={
+                    payloadSourceMode === 'mediaSets'
+                      ? 'Search current page by title, location, or alt text...'
+                      : 'Search current page by filename or alt text...'
+                  }
                   value={payloadSearch}
                   onChange={(e) => setPayloadSearch(e.target.value)}
                 />
               </div>
 
               <p className="fip-masonry-header">
-                Only images uploaded through the variant workflow are shown here.
+                {payloadSourceMode === 'mediaSets'
+                  ? `Showing one preview image per media set. Page ${payloadPage} of ${payloadTotalPages}.`
+                  : requireMediaSet
+                  ? `Only variant-workflow images are shown here. Page ${payloadPage} of ${payloadTotalPages}.`
+                  : `Browse Payload images page by page. Page ${payloadPage} of ${payloadTotalPages}.`}
               </p>
 
               {payloadError && <p className="fip-error">{payloadError}</p>}
@@ -538,41 +681,122 @@ export function FeaturedImagePicker({
               {isLoadingPayload ? (
                 <p className="fip-empty">Loading images...</p>
               ) : (
-                <div className="fip-grid">
-                  {filteredAssets.length === 0 ? (
-                    <p className="fip-empty">
-                      {payloadSearch
-                        ? 'No images match your search.'
-                        : payloadVariant
-                          ? `No ${payloadVariant} images uploaded through the variant workflow found.`
-                          : 'No variant-workflow images found.'}
-                    </p>
-                  ) : (
-                    filteredAssets.map((asset) => (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        className={`fip-card${selectedId === asset.id ? ' fip-card--selected' : ''}`}
-                        onClick={() => handlePayloadSelect(asset)}
-                      >
-                        <img
-                          className="fip-card__thumb"
-                          src={resolveAssetUrl(asset)}
-                          alt={asset.alt_text ?? asset.altText ?? asset.alt ?? asset.filename}
-                          loading="lazy"
-                        />
-                        <div className="fip-card__info">
-                          <span className="fip-card__name">{asset.filename}</span>
-                        </div>
-                        {selectedId === asset.id && (
-                          <div className="fip-card__badge" aria-label="Selected">
-                            ✓
+                <>
+                  <div className="fip-grid">
+                    {payloadSourceMode === 'mediaSets' ? (
+                      filteredMediaSets.length === 0 ? (
+                        <p className="fip-empty">
+                          {payloadSearch
+                            ? 'No media sets on this page match your search.'
+                            : 'No media sets were found on this page.'}
+                        </p>
+                      ) : (
+                        filteredMediaSets.map((mediaSet) => {
+                          const previewAssetId = resolveMediaSetPreviewAssetId(mediaSet)
+                          const previewUrl = resolveMediaSetPreviewUrl(mediaSet)
+                          const label = formatMediaSetLabel(mediaSet)
+                          const isSelected = (
+                            previewAssetId === selectedId
+                            || (
+                              getMediaSetId(selectedResolvedAsset?.mediaSet) !== null
+                              && String(getMediaSetId(selectedResolvedAsset?.mediaSet)) === String(mediaSet.id)
+                            )
+                          )
+
+                          return (
+                            <button
+                              key={mediaSet.id}
+                              type="button"
+                              className={`fip-card${isSelected ? ' fip-card--selected' : ''}`}
+                              onClick={() => {
+                                if (previewAssetId !== null) {
+                                  onSelect(previewAssetId)
+                                  onClose()
+                                }
+                              }}
+                              disabled={previewAssetId === null}
+                            >
+                              {previewUrl ? (
+                                <img
+                                  className="fip-card__thumb"
+                                  src={previewUrl}
+                                  alt={mediaSet.alt_text ?? label}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="fip-card__thumb fip-card__thumb--empty">No preview</div>
+                              )}
+                              <div className="fip-card__info">
+                                <span className="fip-card__name">{label}</span>
+                              </div>
+                              {isSelected ? (
+                                <div className="fip-card__badge" aria-label="Selected">
+                                  ✓
+                                </div>
+                              ) : null}
+                            </button>
+                          )
+                        })
+                      )
+                    ) : filteredAssets.length === 0 ? (
+                      <p className="fip-empty">
+                        {payloadSearch
+                          ? 'No images on this page match your search.'
+                          : payloadVariant
+                            ? `No ${payloadVariant} images uploaded through the variant workflow were found on this page.`
+                            : 'No images were found on this page.'}
+                      </p>
+                    ) : (
+                      filteredAssets.map((asset) => (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          className={`fip-card${selectedId === asset.id ? ' fip-card--selected' : ''}`}
+                          onClick={() => handlePayloadSelect(asset)}
+                        >
+                          <img
+                            className="fip-card__thumb"
+                            src={resolveAssetUrl(asset)}
+                            alt={asset.alt_text ?? asset.altText ?? asset.alt ?? asset.filename}
+                            loading="lazy"
+                          />
+                          <div className="fip-card__info">
+                            <span className="fip-card__name">{asset.filename}</span>
                           </div>
-                        )}
+                          {selectedId === asset.id && (
+                            <div className="fip-card__badge" aria-label="Selected">
+                              ✓
+                            </div>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  {payloadTotalPages > 1 ? (
+                    <div className="fip-pagination" aria-label="Payload image pagination">
+                      <button
+                        type="button"
+                        className="fip-search-btn"
+                        onClick={() => setPayloadPage((current) => Math.max(1, current - 1))}
+                        disabled={!canGoToPreviousPayloadPage || isLoadingPayload}
+                      >
+                        Previous page
                       </button>
-                    ))
-                  )}
-                </div>
+                      <span className="fip-pagination__status">
+                        Page {payloadPage} of {payloadTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        className="fip-search-btn"
+                        onClick={() => setPayloadPage((current) => Math.min(payloadTotalPages, current + 1))}
+                        disabled={!canGoToNextPayloadPage || isLoadingPayload}
+                      >
+                        Next page
+                      </button>
+                    </div>
+                  ) : null}
+                </>
               )}
             </>
           )}

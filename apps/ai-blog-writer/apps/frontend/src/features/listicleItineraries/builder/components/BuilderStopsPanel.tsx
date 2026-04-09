@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
+import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
 import {
   BLOCK_TYPE_OPTIONS,
@@ -325,12 +326,14 @@ export function BuilderStopsPanel({
   onSaveStep3,
   onCancelStep3Update,
 }: BuilderStopsPanelProps) {
+  const resolvedToken = token ?? ''
   const [activePicker, setActivePicker] = useState<ActivePicker>(null)
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null)
   const [copyErrorItemId, setCopyErrorItemId] = useState<string | null>(null)
   const [photoPreviewIndexByItem, setPhotoPreviewIndexByItem] = useState<Record<string, number>>({})
   const [activeInstagramEmbedPreviewItemId, setActiveInstagramEmbedPreviewItemId] = useState<string | null>(null)
   const [imagePickerItemId, setImagePickerItemId] = useState<string | null>(null)
+  const [fetchedManualImageAssets, setFetchedManualImageAssets] = useState<Record<number, MediaAssetOption>>({})
 
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
   const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
@@ -338,12 +341,68 @@ export function BuilderStopsPanel({
   const activeManualInstagramPicker = activePicker?.type === 'manual-instagram' ? activePicker : null
   const activeStartingPointExistingStopPicker = activePicker?.type === 'starting-point-existing-stop' ? activePicker : null
   const activeRouteExistingStopsPicker = activePicker?.type === 'route-existing-stops' ? activePicker : null
+  const missingManualImageIds = useMemo(() => {
+    if (!resolvedToken) return []
+
+    const loadedIds = new Set<number>([
+      ...mediaAssets.map((asset) => asset.id),
+      ...Object.keys(fetchedManualImageAssets).map((id) => Number(id)),
+    ])
+
+    return Array.from(new Set(
+      draft.items
+        .filter((item) => isManualBlockType(item.blockType) && typeof item.image === 'number')
+        .map((item) => item.image)
+        .filter((imageId): imageId is number => typeof imageId === 'number' && !loadedIds.has(imageId)),
+    ))
+  }, [draft.items, fetchedManualImageAssets, mediaAssets, resolvedToken])
 
   useEffect(() => {
     if (!copiedItemId) return
     const timer = window.setTimeout(() => setCopiedItemId(null), 1800)
     return () => window.clearTimeout(timer)
   }, [copiedItemId])
+
+  useEffect(() => {
+    if (!resolvedToken || missingManualImageIds.length === 0) return
+
+    let cancelled = false
+
+    const hydrateManualImages = async () => {
+      const responses = await Promise.all(
+        missingManualImageIds.map(async (imageId) => {
+          try {
+            const response = await fetchPayloadMediaAssets(resolvedToken, {
+              id: imageId,
+              limit: 1,
+            })
+            return response.docs[0] || null
+          } catch {
+            return null
+          }
+        }),
+      )
+
+      if (cancelled) return
+
+      const hydratedAssets = responses.filter((asset): asset is MediaAssetOption => Boolean(asset))
+      if (hydratedAssets.length < 1) return
+
+      setFetchedManualImageAssets((current) => {
+        const next = { ...current }
+        hydratedAssets.forEach((asset) => {
+          next[asset.id] = asset
+        })
+        return next
+      })
+    }
+
+    void hydrateManualImages()
+
+    return () => {
+      cancelled = true
+    }
+  }, [missingManualImageIds, resolvedToken])
 
   useEffect(() => {
     if (!activeInstagramEmbedPreviewItemId) return
@@ -496,7 +555,11 @@ export function BuilderStopsPanel({
                 return url ? { id: photoId, url } : null
               })
               .filter((entry): entry is { id: number; url: string } => Boolean(entry))
-            const selectedManualImage = mediaAssets.find((asset) => asset.id === item.image) || null
+            const selectedManualImage = (
+              mediaAssets.find((asset) => asset.id === item.image)
+              || (item.image ? fetchedManualImageAssets[item.image] : null)
+              || null
+            )
             const selectedManualImageUrl = selectedManualImage ? resolveImageUrl(selectedManualImage) : undefined
             const photoPreviewCount = selectedPhotoPreviews.length
             const activePhotoPreviewIndex = Math.min(
@@ -1388,19 +1451,10 @@ export function BuilderStopsPanel({
                 <FeaturedImagePicker
                   isOpen={imagePickerItemId === item.id}
                   selectedId={item.image}
-                  token={token ?? ''}
+                  token={resolvedToken}
                   locationRef={locationRef}
+                  payloadSourceMode="mediaSets"
                   requireMediaSet={false}
-                  prefetchedPayloadAssets={mediaAssets.map((asset) => ({
-                    id: asset.id,
-                    filename: asset.filename,
-                    url: asset.url,
-                    alt: asset.alt,
-                    alt_text: asset.alt_text,
-                    altText: asset.altText,
-                    mediaSet: asset.mediaSet,
-                    variant: asset.variant as 'square' | 'portrait' | 'thumbnail' | 'wide' | 'hero' | 'open_graph' | 'editorial' | undefined,
-                  }))}
                   onSelect={(mediaAssetId) =>
                     onUpdateItem(item.id, (current) => ({
                       ...current,
