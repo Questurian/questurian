@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom'
 import type { UseHomepageFeaturedSlotsResult } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
 import { ArticlePickerModal } from './ArticlePickerModal'
+import ArticleGridLayout from './ArticleGridLayout'
 import FeaturedArticlesLayout3 from './FeaturedArticlesLayout3'
 import FeaturedArticlesLayout4 from './FeaturedArticlesLayout4'
 import FeaturedArticlesLayout8 from './FeaturedArticlesLayout8'
 import FeaturedArticlesLayout9 from './FeaturedArticlesLayout9'
+import type { ArticleCuratedHomepageBlockType } from './pageBlocks'
 
 function getInvalidMessage(item: HomepageFeaturedInvalidItem): string {
   if (item.reason === 'not_published') return 'No longer published'
@@ -38,6 +40,7 @@ type Props = {
   headerActions?: ReactNode
   /** When true, renders only the editor grid without the page wrapper or hero. */
   compact?: boolean
+  variant?: ArticleCuratedHomepageBlockType
 }
 
 export default function HomepageFeaturedSlotEditor({
@@ -46,6 +49,7 @@ export default function HomepageFeaturedSlotEditor({
   slotEditorState,
   headerActions,
   compact = false,
+  variant = 'featured-articles',
 }: Props) {
   const {
     selectionQuery,
@@ -102,6 +106,7 @@ export default function HomepageFeaturedSlotEditor({
   const currentSlotKey = currentSlotItem
     ? `${currentSlotItem.relationTo}:${currentSlotItem.id}`
     : null
+  const totalSlots = selectionQuery.data?.totalSlots ?? slots.length
 
   const mainContent = (
     <>
@@ -145,25 +150,33 @@ export default function HomepageFeaturedSlotEditor({
       </div>
 
       {/* ── Slot grid / Layout ─────────────────────────────── */}
-      {(selectionQuery.data?.totalSlots ?? slots.length) === 9 ? (
+      {variant === 'article-grid' ? (
+        <ArticleGridLayout
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+          onMove={handleMove}
+          onRemove={handleRemove}
+        />
+      ) : totalSlots === 9 ? (
         <FeaturedArticlesLayout9
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
         />
-      ) : (selectionQuery.data?.totalSlots ?? slots.length) === 8 ? (
+      ) : totalSlots === 8 ? (
         <FeaturedArticlesLayout8
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
         />
-      ) : (selectionQuery.data?.totalSlots ?? slots.length) === 4 ? (
+      ) : totalSlots === 4 ? (
         <FeaturedArticlesLayout4
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
         />
-      ) : (selectionQuery.data?.totalSlots ?? slots.length) === 3 ? (
+      ) : totalSlots === 3 ? (
         <FeaturedArticlesLayout3
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
@@ -301,7 +314,7 @@ export default function HomepageFeaturedSlotEditor({
           <h1>{pageTitle}</h1>
           <p className="hf-hero-desc">
             {pageSubtitle ??
-              `Curate ${selectionQuery.data?.totalSlots ?? slots.length} article slots. Click any slot to pick or swap its article, then save.`}
+              `Curate ${totalSlots} article slots. Click any slot to pick or swap its article, then save.`}
           </p>
         </div>
         <div className="hf-hero-badges">
@@ -312,7 +325,7 @@ export default function HomepageFeaturedSlotEditor({
             </span>
           )}
           <span className={`hf-badge ${hasAllSlotsFilled ? 'success' : 'warning'}`}>
-            {slots.filter(Boolean).length} / {selectionQuery.data?.totalSlots ?? slots.length} slots
+            {slots.filter(Boolean).length} / {totalSlots} slots
           </span>
           <span className={`hf-badge ${hasUnsavedChanges ? 'warning' : 'muted'}`}>
             {hasUnsavedChanges ? 'Unsaved changes' : 'Saved'}

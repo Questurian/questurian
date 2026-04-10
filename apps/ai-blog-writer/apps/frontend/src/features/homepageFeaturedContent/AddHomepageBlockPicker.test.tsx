@@ -1,0 +1,68 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+
+import AddHomepageBlockPicker from './AddHomepageBlockPicker'
+
+describe('AddHomepageBlockPicker', () => {
+  it('submits the new article-grid block with a valid slot count', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+
+    render(
+      <AddHomepageBlockPicker
+        isPending={false}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Article Grid/i }))
+
+    expect(screen.getByText(/choose between 3 and 5 items/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '5' }))
+    await user.click(screen.getByRole('button', { name: 'Add Block' }))
+
+    expect(onConfirm).toHaveBeenCalledWith('article-grid', 5)
+  })
+
+  it('can submit a location-grid block and respect filtered block types', async () => {
+    const onConfirm = vi.fn()
+
+    render(
+      <AddHomepageBlockPicker
+        isPending={false}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+        availableBlockTypes={['featured-articles', 'article-grid']}
+      />,
+    )
+
+    expect(
+      screen.queryByRole('button', { name: /Location Grid/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('submits the new location-grid block with a valid slot count', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+
+    render(
+      <AddHomepageBlockPicker
+        isPending={false}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Location Grid/i }))
+
+    expect(screen.getByText(/choose between 4 and 8 items/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '6' }))
+    await user.click(screen.getByRole('button', { name: 'Add Block' }))
+
+    expect(onConfirm).toHaveBeenCalledWith('location-grid', 6)
+  })
+})

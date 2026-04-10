@@ -8,6 +8,15 @@ import {
   handleCorsOptions,
 } from '@/features/auth/lib/auth-middleware'
 import {
+  buildHotelGridGlobalData,
+  getHotelGridSelectionFromItems,
+  buildLocationGridGlobalData,
+  getLocationGridSelectionFromItems,
+  normalizeHotelGridInput,
+  MAIN_LOCATION_GRID_SCOPE,
+  normalizeLocationGridInput,
+  validateHotelGridItems,
+  validateLocationGridItems,
   buildHomepageFeaturedGlobalData,
   getHomepageFeaturedSelectionFromItems,
   normalizeHomepageFeaturedInput,
@@ -16,6 +25,8 @@ import {
 import { APP_CONFIG } from '@/shared/config'
 import {
   HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
+  HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
+  HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
   HOMEPAGE_FEATURED_CONTENT_SLOTS,
 } from '@/features/homepage-featured-content/types'
 
@@ -34,17 +45,32 @@ type MainHomepageGlobalDoc = {
   pageBlocks?: RawBlock[]
 }
 
+function isCuratedBlockType(
+  value: unknown,
+): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' {
+  return value === 'featured-articles' || value === 'article-grid' || value === 'location-grid' || value === 'hotel-grid'
+}
+
 async function resolvePageBlocks(
   payload: Awaited<ReturnType<typeof getPayload>>,
   rawBlocks: RawBlock[],
 ) {
   return Promise.all(
     rawBlocks.map(async (block) => {
-      if (block.blockType === 'featured-articles') {
-        const selection = await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-          totalSlots: block.slotCount,
-        })
-        return { id: block.id, blockType: 'featured-articles' as const, selection }
+      if (isCuratedBlockType(block.blockType)) {
+        const selection = block.blockType === 'location-grid'
+          ? await getLocationGridSelectionFromItems(payload, block.items, {
+              totalSlots: block.slotCount,
+              scope: MAIN_LOCATION_GRID_SCOPE,
+            })
+          : block.blockType === 'hotel-grid'
+            ? await getHotelGridSelectionFromItems(payload, block.items, {
+                totalSlots: block.slotCount,
+              })
+            : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                totalSlots: block.slotCount,
+              })
+        return { id: block.id, blockType: block.blockType, selection }
       }
       return block
     }),
@@ -119,7 +145,7 @@ export async function PUT(req: NextRequest) {
 
     const block = rawBlocks[blockIndex]
 
-    if (block.blockType !== 'featured-articles') {
+    if (!isCuratedBlockType(block.blockType)) {
       return NextResponse.json(
         { message: `Block type "${block.blockType}" does not support item updates via this endpoint.` },
         { status: 400, headers },
@@ -131,17 +157,44 @@ export async function PUT(req: NextRequest) {
         ? Math.trunc(block.slotCount)
         : HOMEPAGE_FEATURED_CONTENT_SLOTS
 
-    const refs = normalizeHomepageFeaturedInput(body.items)
-    const validatedRefs = await validateHomepageFeaturedItems(payload, refs, {
-      allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-      slotCount: blockSlotCount,
-    })
+    if (block.blockType === 'location-grid') {
+      const refs = normalizeLocationGridInput(body.items)
+      const validatedRefs = await validateLocationGridItems(payload, refs, {
+        scope: MAIN_LOCATION_GRID_SCOPE,
+        slotCount: blockSlotCount,
+      })
 
-    const updatedBlocks = rawBlocks.map((b, i) =>
-      i === blockIndex
-        ? { ...b, ...buildHomepageFeaturedGlobalData(validatedRefs) }
-        : b,
-    )
+      rawBlocks[blockIndex] = { ...block, ...buildLocationGridGlobalData(validatedRefs) }
+    } else if (block.blockType === 'hotel-grid') {
+      if (
+        blockSlotCount < HOMEPAGE_HOTEL_GRID_MIN_SLOTS
+        || blockSlotCount > HOMEPAGE_HOTEL_GRID_MAX_SLOTS
+      ) {
+        return NextResponse.json(
+          {
+            message: `slotCount must be between ${HOMEPAGE_HOTEL_GRID_MIN_SLOTS} and ${HOMEPAGE_HOTEL_GRID_MAX_SLOTS} for "hotel-grid".`,
+          },
+          { status: 400, headers },
+        )
+      }
+
+      const refs = normalizeHotelGridInput(body.items)
+      const validatedRefs = await validateHotelGridItems(payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount: blockSlotCount,
+      })
+      rawBlocks[blockIndex] = { ...block, ...buildHotelGridGlobalData(validatedRefs) }
+    } else {
+      const refs = normalizeHomepageFeaturedInput(body.items)
+      const validatedRefs = await validateHomepageFeaturedItems(payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount: blockSlotCount,
+      })
+
+      rawBlocks[blockIndex] = { ...block, ...buildHomepageFeaturedGlobalData(validatedRefs) }
+    }
+
+    const updatedBlocks = rawBlocks
 
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,

@@ -4,8 +4,16 @@ import type {
   HomepageFeaturedCandidatesResponse,
   HomepageFeaturedCollection,
   HomepageFeaturedItemRef,
-  HomepageFeaturedSelection,
 } from './types'
+import type {
+  HomepageLocationGridCandidatesResponse,
+  HomepageLocationGridItemRef,
+} from './locationGridTypes'
+import type {
+  HomepageHotelGridCandidatesResponse,
+  HomepageHotelGridItemRef,
+} from './hotelGridTypes'
+import type { PageBlockResponse } from './pageBlocks'
 
 const LOCATION_HOMEPAGE_REQUEST_TIMEOUT_MS = 12000
 
@@ -27,18 +35,7 @@ export type LocationHomepageListItem = {
   location: LocationRef | null
 }
 
-export type FeaturedArticlesBlockResponse = {
-  id: string
-  blockType: 'featured-articles'
-  selection: HomepageFeaturedSelection
-}
-
-export type UnknownBlockResponse = {
-  id: string
-  blockType: string
-}
-
-export type PageBlockResponse = FeaturedArticlesBlockResponse | UnknownBlockResponse
+export type { ArticleGridBlockResponse, FeaturedArticlesBlockResponse, PageBlockResponse } from './pageBlocks'
 
 export type LocationHomepageResponse = {
   id: number
@@ -46,6 +43,11 @@ export type LocationHomepageResponse = {
   location: LocationRef | null
   pageBlocks: PageBlockResponse[]
 }
+
+type HomepageBlockSaveItem =
+  | HomepageFeaturedItemRef
+  | HomepageLocationGridItemRef
+  | HomepageHotelGridItemRef
 
 // ── Request helper ─────────────────────────────────────────────────────────
 
@@ -125,7 +127,7 @@ export async function updateLocationHomepageBlock(
   token: string,
   id: number,
   blockId: string,
-  items: HomepageFeaturedItemRef[],
+  items: HomepageBlockSaveItem[],
 ): Promise<LocationHomepageResponse> {
   return locationHomepageRequest(`/api/location-homepages/${id}`, token, {
     method: 'PUT',
@@ -142,6 +144,17 @@ export async function addLocationHomepageBlock(
   return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
     method: 'POST',
     body: JSON.stringify({ blockType, slotCount }),
+  })
+}
+
+export async function deleteLocationHomepageBlock(
+  token: string,
+  id: number,
+  blockId: string,
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
+    method: 'DELETE',
+    body: JSON.stringify({ blockId }),
   })
 }
 
@@ -191,6 +204,66 @@ export async function fetchLocationHomepageCandidates(
   const query = searchParams.toString()
   return locationHomepageRequest(
     `/api/location-homepages/${id}/candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}
+
+export async function fetchLocationHomepageLocationGridCandidates(
+  token: string,
+  id: number,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageLocationGridCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return locationHomepageRequest(
+    `/api/location-homepages/${id}/location-candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}
+
+export async function fetchLocationHomepageHotelGridCandidates(
+  token: string,
+  id: number,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageHotelGridCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return locationHomepageRequest(
+    `/api/location-homepages/${id}/hotel-candidates${query ? `?${query}` : ''}`,
     token,
   )
 }

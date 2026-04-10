@@ -2,7 +2,21 @@ import type { GlobalConfig } from 'payload'
 
 import { APP_CONFIG } from '@/shared/config'
 
+import { ArticleGridBlock } from './blocks/article-grid'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
+import { HotelGridBlock } from './blocks/hotel-grid'
+import { LocationGridBlock } from './blocks/location-grid'
+import {
+  buildHotelGridGlobalData,
+  normalizeHotelGridInput,
+  validateHotelGridItems,
+} from './hotel-grid-service'
+import {
+  buildLocationGridGlobalData,
+  MAIN_LOCATION_GRID_SCOPE,
+  normalizeLocationGridInput,
+  validateLocationGridItems,
+} from './location-grid-service'
 import {
   buildHomepageFeaturedGlobalData,
   normalizeHomepageFeaturedInput,
@@ -13,6 +27,12 @@ import {
   HOMEPAGE_FEATURED_CONTENT_SLOTS,
 } from './types'
 
+function isCuratedBlockType(
+  value: unknown,
+): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' {
+  return value === 'featured-articles' || value === 'article-grid' || value === 'location-grid' || value === 'hotel-grid'
+}
+
 export const HomepageFeaturedContent: GlobalConfig = {
   slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
   label: 'Main Homepage',
@@ -22,16 +42,16 @@ export const HomepageFeaturedContent: GlobalConfig = {
   },
   admin: {
     description:
-      'Main domain homepage built from content blocks. Each block is a curated set of featured articles.',
+      'Main domain homepage built from content blocks. Each block is a curated article module with its own layout.',
   },
   fields: [
     {
       name: 'pageBlocks',
       type: 'blocks',
-      blocks: [FeaturedArticlesBlock],
+      blocks: [FeaturedArticlesBlock, ArticleGridBlock, LocationGridBlock, HotelGridBlock],
       admin: {
         description:
-          'Add content blocks to the main homepage. Each block is a Featured Articles section with a configurable number of slots.',
+          'Add content blocks to the main homepage. Available blocks include Featured Articles, Article Grid, and Location Grid.',
       },
     },
   ],
@@ -44,7 +64,7 @@ export const HomepageFeaturedContent: GlobalConfig = {
           if (
             typeof block === 'object' &&
             block !== null &&
-            (block as Record<string, unknown>).blockType === 'featured-articles'
+            isCuratedBlockType((block as Record<string, unknown>).blockType)
           ) {
             const blockRecord = block as Record<string, unknown>
             if (Array.isArray(blockRecord.items) && blockRecord.items.length > 0) {
@@ -52,12 +72,28 @@ export const HomepageFeaturedContent: GlobalConfig = {
                 typeof blockRecord.slotCount === 'number' && blockRecord.slotCount >= 1
                   ? Math.trunc(blockRecord.slotCount)
                   : HOMEPAGE_FEATURED_CONTENT_SLOTS
-              const refs = normalizeHomepageFeaturedInput(blockRecord.items)
-              await validateHomepageFeaturedItems(req.payload, refs, {
-                allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                slotCount,
-              })
-              blockRecord.items = buildHomepageFeaturedGlobalData(refs).items
+              if (blockRecord.blockType === 'location-grid') {
+                const refs = normalizeLocationGridInput(blockRecord.items)
+                await validateLocationGridItems(req.payload, refs, {
+                  scope: MAIN_LOCATION_GRID_SCOPE,
+                  slotCount,
+                })
+                blockRecord.items = buildLocationGridGlobalData(refs).items
+              } else if (blockRecord.blockType === 'hotel-grid') {
+                const refs = normalizeHotelGridInput(blockRecord.items)
+                await validateHotelGridItems(req.payload, refs, {
+                  allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+                  slotCount,
+                })
+                blockRecord.items = buildHotelGridGlobalData(refs).items
+              } else {
+                const refs = normalizeHomepageFeaturedInput(blockRecord.items)
+                await validateHomepageFeaturedItems(req.payload, refs, {
+                  allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+                  slotCount,
+                })
+                blockRecord.items = buildHomepageFeaturedGlobalData(refs).items
+              }
             }
           }
         }

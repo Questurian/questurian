@@ -8,13 +8,26 @@ import {
   handleCorsOptions,
 } from '@/features/auth/lib/auth-middleware'
 import {
+  buildHotelGridGlobalData,
+  buildLocationGridGlobalData,
+  getHotelGridSelectionFromItems,
+  getLocationGridSelectionFromItems,
+  normalizeHotelGridInput,
+  normalizeLocationGridInput,
+  resolveLocationGridScopeFromLocation,
+  validateHotelGridItems,
+  validateLocationGridItems,
   buildHomepageFeaturedGlobalData,
   getHomepageFeaturedSelectionFromItems,
   normalizeHomepageFeaturedInput,
   validateHomepageFeaturedItems,
 } from '@/features/homepage-featured-content'
 import { APP_CONFIG } from '@/shared/config'
-import { HOMEPAGE_FEATURED_CONTENT_SLOTS } from '@/features/homepage-featured-content/types'
+import {
+  HOMEPAGE_FEATURED_CONTENT_SLOTS,
+  HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
+  HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+} from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -44,19 +57,59 @@ type LocationHomepageDoc = {
   pageBlocks?: RawBlock[]
 }
 
+function isCuratedBlockType(
+  value: unknown,
+): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' {
+  return value === 'featured-articles' || value === 'article-grid' || value === 'location-grid' || value === 'hotel-grid'
+}
+
+async function resolveLocationGridScope(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  rawLocation: LocationHomepageDoc['location'],
+) {
+  if (typeof rawLocation === 'object' && rawLocation !== null) {
+    return resolveLocationGridScopeFromLocation(rawLocation)
+  }
+
+  if (!rawLocation) {
+    return null
+  }
+
+  const location = await payload.findByID({
+    collection: 'locations',
+    id: rawLocation,
+    depth: 0,
+    overrideAccess: true,
+  })
+
+  return resolveLocationGridScopeFromLocation(
+    location as { level?: unknown; locationKey?: unknown } | null,
+  )
+}
+
 async function resolvePageBlocks(
   payload: Awaited<ReturnType<typeof getPayload>>,
   rawBlocks: RawBlock[],
+  locationGridScope: Awaited<ReturnType<typeof resolveLocationGridScope>>,
 ) {
   return Promise.all(
     rawBlocks.map(async (block) => {
-      if (block.blockType === 'featured-articles') {
-        const selection = await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-          totalSlots: block.slotCount,
-        })
+      if (isCuratedBlockType(block.blockType)) {
+        const selection = block.blockType === 'location-grid'
+          ? await getLocationGridSelectionFromItems(payload, block.items, {
+              totalSlots: block.slotCount,
+              scope: locationGridScope,
+            })
+          : block.blockType === 'hotel-grid'
+            ? await getHotelGridSelectionFromItems(payload, block.items, {
+                totalSlots: block.slotCount,
+              })
+            : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                totalSlots: block.slotCount,
+              })
         return {
           id: block.id,
-          blockType: 'featured-articles' as const,
+          blockType: block.blockType,
           selection,
         }
       }
@@ -115,7 +168,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const resolvedBlocks = await resolvePageBlocks(payload, doc.pageBlocks ?? [])
+    const locationGridScope = await resolveLocationGridScope(payload, doc.location)
+    const resolvedBlocks = await resolvePageBlocks(payload, doc.pageBlocks ?? [], locationGridScope)
     return NextResponse.json(formatHomepageDoc(doc, resolvedBlocks), { headers })
   } catch (error) {
     return NextResponse.json(
@@ -171,38 +225,68 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const block = rawBlocks[blockIndex]
 
-    if (block.blockType !== 'featured-articles') {
+    if (!isCuratedBlockType(block.blockType)) {
       return NextResponse.json(
         { message: `Block type "${block.blockType}" does not support item updates via this endpoint.` },
         { status: 400, headers },
       )
     }
 
-    const refs = normalizeHomepageFeaturedInput(body.items)
     const blockSlotCount = typeof block.slotCount === 'number' && block.slotCount >= 1
       ? Math.trunc(block.slotCount)
       : HOMEPAGE_FEATURED_CONTENT_SLOTS
-    const validatedRefs = await validateHomepageFeaturedItems(payload, refs, {
-      allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-      slotCount: blockSlotCount,
-    })
+    const locationGridScope = await resolveLocationGridScope(payload, doc.location)
+    const updatedBlocks = [...rawBlocks]
 
-    const updatedBlocks = rawBlocks.map((b, i) =>
-      i === blockIndex
-        ? { ...b, ...buildHomepageFeaturedGlobalData(validatedRefs) }
-        : b,
-    )
+    if (block.blockType === 'location-grid') {
+      const refs = normalizeLocationGridInput(body.items)
+      const validatedRefs = await validateLocationGridItems(payload, refs, {
+        scope: locationGridScope,
+        slotCount: blockSlotCount,
+      })
+
+      updatedBlocks[blockIndex] = { ...block, ...buildLocationGridGlobalData(validatedRefs) }
+    } else if (block.blockType === 'hotel-grid') {
+      if (
+        blockSlotCount < HOMEPAGE_HOTEL_GRID_MIN_SLOTS
+        || blockSlotCount > HOMEPAGE_HOTEL_GRID_MAX_SLOTS
+      ) {
+        return NextResponse.json(
+          {
+            message: `slotCount must be between ${HOMEPAGE_HOTEL_GRID_MIN_SLOTS} and ${HOMEPAGE_HOTEL_GRID_MAX_SLOTS} for "hotel-grid".`,
+          },
+          { status: 400, headers },
+        )
+      }
+
+      const refs = normalizeHotelGridInput(body.items)
+      const validatedRefs = await validateHotelGridItems(payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount: blockSlotCount,
+      })
+
+      updatedBlocks[blockIndex] = { ...block, ...buildHotelGridGlobalData(validatedRefs) }
+    } else {
+      const refs = normalizeHomepageFeaturedInput(body.items)
+      const validatedRefs = await validateHomepageFeaturedItems(payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount: blockSlotCount,
+      })
+
+      updatedBlocks[blockIndex] = { ...block, ...buildHomepageFeaturedGlobalData(validatedRefs) }
+    }
 
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { pageBlocks: updatedBlocks } as any,
-      depth: 0,
+      depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [])
+    const updatedScope = await resolveLocationGridScope(payload, updated.location)
+    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [], updatedScope)
     return NextResponse.json(formatHomepageDoc(updated, resolvedBlocks), { headers })
   } catch (error) {
     return NextResponse.json(

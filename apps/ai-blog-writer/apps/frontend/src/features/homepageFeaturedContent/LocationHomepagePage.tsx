@@ -4,17 +4,32 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../../providers/useAuth'
 import './homepageFeaturedContent.css'
-import HomepageFeaturedSlotEditor from './HomepageFeaturedSlotEditor'
+import AddHomepageBlockPicker from './AddHomepageBlockPicker'
+import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
+import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
+import HotelGridBlockEditor from './HotelGridBlockEditor'
+import LocationGridBlockEditor from './LocationGridBlockEditor'
 import {
   addLocationHomepageBlock,
+  deleteLocationHomepageBlock,
   fetchLocationHomepage,
   fetchLocationHomepageCandidates,
+  fetchLocationHomepageHotelGridCandidates,
+  fetchLocationHomepageLocationGridCandidates,
   toggleLocationHomepage,
   updateLocationHomepageBlock,
-  type FeaturedArticlesBlockResponse,
   type LocationRef,
 } from './locationHomepagesApi'
-import { useHomepageFeaturedSlots } from './useHomepageFeaturedSlots'
+import {
+  HOMEPAGE_PAGE_BLOCK_TYPES,
+  isHotelGridBlock,
+  isArticleCuratedHomepageBlock,
+  isLocationGridBlock,
+  type ArticleCuratedHomepageBlockResponse,
+  type CuratedHomepageBlockType,
+  type HotelGridBlockResponse,
+  type LocationGridBlockResponse,
+} from './pageBlocks'
 
 function getLocationLabel(location: LocationRef | null): string {
   if (!location) return 'Location Homepage'
@@ -27,72 +42,6 @@ function getLocationLabel(location: LocationRef | null): string {
 
   return location.countryName ?? 'Location Homepage'
 }
-
-type BlockEditorProps = {
-  block: FeaturedArticlesBlockResponse
-  blockIndex: number
-  homepageId: number
-  token: string | null
-  canManage: boolean
-}
-
-function FeaturedArticlesBlockEditor({
-  block,
-  blockIndex,
-  homepageId,
-  token,
-  canManage,
-}: BlockEditorProps) {
-  const queryClient = useQueryClient()
-  const blockSelectionQueryKey = ['location-homepage-block', homepageId, block.id, token]
-
-  const slotEditorState = useHomepageFeaturedSlots({
-    token,
-    canManage,
-    fetchSelection: () => Promise.resolve(block.selection),
-    saveSelection: async (t, items) => {
-      const updated = await updateLocationHomepageBlock(t, homepageId, block.id, items)
-      const updatedBlock = updated.pageBlocks.find(
-        (b): b is FeaturedArticlesBlockResponse =>
-          b.id === block.id && b.blockType === 'featured-articles',
-      )
-      if (!updatedBlock) throw new Error('Block not found after save.')
-      queryClient.invalidateQueries({ queryKey: ['location-homepage', homepageId, token] })
-      return updatedBlock.selection
-    },
-    fetchCandidates: (t, params) =>
-      fetchLocationHomepageCandidates(
-        t,
-        homepageId,
-        params as Parameters<typeof fetchLocationHomepageCandidates>[2],
-      ),
-    selectionQueryKey: blockSelectionQueryKey,
-  })
-
-  const totalSlots = block.selection.totalSlots
-
-  return (
-    <div className="hf-block-section">
-      <div className="hf-block-header">
-        <div className="hf-block-label">
-          <span>Block {blockIndex + 1}</span>
-          <span className="hf-block-type-tag">featured-articles · {totalSlots} slots</span>
-        </div>
-      </div>
-      <div className="hf-block-content">
-        <HomepageFeaturedSlotEditor
-          pageTitle=""
-          slotEditorState={slotEditorState}
-          compact
-        />
-      </div>
-    </div>
-  )
-}
-
-type AddBlockStep = 'type' | 'options'
-
-const QUICK_SLOT_COUNTS = [3, 4, 8, 9]
 
 export default function LocationHomepagePage() {
   const { id } = useParams<{ id: string }>()
@@ -124,31 +73,44 @@ export default function LocationHomepagePage() {
     },
   })
 
-  // ── Add Block UI state ────────────────────────────────────────────────
   const [showAddBlock, setShowAddBlock] = useState(false)
-  const [addBlockStep, setAddBlockStep] = useState<AddBlockStep>('type')
-  const [selectedSlotCount, setSelectedSlotCount] = useState(9)
+  const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
 
   const addBlockMutation = useMutation({
-    mutationFn: (slotCount: number) =>
-      addLocationHomepageBlock(token!, numericId, 'featured-articles', slotCount),
+    mutationFn: ({
+      blockType,
+      slotCount,
+    }: {
+      blockType: CuratedHomepageBlockType
+      slotCount: number
+    }) => addLocationHomepageBlock(token!, numericId, blockType, slotCount),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homepageQueryKey })
       setShowAddBlock(false)
-      setAddBlockStep('type')
-      setSelectedSlotCount(6)
     },
   })
 
-  function handleConfirmAddBlock() {
-    addBlockMutation.mutate(selectedSlotCount)
+  const deleteBlockMutation = useMutation({
+    mutationFn: ({ blockId }: { blockId: string }) =>
+      deleteLocationHomepageBlock(token!, numericId, blockId),
+    onMutate: ({ blockId }) => {
+      setDeletingBlockId(blockId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+    },
+    onSettled: () => {
+      setDeletingBlockId(null)
+    },
+  })
+
+  function handleConfirmAddBlock(blockType: CuratedHomepageBlockType, slotCount: number) {
+    addBlockMutation.mutate({ blockType, slotCount })
   }
 
-  function handleCancelAddBlock() {
-    setShowAddBlock(false)
-    setAddBlockStep('type')
-    setSelectedSlotCount(6)
-  }
+  const deleteError = deleteBlockMutation.isError
+    ? (deleteBlockMutation.error instanceof Error ? deleteBlockMutation.error.message : 'Failed to delete block.')
+    : null
 
   if (!canManage) {
     return (
@@ -193,6 +155,10 @@ export default function LocationHomepagePage() {
   const homepage = homepageQuery.data
   const locationLabel = getLocationLabel(homepage.location)
   const enabledState = isEnabled ?? homepage.isEnabled
+  const locationGridChildLevel = homepage.location?.level === 'city' ? 'neighborhood' : null
+  const availableBlockTypes = locationGridChildLevel
+    ? HOMEPAGE_PAGE_BLOCK_TYPES
+    : HOMEPAGE_PAGE_BLOCK_TYPES.filter((blockType) => blockType !== 'location-grid')
 
   return (
     <div className="hf-page">
@@ -232,20 +198,109 @@ export default function LocationHomepagePage() {
         <div className="hf-state-screen">
           <h2>No blocks yet</h2>
           <p>
-            This homepage has no content blocks. Add a Featured Articles block to start curating.
+            This homepage has no content blocks. Add a content block to start curating.
           </p>
         </div>
       ) : (
         homepage.pageBlocks.map((block, idx) => {
-          if (block.blockType === 'featured-articles') {
+          if (isArticleCuratedHomepageBlock(block)) {
             return (
-              <FeaturedArticlesBlockEditor
+              <CuratedHomepageBlockEditor
                 key={block.id}
-                block={block as FeaturedArticlesBlockResponse}
+                block={block}
                 blockIndex={idx}
-                homepageId={numericId}
                 token={token}
                 canManage={canManage}
+                onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
+                isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
+                deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
+                selectionQueryKey={['location-homepage-block', numericId, block.id, token]}
+                saveSelection={async (currentToken, items) => {
+                  const updated = await updateLocationHomepageBlock(
+                    currentToken,
+                    numericId,
+                    block.id,
+                    items,
+                  )
+                  const updatedBlock = updated.pageBlocks.find(
+                    (candidate): candidate is ArticleCuratedHomepageBlockResponse =>
+                      candidate.id === block.id && candidate.blockType === block.blockType,
+                  )
+                  if (!updatedBlock) throw new Error('Block not found after save.')
+                  queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  return updatedBlock.selection
+                }}
+                fetchCandidates={(currentToken, params) =>
+                  fetchLocationHomepageCandidates(
+                    currentToken,
+                    numericId,
+                    params as Parameters<typeof fetchLocationHomepageCandidates>[2],
+                  )}
+              />
+            )
+          }
+          if (isLocationGridBlock(block) && locationGridChildLevel) {
+            return (
+              <LocationGridBlockEditor
+                key={block.id}
+                block={block}
+                blockIndex={idx}
+                token={token}
+                canManage={canManage}
+                onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
+                isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
+                deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
+                childLevel={locationGridChildLevel}
+                selectionQueryKey={['location-homepage-location-grid', numericId, block.id, token]}
+                saveSelection={async (currentToken, items) => {
+                  const updated = await updateLocationHomepageBlock(
+                    currentToken,
+                    numericId,
+                    block.id,
+                    items,
+                  )
+                  const updatedBlock = updated.pageBlocks.find(
+                    (candidate): candidate is LocationGridBlockResponse =>
+                      candidate.id === block.id && candidate.blockType === block.blockType,
+                  )
+                  if (!updatedBlock) throw new Error('Block not found after save.')
+                  queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  return updatedBlock.selection
+                }}
+                fetchCandidates={(currentToken, params) =>
+                  fetchLocationHomepageLocationGridCandidates(currentToken, numericId, params)}
+              />
+            )
+          }
+          if (isHotelGridBlock(block)) {
+            return (
+              <HotelGridBlockEditor
+                key={block.id}
+                block={block}
+                blockIndex={idx}
+                token={token}
+                canManage={canManage}
+                onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
+                isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
+                deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
+                selectionQueryKey={['location-homepage-hotel-grid', numericId, block.id, token]}
+                saveSelection={async (currentToken, items) => {
+                  const updated = await updateLocationHomepageBlock(
+                    currentToken,
+                    numericId,
+                    block.id,
+                    items,
+                  )
+                  const updatedBlock = updated.pageBlocks.find(
+                    (candidate): candidate is HotelGridBlockResponse =>
+                      candidate.id === block.id && candidate.blockType === block.blockType,
+                  )
+                  if (!updatedBlock) throw new Error('Block not found after save.')
+                  queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  return updatedBlock.selection
+                }}
+                fetchCandidates={(currentToken, params) =>
+                  fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
               />
             )
           }
@@ -256,6 +311,14 @@ export default function LocationHomepagePage() {
                   <span>Block {idx + 1}</span>
                   <span className="hf-block-type-tag">{block.blockType}</span>
                 </div>
+                <HomepageBlockDeleteTrigger
+                  blockId={block.id}
+                  blockIndex={idx}
+                  blockLabel={block.blockType}
+                  onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
+                  isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
+                  deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
+                />
               </div>
               <div className="hf-block-content hf-empty">
                 <p>Editor for &ldquo;{block.blockType}&rdquo; blocks is not yet available in this tool.</p>
@@ -275,58 +338,13 @@ export default function LocationHomepagePage() {
           >
             + Add Block
           </button>
-        ) : addBlockStep === 'type' ? (
-          <div className="hf-add-block-picker">
-            <p className="hf-add-block-prompt">Choose a block type:</p>
-            <button
-              type="button"
-              className="hf-block-type-option"
-              onClick={() => setAddBlockStep('options')}
-            >
-              <strong>Featured Articles</strong>
-              <span>A curated list of articles in fixed slots</span>
-            </button>
-            <button
-              type="button"
-              className="hf-btn-ghost"
-              onClick={handleCancelAddBlock}
-            >
-              Cancel
-            </button>
-          </div>
         ) : (
-          <div className="hf-add-block-picker">
-            <p className="hf-add-block-prompt">How many article slots?</p>
-            <div className="hf-add-block-counts">
-              {QUICK_SLOT_COUNTS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`hf-btn-ghost${selectedSlotCount === n ? ' active' : ''}`}
-                  onClick={() => setSelectedSlotCount(n)}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            <div className="hf-add-block-actions">
-              <button
-                type="button"
-                className="hf-btn-ghost"
-                onClick={() => setAddBlockStep('type')}
-              >
-                ← Back
-              </button>
-              <button
-                type="button"
-                className="hf-btn-primary"
-                onClick={handleConfirmAddBlock}
-                disabled={addBlockMutation.isPending}
-              >
-                {addBlockMutation.isPending ? 'Adding…' : 'Add Block'}
-              </button>
-            </div>
-          </div>
+          <AddHomepageBlockPicker
+            isPending={addBlockMutation.isPending}
+            onConfirm={handleConfirmAddBlock}
+            onCancel={() => setShowAddBlock(false)}
+            availableBlockTypes={availableBlockTypes}
+          />
         )}
       </div>
     </div>

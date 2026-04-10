@@ -407,8 +407,6 @@ export default function HomepageFeaturedContentPage() {
       })
       .flat()
   }, [deferredSearchValue, homepageGroups])
-  const hasSearchQuery = deferredSearchValue.trim().length > 0
-
   if (!canManage) {
     return (
       <div className="hf-page">

@@ -5,13 +5,26 @@ import type {
   HomepageFeaturedCollection,
   HomepageFeaturedItemRef,
 } from './types'
-import type { FeaturedArticlesBlockResponse, PageBlockResponse } from './locationHomepagesApi'
+import type {
+  HomepageLocationGridCandidatesResponse,
+  HomepageLocationGridItemRef,
+} from './locationGridTypes'
+import type {
+  HomepageHotelGridCandidatesResponse,
+  HomepageHotelGridItemRef,
+} from './hotelGridTypes'
+import type { PageBlockResponse } from './pageBlocks'
 
 const HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS = 12000
 
 export type MainHomepageResponse = {
   pageBlocks: PageBlockResponse[]
 }
+
+type HomepageBlockSaveItem =
+  | HomepageFeaturedItemRef
+  | HomepageLocationGridItemRef
+  | HomepageHotelGridItemRef
 
 async function homepageFeaturedRequest<T>(
   endpoint: string,
@@ -64,7 +77,7 @@ export async function fetchMainHomepage(token: string): Promise<MainHomepageResp
 export async function updateMainHomepageBlock(
   token: string,
   blockId: string,
-  items: HomepageFeaturedItemRef[],
+  items: HomepageBlockSaveItem[],
 ): Promise<MainHomepageResponse> {
   return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
@@ -80,6 +93,16 @@ export async function addMainHomepageBlock(
   return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
     method: 'POST',
     body: JSON.stringify({ blockType, slotCount }),
+  })
+}
+
+export async function deleteMainHomepageBlock(
+  token: string,
+  blockId: string,
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
+    method: 'DELETE',
+    body: JSON.stringify({ blockId }),
   })
 }
 
@@ -113,6 +136,64 @@ export async function fetchHomepageFeaturedCandidates(
   const query = searchParams.toString()
   return homepageFeaturedRequest(
     `/api/homepage-featured-content/candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}
+
+export async function fetchHomepageLocationGridCandidates(
+  token: string,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageLocationGridCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return homepageFeaturedRequest(
+    `/api/homepage-featured-content/location-candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}
+
+export async function fetchHomepageHotelGridCandidates(
+  token: string,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageHotelGridCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return homepageFeaturedRequest(
+    `/api/homepage-featured-content/hotel-candidates${query ? `?${query}` : ''}`,
     token,
   )
 }

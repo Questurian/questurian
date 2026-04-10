@@ -2,13 +2,33 @@ import type { CollectionConfig } from 'payload'
 
 import { APP_CONFIG } from '@/shared/config'
 
+import { ArticleGridBlock } from './blocks/article-grid'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
+import { HotelGridBlock } from './blocks/hotel-grid'
+import { LocationGridBlock } from './blocks/location-grid'
+import {
+  buildHotelGridGlobalData,
+  normalizeHotelGridInput,
+  validateHotelGridItems,
+} from './hotel-grid-service'
+import {
+  buildLocationGridGlobalData,
+  normalizeLocationGridInput,
+  resolveLocationGridScopeFromLocation,
+  validateLocationGridItems,
+} from './location-grid-service'
 import { HOMEPAGE_FEATURED_CONTENT_SLOTS } from './types'
 import {
   buildHomepageFeaturedGlobalData,
   normalizeHomepageFeaturedInput,
   validateHomepageFeaturedItems,
 } from './service'
+
+function isCuratedBlockType(
+  value: unknown,
+): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' {
+  return value === 'featured-articles' || value === 'article-grid' || value === 'location-grid' || value === 'hotel-grid'
+}
 
 export const LocationHomepages: CollectionConfig = {
   slug: 'location-homepages',
@@ -55,10 +75,10 @@ export const LocationHomepages: CollectionConfig = {
     {
       name: 'pageBlocks',
       type: 'blocks',
-      blocks: [FeaturedArticlesBlock],
+      blocks: [FeaturedArticlesBlock, ArticleGridBlock, LocationGridBlock, HotelGridBlock],
       admin: {
         description:
-          'Add sections to build this location page. Currently: Featured Articles (10 slots). More block types can be added here in the future.',
+          'Add sections to build this location page. Available blocks include Featured Articles, Article Grid, and Location Grid.',
       },
     },
   ],
@@ -122,25 +142,66 @@ export const LocationHomepages: CollectionConfig = {
           }
         }
 
-        // 3. Validate featured-articles blocks when pageBlocks is present
+        const rawLocation = data?.location ?? originalDoc?.location
+        const rawLocationId =
+          typeof rawLocation === 'object' && rawLocation !== null
+            ? (rawLocation as Record<string, unknown>).id
+            : rawLocation
+        const resolvedLocation =
+          typeof rawLocation === 'object' && rawLocation !== null && 'level' in rawLocation
+            ? rawLocation as { level?: unknown; locationKey?: unknown }
+            : rawLocationId
+              ? await req.payload.findByID({
+                  collection: 'locations',
+                  id: rawLocationId as string | number,
+                  depth: 0,
+                  overrideAccess: true,
+                })
+              : null
+        const locationGridScope = resolveLocationGridScopeFromLocation(
+          resolvedLocation as { level?: unknown; locationKey?: unknown } | null,
+        )
+
+        // 3. Validate supported page blocks when pageBlocks is present
         if (Array.isArray(data?.pageBlocks)) {
           for (const block of data.pageBlocks) {
             if (
               typeof block === 'object' &&
               block !== null &&
-              (block as Record<string, unknown>).blockType === 'featured-articles'
+              isCuratedBlockType((block as Record<string, unknown>).blockType)
             ) {
               const blockRecord = block as Record<string, unknown>
+              if (blockRecord.blockType === 'location-grid' && !locationGridScope) {
+                throw new Error(
+                  'Location Grid blocks are only available on the main homepage and city homepages.',
+                )
+              }
               if (Array.isArray(blockRecord.items) && blockRecord.items.length > 0) {
                 const slotCount = typeof blockRecord.slotCount === 'number' && blockRecord.slotCount >= 1
                   ? Math.trunc(blockRecord.slotCount)
                   : HOMEPAGE_FEATURED_CONTENT_SLOTS
-                const refs = normalizeHomepageFeaturedInput(blockRecord.items)
-                await validateHomepageFeaturedItems(req.payload, refs, {
-                  allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                  slotCount,
-                })
-                blockRecord.items = buildHomepageFeaturedGlobalData(refs).items
+                if (blockRecord.blockType === 'location-grid') {
+                  const refs = normalizeLocationGridInput(blockRecord.items)
+                  await validateLocationGridItems(req.payload, refs, {
+                    scope: locationGridScope,
+                    slotCount,
+                  })
+                  blockRecord.items = buildLocationGridGlobalData(refs).items
+                } else if (blockRecord.blockType === 'hotel-grid') {
+                  const refs = normalizeHotelGridInput(blockRecord.items)
+                  await validateHotelGridItems(req.payload, refs, {
+                    allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+                    slotCount,
+                  })
+                  blockRecord.items = buildHotelGridGlobalData(refs).items
+                } else {
+                  const refs = normalizeHomepageFeaturedInput(blockRecord.items)
+                  await validateHomepageFeaturedItems(req.payload, refs, {
+                    allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+                    slotCount,
+                  })
+                  blockRecord.items = buildHomepageFeaturedGlobalData(refs).items
+                }
               }
             }
           }
