@@ -29,6 +29,7 @@ type PayloadDocLike = {
   updatedAt?: unknown
   publishedAt?: unknown
   headerSection?: unknown
+  header?: unknown
 }
 
 type ParsedHomepageFeaturedSlot = {
@@ -44,10 +45,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function extractFeaturedImageUrl(doc: PayloadDocLike): string | null {
-  if (!isRecord(doc.headerSection)) return null
-  const featuredImage = doc.headerSection.featuredImage
+  // Articles use `headerSection`; listicles and itineraries use `header`
+  const section = isRecord(doc.headerSection) ? doc.headerSection : isRecord(doc.header) ? doc.header : null
+  if (!section) return null
+
+  const featuredImage = section.featuredImage
   if (!isRecord(featuredImage)) return null
-  const url = featuredImage.bunny_original_url
+
+  // Prefer bunny_original_url (1200x630 OG image), fall back to the plugin-set url
+  const bunnyUrl = featuredImage.bunny_original_url
+  if (typeof bunnyUrl === 'string' && bunnyUrl) return bunnyUrl
+
+  const url = featuredImage.url
   return typeof url === 'string' && url ? url : null
 }
 

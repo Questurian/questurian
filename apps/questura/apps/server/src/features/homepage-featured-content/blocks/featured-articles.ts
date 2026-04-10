@@ -13,8 +13,8 @@ export const FeaturedArticlesBlock: Block = {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: 1,
-      max: 100,
+      min: 3,
+      max: 9,
       admin: {
         description: 'How many article slots this block contains.',
       },

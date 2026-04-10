@@ -92,7 +92,7 @@ function FeaturedArticlesBlockEditor({
 
 type AddBlockStep = 'type' | 'options'
 
-const QUICK_SLOT_COUNTS = [1, 4, 6, 10]
+const QUICK_SLOT_COUNTS = [3, 4, 8, 9]
 
 export default function LocationHomepagePage() {
   const { id } = useParams<{ id: string }>()
@@ -127,8 +127,7 @@ export default function LocationHomepagePage() {
   // ── Add Block UI state ────────────────────────────────────────────────
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [addBlockStep, setAddBlockStep] = useState<AddBlockStep>('type')
-  const [selectedSlotCount, setSelectedSlotCount] = useState(10)
-  const [customSlotCount, setCustomSlotCount] = useState('')
+  const [selectedSlotCount, setSelectedSlotCount] = useState(9)
 
   const addBlockMutation = useMutation({
     mutationFn: (slotCount: number) =>
@@ -137,24 +136,18 @@ export default function LocationHomepagePage() {
       queryClient.invalidateQueries({ queryKey: homepageQueryKey })
       setShowAddBlock(false)
       setAddBlockStep('type')
-      setSelectedSlotCount(10)
-      setCustomSlotCount('')
+      setSelectedSlotCount(6)
     },
   })
 
   function handleConfirmAddBlock() {
-    const count = customSlotCount.trim()
-      ? Math.max(1, Math.min(100, Math.trunc(Number(customSlotCount))))
-      : selectedSlotCount
-    if (!count || count < 1) return
-    addBlockMutation.mutate(count)
+    addBlockMutation.mutate(selectedSlotCount)
   }
 
   function handleCancelAddBlock() {
     setShowAddBlock(false)
     setAddBlockStep('type')
-    setSelectedSlotCount(10)
-    setCustomSlotCount('')
+    setSelectedSlotCount(6)
   }
 
   if (!canManage) {
@@ -309,24 +302,12 @@ export default function LocationHomepagePage() {
                 <button
                   key={n}
                   type="button"
-                  className={`hf-btn-ghost${selectedSlotCount === n && !customSlotCount.trim() ? ' active' : ''}`}
-                  onClick={() => {
-                    setSelectedSlotCount(n)
-                    setCustomSlotCount('')
-                  }}
+                  className={`hf-btn-ghost${selectedSlotCount === n ? ' active' : ''}`}
+                  onClick={() => setSelectedSlotCount(n)}
                 >
                   {n}
                 </button>
               ))}
-              <input
-                type="number"
-                className="hf-slot-count-input"
-                min={1}
-                max={100}
-                placeholder="Custom…"
-                value={customSlotCount}
-                onChange={(e) => setCustomSlotCount(e.target.value)}
-              />
             </div>
             <div className="hf-add-block-actions">
               <button

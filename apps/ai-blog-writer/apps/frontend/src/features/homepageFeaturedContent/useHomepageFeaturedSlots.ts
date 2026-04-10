@@ -90,8 +90,7 @@ export type UseHomepageFeaturedSlotsResult = {
   savedSlots: SlotValue[]
   draftSlots: SlotValue[] | null
   savedInvalidItems: HomepageFeaturedInvalidItem[]
-  replaceSlotIndex: number | null
-  firstEmptySlotIndex: number
+  pickerSlotIndex: number | null
   usedKeys: Set<string>
   hasAllSlotsFilled: boolean
   hasUnsavedChanges: boolean
@@ -109,7 +108,7 @@ export type UseHomepageFeaturedSlotsResult = {
   setSearchValue: (v: string) => void
   setCollectionFilter: (v: HomepageFeaturedCollection | 'all') => void
   setCandidatePage: (v: number | ((prev: number) => number)) => void
-  setReplaceSlotIndex: (v: number | null) => void
+  setPickerSlotIndex: (v: number | null) => void
 }
 
 export function useHomepageFeaturedSlots(
@@ -126,7 +125,7 @@ export function useHomepageFeaturedSlots(
   const [draftSlots, setDraftSlots] = useState<SlotValue[] | null>(null)
   const [savedSlots, setSavedSlots] = useState<SlotValue[]>([])
   const [savedInvalidItems, setSavedInvalidItems] = useState<HomepageFeaturedInvalidItem[]>([])
-  const [replaceSlotIndex, setReplaceSlotIndex] = useState<number | null>(null)
+  const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
 
   const selectionQuery = useQuery({
@@ -168,7 +167,7 @@ export function useHomepageFeaturedSlots(
       setSavedSlots(nextSlots)
       setDraftSlots(nextSlots)
       setSavedInvalidItems(selection.invalidItems)
-      setReplaceSlotIndex(null)
+      setPickerSlotIndex(null)
       setResultMessage('Homepage featured content saved.')
       queryClient.setQueryData(selectionQueryKey, selection)
     },
@@ -180,7 +179,6 @@ export function useHomepageFeaturedSlots(
   })
 
   const slots = draftSlots ?? savedSlots
-  const firstEmptySlotIndex = slots.findIndex((item) => item === null)
   const usedKeys = new Set(
     slots.flatMap((item) => (item ? [`${item.relationTo}:${item.id}`] : [])),
   )
@@ -207,28 +205,15 @@ export function useHomepageFeaturedSlots(
   }
 
   function handleCandidatePick(candidate: HomepageFeaturedCandidate) {
-    if (replaceSlotIndex === null && firstEmptySlotIndex === -1) {
-      const totalSlots = selectionQuery.data?.totalSlots ?? slots.length
-      setResultMessage(`All ${totalSlots} slots are filled. Choose Replace on a slot to swap an item.`)
-      return
-    }
+    if (pickerSlotIndex === null) return
 
     updateSlots((current) => {
       const next = [...current]
-
-      if (replaceSlotIndex !== null) {
-        next[replaceSlotIndex] = candidate
-        return next
-      }
-
-      if (firstEmptySlotIndex >= 0) {
-        next[firstEmptySlotIndex] = candidate
-      }
-
+      next[pickerSlotIndex] = candidate
       return next
     })
 
-    setReplaceSlotIndex(null)
+    setPickerSlotIndex(null)
   }
 
   function handleMove(slotIndex: number, direction: -1 | 1) {
@@ -250,15 +235,11 @@ export function useHomepageFeaturedSlots(
       next[slotIndex] = null
       return next
     })
-
-    if (replaceSlotIndex === slotIndex) {
-      setReplaceSlotIndex(null)
-    }
   }
 
   function handleReset() {
     setDraftSlots([...savedSlots])
-    setReplaceSlotIndex(null)
+    setPickerSlotIndex(null)
     setResultMessage('Local changes discarded. Restored saved homepage selection.')
   }
 
@@ -275,8 +256,7 @@ export function useHomepageFeaturedSlots(
     savedSlots,
     draftSlots,
     savedInvalidItems,
-    replaceSlotIndex,
-    firstEmptySlotIndex,
+    pickerSlotIndex,
     usedKeys,
     hasAllSlotsFilled,
     hasUnsavedChanges,
@@ -294,6 +274,6 @@ export function useHomepageFeaturedSlots(
     setSearchValue,
     setCollectionFilter,
     setCandidatePage,
-    setReplaceSlotIndex,
+    setPickerSlotIndex,
   }
 }

@@ -2,29 +2,23 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 import type { UseHomepageFeaturedSlotsResult } from './useHomepageFeaturedSlots'
-import type { HomepageFeaturedCandidate, HomepageFeaturedInvalidItem } from './types'
-
-function formatDate(value: string | null): string {
-  if (!value) return 'Unknown'
-  const timestamp = Date.parse(value)
-  if (Number.isNaN(timestamp)) return value
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
+import type { HomepageFeaturedInvalidItem } from './types'
+import { ArticlePickerModal } from './ArticlePickerModal'
+import FeaturedArticlesLayout3 from './FeaturedArticlesLayout3'
+import FeaturedArticlesLayout4 from './FeaturedArticlesLayout4'
+import FeaturedArticlesLayout8 from './FeaturedArticlesLayout8'
+import FeaturedArticlesLayout9 from './FeaturedArticlesLayout9'
 
 function getInvalidMessage(item: HomepageFeaturedInvalidItem): string {
-  if (item.reason === 'not_published') return 'This item is no longer published.'
-  if (item.reason === 'not_found') return 'This item could not be found.'
-  return 'Invalid reference in saved data.'
+  if (item.reason === 'not_published') return 'No longer published'
+  if (item.reason === 'not_found') return 'Item not found'
+  return 'Invalid reference'
 }
 
-function ImgPlaceholder({ className }: { className: string }) {
+function ImgPlaceholder() {
   return (
     <svg
-      className={className}
+      style={{ width: '100%', height: '100%', color: 'var(--muted)' }}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -59,8 +53,7 @@ export default function HomepageFeaturedSlotEditor({
     saveMutation,
     slots,
     savedInvalidItems,
-    replaceSlotIndex,
-    firstEmptySlotIndex,
+    pickerSlotIndex,
     usedKeys,
     hasAllSlotsFilled,
     hasUnsavedChanges,
@@ -78,12 +71,12 @@ export default function HomepageFeaturedSlotEditor({
     setSearchValue,
     setCollectionFilter,
     setCandidatePage,
-    setReplaceSlotIndex,
+    setPickerSlotIndex,
     draftSlots,
   } = slotEditorState
 
   const loadError = selectionQuery.error instanceof Error ? selectionQuery.error.message : null
-  const candidateError = candidatesQuery.error instanceof Error ? candidatesQuery.error.message : null
+  const isComplete = selectionQuery.data?.isComplete
 
   if (selectionQuery.isLoading && draftSlots === null) {
     const screen = (
@@ -105,15 +98,18 @@ export default function HomepageFeaturedSlotEditor({
     return compact ? screen : <div className="hf-page">{screen}</div>
   }
 
-  const isComplete = selectionQuery.data?.isComplete
+  const currentSlotItem = pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
+  const currentSlotKey = currentSlotItem
+    ? `${currentSlotItem.relationTo}:${currentSlotItem.id}`
+    : null
 
   const mainContent = (
     <>
       {savedInvalidItems.length > 0 && (
         <div className="hf-banner warning">
           {savedInvalidItems.length === 1
-            ? 'One saved slot is no longer eligible. Replace it before saving again.'
-            : `${savedInvalidItems.length} saved slots are no longer eligible. Replace them before saving.`}
+            ? 'One saved slot is no longer eligible. Swap it before saving again.'
+            : `${savedInvalidItems.length} saved slots are no longer eligible. Swap them before saving.`}
         </div>
       )}
 
@@ -123,281 +119,173 @@ export default function HomepageFeaturedSlotEditor({
         </div>
       )}
 
-      <div className="hf-editor-grid">
-        {/* ── Slots panel ────────────────────────────────────── */}
-        <section className="hf-panel">
-          <div className="hf-panel-header">
-            <div>
-              <h2 className="hf-panel-title">{selectionQuery.data?.totalSlots ?? slots.length} Featured Slots</h2>
-              <p className="hf-panel-desc">
-                Fixed positions displayed on the front page. Use Replace to target a specific slot
-                directly.
-              </p>
-            </div>
-            <div className="hf-panel-actions">
-              <button
-                type="button"
-                className="hf-btn-ghost"
-                onClick={handleReset}
-                disabled={!hasUnsavedChanges}
-              >
-                Discard
-              </button>
-              <button
-                type="button"
-                className="hf-btn-primary"
-                onClick={handleSave}
-                disabled={saveDisabled}
-              >
-                {saveMutation.isPending ? 'Saving…' : 'Save'}
-              </button>
-            </div>
-          </div>
-
-          <div className="hf-slot-list">
-            {slots.map((item, slotIndex) => {
-              const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
-              const isReplacing = replaceSlotIndex === slotIndex
-
-              return (
-                <article
-                  key={`slot-${slotIndex + 1}`}
-                  className={[
-                    'hf-slot',
-                    isReplacing ? 'replacing' : '',
-                    !item ? 'empty' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <span className="hf-slot-num">{slotIndex + 1}</span>
-
-                  <div className="hf-slot-thumb">
-                    {item?.imageUrl ? (
-                      <img src={item.imageUrl} alt="" loading="lazy" />
-                    ) : (
-                      <ImgPlaceholder className="hf-slot-thumb-placeholder" />
-                    )}
-                  </div>
-
-                  <div className="hf-slot-body">
-                    {item ? (
-                      <>
-                        <div className="hf-slot-meta">
-                          <span className="hf-slot-meta-tag">
-                            {(item as HomepageFeaturedCandidate).collectionLabel}
-                          </span>
-                          <span className="hf-slot-meta-tag">{item.status ?? 'unknown'}</span>
-                          <span className="hf-slot-meta-tag">
-                            Updated {formatDate(item.updatedAt)}
-                          </span>
-                        </div>
-                        <p className="hf-slot-title">{item.title}</p>
-                        <p className="hf-slot-sub">
-                          {item.slug ? `/${item.slug}` : 'No slug'} · #{item.id}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <span className="hf-slot-empty-label">Empty slot</span>
-                        <p className="hf-slot-empty-hint">
-                          {invalidItem
-                            ? getInvalidMessage(invalidItem)
-                            : 'Pick a candidate from the right panel.'}
-                        </p>
-                        {invalidItem && (
-                          <span className="hf-slot-empty-warn">
-                            Needs replacement before saving.
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  <div className="hf-slot-actions">
-                    <button
-                      type="button"
-                      className="hf-btn-ghost"
-                      onClick={() => setReplaceSlotIndex(isReplacing ? null : slotIndex)}
-                      style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', minHeight: '1.9rem' }}
-                    >
-                      {isReplacing ? '↩ Cancel' : 'Replace'}
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon"
-                      title="Move up"
-                      onClick={() => handleMove(slotIndex, -1)}
-                      disabled={slotIndex === 0}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon"
-                      title="Move down"
-                      onClick={() => handleMove(slotIndex, 1)}
-                      disabled={slotIndex === slots.length - 1}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon danger"
-                      title="Remove"
-                      onClick={() => handleRemove(slotIndex)}
-                      disabled={!item && !invalidItem}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* ── Candidates panel ───────────────────────────────── */}
-        <section className="hf-panel">
-          <div className="hf-panel-header">
-            <div>
-              <h2 className="hf-panel-title">Content Library</h2>
-              <p className="hf-panel-desc">
-                Search Payload content and add articles directly into the selection.
-              </p>
-            </div>
-          </div>
-
-          <div className="hf-search-row">
-            <input
-              type="search"
-              className="hf-search-input"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              placeholder="Search title or slug…"
-            />
-            <select
-              className="hf-type-select"
-              value={collectionFilter}
-              onChange={(e) => setCollectionFilter(e.target.value as typeof collectionFilter)}
-            >
-              <option value="all">All types</option>
-              <option value="articles">Articles</option>
-              <option value="single-type-listicles">Listicles</option>
-              <option value="listicle-itineraries">Itineraries</option>
-            </select>
-          </div>
-
-          {replaceSlotIndex !== null && (
-            <div className="hf-replace-note">
-              Replace mode active for slot {replaceSlotIndex + 1} — click a card to swap.
-            </div>
-          )}
-
-          {candidateError ? (
-            <div className="hf-empty">
-              <p>{candidateError}</p>
-            </div>
-          ) : candidatesQuery.isLoading && !candidatesQuery.data ? (
-            <div className="hf-empty">
-              <p>Loading candidates…</p>
-            </div>
-          ) : candidatesQuery.data && candidatesQuery.data.docs.length > 0 ? (
-            <>
-              <div className="hf-candidate-list">
-                {candidatesQuery.data.docs.map((candidate) => {
-                  const candidateKey = `${candidate.relationTo}:${candidate.id}`
-                  const isUsed = usedKeys.has(candidateKey)
-                  const isCurrentSlot =
-                    replaceSlotIndex !== null &&
-                    slots[replaceSlotIndex]?.id === candidate.id &&
-                    slots[replaceSlotIndex]?.relationTo === candidate.relationTo
-                  const isDisabled = isUsed && !isCurrentSlot
-                  const isFull = replaceSlotIndex === null && firstEmptySlotIndex === -1
-                  const actionLabel =
-                    isDisabled
-                      ? 'In use'
-                      : replaceSlotIndex !== null
-                        ? `→ Slot ${replaceSlotIndex + 1}`
-                        : firstEmptySlotIndex >= 0
-                          ? `→ Slot ${firstEmptySlotIndex + 1}`
-                          : 'Full'
-
-                  return (
-                    <article
-                      key={candidateKey}
-                      className={`hf-candidate${isUsed && !isCurrentSlot ? ' used' : ''}`}
-                    >
-                      <div className="hf-candidate-thumb">
-                        {candidate.imageUrl ? (
-                          <img src={candidate.imageUrl} alt="" loading="lazy" />
-                        ) : (
-                          <ImgPlaceholder className="hf-slot-thumb-placeholder" />
-                        )}
-                      </div>
-
-                      <div className="hf-candidate-body">
-                        <p className="hf-candidate-title">{candidate.title}</p>
-                        <div className="hf-candidate-meta">
-                          <span className="hf-candidate-meta-tag">
-                            {candidate.collectionLabel}
-                          </span>
-                          <span className="hf-candidate-meta-tag">
-                            {candidate.status ?? 'unknown'}
-                          </span>
-                          <span className="hf-candidate-meta-tag">
-                            {formatDate(candidate.updatedAt)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="hf-btn-primary"
-                        style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem', minHeight: '2rem' }}
-                        onClick={() => handleCandidatePick(candidate)}
-                        disabled={isDisabled || isFull}
-                      >
-                        {actionLabel}
-                      </button>
-                    </article>
-                  )
-                })}
-              </div>
-
-              <div className="hf-pagination">
-                <button
-                  type="button"
-                  className="hf-btn-ghost"
-                  onClick={() => setCandidatePage((p) => Math.max(1, p - 1))}
-                  disabled={candidatePage <= 1}
-                >
-                  ← Prev
-                </button>
-                <span className="hf-pagination-label">
-                  {candidatesQuery.data.page} / {candidatesQuery.data.totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="hf-btn-ghost"
-                  onClick={() =>
-                    setCandidatePage((p) =>
-                      Math.min(candidatesQuery.data?.totalPages || p, p + 1),
-                    )
-                  }
-                  disabled={candidatePage >= (candidatesQuery.data.totalPages || 1)}
-                >
-                  Next →
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="hf-empty">
-              <p>No candidates matched the current filters.</p>
-            </div>
-          )}
-        </section>
+      {/* ── Controls row ───────────────────────────────────── */}
+      <div className="hf-slot-controls">
+        <span className="hf-panel-desc">
+          {slots.filter(Boolean).length} / {selectionQuery.data?.totalSlots ?? slots.length} slots filled
+        </span>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <button
+            type="button"
+            className="hf-btn-ghost"
+            onClick={handleReset}
+            disabled={!hasUnsavedChanges}
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            className="hf-btn-primary"
+            onClick={handleSave}
+            disabled={saveDisabled}
+          >
+            {saveMutation.isPending ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
+
+      {/* ── Slot grid / Layout ─────────────────────────────── */}
+      {(selectionQuery.data?.totalSlots ?? slots.length) === 9 ? (
+        <FeaturedArticlesLayout9
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+        />
+      ) : (selectionQuery.data?.totalSlots ?? slots.length) === 8 ? (
+        <FeaturedArticlesLayout8
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+        />
+      ) : (selectionQuery.data?.totalSlots ?? slots.length) === 4 ? (
+        <FeaturedArticlesLayout4
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+        />
+      ) : (selectionQuery.data?.totalSlots ?? slots.length) === 3 ? (
+        <FeaturedArticlesLayout3
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+        />
+      ) : (
+      <div className="hf-slot-grid">
+        {slots.map((item, slotIndex) => {
+          const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
+
+          if (!item) {
+            // Empty or invalid slot — clickable card
+            return (
+              <button
+                key={`slot-${slotIndex + 1}`}
+                type="button"
+                className={`hf-slot-card empty${invalidItem ? ' invalid' : ''}`}
+                onClick={() => setPickerSlotIndex(slotIndex)}
+              >
+                <span className="hf-slot-card-num">{slotIndex + 1}</span>
+                {invalidItem ? (
+                  <>
+                    <span style={{ fontSize: '1.4rem' }}>⚠</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600 }}>
+                      {getInvalidMessage(invalidItem)}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                      Click to replace
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '1.6rem', color: 'var(--muted)' }}>＋</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Add article</span>
+                  </>
+                )}
+              </button>
+            )
+          }
+
+          // Filled slot card
+          return (
+            <article
+              key={`slot-${slotIndex + 1}`}
+              className="hf-slot-card"
+            >
+              <div className="hf-slot-card-thumb">
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" loading="lazy" />
+                ) : (
+                  <ImgPlaceholder />
+                )}
+                <span className="hf-slot-card-num">{slotIndex + 1}</span>
+              </div>
+
+              <div className="hf-slot-card-body">
+                <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                  <span className="hf-level-tag">{item.collectionLabel}</span>
+                  <span className="hf-level-tag">{item.status ?? 'unknown'}</span>
+                </div>
+                <p className="hf-slot-card-title">{item.title}</p>
+
+                <div className="hf-slot-card-actions">
+                  <button
+                    type="button"
+                    className="hf-btn-ghost"
+                    onClick={() => setPickerSlotIndex(slotIndex)}
+                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', minHeight: '1.8rem' }}
+                  >
+                    Swap
+                  </button>
+                  <button
+                    type="button"
+                    className="hf-btn-icon"
+                    title="Move up"
+                    onClick={() => handleMove(slotIndex, -1)}
+                    disabled={slotIndex === 0}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="hf-btn-icon"
+                    title="Move down"
+                    onClick={() => handleMove(slotIndex, 1)}
+                    disabled={slotIndex === slots.length - 1}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    className="hf-btn-icon danger"
+                    title="Remove"
+                    onClick={() => handleRemove(slotIndex)}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+      )}
+
+      {/* ── Picker modal ───────────────────────────────────── */}
+      {pickerSlotIndex !== null && (
+        <ArticlePickerModal
+          slotIndex={pickerSlotIndex}
+          candidatesQuery={candidatesQuery}
+          searchValue={searchValue}
+          collectionFilter={collectionFilter}
+          candidatePage={candidatePage}
+          usedKeys={usedKeys}
+          currentSlotKey={currentSlotKey}
+          onPick={handleCandidatePick}
+          onClose={() => setPickerSlotIndex(null)}
+          setSearchValue={setSearchValue}
+          setCollectionFilter={setCollectionFilter}
+          setCandidatePage={setCandidatePage}
+        />
+      )}
     </>
   )
 
@@ -413,7 +301,7 @@ export default function HomepageFeaturedSlotEditor({
           <h1>{pageTitle}</h1>
           <p className="hf-hero-desc">
             {pageSubtitle ??
-              `Curate the exact ${selectionQuery.data?.totalSlots ?? slots.length} content slots. Add, replace, reorder, and save only when every slot is filled with a unique entry.`}
+              `Curate ${selectionQuery.data?.totalSlots ?? slots.length} article slots. Click any slot to pick or swap its article, then save.`}
           </p>
         </div>
         <div className="hf-hero-badges">

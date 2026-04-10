@@ -73,7 +73,7 @@ function MainFeaturedArticlesBlockEditor({
 
 type AddBlockStep = 'type' | 'options'
 
-const QUICK_SLOT_COUNTS = [1, 4, 6, 10]
+const QUICK_SLOT_COUNTS = [3, 4, 8, 9]
 
 export default function MainHomepagePage() {
   const { token, user } = useAuth()
@@ -89,8 +89,7 @@ export default function MainHomepagePage() {
 
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [addBlockStep, setAddBlockStep] = useState<AddBlockStep>('type')
-  const [selectedSlotCount, setSelectedSlotCount] = useState(10)
-  const [customSlotCount, setCustomSlotCount] = useState('')
+  const [selectedSlotCount, setSelectedSlotCount] = useState(9)
 
   const addBlockMutation = useMutation({
     mutationFn: (slotCount: number) =>
@@ -99,24 +98,18 @@ export default function MainHomepagePage() {
       queryClient.invalidateQueries({ queryKey: mainHomepageQueryKey })
       setShowAddBlock(false)
       setAddBlockStep('type')
-      setSelectedSlotCount(10)
-      setCustomSlotCount('')
+      setSelectedSlotCount(6)
     },
   })
 
   function handleConfirmAddBlock() {
-    const count = customSlotCount.trim()
-      ? Math.max(1, Math.min(100, Math.trunc(Number(customSlotCount))))
-      : selectedSlotCount
-    if (!count || count < 1) return
-    addBlockMutation.mutate(count)
+    addBlockMutation.mutate(selectedSlotCount)
   }
 
   function handleCancelAddBlock() {
     setShowAddBlock(false)
     setAddBlockStep('type')
-    setSelectedSlotCount(10)
-    setCustomSlotCount('')
+    setSelectedSlotCount(6)
   }
 
   if (!canManage) {
