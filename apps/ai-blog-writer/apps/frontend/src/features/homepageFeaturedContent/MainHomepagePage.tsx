@@ -10,6 +10,7 @@ import {
   fetchHomepageFeaturedCandidates,
   fetchHomepageHotelGridCandidates,
   fetchHomepageLocationGridCandidates,
+  fetchWhereToEatDrinkCandidates,
   fetchMainHomepage,
   updateMainHomepageBlock,
 } from './api'
@@ -173,7 +174,9 @@ export default function MainHomepagePage() {
                   return updatedBlock.selection
                 }}
                 fetchCandidates={(currentToken, params) =>
-                  fetchHomepageFeaturedCandidates(currentToken, params)}
+                  block.blockType === 'where-to-eat-drink'
+                    ? fetchWhereToEatDrinkCandidates(currentToken, params)
+                    : fetchHomepageFeaturedCandidates(currentToken, params)}
               />
             )
           }

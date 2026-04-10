@@ -267,3 +267,33 @@ export async function fetchLocationHomepageHotelGridCandidates(
     token,
   )
 }
+
+export async function fetchLocationHomepageWhereToEatDrinkCandidates(
+  token: string,
+  id: number,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageFeaturedCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return locationHomepageRequest(
+    `/api/location-homepages/${id}/where-to-eat-drink-candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}

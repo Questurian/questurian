@@ -16,6 +16,7 @@ import {
   fetchLocationHomepageCandidates,
   fetchLocationHomepageHotelGridCandidates,
   fetchLocationHomepageLocationGridCandidates,
+  fetchLocationHomepageWhereToEatDrinkCandidates,
   toggleLocationHomepage,
   updateLocationHomepageBlock,
   type LocationRef,
@@ -231,11 +232,13 @@ export default function LocationHomepagePage() {
                   return updatedBlock.selection
                 }}
                 fetchCandidates={(currentToken, params) =>
-                  fetchLocationHomepageCandidates(
-                    currentToken,
-                    numericId,
-                    params as Parameters<typeof fetchLocationHomepageCandidates>[2],
-                  )}
+                  block.blockType === 'where-to-eat-drink'
+                    ? fetchLocationHomepageWhereToEatDrinkCandidates(currentToken, numericId, params)
+                    : fetchLocationHomepageCandidates(
+                      currentToken,
+                      numericId,
+                      params as Parameters<typeof fetchLocationHomepageCandidates>[2],
+                    )}
               />
             )
           }

@@ -6,6 +6,7 @@ import { ArticleGridBlock } from './blocks/article-grid'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
 import { HotelGridBlock } from './blocks/hotel-grid'
 import { LocationGridBlock } from './blocks/location-grid'
+import { WhereToEatDrinkBlock } from './blocks/where-to-eat-drink'
 import {
   buildHotelGridGlobalData,
   normalizeHotelGridInput,
@@ -19,6 +20,11 @@ import {
 } from './location-grid-service'
 import { HOMEPAGE_FEATURED_CONTENT_SLOTS } from './types'
 import {
+  buildWhereToEatDrinkGlobalData,
+  normalizeWhereToEatDrinkInput,
+  validateWhereToEatDrinkItems,
+} from './where-to-eat-drink-service'
+import {
   buildHomepageFeaturedGlobalData,
   normalizeHomepageFeaturedInput,
   validateHomepageFeaturedItems,
@@ -26,8 +32,12 @@ import {
 
 function isCuratedBlockType(
   value: unknown,
-): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' {
-  return value === 'featured-articles' || value === 'article-grid' || value === 'location-grid' || value === 'hotel-grid'
+): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' | 'where-to-eat-drink' {
+  return value === 'featured-articles'
+    || value === 'article-grid'
+    || value === 'location-grid'
+    || value === 'hotel-grid'
+    || value === 'where-to-eat-drink'
 }
 
 export const LocationHomepages: CollectionConfig = {
@@ -75,7 +85,7 @@ export const LocationHomepages: CollectionConfig = {
     {
       name: 'pageBlocks',
       type: 'blocks',
-      blocks: [FeaturedArticlesBlock, ArticleGridBlock, LocationGridBlock, HotelGridBlock],
+      blocks: [FeaturedArticlesBlock, ArticleGridBlock, LocationGridBlock, HotelGridBlock, WhereToEatDrinkBlock],
       admin: {
         description:
           'Add sections to build this location page. Available blocks include Featured Articles, Article Grid, and Location Grid.',
@@ -194,6 +204,13 @@ export const LocationHomepages: CollectionConfig = {
                     slotCount,
                   })
                   blockRecord.items = buildHotelGridGlobalData(refs).items
+                } else if (blockRecord.blockType === 'where-to-eat-drink') {
+                  const refs = normalizeWhereToEatDrinkInput(blockRecord.items)
+                  await validateWhereToEatDrinkItems(req.payload, refs, {
+                    allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+                    slotCount,
+                  })
+                  blockRecord.items = buildWhereToEatDrinkGlobalData(refs).items
                 } else {
                   const refs = normalizeHomepageFeaturedInput(blockRecord.items)
                   await validateHomepageFeaturedItems(req.payload, refs, {

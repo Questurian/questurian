@@ -7,10 +7,12 @@ export type CuratedHomepageBlockType =
   | 'article-grid'
   | 'location-grid'
   | 'hotel-grid'
+  | 'where-to-eat-drink'
 
 export type ArticleCuratedHomepageBlockType =
   | 'featured-articles'
   | 'article-grid'
+  | 'where-to-eat-drink'
 
 export type CuratedHomepageBlockConfig = {
   label: string
@@ -57,6 +59,14 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     minSlotCount: 3,
     maxSlotCount: 12,
   },
+  'where-to-eat-drink': {
+    label: 'Where to Eat & Drink',
+    description: 'Dining-only single-type listicles',
+    quickSlotCounts: [3, 4, 6, 8],
+    defaultSlotCount: 4,
+    minSlotCount: 3,
+    maxSlotCount: 12,
+  },
 }
 
 export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
@@ -64,6 +74,7 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'article-grid',
   'location-grid',
   'hotel-grid',
+  'where-to-eat-drink',
 ]
 
 export type FeaturedArticlesBlockResponse = {
@@ -120,7 +131,9 @@ export function isCuratedHomepageBlock(
 export function isArticleCuratedHomepageBlock(
   block: PageBlockResponse,
 ): block is ArticleCuratedHomepageBlockResponse {
-  return block.blockType === 'featured-articles' || block.blockType === 'article-grid'
+  return block.blockType === 'featured-articles'
+    || block.blockType === 'article-grid'
+    || block.blockType === 'where-to-eat-drink'
 }
 
 export function isLocationGridBlock(

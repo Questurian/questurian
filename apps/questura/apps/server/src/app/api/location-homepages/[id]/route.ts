@@ -9,13 +9,17 @@ import {
 } from '@/features/auth/lib/auth-middleware'
 import {
   buildHotelGridGlobalData,
+  buildWhereToEatDrinkGlobalData,
   buildLocationGridGlobalData,
   getHotelGridSelectionFromItems,
+  getWhereToEatDrinkSelectionFromItems,
   getLocationGridSelectionFromItems,
   normalizeHotelGridInput,
+  normalizeWhereToEatDrinkInput,
   normalizeLocationGridInput,
   resolveLocationGridScopeFromLocation,
   validateHotelGridItems,
+  validateWhereToEatDrinkItems,
   validateLocationGridItems,
   buildHomepageFeaturedGlobalData,
   getHomepageFeaturedSelectionFromItems,
@@ -27,6 +31,8 @@ import {
   HOMEPAGE_FEATURED_CONTENT_SLOTS,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
+  HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
 } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -59,8 +65,12 @@ type LocationHomepageDoc = {
 
 function isCuratedBlockType(
   value: unknown,
-): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' {
-  return value === 'featured-articles' || value === 'article-grid' || value === 'location-grid' || value === 'hotel-grid'
+): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' | 'where-to-eat-drink' {
+  return value === 'featured-articles'
+    || value === 'article-grid'
+    || value === 'location-grid'
+    || value === 'hotel-grid'
+    || value === 'where-to-eat-drink'
 }
 
 async function resolveLocationGridScope(
@@ -104,6 +114,10 @@ async function resolvePageBlocks(
             ? await getHotelGridSelectionFromItems(payload, block.items, {
                 totalSlots: block.slotCount,
               })
+            : block.blockType === 'where-to-eat-drink'
+              ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
+                  totalSlots: block.slotCount,
+                })
             : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                 totalSlots: block.slotCount,
               })
@@ -266,6 +280,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       })
 
       updatedBlocks[blockIndex] = { ...block, ...buildHotelGridGlobalData(validatedRefs) }
+    } else if (block.blockType === 'where-to-eat-drink') {
+      if (
+        blockSlotCount < HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS
+        || blockSlotCount > HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS
+      ) {
+        return NextResponse.json(
+          {
+            message: `slotCount must be between ${HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS} and ${HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS} for "where-to-eat-drink".`,
+          },
+          { status: 400, headers },
+        )
+      }
+
+      const refs = normalizeWhereToEatDrinkInput(body.items)
+      const validatedRefs = await validateWhereToEatDrinkItems(payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount: blockSlotCount,
+      })
+      updatedBlocks[blockIndex] = { ...block, ...buildWhereToEatDrinkGlobalData(validatedRefs) }
     } else {
       const refs = normalizeHomepageFeaturedInput(body.items)
       const validatedRefs = await validateHomepageFeaturedItems(payload, refs, {

@@ -11,8 +11,11 @@ import {
   getHotelGridSelectionFromItems,
   getHomepageFeaturedSelectionFromItems,
   getLocationGridSelectionFromItems,
+  getWhereToEatDrinkSelectionFromItems,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
+  HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
   LOCATION_GRID_MAX_SLOTS,
   LOCATION_GRID_MIN_SLOTS,
   resolveLocationGridScopeFromLocation,
@@ -36,13 +39,17 @@ type LocationHomepageDoc = {
   pageBlocks?: RawBlock[]
 }
 
-const SUPPORTED_BLOCK_TYPES = ['featured-articles', 'article-grid', 'location-grid', 'hotel-grid'] as const
+const SUPPORTED_BLOCK_TYPES = ['featured-articles', 'article-grid', 'location-grid', 'hotel-grid', 'where-to-eat-drink'] as const
 type SupportedBlockType = (typeof SUPPORTED_BLOCK_TYPES)[number]
 const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }> = {
   'featured-articles': { min: 3, max: 9 },
   'article-grid': { min: 3, max: 5 },
   'location-grid': { min: LOCATION_GRID_MIN_SLOTS, max: LOCATION_GRID_MAX_SLOTS },
   'hotel-grid': { min: HOMEPAGE_HOTEL_GRID_MIN_SLOTS, max: HOMEPAGE_HOTEL_GRID_MAX_SLOTS },
+  'where-to-eat-drink': {
+    min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
+    max: HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
+  },
 }
 
 function isCuratedBlockType(value: unknown): value is SupportedBlockType {
@@ -146,6 +153,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               ? await getHotelGridSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
+              : block.blockType === 'where-to-eat-drink'
+                ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
+                    totalSlots: block.slotCount,
+                  })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
@@ -258,6 +269,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
               ? await getHotelGridSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
+              : block.blockType === 'where-to-eat-drink'
+                ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
+                    totalSlots: block.slotCount,
+                  })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
