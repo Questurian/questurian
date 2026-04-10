@@ -21,6 +21,7 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   updatedAt: string | null
   publishedAt: string | null
   collectionLabel: string
+  imageUrl: string | null
 }
 
 export type HomepageFeaturedInvalidItem = {

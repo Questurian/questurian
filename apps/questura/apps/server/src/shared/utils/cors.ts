@@ -10,7 +10,7 @@ export function getCorsHeaders(req: NextRequest) {
   return {
     'Access-Control-Allow-Origin': corsOrigin!,
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, ngrok-skip-browser-warning',
   }
 }

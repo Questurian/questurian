@@ -4,10 +4,14 @@ import type {
   HomepageFeaturedCandidatesResponse,
   HomepageFeaturedCollection,
   HomepageFeaturedItemRef,
-  HomepageFeaturedSelection,
 } from './types'
+import type { FeaturedArticlesBlockResponse, PageBlockResponse } from './locationHomepagesApi'
 
 const HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS = 12000
+
+export type MainHomepageResponse = {
+  pageBlocks: PageBlockResponse[]
+}
 
 async function homepageFeaturedRequest<T>(
   endpoint: string,
@@ -53,8 +57,30 @@ async function homepageFeaturedRequest<T>(
   }
 }
 
-export async function fetchHomepageFeaturedSelection(token: string): Promise<HomepageFeaturedSelection> {
+export async function fetchMainHomepage(token: string): Promise<MainHomepageResponse> {
   return homepageFeaturedRequest('/api/homepage-featured-content', token)
+}
+
+export async function updateMainHomepageBlock(
+  token: string,
+  blockId: string,
+  items: HomepageFeaturedItemRef[],
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, items }),
+  })
+}
+
+export async function addMainHomepageBlock(
+  token: string,
+  blockType: string,
+  slotCount: number,
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
+    method: 'POST',
+    body: JSON.stringify({ blockType, slotCount }),
+  })
 }
 
 export async function fetchHomepageFeaturedCandidates(
@@ -89,14 +115,4 @@ export async function fetchHomepageFeaturedCandidates(
     `/api/homepage-featured-content/candidates${query ? `?${query}` : ''}`,
     token,
   )
-}
-
-export async function saveHomepageFeaturedSelection(
-  token: string,
-  items: HomepageFeaturedItemRef[],
-): Promise<HomepageFeaturedSelection> {
-  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
-    method: 'PUT',
-    body: JSON.stringify({ items }),
-  })
 }

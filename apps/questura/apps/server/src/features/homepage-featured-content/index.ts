@@ -1,3 +1,5 @@
 export { HomepageFeaturedContent } from './global'
+export { LocationHomepages } from './collection'
+export { FeaturedArticlesBlock } from './blocks/featured-articles'
 export * from './service'
 export * from './types'

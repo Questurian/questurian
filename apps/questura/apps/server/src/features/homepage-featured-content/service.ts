@@ -28,6 +28,7 @@ type PayloadDocLike = {
   status?: unknown
   updatedAt?: unknown
   publishedAt?: unknown
+  headerSection?: unknown
 }
 
 type ParsedHomepageFeaturedSlot = {
@@ -40,6 +41,14 @@ type PayloadFindWhere = NonNullable<Parameters<Payload['find']>[0]['where']>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function extractFeaturedImageUrl(doc: PayloadDocLike): string | null {
+  if (!isRecord(doc.headerSection)) return null
+  const featuredImage = doc.headerSection.featuredImage
+  if (!isRecord(featuredImage)) return null
+  const url = featuredImage.bunny_original_url
+  return typeof url === 'string' && url ? url : null
 }
 
 function isHomepageFeaturedCollection(value: unknown): value is HomepageFeaturedCollection {
@@ -158,6 +167,7 @@ function normalizeHomepageFeaturedCandidate(
     updatedAt: typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
     publishedAt: typeof doc.publishedAt === 'string' && doc.publishedAt.trim() ? doc.publishedAt : null,
     collectionLabel: getHomepageFeaturedCollectionLabel(relationTo),
+    imageUrl: extractFeaturedImageUrl(doc),
   }
 }
 
@@ -169,7 +179,7 @@ async function findHomepageFeaturedDoc(
     const doc = await payload.findByID({
       collection: ref.relationTo,
       id: ref.id,
-      depth: 0,
+      depth: 1,
       overrideAccess: true,
     })
 
@@ -216,12 +226,14 @@ export async function validateHomepageFeaturedItems(
   refs: HomepageFeaturedItemRef[],
   options: {
     allowDrafts?: boolean
+    slotCount?: number
   } = {},
 ): Promise<HomepageFeaturedItemRef[]> {
   const allowDrafts = options.allowDrafts ?? APP_CONFIG.features.homepageFeaturedAllowDrafts
+  const slotCount = options.slotCount ?? HOMEPAGE_FEATURED_CONTENT_SLOTS
 
-  if (refs.length !== HOMEPAGE_FEATURED_CONTENT_SLOTS) {
-    throw new Error(`Homepage featured content requires exactly ${HOMEPAGE_FEATURED_CONTENT_SLOTS} items.`)
+  if (refs.length !== slotCount) {
+    throw new Error(`This block requires exactly ${slotCount} item${slotCount === 1 ? '' : 's'}.`)
   }
 
   const keys = new Set<string>()
@@ -243,23 +255,17 @@ export async function validateHomepageFeaturedItems(
   return refs
 }
 
-export async function getHomepageFeaturedSelection(
+export async function getHomepageFeaturedSelectionFromItems(
   payload: Payload,
+  rawItems: unknown,
   options: {
     allowDrafts?: boolean
+    totalSlots?: number
   } = {},
 ): Promise<HomepageFeaturedSelection> {
   const allowDrafts = options.allowDrafts ?? APP_CONFIG.features.homepageFeaturedAllowDrafts
-
-  const globalDoc = await payload.findGlobal({
-    slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-    depth: 0,
-    overrideAccess: true,
-  }) as {
-    items?: unknown
-  }
-
-  const parsedSlots = parseHomepageFeaturedSlots(globalDoc.items)
+  const totalSlots = options.totalSlots ?? HOMEPAGE_FEATURED_CONTENT_SLOTS
+  const parsedSlots = parseHomepageFeaturedSlots(rawItems)
   const items: HomepageFeaturedCandidate[] = []
   const invalidItems: HomepageFeaturedInvalidItem[] = []
 
@@ -307,11 +313,28 @@ export async function getHomepageFeaturedSelection(
     invalidItems,
     allowDrafts,
     isComplete:
-      items.length === HOMEPAGE_FEATURED_CONTENT_SLOTS
+      items.length === totalSlots
       && invalidItems.length === 0
-      && parsedSlots.length === HOMEPAGE_FEATURED_CONTENT_SLOTS,
-    totalSlots: HOMEPAGE_FEATURED_CONTENT_SLOTS,
+      && parsedSlots.length === totalSlots,
+    totalSlots,
   }
+}
+
+export async function getHomepageFeaturedSelection(
+  payload: Payload,
+  options: {
+    allowDrafts?: boolean
+  } = {},
+): Promise<HomepageFeaturedSelection> {
+  const globalDoc = await payload.findGlobal({
+    slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
+    depth: 0,
+    overrideAccess: true,
+  }) as {
+    items?: unknown
+  }
+
+  return getHomepageFeaturedSelectionFromItems(payload, globalDoc.items, options)
 }
 
 export async function searchHomepageFeaturedCandidates(
@@ -370,7 +393,7 @@ export async function searchHomepageFeaturedCandidates(
 
       const response = await payload.find({
         collection,
-        depth: 0,
+        depth: 1,
         limit: perCollectionLimit,
         page: 1,
         sort: '-updatedAt',
