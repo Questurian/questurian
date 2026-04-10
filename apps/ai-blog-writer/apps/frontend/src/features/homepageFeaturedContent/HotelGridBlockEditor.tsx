@@ -8,16 +8,18 @@ import type {
 } from './hotelGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
-  type HotelGridBlockResponse,
+  type HotelOrAttractionGridBlockResponse,
 } from './pageBlocks'
 import {
   useHomepageHotelGridSlots,
   type HotelGridCandidateParams,
 } from './useHomepageHotelGridSlots'
 
-function getInvalidMessage(count: number): string {
-  if (count === 1) return 'One saved hotel is no longer eligible. Replace it before saving again.'
-  return `${count} saved hotels are no longer eligible. Replace them before saving.`
+function getInvalidMessage(blockType: HotelOrAttractionGridBlockResponse['blockType'], count: number): string {
+  const noun = blockType === 'things-to-do-attractions' ? 'place' : 'hotel'
+  const plural = blockType === 'things-to-do-attractions' ? 'places' : 'hotels'
+  if (count === 1) return `One saved ${noun} is no longer eligible. Replace it before saving again.`
+  return `${count} saved ${plural} are no longer eligible. Replace them before saving.`
 }
 
 export default function HotelGridBlockEditor({
@@ -32,7 +34,7 @@ export default function HotelGridBlockEditor({
   isDeletingBlock,
   deleteError,
 }: {
-  block: HotelGridBlockResponse
+  block: HotelOrAttractionGridBlockResponse
   blockIndex: number
   token: string | null
   canManage: boolean
@@ -87,7 +89,7 @@ export default function HotelGridBlockEditor({
       <div className="hf-block-section">
         <div className="hf-state-screen">
           <h2>Loading…</h2>
-          <p>Fetching saved hotel grid.</p>
+          <p>Fetching saved {blockConfig.label.toLowerCase()}.</p>
         </div>
       </div>
     )
@@ -98,7 +100,11 @@ export default function HotelGridBlockEditor({
       <div className="hf-block-section">
         <div className="hf-state-screen">
           <h2>{blockConfig.label}</h2>
-          <p>{selectionQuery.error instanceof Error ? selectionQuery.error.message : 'Failed to load hotel grid.'}</p>
+          <p>
+            {selectionQuery.error instanceof Error
+              ? selectionQuery.error.message
+              : `Failed to load ${blockConfig.label.toLowerCase()}.`}
+          </p>
         </div>
       </div>
     )
@@ -125,7 +131,11 @@ export default function HotelGridBlockEditor({
       </div>
       <div className="hf-block-content">
         <p className="hf-panel-desc">{blockConfig.description}.</p>
-        {savedInvalidItems.length > 0 && <div className="hf-banner warning">{getInvalidMessage(savedInvalidItems.length)}</div>}
+        {savedInvalidItems.length > 0 && (
+          <div className="hf-banner warning">
+            {getInvalidMessage(block.blockType, savedInvalidItems.length)}
+          </div>
+        )}
         {resultMessage && (
           <div className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}>{resultMessage}</div>
         )}

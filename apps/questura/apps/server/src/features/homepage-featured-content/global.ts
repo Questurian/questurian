@@ -1,47 +1,30 @@
 import type { GlobalConfig } from 'payload'
 
-import { APP_CONFIG } from '@/shared/config'
-
 import { ArticleGridBlock } from './blocks/article-grid'
+import { FeaturedArticleBlock } from './blocks/featured-article'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
 import { HotelGridBlock } from './blocks/hotel-grid'
 import { LocationGridBlock } from './blocks/location-grid'
 import { WhereToEatDrinkBlock } from './blocks/where-to-eat-drink'
+import { ThingsToDoAttractionsBlock } from './blocks/things-to-do-attractions'
+import { ThingsToDoListiclesBlock } from './blocks/things-to-do-listicles'
+import { MAIN_LOCATION_GRID_SCOPE } from './location-grid-service'
+import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
 import {
-  buildHotelGridGlobalData,
-  normalizeHotelGridInput,
-  validateHotelGridItems,
-} from './hotel-grid-service'
-import {
-  buildLocationGridGlobalData,
-  MAIN_LOCATION_GRID_SCOPE,
-  normalizeLocationGridInput,
-  validateLocationGridItems,
-} from './location-grid-service'
-import {
-  buildWhereToEatDrinkGlobalData,
-  normalizeWhereToEatDrinkInput,
-  validateWhereToEatDrinkItems,
-} from './where-to-eat-drink-service'
-import {
-  buildHomepageFeaturedGlobalData,
-  normalizeHomepageFeaturedInput,
-  validateHomepageFeaturedItems,
-} from './service'
-import {
+  ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS,
   HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-  HOMEPAGE_FEATURED_CONTENT_SLOTS,
 } from './types'
 
-function isCuratedBlockType(
-  value: unknown,
-): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' | 'where-to-eat-drink' {
-  return value === 'featured-articles'
-    || value === 'article-grid'
-    || value === 'location-grid'
-    || value === 'hotel-grid'
-    || value === 'where-to-eat-drink'
-}
+const HOMEPAGE_BLOCK_TYPES = [
+  FeaturedArticleBlock,
+  FeaturedArticlesBlock,
+  ArticleGridBlock,
+  LocationGridBlock,
+  HotelGridBlock,
+  WhereToEatDrinkBlock,
+  ThingsToDoListiclesBlock,
+  ThingsToDoAttractionsBlock,
+] as const
 
 export const HomepageFeaturedContent: GlobalConfig = {
   slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -58,60 +41,45 @@ export const HomepageFeaturedContent: GlobalConfig = {
     {
       name: 'pageBlocks',
       type: 'blocks',
-      blocks: [FeaturedArticlesBlock, ArticleGridBlock, LocationGridBlock, HotelGridBlock, WhereToEatDrinkBlock],
+      blocks: [...HOMEPAGE_BLOCK_TYPES],
+      label: 'Explore — page blocks',
       admin: {
         description:
-          'Add content blocks to the main homepage. Available blocks include Featured Articles, Article Grid, and Location Grid.',
+          'Explore mode: curated sections for the main homepage (articles, grids, etc.).',
+      },
+    },
+    {
+      name: 'pageBlocksStay',
+      type: 'blocks',
+      blocks: [...HOMEPAGE_BLOCK_TYPES],
+      label: 'Stay — page blocks',
+      admin: {
+        description: 'Stay mode: same block types as Explore; curated independently.',
+      },
+    },
+    {
+      name: 'pageBlocksMove',
+      type: 'blocks',
+      blocks: [...HOMEPAGE_BLOCK_TYPES],
+      label: 'Move — page blocks',
+      admin: {
+        description: 'Move mode: same block types as Explore; curated independently.',
       },
     },
   ],
   hooks: {
     beforeValidate: [
       async ({ data, req }) => {
-        if (!Array.isArray(data?.pageBlocks)) return data
+        if (!data) return data
 
-        for (const block of data.pageBlocks) {
-          if (
-            typeof block === 'object' &&
-            block !== null &&
-            isCuratedBlockType((block as Record<string, unknown>).blockType)
-          ) {
-            const blockRecord = block as Record<string, unknown>
-            if (Array.isArray(blockRecord.items) && blockRecord.items.length > 0) {
-              const slotCount =
-                typeof blockRecord.slotCount === 'number' && blockRecord.slotCount >= 1
-                  ? Math.trunc(blockRecord.slotCount)
-                  : HOMEPAGE_FEATURED_CONTENT_SLOTS
-              if (blockRecord.blockType === 'location-grid') {
-                const refs = normalizeLocationGridInput(blockRecord.items)
-                await validateLocationGridItems(req.payload, refs, {
-                  scope: MAIN_LOCATION_GRID_SCOPE,
-                  slotCount,
-                })
-                blockRecord.items = buildLocationGridGlobalData(refs).items
-              } else if (blockRecord.blockType === 'hotel-grid') {
-                const refs = normalizeHotelGridInput(blockRecord.items)
-                await validateHotelGridItems(req.payload, refs, {
-                  allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                  slotCount,
-                })
-                blockRecord.items = buildHotelGridGlobalData(refs).items
-              } else if (blockRecord.blockType === 'where-to-eat-drink') {
-                const refs = normalizeWhereToEatDrinkInput(blockRecord.items)
-                await validateWhereToEatDrinkItems(req.payload, refs, {
-                  allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                  slotCount,
-                })
-                blockRecord.items = buildWhereToEatDrinkGlobalData(refs).items
-              } else {
-                const refs = normalizeHomepageFeaturedInput(blockRecord.items)
-                await validateHomepageFeaturedItems(req.payload, refs, {
-                  allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                  slotCount,
-                })
-                blockRecord.items = buildHomepageFeaturedGlobalData(refs).items
-              }
-            }
+        for (const field of ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS) {
+          const arr = data[field as keyof typeof data]
+          if (Array.isArray(arr)) {
+            await normalizePageBlocksArrayInPlace(
+              req,
+              arr as unknown[],
+              MAIN_LOCATION_GRID_SCOPE,
+            )
           }
         }
 

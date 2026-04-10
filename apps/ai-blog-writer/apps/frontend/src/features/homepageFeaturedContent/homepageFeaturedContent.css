@@ -1285,6 +1285,53 @@
 .hf-detail-title-block { display: flex; flex-direction: column; gap: 0.2rem; }
 .hf-detail-title-block h1 { margin: 0; font-size: 1.3rem; }
 
+.hf-mode-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: min(100%, 14rem);
+}
+
+.hf-mode-switch-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hf-mode-segment {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(255,255,255,0.6);
+}
+
+.hf-mode-segment button {
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--ink-light);
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+
+.hf-mode-segment button:last-child { border-right: none; }
+
+.hf-mode-segment button:hover { background: rgba(0,0,0,0.04); }
+
+.hf-mode-segment button.hf-mode-active {
+  background: rgba(197,90,59,0.12);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .hf-toggle-btn {
   display: inline-flex;
   align-items: center;
@@ -2652,5 +2699,169 @@
   }
   .hf-location-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Featured article (dark spotlight) ─────────────────────────── */
+
+.hf-fa-spotlight {
+  background: #000;
+  color: #f5f5f5;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.hf-fa-spotlight-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  min-height: 14rem;
+  align-items: stretch;
+}
+
+.hf-fa-spotlight-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.hf-fa-spotlight-title {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(1.55rem, 2.8vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.12;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.hf-fa-spotlight-dek {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(0.95rem, 1.35vw, 1.08rem);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 400;
+}
+
+.hf-fa-spotlight-byline {
+  margin: 0.25rem 0 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.hf-fa-spotlight-date {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.hf-fa-spotlight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.hf-fa-spotlight-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hf-fa-spotlight-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.hf-fa-spotlight-btn.ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.hf-fa-spotlight-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.hf-fa-spotlight-empty-title {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.hf-fa-spotlight-empty-hint {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  max-width: 22rem;
+  line-height: 1.45;
+}
+
+.hf-fa-spotlight-media {
+  position: relative;
+  min-height: 12rem;
+  background: #0a0a0a;
+}
+
+.hf-fa-spotlight-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  min-height: 12rem;
+}
+
+.hf-fa-spotlight-placeholder-inner {
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.hf-fa-spotlight-placeholder-inner svg {
+  width: 3rem;
+  height: 3rem;
+}
+
+@media (max-width: 768px) {
+  .hf-fa-spotlight-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-fa-spotlight-media {
+    order: -1;
+    min-height: 11rem;
   }
 }

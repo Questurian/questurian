@@ -11,15 +11,26 @@ import {
   getHotelGridSelectionFromItems,
   getHomepageFeaturedSelectionFromItems,
   getLocationGridSelectionFromItems,
+  getThingsToDoAttractionsSelectionFromItems,
+  getThingsToDoListiclesSelectionFromItems,
   getWhereToEatDrinkSelectionFromItems,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
   LOCATION_GRID_MAX_SLOTS,
   LOCATION_GRID_MIN_SLOTS,
   resolveLocationGridScopeFromLocation,
 } from '@/features/homepage-featured-content'
+import {
+  getPageBlocksFieldName,
+  mergeHomepageBlockFields,
+  parseHomepageEditorModeParam,
+} from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -37,11 +48,23 @@ type LocationHomepageDoc = {
   isEnabled?: boolean
   location?: unknown
   pageBlocks?: RawBlock[]
+  pageBlocksStay?: RawBlock[]
+  pageBlocksMove?: RawBlock[]
 }
 
-const SUPPORTED_BLOCK_TYPES = ['featured-articles', 'article-grid', 'location-grid', 'hotel-grid', 'where-to-eat-drink'] as const
+const SUPPORTED_BLOCK_TYPES = [
+  'featured-article',
+  'featured-articles',
+  'article-grid',
+  'location-grid',
+  'hotel-grid',
+  'where-to-eat-drink',
+  'things-to-do-listicles',
+  'things-to-do-attractions',
+] as const
 type SupportedBlockType = (typeof SUPPORTED_BLOCK_TYPES)[number]
 const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }> = {
+  'featured-article': { min: 1, max: 1 },
   'featured-articles': { min: 3, max: 9 },
   'article-grid': { min: 3, max: 5 },
   'location-grid': { min: LOCATION_GRID_MIN_SLOTS, max: LOCATION_GRID_MAX_SLOTS },
@@ -49,6 +72,14 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
   'where-to-eat-drink': {
     min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
     max: HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
+  },
+  'things-to-do-listicles': {
+    min: HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
+    max: HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+  },
+  'things-to-do-attractions': {
+    min: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
+    max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   },
 }
 
@@ -103,6 +134,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params
     const payload = await getPayload({ config })
+    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
+    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -111,7 +144,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
+    const existingBlocks: RawBlock[] = doc[field] ?? []
     const rawLocation =
       typeof doc.location === 'object' && doc.location !== null
         ? doc.location as { level?: unknown; locationKey?: unknown; id?: unknown }
@@ -128,12 +161,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const newBlock = { blockType: blockType as SupportedBlockType, slotCount, items: [] }
+    const mergeData = mergeHomepageBlockFields(doc, field, [...existingBlocks, newBlock])
 
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { pageBlocks: [...existingBlocks, newBlock] } as any,
+      data: mergeData as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
@@ -142,7 +175,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       typeof updated.location === 'object' && updated.location !== null ? updated.location as Record<string, unknown> : null
 
     const resolvedBlocks = await Promise.all(
-      (updated.pageBlocks ?? []).map(async (block) => {
+      (updated[field] ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const selection = block.blockType === 'location-grid'
             ? await getLocationGridSelectionFromItems(payload, block.items, {
@@ -157,6 +190,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
                     totalSlots: block.slotCount,
                   })
+                : block.blockType === 'things-to-do-listicles'
+                  ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
+                      totalSlots: block.slotCount,
+                    })
+                  : block.blockType === 'things-to-do-attractions'
+                    ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
+                        totalSlots: block.slotCount,
+                      })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
@@ -181,6 +222,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             }
           : null,
         pageBlocks: resolvedBlocks,
+        mode,
       },
       { status: 201, headers },
     )
@@ -219,6 +261,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const { id } = await params
     const payload = await getPayload({ config })
+    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
+    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -227,7 +271,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
+    const existingBlocks: RawBlock[] = doc[field] ?? []
     const updatedBlocks = existingBlocks.filter((block) => block.id !== blockId)
 
     if (updatedBlocks.length === existingBlocks.length) {
@@ -243,11 +287,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         : null
     const locationGridScope = resolveLocationGridScopeFromLocation(rawLocation)
 
+    const mergeData = mergeHomepageBlockFields(doc, field, updatedBlocks)
+
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { pageBlocks: updatedBlocks } as any,
+      data: mergeData as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
@@ -258,7 +303,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         : null
 
     const resolvedBlocks = await Promise.all(
-      (updated.pageBlocks ?? []).map(async (block) => {
+      (updated[field] ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const selection = block.blockType === 'location-grid'
             ? await getLocationGridSelectionFromItems(payload, block.items, {
@@ -273,6 +318,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
                     totalSlots: block.slotCount,
                   })
+                : block.blockType === 'things-to-do-listicles'
+                  ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
+                      totalSlots: block.slotCount,
+                    })
+                  : block.blockType === 'things-to-do-attractions'
+                    ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
+                        totalSlots: block.slotCount,
+                      })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
@@ -297,6 +350,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
             }
           : null,
         pageBlocks: resolvedBlocks,
+        mode,
       },
       { headers },
     )

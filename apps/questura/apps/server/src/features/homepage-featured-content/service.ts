@@ -30,6 +30,8 @@ type PayloadDocLike = {
   publishedAt?: unknown
   headerSection?: unknown
   header?: unknown
+  author?: unknown
+  seo?: unknown
 }
 
 type ParsedHomepageFeaturedSlot = {
@@ -42,6 +44,32 @@ type PayloadFindWhere = NonNullable<Parameters<Payload['find']>[0]['where']>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function extractSeoExcerpt(doc: PayloadDocLike): string | null {
+  const seoRoot = isRecord(doc.seo) ? doc.seo : null
+  if (!seoRoot) return null
+
+  const section = isRecord(seoRoot.seoSection) ? seoRoot.seoSection : null
+  if (!section) return null
+
+  const meta = section.metaDescription
+  if (typeof meta === 'string' && meta.trim()) return meta.trim()
+
+  return null
+}
+
+function extractAuthorLabel(doc: PayloadDocLike): string | null {
+  const author = doc.author
+  if (!isRecord(author)) return null
+
+  const first = typeof author.firstName === 'string' ? author.firstName.trim() : ''
+  const last = typeof author.lastName === 'string' ? author.lastName.trim() : ''
+  const name = [first, last].filter(Boolean).join(' ')
+  if (name) return name
+
+  const email = typeof author.email === 'string' ? author.email.trim() : ''
+  return email || null
 }
 
 function extractFeaturedImageUrl(doc: PayloadDocLike): string | null {
@@ -177,6 +205,8 @@ function normalizeHomepageFeaturedCandidate(
     publishedAt: typeof doc.publishedAt === 'string' && doc.publishedAt.trim() ? doc.publishedAt : null,
     collectionLabel: getHomepageFeaturedCollectionLabel(relationTo),
     imageUrl: extractFeaturedImageUrl(doc),
+    excerpt: extractSeoExcerpt(doc),
+    authorLabel: extractAuthorLabel(doc),
   }
 }
 

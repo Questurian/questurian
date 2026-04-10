@@ -11,9 +11,15 @@ import {
   getHotelGridSelectionFromItems,
   getHomepageFeaturedSelectionFromItems,
   getLocationGridSelectionFromItems,
+  getThingsToDoAttractionsSelectionFromItems,
+  getThingsToDoListiclesSelectionFromItems,
   getWhereToEatDrinkSelectionFromItems,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
   LOCATION_GRID_MAX_SLOTS,
@@ -22,6 +28,9 @@ import {
 } from '@/features/homepage-featured-content'
 import {
   HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
+  getPageBlocksFieldName,
+  mergeHomepageBlockFields,
+  parseHomepageEditorModeParam,
 } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -37,11 +46,23 @@ type RawBlock = {
 
 type MainHomepageGlobalDoc = {
   pageBlocks?: RawBlock[]
+  pageBlocksStay?: RawBlock[]
+  pageBlocksMove?: RawBlock[]
 }
 
-const SUPPORTED_BLOCK_TYPES = ['featured-articles', 'article-grid', 'location-grid', 'hotel-grid', 'where-to-eat-drink'] as const
+const SUPPORTED_BLOCK_TYPES = [
+  'featured-article',
+  'featured-articles',
+  'article-grid',
+  'location-grid',
+  'hotel-grid',
+  'where-to-eat-drink',
+  'things-to-do-listicles',
+  'things-to-do-attractions',
+] as const
 type SupportedBlockType = (typeof SUPPORTED_BLOCK_TYPES)[number]
 const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }> = {
+  'featured-article': { min: 1, max: 1 },
   'featured-articles': { min: 3, max: 9 },
   'article-grid': { min: 3, max: 5 },
   'location-grid': { min: LOCATION_GRID_MIN_SLOTS, max: LOCATION_GRID_MAX_SLOTS },
@@ -49,6 +70,14 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
   'where-to-eat-drink': {
     min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
     max: HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
+  },
+  'things-to-do-listicles': {
+    min: HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
+    max: HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+  },
+  'things-to-do-attractions': {
+    min: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
+    max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   },
 }
 
@@ -101,6 +130,8 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await getPayload({ config })
+    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
+    const field = getPageBlocksFieldName(mode)
 
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -108,19 +139,19 @@ export async function POST(req: NextRequest) {
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const existingBlocks: RawBlock[] = globalDoc.pageBlocks ?? []
+    const existingBlocks: RawBlock[] = globalDoc[field] ?? []
     const newBlock = { blockType: blockType as SupportedBlockType, slotCount, items: [] }
+    const mergeData = mergeHomepageBlockFields(globalDoc, field, [...existingBlocks, newBlock])
 
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { pageBlocks: [...existingBlocks, newBlock] } as any,
+      data: mergeData as any,
       depth: 1,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
     const resolvedBlocks = await Promise.all(
-      (updated.pageBlocks ?? []).map(async (block) => {
+      (updated[field] ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const selection = block.blockType === 'location-grid'
             ? await getLocationGridSelectionFromItems(payload, block.items, {
@@ -135,6 +166,14 @@ export async function POST(req: NextRequest) {
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
                     totalSlots: block.slotCount,
                   })
+                : block.blockType === 'things-to-do-listicles'
+                  ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
+                      totalSlots: block.slotCount,
+                    })
+                  : block.blockType === 'things-to-do-attractions'
+                    ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
+                        totalSlots: block.slotCount,
+                      })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
@@ -144,7 +183,7 @@ export async function POST(req: NextRequest) {
       }),
     )
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks }, { status: 201, headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { status: 201, headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to add block to main homepage.') },
@@ -179,13 +218,16 @@ export async function DELETE(req: NextRequest) {
     }
 
     const payload = await getPayload({ config })
+    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
+    const field = getPageBlocksFieldName(mode)
+
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
       depth: 0,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const existingBlocks: RawBlock[] = globalDoc.pageBlocks ?? []
+    const existingBlocks: RawBlock[] = globalDoc[field] ?? []
     const updatedBlocks = existingBlocks.filter((block) => block.id !== blockId)
 
     if (updatedBlocks.length === existingBlocks.length) {
@@ -195,16 +237,17 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
+    const mergeData = mergeHomepageBlockFields(globalDoc, field, updatedBlocks)
+
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { pageBlocks: updatedBlocks } as any,
+      data: mergeData as any,
       depth: 1,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
     const resolvedBlocks = await Promise.all(
-      (updated.pageBlocks ?? []).map(async (block) => {
+      (updated[field] ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const selection = block.blockType === 'location-grid'
             ? await getLocationGridSelectionFromItems(payload, block.items, {
@@ -219,6 +262,14 @@ export async function DELETE(req: NextRequest) {
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
                     totalSlots: block.slotCount,
                   })
+                : block.blockType === 'things-to-do-listicles'
+                  ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
+                      totalSlots: block.slotCount,
+                    })
+                  : block.blockType === 'things-to-do-attractions'
+                    ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
+                        totalSlots: block.slotCount,
+                      })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
@@ -228,7 +279,7 @@ export async function DELETE(req: NextRequest) {
       }),
     )
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks }, { headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to delete block from main homepage.') },

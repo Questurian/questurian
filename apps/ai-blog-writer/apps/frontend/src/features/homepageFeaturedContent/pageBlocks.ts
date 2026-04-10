@@ -3,16 +3,21 @@ import type { HomepageLocationGridSelection } from './locationGridTypes'
 import type { HomepageHotelGridSelection } from './hotelGridTypes'
 
 export type CuratedHomepageBlockType =
+  | 'featured-article'
   | 'featured-articles'
   | 'article-grid'
   | 'location-grid'
   | 'hotel-grid'
   | 'where-to-eat-drink'
+  | 'things-to-do-listicles'
+  | 'things-to-do-attractions'
 
 export type ArticleCuratedHomepageBlockType =
+  | 'featured-article'
   | 'featured-articles'
   | 'article-grid'
   | 'where-to-eat-drink'
+  | 'things-to-do-listicles'
 
 export type CuratedHomepageBlockConfig = {
   label: string
@@ -27,6 +32,14 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
   CuratedHomepageBlockType,
   CuratedHomepageBlockConfig
 > = {
+  'featured-article': {
+    label: 'Featured Article',
+    description: 'Full-width dark hero highlighting one article or listicle',
+    quickSlotCounts: [1],
+    defaultSlotCount: 1,
+    minSlotCount: 1,
+    maxSlotCount: 1,
+  },
   'featured-articles': {
     label: 'Featured Articles',
     description: 'A curated list of articles in fixed slots',
@@ -67,15 +80,40 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     minSlotCount: 3,
     maxSlotCount: 12,
   },
+  'things-to-do-listicles': {
+    label: 'Things to Do (Listicles)',
+    description: 'Attractions single-type listicles only',
+    quickSlotCounts: [3, 4, 6, 8],
+    defaultSlotCount: 4,
+    minSlotCount: 3,
+    maxSlotCount: 12,
+  },
+  'things-to-do-attractions': {
+    label: 'Things to Do (Places)',
+    description: 'A curated grid of attraction records',
+    quickSlotCounts: [3, 4, 6, 8],
+    defaultSlotCount: 4,
+    minSlotCount: 3,
+    maxSlotCount: 12,
+  },
 }
 
 export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
+  'featured-article',
   'featured-articles',
   'article-grid',
   'location-grid',
   'hotel-grid',
   'where-to-eat-drink',
+  'things-to-do-listicles',
+  'things-to-do-attractions',
 ]
+
+export type FeaturedArticleBlockResponse = {
+  id: string
+  blockType: 'featured-article'
+  selection: HomepageFeaturedSelection
+}
 
 export type FeaturedArticlesBlockResponse = {
   id: string
@@ -101,14 +139,36 @@ export type HotelGridBlockResponse = {
   selection: HomepageHotelGridSelection
 }
 
+export type WhereToEatDrinkBlockResponse = {
+  id: string
+  blockType: 'where-to-eat-drink'
+  selection: HomepageFeaturedSelection
+}
+
+export type ThingsToDoListiclesBlockResponse = {
+  id: string
+  blockType: 'things-to-do-listicles'
+  selection: HomepageFeaturedSelection
+}
+
+export type ThingsToDoAttractionsBlockResponse = {
+  id: string
+  blockType: 'things-to-do-attractions'
+  selection: HomepageHotelGridSelection
+}
+
 export type ArticleCuratedHomepageBlockResponse =
+  | FeaturedArticleBlockResponse
   | FeaturedArticlesBlockResponse
   | ArticleGridBlockResponse
+  | WhereToEatDrinkBlockResponse
+  | ThingsToDoListiclesBlockResponse
 
 export type CuratedHomepageBlockResponse =
   | ArticleCuratedHomepageBlockResponse
   | LocationGridBlockResponse
   | HotelGridBlockResponse
+  | ThingsToDoAttractionsBlockResponse
 
 export type UnknownBlockResponse = {
   id: string
@@ -121,19 +181,25 @@ export function isCuratedHomepageBlock(
   block: PageBlockResponse,
 ): block is CuratedHomepageBlockResponse {
   return (
-    block.blockType === 'featured-articles'
+    block.blockType === 'featured-article'
+    || block.blockType === 'featured-articles'
     || block.blockType === 'article-grid'
     || block.blockType === 'location-grid'
     || block.blockType === 'hotel-grid'
+    || block.blockType === 'where-to-eat-drink'
+    || block.blockType === 'things-to-do-listicles'
+    || block.blockType === 'things-to-do-attractions'
   )
 }
 
 export function isArticleCuratedHomepageBlock(
   block: PageBlockResponse,
 ): block is ArticleCuratedHomepageBlockResponse {
-  return block.blockType === 'featured-articles'
+  return block.blockType === 'featured-article'
+    || block.blockType === 'featured-articles'
     || block.blockType === 'article-grid'
     || block.blockType === 'where-to-eat-drink'
+    || block.blockType === 'things-to-do-listicles'
 }
 
 export function isLocationGridBlock(
@@ -147,3 +213,11 @@ export function isHotelGridBlock(
 ): block is HotelGridBlockResponse {
   return block.blockType === 'hotel-grid'
 }
+
+export function isThingsToDoAttractionsBlock(
+  block: PageBlockResponse,
+): block is ThingsToDoAttractionsBlockResponse {
+  return block.blockType === 'things-to-do-attractions'
+}
+
+export type HotelOrAttractionGridBlockResponse = HotelGridBlockResponse | ThingsToDoAttractionsBlockResponse

@@ -9,16 +9,24 @@ import {
 } from '@/features/auth/lib/auth-middleware'
 import {
   buildHotelGridGlobalData,
+  buildThingsToDoAttractionsGlobalData,
+  buildThingsToDoListiclesGlobalData,
   buildWhereToEatDrinkGlobalData,
   buildLocationGridGlobalData,
   getHotelGridSelectionFromItems,
   getWhereToEatDrinkSelectionFromItems,
   getLocationGridSelectionFromItems,
+  getThingsToDoAttractionsSelectionFromItems,
+  getThingsToDoListiclesSelectionFromItems,
   normalizeHotelGridInput,
+  normalizeThingsToDoAttractionsInput,
+  normalizeThingsToDoListiclesInput,
   normalizeWhereToEatDrinkInput,
   normalizeLocationGridInput,
   resolveLocationGridScopeFromLocation,
   validateHotelGridItems,
+  validateThingsToDoAttractionsItems,
+  validateThingsToDoListiclesItems,
   validateWhereToEatDrinkItems,
   validateLocationGridItems,
   buildHomepageFeaturedGlobalData,
@@ -28,11 +36,19 @@ import {
 } from '@/features/homepage-featured-content'
 import { APP_CONFIG } from '@/shared/config'
 import {
+  HOMEPAGE_FEATURED_ARTICLE_SLOT_COUNT,
   HOMEPAGE_FEATURED_CONTENT_SLOTS,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
+  getPageBlocksFieldName,
+  mergeHomepageBlockFields,
+  parseHomepageEditorModeParam,
 } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -61,16 +77,29 @@ type LocationHomepageDoc = {
   updatedAt?: string
   location?: LocationDoc | number | null
   pageBlocks?: RawBlock[]
+  pageBlocksStay?: RawBlock[]
+  pageBlocksMove?: RawBlock[]
 }
 
 function isCuratedBlockType(
   value: unknown,
-): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' | 'where-to-eat-drink' {
-  return value === 'featured-articles'
+): value is
+  | 'featured-article'
+  | 'featured-articles'
+  | 'article-grid'
+  | 'location-grid'
+  | 'hotel-grid'
+  | 'where-to-eat-drink'
+  | 'things-to-do-listicles'
+  | 'things-to-do-attractions' {
+  return value === 'featured-article'
+    || value === 'featured-articles'
     || value === 'article-grid'
     || value === 'location-grid'
     || value === 'hotel-grid'
     || value === 'where-to-eat-drink'
+    || value === 'things-to-do-listicles'
+    || value === 'things-to-do-attractions'
 }
 
 async function resolveLocationGridScope(
@@ -118,6 +147,14 @@ async function resolvePageBlocks(
               ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
                   totalSlots: block.slotCount,
                 })
+              : block.blockType === 'things-to-do-listicles'
+                ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
+                    totalSlots: block.slotCount,
+                  })
+                : block.blockType === 'things-to-do-attractions'
+                  ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
+                      totalSlots: block.slotCount,
+                    })
             : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
                 totalSlots: block.slotCount,
               })
@@ -137,6 +174,7 @@ async function resolvePageBlocks(
 function formatHomepageDoc(
   doc: LocationHomepageDoc,
   resolvedBlocks: Awaited<ReturnType<typeof resolvePageBlocks>>,
+  mode: ReturnType<typeof parseHomepageEditorModeParam>,
 ) {
   const location =
     typeof doc.location === 'object' && doc.location !== null ? doc.location : null
@@ -155,6 +193,7 @@ function formatHomepageDoc(
         }
       : null,
     pageBlocks: resolvedBlocks,
+    mode,
   }
 }
 
@@ -174,6 +213,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params
     const payload = await getPayload({ config })
+    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
+    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -183,8 +224,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     })) as LocationHomepageDoc
 
     const locationGridScope = await resolveLocationGridScope(payload, doc.location)
-    const resolvedBlocks = await resolvePageBlocks(payload, doc.pageBlocks ?? [], locationGridScope)
-    return NextResponse.json(formatHomepageDoc(doc, resolvedBlocks), { headers })
+    const resolvedBlocks = await resolvePageBlocks(payload, doc[field] ?? [], locationGridScope)
+    return NextResponse.json(formatHomepageDoc(doc, resolvedBlocks, mode), { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to load location homepage.') },
@@ -219,6 +260,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const payload = await getPayload({ config })
+    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
+    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -227,7 +270,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const rawBlocks: RawBlock[] = doc.pageBlocks ?? []
+    const rawBlocks: RawBlock[] = doc[field] ?? []
     const blockIndex = rawBlocks.findIndex((b) => b.id === body.blockId)
 
     if (blockIndex === -1) {
@@ -246,9 +289,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       )
     }
 
-    const blockSlotCount = typeof block.slotCount === 'number' && block.slotCount >= 1
-      ? Math.trunc(block.slotCount)
-      : HOMEPAGE_FEATURED_CONTENT_SLOTS
+    const blockSlotCount =
+      block.blockType === 'featured-article'
+        ? HOMEPAGE_FEATURED_ARTICLE_SLOT_COUNT
+        : typeof block.slotCount === 'number' && block.slotCount >= 1
+          ? Math.trunc(block.slotCount)
+          : HOMEPAGE_FEATURED_CONTENT_SLOTS
     const locationGridScope = await resolveLocationGridScope(payload, doc.location)
     const updatedBlocks = [...rawBlocks]
 
@@ -299,6 +345,44 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         slotCount: blockSlotCount,
       })
       updatedBlocks[blockIndex] = { ...block, ...buildWhereToEatDrinkGlobalData(validatedRefs) }
+    } else if (block.blockType === 'things-to-do-listicles') {
+      if (
+        blockSlotCount < HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS
+        || blockSlotCount > HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS
+      ) {
+        return NextResponse.json(
+          {
+            message: `slotCount must be between ${HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS} and ${HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS} for "things-to-do-listicles".`,
+          },
+          { status: 400, headers },
+        )
+      }
+
+      const refs = normalizeThingsToDoListiclesInput(body.items)
+      const validatedRefs = await validateThingsToDoListiclesItems(payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount: blockSlotCount,
+      })
+      updatedBlocks[blockIndex] = { ...block, ...buildThingsToDoListiclesGlobalData(validatedRefs) }
+    } else if (block.blockType === 'things-to-do-attractions') {
+      if (
+        blockSlotCount < HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS
+        || blockSlotCount > HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS
+      ) {
+        return NextResponse.json(
+          {
+            message: `slotCount must be between ${HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS} and ${HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS} for "things-to-do-attractions".`,
+          },
+          { status: 400, headers },
+        )
+      }
+
+      const refs = normalizeThingsToDoAttractionsInput(body.items)
+      const validatedRefs = await validateThingsToDoAttractionsItems(payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount: blockSlotCount,
+      })
+      updatedBlocks[blockIndex] = { ...block, ...buildThingsToDoAttractionsGlobalData(validatedRefs) }
     } else {
       const refs = normalizeHomepageFeaturedInput(body.items)
       const validatedRefs = await validateHomepageFeaturedItems(payload, refs, {
@@ -309,18 +393,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       updatedBlocks[blockIndex] = { ...block, ...buildHomepageFeaturedGlobalData(validatedRefs) }
     }
 
+    const mergeData = mergeHomepageBlockFields(doc, field, updatedBlocks)
+
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { pageBlocks: updatedBlocks } as any,
+      data: mergeData as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
 
     const updatedScope = await resolveLocationGridScope(payload, updated.location)
-    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [], updatedScope)
-    return NextResponse.json(formatHomepageDoc(updated, resolvedBlocks), { headers })
+    const resolvedBlocks = await resolvePageBlocks(payload, updated[field] ?? [], updatedScope)
+    return NextResponse.json(formatHomepageDoc(updated, resolvedBlocks, mode), { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to update location homepage block.') },

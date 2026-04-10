@@ -52,6 +52,10 @@ export default function AddHomepageBlockPicker({
 
   function handleSelectBlockType(blockType: CuratedHomepageBlockType) {
     const nextConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
+    if (nextConfig.minSlotCount === nextConfig.maxSlotCount) {
+      onConfirm(blockType, nextConfig.defaultSlotCount)
+      return
+    }
     setSelectedBlockType(blockType)
     setSelectedSlotCount(nextConfig.defaultSlotCount)
     setCustomSlotCount('')
