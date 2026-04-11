@@ -45,7 +45,7 @@ export default function HomepageBlockDeleteTrigger({
 
       {showDeleteModal && (
         <div
-          className="hf-modal-backdrop"
+          className="hf-modal-backdrop hf-block-delete-confirm-backdrop"
           onClick={!isDeletingBlock ? () => setShowDeleteModal(false) : undefined}
         >
           <div

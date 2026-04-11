@@ -52,6 +52,8 @@ export const HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS = 3
 export const HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS = 12
 export const HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS = 3
 export const HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS = 12
+/** Questurian Maps: fixed six single-type listicle slots. */
+export const HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT = 6
 
 export const HOMEPAGE_FEATURED_CONTENT_COLLECTIONS = [
   'articles',

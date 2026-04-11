@@ -5,6 +5,7 @@ import { FeaturedArticleBlock } from './blocks/featured-article'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
 import { HotelGridBlock } from './blocks/hotel-grid'
 import { LocationGridBlock } from './blocks/location-grid'
+import { QuesturianMapsBlock } from './blocks/questurian-maps'
 import { WhereToEatDrinkBlock } from './blocks/where-to-eat-drink'
 import { ThingsToDoAttractionsBlock } from './blocks/things-to-do-attractions'
 import { ThingsToDoListiclesBlock } from './blocks/things-to-do-listicles'
@@ -20,6 +21,7 @@ const HOMEPAGE_BLOCK_TYPES = [
   FeaturedArticlesBlock,
   ArticleGridBlock,
   LocationGridBlock,
+  QuesturianMapsBlock,
   HotelGridBlock,
   WhereToEatDrinkBlock,
   ThingsToDoListiclesBlock,

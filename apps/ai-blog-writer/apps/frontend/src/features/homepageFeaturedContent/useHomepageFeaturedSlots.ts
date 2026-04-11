@@ -80,6 +80,8 @@ export type UseHomepageFeaturedSlotsOptions = {
   saveSelection: (token: string, items: HomepageFeaturedItemRef[]) => Promise<HomepageFeaturedSelection>
   fetchCandidates: (token: string, params: CandidateParams) => Promise<HomepageFeaturedCandidatesResponse>
   selectionQueryKey: unknown[]
+  /** When set, candidate search stays on this collection (e.g. Questurian Maps → single-type listicles). */
+  lockedCollectionFilter?: HomepageFeaturedCollection
 }
 
 export type UseHomepageFeaturedSlotsResult = {
@@ -99,6 +101,9 @@ export type UseHomepageFeaturedSlotsResult = {
   resultMessage: string | null
   searchValue: string
   collectionFilter: HomepageFeaturedCollection | 'all'
+  /** Resolved filter sent to the candidates API (respects `lockedCollectionFilter`). */
+  effectiveCollectionFilter: HomepageFeaturedCollection | 'all'
+  lockedCollectionFilter?: HomepageFeaturedCollection
   candidatePage: number
   handleCandidatePick: (candidate: HomepageFeaturedCandidate) => void
   handleMove: (slotIndex: number, direction: -1 | 1) => void
@@ -114,13 +119,22 @@ export type UseHomepageFeaturedSlotsResult = {
 export function useHomepageFeaturedSlots(
   options: UseHomepageFeaturedSlotsOptions,
 ): UseHomepageFeaturedSlotsResult {
-  const { token, canManage, fetchSelection, saveSelection, fetchCandidates, selectionQueryKey } =
-    options
+  const {
+    token,
+    canManage,
+    fetchSelection,
+    saveSelection,
+    fetchCandidates,
+    selectionQueryKey,
+    lockedCollectionFilter,
+  } = options
 
   const queryClient = useQueryClient()
   const [searchValue, setSearchValue] = useState('')
   const deferredSearchValue = useDeferredValue(searchValue.trim())
-  const [collectionFilter, setCollectionFilter] = useState<HomepageFeaturedCollection | 'all'>('all')
+  const [collectionFilter, setCollectionFilter] = useState<HomepageFeaturedCollection | 'all'>(
+    lockedCollectionFilter ?? 'all',
+  )
   const [candidatePage, setCandidatePage] = useState(1)
   const [draftSlots, setDraftSlots] = useState<SlotValue[] | null>(null)
   const [savedSlots, setSavedSlots] = useState<SlotValue[]>([])
@@ -147,11 +161,19 @@ export function useHomepageFeaturedSlots(
     setCandidatePage(1)
   }, [collectionFilter, deferredSearchValue])
 
+  const effectiveCollectionFilter = lockedCollectionFilter ?? collectionFilter
+
   const candidatesQuery = useQuery({
-    queryKey: [...selectionQueryKey, 'candidates', collectionFilter, deferredSearchValue, candidatePage],
+    queryKey: [
+      ...selectionQueryKey,
+      'candidates',
+      effectiveCollectionFilter,
+      deferredSearchValue,
+      candidatePage,
+    ],
     queryFn: () =>
       fetchCandidates(token!, {
-        type: collectionFilter,
+        type: effectiveCollectionFilter,
         query: deferredSearchValue || undefined,
         page: candidatePage,
         limit: CANDIDATE_PAGE_SIZE,
@@ -265,6 +287,8 @@ export function useHomepageFeaturedSlots(
     resultMessage,
     searchValue,
     collectionFilter,
+    effectiveCollectionFilter,
+    lockedCollectionFilter,
     candidatePage,
     handleCandidatePick,
     handleMove,

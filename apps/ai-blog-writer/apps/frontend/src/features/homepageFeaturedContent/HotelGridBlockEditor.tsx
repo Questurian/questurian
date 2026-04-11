@@ -65,7 +65,6 @@ export default function HotelGridBlockEditor({
     savedInvalidItems,
     pickerSlotIndex,
     usedIds,
-    hasUnsavedChanges,
     saveDisabled,
     invalidItemsBySlot,
     resultMessage,
@@ -74,7 +73,6 @@ export default function HotelGridBlockEditor({
     handleCandidatePick,
     handleMove,
     handleRemove,
-    handleReset,
     handleSave,
     setSearchValue,
     setCandidatePage,
@@ -120,14 +118,27 @@ export default function HotelGridBlockEditor({
           <span>Block {blockIndex + 1}</span>
           <span className="hf-block-type-tag">{blockConfig.label} · {block.selection.totalSlots} slots</span>
         </div>
-        <HomepageBlockDeleteTrigger
-          blockId={block.id}
-          blockIndex={blockIndex}
-          blockLabel={blockConfig.label}
-          onDeleteBlock={onDeleteBlock}
-          isDeletingBlock={isDeletingBlock}
-          deleteError={deleteError}
-        />
+        <div className="hf-block-header-actions">
+          <span className="hf-block-slot-meta" aria-live="polite">
+            {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+          </span>
+          <button
+            type="button"
+            className="hf-btn-primary hf-block-header-save"
+            onClick={handleSave}
+            disabled={saveDisabled}
+          >
+            {saveMutation.isPending ? 'Saving…' : 'Save'}
+          </button>
+          <HomepageBlockDeleteTrigger
+            blockId={block.id}
+            blockIndex={blockIndex}
+            blockLabel={blockConfig.label}
+            onDeleteBlock={onDeleteBlock}
+            isDeletingBlock={isDeletingBlock}
+            deleteError={deleteError}
+          />
+        </div>
       </div>
       <div className="hf-block-content">
         <p className="hf-panel-desc">{blockConfig.description}.</p>
@@ -139,17 +150,6 @@ export default function HotelGridBlockEditor({
         {resultMessage && (
           <div className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}>{resultMessage}</div>
         )}
-        <div className="hf-slot-controls">
-          <span className="hf-panel-desc">{slots.filter(Boolean).length} / {block.selection.totalSlots} slots filled</span>
-          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-            <button type="button" className="hf-btn-ghost" onClick={handleReset} disabled={!hasUnsavedChanges}>
-              Discard
-            </button>
-            <button type="button" className="hf-btn-primary" onClick={handleSave} disabled={saveDisabled}>
-              {saveMutation.isPending ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
         <HotelGridLayout
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}

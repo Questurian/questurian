@@ -28,7 +28,12 @@ import {
   normalizeThingsToDoListiclesInput,
   validateThingsToDoListiclesItems,
 } from './things-to-do-listicles-service'
-import { HOMEPAGE_FEATURED_ARTICLE_SLOT_COUNT, HOMEPAGE_FEATURED_CONTENT_SLOTS } from './types'
+import {
+  buildQuesturianMapsGlobalData,
+  normalizeQuesturianMapsInput,
+  validateQuesturianMapsItems,
+} from './questurian-maps-service'
+import { resolveStoredSlotCountForBlockType } from './slot-count-for-block-type'
 import {
   buildWhereToEatDrinkGlobalData,
   normalizeWhereToEatDrinkInput,
@@ -42,6 +47,7 @@ export function isCuratedHomepageBlockType(
   | 'featured-articles'
   | 'article-grid'
   | 'location-grid'
+  | 'questurian-maps'
   | 'hotel-grid'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
@@ -50,6 +56,7 @@ export function isCuratedHomepageBlockType(
     || value === 'featured-articles'
     || value === 'article-grid'
     || value === 'location-grid'
+    || value === 'questurian-maps'
     || value === 'hotel-grid'
     || value === 'where-to-eat-drink'
     || value === 'things-to-do-listicles'
@@ -76,6 +83,12 @@ export async function normalizePageBlocksArrayInPlace(
 
     const blockRecord = block as Record<string, unknown>
 
+    const slotCount = resolveStoredSlotCountForBlockType(
+      String(blockRecord.blockType),
+      blockRecord.slotCount,
+    )
+    blockRecord.slotCount = slotCount
+
     if (blockRecord.blockType === 'location-grid' && !locationGridScope) {
       throw new Error(
         'Location Grid blocks are only available on the main homepage and city homepages.',
@@ -86,14 +99,14 @@ export async function normalizePageBlocksArrayInPlace(
       continue
     }
 
-    const slotCount =
-      blockRecord.blockType === 'featured-article'
-        ? HOMEPAGE_FEATURED_ARTICLE_SLOT_COUNT
-        : typeof blockRecord.slotCount === 'number' && blockRecord.slotCount >= 1
-          ? Math.trunc(blockRecord.slotCount)
-          : HOMEPAGE_FEATURED_CONTENT_SLOTS
-
-    if (blockRecord.blockType === 'location-grid') {
+    if (blockRecord.blockType === 'questurian-maps') {
+      const refs = normalizeQuesturianMapsInput(blockRecord.items)
+      await validateQuesturianMapsItems(req.payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount,
+      })
+      blockRecord.items = buildQuesturianMapsGlobalData(refs).items
+    } else if (blockRecord.blockType === 'location-grid') {
       const refs = normalizeLocationGridInput(blockRecord.items)
       await validateLocationGridItems(req.payload, refs, {
         scope: locationGridScope,

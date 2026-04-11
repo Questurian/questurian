@@ -68,8 +68,22 @@ export default function LocationGridLayout({
         }
 
         return (
-          <article key={`slot-${slotIndex + 1}`} className="hf-location-grid-card">
+          <article
+            key={`slot-${slotIndex + 1}`}
+            className="hf-location-grid-card hf-location-grid-card--filled"
+            onClick={() => onSlotClick(slotIndex)}
+          >
             <span className="hf-slot-card-num">{slotIndex + 1}</span>
+            {item.coverImageUrl ? (
+              <div className="hf-location-grid-media">
+                <img
+                  src={item.coverImageUrl}
+                  alt={item.coverImageAlt ?? item.title}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            ) : null}
             <div className="hf-location-grid-body">
               <div className="hf-location-grid-meta">
                 <span className="hf-level-tag">{item.level}</span>
@@ -83,7 +97,10 @@ export default function LocationGridLayout({
                 <button
                   type="button"
                   className="hf-btn-ghost"
-                  onClick={() => onSlotClick(slotIndex)}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onSlotClick(slotIndex)
+                  }}
                   style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', minHeight: '1.8rem' }}
                 >
                   Swap

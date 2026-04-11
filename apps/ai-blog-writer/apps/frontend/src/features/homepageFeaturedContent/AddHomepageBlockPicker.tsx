@@ -8,9 +8,19 @@ import {
 
 type AddBlockStep = 'type' | 'options'
 
+const SECTION_HEADING_MAX_LEN = 120
+
+function blockTypeSupportsSectionHeading(blockType: CuratedHomepageBlockType): boolean {
+  return blockType === 'featured-articles' || blockType === 'location-grid'
+}
+
 type Props = {
   isPending: boolean
-  onConfirm: (blockType: CuratedHomepageBlockType, slotCount: number) => void
+  onConfirm: (
+    blockType: CuratedHomepageBlockType,
+    slotCount: number,
+    sectionHeading?: string | null,
+  ) => void
   onCancel: () => void
   availableBlockTypes?: CuratedHomepageBlockType[]
 }
@@ -28,6 +38,7 @@ export default function AddHomepageBlockPicker({
     HOMEPAGE_PAGE_BLOCK_CONFIG[initialBlockType].defaultSlotCount,
   )
   const [customSlotCount, setCustomSlotCount] = useState('')
+  const [sectionHeadingDraft, setSectionHeadingDraft] = useState('')
 
   useEffect(() => {
     if (availableBlockTypes.includes(selectedBlockType)) return
@@ -36,6 +47,7 @@ export default function AddHomepageBlockPicker({
     setSelectedBlockType(nextBlockType)
     setSelectedSlotCount(HOMEPAGE_PAGE_BLOCK_CONFIG[nextBlockType].defaultSlotCount)
     setCustomSlotCount('')
+    setSectionHeadingDraft('')
     setStep('type')
   }, [availableBlockTypes, selectedBlockType])
 
@@ -53,12 +65,17 @@ export default function AddHomepageBlockPicker({
   function handleSelectBlockType(blockType: CuratedHomepageBlockType) {
     const nextConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
     if (nextConfig.minSlotCount === nextConfig.maxSlotCount) {
-      onConfirm(blockType, nextConfig.defaultSlotCount)
+      onConfirm(
+        blockType,
+        nextConfig.defaultSlotCount,
+        blockTypeSupportsSectionHeading(blockType) ? sectionHeadingDraft.trim() || undefined : undefined,
+      )
       return
     }
     setSelectedBlockType(blockType)
     setSelectedSlotCount(nextConfig.defaultSlotCount)
     setCustomSlotCount('')
+    setSectionHeadingDraft('')
     setStep('options')
   }
 
@@ -66,12 +83,17 @@ export default function AddHomepageBlockPicker({
     setStep('type')
     setSelectedSlotCount(HOMEPAGE_PAGE_BLOCK_CONFIG[selectedBlockType].defaultSlotCount)
     setCustomSlotCount('')
+    setSectionHeadingDraft('')
   }
 
   function handleConfirm() {
     if (!isSlotCountValid) return
 
-    onConfirm(selectedBlockType, resolvedSlotCount)
+    onConfirm(
+      selectedBlockType,
+      resolvedSlotCount,
+      blockTypeSupportsSectionHeading(selectedBlockType) ? sectionHeadingDraft.trim() || undefined : undefined,
+    )
   }
 
   if (step === 'type') {
@@ -132,6 +154,20 @@ export default function AddHomepageBlockPicker({
           onChange={(event) => setCustomSlotCount(event.target.value)}
         />
       </div>
+      {blockTypeSupportsSectionHeading(selectedBlockType) ? (
+        <label className="hf-add-block-section-heading">
+          <span className="hf-add-block-section-heading-label">Section heading (optional)</span>
+          <input
+            type="text"
+            className="hf-add-block-section-heading-input"
+            maxLength={SECTION_HEADING_MAX_LEN}
+            placeholder="Shown above this block on the site"
+            value={sectionHeadingDraft}
+            onChange={(event) => setSectionHeadingDraft(event.target.value)}
+            autoComplete="off"
+          />
+        </label>
+      ) : null}
       <div className="hf-add-block-actions">
         <button
           type="button"

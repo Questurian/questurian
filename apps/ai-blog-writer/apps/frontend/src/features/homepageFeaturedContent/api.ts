@@ -99,18 +99,53 @@ export async function updateMainHomepageBlock(
   })
 }
 
-export async function addMainHomepageBlock(
+export async function updateMainHomepageFeaturedSectionHeading(
   token: string,
+  blockId: string,
+  sectionHeading: string | null,
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, sectionHeading }),
+  })
+}
+
+/** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
+export async function convertMainHomepageFeaturedArticlesBlock(
+  token: string,
+  blockId: string,
   blockType: string,
   slotCount: number,
   mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
   return homepageFeaturedRequest(
+    withHomepageMode('/api/homepage-featured-content/blocks/convert', mode),
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify({ blockId, blockType, slotCount }),
+    },
+  )
+}
+
+export async function addMainHomepageBlock(
+  token: string,
+  blockType: string,
+  slotCount: number,
+  mode: HomepageEditorMode = 'explore',
+  sectionHeading?: string | null,
+): Promise<MainHomepageResponse> {
+  const body: Record<string, unknown> = { blockType, slotCount }
+  if (typeof sectionHeading === 'string' && sectionHeading.trim()) {
+    body.sectionHeading = sectionHeading.trim()
+  }
+  return homepageFeaturedRequest(
     withHomepageMode('/api/homepage-featured-content/blocks', mode),
     token,
     {
       method: 'POST',
-      body: JSON.stringify({ blockType, slotCount }),
+      body: JSON.stringify(body),
     },
   )
 }
@@ -126,6 +161,21 @@ export async function deleteMainHomepageBlock(
     {
       method: 'DELETE',
       body: JSON.stringify({ blockId }),
+    },
+  )
+}
+
+export async function reorderMainHomepageBlocks(
+  token: string,
+  orderedBlockIds: string[],
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(
+    withHomepageMode('/api/homepage-featured-content/blocks', mode),
+    token,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ orderedBlockIds }),
     },
   )
 }

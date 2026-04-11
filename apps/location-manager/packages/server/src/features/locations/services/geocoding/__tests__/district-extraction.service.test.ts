@@ -128,9 +128,15 @@ describe("DistrictExtractionService", () => {
     expect(mappings).toHaveProperty("PE");
     expect(mappings).toHaveProperty("CO");
     expect(mappings).toHaveProperty("BR");
+    expect(mappings).toHaveProperty("MX");
+    expect(mappings).toHaveProperty("AR");
+    expect(mappings).toHaveProperty("CL");
     expect(mappings["PE"]).toEqual([8]);
     expect(mappings["CO"]).toEqual([8]);
     expect(mappings["BR"]).toEqual([10, 8]);
+    expect(mappings["MX"]).toEqual([8, 10]);
+    expect(mappings["AR"]).toEqual([8, 10]);
+    expect(mappings["CL"]).toEqual([8, 10]);
   });
 
   test("setCountryMapping allows adding new country", () => {

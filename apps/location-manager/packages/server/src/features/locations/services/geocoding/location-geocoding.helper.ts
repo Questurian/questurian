@@ -2,7 +2,7 @@ import type { LocationCategory, Location, InstagramEmbed, Upload } from "../mode
 import type { BigDataCloudResponse, AdministrativeLevel } from "../integrations/clients/bigdatacloud-api.client";
 import { BadRequestError } from "@server/shared/core/errors/http-error";
 
-const APPROVED_COUNTRIES = ['PE', 'CO', 'BR'] as const;
+const APPROVED_COUNTRIES = ['PE', 'CO', 'BR', 'MX', 'AR', 'CL'] as const;
 
 export function generateGoogleMapsUrl(name: string, address: string): string {
   const query = `${name}, ${address}`;
@@ -451,7 +451,7 @@ async function reverseGeocodeWithRouting(
   if (routedCountryCode === 'BR') {
     return reverseGeocodeWithGeoapify(latitude, longitude, countryCode);
   } else {
-    // Default: Peru, Colombia, and any others
+    // Default: BigDataCloud for non-Brazil approved countries
     return reverseGeocodeWithBigDataCloud(latitude, longitude, countryCode);
   }
 }
@@ -541,7 +541,7 @@ export async function createFromMaps(
         const normalizedCode = coords.countryCode.toUpperCase();
         if (!APPROVED_COUNTRIES.includes(normalizedCode as any)) {
           throw new BadRequestError(
-            "Location not allowed. Only Peru, Colombia, and Brazil are supported."
+            "Location not allowed. Only Peru, Colombia, Brazil, Mexico, Argentina, and Chile are supported."
           );
         }
         entry.countryCode = coords.countryCode;

@@ -73,6 +73,12 @@ export function TaxonomyReview() {
     setModalOpen(true);
   };
 
+  const handleAddCorrectionRule = () => {
+    setSelectedLocationKey(undefined);
+    setDefaultPartType("neighborhood");
+    setModalOpen(true);
+  };
+
   // Cascading filter handlers
   const handleCountryChange = (country: string) => {
     setSelectedCountry(country);
@@ -191,11 +197,21 @@ export function TaxonomyReview() {
 
       {/* SECTION 2: TAXONOMY CORRECTIONS */}
       <div className="bg-card border border-border rounded-xl p-6 mb-6 mt-6">
-        <div className="mb-6">
-          <h2 className="text-[20px] font-bold mb-2 text-foreground">Taxonomy Corrections</h2>
-          <p className="text-muted-foreground">
-            Create rules to automatically fix malformed location data from geocoding APIs.
-          </p>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-[20px] font-bold mb-2 text-foreground">Taxonomy Corrections</h2>
+            <p className="text-muted-foreground">
+              Create rules to automatically fix malformed location data from geocoding APIs.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={handleAddCorrectionRule}
+            className="shrink-0 bg-foreground text-background hover:bg-foreground/90 border-0"
+            size="sm"
+          >
+            Add correction rule
+          </Button>
         </div>
 
         {/* Corrections Table */}
@@ -261,7 +277,7 @@ export function TaxonomyReview() {
           </div>
         ) : (
           <p className="text-center text-muted-foreground py-4">
-            No correction rules yet. Add one above to fix malformed location data.
+            No correction rules yet. Use Add correction rule, or create one from a pending row above.
           </p>
         )}
       </div>

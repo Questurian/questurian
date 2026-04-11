@@ -7,6 +7,7 @@ export type CuratedHomepageBlockType =
   | 'featured-articles'
   | 'article-grid'
   | 'location-grid'
+  | 'questurian-maps'
   | 'hotel-grid'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
@@ -16,6 +17,7 @@ export type ArticleCuratedHomepageBlockType =
   | 'featured-article'
   | 'featured-articles'
   | 'article-grid'
+  | 'questurian-maps'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
 
@@ -43,7 +45,7 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
   'featured-articles': {
     label: 'Featured Articles',
     description: 'A curated list of articles in fixed slots',
-    quickSlotCounts: [3, 4, 8, 9],
+    quickSlotCounts: [3, 4, 7, 8, 9],
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 9,
@@ -63,6 +65,14 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 4,
     minSlotCount: 4,
     maxSlotCount: 8,
+  },
+  'questurian-maps': {
+    label: 'Questurian Maps',
+    description: 'Six single-type listicles in a 2×3 maps grid with headline styling',
+    quickSlotCounts: [6],
+    defaultSlotCount: 6,
+    minSlotCount: 6,
+    maxSlotCount: 6,
   },
   'hotel-grid': {
     label: 'Hotel Grid',
@@ -103,66 +113,105 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'featured-articles',
   'article-grid',
   'location-grid',
+  'questurian-maps',
   'hotel-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
 ]
 
+/** Empty Featured Articles → these types (hotel/attraction grids omitted: different editor). Section title is kept. */
+export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBlockType[] = [
+  'featured-article',
+  'article-grid',
+  'location-grid',
+  'questurian-maps',
+  'where-to-eat-drink',
+  'things-to-do-listicles',
+]
+
 export type FeaturedArticleBlockResponse = {
   id: string
   blockType: 'featured-article'
   selection: HomepageFeaturedSelection
+  sectionHeading: string | null
 }
 
 export type FeaturedArticlesBlockResponse = {
   id: string
   blockType: 'featured-articles'
   selection: HomepageFeaturedSelection
+  /** Optional label for this block on the public homepage (e.g. section title). */
+  sectionHeading: string | null
 }
 
 export type ArticleGridBlockResponse = {
   id: string
   blockType: 'article-grid'
   selection: HomepageFeaturedSelection
+  sectionHeading: string | null
 }
 
 export type LocationGridBlockResponse = {
   id: string
   blockType: 'location-grid'
   selection: HomepageLocationGridSelection
+  /** Optional label for this block on the public homepage (e.g. section title). */
+  sectionHeading: string | null
+}
+
+export type QuesturianMapsBlockResponse = {
+  id: string
+  blockType: 'questurian-maps'
+  selection: HomepageFeaturedSelection
+  sectionHeading: string | null
 }
 
 export type HotelGridBlockResponse = {
   id: string
   blockType: 'hotel-grid'
   selection: HomepageHotelGridSelection
+  sectionHeading: string | null
 }
 
 export type WhereToEatDrinkBlockResponse = {
   id: string
   blockType: 'where-to-eat-drink'
   selection: HomepageFeaturedSelection
+  sectionHeading: string | null
 }
 
 export type ThingsToDoListiclesBlockResponse = {
   id: string
   blockType: 'things-to-do-listicles'
   selection: HomepageFeaturedSelection
+  sectionHeading: string | null
 }
 
 export type ThingsToDoAttractionsBlockResponse = {
   id: string
   blockType: 'things-to-do-attractions'
   selection: HomepageHotelGridSelection
+  sectionHeading: string | null
 }
 
 export type ArticleCuratedHomepageBlockResponse =
   | FeaturedArticleBlockResponse
   | FeaturedArticlesBlockResponse
   | ArticleGridBlockResponse
+  | QuesturianMapsBlockResponse
   | WhereToEatDrinkBlockResponse
   | ThingsToDoListiclesBlockResponse
+
+/** Block types edited with {@link CuratedHomepageBlockEditor}; empty blocks may convert to another type. */
+export const ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES: ArticleCuratedHomepageBlockType[] = [
+  'featured-article',
+  'featured-articles',
+  'article-grid',
+  'questurian-maps',
+  'where-to-eat-drink',
+  'things-to-do-listicles',
+]
 
 export type CuratedHomepageBlockResponse =
   | ArticleCuratedHomepageBlockResponse
@@ -185,6 +234,7 @@ export function isCuratedHomepageBlock(
     || block.blockType === 'featured-articles'
     || block.blockType === 'article-grid'
     || block.blockType === 'location-grid'
+    || block.blockType === 'questurian-maps'
     || block.blockType === 'hotel-grid'
     || block.blockType === 'where-to-eat-drink'
     || block.blockType === 'things-to-do-listicles'
@@ -198,6 +248,7 @@ export function isArticleCuratedHomepageBlock(
   return block.blockType === 'featured-article'
     || block.blockType === 'featured-articles'
     || block.blockType === 'article-grid'
+    || block.blockType === 'questurian-maps'
     || block.blockType === 'where-to-eat-drink'
     || block.blockType === 'things-to-do-listicles'
 }

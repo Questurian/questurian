@@ -144,19 +144,56 @@ export async function updateLocationHomepageBlock(
   })
 }
 
+export async function updateLocationHomepageFeaturedSectionHeading(
+  token: string,
+  id: number,
+  blockId: string,
+  sectionHeading: string | null,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, sectionHeading }),
+  })
+}
+
+/** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
+export async function convertLocationHomepageFeaturedArticlesBlock(
+  token: string,
+  homepageId: number,
+  blockId: string,
+  blockType: string,
+  slotCount: number,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${homepageId}/blocks/convert`, mode),
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify({ blockId, blockType, slotCount }),
+    },
+  )
+}
+
 export async function addLocationHomepageBlock(
   token: string,
   id: number,
   blockType: string,
   slotCount: number,
   mode: HomepageEditorMode = 'explore',
+  sectionHeading?: string | null,
 ): Promise<LocationHomepageResponse> {
+  const body: Record<string, unknown> = { blockType, slotCount }
+  if (typeof sectionHeading === 'string' && sectionHeading.trim()) {
+    body.sectionHeading = sectionHeading.trim()
+  }
   return locationHomepageRequest(
     withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
     token,
     {
       method: 'POST',
-      body: JSON.stringify({ blockType, slotCount }),
+      body: JSON.stringify(body),
     },
   )
 }
@@ -173,6 +210,22 @@ export async function deleteLocationHomepageBlock(
     {
       method: 'DELETE',
       body: JSON.stringify({ blockId }),
+    },
+  )
+}
+
+export async function reorderLocationHomepageBlocks(
+  token: string,
+  id: number,
+  orderedBlockIds: string[],
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
+    token,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ orderedBlockIds }),
     },
   )
 }

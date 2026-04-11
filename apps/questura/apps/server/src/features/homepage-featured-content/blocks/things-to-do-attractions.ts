@@ -1,5 +1,6 @@
 import type { Block } from 'payload'
 
+import { HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX } from '../featured-articles-section-heading'
 import {
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
@@ -20,6 +21,15 @@ export const ThingsToDoAttractionsBlock: Block = {
       max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
       admin: {
         description: 'How many attraction place cards this block contains.',
+      },
+    },
+    {
+      name: 'sectionHeading',
+      type: 'text',
+      required: false,
+      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
+      admin: {
+        description: 'Optional headline shown above this block on the public homepage.',
       },
     },
     {

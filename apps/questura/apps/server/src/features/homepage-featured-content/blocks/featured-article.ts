@@ -1,5 +1,6 @@
 import type { Block } from 'payload'
 
+import { HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX } from '../featured-articles-section-heading'
 import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 
 export const FeaturedArticleBlock: Block = {
@@ -19,6 +20,15 @@ export const FeaturedArticleBlock: Block = {
       admin: {
         readOnly: true,
         description: 'Single spotlight slot (fixed).',
+      },
+    },
+    {
+      name: 'sectionHeading',
+      type: 'text',
+      required: false,
+      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
+      admin: {
+        description: 'Optional headline shown above this block on the public homepage.',
       },
     },
     {

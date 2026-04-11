@@ -47,6 +47,8 @@ type Props = {
   setSearchValue: (v: string) => void
   setCollectionFilter: (v: HomepageFeaturedCollection | 'all') => void
   setCandidatePage: (v: number | ((prev: number) => number)) => void
+  /** Hide the content-type dropdown (e.g. Questurian Maps is listicle-only). */
+  hideCollectionSelect?: boolean
 }
 
 export function ArticlePickerModal({
@@ -62,6 +64,7 @@ export function ArticlePickerModal({
   setSearchValue,
   setCollectionFilter,
   setCandidatePage,
+  hideCollectionSelect = false,
 }: Props) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -107,16 +110,18 @@ export function ArticlePickerModal({
               // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
             />
-            <select
-              value={collectionFilter}
-              onChange={(e) => setCollectionFilter(e.target.value as typeof collectionFilter)}
-              style={{ marginLeft: 'auto', flexShrink: 0 }}
-            >
-              <option value="all">All types</option>
-              <option value="articles">Articles</option>
-              <option value="single-type-listicles">Listicles</option>
-              <option value="listicle-itineraries">Itineraries</option>
-            </select>
+            {!hideCollectionSelect ? (
+              <select
+                value={collectionFilter}
+                onChange={(e) => setCollectionFilter(e.target.value as typeof collectionFilter)}
+                style={{ marginLeft: 'auto', flexShrink: 0 }}
+              >
+                <option value="all">All types</option>
+                <option value="articles">Articles</option>
+                <option value="single-type-listicles">Listicles</option>
+                <option value="listicle-itineraries">Itineraries</option>
+              </select>
+            ) : null}
           </div>
         </div>
 

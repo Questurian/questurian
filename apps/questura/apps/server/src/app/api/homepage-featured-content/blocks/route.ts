@@ -11,9 +11,12 @@ import {
   getHotelGridSelectionFromItems,
   getHomepageFeaturedSelectionFromItems,
   getLocationGridSelectionFromItems,
+  getQuesturianMapsSelectionFromItems,
   getThingsToDoAttractionsSelectionFromItems,
   getThingsToDoListiclesSelectionFromItems,
   getWhereToEatDrinkSelectionFromItems,
+  curatedBlockApiPayload,
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
@@ -25,10 +28,13 @@ import {
   LOCATION_GRID_MAX_SLOTS,
   LOCATION_GRID_MIN_SLOTS,
   MAIN_LOCATION_GRID_SCOPE,
+  resolveStoredSlotCountForBlockType,
 } from '@/features/homepage-featured-content'
+import { reorderBlocksByIds } from '@/features/homepage-featured-content/reorder-blocks'
 import {
   HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
   getPageBlocksFieldName,
+  HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
   mergeHomepageBlockFields,
   parseHomepageEditorModeParam,
 } from '@/features/homepage-featured-content/types'
@@ -41,6 +47,7 @@ type RawBlock = {
   id: string
   blockType: string
   slotCount?: number
+  sectionHeading?: string | null
   items?: unknown
 }
 
@@ -55,6 +62,7 @@ const SUPPORTED_BLOCK_TYPES = [
   'featured-articles',
   'article-grid',
   'location-grid',
+  'questurian-maps',
   'hotel-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
@@ -66,6 +74,10 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
   'featured-articles': { min: 3, max: 9 },
   'article-grid': { min: 3, max: 5 },
   'location-grid': { min: LOCATION_GRID_MIN_SLOTS, max: LOCATION_GRID_MAX_SLOTS },
+  'questurian-maps': {
+    min: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
+    max: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
+  },
   'hotel-grid': { min: HOMEPAGE_HOTEL_GRID_MIN_SLOTS, max: HOMEPAGE_HOTEL_GRID_MAX_SLOTS },
   'where-to-eat-drink': {
     min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
@@ -140,7 +152,18 @@ export async function POST(req: NextRequest) {
     })) as MainHomepageGlobalDoc
 
     const existingBlocks: RawBlock[] = globalDoc[field] ?? []
-    const newBlock = { blockType: blockType as SupportedBlockType, slotCount, items: [] }
+    const newBlock: Record<string, unknown> = {
+      blockType: blockType as SupportedBlockType,
+      slotCount,
+      items: [],
+    }
+    if (blockType === 'featured-articles' || blockType === 'location-grid') {
+      const sh = body?.sectionHeading
+      if (typeof sh === 'string') {
+        const t = sh.trim().slice(0, HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX)
+        if (t) newBlock.sectionHeading = t
+      }
+    }
     const mergeData = mergeHomepageBlockFields(globalDoc, field, [...existingBlocks, newBlock])
 
     const updated = (await payload.updateGlobal({
@@ -153,31 +176,36 @@ export async function POST(req: NextRequest) {
     const resolvedBlocks = await Promise.all(
       (updated[field] ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
+          const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
             ? await getLocationGridSelectionFromItems(payload, block.items, {
-                totalSlots: block.slotCount,
+                totalSlots: slotCount,
                 scope: MAIN_LOCATION_GRID_SCOPE,
               })
-            : block.blockType === 'hotel-grid'
+            : block.blockType === 'questurian-maps'
+              ? await getQuesturianMapsSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
+              : block.blockType === 'hotel-grid'
               ? await getHotelGridSelectionFromItems(payload, block.items, {
-                  totalSlots: block.slotCount,
+                  totalSlots: slotCount,
                 })
               : block.blockType === 'where-to-eat-drink'
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
-                    totalSlots: block.slotCount,
+                    totalSlots: slotCount,
                   })
                 : block.blockType === 'things-to-do-listicles'
                   ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
-                      totalSlots: block.slotCount,
+                      totalSlots: slotCount,
                     })
                   : block.blockType === 'things-to-do-attractions'
                     ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
-                        totalSlots: block.slotCount,
+                        totalSlots: slotCount,
                       })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                  totalSlots: block.slotCount,
+                  totalSlots: slotCount,
                 })
-          return { id: block.id, blockType: block.blockType, selection }
+          return curatedBlockApiPayload(block, selection)
         }
         return block
       }),
@@ -249,31 +277,36 @@ export async function DELETE(req: NextRequest) {
     const resolvedBlocks = await Promise.all(
       (updated[field] ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
+          const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
             ? await getLocationGridSelectionFromItems(payload, block.items, {
-                totalSlots: block.slotCount,
+                totalSlots: slotCount,
                 scope: MAIN_LOCATION_GRID_SCOPE,
               })
-            : block.blockType === 'hotel-grid'
+            : block.blockType === 'questurian-maps'
+              ? await getQuesturianMapsSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
+              : block.blockType === 'hotel-grid'
               ? await getHotelGridSelectionFromItems(payload, block.items, {
-                  totalSlots: block.slotCount,
+                  totalSlots: slotCount,
                 })
               : block.blockType === 'where-to-eat-drink'
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
-                    totalSlots: block.slotCount,
+                    totalSlots: slotCount,
                   })
                 : block.blockType === 'things-to-do-listicles'
                   ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
-                      totalSlots: block.slotCount,
+                      totalSlots: slotCount,
                     })
                   : block.blockType === 'things-to-do-attractions'
                     ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
-                        totalSlots: block.slotCount,
+                        totalSlots: slotCount,
                       })
               : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                  totalSlots: block.slotCount,
+                  totalSlots: slotCount,
                 })
-          return { id: block.id, blockType: block.blockType, selection }
+          return curatedBlockApiPayload(block, selection)
         }
         return block
       }),
@@ -283,6 +316,95 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to delete block from main homepage.') },
+      { status: 400, headers },
+    )
+  }
+}
+
+// PATCH /api/homepage-featured-content/blocks — reorder blocks
+// Body: { orderedBlockIds: string[] }
+export async function PATCH(req: NextRequest) {
+  const headers = getCorsHeaders(req)
+
+  try {
+    const authResult = await authenticateRequest(req, {
+      requireAuth: true,
+      allowedRoles: ['admin', 'editor'],
+    })
+
+    if (authResult.error) {
+      return NextResponse.json({ message: authResult.error }, { status: authResult.status, headers })
+    }
+
+    const body = await req.json().catch(() => null)
+    const payload = await getPayload({ config })
+    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
+    const field = getPageBlocksFieldName(mode)
+
+    const globalDoc = (await payload.findGlobal({
+      slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
+      depth: 0,
+      overrideAccess: true,
+    })) as MainHomepageGlobalDoc
+
+    const existingBlocks: RawBlock[] = globalDoc[field] ?? []
+    const reorderResult = reorderBlocksByIds(existingBlocks, body?.orderedBlockIds)
+
+    if (!reorderResult.ok) {
+      return NextResponse.json({ message: reorderResult.message }, { status: 400, headers })
+    }
+
+    const mergeData = mergeHomepageBlockFields(globalDoc, field, reorderResult.reordered)
+
+    const updated = (await payload.updateGlobal({
+      slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
+      data: mergeData as any,
+      depth: 1,
+      overrideAccess: true,
+    })) as MainHomepageGlobalDoc
+
+    const resolvedBlocks = await Promise.all(
+      (updated[field] ?? []).map(async (block) => {
+        if (isCuratedBlockType(block.blockType)) {
+          const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+          const selection = block.blockType === 'location-grid'
+            ? await getLocationGridSelectionFromItems(payload, block.items, {
+                totalSlots: slotCount,
+                scope: MAIN_LOCATION_GRID_SCOPE,
+              })
+            : block.blockType === 'questurian-maps'
+              ? await getQuesturianMapsSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
+              : block.blockType === 'hotel-grid'
+              ? await getHotelGridSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
+              : block.blockType === 'where-to-eat-drink'
+                ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
+                    totalSlots: slotCount,
+                  })
+                : block.blockType === 'things-to-do-listicles'
+                  ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
+                      totalSlots: slotCount,
+                    })
+                  : block.blockType === 'things-to-do-attractions'
+                    ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
+                        totalSlots: slotCount,
+                      })
+              : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
+          return curatedBlockApiPayload(block, selection)
+        }
+        return block
+      }),
+    )
+
+    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { headers })
+  } catch (error) {
+    return NextResponse.json(
+      { message: getErrorMessage(error, 'Failed to reorder main homepage blocks.') },
       { status: 400, headers },
     )
   }

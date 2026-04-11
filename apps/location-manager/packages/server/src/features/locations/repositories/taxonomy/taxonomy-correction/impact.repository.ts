@@ -1,10 +1,21 @@
 import { getDb } from "@server/shared/db/client";
-import { buildTaxonomyLikePattern } from "../location-hierarchy/bulk.utils";
+import {
+  buildTaxonomyLikePattern,
+  previewCorrectedLocationKey,
+  threeSegmentLocationKeySqlPredicate,
+} from "../location-hierarchy/bulk.utils";
 import type {
   TaxonomyPartType,
   AffectedPendingTaxonomyEntry,
   AffectedLocationSample,
 } from "./types";
+
+function neighborhoodWhereExtra(partType: TaxonomyPartType): string {
+  if (partType === "neighborhood") {
+    return ` AND ${threeSegmentLocationKeySqlPredicate()}`;
+  }
+  return "";
+}
 
 export function findAffectedPendingTaxonomy(
   incorrectValue: string,
@@ -12,11 +23,12 @@ export function findAffectedPendingTaxonomy(
 ): AffectedPendingTaxonomyEntry[] {
   const db = getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
+  const extra = neighborhoodWhereExtra(partType);
 
   const query = db.query(`
     SELECT locationKey, country, city, neighborhood
     FROM location_taxonomy
-    WHERE status = 'pending' AND locationKey LIKE $pattern
+    WHERE status = 'pending' AND locationKey LIKE $pattern${extra}
     ORDER BY created_at ASC
     LIMIT 5
   `);
@@ -30,11 +42,12 @@ export function countAffectedLocations(
 ): number {
   const db = getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
+  const extra = neighborhoodWhereExtra(partType);
 
   const query = db.query(`
     SELECT COUNT(*) as count
     FROM entities
-    WHERE locationKey LIKE $pattern
+    WHERE locationKey LIKE $pattern${extra}
   `);
 
   const result = query.get({ $pattern: likePattern }) as { count: number } | null;
@@ -48,11 +61,12 @@ export function findAffectedLocationSamples(
 ): AffectedLocationSample[] {
   const db = getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
+  const extra = neighborhoodWhereExtra(partType);
 
   const query = db.query(`
     SELECT id, name, locationKey
     FROM entities
-    WHERE locationKey LIKE $pattern
+    WHERE locationKey LIKE $pattern${extra}
     LIMIT 5
   `);
 
@@ -66,6 +80,11 @@ export function findAffectedLocationSamples(
     id: row.id,
     name: row.name,
     currentKey: row.locationKey,
-    correctedKey: row.locationKey.replace(incorrectValue, correctValue),
+    correctedKey: previewCorrectedLocationKey(
+      row.locationKey,
+      incorrectValue,
+      correctValue,
+      partType
+    ),
   }));
 }

@@ -108,6 +108,16 @@ export function LocationGridPickerModal({
                   key={candidate.id}
                   className={`hf-location-picker-row${isUsedElsewhere ? ' used' : ''}`}
                 >
+                  <div className="hf-location-picker-thumb">
+                    {candidate.coverImageUrl ? (
+                      <img
+                        src={candidate.coverImageUrl}
+                        alt={candidate.coverImageAlt ?? candidate.title}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : null}
+                  </div>
                   <div className="hf-location-picker-body">
                     <p className="hf-location-picker-title">{candidate.title}</p>
                     <div className="hf-location-picker-meta">

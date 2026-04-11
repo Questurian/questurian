@@ -9,7 +9,9 @@ import FeaturedArticleSpotlightLayout from './FeaturedArticleSpotlightLayout'
 import FeaturedArticlesLayout3 from './FeaturedArticlesLayout3'
 import FeaturedArticlesLayout4 from './FeaturedArticlesLayout4'
 import FeaturedArticlesLayout8 from './FeaturedArticlesLayout8'
+import FeaturedArticlesLayout7 from './FeaturedArticlesLayout7'
 import FeaturedArticlesLayout9 from './FeaturedArticlesLayout9'
+import QuesturianMapsArticleLayout from './QuesturianMapsArticleLayout'
 import type { ArticleCuratedHomepageBlockType } from './pageBlocks'
 
 function getInvalidMessage(item: HomepageFeaturedInvalidItem): string {
@@ -41,6 +43,8 @@ type Props = {
   headerActions?: ReactNode
   /** When true, renders only the editor grid without the page wrapper or hero. */
   compact?: boolean
+  /** Hide the inline Discard/Save row (e.g. when Save lives in the block header). */
+  suppressToolbar?: boolean
   variant?: ArticleCuratedHomepageBlockType
 }
 
@@ -50,6 +54,7 @@ export default function HomepageFeaturedSlotEditor({
   slotEditorState,
   headerActions,
   compact = false,
+  suppressToolbar = false,
   variant = 'featured-articles',
 }: Props) {
   const {
@@ -66,12 +71,12 @@ export default function HomepageFeaturedSlotEditor({
     invalidItemsBySlot,
     resultMessage,
     searchValue,
-    collectionFilter,
+    effectiveCollectionFilter,
+    lockedCollectionFilter,
     candidatePage,
     handleCandidatePick,
     handleMove,
     handleRemove,
-    handleReset,
     handleSave,
     setSearchValue,
     setCollectionFilter,
@@ -125,33 +130,35 @@ export default function HomepageFeaturedSlotEditor({
         </div>
       )}
 
-      {/* ── Controls row ───────────────────────────────────── */}
-      <div className="hf-slot-controls">
-        <span className="hf-panel-desc">
-          {slots.filter(Boolean).length} / {selectionQuery.data?.totalSlots ?? slots.length} slots filled
-        </span>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <button
-            type="button"
-            className="hf-btn-ghost"
-            onClick={handleReset}
-            disabled={!hasUnsavedChanges}
-          >
-            Discard
-          </button>
-          <button
-            type="button"
-            className="hf-btn-primary"
-            onClick={handleSave}
-            disabled={saveDisabled}
-          >
-            {saveMutation.isPending ? 'Saving…' : 'Save'}
-          </button>
+      {/* ── Controls row (full-page only unless suppressed) ───────────── */}
+      {!(compact && suppressToolbar) ? (
+        <div className="hf-slot-controls">
+          <span className="hf-panel-desc">
+            {slots.filter(Boolean).length} / {selectionQuery.data?.totalSlots ?? slots.length} slots filled
+          </span>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <button
+              type="button"
+              className="hf-btn-primary"
+              onClick={handleSave}
+              disabled={saveDisabled}
+            >
+              {saveMutation.isPending ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* ── Slot grid / Layout ─────────────────────────────── */}
-      {variant === 'featured-article' ? (
+      {variant === 'questurian-maps' ? (
+        <QuesturianMapsArticleLayout
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+          onMove={handleMove}
+          onRemove={handleRemove}
+        />
+      ) : variant === 'featured-article' ? (
         <FeaturedArticleSpotlightLayout
           item={slots[0] ?? null}
           invalidItem={invalidItemsBySlot.get(1)}
@@ -168,6 +175,12 @@ export default function HomepageFeaturedSlotEditor({
         />
       ) : totalSlots === 9 ? (
         <FeaturedArticlesLayout9
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+        />
+      ) : totalSlots === 7 ? (
+        <FeaturedArticlesLayout7
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
@@ -296,7 +309,7 @@ export default function HomepageFeaturedSlotEditor({
           slotIndex={pickerSlotIndex}
           candidatesQuery={candidatesQuery}
           searchValue={searchValue}
-          collectionFilter={collectionFilter}
+          collectionFilter={effectiveCollectionFilter}
           candidatePage={candidatePage}
           usedKeys={usedKeys}
           currentSlotKey={currentSlotKey}
@@ -305,6 +318,7 @@ export default function HomepageFeaturedSlotEditor({
           setSearchValue={setSearchValue}
           setCollectionFilter={setCollectionFilter}
           setCandidatePage={setCandidatePage}
+          hideCollectionSelect={Boolean(lockedCollectionFilter)}
         />
       )}
     </>

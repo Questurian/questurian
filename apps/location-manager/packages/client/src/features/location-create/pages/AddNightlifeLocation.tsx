@@ -1059,6 +1059,9 @@ export function AddNightlifeLocation() {
                 <option value="PE">Peru (PE)</option>
                 <option value="CO">Colombia (CO)</option>
                 <option value="BR">Brazil (BR)</option>
+                <option value="MX">Mexico (MX)</option>
+                <option value="AR">Argentina (AR)</option>
+                <option value="CL">Chile (CL)</option>
               </select>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -13,6 +13,7 @@ type AdminLevel = number;
  * - Peru: Districts at adminLevel 8
  * - Colombia: Districts at adminLevel 8
  * - Brazil: Tourism zones from informative array, fallback to adminLevel 8
+ * - Mexico, Argentina, Chile: Neighborhood-style levels (8, then 10 fallback)
  */
 export class DistrictExtractionService {
   private readonly adminLevelMapping: Map<CountryCode, AdminLevel[]>;
@@ -43,7 +44,9 @@ export class DistrictExtractionService {
       ["PE", [8]], // Peru: adminLevel 8 (districts like Miraflores, Barranco)
       ["CO", [8]], // Colombia: adminLevel 8 (districts like Chapinero, Santa Fe)
       ["BR", [10, 8]], // Brazil: adminLevel 10 (bairros like Grajau), fallback to 8 (municipality)
-      // Add more countries as needed
+      ["MX", [8, 10]], // Mexico: colonia / neighborhood levels vary by metro
+      ["AR", [8, 10]], // Argentina: barrio / comuna levels vary by city
+      ["CL", [8, 10]], // Chile: comuna / barrio levels vary by city
     ]);
   }
 

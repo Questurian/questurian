@@ -112,6 +112,7 @@ describe('location grid service', () => {
     expect(payload.find).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'locations',
+        depth: 2,
         sort: 'locationKey',
         overrideAccess: true,
         where: {
@@ -154,5 +155,48 @@ describe('location grid service', () => {
         },
       }),
     )
+  })
+
+  it('includes cover image URL when guide media cover is populated', async () => {
+    const payload = createPayloadMock()
+    payload.find.mockResolvedValue({
+      docs: [
+        {
+          id: 1,
+          level: 'city',
+          locationKey: 'usa|austin',
+          parentKey: 'usa',
+          countryName: 'United States',
+          cityName: 'Austin',
+          neighborhoodName: null,
+          updatedAt: '2026-04-09T10:00:00.000Z',
+          guide: {
+            media: {
+              coverImage: {
+                alt_text: 'Austin skyline',
+                variants: {
+                  thumbnail: {
+                    url: 'https://cdn.example.com/austin-thumb.jpg',
+                    alt_text: 'Downtown',
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+      totalDocs: 1,
+      totalPages: 1,
+    })
+
+    const response = await searchLocationGridCandidates(payload as never, {
+      query: '',
+      page: 1,
+      limit: 20,
+      scope: MAIN_LOCATION_GRID_SCOPE,
+    })
+
+    expect(response.docs[0]?.coverImageUrl).toBe('https://cdn.example.com/austin-thumb.jpg')
+    expect(response.docs[0]?.coverImageAlt).toBe('Downtown')
   })
 })
