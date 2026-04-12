@@ -1,4 +1,8 @@
+import { useMemo, useState } from 'react'
+
+import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
+import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
 import HotelGridLayout from './HotelGridLayout'
 import { HotelGridPickerModal } from './HotelGridPickerModal'
 import type {
@@ -8,16 +12,19 @@ import type {
 } from './hotelGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
-  type HotelGridBlockResponse,
+  type CuratedHomepageBlockType,
+  type HotelOrAttractionGridBlockResponse,
 } from './pageBlocks'
 import {
   useHomepageHotelGridSlots,
   type HotelGridCandidateParams,
 } from './useHomepageHotelGridSlots'
 
-function getInvalidMessage(count: number): string {
-  if (count === 1) return 'One saved hotel is no longer eligible. Replace it before saving again.'
-  return `${count} saved hotels are no longer eligible. Replace them before saving.`
+function getInvalidMessage(blockType: HotelOrAttractionGridBlockResponse['blockType'], count: number): string {
+  const noun = blockType === 'things-to-do-attractions' ? 'place' : 'hotel'
+  const plural = blockType === 'things-to-do-attractions' ? 'places' : 'hotels'
+  if (count === 1) return `One saved ${noun} is no longer eligible. Replace it before saving again.`
+  return `${count} saved ${plural} are no longer eligible. Replace them before saving.`
 }
 
 export default function HotelGridBlockEditor({
@@ -28,11 +35,13 @@ export default function HotelGridBlockEditor({
   selectionQueryKey,
   saveSelection,
   fetchCandidates,
+  convertBlockTargets,
+  onConvertEmptyBlock,
   onDeleteBlock,
   isDeletingBlock,
   deleteError,
 }: {
-  block: HotelGridBlockResponse
+  block: HotelOrAttractionGridBlockResponse
   blockIndex: number
   token: string | null
   canManage: boolean
@@ -42,10 +51,17 @@ export default function HotelGridBlockEditor({
     token: string,
     params: HotelGridCandidateParams,
   ) => Promise<HomepageHotelGridCandidatesResponse>
+  convertBlockTargets?: CuratedHomepageBlockType[]
+  onConvertEmptyBlock?: (
+    token: string,
+    blockType: CuratedHomepageBlockType,
+    slotCount: number,
+  ) => Promise<void>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
   deleteError: string | null
 }) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const slotEditorState = useHomepageHotelGridSlots({
     token,
     canManage,
@@ -60,10 +76,10 @@ export default function HotelGridBlockEditor({
     candidatesQuery,
     saveMutation,
     slots,
+    savedSlots,
     savedInvalidItems,
     pickerSlotIndex,
     usedIds,
-    hasUnsavedChanges,
     saveDisabled,
     invalidItemsBySlot,
     resultMessage,
@@ -72,13 +88,25 @@ export default function HotelGridBlockEditor({
     handleCandidatePick,
     handleMove,
     handleRemove,
-    handleReset,
     handleSave,
     setSearchValue,
     setCandidatePage,
     setPickerSlotIndex,
     draftSlots,
+    hasUnsavedChanges,
   } = slotEditorState
+
+  const convertTargetOptions = useMemo(
+    () => (convertBlockTargets ?? []).filter((t) => t !== block.blockType),
+    [convertBlockTargets, block.blockType],
+  )
+
+  const canConvertEmptyBlock =
+    Boolean(onConvertEmptyBlock)
+    && convertTargetOptions.length > 0
+    && !hasUnsavedChanges
+    && savedSlots.every((s) => !s)
+    && savedInvalidItems.length === 0
 
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
 
@@ -87,7 +115,7 @@ export default function HotelGridBlockEditor({
       <div className="hf-block-section">
         <div className="hf-state-screen">
           <h2>Loading…</h2>
-          <p>Fetching saved hotel grid.</p>
+          <p>Fetching saved {blockConfig.label.toLowerCase()}.</p>
         </div>
       </div>
     )
@@ -98,7 +126,11 @@ export default function HotelGridBlockEditor({
       <div className="hf-block-section">
         <div className="hf-state-screen">
           <h2>{blockConfig.label}</h2>
-          <p>{selectionQuery.error instanceof Error ? selectionQuery.error.message : 'Failed to load hotel grid.'}</p>
+          <p>
+            {selectionQuery.error instanceof Error
+              ? selectionQuery.error.message
+              : `Failed to load ${blockConfig.label.toLowerCase()}.`}
+          </p>
         </div>
       </div>
     )
@@ -114,32 +146,79 @@ export default function HotelGridBlockEditor({
           <span>Block {blockIndex + 1}</span>
           <span className="hf-block-type-tag">{blockConfig.label} · {block.selection.totalSlots} slots</span>
         </div>
-        <HomepageBlockDeleteTrigger
-          blockId={block.id}
-          blockIndex={blockIndex}
-          blockLabel={blockConfig.label}
-          onDeleteBlock={onDeleteBlock}
-          isDeletingBlock={isDeletingBlock}
-          deleteError={deleteError}
-        />
+        <div className="hf-block-header-actions">
+          <span className="hf-block-slot-meta" aria-live="polite">
+            {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+          </span>
+          <button
+            type="button"
+            className="hf-btn-icon hf-block-settings-gear"
+            title="Block settings — change type when empty"
+            aria-label="Block settings"
+            disabled={!token}
+            onClick={() => setSettingsOpen(true)}
+          >
+            ⚙
+          </button>
+          <button
+            type="button"
+            className="hf-btn-primary hf-block-header-save"
+            onClick={handleSave}
+            disabled={saveDisabled}
+          >
+            {saveMutation.isPending ? 'Saving…' : 'Save'}
+          </button>
+          <HomepageBlockDeleteTrigger
+            blockId={block.id}
+            blockIndex={blockIndex}
+            blockLabel={blockConfig.label}
+            onDeleteBlock={onDeleteBlock}
+            isDeletingBlock={isDeletingBlock}
+            deleteError={deleteError}
+          />
+        </div>
       </div>
+
+      <HomepageBlockSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        title="Block settings"
+      >
+        <p
+          className="hf-block-slot-meta hf-block-settings-slot-summary"
+          aria-live="polite"
+        >
+          {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+        </p>
+        <HomepageBlockConvertSection
+          blockId={block.id}
+          token={token}
+          convertTargetOptions={convertTargetOptions}
+          canConvert={canConvertEmptyBlock}
+          onConvert={async (tok, blockType, slotCount) => {
+            if (!onConvertEmptyBlock) return
+            await onConvertEmptyBlock(tok, blockType, slotCount)
+          }}
+          onConverted={() => setSettingsOpen(false)}
+        />
+        {!canConvertEmptyBlock ? (
+          <p className="hf-block-settings-hint">
+            To change type, clear every slot and save (or discard unsaved edits) so there are no saved
+            picks.
+          </p>
+        ) : null}
+      </HomepageBlockSettingsModal>
+
       <div className="hf-block-content">
         <p className="hf-panel-desc">{blockConfig.description}.</p>
-        {savedInvalidItems.length > 0 && <div className="hf-banner warning">{getInvalidMessage(savedInvalidItems.length)}</div>}
+        {savedInvalidItems.length > 0 && (
+          <div className="hf-banner warning">
+            {getInvalidMessage(block.blockType, savedInvalidItems.length)}
+          </div>
+        )}
         {resultMessage && (
           <div className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}>{resultMessage}</div>
         )}
-        <div className="hf-slot-controls">
-          <span className="hf-panel-desc">{slots.filter(Boolean).length} / {block.selection.totalSlots} slots filled</span>
-          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-            <button type="button" className="hf-btn-ghost" onClick={handleReset} disabled={!hasUnsavedChanges}>
-              Discard
-            </button>
-            <button type="button" className="hf-btn-primary" onClick={handleSave} disabled={saveDisabled}>
-              {saveMutation.isPending ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
         <HotelGridLayout
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}

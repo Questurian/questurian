@@ -1,6 +1,7 @@
 import { PAYLOAD_API_URL } from '../staging/api/client/config'
 import { parseErrorResponse } from '../staging/api/client/error-parser'
 import type {
+  HomepageEditorMode,
   HomepageFeaturedCandidatesResponse,
   HomepageFeaturedCollection,
   HomepageFeaturedItemRef,
@@ -16,6 +17,11 @@ import type {
 import type { PageBlockResponse } from './pageBlocks'
 
 const LOCATION_HOMEPAGE_REQUEST_TIMEOUT_MS = 12000
+
+function withHomepageMode(path: string, mode: HomepageEditorMode): string {
+  const sep = path.includes('?') ? '&' : '?'
+  return `${path}${sep}mode=${encodeURIComponent(mode)}`
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +48,7 @@ export type LocationHomepageResponse = {
   isEnabled: boolean
   location: LocationRef | null
   pageBlocks: PageBlockResponse[]
+  mode?: HomepageEditorMode
 }
 
 type HomepageBlockSaveItem =
@@ -119,8 +126,9 @@ export async function createLocationHomepage(
 export async function fetchLocationHomepage(
   token: string,
   id: number,
+  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${id}`, token)
+  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token)
 }
 
 export async function updateLocationHomepageBlock(
@@ -128,11 +136,44 @@ export async function updateLocationHomepageBlock(
   id: number,
   blockId: string,
   items: HomepageBlockSaveItem[],
+  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${id}`, token, {
+  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, items }),
   })
+}
+
+export async function updateLocationHomepageFeaturedSectionHeading(
+  token: string,
+  id: number,
+  blockId: string,
+  sectionHeading: string | null,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, sectionHeading }),
+  })
+}
+
+/** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
+export async function convertLocationHomepageFeaturedArticlesBlock(
+  token: string,
+  homepageId: number,
+  blockId: string,
+  blockType: string,
+  slotCount: number,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${homepageId}/blocks/convert`, mode),
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify({ blockId, blockType, slotCount }),
+    },
+  )
 }
 
 export async function addLocationHomepageBlock(
@@ -140,22 +181,53 @@ export async function addLocationHomepageBlock(
   id: number,
   blockType: string,
   slotCount: number,
+  mode: HomepageEditorMode = 'explore',
+  sectionHeading?: string | null,
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
-    method: 'POST',
-    body: JSON.stringify({ blockType, slotCount }),
-  })
+  const body: Record<string, unknown> = { blockType, slotCount }
+  if (typeof sectionHeading === 'string' && sectionHeading.trim()) {
+    body.sectionHeading = sectionHeading.trim()
+  }
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  )
 }
 
 export async function deleteLocationHomepageBlock(
   token: string,
   id: number,
   blockId: string,
+  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
-    method: 'DELETE',
-    body: JSON.stringify({ blockId }),
-  })
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
+    token,
+    {
+      method: 'DELETE',
+      body: JSON.stringify({ blockId }),
+    },
+  )
+}
+
+export async function reorderLocationHomepageBlocks(
+  token: string,
+  id: number,
+  orderedBlockIds: string[],
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
+    token,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ orderedBlockIds }),
+    },
+  )
 }
 
 export async function deleteLocationHomepage(token: string, id: number): Promise<void> {
@@ -294,6 +366,66 @@ export async function fetchLocationHomepageWhereToEatDrinkCandidates(
   const query = searchParams.toString()
   return locationHomepageRequest(
     `/api/location-homepages/${id}/where-to-eat-drink-candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}
+
+export async function fetchLocationHomepageThingsToDoListicleCandidates(
+  token: string,
+  id: number,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageFeaturedCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return locationHomepageRequest(
+    `/api/location-homepages/${id}/things-to-do-listicle-candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}
+
+export async function fetchLocationHomepageThingsToDoAttractionCandidates(
+  token: string,
+  id: number,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageHotelGridCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return locationHomepageRequest(
+    `/api/location-homepages/${id}/things-to-do-attraction-candidates${query ? `?${query}` : ''}`,
     token,
   )
 }

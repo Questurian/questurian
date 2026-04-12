@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { getMediaSetPreviewAsset } from '@/features/media/lib/media-set-preview'
 import { locationIdentitySelect } from '@/shared/location/constants'
 
 export const LOCATION_GRID_MIN_SLOTS = 4
@@ -31,6 +32,9 @@ export type LocationGridCandidate = LocationGridItemRef & {
   title: string
   subtitle: string | null
   updatedAt: string | null
+  /** Resolved from guide.media.coverImage (media-set) when present */
+  coverImageUrl: string | null
+  coverImageAlt: string | null
 }
 
 export type LocationGridInvalidReason =
@@ -69,6 +73,58 @@ type LocationDocLike = {
   cityName?: unknown
   neighborhoodName?: unknown
   updatedAt?: unknown
+  guide?: unknown
+}
+
+/** Select identity + cover image relationship (populated at depth ≥ 2). */
+const locationGridSelect = {
+  ...locationIdentitySelect,
+  updatedAt: true,
+  guide: {
+    media: {
+      coverImage: true,
+    },
+  },
+} as const
+
+function extractCoverImageFields(doc: LocationDocLike): {
+  coverImageUrl: string | null
+  coverImageAlt: string | null
+} {
+  const guide = doc.guide
+  if (!guide || typeof guide !== 'object') {
+    return { coverImageUrl: null, coverImageAlt: null }
+  }
+
+  const media = (guide as { media?: unknown }).media
+  if (!media || typeof media !== 'object') {
+    return { coverImageUrl: null, coverImageAlt: null }
+  }
+
+  const coverImage = (media as { coverImage?: unknown }).coverImage
+  if (coverImage === null || coverImage === undefined) {
+    return { coverImageUrl: null, coverImageAlt: null }
+  }
+
+  if (typeof coverImage === 'object') {
+    const setDoc = coverImage as { alt_text?: string; title?: string }
+    const asset = getMediaSetPreviewAsset(coverImage)
+    if (asset?.url && typeof asset.url === 'string') {
+      const altFromAsset = typeof asset.alt_text === 'string' ? asset.alt_text : null
+      const altFromSet =
+        typeof setDoc.alt_text === 'string'
+          ? setDoc.alt_text
+          : typeof setDoc.title === 'string'
+            ? setDoc.title
+            : null
+      return {
+        coverImageUrl: asset.url,
+        coverImageAlt: altFromAsset ?? altFromSet,
+      }
+    }
+  }
+
+  return { coverImageUrl: null, coverImageAlt: null }
 }
 
 type ParsedLocationGridSlot = {
@@ -135,6 +191,7 @@ function getLocationGridSubtitle(doc: LocationDocLike): string | null {
 }
 
 function normalizeLocationGridCandidate(doc: LocationDocLike): LocationGridCandidate {
+  const cover = extractCoverImageFields(doc)
   return {
     id: normalizeNumericId(doc.id) ?? 0,
     level: doc.level === 'neighborhood' ? 'neighborhood' : 'city',
@@ -154,6 +211,8 @@ function normalizeLocationGridCandidate(doc: LocationDocLike): LocationGridCandi
     subtitle: getLocationGridSubtitle(doc),
     updatedAt:
       typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
+    coverImageUrl: cover.coverImageUrl,
+    coverImageAlt: cover.coverImageAlt,
   }
 }
 
@@ -260,9 +319,9 @@ async function findLocationGridDoc(
     const doc = await payload.findByID({
       collection: 'locations',
       id: ref.id,
-      depth: 0,
+      depth: 2,
       overrideAccess: true,
-      select: locationIdentitySelect,
+      select: locationGridSelect,
     })
 
     return normalizeLocationGridCandidate(doc as LocationDocLike)
@@ -463,13 +522,13 @@ export async function searchLocationGridCandidates(
 
   const response = await payload.find({
     collection: 'locations',
-    depth: 0,
+    depth: 2,
     limit,
     page,
     sort: 'locationKey',
     where,
     overrideAccess: true,
-    select: locationIdentitySelect,
+    select: locationGridSelect,
   })
 
   const docs = (response.docs || [])

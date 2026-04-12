@@ -1,3 +1,6 @@
+export const HOMEPAGE_EDITOR_MODES = ['explore', 'stay', 'move'] as const
+export type HomepageEditorMode = (typeof HOMEPAGE_EDITOR_MODES)[number]
+
 export const HOMEPAGE_FEATURED_TOTAL_SLOTS = 10
 
 export const HOMEPAGE_FEATURED_COLLECTIONS = [
@@ -22,6 +25,8 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   publishedAt: string | null
   collectionLabel: string
   imageUrl: string | null
+  excerpt: string | null
+  authorLabel: string | null
 }
 
 export type HomepageFeaturedInvalidItem = {

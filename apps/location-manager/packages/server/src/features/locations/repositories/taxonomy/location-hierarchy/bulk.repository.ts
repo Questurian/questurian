@@ -3,6 +3,7 @@ import type { TaxonomyPartType } from "./types";
 import {
   buildTaxonomyLikePattern,
   buildTaxonomyPartColumnUpdate,
+  threeSegmentLocationKeySqlPredicate,
 } from "./bulk.utils";
 
 export function deduplicatePendingTaxonomy(
@@ -12,8 +13,36 @@ export function deduplicatePendingTaxonomy(
 ): number {
   const db = getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
+  const seg = threeSegmentLocationKeySqlPredicate();
 
   try {
+    if (partType === "neighborhood") {
+      const query = db.query(`
+        WITH corrected_keys AS (
+          SELECT
+            id,
+            substr(locationKey, 1, LENGTH(locationKey) - LENGTH($incorrectValue)) || $correctValue as new_key,
+            created_at,
+            ROW_NUMBER() OVER (
+              PARTITION BY substr(locationKey, 1, LENGTH(locationKey) - LENGTH($incorrectValue)) || $correctValue
+              ORDER BY created_at ASC
+            ) as rn
+          FROM location_taxonomy
+          WHERE status = 'pending' AND locationKey LIKE $pattern AND ${seg}
+        )
+        DELETE FROM location_taxonomy
+        WHERE id IN (SELECT id FROM corrected_keys WHERE rn > 1)
+      `);
+
+      const result = query.run({
+        $incorrectValue: incorrectValue,
+        $correctValue: correctValue,
+        $pattern: likePattern,
+      });
+
+      return result.changes;
+    }
+
     const query = db.query(`
       WITH corrected_keys AS (
         SELECT
@@ -52,8 +81,28 @@ export function bulkUpdatePendingTaxonomy(
   const db = getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
   const partColumnUpdate = buildTaxonomyPartColumnUpdate(partType);
+  const seg = threeSegmentLocationKeySqlPredicate();
 
   try {
+    if (partType === "neighborhood") {
+      const sql = `
+        UPDATE location_taxonomy
+        SET
+          ${partColumnUpdate}
+          locationKey = substr(locationKey, 1, LENGTH(locationKey) - LENGTH($incorrectValue)) || $correctValue
+        WHERE status = 'pending' AND locationKey LIKE $pattern AND ${seg}
+      `;
+
+      const query = db.query(sql);
+      const result = query.run({
+        $incorrectValue: incorrectValue,
+        $correctValue: correctValue,
+        $pattern: likePattern,
+      });
+
+      return result.changes;
+    }
+
     const sql = `
       UPDATE location_taxonomy
       SET

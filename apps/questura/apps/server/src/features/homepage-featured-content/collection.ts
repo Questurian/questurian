@@ -1,44 +1,31 @@
 import type { CollectionConfig } from 'payload'
 
-import { APP_CONFIG } from '@/shared/config'
-
 import { ArticleGridBlock } from './blocks/article-grid'
+import { FeaturedArticleBlock } from './blocks/featured-article'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
 import { HotelGridBlock } from './blocks/hotel-grid'
 import { LocationGridBlock } from './blocks/location-grid'
+import { QuesturianMapsBlock } from './blocks/questurian-maps'
 import { WhereToEatDrinkBlock } from './blocks/where-to-eat-drink'
+import { ThingsToDoAttractionsBlock } from './blocks/things-to-do-attractions'
+import { ThingsToDoListiclesBlock } from './blocks/things-to-do-listicles'
 import {
-  buildHotelGridGlobalData,
-  normalizeHotelGridInput,
-  validateHotelGridItems,
-} from './hotel-grid-service'
-import {
-  buildLocationGridGlobalData,
-  normalizeLocationGridInput,
   resolveLocationGridScopeFromLocation,
-  validateLocationGridItems,
 } from './location-grid-service'
-import { HOMEPAGE_FEATURED_CONTENT_SLOTS } from './types'
-import {
-  buildWhereToEatDrinkGlobalData,
-  normalizeWhereToEatDrinkInput,
-  validateWhereToEatDrinkItems,
-} from './where-to-eat-drink-service'
-import {
-  buildHomepageFeaturedGlobalData,
-  normalizeHomepageFeaturedInput,
-  validateHomepageFeaturedItems,
-} from './service'
+import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
+import { ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS } from './types'
 
-function isCuratedBlockType(
-  value: unknown,
-): value is 'featured-articles' | 'article-grid' | 'location-grid' | 'hotel-grid' | 'where-to-eat-drink' {
-  return value === 'featured-articles'
-    || value === 'article-grid'
-    || value === 'location-grid'
-    || value === 'hotel-grid'
-    || value === 'where-to-eat-drink'
-}
+const HOMEPAGE_BLOCK_TYPES = [
+  FeaturedArticleBlock,
+  FeaturedArticlesBlock,
+  ArticleGridBlock,
+  LocationGridBlock,
+  QuesturianMapsBlock,
+  HotelGridBlock,
+  WhereToEatDrinkBlock,
+  ThingsToDoListiclesBlock,
+  ThingsToDoAttractionsBlock,
+] as const
 
 export const LocationHomepages: CollectionConfig = {
   slug: 'location-homepages',
@@ -85,10 +72,29 @@ export const LocationHomepages: CollectionConfig = {
     {
       name: 'pageBlocks',
       type: 'blocks',
-      blocks: [FeaturedArticlesBlock, ArticleGridBlock, LocationGridBlock, HotelGridBlock, WhereToEatDrinkBlock],
+      blocks: [...HOMEPAGE_BLOCK_TYPES],
+      label: 'Explore — page blocks',
       admin: {
         description:
-          'Add sections to build this location page. Available blocks include Featured Articles, Article Grid, and Location Grid.',
+          'Explore mode: sections for this location homepage.',
+      },
+    },
+    {
+      name: 'pageBlocksStay',
+      type: 'blocks',
+      blocks: [...HOMEPAGE_BLOCK_TYPES],
+      label: 'Stay — page blocks',
+      admin: {
+        description: 'Stay mode: curated independently from Explore.',
+      },
+    },
+    {
+      name: 'pageBlocksMove',
+      type: 'blocks',
+      blocks: [...HOMEPAGE_BLOCK_TYPES],
+      label: 'Move — page blocks',
+      admin: {
+        description: 'Move mode: curated independently from Explore.',
       },
     },
   ],
@@ -118,10 +124,10 @@ export const LocationHomepages: CollectionConfig = {
 
         // 2. Enforce one homepage per location (Payload doesn't support unique on relationship fields)
         if (
-          data?.location &&
-          (operation === 'create' ||
-            (originalDoc &&
-              String(
+          data?.location
+          && (operation === 'create'
+            || (originalDoc
+              && String(
                 typeof data.location === 'object' && data.location !== null
                   ? (data.location as Record<string, unknown>).id
                   : data.location,
@@ -143,9 +149,10 @@ export const LocationHomepages: CollectionConfig = {
           })
 
           const isDuplicate =
-            existing.totalDocs > 0 &&
-            (operation === 'create' ||
-              (existing.docs[0] as unknown as Record<string, unknown> | undefined)?.id !== originalDoc?.id)
+            existing.totalDocs > 0
+            && (operation === 'create'
+              || (existing.docs[0] as unknown as Record<string, unknown> | undefined)?.id
+                !== originalDoc?.id)
 
           if (isDuplicate) {
             throw new Error('A homepage already exists for this location.')
@@ -172,54 +179,12 @@ export const LocationHomepages: CollectionConfig = {
           resolvedLocation as { level?: unknown; locationKey?: unknown } | null,
         )
 
-        // 3. Validate supported page blocks when pageBlocks is present
-        if (Array.isArray(data?.pageBlocks)) {
-          for (const block of data.pageBlocks) {
-            if (
-              typeof block === 'object' &&
-              block !== null &&
-              isCuratedBlockType((block as Record<string, unknown>).blockType)
-            ) {
-              const blockRecord = block as Record<string, unknown>
-              if (blockRecord.blockType === 'location-grid' && !locationGridScope) {
-                throw new Error(
-                  'Location Grid blocks are only available on the main homepage and city homepages.',
-                )
-              }
-              if (Array.isArray(blockRecord.items) && blockRecord.items.length > 0) {
-                const slotCount = typeof blockRecord.slotCount === 'number' && blockRecord.slotCount >= 1
-                  ? Math.trunc(blockRecord.slotCount)
-                  : HOMEPAGE_FEATURED_CONTENT_SLOTS
-                if (blockRecord.blockType === 'location-grid') {
-                  const refs = normalizeLocationGridInput(blockRecord.items)
-                  await validateLocationGridItems(req.payload, refs, {
-                    scope: locationGridScope,
-                    slotCount,
-                  })
-                  blockRecord.items = buildLocationGridGlobalData(refs).items
-                } else if (blockRecord.blockType === 'hotel-grid') {
-                  const refs = normalizeHotelGridInput(blockRecord.items)
-                  await validateHotelGridItems(req.payload, refs, {
-                    allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                    slotCount,
-                  })
-                  blockRecord.items = buildHotelGridGlobalData(refs).items
-                } else if (blockRecord.blockType === 'where-to-eat-drink') {
-                  const refs = normalizeWhereToEatDrinkInput(blockRecord.items)
-                  await validateWhereToEatDrinkItems(req.payload, refs, {
-                    allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                    slotCount,
-                  })
-                  blockRecord.items = buildWhereToEatDrinkGlobalData(refs).items
-                } else {
-                  const refs = normalizeHomepageFeaturedInput(blockRecord.items)
-                  await validateHomepageFeaturedItems(req.payload, refs, {
-                    allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
-                    slotCount,
-                  })
-                  blockRecord.items = buildHomepageFeaturedGlobalData(refs).items
-                }
-              }
+        // 3. Validate supported page blocks for each mode field present
+        if (data) {
+          for (const field of ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS) {
+            const arr = data[field as keyof typeof data]
+            if (Array.isArray(arr)) {
+              await normalizePageBlocksArrayInPlace(req, arr as unknown[], locationGridScope)
             }
           }
         }

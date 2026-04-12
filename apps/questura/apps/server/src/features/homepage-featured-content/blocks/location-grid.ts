@@ -18,6 +18,15 @@ export const LocationGridBlock: Block = {
       },
     },
     {
+      name: 'sectionHeading',
+      type: 'text',
+      required: false,
+      maxLength: 120,
+      admin: {
+        description: 'Optional headline shown above this block on the public homepage.',
+      },
+    },
+    {
       name: 'items',
       type: 'relationship',
       relationTo: 'locations',

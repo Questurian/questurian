@@ -77,6 +77,9 @@ const COUNTRY_OPTIONS = [
   { value: "PE", label: "Peru (PE)" },
   { value: "CO", label: "Colombia (CO)" },
   { value: "BR", label: "Brazil (BR)" },
+  { value: "MX", label: "Mexico (MX)" },
+  { value: "AR", label: "Argentina (AR)" },
+  { value: "CL", label: "Chile (CL)" },
 ];
 
 const NIGHTLIFE_FORM_DEFAULT_VALUES: EditNightlifeFormData = {

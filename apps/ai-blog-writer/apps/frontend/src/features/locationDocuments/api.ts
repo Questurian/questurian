@@ -278,21 +278,46 @@ export async function fetchCurrencyOptions(token: string): Promise<CurrencyOptio
 export async function fetchMediaSetLibrary(
   token: string,
   params: {
+    /** Page size when listing all sets (default 200). Ignored when `id` is set. */
     limit?: number
     id?: number
   } = {},
 ): Promise<MediaSetOption[]> {
-  const query = new URLSearchParams()
-  query.set('depth', '2')
-  query.set('limit', String(params.id ? 1 : (params.limit ?? 200)))
-  query.set('sort', '-updatedAt')
-
   if (params.id) {
+    const query = new URLSearchParams()
+    query.set('depth', '2')
+    query.set('limit', '1')
+    query.set('sort', '-updatedAt')
     query.set('where[id][equals]', String(params.id))
+    const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(
+      `/api/media-sets?${query.toString()}`,
+      token,
+    )
+    return response.docs || []
   }
 
-  const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(`/api/media-sets?${query.toString()}`, token)
-  return response.docs || []
+  const pageSize = params.limit ?? 200
+  const docs: MediaSetOption[] = []
+  let page = 1
+  let totalPages = 1
+
+  while (page <= totalPages) {
+    const query = new URLSearchParams()
+    query.set('depth', '2')
+    query.set('limit', String(pageSize))
+    query.set('page', String(page))
+    query.set('sort', '-updatedAt')
+
+    const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(
+      `/api/media-sets?${query.toString()}`,
+      token,
+    )
+    docs.push(...(response.docs || []))
+    totalPages = response.totalPages || 1
+    page += 1
+  }
+
+  return docs
 }
 
 async function aiRequest<TResponse>(endpoint: string, body: Record<string, unknown>, fallback: string): Promise<TResponse> {

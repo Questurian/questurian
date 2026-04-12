@@ -87,6 +87,20 @@ export function CorrectionModal({ open, onOpenChange, locationKey, defaultPartTy
   const partTypeValue = useWatch({ control, name: "part_type" });
 
   useEffect(() => {
+    if (!open) return;
+    reset({
+      incorrect_value:
+        locationKey && defaultPartType
+          ? extractPartFromLocationKey(locationKey, defaultPartType)
+          : "",
+      correct_value: "",
+      part_type: defaultPartType || "city",
+    });
+    setShowPreview(false);
+    previewMutation.reset();
+  }, [open, locationKey, defaultPartType, reset]);
+
+  useEffect(() => {
     if (locationKey && partTypeValue) {
       const extractedValue = extractPartFromLocationKey(locationKey, partTypeValue);
       if (extractedValue) {

@@ -18,7 +18,7 @@ import {
   VIBE_VALUES,
 } from "../constants/nightlife-options";
 
-export const SUPPORTED_COUNTRY_CODES = ["PE", "CO", "BR"] as const;
+export const SUPPORTED_COUNTRY_CODES = ["PE", "CO", "BR", "MX", "AR", "CL"] as const;
 
 export const addNightlifeSchema = z.object({
   name: z
