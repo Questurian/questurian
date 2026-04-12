@@ -173,6 +173,7 @@ export function useHomepageHotelGridSlots(options: {
     candidatesQuery,
     saveMutation,
     slots,
+    savedSlots,
     savedInvalidItems,
     pickerSlotIndex,
     usedIds,

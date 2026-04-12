@@ -30,6 +30,7 @@ import {
   isThingsToDoAttractionsBlock,
   isArticleCuratedHomepageBlock,
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
+  homepageBlockShapeIdentity,
   isLocationGridBlock,
   type ArticleCuratedHomepageBlockResponse,
   type CuratedHomepageBlockType,
@@ -212,7 +213,7 @@ export default function MainHomepagePage() {
             if (isArticleCuratedHomepageBlock(block)) {
               return (
                 <CuratedHomepageBlockEditor
-                  key={block.id}
+                  key={homepageBlockShapeIdentity(block).join(':')}
                   block={block}
                   blockIndex={idx}
                   token={token}
@@ -220,7 +221,12 @@ export default function MainHomepagePage() {
                   onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
                   isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
                   deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
-                  selectionQueryKey={['main-homepage-block', homepageMode, block.id, token]}
+                  selectionQueryKey={[
+                    'main-homepage-block',
+                    homepageMode,
+                    ...homepageBlockShapeIdentity(block),
+                    token,
+                  ]}
                   saveSelection={async (currentToken, items) => {
                     const updated = await updateMainHomepageBlock(
                       currentToken,
@@ -273,7 +279,7 @@ export default function MainHomepagePage() {
             if (isLocationGridBlock(block)) {
               return (
                 <LocationGridBlockEditor
-                  key={block.id}
+                  key={homepageBlockShapeIdentity(block).join(':')}
                   block={block}
                   blockIndex={idx}
                   token={token}
@@ -282,7 +288,12 @@ export default function MainHomepagePage() {
                   isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
                   deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
                   childLevel="city"
-                  selectionQueryKey={['main-homepage-location-grid', homepageMode, block.id, token]}
+                  selectionQueryKey={[
+                    'main-homepage-location-grid',
+                    homepageMode,
+                    ...homepageBlockShapeIdentity(block),
+                    token,
+                  ]}
                   saveSelection={async (currentToken, items) => {
                     const updated = await updateMainHomepageBlock(
                       currentToken,
@@ -309,6 +320,17 @@ export default function MainHomepagePage() {
                     )
                     queryClient.invalidateQueries({ queryKey: mainHomepageQueryKey })
                   }}
+                  convertBlockTargets={CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES}
+                  onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
+                    await convertMainHomepageFeaturedArticlesBlock(
+                      currentToken,
+                      block.id,
+                      blockType,
+                      slotCount,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: mainHomepageQueryKey })
+                  }}
                 />
               )
             }
@@ -316,7 +338,7 @@ export default function MainHomepagePage() {
               const gridBlock = block
               return (
                 <HotelGridBlockEditor
-                  key={gridBlock.id}
+                  key={homepageBlockShapeIdentity(gridBlock).join(':')}
                   block={gridBlock}
                   blockIndex={idx}
                   token={token}
@@ -329,8 +351,7 @@ export default function MainHomepagePage() {
                   selectionQueryKey={[
                     'main-homepage-hotel-grid',
                     homepageMode,
-                    gridBlock.blockType,
-                    gridBlock.id,
+                    ...homepageBlockShapeIdentity(gridBlock),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -352,6 +373,17 @@ export default function MainHomepagePage() {
                     gridBlock.blockType === 'things-to-do-attractions'
                       ? fetchThingsToDoAttractionCandidates(currentToken, params)
                       : fetchHomepageHotelGridCandidates(currentToken, params)}
+                  convertBlockTargets={CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES}
+                  onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
+                    await convertMainHomepageFeaturedArticlesBlock(
+                      currentToken,
+                      gridBlock.id,
+                      blockType,
+                      slotCount,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: mainHomepageQueryKey })
+                  }}
                 />
               )
             }

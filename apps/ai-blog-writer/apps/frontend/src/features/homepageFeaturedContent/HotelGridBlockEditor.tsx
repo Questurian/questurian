@@ -1,4 +1,8 @@
+import { useMemo, useState } from 'react'
+
+import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
+import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
 import HotelGridLayout from './HotelGridLayout'
 import { HotelGridPickerModal } from './HotelGridPickerModal'
 import type {
@@ -8,6 +12,7 @@ import type {
 } from './hotelGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
+  type CuratedHomepageBlockType,
   type HotelOrAttractionGridBlockResponse,
 } from './pageBlocks'
 import {
@@ -30,6 +35,8 @@ export default function HotelGridBlockEditor({
   selectionQueryKey,
   saveSelection,
   fetchCandidates,
+  convertBlockTargets,
+  onConvertEmptyBlock,
   onDeleteBlock,
   isDeletingBlock,
   deleteError,
@@ -44,10 +51,17 @@ export default function HotelGridBlockEditor({
     token: string,
     params: HotelGridCandidateParams,
   ) => Promise<HomepageHotelGridCandidatesResponse>
+  convertBlockTargets?: CuratedHomepageBlockType[]
+  onConvertEmptyBlock?: (
+    token: string,
+    blockType: CuratedHomepageBlockType,
+    slotCount: number,
+  ) => Promise<void>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
   deleteError: string | null
 }) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const slotEditorState = useHomepageHotelGridSlots({
     token,
     canManage,
@@ -62,6 +76,7 @@ export default function HotelGridBlockEditor({
     candidatesQuery,
     saveMutation,
     slots,
+    savedSlots,
     savedInvalidItems,
     pickerSlotIndex,
     usedIds,
@@ -78,7 +93,20 @@ export default function HotelGridBlockEditor({
     setCandidatePage,
     setPickerSlotIndex,
     draftSlots,
+    hasUnsavedChanges,
   } = slotEditorState
+
+  const convertTargetOptions = useMemo(
+    () => (convertBlockTargets ?? []).filter((t) => t !== block.blockType),
+    [convertBlockTargets, block.blockType],
+  )
+
+  const canConvertEmptyBlock =
+    Boolean(onConvertEmptyBlock)
+    && convertTargetOptions.length > 0
+    && !hasUnsavedChanges
+    && savedSlots.every((s) => !s)
+    && savedInvalidItems.length === 0
 
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
 
@@ -124,6 +152,16 @@ export default function HotelGridBlockEditor({
           </span>
           <button
             type="button"
+            className="hf-btn-icon hf-block-settings-gear"
+            title="Block settings — change type when empty"
+            aria-label="Block settings"
+            disabled={!token}
+            onClick={() => setSettingsOpen(true)}
+          >
+            ⚙
+          </button>
+          <button
+            type="button"
             className="hf-btn-primary hf-block-header-save"
             onClick={handleSave}
             disabled={saveDisabled}
@@ -140,6 +178,37 @@ export default function HotelGridBlockEditor({
           />
         </div>
       </div>
+
+      <HomepageBlockSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        title="Block settings"
+      >
+        <p
+          className="hf-block-slot-meta hf-block-settings-slot-summary"
+          aria-live="polite"
+        >
+          {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+        </p>
+        <HomepageBlockConvertSection
+          blockId={block.id}
+          token={token}
+          convertTargetOptions={convertTargetOptions}
+          canConvert={canConvertEmptyBlock}
+          onConvert={async (tok, blockType, slotCount) => {
+            if (!onConvertEmptyBlock) return
+            await onConvertEmptyBlock(tok, blockType, slotCount)
+          }}
+          onConverted={() => setSettingsOpen(false)}
+        />
+        {!canConvertEmptyBlock ? (
+          <p className="hf-block-settings-hint">
+            To change type, clear every slot and save (or discard unsaved edits) so there are no saved
+            picks.
+          </p>
+        ) : null}
+      </HomepageBlockSettingsModal>
+
       <div className="hf-block-content">
         <p className="hf-panel-desc">{blockConfig.description}.</p>
         {savedInvalidItems.length > 0 && (

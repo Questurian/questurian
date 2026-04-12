@@ -120,14 +120,22 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'things-to-do-attractions',
 ]
 
-/** Empty Featured Articles → these types (hotel/attraction grids omitted: different editor). Section title is kept. */
+/**
+ * Destination types when converting an empty block (any curated editor). Section title kept when
+ * supported. Excludes `featured-articles` (use Add block for that shape).
+ *
+ * **Sync:** Questura `homepage-empty-convert-block-types.ts` → `HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES`.
+ * This array = valid **targets** (no `featured-articles`; add that shape via Add block). New type → update both + slot limits + editor.
+ */
 export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'featured-article',
   'article-grid',
   'location-grid',
   'questurian-maps',
+  'hotel-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
+  'things-to-do-attractions',
 ]
 
 export type FeaturedArticleBlockResponse = {
@@ -225,6 +233,15 @@ export type UnknownBlockResponse = {
 }
 
 export type PageBlockResponse = CuratedHomepageBlockResponse | UnknownBlockResponse
+
+/** Same Payload `id` can change `blockType` / slot count (convert). Include shape in React key + query key so editors remount and TanStack cache does not reuse old `selection`. */
+export function homepageBlockShapeIdentity(block: {
+  id: string
+  blockType: string
+  selection: { totalSlots: number }
+}): readonly [string, string, number] {
+  return [block.id, block.blockType, block.selection.totalSlots]
+}
 
 export function isCuratedHomepageBlock(
   block: PageBlockResponse,

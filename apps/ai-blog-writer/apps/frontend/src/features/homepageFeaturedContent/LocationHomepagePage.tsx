@@ -30,6 +30,7 @@ import {
 import {
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
   HOMEPAGE_PAGE_BLOCK_TYPES,
+  homepageBlockShapeIdentity,
   isHotelGridBlock,
   isThingsToDoAttractionsBlock,
   isArticleCuratedHomepageBlock,
@@ -277,7 +278,7 @@ export default function LocationHomepagePage() {
             if (isArticleCuratedHomepageBlock(block)) {
               return (
                 <CuratedHomepageBlockEditor
-                  key={block.id}
+                  key={homepageBlockShapeIdentity(block).join(':')}
                   block={block}
                   blockIndex={idx}
                   token={token}
@@ -289,7 +290,7 @@ export default function LocationHomepagePage() {
                     'location-homepage-block',
                     homepageMode,
                     numericId,
-                    block.id,
+                    ...homepageBlockShapeIdentity(block),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -351,7 +352,7 @@ export default function LocationHomepagePage() {
             if (isLocationGridBlock(block) && locationGridChildLevel) {
               return (
                 <LocationGridBlockEditor
-                  key={block.id}
+                  key={homepageBlockShapeIdentity(block).join(':')}
                   block={block}
                   blockIndex={idx}
                   token={token}
@@ -364,7 +365,7 @@ export default function LocationHomepagePage() {
                     'location-homepage-location-grid',
                     homepageMode,
                     numericId,
-                    block.id,
+                    ...homepageBlockShapeIdentity(block),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -395,6 +396,18 @@ export default function LocationHomepagePage() {
                     )
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
+                  convertBlockTargets={convertEmptyFeaturedArticlesTargets}
+                  onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
+                    await convertLocationHomepageFeaturedArticlesBlock(
+                      currentToken,
+                      numericId,
+                      block.id,
+                      blockType,
+                      slotCount,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
                 />
               )
             }
@@ -402,7 +415,7 @@ export default function LocationHomepagePage() {
               const gridBlock = block
               return (
                 <HotelGridBlockEditor
-                  key={gridBlock.id}
+                  key={homepageBlockShapeIdentity(gridBlock).join(':')}
                   block={gridBlock}
                   blockIndex={idx}
                   token={token}
@@ -415,9 +428,8 @@ export default function LocationHomepagePage() {
                   selectionQueryKey={[
                     'location-homepage-hotel-grid',
                     homepageMode,
-                    gridBlock.blockType,
                     numericId,
-                    gridBlock.id,
+                    ...homepageBlockShapeIdentity(gridBlock),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -444,6 +456,18 @@ export default function LocationHomepagePage() {
                         params,
                       )
                       : fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
+                  convertBlockTargets={convertEmptyFeaturedArticlesTargets}
+                  onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
+                    await convertLocationHomepageFeaturedArticlesBlock(
+                      currentToken,
+                      numericId,
+                      gridBlock.id,
+                      blockType,
+                      slotCount,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
                 />
               )
             }

@@ -30,7 +30,7 @@ describe('assertFeaturedArticlesBlockConvertible', () => {
         blockType: 'featured-article',
         items: [{ id: 'x' }],
       }),
-    ).toThrow(/Remove all articles/)
+    ).toThrow(/Clear all saved picks/)
   })
 
   it('allows empty article-grid', () => {
@@ -53,13 +53,23 @@ describe('assertFeaturedArticlesBlockConvertible', () => {
     ).not.toThrow()
   })
 
-  it('rejects hotel-grid even when empty', () => {
+  it('allows empty hotel-grid', () => {
     expect(() =>
       assertFeaturedArticlesBlockConvertible({
         id: '1',
         blockType: 'hotel-grid',
         items: [],
       }),
-    ).toThrow(/article-curated blocks/)
+    ).not.toThrow()
+  })
+
+  it('allows empty location-grid', () => {
+    expect(() =>
+      assertFeaturedArticlesBlockConvertible({
+        id: '1',
+        blockType: 'location-grid',
+        items: [],
+      }),
+    ).not.toThrow()
   })
 })

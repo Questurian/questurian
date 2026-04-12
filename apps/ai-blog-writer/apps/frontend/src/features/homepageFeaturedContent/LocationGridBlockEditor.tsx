@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
 import { LocationGridPickerModal } from './LocationGridPickerModal'
 import LocationGridLayout from './LocationGridLayout'
+import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
 import type {
@@ -13,6 +14,7 @@ import type {
 } from './locationGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
+  type CuratedHomepageBlockType,
   type LocationGridBlockResponse,
 } from './pageBlocks'
 import {
@@ -47,6 +49,13 @@ type Props = {
   ) => Promise<HomepageLocationGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
   saveLocationGridSectionHeading?: (token: string, value: string | null) => Promise<void>
+  /** When the grid has no saved locations, user may switch block type (section title kept). */
+  convertBlockTargets?: CuratedHomepageBlockType[]
+  onConvertEmptyBlock?: (
+    token: string,
+    blockType: CuratedHomepageBlockType,
+    slotCount: number,
+  ) => Promise<void>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
   deleteError: string | null
@@ -62,6 +71,8 @@ export default function LocationGridBlockEditor({
   saveSelection,
   fetchCandidates,
   saveLocationGridSectionHeading,
+  convertBlockTargets,
+  onConvertEmptyBlock,
   onDeleteBlock,
   isDeletingBlock,
   deleteError,
@@ -105,6 +116,7 @@ export default function LocationGridBlockEditor({
     candidatesQuery,
     saveMutation,
     slots,
+    savedSlots,
     savedInvalidItems,
     pickerSlotIndex,
     usedIds,
@@ -124,6 +136,18 @@ export default function LocationGridBlockEditor({
     hasAllSlotsFilled,
     hasUnsavedChanges,
   } = slotEditorState
+
+  const convertTargetOptions = useMemo(
+    () => (convertBlockTargets ?? []).filter((t) => t !== block.blockType),
+    [convertBlockTargets, block.blockType],
+  )
+
+  const canConvertEmptyBlock =
+    Boolean(onConvertEmptyBlock)
+    && convertTargetOptions.length > 0
+    && !hasUnsavedChanges
+    && savedSlots.every((s) => !s)
+    && savedInvalidItems.length === 0
 
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
   const childLabel = childLevel === 'city' ? 'cities' : 'neighborhoods'
@@ -283,6 +307,24 @@ export default function LocationGridBlockEditor({
               </p>
             ) : null}
           </section>
+
+          <HomepageBlockConvertSection
+            blockId={block.id}
+            token={token}
+            convertTargetOptions={convertTargetOptions}
+            canConvert={canConvertEmptyBlock}
+            onConvert={async (tok, blockType, slotCount) => {
+              if (!onConvertEmptyBlock) return
+              await onConvertEmptyBlock(tok, blockType, slotCount)
+            }}
+            onConverted={() => setSettingsOpen(false)}
+          />
+          {onConvertEmptyBlock && !canConvertEmptyBlock ? (
+            <p className="hf-block-settings-hint">
+              To change type, remove every location, save an empty grid (or discard unsaved edits), and
+              fix any invalid picks first.
+            </p>
+          ) : null}
       </HomepageBlockSettingsModal>
 
       <div className="hf-block-content">

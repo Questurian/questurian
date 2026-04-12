@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
+import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageFeaturedSlotEditor from './HomepageFeaturedSlotEditor'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
@@ -77,12 +78,6 @@ export default function CuratedHomepageBlockEditor({
       convertEmptyFeaturedArticlesTargets.length > 0 ? convertEmptyFeaturedArticlesTargets : []
     return list.filter((t) => t !== block.blockType)
   }, [convertEmptyFeaturedArticlesTargets, block.blockType])
-  const [convertTargetType, setConvertTargetType] = useState<CuratedHomepageBlockType>(
-    convertTargets[0] ?? 'article-grid',
-  )
-  const [convertSlotCount, setConvertSlotCount] = useState(
-    convertTargets[0] ? HOMEPAGE_PAGE_BLOCK_CONFIG[convertTargets[0]].defaultSlotCount : 4,
-  )
 
   useEffect(() => {
     setSectionHeadingDraft(savedSectionHeading)
@@ -94,20 +89,6 @@ export default function CuratedHomepageBlockEditor({
     return () => window.clearTimeout(id)
   }, [settingsOpen, saveSectionHeading])
 
-  useEffect(() => {
-    if (convertTargets.length === 0) return
-    if (!convertTargets.includes(convertTargetType)) {
-      const next = convertTargets[0]
-      setConvertTargetType(next)
-      setConvertSlotCount(HOMEPAGE_PAGE_BLOCK_CONFIG[next].defaultSlotCount)
-    }
-  }, [convertTargets, convertTargetType])
-
-  useEffect(() => {
-    if (!convertTargets.includes(convertTargetType)) return
-    setConvertSlotCount(HOMEPAGE_PAGE_BLOCK_CONFIG[convertTargetType].defaultSlotCount)
-  }, [convertTargetType, convertTargets])
-
   const headingTrimmed = sectionHeadingDraft.trim()
   const headingDirty = headingTrimmed !== savedSectionHeading.trim()
 
@@ -115,22 +96,6 @@ export default function CuratedHomepageBlockEditor({
     mutationFn: async (value: string | null) => {
       if (!token || !saveSectionHeading) return
       await saveSectionHeading(token, value)
-    },
-  })
-
-  const convertMutation = useMutation({
-    mutationFn: async ({
-      blockType,
-      slotCount,
-    }: {
-      blockType: CuratedHomepageBlockType
-      slotCount: number
-    }) => {
-      if (!token || !onConvertEmptyFeaturedArticlesBlock) return
-      await onConvertEmptyFeaturedArticlesBlock(token, blockType, slotCount)
-    },
-    onSuccess: () => {
-      setSettingsOpen(false)
     },
   })
 
@@ -168,20 +133,6 @@ export default function CuratedHomepageBlockEditor({
     && !hasUnsavedChanges
     && savedSlots.every((s) => !s)
     && savedInvalidItems.length === 0
-
-  const convertCfg = HOMEPAGE_PAGE_BLOCK_CONFIG[convertTargetType]
-  const convertSlotsFixed = convertCfg.minSlotCount === convertCfg.maxSlotCount
-
-  function handleConvert() {
-    if (!canConvertEmptyFeaturedArticles || !token) return
-    let n = convertSlotCount
-    if (convertSlotsFixed) {
-      n = convertCfg.defaultSlotCount
-    } else {
-      n = Math.min(Math.max(Math.trunc(n), convertCfg.minSlotCount), convertCfg.maxSlotCount)
-    }
-    convertMutation.mutate({ blockType: convertTargetType, slotCount: n })
-  }
 
   return (
     <div className="hf-block-section">
@@ -294,77 +245,17 @@ export default function CuratedHomepageBlockEditor({
             </p>
           ) : null}
 
-          {canConvertEmptyFeaturedArticles ? (
-            <section className="hf-block-settings-section">
-              <h3 className="hf-block-settings-kicker">Change block type</h3>
-              <p className="hf-block-settings-hint">
-                No saved picks yet. Switch to another block type; your section title is kept when
-                supported.
-              </p>
-              <div className="hf-block-convert-row">
-                <label className="hf-block-convert-label" htmlFor={`hf-convert-type-${block.id}`}>
-                  New type
-                </label>
-                <select
-                  id={`hf-convert-type-${block.id}`}
-                  className="hf-block-convert-select"
-                  value={convertTargetType}
-                  onChange={(e) => setConvertTargetType(e.target.value as CuratedHomepageBlockType)}
-                >
-                  {convertTargets.map((t) => (
-                    <option key={t} value={t}>
-                      {HOMEPAGE_PAGE_BLOCK_CONFIG[t].label}
-                    </option>
-                  ))}
-                </select>
-                {convertSlotsFixed ? (
-                  <span className="hf-block-convert-slot-note">
-                    {convertCfg.defaultSlotCount} slots
-                  </span>
-                ) : (
-                  <>
-                    <span className="hf-block-convert-label">Slots</span>
-                    <div className="hf-block-convert-counts">
-                      {convertCfg.quickSlotCounts.map((count) => (
-                        <button
-                          key={count}
-                          type="button"
-                          className={`hf-btn-ghost${convertSlotCount === count ? ' active' : ''}`}
-                          onClick={() => setConvertSlotCount(count)}
-                        >
-                          {count}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="number"
-                      className="hf-slot-count-input hf-block-convert-custom"
-                      min={convertCfg.minSlotCount}
-                      max={convertCfg.maxSlotCount}
-                      aria-label="Custom slot count"
-                      value={convertSlotCount}
-                      onChange={(e) => setConvertSlotCount(Number(e.target.value))}
-                    />
-                  </>
-                )}
-                <button
-                  type="button"
-                  className="hf-btn-primary"
-                  disabled={!token || convertMutation.isPending}
-                  onClick={handleConvert}
-                >
-                  {convertMutation.isPending ? 'Converting…' : 'Convert block'}
-                </button>
-              </div>
-              {convertMutation.isError ? (
-                <p className="hf-block-section-heading-error">
-                  {convertMutation.error instanceof Error
-                    ? convertMutation.error.message
-                    : 'Failed to convert block.'}
-                </p>
-              ) : null}
-            </section>
-          ) : null}
+          <HomepageBlockConvertSection
+            blockId={block.id}
+            token={token}
+            convertTargetOptions={convertTargets}
+            canConvert={canConvertEmptyFeaturedArticles}
+            onConvert={async (tok, blockType, slotCount) => {
+              if (!onConvertEmptyFeaturedArticlesBlock) return
+              await onConvertEmptyFeaturedArticlesBlock(tok, blockType, slotCount)
+            }}
+            onConverted={() => setSettingsOpen(false)}
+          />
       </HomepageBlockSettingsModal>
 
       <div className="hf-block-content">

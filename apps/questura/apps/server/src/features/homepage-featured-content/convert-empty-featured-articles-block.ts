@@ -1,4 +1,5 @@
 import { HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX } from './featured-articles-section-heading'
+import { isHomepageBlockConvertibleWhenEmpty } from './homepage-empty-convert-block-types'
 import { resolveStoredSlotCountForBlockType } from './slot-count-for-block-type'
 
 export type RawHomepageBlockForConvert = {
@@ -15,24 +16,12 @@ export function rawHomepageBlockItemsAreEmpty(items: unknown): boolean {
   return false
 }
 
-/** Article-curated blocks that use the same convert API when they have no items. */
-const BLOCK_TYPES_CONVERTIBLE_WHEN_EMPTY = new Set([
-  'featured-articles',
-  'featured-article',
-  'article-grid',
-  'questurian-maps',
-  'where-to-eat-drink',
-  'things-to-do-listicles',
-])
-
 export function assertFeaturedArticlesBlockConvertible(block: RawHomepageBlockForConvert): void {
-  if (!BLOCK_TYPES_CONVERTIBLE_WHEN_EMPTY.has(block.blockType)) {
-    throw new Error(
-      'Only empty article-curated blocks (same editor as Featured Articles) can change type this way.',
-    )
+  if (!isHomepageBlockConvertibleWhenEmpty(block.blockType)) {
+    throw new Error('Only empty curated homepage blocks can change type this way.')
   }
   if (!rawHomepageBlockItemsAreEmpty(block.items)) {
-    throw new Error('Remove all articles from this block before changing its type.')
+    throw new Error('Clear all saved picks from this block before changing its type.')
   }
 }
 
