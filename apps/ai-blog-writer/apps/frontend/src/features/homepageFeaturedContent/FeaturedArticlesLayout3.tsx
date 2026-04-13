@@ -1,5 +1,6 @@
 import type { SlotValue } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
+import type { FeaturedArticlesSlot3Layout } from './pageBlocks'
 
 function formatDate(value: string | null): string {
   if (!value) return ''
@@ -78,7 +79,59 @@ function CardHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
   )
 }
 
-// ── Stacked image card (slots 2 & 3, right column) ───────────────
+// ── Center column hero (featured-center layout, slot 2) ─────────
+function CardHeroCenterFeature({ slotIndex, item, invalid, onClick }: SlotCardProps) {
+  const num = slotIndex + 1
+
+  if (!item) {
+    return (
+      <button
+        type="button"
+        className={`hf-l3-card-hero hf-l3-fc-center${invalid ? ' invalid' : ''}`}
+        onClick={onClick}
+      >
+        <div className="hf-l3-hero-empty hf-l3-fc-center-empty">
+          <span className="hf-l3-num" style={{ position: 'static' }}>{num}</span>
+          {invalid ? (
+            <>
+              <span style={{ fontSize: '1.4rem' }}>⚠</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--error)', fontWeight: 600 }}>
+                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: '2rem' }}>＋</span>
+              <span>Add center article</span>
+            </>
+          )}
+        </div>
+      </button>
+    )
+  }
+
+  return (
+    <button type="button" className="hf-l3-card-hero hf-l3-fc-center" onClick={onClick}>
+      <div className="hf-l3-hero-img hf-l3-fc-center-img">
+        {item.imageUrl ? (
+          <img src={item.imageUrl} alt="" loading="lazy" />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+            <ImgPlaceholder />
+          </div>
+        )}
+        <span className="hf-l3-num">{num}</span>
+      </div>
+      <div className="hf-l3-hero-body">
+        <p className="hf-l3-label">{item.collectionLabel}</p>
+        <p className="hf-l3-hero-title">{item.title}</p>
+        {item.authorLabel ? <p className="hf-l3-author">By {item.authorLabel}</p> : null}
+      </div>
+    </button>
+  )
+}
+
+// ── Stacked image card (slots 2 & 3, right column — hero-left layout) ─
 function CardImg({ slotIndex, item, invalid, onClick }: SlotCardProps) {
   const num = slotIndex + 1
   const date = formatDate(item?.publishedAt ?? item?.updatedAt ?? null)
@@ -118,16 +171,83 @@ function CardImg({ slotIndex, item, invalid, onClick }: SlotCardProps) {
   )
 }
 
+// ── Side column card (featured-center layout, slots 1 & 3) ──────
+function CardFcSide({ slotIndex, item, invalid, onClick }: SlotCardProps) {
+  const num = slotIndex + 1
+  const date = formatDate(item?.publishedAt ?? item?.updatedAt ?? null)
+
+  return (
+    <button
+      type="button"
+      className={`hf-l3-card-img hf-l3-fc-side${invalid ? ' invalid' : ''}`}
+      onClick={onClick}
+    >
+      <div className="hf-l3-img-thumb hf-l3-fc-side-thumb">
+        {item?.imageUrl ? (
+          <img src={item.imageUrl} alt="" loading="lazy" />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+            <ImgPlaceholder />
+          </div>
+        )}
+        <span className="hf-l3-num">{num}</span>
+      </div>
+      <div className="hf-l3-img-body">
+        {item ? (
+          <>
+            <p className="hf-l3-label">{item.collectionLabel}</p>
+            <p className="hf-l3-img-title hf-l3-fc-side-title">{item.title}</p>
+            {item.authorLabel ? <p className="hf-l3-author">By {item.authorLabel}</p> : null}
+            {date ? <p className="hf-l3-date">{date}</p> : null}
+          </>
+        ) : invalid ? (
+          <p className="hf-l3-img-title" style={{ color: 'var(--error)' }}>
+            {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+          </p>
+        ) : (
+          <p className="hf-l3-img-title" style={{ color: 'var(--muted)', fontWeight: 400 }}>＋ Add article</p>
+        )}
+      </div>
+    </button>
+  )
+}
+
 // ── Main layout ───────────────────────────────────────────────────
 type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
+  layout: FeaturedArticlesSlot3Layout
 }
 
-export default function FeaturedArticlesLayout3({ slots, invalidItemsBySlot, onSlotClick }: Props) {
+export default function FeaturedArticlesLayout3({ slots, invalidItemsBySlot, onSlotClick, layout }: Props) {
   function invalid(i: number) {
     return invalidItemsBySlot.get(i + 1)
+  }
+
+  if (layout === 'featured-center') {
+    return (
+      <div className="hf-l3 hf-l3-fc">
+        <CardFcSide
+          slotIndex={0}
+          item={slots[0] ?? null}
+          invalid={invalid(0)}
+          onClick={() => onSlotClick(0)}
+        />
+        <CardHeroCenterFeature
+          slotIndex={1}
+          item={slots[1] ?? null}
+          invalid={invalid(1)}
+          onClick={() => onSlotClick(1)}
+        />
+        <CardFcSide
+          slotIndex={2}
+          item={slots[2] ?? null}
+          invalid={invalid(2)}
+          onClick={() => onSlotClick(2)}
+        />
+      </div>
+    )
   }
 
   return (

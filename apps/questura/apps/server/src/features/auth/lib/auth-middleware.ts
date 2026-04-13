@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 import type { JwtPayload } from '../types/jwt'
 import type { User } from '@/payload-types'
 import { APP_CONFIG } from '@/shared/config'
+import { tryVerifyJwtWithAppSecrets } from './verify-jwt-with-app-secrets'
 
 const JWT_SECRET = APP_CONFIG.JWT_SECRET
 if (!JWT_SECRET) {
@@ -74,14 +75,11 @@ export async function authenticateRequest(
 
     let user: User | null = null
 
-    // Strategy 1: Manual JWT verification first (more reliable for our custom tokens)
-    try {
-      console.log('Auth Middleware - Trying manual JWT verification...')
-      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
-      console.log('Auth Middleware - JWT decoded:', { userId: decoded?.userId, id: decoded?.id, email: decoded?.email, tokenVersion: decoded?.tokenVersion })
+    // Strategy 1: Manual JWT verification (custom tokens + Payload tokens when secrets differ)
+    const decodedManual = tryVerifyJwtWithAppSecrets(token)
 
-      // Check for both userId and id fields for compatibility
-      const userId = decoded.userId || decoded.id
+    if (decodedManual) {
+      const userId = decodedManual.userId || decodedManual.id
       if (userId) {
         const userResult = await payload.findByID({
           collection: 'users',
@@ -90,27 +88,16 @@ export async function authenticateRequest(
 
         user = userResult
 
-        // Token version validation - invalidate sessions on password change
-        const validationError = validateTokenVersion(decoded, userResult)
+        const validationError = validateTokenVersion(decodedManual, userResult)
         if (validationError) {
           return { user: null, ...validationError }
         }
-
-        console.log('Auth Middleware - Manual JWT auth successful:', {
-          id: user?.id,
-          email: user?.email,
-          role: user?.role,
-          tokenVersion: user?.tokenVersion
-        })
-      } else {
-        console.log('Auth Middleware - No userId/id found in JWT')
       }
-    } catch (jwtError) {
-      console.log('Auth Middleware - Manual JWT verification failed, trying Payload auth...', jwtError)
+    }
 
-      // Strategy 2: Fallback to Payload's built-in auth
+    if (!user) {
+      // Strategy 2: Payload's built-in auth (cookies / Bearer handled by Payload)
       try {
-        console.log('Auth Middleware - Trying Payload auth...')
         const authResult = await payload.auth({
           headers: new Headers({
             authorization: authHeader || '',
@@ -119,29 +106,26 @@ export async function authenticateRequest(
         })
 
         user = authResult.user
-        console.log('Auth Middleware - Payload auth result:', {
-          id: user?.id,
-          email: user?.email,
-          role: user?.role
-        })
 
         // Token version validation for Payload auth tokens too
         if (user) {
           try {
-            // Decode token without verification to extract tokenVersion
             const decoded = jwt.decode(token) as JwtPayload
             const validationError = validateTokenVersion(decoded, user)
             if (validationError) {
               return { user: null, ...validationError }
             }
           } catch (decodeError) {
-            console.log('Auth Middleware - Could not decode token for version check:', decodeError)
-            // If we can't decode, continue with Payload's validation
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Auth Middleware - Could not decode token for version check:', decodeError)
+            }
           }
         }
 
       } catch (payloadError) {
-        console.log('Auth Middleware - Payload auth also failed:', payloadError)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Auth Middleware - Payload auth failed:', payloadError)
+        }
         return {
           user: null,
           error: 'Invalid authentication token',

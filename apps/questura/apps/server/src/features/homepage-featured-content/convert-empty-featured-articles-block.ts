@@ -1,4 +1,7 @@
-import { HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX } from './featured-articles-section-heading'
+import {
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
+} from './featured-articles-section-heading'
 import { isHomepageBlockConvertibleWhenEmpty } from './homepage-empty-convert-block-types'
 import { resolveStoredSlotCountForBlockType } from './slot-count-for-block-type'
 
@@ -7,6 +10,7 @@ export type RawHomepageBlockForConvert = {
   blockType: string
   slotCount?: number
   sectionHeading?: string | null
+  sectionSubheading?: string | null
   items?: unknown
 }
 
@@ -31,6 +35,12 @@ export function sliceStoredSectionHeading(sectionHeading: unknown): string | und
   return t || undefined
 }
 
+export function sliceStoredSectionSubheading(sectionSubheading: unknown): string | undefined {
+  if (typeof sectionSubheading !== 'string' || !sectionSubheading.trim()) return undefined
+  const t = sectionSubheading.trim().slice(0, HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX)
+  return t || undefined
+}
+
 /**
  * Preserves optional section title when converting an empty Featured Article(s) block.
  */
@@ -47,6 +57,8 @@ export function buildConvertedHomepageBlock(
   }
   const h = sliceStoredSectionHeading(old.sectionHeading)
   if (h) next.sectionHeading = h
+  const sub = sliceStoredSectionSubheading(old.sectionSubheading)
+  if (sub) next.sectionSubheading = sub
   return next
 }
 

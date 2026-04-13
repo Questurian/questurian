@@ -6,7 +6,7 @@
  * 2. Mirror list in ai-blog-writer `pageBlocks.ts` → `CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES`
  *    (destination types) + `ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES` / editor props if new editor.
  *
- * Destinations are same list minus current block + minus `featured-articles` (add via POST /blocks).
+ * Editor lists current block type plus this list so empty blocks can resize slots or change type (POST …/blocks/convert).
  */
 export const HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES = [
   'featured-articles',

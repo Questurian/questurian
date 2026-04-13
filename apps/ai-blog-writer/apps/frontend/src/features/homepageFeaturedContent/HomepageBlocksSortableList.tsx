@@ -57,8 +57,15 @@ export default function HomepageBlocksSortableList<T extends { id: string }>({
     )
   }
 
+  const orderKey = ids.join('|')
+
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      key={orderKey}
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         {blocks.map((block, idx) => (
           <SortableBlockItem key={block.id} id={block.id} disabled={disabled}>

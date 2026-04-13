@@ -5,6 +5,23 @@ import { describe, expect, it, vi } from 'vitest'
 import AddHomepageBlockPicker from './AddHomepageBlockPicker'
 
 describe('AddHomepageBlockPicker', () => {
+  it('submits newsletter-signup in one click (fixed zero slots)', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+
+    render(
+      <AddHomepageBlockPicker
+        isPending={false}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Newsletter signup/i }))
+
+    expect(onConfirm).toHaveBeenCalledWith('newsletter-signup', 0, undefined, undefined)
+  })
+
   it('submits the new article-grid block with a valid slot count', async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn()
@@ -19,12 +36,12 @@ describe('AddHomepageBlockPicker', () => {
 
     await user.click(screen.getByRole('button', { name: /Article Grid/i }))
 
-    expect(screen.getByText(/choose between 3 and 5 items/i)).toBeInTheDocument()
+    expect(screen.getByText(/choose 4 .* or 8/i)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '5' }))
+    await user.click(screen.getByRole('button', { name: '8' }))
     await user.click(screen.getByRole('button', { name: 'Add Block' }))
 
-    expect(onConfirm).toHaveBeenCalledWith('article-grid', 5)
+    expect(onConfirm).toHaveBeenCalledWith('article-grid', 8, undefined, undefined)
   })
 
   it('can submit a location-grid block and respect filtered block types', async () => {
@@ -63,6 +80,6 @@ describe('AddHomepageBlockPicker', () => {
     await user.click(screen.getByRole('button', { name: '6' }))
     await user.click(screen.getByRole('button', { name: 'Add Block' }))
 
-    expect(onConfirm).toHaveBeenCalledWith('location-grid', 6)
+    expect(onConfirm).toHaveBeenCalledWith('location-grid', 6, undefined, undefined)
   })
 })

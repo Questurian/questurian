@@ -12,6 +12,7 @@ import {
   buildConvertedHomepageBlock,
   curatedBlockApiPayload,
   getHomepageFeaturedSelectionFromItems,
+  getNewsletterSignupPlaceholderSelection,
   getHotelGridSelectionFromItems,
   getLocationGridSelectionFromItems,
   getQuesturianMapsSelectionFromItems,
@@ -29,6 +30,7 @@ import {
   HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
   LOCATION_GRID_MAX_SLOTS,
   LOCATION_GRID_MIN_SLOTS,
+  isValidRequestedSlotCount,
   normalizeSlotCountForBlockType,
   resolveLocationGridScopeFromLocation,
   resolveStoredSlotCountForBlockType,
@@ -70,13 +72,14 @@ const SUPPORTED_BLOCK_TYPES = [
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
+  'newsletter-signup',
 ] as const
 type SupportedBlockType = (typeof SUPPORTED_BLOCK_TYPES)[number]
 
 const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }> = {
   'featured-article': { min: 1, max: 1 },
   'featured-articles': { min: 3, max: 9 },
-  'article-grid': { min: 3, max: 5 },
+  'article-grid': { min: 4, max: 8 },
   'location-grid': { min: LOCATION_GRID_MIN_SLOTS, max: LOCATION_GRID_MAX_SLOTS },
   'questurian-maps': {
     min: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
@@ -95,6 +98,7 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
     min: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
     max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   },
+  'newsletter-signup': { min: 0, max: 0 },
 }
 
 function isCuratedBlockType(value: unknown): value is SupportedBlockType {
@@ -159,9 +163,11 @@ async function resolvePageBlocks(
                     ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
                         totalSlots: slotCount,
                       })
-                    : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                        totalSlots: slotCount,
-                      })
+                    : block.blockType === 'newsletter-signup'
+                      ? getNewsletterSignupPlaceholderSelection()
+                      : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                          totalSlots: slotCount,
+                        })
         return curatedBlockApiPayload(block, selection)
       }
       return block
@@ -192,39 +198,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ message: 'blockId (string) is required.' }, { status: 400, headers })
     }
 
-    if (!isCuratedBlockType(nextBlockType) || nextBlockType === 'featured-articles') {
+    if (!isCuratedBlockType(nextBlockType)) {
       return NextResponse.json(
         {
           message:
-            'Provide a supported blockType other than featured-articles (e.g. article-grid, questurian-maps).',
+            'Provide a supported blockType (e.g. featured-articles, article-grid, questurian-maps).',
         },
         { status: 400, headers },
       )
     }
 
-    const slotCount =
-      typeof rawSlotCount === 'number' && Number.isFinite(rawSlotCount) && rawSlotCount >= 1
-        ? Math.trunc(rawSlotCount)
-        : null
+    const limits = BLOCK_SLOT_LIMITS[nextBlockType]
+
+    let slotCount: number | null = null
+    if (typeof rawSlotCount === 'number' && Number.isFinite(rawSlotCount)) {
+      const n = Math.trunc(rawSlotCount)
+      if (isValidRequestedSlotCount(nextBlockType, n)) {
+        slotCount = n
+      }
+    } else if (limits.min === limits.max) {
+      slotCount = limits.min
+    }
 
     if (slotCount === null) {
-      return NextResponse.json(
-        { message: 'slotCount (positive integer) is required.' },
-        { status: 400, headers },
-      )
+      const message =
+        nextBlockType === 'article-grid'
+          ? `slotCount must be 4 or 8 for "${nextBlockType}".`
+          : `slotCount must be an integer between ${limits.min} and ${limits.max} for "${nextBlockType}".`
+      return NextResponse.json({ message }, { status: 400, headers })
     }
 
     const normalizedSlotCount = normalizeSlotCountForBlockType(nextBlockType, slotCount)
-    const limits = BLOCK_SLOT_LIMITS[nextBlockType]
-
-    if (normalizedSlotCount < limits.min || normalizedSlotCount > limits.max) {
-      return NextResponse.json(
-        {
-          message: `slotCount must be between ${limits.min} and ${limits.max} for "${nextBlockType}".`,
-        },
-        { status: 400, headers },
-      )
-    }
 
     const { id } = await params
     const payload = await getPayload({ config })

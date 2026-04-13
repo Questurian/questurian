@@ -9,12 +9,19 @@ import type {
 import type {
   HomepageLocationGridCandidatesResponse,
   HomepageLocationGridItemRef,
+  LocationGridMediaAspect,
 } from './locationGridTypes'
 import type {
   HomepageHotelGridCandidatesResponse,
   HomepageHotelGridItemRef,
 } from './hotelGridTypes'
-import type { PageBlockResponse } from './pageBlocks'
+import type {
+  ArticleGridFourLayout,
+  FeaturedArticlesSlot3Layout,
+  FeaturedArticlesSlot4Layout,
+  FeaturedArticlesSlot5Layout,
+  PageBlockResponse,
+} from './pageBlocks'
 
 const HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS = 12000
 
@@ -111,6 +118,78 @@ export async function updateMainHomepageFeaturedSectionHeading(
   })
 }
 
+export async function updateMainHomepageFeaturedSectionSubheading(
+  token: string,
+  blockId: string,
+  sectionSubheading: string | null,
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, sectionSubheading }),
+  })
+}
+
+export async function updateMainHomepageFeaturedSlot3Layout(
+  token: string,
+  blockId: string,
+  slot3Layout: FeaturedArticlesSlot3Layout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot3Layout }),
+  })
+}
+
+export async function updateMainHomepageFeaturedSlot4Layout(
+  token: string,
+  blockId: string,
+  slot4Layout: FeaturedArticlesSlot4Layout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot4Layout }),
+  })
+}
+
+export async function updateMainHomepageFeaturedSlot5Layout(
+  token: string,
+  blockId: string,
+  slot5Layout: FeaturedArticlesSlot5Layout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot5Layout }),
+  })
+}
+
+export async function updateMainHomepageLocationGridMediaAspect(
+  token: string,
+  blockId: string,
+  mediaAspect: LocationGridMediaAspect,
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, mediaAspect }),
+  })
+}
+
+export async function updateMainHomepageArticleGridFourLayout(
+  token: string,
+  blockId: string,
+  articleGridFourLayout: ArticleGridFourLayout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, articleGridFourLayout }),
+  })
+}
+
 /** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
 export async function convertMainHomepageFeaturedArticlesBlock(
   token: string,
@@ -135,10 +214,14 @@ export async function addMainHomepageBlock(
   slotCount: number,
   mode: HomepageEditorMode = 'explore',
   sectionHeading?: string | null,
+  sectionSubheading?: string | null,
 ): Promise<MainHomepageResponse> {
   const body: Record<string, unknown> = { blockType, slotCount }
   if (typeof sectionHeading === 'string' && sectionHeading.trim()) {
     body.sectionHeading = sectionHeading.trim()
+  }
+  if (typeof sectionSubheading === 'string' && sectionSubheading.trim()) {
+    body.sectionSubheading = sectionSubheading.trim()
   }
   return homepageFeaturedRequest(
     withHomepageMode('/api/homepage-featured-content/blocks', mode),

@@ -117,14 +117,14 @@ describe('HomepageFeaturedContent global validation', () => {
   })
 
   it('normalizes article-grid block items before save', async () => {
-    const items = buildItems(5, 'single-type-listicles')
+    const items = buildItems(8, 'single-type-listicles')
     const statuses = buildStatusMap(items)
 
     const result = await runBeforeValidate(
       [
         {
           blockType: 'article-grid',
-          slotCount: 5,
+          slotCount: 8,
           items,
         },
       ],
@@ -135,7 +135,7 @@ describe('HomepageFeaturedContent global validation', () => {
       pageBlocks: [
         {
           blockType: 'article-grid',
-          slotCount: 5,
+          slotCount: 8,
           items: items.map((item) => ({
             relationTo: item.relationTo,
             value: item.value,
@@ -146,15 +146,16 @@ describe('HomepageFeaturedContent global validation', () => {
   })
 
   it('rejects duplicate entries inside article-grid blocks', async () => {
-    const items = [...buildItems(4), { relationTo: 'articles', value: 1 }]
-    const statuses = buildStatusMap(buildItems(4))
+    const base = buildItems(7, 'articles')
+    const items = [...base, { relationTo: 'articles' as const, value: 1 }]
+    const statuses = buildStatusMap(buildItems(8, 'articles'))
 
     await expect(
       runBeforeValidate(
         [
           {
             blockType: 'article-grid',
-            slotCount: 5,
+            slotCount: 8,
             items,
           },
         ],
@@ -190,6 +191,7 @@ describe('HomepageFeaturedContent global validation', () => {
         {
           blockType: 'location-grid',
           slotCount: 4,
+          mediaAspect: 'rectangle',
           items: [1, 2, 3, 4],
         },
       ],

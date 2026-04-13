@@ -7,6 +7,8 @@ import {
   normalizeHotelGridInput,
   validateHotelGridItems,
 } from './hotel-grid-service'
+import { normalizeArticleGridFourLayout } from './article-grid-four-layout'
+import { normalizeLocationGridMediaAspect } from './location-grid-media-aspect'
 import {
   buildLocationGridGlobalData,
   normalizeLocationGridInput,
@@ -51,7 +53,8 @@ export function isCuratedHomepageBlockType(
   | 'hotel-grid'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
-  | 'things-to-do-attractions' {
+  | 'things-to-do-attractions'
+  | 'newsletter-signup' {
   return value === 'featured-article'
     || value === 'featured-articles'
     || value === 'article-grid'
@@ -61,6 +64,7 @@ export function isCuratedHomepageBlockType(
     || value === 'where-to-eat-drink'
     || value === 'things-to-do-listicles'
     || value === 'things-to-do-attractions'
+    || value === 'newsletter-signup'
 }
 
 /**
@@ -89,10 +93,25 @@ export async function normalizePageBlocksArrayInPlace(
     )
     blockRecord.slotCount = slotCount
 
+    if (blockRecord.blockType === 'location-grid') {
+      blockRecord.mediaAspect = normalizeLocationGridMediaAspect(blockRecord.mediaAspect)
+    }
+
+    if (blockRecord.blockType === 'article-grid' && slotCount === 4) {
+      blockRecord.articleGridFourLayout = normalizeArticleGridFourLayout(
+        blockRecord.articleGridFourLayout,
+      )
+    }
+
     if (blockRecord.blockType === 'location-grid' && !locationGridScope) {
       throw new Error(
         'Location Grid blocks are only available on the main homepage and city homepages.',
       )
+    }
+
+    if (blockRecord.blockType === 'newsletter-signup') {
+      blockRecord.items = []
+      continue
     }
 
     if (!Array.isArray(blockRecord.items) || blockRecord.items.length === 0) {

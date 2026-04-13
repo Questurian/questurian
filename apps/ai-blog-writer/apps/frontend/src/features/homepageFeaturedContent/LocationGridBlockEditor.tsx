@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
 
 import { LocationGridPickerModal } from './LocationGridPickerModal'
 import LocationGridLayout from './LocationGridLayout'
 import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
+import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
-import type {
-  HomepageLocationGridCandidatesResponse,
-  HomepageLocationGridItemRef,
-  HomepageLocationGridLevel,
-  HomepageLocationGridSelection,
+import {
+  LOCATION_GRID_MEDIA_ASPECTS,
+  type HomepageLocationGridCandidatesResponse,
+  type HomepageLocationGridItemRef,
+  type HomepageLocationGridLevel,
+  type HomepageLocationGridSelection,
+  type LocationGridMediaAspect,
 } from './locationGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
@@ -21,8 +24,6 @@ import {
   useHomepageLocationGridSlots,
   type LocationGridCandidateParams,
 } from './useHomepageLocationGridSlots'
-
-const SECTION_HEADING_MAX_LEN = 120
 
 function getInvalidMessage(count: number): string {
   if (count === 1) {
@@ -49,6 +50,8 @@ type Props = {
   ) => Promise<HomepageLocationGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
   saveLocationGridSectionHeading?: (token: string, value: string | null) => Promise<void>
+  saveLocationGridSectionSubheading?: (token: string, value: string | null) => Promise<void>
+  saveLocationGridMediaAspect?: (token: string, value: LocationGridMediaAspect) => Promise<void>
   /** When the grid has no saved locations, user may switch block type (section title kept). */
   convertBlockTargets?: CuratedHomepageBlockType[]
   onConvertEmptyBlock?: (
@@ -71,6 +74,8 @@ export default function LocationGridBlockEditor({
   saveSelection,
   fetchCandidates,
   saveLocationGridSectionHeading,
+  saveLocationGridSectionSubheading,
+  saveLocationGridMediaAspect,
   convertBlockTargets,
   onConvertEmptyBlock,
   onDeleteBlock,
@@ -78,27 +83,21 @@ export default function LocationGridBlockEditor({
   deleteError,
 }: Props) {
   const savedSectionHeading = block.sectionHeading ?? ''
-  const [sectionHeadingDraft, setSectionHeadingDraft] = useState(savedSectionHeading)
+  const savedSectionSubheading = block.sectionSubheading ?? ''
+  const savedMediaAspect: LocationGridMediaAspect = block.mediaAspect ?? 'rectangle'
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const sectionHeadingInputRef = useRef<HTMLInputElement>(null)
+  const [mediaAspectDraft, setMediaAspectDraft] = useState<LocationGridMediaAspect>(savedMediaAspect)
 
   useEffect(() => {
-    setSectionHeadingDraft(savedSectionHeading)
-  }, [block.id, savedSectionHeading])
+    setMediaAspectDraft(savedMediaAspect)
+  }, [savedMediaAspect])
 
-  useEffect(() => {
-    if (!settingsOpen || !saveLocationGridSectionHeading) return
-    const id = window.setTimeout(() => sectionHeadingInputRef.current?.focus(), 0)
-    return () => window.clearTimeout(id)
-  }, [settingsOpen, saveLocationGridSectionHeading])
+  const mediaAspectDirty = mediaAspectDraft !== savedMediaAspect
 
-  const headingTrimmed = sectionHeadingDraft.trim()
-  const headingDirty = headingTrimmed !== savedSectionHeading.trim()
-
-  const headingMutation = useMutation({
-    mutationFn: async (value: string | null) => {
-      if (!token || !saveLocationGridSectionHeading) return
-      await saveLocationGridSectionHeading(token, value)
+  const mediaAspectMutation = useMutation({
+    mutationFn: async (value: LocationGridMediaAspect) => {
+      if (!token || !saveLocationGridMediaAspect) return
+      await saveLocationGridMediaAspect(token, value)
     },
   })
 
@@ -137,10 +136,11 @@ export default function LocationGridBlockEditor({
     hasUnsavedChanges,
   } = slotEditorState
 
-  const convertTargetOptions = useMemo(
-    () => (convertBlockTargets ?? []).filter((t) => t !== block.blockType),
-    [convertBlockTargets, block.blockType],
-  )
+  const convertTargetOptions = useMemo(() => {
+    const list = convertBlockTargets ?? []
+    const others = list.filter((t) => t !== block.blockType)
+    return [block.blockType, ...others]
+  }, [convertBlockTargets, block.blockType])
 
   const canConvertEmptyBlock =
     Boolean(onConvertEmptyBlock)
@@ -243,51 +243,70 @@ export default function LocationGridBlockEditor({
         >
           {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
         </p>
-          {saveLocationGridSectionHeading ? (
+          <HomepageBlockSectionTextFields
+            blockId={block.id}
+            token={token}
+            sectionHeading={block.sectionHeading}
+            sectionSubheading={block.sectionSubheading}
+            settingsOpen={settingsOpen}
+            saveSectionHeading={saveLocationGridSectionHeading}
+            saveSectionSubheading={saveLocationGridSectionSubheading}
+          />
+
+          {saveLocationGridMediaAspect ? (
             <section className="hf-block-settings-section">
-              <h3 className="hf-block-settings-kicker">Section title</h3>
+              <h3 className="hf-block-settings-kicker">Card image shape</h3>
               <p className="hf-block-settings-hint">
-                Optional headline shown above this grid on the public site.
+                Aspect ratio for each location cover image in this grid (editor preview matches the
+                public homepage).
               </p>
-              <label className="hf-sr-only" htmlFor={`hf-lg-section-${block.id}`}>
-                Section title
-              </label>
-              <input
-                ref={sectionHeadingInputRef}
-                id={`hf-lg-section-${block.id}`}
-                type="text"
-                className="hf-block-section-heading-input"
-                maxLength={SECTION_HEADING_MAX_LEN}
-                placeholder="e.g. Explore destinations"
-                value={sectionHeadingDraft}
-                onChange={(e) => setSectionHeadingDraft(e.target.value)}
-                disabled={!token || headingMutation.isPending}
-                autoComplete="off"
-              />
+              <div
+                className="hf-slot3-layout-options"
+                role="radiogroup"
+                aria-label="Location grid image shape"
+              >
+                {LOCATION_GRID_MEDIA_ASPECTS.map((aspect) => (
+                  <label key={aspect} className="hf-slot3-layout-label">
+                    <input
+                      type="radio"
+                      name={`hf-lg-aspect-${block.id}`}
+                      checked={mediaAspectDraft === aspect}
+                      onChange={() => setMediaAspectDraft(aspect)}
+                      disabled={!token || mediaAspectMutation.isPending}
+                    />
+                    <span>
+                      {aspect === 'rectangle'
+                        ? 'Rectangle — wide (16:10)'
+                        : aspect === 'square'
+                          ? 'Square — 1:1'
+                          : 'Portrait — taller (3:4, not phone-tall)'}
+                    </span>
+                  </label>
+                ))}
+              </div>
               <div className="hf-block-section-heading-row">
                 <button
                   type="button"
                   className="hf-btn-ghost"
-                  disabled={!token || !headingDirty || headingMutation.isPending}
-                  onClick={() => setSectionHeadingDraft(savedSectionHeading)}
+                  disabled={!token || !mediaAspectDirty || mediaAspectMutation.isPending}
+                  onClick={() => setMediaAspectDraft(savedMediaAspect)}
                 >
                   Reset
                 </button>
                 <button
                   type="button"
                   className="hf-btn-primary"
-                  disabled={!token || !headingDirty || headingMutation.isPending}
-                  onClick={() =>
-                    headingMutation.mutate(headingTrimmed === '' ? null : headingTrimmed)}
+                  disabled={!token || !mediaAspectDirty || mediaAspectMutation.isPending}
+                  onClick={() => mediaAspectMutation.mutate(mediaAspectDraft)}
                 >
-                  {headingMutation.isPending ? 'Saving…' : 'Save title'}
+                  {mediaAspectMutation.isPending ? 'Saving…' : 'Save shape'}
                 </button>
               </div>
-              {headingMutation.isError ? (
+              {mediaAspectMutation.isError ? (
                 <p className="hf-block-section-heading-error">
-                  {headingMutation.error instanceof Error
-                    ? headingMutation.error.message
-                    : 'Failed to save heading.'}
+                  {mediaAspectMutation.error instanceof Error
+                    ? mediaAspectMutation.error.message
+                    : 'Failed to save image shape.'}
                 </p>
               ) : null}
             </section>
@@ -310,6 +329,8 @@ export default function LocationGridBlockEditor({
 
           <HomepageBlockConvertSection
             blockId={block.id}
+            currentBlockType={block.blockType}
+            currentSlotCount={block.selection.totalSlots}
             token={token}
             convertTargetOptions={convertTargetOptions}
             canConvert={canConvertEmptyBlock}
@@ -328,6 +349,14 @@ export default function LocationGridBlockEditor({
       </HomepageBlockSettingsModal>
 
       <div className="hf-block-content">
+        {savedSectionHeading.trim() ? (
+          <h2 className="hf-block-section-heading-h2 hf-block-public-section-title">
+            {savedSectionHeading.trim()}
+          </h2>
+        ) : null}
+        {savedSectionSubheading.trim() ? (
+          <p className="hf-block-public-section-subtitle">{savedSectionSubheading.trim()}</p>
+        ) : null}
         <p className="hf-panel-desc">
           {blockConfig.description}. This block can only select {childLabel}. Click a card to pick or
           swap a location; use the arrows to reorder.
@@ -346,6 +375,7 @@ export default function LocationGridBlockEditor({
         <LocationGridLayout
           slots={slots}
           childLevel={childLevel}
+          mediaAspect={mediaAspectDraft}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onMove={handleMove}

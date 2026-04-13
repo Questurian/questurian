@@ -77,6 +77,11 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   publishedAt: string | null
   collectionLabel: string
   imageUrl: string | null
+  /**
+   * Square (1:1) asset URL when featured image links to a media set with a square variant,
+   * or when the featured upload is the square variant. Null → UI may crop `imageUrl`.
+   */
+  imageUrlSquare: string | null
   /** SEO meta description when present (articles, listicles, itineraries). */
   excerpt: string | null
   /** Resolved author display name when relationship populated at depth ≥ 1. */

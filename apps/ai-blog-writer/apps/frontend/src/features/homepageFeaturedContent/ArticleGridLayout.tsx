@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react'
 
+import type { ArticleGridFourLayout } from './pageBlocks'
 import type { HomepageFeaturedInvalidItem } from './types'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 
@@ -27,6 +28,8 @@ function ImgPlaceholder() {
 
 type Props = {
   slots: SlotValue[]
+  /** When there are 4 slots: wide strip vs 2×2 square (ignored for 8 slots). */
+  articleGridFourLayout?: ArticleGridFourLayout
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
   onMove: (slotIndex: number, direction: -1 | 1) => void
@@ -35,19 +38,27 @@ type Props = {
 
 export default function ArticleGridLayout({
   slots,
+  articleGridFourLayout = 'four-across',
   invalidItemsBySlot,
   onSlotClick,
   onMove,
   onRemove,
 }: Props) {
-  const columnClass = slots.length <= 3 ? 'hf-article-grid-cols-3' : 'hf-article-grid-cols-4'
+  const fourVariant =
+    articleGridFourLayout === 'two-by-two'
+      ? 'hf-article-grid--4-2x2'
+      : 'hf-article-grid--4-across'
+  const gridVariant =
+    slots.length === 8
+      ? 'hf-article-grid--slots-8'
+      : `hf-article-grid--slots-4 ${fourVariant}`
 
   function stopEvent(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation()
   }
 
   return (
-    <div className={`hf-article-grid ${columnClass}`}>
+    <div className={`hf-article-grid ${gridVariant}`}>
       {slots.map((item, slotIndex) => {
         const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
 

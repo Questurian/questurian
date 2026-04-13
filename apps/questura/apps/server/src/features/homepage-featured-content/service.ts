@@ -72,6 +72,14 @@ function extractAuthorLabel(doc: PayloadDocLike): string | null {
   return email || null
 }
 
+function assetDisplayUrl(asset: Record<string, unknown>): string | null {
+  const bunnyUrl = asset.bunny_original_url
+  if (typeof bunnyUrl === 'string' && bunnyUrl) return bunnyUrl
+
+  const url = asset.url
+  return typeof url === 'string' && url ? url : null
+}
+
 function extractFeaturedImageUrl(doc: PayloadDocLike): string | null {
   // Articles use `headerSection`; listicles and itineraries use `header`
   const section = isRecord(doc.headerSection) ? doc.headerSection : isRecord(doc.header) ? doc.header : null
@@ -81,11 +89,35 @@ function extractFeaturedImageUrl(doc: PayloadDocLike): string | null {
   if (!isRecord(featuredImage)) return null
 
   // Prefer bunny_original_url (1200x630 OG image), fall back to the plugin-set url
-  const bunnyUrl = featuredImage.bunny_original_url
-  if (typeof bunnyUrl === 'string' && bunnyUrl) return bunnyUrl
+  return assetDisplayUrl(featuredImage)
+}
 
-  const url = featuredImage.url
-  return typeof url === 'string' && url ? url : null
+/** Prefer media-set square variant or a featured upload that is the square variant. */
+function extractFeaturedSquareImageUrl(doc: PayloadDocLike): string | null {
+  const section = isRecord(doc.headerSection) ? doc.headerSection : isRecord(doc.header) ? doc.header : null
+  if (!section) return null
+
+  const featuredImage = section.featuredImage
+  if (!isRecord(featuredImage)) return null
+
+  if (featuredImage.variant === 'square') {
+    const direct = assetDisplayUrl(featuredImage)
+    if (direct) return direct
+  }
+
+  const mediaSet = featuredImage.mediaSet
+  if (!isRecord(mediaSet)) return null
+
+  const variants = mediaSet.variants
+  if (!isRecord(variants)) return null
+
+  const square = variants.square
+  if (isRecord(square)) {
+    const u = assetDisplayUrl(square)
+    if (u) return u
+  }
+
+  return null
 }
 
 function isHomepageFeaturedCollection(value: unknown): value is HomepageFeaturedCollection {
@@ -205,6 +237,7 @@ function normalizeHomepageFeaturedCandidate(
     publishedAt: typeof doc.publishedAt === 'string' && doc.publishedAt.trim() ? doc.publishedAt : null,
     collectionLabel: getHomepageFeaturedCollectionLabel(relationTo),
     imageUrl: extractFeaturedImageUrl(doc),
+    imageUrlSquare: extractFeaturedSquareImageUrl(doc),
     excerpt: extractSeoExcerpt(doc),
     authorLabel: extractAuthorLabel(doc),
   }
@@ -218,7 +251,8 @@ async function findHomepageFeaturedDoc(
     const doc = await payload.findByID({
       collection: ref.relationTo,
       id: ref.id,
-      depth: 1,
+      // Populate featuredImage → mediaSet → variants.square for `imageUrlSquare`
+      depth: 3,
       overrideAccess: true,
     })
 
@@ -359,6 +393,19 @@ export async function getHomepageFeaturedSelectionFromItems(
   }
 }
 
+/** API selection shape for `newsletter-signup` blocks (no curated items). */
+export function getNewsletterSignupPlaceholderSelection(options?: {
+  allowDrafts?: boolean
+}): HomepageFeaturedSelection {
+  return {
+    items: [],
+    invalidItems: [],
+    allowDrafts: options?.allowDrafts ?? APP_CONFIG.features.homepageFeaturedAllowDrafts,
+    isComplete: true,
+    totalSlots: 0,
+  }
+}
+
 export async function getHomepageFeaturedSelection(
   payload: Payload,
   options: {
@@ -432,7 +479,7 @@ export async function searchHomepageFeaturedCandidates(
 
       const response = await payload.find({
         collection,
-        depth: 1,
+        depth: 3,
         limit: perCollectionLimit,
         page: 1,
         sort: '-updatedAt',

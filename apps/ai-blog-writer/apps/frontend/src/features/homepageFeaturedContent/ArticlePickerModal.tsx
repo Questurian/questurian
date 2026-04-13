@@ -143,8 +143,12 @@ export function ArticlePickerModal({
                   className={`hf-picker-row${isUsedElsewhere ? ' used' : ''}`}
                 >
                   <div className="hf-picker-thumb">
-                    {candidate.imageUrl ? (
-                      <img src={candidate.imageUrl} alt="" loading="lazy" />
+                    {candidate.imageUrlSquare || candidate.imageUrl ? (
+                      <img
+                        src={candidate.imageUrlSquare ?? candidate.imageUrl!}
+                        alt=""
+                        loading="lazy"
+                      />
                     ) : (
                       <ImgPlaceholder />
                     )}

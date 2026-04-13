@@ -9,6 +9,7 @@ import { QuesturianMapsBlock } from './blocks/questurian-maps'
 import { WhereToEatDrinkBlock } from './blocks/where-to-eat-drink'
 import { ThingsToDoAttractionsBlock } from './blocks/things-to-do-attractions'
 import { ThingsToDoListiclesBlock } from './blocks/things-to-do-listicles'
+import { NewsletterSignupBlock } from './blocks/newsletter-signup'
 import { MAIN_LOCATION_GRID_SCOPE } from './location-grid-service'
 import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
 import {
@@ -26,6 +27,7 @@ const HOMEPAGE_BLOCK_TYPES = [
   WhereToEatDrinkBlock,
   ThingsToDoListiclesBlock,
   ThingsToDoAttractionsBlock,
+  NewsletterSignupBlock,
 ] as const
 
 export const HomepageFeaturedContent: GlobalConfig = {

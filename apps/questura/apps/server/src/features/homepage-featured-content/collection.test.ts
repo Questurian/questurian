@@ -133,6 +133,7 @@ describe('LocationHomepages collection validation', () => {
         {
           blockType: 'location-grid',
           slotCount: 4,
+          mediaAspect: 'rectangle',
           items: [1, 2, 3, 4],
         },
       ],

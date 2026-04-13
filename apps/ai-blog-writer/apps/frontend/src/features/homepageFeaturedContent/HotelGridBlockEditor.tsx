@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 
 import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
+import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
 import HotelGridLayout from './HotelGridLayout'
 import { HotelGridPickerModal } from './HotelGridPickerModal'
@@ -37,6 +38,8 @@ export default function HotelGridBlockEditor({
   fetchCandidates,
   convertBlockTargets,
   onConvertEmptyBlock,
+  saveHotelGridSectionHeading,
+  saveHotelGridSectionSubheading,
   onDeleteBlock,
   isDeletingBlock,
   deleteError,
@@ -51,6 +54,9 @@ export default function HotelGridBlockEditor({
     token: string,
     params: HotelGridCandidateParams,
   ) => Promise<HomepageHotelGridCandidatesResponse>
+  /** Persist optional section title (PUT without items). */
+  saveHotelGridSectionHeading?: (token: string, value: string | null) => Promise<void>
+  saveHotelGridSectionSubheading?: (token: string, value: string | null) => Promise<void>
   convertBlockTargets?: CuratedHomepageBlockType[]
   onConvertEmptyBlock?: (
     token: string,
@@ -61,7 +67,10 @@ export default function HotelGridBlockEditor({
   isDeletingBlock: boolean
   deleteError: string | null
 }) {
+  const savedSectionHeading = block.sectionHeading ?? ''
+  const savedSectionSubheading = block.sectionSubheading ?? ''
   const [settingsOpen, setSettingsOpen] = useState(false)
+
   const slotEditorState = useHomepageHotelGridSlots({
     token,
     canManage,
@@ -96,10 +105,11 @@ export default function HotelGridBlockEditor({
     hasUnsavedChanges,
   } = slotEditorState
 
-  const convertTargetOptions = useMemo(
-    () => (convertBlockTargets ?? []).filter((t) => t !== block.blockType),
-    [convertBlockTargets, block.blockType],
-  )
+  const convertTargetOptions = useMemo(() => {
+    const list = convertBlockTargets ?? []
+    const others = list.filter((t) => t !== block.blockType)
+    return [block.blockType, ...others]
+  }, [convertBlockTargets, block.blockType])
 
   const canConvertEmptyBlock =
     Boolean(onConvertEmptyBlock)
@@ -153,7 +163,7 @@ export default function HotelGridBlockEditor({
           <button
             type="button"
             className="hf-btn-icon hf-block-settings-gear"
-            title="Block settings — change type when empty"
+            title="Block settings — section title, change type when empty"
             aria-label="Block settings"
             disabled={!token}
             onClick={() => setSettingsOpen(true)}
@@ -190,8 +200,19 @@ export default function HotelGridBlockEditor({
         >
           {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
         </p>
+        <HomepageBlockSectionTextFields
+          blockId={block.id}
+          token={token}
+          sectionHeading={block.sectionHeading}
+          sectionSubheading={block.sectionSubheading}
+          settingsOpen={settingsOpen}
+          saveSectionHeading={saveHotelGridSectionHeading}
+          saveSectionSubheading={saveHotelGridSectionSubheading}
+        />
         <HomepageBlockConvertSection
           blockId={block.id}
+          currentBlockType={block.blockType}
+          currentSlotCount={block.selection.totalSlots}
           token={token}
           convertTargetOptions={convertTargetOptions}
           canConvert={canConvertEmptyBlock}
@@ -210,6 +231,14 @@ export default function HotelGridBlockEditor({
       </HomepageBlockSettingsModal>
 
       <div className="hf-block-content">
+        {savedSectionHeading.trim() ? (
+          <h2 className="hf-block-section-heading-h2 hf-block-public-section-title">
+            {savedSectionHeading.trim()}
+          </h2>
+        ) : null}
+        {savedSectionSubheading.trim() ? (
+          <p className="hf-block-public-section-subtitle">{savedSectionSubheading.trim()}</p>
+        ) : null}
         <p className="hf-panel-desc">{blockConfig.description}.</p>
         {savedInvalidItems.length > 0 && (
           <div className="hf-banner warning">

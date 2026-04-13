@@ -1,6 +1,9 @@
 import type { Block } from 'payload'
 
-import { HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX } from '../featured-articles-section-heading'
+import {
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
+} from '../featured-articles-section-heading'
 import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 
 export const ArticleGridBlock: Block = {
@@ -14,10 +17,29 @@ export const ArticleGridBlock: Block = {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: 3,
-      max: 5,
+      min: 4,
+      max: 8,
+      validate: (value: unknown) => {
+        if (value === 4 || value === 8) return true
+        return 'Must be 4 or 8 cards.'
+      },
       admin: {
-        description: 'How many cards this compact article grid contains.',
+        description:
+          '4 or 8 slots. For 4 slots, pick row vs 2×2 layout below. 8 slots: always four columns × two rows, square images.',
+      },
+    },
+    {
+      name: 'articleGridFourLayout',
+      dbName: 'ag_l4',
+      type: 'select',
+      required: false,
+      defaultValue: 'four-across',
+      options: [
+        { label: 'One row × four — wide (16:10) images', value: 'four-across' },
+        { label: '2×2 grid — square images', value: 'two-by-two' },
+      ],
+      admin: {
+        description: 'Applies only when slot count is 4.',
       },
     },
     {
@@ -27,6 +49,15 @@ export const ArticleGridBlock: Block = {
       maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
       admin: {
         description: 'Optional headline shown above this block on the public homepage.',
+      },
+    },
+    {
+      name: 'sectionSubheading',
+      type: 'text',
+      required: false,
+      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
+      admin: {
+        description: 'Optional supporting line under the section heading.',
       },
     },
     {
