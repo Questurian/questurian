@@ -12,10 +12,7 @@ import { ThingsToDoListiclesBlock } from './blocks/things-to-do-listicles'
 import { NewsletterSignupBlock } from './blocks/newsletter-signup'
 import { MAIN_LOCATION_GRID_SCOPE } from './location-grid-service'
 import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
-import {
-  ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS,
-  HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-} from './types'
+import { HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG } from './types'
 
 const HOMEPAGE_BLOCK_TYPES = [
   FeaturedArticleBlock,
@@ -46,28 +43,9 @@ export const HomepageFeaturedContent: GlobalConfig = {
       name: 'pageBlocks',
       type: 'blocks',
       blocks: [...HOMEPAGE_BLOCK_TYPES],
-      label: 'Explore — page blocks',
+      label: 'Page blocks',
       admin: {
-        description:
-          'Explore mode: curated sections for the main homepage (articles, grids, etc.).',
-      },
-    },
-    {
-      name: 'pageBlocksStay',
-      type: 'blocks',
-      blocks: [...HOMEPAGE_BLOCK_TYPES],
-      label: 'Stay — page blocks',
-      admin: {
-        description: 'Stay mode: same block types as Explore; curated independently.',
-      },
-    },
-    {
-      name: 'pageBlocksMove',
-      type: 'blocks',
-      blocks: [...HOMEPAGE_BLOCK_TYPES],
-      label: 'Move — page blocks',
-      admin: {
-        description: 'Move mode: same block types as Explore; curated independently.',
+        description: 'Curated sections for the main homepage (articles, grids, etc.).',
       },
     },
   ],
@@ -76,15 +54,9 @@ export const HomepageFeaturedContent: GlobalConfig = {
       async ({ data, req }) => {
         if (!data) return data
 
-        for (const field of ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS) {
-          const arr = data[field as keyof typeof data]
-          if (Array.isArray(arr)) {
-            await normalizePageBlocksArrayInPlace(
-              req,
-              arr as unknown[],
-              MAIN_LOCATION_GRID_SCOPE,
-            )
-          }
+        const arr = data['pageBlocks' as keyof typeof data]
+        if (Array.isArray(arr)) {
+          await normalizePageBlocksArrayInPlace(req, arr as unknown[], MAIN_LOCATION_GRID_SCOPE)
         }
 
         return data

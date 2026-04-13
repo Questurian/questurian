@@ -1,6 +1,3 @@
-export const HOMEPAGE_EDITOR_MODES = ['explore', 'stay', 'move'] as const
-export type HomepageEditorMode = (typeof HOMEPAGE_EDITOR_MODES)[number]
-
 export const HOMEPAGE_FEATURED_TOTAL_SLOTS = 10
 
 export const HOMEPAGE_FEATURED_COLLECTIONS = [

@@ -55,14 +55,6 @@ import {
   type LocationGridBlockResponse,
   type PageBlockResponse,
 } from './pageBlocks'
-import { HOMEPAGE_EDITOR_MODES, type HomepageEditorMode } from './types'
-
-function homepageModeLabel(mode: HomepageEditorMode): string {
-  if (mode === 'explore') return 'Explore'
-  if (mode === 'stay') return 'Stay'
-  return 'Move'
-}
-
 function getLocationLabel(location: LocationRef | null): string {
   if (!location) return 'Location Homepage'
 
@@ -81,12 +73,11 @@ export default function LocationHomepagePage() {
   const { token, user } = useAuth()
   const canManage = user?.role === 'admin' || user?.role === 'editor'
   const queryClient = useQueryClient()
-  const [homepageMode, setHomepageMode] = useState<HomepageEditorMode>('explore')
-  const homepageQueryKey = ['location-homepage', numericId, homepageMode, token]
+  const homepageQueryKey = ['location-homepage', numericId, token]
 
   const homepageQuery = useQuery({
     queryKey: homepageQueryKey,
-    queryFn: () => fetchLocationHomepage(token!, numericId, homepageMode),
+    queryFn: () => fetchLocationHomepage(token!, numericId),
     enabled: Boolean(token && canManage && numericId),
   })
 
@@ -122,15 +113,7 @@ export default function LocationHomepagePage() {
       sectionHeading?: string | null
       sectionSubheading?: string | null
     }) =>
-      addLocationHomepageBlock(
-        token!,
-        numericId,
-        blockType,
-        slotCount,
-        homepageMode,
-        sectionHeading,
-        sectionSubheading,
-      ),
+      addLocationHomepageBlock(token!, numericId, blockType, slotCount, sectionHeading, sectionSubheading),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homepageQueryKey })
       setShowAddBlock(false)
@@ -139,7 +122,7 @@ export default function LocationHomepagePage() {
 
   const deleteBlockMutation = useMutation({
     mutationFn: ({ blockId }: { blockId: string }) =>
-      deleteLocationHomepageBlock(token!, numericId, blockId, homepageMode),
+      deleteLocationHomepageBlock(token!, numericId, blockId),
     onMutate: ({ blockId }) => {
       setDeletingBlockId(blockId)
     },
@@ -153,7 +136,7 @@ export default function LocationHomepagePage() {
 
   const reorderBlocksMutation = useMutation({
     mutationFn: (orderedBlockIds: string[]) =>
-      reorderLocationHomepageBlocks(token!, numericId, orderedBlockIds, homepageMode),
+      reorderLocationHomepageBlocks(token!, numericId, orderedBlockIds),
     onMutate: () => setReorderCommitting(true),
     onSuccess: async () => {
       try {
@@ -266,24 +249,6 @@ export default function LocationHomepagePage() {
         </button>
       </div>
 
-      <div className="hf-mode-switch" aria-label="Location homepage variant">
-        <span className="hf-mode-switch-label">Variant</span>
-        <div className="hf-mode-segment" role="tablist">
-          {HOMEPAGE_EDITOR_MODES.map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="tab"
-              aria-selected={homepageMode === m}
-              className={homepageMode === m ? 'hf-mode-active' : undefined}
-              onClick={() => setHomepageMode(m)}
-            >
-              {homepageModeLabel(m)}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* ── Blocks ─────────────────────────────────────────── */}
       {homepage.pageBlocks.length === 0 ? (
         <div className="hf-state-screen">
@@ -316,20 +281,13 @@ export default function LocationHomepagePage() {
                   deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
                   selectionQueryKey={[
                     'location-homepage-block',
-                    homepageMode,
                     numericId,
                     ...homepageBlockShapeIdentity(block),
                     homepageFeaturedSelectionRevision(block.selection),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
-                    const updated = await updateLocationHomepageBlock(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      items,
-                      homepageMode,
-                    )
+                    const updated = await updateLocationHomepageBlock(currentToken, numericId, block.id, items)
                     const updatedBlock = updated.pageBlocks.find(
                       (candidate): candidate is ArticleCuratedHomepageBlockResponse =>
                         candidate.id === block.id && candidate.blockType === block.blockType,
@@ -354,35 +312,17 @@ export default function LocationHomepagePage() {
                             params as Parameters<typeof fetchLocationHomepageCandidates>[2],
                           )}
                   saveSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   saveSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   saveSlot3Layout={
                     block.blockType === 'featured-articles' && block.selection.totalSlots === 3
                       ? async (currentToken, value) => {
-                          await updateLocationHomepageFeaturedSlot3Layout(
-                            currentToken,
-                            numericId,
-                            block.id,
-                            value,
-                            homepageMode,
-                          )
+                          await updateLocationHomepageFeaturedSlot3Layout(currentToken, numericId, block.id, value)
                           queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                         }
                       : undefined
@@ -390,13 +330,7 @@ export default function LocationHomepagePage() {
                   saveSlot4Layout={
                     block.blockType === 'featured-articles' && block.selection.totalSlots === 4
                       ? async (currentToken, value) => {
-                          await updateLocationHomepageFeaturedSlot4Layout(
-                            currentToken,
-                            numericId,
-                            block.id,
-                            value,
-                            homepageMode,
-                          )
+                          await updateLocationHomepageFeaturedSlot4Layout(currentToken, numericId, block.id, value)
                           queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                         }
                       : undefined
@@ -404,13 +338,7 @@ export default function LocationHomepagePage() {
                   saveSlot5Layout={
                     block.blockType === 'featured-articles' && block.selection.totalSlots === 5
                       ? async (currentToken, value) => {
-                          await updateLocationHomepageFeaturedSlot5Layout(
-                            currentToken,
-                            numericId,
-                            block.id,
-                            value,
-                            homepageMode,
-                          )
+                          await updateLocationHomepageFeaturedSlot5Layout(currentToken, numericId, block.id, value)
                           queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                         }
                       : undefined
@@ -418,27 +346,14 @@ export default function LocationHomepagePage() {
                   saveArticleGridFourLayout={
                     block.blockType === 'article-grid' && block.selection.totalSlots === 4
                       ? async (currentToken, value) => {
-                          await updateLocationHomepageArticleGridFourLayout(
-                            currentToken,
-                            numericId,
-                            block.id,
-                            value,
-                            homepageMode,
-                          )
+                          await updateLocationHomepageArticleGridFourLayout(currentToken, numericId, block.id, value)
                           queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                         }
                       : undefined
                   }
                   convertEmptyFeaturedArticlesTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyFeaturedArticlesBlock={async (currentToken, blockType, slotCount) => {
-                    await convertLocationHomepageFeaturedArticlesBlock(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      blockType,
-                      slotCount,
-                      homepageMode,
-                    )
+                    await convertLocationHomepageFeaturedArticlesBlock(currentToken, numericId, block.id, blockType, slotCount)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                 />
@@ -458,20 +373,13 @@ export default function LocationHomepagePage() {
                   childLevel={locationGridChildLevel}
                   selectionQueryKey={[
                     'location-homepage-location-grid',
-                    homepageMode,
                     numericId,
                     ...homepageBlockShapeIdentity(block),
                     homepageLocationGridSelectionRevision(block.selection),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
-                    const updated = await updateLocationHomepageBlock(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      items,
-                      homepageMode,
-                    )
+                    const updated = await updateLocationHomepageBlock(currentToken, numericId, block.id, items)
                     const updatedBlock = updated.pageBlocks.find(
                       (candidate): candidate is LocationGridBlockResponse =>
                         candidate.id === block.id && candidate.blockType === block.blockType,
@@ -483,45 +391,20 @@ export default function LocationHomepagePage() {
                   fetchCandidates={(currentToken, params) =>
                     fetchLocationHomepageLocationGridCandidates(currentToken, numericId, params)}
                   saveLocationGridSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   saveLocationGridSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   saveLocationGridMediaAspect={async (currentToken, value) => {
-                    await updateLocationHomepageLocationGridMediaAspect(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageLocationGridMediaAspect(currentToken, numericId, block.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   convertBlockTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-                    await convertLocationHomepageFeaturedArticlesBlock(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      blockType,
-                      slotCount,
-                      homepageMode,
-                    )
+                    await convertLocationHomepageFeaturedArticlesBlock(currentToken, numericId, block.id, blockType, slotCount)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                 />
@@ -538,23 +421,11 @@ export default function LocationHomepagePage() {
                   isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
                   deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
                   saveSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   saveSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                 />
@@ -576,20 +447,13 @@ export default function LocationHomepagePage() {
                   }
                   selectionQueryKey={[
                     'location-homepage-hotel-grid',
-                    homepageMode,
                     numericId,
                     ...homepageBlockShapeIdentity(gridBlock),
                     homepageHotelGridSelectionRevision(gridBlock.selection),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
-                    const updated = await updateLocationHomepageBlock(
-                      currentToken,
-                      numericId,
-                      gridBlock.id,
-                      items,
-                      homepageMode,
-                    )
+                    const updated = await updateLocationHomepageBlock(currentToken, numericId, gridBlock.id, items)
                     const updatedBlock = updated.pageBlocks.find(
                       (candidate): candidate is HotelOrAttractionGridBlockResponse =>
                         candidate.id === gridBlock.id && candidate.blockType === gridBlock.blockType,
@@ -608,34 +472,15 @@ export default function LocationHomepagePage() {
                       : fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
                   convertBlockTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-                    await convertLocationHomepageFeaturedArticlesBlock(
-                      currentToken,
-                      numericId,
-                      gridBlock.id,
-                      blockType,
-                      slotCount,
-                      homepageMode,
-                    )
+                    await convertLocationHomepageFeaturedArticlesBlock(currentToken, numericId, gridBlock.id, blockType, slotCount)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   saveHotelGridSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(
-                      currentToken,
-                      numericId,
-                      gridBlock.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, gridBlock.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                   saveHotelGridSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(
-                      currentToken,
-                      numericId,
-                      gridBlock.id,
-                      value,
-                      homepageMode,
-                    )
+                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, gridBlock.id, value)
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
                 />

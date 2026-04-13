@@ -1,46 +1,5 @@
 export const HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG = 'homepage-featured-content'
 
-export const HOMEPAGE_EDITOR_MODES = ['explore', 'stay', 'move'] as const
-export type HomepageEditorMode = (typeof HOMEPAGE_EDITOR_MODES)[number]
-
-export const HOMEPAGE_PAGE_BLOCKS_BY_MODE = {
-  explore: 'pageBlocks',
-  stay: 'pageBlocksStay',
-  move: 'pageBlocksMove',
-} as const satisfies Record<HomepageEditorMode, string>
-
-export type HomepagePageBlocksFieldName =
-  (typeof HOMEPAGE_PAGE_BLOCKS_BY_MODE)[HomepageEditorMode]
-
-export const ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS = [
-  HOMEPAGE_PAGE_BLOCKS_BY_MODE.explore,
-  HOMEPAGE_PAGE_BLOCKS_BY_MODE.stay,
-  HOMEPAGE_PAGE_BLOCKS_BY_MODE.move,
-] as const satisfies readonly HomepagePageBlocksFieldName[]
-
-export function parseHomepageEditorModeParam(value: string | null | undefined): HomepageEditorMode {
-  if (value === 'stay' || value === 'move') return value
-  return 'explore'
-}
-
-export function getPageBlocksFieldName(mode: HomepageEditorMode): HomepagePageBlocksFieldName {
-  return HOMEPAGE_PAGE_BLOCKS_BY_MODE[mode]
-}
-
-/** Merge-safe update for one mode’s blocks; copies other modes from `doc`. */
-export function mergeHomepageBlockFields<T extends Partial<Record<HomepagePageBlocksFieldName, unknown[] | undefined>>>(
-  doc: T,
-  field: HomepagePageBlocksFieldName,
-  blocks: unknown[],
-): Record<HomepagePageBlocksFieldName, unknown[]> {
-  const next = {} as Record<HomepagePageBlocksFieldName, unknown[]>
-  for (const f of ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS) {
-    const existing = doc[f] as unknown[] | undefined
-    next[f] = f === field ? blocks : [...(existing ?? [])]
-  }
-  return next
-}
-
 export const HOMEPAGE_FEATURED_CONTENT_SLOTS = 10
 /** Spotlight block: exactly one curated article/listicle. */
 export const HOMEPAGE_FEATURED_ARTICLE_SLOT_COUNT = 1

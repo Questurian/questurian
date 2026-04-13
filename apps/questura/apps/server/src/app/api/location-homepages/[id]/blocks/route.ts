@@ -35,12 +35,7 @@ import {
   resolveStoredSlotCountForBlockType,
 } from '@/features/homepage-featured-content'
 import { reorderBlocksByIds } from '@/features/homepage-featured-content/reorder-blocks'
-import {
-  getPageBlocksFieldName,
-  HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
-  mergeHomepageBlockFields,
-  parseHomepageEditorModeParam,
-} from '@/features/homepage-featured-content/types'
+import { HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -60,8 +55,6 @@ type LocationHomepageDoc = {
   isEnabled?: boolean
   location?: unknown
   pageBlocks?: RawBlock[]
-  pageBlocksStay?: RawBlock[]
-  pageBlocksMove?: RawBlock[]
 }
 
 const SUPPORTED_BLOCK_TYPES = [
@@ -155,8 +148,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -165,7 +156,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const existingBlocks: RawBlock[] = doc[field] ?? []
+    const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
     const rawLocation =
       typeof doc.location === 'object' && doc.location !== null
         ? doc.location as { level?: unknown; locationKey?: unknown; id?: unknown }
@@ -199,12 +190,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (t) newBlock.sectionSubheading = t
       }
     }
-    const mergeData = mergeHomepageBlockFields(doc, field, [...existingBlocks, newBlock])
-
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      data: mergeData as any,
+      data: { pageBlocks: [...existingBlocks, newBlock] } as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
@@ -213,7 +202,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       typeof updated.location === 'object' && updated.location !== null ? updated.location as Record<string, unknown> : null
 
     const resolvedBlocks = await Promise.all(
-      (updated[field] ?? []).map(async (block) => {
+      (updated.pageBlocks ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
@@ -267,7 +256,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             }
           : null,
         pageBlocks: resolvedBlocks,
-        mode,
       },
       { status: 201, headers },
     )
@@ -306,8 +294,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const { id } = await params
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -316,7 +302,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const existingBlocks: RawBlock[] = doc[field] ?? []
+    const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
     const updatedBlocks = existingBlocks.filter((block) => block.id !== blockId)
 
     if (updatedBlocks.length === existingBlocks.length) {
@@ -332,12 +318,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         : null
     const locationGridScope = resolveLocationGridScopeFromLocation(rawLocation)
 
-    const mergeData = mergeHomepageBlockFields(doc, field, updatedBlocks)
-
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      data: mergeData as any,
+      data: { pageBlocks: updatedBlocks } as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
@@ -348,7 +332,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         : null
 
     const resolvedBlocks = await Promise.all(
-      (updated[field] ?? []).map(async (block) => {
+      (updated.pageBlocks ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
@@ -402,7 +386,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
             }
           : null,
         pageBlocks: resolvedBlocks,
-        mode,
       },
       { headers },
     )
@@ -432,8 +415,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json().catch(() => null)
     const { id } = await params
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -442,7 +423,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const existingBlocks: RawBlock[] = doc[field] ?? []
+    const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
     const reorderResult = reorderBlocksByIds(existingBlocks, body?.orderedBlockIds)
 
     if (!reorderResult.ok) {
@@ -455,12 +436,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         : null
     const locationGridScope = resolveLocationGridScopeFromLocation(rawLocation)
 
-    const mergeData = mergeHomepageBlockFields(doc, field, reorderResult.reordered)
-
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      data: mergeData as any,
+      data: { pageBlocks: reorderResult.reordered } as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
@@ -471,7 +450,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         : null
 
     const resolvedBlocks = await Promise.all(
-      (updated[field] ?? []).map(async (block) => {
+      (updated.pageBlocks ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
@@ -525,7 +504,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             }
           : null,
         pageBlocks: resolvedBlocks,
-        mode,
       },
       { headers },
     )

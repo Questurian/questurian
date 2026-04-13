@@ -1,7 +1,6 @@
 import { PAYLOAD_API_URL } from '../staging/api/client/config'
 import { parseErrorResponse } from '../staging/api/client/error-parser'
 import type {
-  HomepageEditorMode,
   HomepageFeaturedCandidatesResponse,
   HomepageFeaturedCollection,
   HomepageFeaturedItemRef,
@@ -24,11 +23,6 @@ import type {
 } from './pageBlocks'
 
 const LOCATION_HOMEPAGE_REQUEST_TIMEOUT_MS = 12000
-
-function withHomepageMode(path: string, mode: HomepageEditorMode): string {
-  const sep = path.includes('?') ? '&' : '?'
-  return `${path}${sep}mode=${encodeURIComponent(mode)}`
-}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -55,7 +49,6 @@ export type LocationHomepageResponse = {
   isEnabled: boolean
   location: LocationRef | null
   pageBlocks: PageBlockResponse[]
-  mode?: HomepageEditorMode
 }
 
 type HomepageBlockSaveItem =
@@ -133,9 +126,8 @@ export async function createLocationHomepage(
 export async function fetchLocationHomepage(
   token: string,
   id: number,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token)
+  return locationHomepageRequest(`/api/location-homepages/${id}`, token)
 }
 
 export async function updateLocationHomepageBlock(
@@ -143,9 +135,8 @@ export async function updateLocationHomepageBlock(
   id: number,
   blockId: string,
   items: HomepageBlockSaveItem[],
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token, {
+  return locationHomepageRequest(`/api/location-homepages/${id}`, token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, items }),
   })
@@ -156,9 +147,8 @@ export async function updateLocationHomepageFeaturedSectionHeading(
   id: number,
   blockId: string,
   sectionHeading: string | null,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token, {
+  return locationHomepageRequest(`/api/location-homepages/${id}`, token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, sectionHeading }),
   })
@@ -169,9 +159,8 @@ export async function updateLocationHomepageFeaturedSectionSubheading(
   id: number,
   blockId: string,
   sectionSubheading: string | null,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token, {
+  return locationHomepageRequest(`/api/location-homepages/${id}`, token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, sectionSubheading }),
   })
@@ -182,16 +171,11 @@ export async function updateLocationHomepageFeaturedSlot3Layout(
   homepageId: number,
   blockId: string,
   slot3Layout: FeaturedArticlesSlot3Layout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
-    token,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, slot3Layout }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot3Layout }),
+  })
 }
 
 export async function updateLocationHomepageFeaturedSlot4Layout(
@@ -199,16 +183,11 @@ export async function updateLocationHomepageFeaturedSlot4Layout(
   homepageId: number,
   blockId: string,
   slot4Layout: FeaturedArticlesSlot4Layout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
-    token,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, slot4Layout }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot4Layout }),
+  })
 }
 
 export async function updateLocationHomepageFeaturedSlot5Layout(
@@ -216,16 +195,11 @@ export async function updateLocationHomepageFeaturedSlot5Layout(
   homepageId: number,
   blockId: string,
   slot5Layout: FeaturedArticlesSlot5Layout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
-    token,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, slot5Layout }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot5Layout }),
+  })
 }
 
 export async function updateLocationHomepageLocationGridMediaAspect(
@@ -233,16 +207,11 @@ export async function updateLocationHomepageLocationGridMediaAspect(
   homepageId: number,
   blockId: string,
   mediaAspect: LocationGridMediaAspect,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
-    token,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, mediaAspect }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, mediaAspect }),
+  })
 }
 
 export async function updateLocationHomepageArticleGridFourLayout(
@@ -250,16 +219,11 @@ export async function updateLocationHomepageArticleGridFourLayout(
   homepageId: number,
   blockId: string,
   articleGridFourLayout: ArticleGridFourLayout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
-    token,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, articleGridFourLayout }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, articleGridFourLayout }),
+  })
 }
 
 /** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
@@ -269,16 +233,11 @@ export async function convertLocationHomepageFeaturedArticlesBlock(
   blockId: string,
   blockType: string,
   slotCount: number,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${homepageId}/blocks/convert`, mode),
-    token,
-    {
-      method: 'POST',
-      body: JSON.stringify({ blockId, blockType, slotCount }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}/blocks/convert`, token, {
+    method: 'POST',
+    body: JSON.stringify({ blockId, blockType, slotCount }),
+  })
 }
 
 export async function addLocationHomepageBlock(
@@ -286,7 +245,6 @@ export async function addLocationHomepageBlock(
   id: number,
   blockType: string,
   slotCount: number,
-  mode: HomepageEditorMode = 'explore',
   sectionHeading?: string | null,
   sectionSubheading?: string | null,
 ): Promise<LocationHomepageResponse> {
@@ -297,46 +255,32 @@ export async function addLocationHomepageBlock(
   if (typeof sectionSubheading === 'string' && sectionSubheading.trim()) {
     body.sectionSubheading = sectionSubheading.trim()
   }
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
-    token,
-    {
-      method: 'POST',
-      body: JSON.stringify(body),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
 export async function deleteLocationHomepageBlock(
   token: string,
   id: number,
   blockId: string,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
-    token,
-    {
-      method: 'DELETE',
-      body: JSON.stringify({ blockId }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
+    method: 'DELETE',
+    body: JSON.stringify({ blockId }),
+  })
 }
 
 export async function reorderLocationHomepageBlocks(
   token: string,
   id: number,
   orderedBlockIds: string[],
-  mode: HomepageEditorMode = 'explore',
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),
-    token,
-    {
-      method: 'PATCH',
-      body: JSON.stringify({ orderedBlockIds }),
-    },
-  )
+  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ orderedBlockIds }),
+  })
 }
 
 export async function deleteLocationHomepage(token: string, id: number): Promise<void> {

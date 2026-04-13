@@ -35,11 +35,6 @@ import {
   resolveLocationGridScopeFromLocation,
   resolveStoredSlotCountForBlockType,
 } from '@/features/homepage-featured-content'
-import {
-  getPageBlocksFieldName,
-  mergeHomepageBlockFields,
-  parseHomepageEditorModeParam,
-} from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -58,8 +53,6 @@ type LocationHomepageDoc = {
   isEnabled?: boolean
   location?: unknown
   pageBlocks?: RawBlock[]
-  pageBlocksStay?: RawBlock[]
-  pageBlocksMove?: RawBlock[]
 }
 
 const SUPPORTED_BLOCK_TYPES = [
@@ -232,8 +225,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -242,7 +233,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const rawBlocks: RawBlock[] = doc[field] ?? []
+    const rawBlocks: RawBlock[] = doc.pageBlocks ?? []
     const blockIndex = rawBlocks.findIndex((b) => b.id === blockId)
 
     if (blockIndex === -1) {
@@ -276,18 +267,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const updatedBlocks = [...rawBlocks]
     updatedBlocks[blockIndex] = replacement as RawBlock
 
-    const mergeData = mergeHomepageBlockFields(doc, field, updatedBlocks)
-
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      data: mergeData as any,
+      data: { pageBlocks: updatedBlocks } as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
 
     const updatedScope = await resolveLocationGridScope(payload, updated.location)
-    const resolvedBlocks = await resolvePageBlocks(payload, updated[field] ?? [], updatedScope)
+    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [], updatedScope)
 
     const location =
       typeof updated.location === 'object' && updated.location !== null
@@ -309,7 +298,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             }
           : null,
         pageBlocks: resolvedBlocks,
-        mode,
       },
       { status: 200, headers },
     )

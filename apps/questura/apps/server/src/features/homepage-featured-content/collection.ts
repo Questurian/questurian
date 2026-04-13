@@ -14,7 +14,6 @@ import {
   resolveLocationGridScopeFromLocation,
 } from './location-grid-service'
 import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
-import { ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS } from './types'
 
 const HOMEPAGE_BLOCK_TYPES = [
   FeaturedArticleBlock,
@@ -75,28 +74,9 @@ export const LocationHomepages: CollectionConfig = {
       name: 'pageBlocks',
       type: 'blocks',
       blocks: [...HOMEPAGE_BLOCK_TYPES],
-      label: 'Explore — page blocks',
+      label: 'Page blocks',
       admin: {
-        description:
-          'Explore mode: sections for this location homepage.',
-      },
-    },
-    {
-      name: 'pageBlocksStay',
-      type: 'blocks',
-      blocks: [...HOMEPAGE_BLOCK_TYPES],
-      label: 'Stay — page blocks',
-      admin: {
-        description: 'Stay mode: curated independently from Explore.',
-      },
-    },
-    {
-      name: 'pageBlocksMove',
-      type: 'blocks',
-      blocks: [...HOMEPAGE_BLOCK_TYPES],
-      label: 'Move — page blocks',
-      admin: {
-        description: 'Move mode: curated independently from Explore.',
+        description: 'Curated sections for this location homepage.',
       },
     },
   ],
@@ -181,13 +161,11 @@ export const LocationHomepages: CollectionConfig = {
           resolvedLocation as { level?: unknown; locationKey?: unknown } | null,
         )
 
-        // 3. Validate supported page blocks for each mode field present
+        // 3. Validate supported page blocks
         if (data) {
-          for (const field of ALL_HOMEPAGE_PAGE_BLOCKS_FIELDS) {
-            const arr = data[field as keyof typeof data]
-            if (Array.isArray(arr)) {
-              await normalizePageBlocksArrayInPlace(req, arr as unknown[], locationGridScope)
-            }
+          const arr = data['pageBlocks' as keyof typeof data]
+          if (Array.isArray(arr)) {
+            await normalizePageBlocksArrayInPlace(req, arr as unknown[], locationGridScope)
           }
         }
 

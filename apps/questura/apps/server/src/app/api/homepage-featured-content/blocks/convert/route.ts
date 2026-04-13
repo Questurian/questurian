@@ -35,12 +35,7 @@ import {
   normalizeSlotCountForBlockType,
   resolveStoredSlotCountForBlockType,
 } from '@/features/homepage-featured-content'
-import {
-  HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-  getPageBlocksFieldName,
-  mergeHomepageBlockFields,
-  parseHomepageEditorModeParam,
-} from '@/features/homepage-featured-content/types'
+import { HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -56,8 +51,6 @@ type RawBlock = {
 
 type MainHomepageGlobalDoc = {
   pageBlocks?: RawBlock[]
-  pageBlocksStay?: RawBlock[]
-  pageBlocksMove?: RawBlock[]
 }
 
 const SUPPORTED_BLOCK_TYPES = [
@@ -204,8 +197,6 @@ export async function POST(req: NextRequest) {
     const normalizedSlotCount = normalizeSlotCountForBlockType(nextBlockType, slotCount)
 
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -213,7 +204,7 @@ export async function POST(req: NextRequest) {
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const rawBlocks: RawBlock[] = globalDoc[field] ?? []
+    const rawBlocks: RawBlock[] = globalDoc.pageBlocks ?? []
     const blockIndex = rawBlocks.findIndex((b) => b.id === blockId)
 
     if (blockIndex === -1) {
@@ -235,18 +226,16 @@ export async function POST(req: NextRequest) {
     const updatedBlocks = [...rawBlocks]
     updatedBlocks[blockIndex] = replacement as RawBlock
 
-    const mergeData = mergeHomepageBlockFields(globalDoc, field, updatedBlocks)
-
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-      data: mergeData as any,
+      data: { pageBlocks: updatedBlocks } as any,
       depth: 0,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const resolvedBlocks = await resolvePageBlocks(payload, updated[field] ?? [])
+    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [])
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { status: 200, headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks }, { status: 200, headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to convert homepage block.') },

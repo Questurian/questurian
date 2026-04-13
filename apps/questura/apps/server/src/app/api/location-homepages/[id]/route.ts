@@ -60,9 +60,6 @@ import {
   HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
   HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
-  getPageBlocksFieldName,
-  mergeHomepageBlockFields,
-  parseHomepageEditorModeParam,
 } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -98,8 +95,6 @@ type LocationHomepageDoc = {
   updatedAt?: string
   location?: LocationDoc | number | null
   pageBlocks?: RawBlock[]
-  pageBlocksStay?: RawBlock[]
-  pageBlocksMove?: RawBlock[]
 }
 
 function isCuratedBlockType(
@@ -202,7 +197,6 @@ async function resolvePageBlocks(
 function formatHomepageDoc(
   doc: LocationHomepageDoc,
   resolvedBlocks: Awaited<ReturnType<typeof resolvePageBlocks>>,
-  mode: ReturnType<typeof parseHomepageEditorModeParam>,
 ) {
   const location =
     typeof doc.location === 'object' && doc.location !== null ? doc.location : null
@@ -221,7 +215,6 @@ function formatHomepageDoc(
         }
       : null,
     pageBlocks: resolvedBlocks,
-    mode,
   }
 }
 
@@ -241,8 +234,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -252,8 +243,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     })) as LocationHomepageDoc
 
     const locationGridScope = await resolveLocationGridScope(payload, doc.location)
-    const resolvedBlocks = await resolvePageBlocks(payload, doc[field] ?? [], locationGridScope)
-    return NextResponse.json(formatHomepageDoc(doc, resolvedBlocks, mode), { headers })
+    const resolvedBlocks = await resolvePageBlocks(payload, doc.pageBlocks ?? [], locationGridScope)
+    return NextResponse.json(formatHomepageDoc(doc, resolvedBlocks), { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to load location homepage.') },
@@ -346,8 +337,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
@@ -356,7 +345,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const rawBlocks: RawBlock[] = doc[field] ?? []
+    const rawBlocks: RawBlock[] = doc.pageBlocks ?? []
     const blockIndex = rawBlocks.findIndex((b) => b.id === body.blockId)
 
     if (blockIndex === -1) {
@@ -751,19 +740,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    const mergeData = mergeHomepageBlockFields(doc, field, updatedBlocks)
-
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      data: mergeData as any,
+      data: { pageBlocks: updatedBlocks } as any,
       depth: 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
 
     const updatedScope = await resolveLocationGridScope(payload, updated.location)
-    const resolvedBlocks = await resolvePageBlocks(payload, updated[field] ?? [], updatedScope)
-    return NextResponse.json(formatHomepageDoc(updated, resolvedBlocks, mode), { headers })
+    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [], updatedScope)
+    return NextResponse.json(formatHomepageDoc(updated, resolvedBlocks), { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to update location homepage block.') },

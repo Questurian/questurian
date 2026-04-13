@@ -1,7 +1,6 @@
 import { PAYLOAD_API_URL } from '../staging/api/client/config'
 import { parseErrorResponse } from '../staging/api/client/error-parser'
 import type {
-  HomepageEditorMode,
   HomepageFeaturedCandidatesResponse,
   HomepageFeaturedCollection,
   HomepageFeaturedItemRef,
@@ -25,14 +24,8 @@ import type {
 
 const HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS = 12000
 
-function withHomepageMode(path: string, mode: HomepageEditorMode): string {
-  const sep = path.includes('?') ? '&' : '?'
-  return `${path}${sep}mode=${encodeURIComponent(mode)}`
-}
-
 export type MainHomepageResponse = {
   pageBlocks: PageBlockResponse[]
-  mode?: HomepageEditorMode
 }
 
 type HomepageBlockSaveItem =
@@ -84,23 +77,16 @@ async function homepageFeaturedRequest<T>(
   }
 }
 
-export async function fetchMainHomepage(
-  token: string,
-  mode: HomepageEditorMode = 'explore',
-): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(
-    withHomepageMode('/api/homepage-featured-content', mode),
-    token,
-  )
+export async function fetchMainHomepage(token: string): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token)
 }
 
 export async function updateMainHomepageBlock(
   token: string,
   blockId: string,
   items: HomepageBlockSaveItem[],
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, items }),
   })
@@ -110,9 +96,8 @@ export async function updateMainHomepageFeaturedSectionHeading(
   token: string,
   blockId: string,
   sectionHeading: string | null,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, sectionHeading }),
   })
@@ -122,9 +107,8 @@ export async function updateMainHomepageFeaturedSectionSubheading(
   token: string,
   blockId: string,
   sectionSubheading: string | null,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, sectionSubheading }),
   })
@@ -134,9 +118,8 @@ export async function updateMainHomepageFeaturedSlot3Layout(
   token: string,
   blockId: string,
   slot3Layout: FeaturedArticlesSlot3Layout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, slot3Layout }),
   })
@@ -146,9 +129,8 @@ export async function updateMainHomepageFeaturedSlot4Layout(
   token: string,
   blockId: string,
   slot4Layout: FeaturedArticlesSlot4Layout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, slot4Layout }),
   })
@@ -158,9 +140,8 @@ export async function updateMainHomepageFeaturedSlot5Layout(
   token: string,
   blockId: string,
   slot5Layout: FeaturedArticlesSlot5Layout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, slot5Layout }),
   })
@@ -170,9 +151,8 @@ export async function updateMainHomepageLocationGridMediaAspect(
   token: string,
   blockId: string,
   mediaAspect: LocationGridMediaAspect,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, mediaAspect }),
   })
@@ -182,9 +162,8 @@ export async function updateMainHomepageArticleGridFourLayout(
   token: string,
   blockId: string,
   articleGridFourLayout: ArticleGridFourLayout,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(withHomepageMode('/api/homepage-featured-content', mode), token, {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
     body: JSON.stringify({ blockId, articleGridFourLayout }),
   })
@@ -196,23 +175,17 @@ export async function convertMainHomepageFeaturedArticlesBlock(
   blockId: string,
   blockType: string,
   slotCount: number,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(
-    withHomepageMode('/api/homepage-featured-content/blocks/convert', mode),
-    token,
-    {
-      method: 'POST',
-      body: JSON.stringify({ blockId, blockType, slotCount }),
-    },
-  )
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks/convert', token, {
+    method: 'POST',
+    body: JSON.stringify({ blockId, blockType, slotCount }),
+  })
 }
 
 export async function addMainHomepageBlock(
   token: string,
   blockType: string,
   slotCount: number,
-  mode: HomepageEditorMode = 'explore',
   sectionHeading?: string | null,
   sectionSubheading?: string | null,
 ): Promise<MainHomepageResponse> {
@@ -223,44 +196,30 @@ export async function addMainHomepageBlock(
   if (typeof sectionSubheading === 'string' && sectionSubheading.trim()) {
     body.sectionSubheading = sectionSubheading.trim()
   }
-  return homepageFeaturedRequest(
-    withHomepageMode('/api/homepage-featured-content/blocks', mode),
-    token,
-    {
-      method: 'POST',
-      body: JSON.stringify(body),
-    },
-  )
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
 export async function deleteMainHomepageBlock(
   token: string,
   blockId: string,
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(
-    withHomepageMode('/api/homepage-featured-content/blocks', mode),
-    token,
-    {
-      method: 'DELETE',
-      body: JSON.stringify({ blockId }),
-    },
-  )
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
+    method: 'DELETE',
+    body: JSON.stringify({ blockId }),
+  })
 }
 
 export async function reorderMainHomepageBlocks(
   token: string,
   orderedBlockIds: string[],
-  mode: HomepageEditorMode = 'explore',
 ): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest(
-    withHomepageMode('/api/homepage-featured-content/blocks', mode),
-    token,
-    {
-      method: 'PATCH',
-      body: JSON.stringify({ orderedBlockIds }),
-    },
-  )
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
+    method: 'PATCH',
+    body: JSON.stringify({ orderedBlockIds }),
+  })
 }
 
 export async function fetchHomepageFeaturedCandidates(

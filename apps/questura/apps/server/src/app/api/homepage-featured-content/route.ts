@@ -61,9 +61,6 @@ import {
   HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
   HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
   HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
-  getPageBlocksFieldName,
-  mergeHomepageBlockFields,
-  parseHomepageEditorModeParam,
 } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -86,8 +83,6 @@ type RawBlock = {
 
 type MainHomepageGlobalDoc = {
   pageBlocks?: RawBlock[]
-  pageBlocksStay?: RawBlock[]
-  pageBlocksMove?: RawBlock[]
 }
 
 function isCuratedBlockType(
@@ -160,14 +155,12 @@ async function resolvePageBlocks(
   )
 }
 
-// GET /api/homepage-featured-content — return page blocks for mode (?mode=explore|stay|move)
+// GET /api/homepage-featured-content — return page blocks
 export async function GET(req: NextRequest) {
   const headers = getCorsHeaders(req)
 
   try {
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -175,10 +168,9 @@ export async function GET(req: NextRequest) {
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const rawForMode = globalDoc[field] ?? []
-    const resolvedBlocks = await resolvePageBlocks(payload, rawForMode)
+    const resolvedBlocks = await resolvePageBlocks(payload, globalDoc.pageBlocks ?? [])
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks }, { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to load main homepage.') },
@@ -270,8 +262,6 @@ export async function PUT(req: NextRequest) {
     }
 
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -279,7 +269,7 @@ export async function PUT(req: NextRequest) {
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const rawBlocks: RawBlock[] = globalDoc[field] ?? []
+    const rawBlocks: RawBlock[] = globalDoc.pageBlocks ?? []
     const blockIndex = rawBlocks.findIndex((b) => b.id === body.blockId)
 
     if (blockIndex === -1) {
@@ -670,19 +660,16 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const updatedBlocks = rawBlocks
-    const mergeData = mergeHomepageBlockFields(globalDoc, field, updatedBlocks)
-
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-      data: mergeData as any,
+      data: { pageBlocks: rawBlocks } as any,
       depth: 0,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const resolvedBlocks = await resolvePageBlocks(payload, updated[field] ?? [])
+    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [])
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks }, { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to update main homepage block.') },

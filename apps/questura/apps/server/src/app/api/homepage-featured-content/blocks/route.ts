@@ -37,10 +37,7 @@ import {
 import { reorderBlocksByIds } from '@/features/homepage-featured-content/reorder-blocks'
 import {
   HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-  getPageBlocksFieldName,
   HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
-  mergeHomepageBlockFields,
-  parseHomepageEditorModeParam,
 } from '@/features/homepage-featured-content/types'
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -58,8 +55,6 @@ type RawBlock = {
 
 type MainHomepageGlobalDoc = {
   pageBlocks?: RawBlock[]
-  pageBlocksStay?: RawBlock[]
-  pageBlocksMove?: RawBlock[]
 }
 
 const SUPPORTED_BLOCK_TYPES = [
@@ -150,8 +145,6 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -159,7 +152,7 @@ export async function POST(req: NextRequest) {
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const existingBlocks: RawBlock[] = globalDoc[field] ?? []
+    const existingBlocks: RawBlock[] = globalDoc.pageBlocks ?? []
     const newBlock: Record<string, unknown> = {
       blockType: blockType as SupportedBlockType,
       slotCount,
@@ -177,17 +170,16 @@ export async function POST(req: NextRequest) {
         if (t) newBlock.sectionSubheading = t
       }
     }
-    const mergeData = mergeHomepageBlockFields(globalDoc, field, [...existingBlocks, newBlock])
 
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-      data: mergeData as any,
+      data: { pageBlocks: [...existingBlocks, newBlock] } as any,
       depth: 1,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
     const resolvedBlocks = await Promise.all(
-      (updated[field] ?? []).map(async (block) => {
+      (updated.pageBlocks ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
@@ -226,7 +218,7 @@ export async function POST(req: NextRequest) {
       }),
     )
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { status: 201, headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks }, { status: 201, headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to add block to main homepage.') },
@@ -261,8 +253,6 @@ export async function DELETE(req: NextRequest) {
     }
 
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -270,7 +260,7 @@ export async function DELETE(req: NextRequest) {
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const existingBlocks: RawBlock[] = globalDoc[field] ?? []
+    const existingBlocks: RawBlock[] = globalDoc.pageBlocks ?? []
     const updatedBlocks = existingBlocks.filter((block) => block.id !== blockId)
 
     if (updatedBlocks.length === existingBlocks.length) {
@@ -280,17 +270,15 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
-    const mergeData = mergeHomepageBlockFields(globalDoc, field, updatedBlocks)
-
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-      data: mergeData as any,
+      data: { pageBlocks: updatedBlocks } as any,
       depth: 1,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
     const resolvedBlocks = await Promise.all(
-      (updated[field] ?? []).map(async (block) => {
+      (updated.pageBlocks ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
@@ -329,7 +317,7 @@ export async function DELETE(req: NextRequest) {
       }),
     )
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks }, { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to delete block from main homepage.') },
@@ -355,8 +343,6 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json().catch(() => null)
     const payload = await getPayload({ config })
-    const mode = parseHomepageEditorModeParam(req.nextUrl.searchParams.get('mode'))
-    const field = getPageBlocksFieldName(mode)
 
     const globalDoc = (await payload.findGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
@@ -364,24 +350,22 @@ export async function PATCH(req: NextRequest) {
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
-    const existingBlocks: RawBlock[] = globalDoc[field] ?? []
+    const existingBlocks: RawBlock[] = globalDoc.pageBlocks ?? []
     const reorderResult = reorderBlocksByIds(existingBlocks, body?.orderedBlockIds)
 
     if (!reorderResult.ok) {
       return NextResponse.json({ message: reorderResult.message }, { status: 400, headers })
     }
 
-    const mergeData = mergeHomepageBlockFields(globalDoc, field, reorderResult.reordered)
-
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-      data: mergeData as any,
+      data: { pageBlocks: reorderResult.reordered } as any,
       depth: 1,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
 
     const resolvedBlocks = await Promise.all(
-      (updated[field] ?? []).map(async (block) => {
+      (updated.pageBlocks ?? []).map(async (block) => {
         if (isCuratedBlockType(block.blockType)) {
           const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
           const selection = block.blockType === 'location-grid'
@@ -420,7 +404,7 @@ export async function PATCH(req: NextRequest) {
       }),
     )
 
-    return NextResponse.json({ pageBlocks: resolvedBlocks, mode }, { headers })
+    return NextResponse.json({ pageBlocks: resolvedBlocks }, { headers })
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to reorder main homepage blocks.') },
