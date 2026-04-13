@@ -4,12 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../../providers/useAuth'
 import './homepageFeaturedContent.css'
+import HomepageBlocksReorderOverlay from './HomepageBlocksReorderOverlay'
 import HomepageBlocksSortableList from './HomepageBlocksSortableList'
 import AddHomepageBlockPicker from './AddHomepageBlockPicker'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
 import HotelGridBlockEditor from './HotelGridBlockEditor'
 import LocationGridBlockEditor from './LocationGridBlockEditor'
+import NewsletterSignupBlockEditor from './NewsletterSignupBlockEditor'
 import {
   addLocationHomepageBlock,
   deleteLocationHomepageBlock,
@@ -25,8 +27,19 @@ import {
   toggleLocationHomepage,
   updateLocationHomepageBlock,
   updateLocationHomepageFeaturedSectionHeading,
+  updateLocationHomepageFeaturedSectionSubheading,
+  updateLocationHomepageLocationGridMediaAspect,
+  updateLocationHomepageFeaturedSlot3Layout,
+  updateLocationHomepageFeaturedSlot4Layout,
+  updateLocationHomepageFeaturedSlot5Layout,
+  updateLocationHomepageArticleGridFourLayout,
   type LocationRef,
 } from './locationHomepagesApi'
+import {
+  homepageFeaturedSelectionRevision,
+  homepageHotelGridSelectionRevision,
+  homepageLocationGridSelectionRevision,
+} from './homepageEditorCacheKeys'
 import {
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
   HOMEPAGE_PAGE_BLOCK_TYPES,
@@ -35,6 +48,7 @@ import {
   isThingsToDoAttractionsBlock,
   isArticleCuratedHomepageBlock,
   isLocationGridBlock,
+  isNewsletterSignupBlock,
   type ArticleCuratedHomepageBlockResponse,
   type CuratedHomepageBlockType,
   type HotelOrAttractionGridBlockResponse,
@@ -94,16 +108,19 @@ export default function LocationHomepagePage() {
 
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
+  const [reorderCommitting, setReorderCommitting] = useState(false)
 
   const addBlockMutation = useMutation({
     mutationFn: ({
       blockType,
       slotCount,
       sectionHeading,
+      sectionSubheading,
     }: {
       blockType: CuratedHomepageBlockType
       slotCount: number
       sectionHeading?: string | null
+      sectionSubheading?: string | null
     }) =>
       addLocationHomepageBlock(
         token!,
@@ -112,6 +129,7 @@ export default function LocationHomepagePage() {
         slotCount,
         homepageMode,
         sectionHeading,
+        sectionSubheading,
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homepageQueryKey })
@@ -136,8 +154,16 @@ export default function LocationHomepagePage() {
   const reorderBlocksMutation = useMutation({
     mutationFn: (orderedBlockIds: string[]) =>
       reorderLocationHomepageBlocks(token!, numericId, orderedBlockIds, homepageMode),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+    onMutate: () => setReorderCommitting(true),
+    onSuccess: async () => {
+      try {
+        await queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+      } finally {
+        setReorderCommitting(false)
+      }
+    },
+    onError: () => {
+      setReorderCommitting(false)
     },
   })
 
@@ -145,8 +171,9 @@ export default function LocationHomepagePage() {
     blockType: CuratedHomepageBlockType,
     slotCount: number,
     sectionHeading?: string | null,
+    sectionSubheading?: string | null,
   ) {
-    addBlockMutation.mutate({ blockType, slotCount, sectionHeading })
+    addBlockMutation.mutate({ blockType, slotCount, sectionHeading, sectionSubheading })
   }
 
   const deleteError = deleteBlockMutation.isError
@@ -207,6 +234,7 @@ export default function LocationHomepagePage() {
 
   return (
     <div className="hf-page">
+      <HomepageBlocksReorderOverlay visible={reorderCommitting} />
       {/* ── Detail header ──────────────────────────────────── */}
       <div className="hf-detail-header">
         <div className="hf-detail-header-left">
@@ -268,7 +296,7 @@ export default function LocationHomepagePage() {
         <HomepageBlocksSortableList
           blocks={homepage.pageBlocks}
           disabled={
-            reorderBlocksMutation.isPending
+            reorderCommitting
             || deleteBlockMutation.isPending
             || addBlockMutation.isPending
           }
@@ -291,6 +319,7 @@ export default function LocationHomepagePage() {
                     homepageMode,
                     numericId,
                     ...homepageBlockShapeIdentity(block),
+                    homepageFeaturedSelectionRevision(block.selection),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -334,6 +363,72 @@ export default function LocationHomepagePage() {
                     )
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
+                  saveSectionSubheading={async (currentToken, value) => {
+                    await updateLocationHomepageFeaturedSectionSubheading(
+                      currentToken,
+                      numericId,
+                      block.id,
+                      value,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
+                  saveSlot3Layout={
+                    block.blockType === 'featured-articles' && block.selection.totalSlots === 3
+                      ? async (currentToken, value) => {
+                          await updateLocationHomepageFeaturedSlot3Layout(
+                            currentToken,
+                            numericId,
+                            block.id,
+                            value,
+                            homepageMode,
+                          )
+                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                        }
+                      : undefined
+                  }
+                  saveSlot4Layout={
+                    block.blockType === 'featured-articles' && block.selection.totalSlots === 4
+                      ? async (currentToken, value) => {
+                          await updateLocationHomepageFeaturedSlot4Layout(
+                            currentToken,
+                            numericId,
+                            block.id,
+                            value,
+                            homepageMode,
+                          )
+                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                        }
+                      : undefined
+                  }
+                  saveSlot5Layout={
+                    block.blockType === 'featured-articles' && block.selection.totalSlots === 5
+                      ? async (currentToken, value) => {
+                          await updateLocationHomepageFeaturedSlot5Layout(
+                            currentToken,
+                            numericId,
+                            block.id,
+                            value,
+                            homepageMode,
+                          )
+                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                        }
+                      : undefined
+                  }
+                  saveArticleGridFourLayout={
+                    block.blockType === 'article-grid' && block.selection.totalSlots === 4
+                      ? async (currentToken, value) => {
+                          await updateLocationHomepageArticleGridFourLayout(
+                            currentToken,
+                            numericId,
+                            block.id,
+                            value,
+                            homepageMode,
+                          )
+                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                        }
+                      : undefined
+                  }
                   convertEmptyFeaturedArticlesTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyFeaturedArticlesBlock={async (currentToken, blockType, slotCount) => {
                     await convertLocationHomepageFeaturedArticlesBlock(
@@ -366,6 +461,7 @@ export default function LocationHomepagePage() {
                     homepageMode,
                     numericId,
                     ...homepageBlockShapeIdentity(block),
+                    homepageLocationGridSelectionRevision(block.selection),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -396,6 +492,26 @@ export default function LocationHomepagePage() {
                     )
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
                   }}
+                  saveLocationGridSectionSubheading={async (currentToken, value) => {
+                    await updateLocationHomepageFeaturedSectionSubheading(
+                      currentToken,
+                      numericId,
+                      block.id,
+                      value,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
+                  saveLocationGridMediaAspect={async (currentToken, value) => {
+                    await updateLocationHomepageLocationGridMediaAspect(
+                      currentToken,
+                      numericId,
+                      block.id,
+                      value,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
                   convertBlockTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
                     await convertLocationHomepageFeaturedArticlesBlock(
@@ -404,6 +520,39 @@ export default function LocationHomepagePage() {
                       block.id,
                       blockType,
                       slotCount,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
+                />
+              )
+            }
+            if (isNewsletterSignupBlock(block)) {
+              return (
+                <NewsletterSignupBlockEditor
+                  key={homepageBlockShapeIdentity(block).join(':')}
+                  block={block}
+                  blockIndex={idx}
+                  token={token}
+                  onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
+                  isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
+                  deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
+                  saveSectionHeading={async (currentToken, value) => {
+                    await updateLocationHomepageFeaturedSectionHeading(
+                      currentToken,
+                      numericId,
+                      block.id,
+                      value,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
+                  saveSectionSubheading={async (currentToken, value) => {
+                    await updateLocationHomepageFeaturedSectionSubheading(
+                      currentToken,
+                      numericId,
+                      block.id,
+                      value,
                       homepageMode,
                     )
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })
@@ -430,6 +579,7 @@ export default function LocationHomepagePage() {
                     homepageMode,
                     numericId,
                     ...homepageBlockShapeIdentity(gridBlock),
+                    homepageHotelGridSelectionRevision(gridBlock.selection),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -464,6 +614,26 @@ export default function LocationHomepagePage() {
                       gridBlock.id,
                       blockType,
                       slotCount,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
+                  saveHotelGridSectionHeading={async (currentToken, value) => {
+                    await updateLocationHomepageFeaturedSectionHeading(
+                      currentToken,
+                      numericId,
+                      gridBlock.id,
+                      value,
+                      homepageMode,
+                    )
+                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                  }}
+                  saveHotelGridSectionSubheading={async (currentToken, value) => {
+                    await updateLocationHomepageFeaturedSectionSubheading(
+                      currentToken,
+                      numericId,
+                      gridBlock.id,
+                      value,
                       homepageMode,
                     )
                     queryClient.invalidateQueries({ queryKey: homepageQueryKey })

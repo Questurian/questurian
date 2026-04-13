@@ -25,6 +25,8 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   publishedAt: string | null
   collectionLabel: string
   imageUrl: string | null
+  /** Square crop URL from media set when available; magazine layout prefers this. */
+  imageUrlSquare?: string | null
   excerpt: string | null
   authorLabel: string | null
 }

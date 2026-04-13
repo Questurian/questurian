@@ -3,16 +3,14 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
   HOMEPAGE_PAGE_BLOCK_TYPES,
+  isValidHomepageBlockSlotCount,
   type CuratedHomepageBlockType,
 } from './pageBlocks'
 
 type AddBlockStep = 'type' | 'options'
 
 const SECTION_HEADING_MAX_LEN = 120
-
-function blockTypeSupportsSectionHeading(blockType: CuratedHomepageBlockType): boolean {
-  return blockType === 'featured-articles' || blockType === 'location-grid'
-}
+const SECTION_SUBHEADING_MAX_LEN = 200
 
 type Props = {
   isPending: boolean
@@ -20,6 +18,7 @@ type Props = {
     blockType: CuratedHomepageBlockType,
     slotCount: number,
     sectionHeading?: string | null,
+    sectionSubheading?: string | null,
   ) => void
   onCancel: () => void
   availableBlockTypes?: CuratedHomepageBlockType[]
@@ -39,6 +38,7 @@ export default function AddHomepageBlockPicker({
   )
   const [customSlotCount, setCustomSlotCount] = useState('')
   const [sectionHeadingDraft, setSectionHeadingDraft] = useState('')
+  const [sectionSubheadingDraft, setSectionSubheadingDraft] = useState('')
 
   useEffect(() => {
     if (availableBlockTypes.includes(selectedBlockType)) return
@@ -48,6 +48,7 @@ export default function AddHomepageBlockPicker({
     setSelectedSlotCount(HOMEPAGE_PAGE_BLOCK_CONFIG[nextBlockType].defaultSlotCount)
     setCustomSlotCount('')
     setSectionHeadingDraft('')
+    setSectionSubheadingDraft('')
     setStep('type')
   }, [availableBlockTypes, selectedBlockType])
 
@@ -57,25 +58,19 @@ export default function AddHomepageBlockPicker({
 
     return Number(customSlotCount)
   }, [customSlotCount, selectedSlotCount])
-  const isSlotCountValid =
-    Number.isInteger(resolvedSlotCount) &&
-    resolvedSlotCount >= blockConfig.minSlotCount &&
-    resolvedSlotCount <= blockConfig.maxSlotCount
+  const isSlotCountValid = isValidHomepageBlockSlotCount(selectedBlockType, resolvedSlotCount)
 
   function handleSelectBlockType(blockType: CuratedHomepageBlockType) {
     const nextConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
     if (nextConfig.minSlotCount === nextConfig.maxSlotCount) {
-      onConfirm(
-        blockType,
-        nextConfig.defaultSlotCount,
-        blockTypeSupportsSectionHeading(blockType) ? sectionHeadingDraft.trim() || undefined : undefined,
-      )
+      onConfirm(blockType, nextConfig.defaultSlotCount, undefined, undefined)
       return
     }
     setSelectedBlockType(blockType)
     setSelectedSlotCount(nextConfig.defaultSlotCount)
     setCustomSlotCount('')
     setSectionHeadingDraft('')
+    setSectionSubheadingDraft('')
     setStep('options')
   }
 
@@ -84,15 +79,19 @@ export default function AddHomepageBlockPicker({
     setSelectedSlotCount(HOMEPAGE_PAGE_BLOCK_CONFIG[selectedBlockType].defaultSlotCount)
     setCustomSlotCount('')
     setSectionHeadingDraft('')
+    setSectionSubheadingDraft('')
   }
 
   function handleConfirm() {
     if (!isSlotCountValid) return
 
+    const h = sectionHeadingDraft.trim()
+    const s = sectionSubheadingDraft.trim()
     onConfirm(
       selectedBlockType,
       resolvedSlotCount,
-      blockTypeSupportsSectionHeading(selectedBlockType) ? sectionHeadingDraft.trim() || undefined : undefined,
+      h || undefined,
+      s || undefined,
     )
   }
 
@@ -128,7 +127,9 @@ export default function AddHomepageBlockPicker({
         {blockConfig.label} size
       </p>
       <p className="hf-add-block-hint">
-        Choose between {blockConfig.minSlotCount} and {blockConfig.maxSlotCount} items.
+        {selectedBlockType === 'article-grid'
+          ? 'Choose 4 (square grid: four across on large screens, 2×2 on narrow) or 8 (four columns × two rows, all square).'
+          : `Choose between ${blockConfig.minSlotCount} and ${blockConfig.maxSlotCount} items.`}
       </p>
       <div className="hf-add-block-counts">
         {blockConfig.quickSlotCounts.map((count) => (
@@ -154,20 +155,30 @@ export default function AddHomepageBlockPicker({
           onChange={(event) => setCustomSlotCount(event.target.value)}
         />
       </div>
-      {blockTypeSupportsSectionHeading(selectedBlockType) ? (
-        <label className="hf-add-block-section-heading">
-          <span className="hf-add-block-section-heading-label">Section heading (optional)</span>
-          <input
-            type="text"
-            className="hf-add-block-section-heading-input"
-            maxLength={SECTION_HEADING_MAX_LEN}
-            placeholder="Shown above this block on the site"
-            value={sectionHeadingDraft}
-            onChange={(event) => setSectionHeadingDraft(event.target.value)}
-            autoComplete="off"
-          />
-        </label>
-      ) : null}
+      <label className="hf-add-block-section-heading">
+        <span className="hf-add-block-section-heading-label">Section heading (optional)</span>
+        <input
+          type="text"
+          className="hf-add-block-section-heading-input"
+          maxLength={SECTION_HEADING_MAX_LEN}
+          placeholder="Shown above this block on the site"
+          value={sectionHeadingDraft}
+          onChange={(event) => setSectionHeadingDraft(event.target.value)}
+          autoComplete="off"
+        />
+      </label>
+      <label className="hf-add-block-section-heading">
+        <span className="hf-add-block-section-heading-label">Subheading (optional)</span>
+        <textarea
+          className="hf-add-block-section-subheading-input"
+          maxLength={SECTION_SUBHEADING_MAX_LEN}
+          rows={2}
+          placeholder="Supporting line under the title"
+          value={sectionSubheadingDraft}
+          onChange={(event) => setSectionSubheadingDraft(event.target.value)}
+          autoComplete="off"
+        />
+      </label>
       <div className="hf-add-block-actions">
         <button
           type="button"

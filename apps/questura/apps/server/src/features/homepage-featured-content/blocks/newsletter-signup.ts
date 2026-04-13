@@ -4,26 +4,24 @@ import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
 } from '../featured-articles-section-heading'
-import {
-  HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
-  HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
-} from '../types'
 
-export const ThingsToDoListiclesBlock: Block = {
-  slug: 'things-to-do-listicles',
+export const NewsletterSignupBlock: Block = {
+  slug: 'newsletter-signup',
   labels: {
-    singular: 'Things to Do — Listicles',
-    plural: 'Things to Do — Listicle Blocks',
+    singular: 'Newsletter signup',
+    plural: 'Newsletter signup blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
-      max: HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+      min: 0,
+      max: 0,
+      defaultValue: 0,
       admin: {
-        description: 'How many attraction listicles this block contains.',
+        readOnly: true,
+        description: 'Placeholder block for homepage structure (no curated items).',
       },
     },
     {
@@ -42,15 +40,6 @@ export const ThingsToDoListiclesBlock: Block = {
       maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
       admin: {
         description: 'Optional supporting line under the section heading.',
-      },
-    },
-    {
-      name: 'items',
-      type: 'relationship',
-      relationTo: 'single-type-listicles',
-      hasMany: true,
-      admin: {
-        description: 'Single-type listicles with data type Attractions only.',
       },
     },
   ],

@@ -8,11 +8,18 @@ import ArticleGridLayout from './ArticleGridLayout'
 import FeaturedArticleSpotlightLayout from './FeaturedArticleSpotlightLayout'
 import FeaturedArticlesLayout3 from './FeaturedArticlesLayout3'
 import FeaturedArticlesLayout4 from './FeaturedArticlesLayout4'
+import FeaturedArticlesLayout5 from './FeaturedArticlesLayout5'
 import FeaturedArticlesLayout8 from './FeaturedArticlesLayout8'
 import FeaturedArticlesLayout7 from './FeaturedArticlesLayout7'
 import FeaturedArticlesLayout9 from './FeaturedArticlesLayout9'
 import QuesturianMapsArticleLayout from './QuesturianMapsArticleLayout'
-import type { ArticleCuratedHomepageBlockType } from './pageBlocks'
+import type {
+  ArticleCuratedHomepageBlockType,
+  ArticleGridFourLayout,
+  FeaturedArticlesSlot3Layout,
+  FeaturedArticlesSlot4Layout,
+  FeaturedArticlesSlot5Layout,
+} from './pageBlocks'
 
 function getInvalidMessage(item: HomepageFeaturedInvalidItem): string {
   if (item.reason === 'not_published') return 'No longer published'
@@ -46,6 +53,14 @@ type Props = {
   /** Hide the inline Discard/Save row (e.g. when Save lives in the block header). */
   suppressToolbar?: boolean
   variant?: ArticleCuratedHomepageBlockType
+  /** When `variant` is featured-articles with 3 slots, controls 3-slot preview. */
+  featuredArticlesSlot3Layout?: FeaturedArticlesSlot3Layout
+  /** When `variant` is featured-articles with 4 slots. */
+  featuredArticlesSlot4Layout?: FeaturedArticlesSlot4Layout
+  /** When `variant` is featured-articles with 5 slots. */
+  featuredArticlesSlot5Layout?: FeaturedArticlesSlot5Layout
+  /** When `variant` is article-grid with 4 slots. */
+  articleGridFourLayout?: ArticleGridFourLayout
 }
 
 export default function HomepageFeaturedSlotEditor({
@@ -56,6 +71,10 @@ export default function HomepageFeaturedSlotEditor({
   compact = false,
   suppressToolbar = false,
   variant = 'featured-articles',
+  featuredArticlesSlot3Layout = 'hero-left',
+  featuredArticlesSlot4Layout = 'sidebar-stack',
+  featuredArticlesSlot5Layout = 'card-grid',
+  articleGridFourLayout = 'four-across',
 }: Props) {
   const {
     selectionQuery,
@@ -168,6 +187,7 @@ export default function HomepageFeaturedSlotEditor({
       ) : variant === 'article-grid' ? (
         <ArticleGridLayout
           slots={slots}
+          articleGridFourLayout={articleGridFourLayout}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onMove={handleMove}
@@ -191,17 +211,28 @@ export default function HomepageFeaturedSlotEditor({
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
         />
+      ) : totalSlots === 5 ? (
+        <FeaturedArticlesLayout5
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+          onMove={handleMove}
+          onRemove={handleRemove}
+          layout={featuredArticlesSlot5Layout}
+        />
       ) : totalSlots === 4 ? (
         <FeaturedArticlesLayout4
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          layout={featuredArticlesSlot4Layout}
         />
       ) : totalSlots === 3 ? (
         <FeaturedArticlesLayout3
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          layout={featuredArticlesSlot3Layout}
         />
       ) : (
       <div className="hf-slot-grid">

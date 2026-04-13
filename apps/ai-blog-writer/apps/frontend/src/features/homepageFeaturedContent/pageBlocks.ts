@@ -1,5 +1,5 @@
 import type { HomepageFeaturedSelection } from './types'
-import type { HomepageLocationGridSelection } from './locationGridTypes'
+import type { HomepageLocationGridSelection, LocationGridMediaAspect } from './locationGridTypes'
 import type { HomepageHotelGridSelection } from './hotelGridTypes'
 
 export type CuratedHomepageBlockType =
@@ -12,6 +12,7 @@ export type CuratedHomepageBlockType =
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
   | 'things-to-do-attractions'
+  | 'newsletter-signup'
 
 export type ArticleCuratedHomepageBlockType =
   | 'featured-article'
@@ -45,18 +46,18 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
   'featured-articles': {
     label: 'Featured Articles',
     description: 'A curated list of articles in fixed slots',
-    quickSlotCounts: [3, 4, 7, 8, 9],
+    quickSlotCounts: [3, 4, 5, 6, 7, 8, 9],
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 9,
   },
   'article-grid': {
     label: 'Article Grid',
-    description: 'A compact mixed-content grid displayed 3–4 across',
-    quickSlotCounts: [3, 4, 5],
+    description: 'Square thumbnails: 4 (2×2 / four-across) or 8 (four columns × two rows)',
+    quickSlotCounts: [4, 8],
     defaultSlotCount: 4,
-    minSlotCount: 3,
-    maxSlotCount: 5,
+    minSlotCount: 4,
+    maxSlotCount: 8,
   },
   'location-grid': {
     label: 'Location Grid',
@@ -106,6 +107,27 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     minSlotCount: 3,
     maxSlotCount: 12,
   },
+  'newsletter-signup': {
+    label: 'Newsletter signup',
+    description: 'Dark full-width placeholder for a future email capture section',
+    quickSlotCounts: [0],
+    defaultSlotCount: 0,
+    minSlotCount: 0,
+    maxSlotCount: 0,
+  },
+}
+
+/** Validates slot count when adding a block (article-grid allows only 4 or 8). */
+export function isValidHomepageBlockSlotCount(
+  blockType: CuratedHomepageBlockType,
+  slotCount: number,
+): boolean {
+  if (!Number.isInteger(slotCount)) return false
+  if (blockType === 'article-grid') {
+    return slotCount === 4 || slotCount === 8
+  }
+  const c = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
+  return slotCount >= c.minSlotCount && slotCount <= c.maxSlotCount
 }
 
 export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
@@ -118,6 +140,7 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
+  'newsletter-signup',
 ]
 
 /**
@@ -136,6 +159,7 @@ export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBloc
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
+  'newsletter-signup',
 ]
 
 export type FeaturedArticleBlockResponse = {
@@ -143,7 +167,17 @@ export type FeaturedArticleBlockResponse = {
   blockType: 'featured-article'
   selection: HomepageFeaturedSelection
   sectionHeading: string | null
+  sectionSubheading: string | null
 }
+
+/** Stored on Payload for `featured-articles` when slot count is 3. */
+export type FeaturedArticlesSlot3Layout = 'hero-left' | 'featured-center'
+
+/** Stored when slot count is 4. */
+export type FeaturedArticlesSlot4Layout = 'sidebar-stack' | 'one-over-three'
+
+/** Stored when slot count is 5. */
+export type FeaturedArticlesSlot5Layout = 'card-grid' | 'hero-sidebar'
 
 export type FeaturedArticlesBlockResponse = {
   id: string
@@ -151,13 +185,25 @@ export type FeaturedArticlesBlockResponse = {
   selection: HomepageFeaturedSelection
   /** Optional label for this block on the public homepage (e.g. section title). */
   sectionHeading: string | null
+  sectionSubheading: string | null
+  /** Present when `selection.totalSlots === 3`; drives editor + public layout. */
+  slot3Layout?: FeaturedArticlesSlot3Layout | null
+  /** Present when `selection.totalSlots === 4`. */
+  slot4Layout?: FeaturedArticlesSlot4Layout | null
+  /** Present when `selection.totalSlots === 5`. */
+  slot5Layout?: FeaturedArticlesSlot5Layout | null
 }
+
+/** When `selection.totalSlots === 4`: one row of four (wide images) vs 2×2 (square images). */
+export type ArticleGridFourLayout = 'four-across' | 'two-by-two'
 
 export type ArticleGridBlockResponse = {
   id: string
   blockType: 'article-grid'
   selection: HomepageFeaturedSelection
   sectionHeading: string | null
+  sectionSubheading: string | null
+  articleGridFourLayout?: ArticleGridFourLayout | null
 }
 
 export type LocationGridBlockResponse = {
@@ -166,6 +212,9 @@ export type LocationGridBlockResponse = {
   selection: HomepageLocationGridSelection
   /** Optional label for this block on the public homepage (e.g. section title). */
   sectionHeading: string | null
+  sectionSubheading: string | null
+  /** Cover image crop: wide banner, square, or modest portrait (not full phone-tall). */
+  mediaAspect?: LocationGridMediaAspect | null
 }
 
 export type QuesturianMapsBlockResponse = {
@@ -173,6 +222,7 @@ export type QuesturianMapsBlockResponse = {
   blockType: 'questurian-maps'
   selection: HomepageFeaturedSelection
   sectionHeading: string | null
+  sectionSubheading: string | null
 }
 
 export type HotelGridBlockResponse = {
@@ -180,6 +230,7 @@ export type HotelGridBlockResponse = {
   blockType: 'hotel-grid'
   selection: HomepageHotelGridSelection
   sectionHeading: string | null
+  sectionSubheading: string | null
 }
 
 export type WhereToEatDrinkBlockResponse = {
@@ -187,6 +238,7 @@ export type WhereToEatDrinkBlockResponse = {
   blockType: 'where-to-eat-drink'
   selection: HomepageFeaturedSelection
   sectionHeading: string | null
+  sectionSubheading: string | null
 }
 
 export type ThingsToDoListiclesBlockResponse = {
@@ -194,6 +246,7 @@ export type ThingsToDoListiclesBlockResponse = {
   blockType: 'things-to-do-listicles'
   selection: HomepageFeaturedSelection
   sectionHeading: string | null
+  sectionSubheading: string | null
 }
 
 export type ThingsToDoAttractionsBlockResponse = {
@@ -201,6 +254,15 @@ export type ThingsToDoAttractionsBlockResponse = {
   blockType: 'things-to-do-attractions'
   selection: HomepageHotelGridSelection
   sectionHeading: string | null
+  sectionSubheading: string | null
+}
+
+export type NewsletterSignupBlockResponse = {
+  id: string
+  blockType: 'newsletter-signup'
+  selection: HomepageFeaturedSelection
+  sectionHeading: string | null
+  sectionSubheading: string | null
 }
 
 export type ArticleCuratedHomepageBlockResponse =
@@ -226,6 +288,7 @@ export type CuratedHomepageBlockResponse =
   | LocationGridBlockResponse
   | HotelGridBlockResponse
   | ThingsToDoAttractionsBlockResponse
+  | NewsletterSignupBlockResponse
 
 export type UnknownBlockResponse = {
   id: string
@@ -239,8 +302,27 @@ export function homepageBlockShapeIdentity(block: {
   id: string
   blockType: string
   selection: { totalSlots: number }
-}): readonly [string, string, number] {
-  return [block.id, block.blockType, block.selection.totalSlots]
+  slot3Layout?: FeaturedArticlesSlot3Layout | null
+  slot4Layout?: FeaturedArticlesSlot4Layout | null
+  slot5Layout?: FeaturedArticlesSlot5Layout | null
+  mediaAspect?: LocationGridMediaAspect | null
+  articleGridFourLayout?: ArticleGridFourLayout | null
+}): readonly [string, string, number, string] {
+  let layoutKey = '-'
+  if (block.blockType === 'featured-articles') {
+    if (block.selection.totalSlots === 3) {
+      layoutKey = `3:${block.slot3Layout ?? 'hero-left'}`
+    } else if (block.selection.totalSlots === 4) {
+      layoutKey = `4:${block.slot4Layout ?? 'sidebar-stack'}`
+    } else if (block.selection.totalSlots === 5) {
+      layoutKey = `5:${block.slot5Layout ?? 'card-grid'}`
+    }
+  } else if (block.blockType === 'location-grid') {
+    layoutKey = `lg:${block.mediaAspect ?? 'rectangle'}`
+  } else if (block.blockType === 'article-grid' && block.selection.totalSlots === 4) {
+    layoutKey = `ag4:${block.articleGridFourLayout ?? 'four-across'}`
+  }
+  return [block.id, block.blockType, block.selection.totalSlots, layoutKey]
 }
 
 export function isCuratedHomepageBlock(
@@ -256,6 +338,7 @@ export function isCuratedHomepageBlock(
     || block.blockType === 'where-to-eat-drink'
     || block.blockType === 'things-to-do-listicles'
     || block.blockType === 'things-to-do-attractions'
+    || block.blockType === 'newsletter-signup'
   )
 }
 
@@ -286,6 +369,12 @@ export function isThingsToDoAttractionsBlock(
   block: PageBlockResponse,
 ): block is ThingsToDoAttractionsBlockResponse {
   return block.blockType === 'things-to-do-attractions'
+}
+
+export function isNewsletterSignupBlock(
+  block: PageBlockResponse,
+): block is NewsletterSignupBlockResponse {
+  return block.blockType === 'newsletter-signup'
 }
 
 export type HotelOrAttractionGridBlockResponse = HotelGridBlockResponse | ThingsToDoAttractionsBlockResponse

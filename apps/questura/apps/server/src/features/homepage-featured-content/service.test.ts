@@ -125,6 +125,7 @@ describe('homepage featured content service', () => {
     expect(response.totalDocs).toBe(3)
     expect(payload.find.mock.calls[0]?.[0]).toMatchObject({
       collection: 'articles',
+      depth: 3,
       sort: '-updatedAt',
       overrideAccess: true,
       where: {
@@ -151,5 +152,46 @@ describe('homepage featured content service', () => {
         ],
       },
     })
+  })
+
+  it('resolves imageUrlSquare from media set square variant on selection', async () => {
+    const payload = createPayloadMock()
+    payload.findGlobal.mockResolvedValue({
+      items: [{ relationTo: 'articles', value: 1 }],
+    })
+    payload.findByID.mockResolvedValue({
+      id: 1,
+      title: 'Article',
+      slug: 'article',
+      status: 'published',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      publishedAt: '2026-04-01T10:00:00.000Z',
+      headerSection: {
+        featuredImage: {
+          id: 10,
+          variant: 'open_graph',
+          bunny_original_url: 'https://cdn.example/og.jpg',
+          mediaSet: {
+            variants: {
+              square: {
+                bunny_original_url: 'https://cdn.example/sq.jpg',
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const selection = await getHomepageFeaturedSelection(payload as never, { allowDrafts: true })
+
+    expect(payload.findByID).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'articles',
+        id: 1,
+        depth: 3,
+      }),
+    )
+    expect(selection.items[0]?.imageUrl).toBe('https://cdn.example/og.jpg')
+    expect(selection.items[0]?.imageUrlSquare).toBe('https://cdn.example/sq.jpg')
   })
 })

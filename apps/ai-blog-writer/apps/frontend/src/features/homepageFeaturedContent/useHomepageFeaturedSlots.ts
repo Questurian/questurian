@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type {
@@ -141,6 +141,18 @@ export function useHomepageFeaturedSlots(
   const [savedInvalidItems, setSavedInvalidItems] = useState<HomepageFeaturedInvalidItem[]>([])
   const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
+
+  const selectionKeyJson = JSON.stringify(selectionQueryKey)
+  const prevSelectionKeyJsonRef = useRef<string | null>(null)
+
+  useLayoutEffect(() => {
+    if (prevSelectionKeyJsonRef.current === selectionKeyJson) return
+    prevSelectionKeyJsonRef.current = selectionKeyJson
+    setDraftSlots(null)
+    setSavedSlots([])
+    setSavedInvalidItems([])
+    setPickerSlotIndex(null)
+  }, [selectionKeyJson])
 
   const selectionQuery = useQuery({
     queryKey: selectionQueryKey,

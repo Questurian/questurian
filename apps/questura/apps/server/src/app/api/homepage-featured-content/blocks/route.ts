@@ -11,12 +11,15 @@ import {
   getHotelGridSelectionFromItems,
   getHomepageFeaturedSelectionFromItems,
   getLocationGridSelectionFromItems,
+  getNewsletterSignupPlaceholderSelection,
   getQuesturianMapsSelectionFromItems,
   getThingsToDoAttractionsSelectionFromItems,
   getThingsToDoListiclesSelectionFromItems,
   getWhereToEatDrinkSelectionFromItems,
   curatedBlockApiPayload,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
+  homepageBlockSupportsSectionHeading,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
@@ -28,6 +31,7 @@ import {
   LOCATION_GRID_MAX_SLOTS,
   LOCATION_GRID_MIN_SLOTS,
   MAIN_LOCATION_GRID_SCOPE,
+  isValidRequestedSlotCount,
   resolveStoredSlotCountForBlockType,
 } from '@/features/homepage-featured-content'
 import { reorderBlocksByIds } from '@/features/homepage-featured-content/reorder-blocks'
@@ -48,6 +52,7 @@ type RawBlock = {
   blockType: string
   slotCount?: number
   sectionHeading?: string | null
+  sectionSubheading?: string | null
   items?: unknown
 }
 
@@ -67,12 +72,13 @@ const SUPPORTED_BLOCK_TYPES = [
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
+  'newsletter-signup',
 ] as const
 type SupportedBlockType = (typeof SUPPORTED_BLOCK_TYPES)[number]
 const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }> = {
   'featured-article': { min: 1, max: 1 },
   'featured-articles': { min: 3, max: 9 },
-  'article-grid': { min: 3, max: 5 },
+  'article-grid': { min: 4, max: 8 },
   'location-grid': { min: LOCATION_GRID_MIN_SLOTS, max: LOCATION_GRID_MAX_SLOTS },
   'questurian-maps': {
     min: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
@@ -91,6 +97,7 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
     min: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
     max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   },
+  'newsletter-signup': { min: 0, max: 0 },
 }
 
 function isCuratedBlockType(value: unknown): value is SupportedBlockType {
@@ -122,23 +129,24 @@ export async function POST(req: NextRequest) {
     }
 
     const rawSlotCount = body?.slotCount
-    const slotCount =
-      typeof rawSlotCount === 'number' && Number.isFinite(rawSlotCount) && rawSlotCount >= 1
-        ? Math.trunc(rawSlotCount)
-        : null
     const slotLimits = BLOCK_SLOT_LIMITS[blockType]
 
-    if (
-      slotCount === null ||
-      slotCount < slotLimits.min ||
-      slotCount > slotLimits.max
-    ) {
-      return NextResponse.json(
-        {
-          message: `slotCount must be between ${slotLimits.min} and ${slotLimits.max} for "${blockType}".`,
-        },
-        { status: 400, headers },
-      )
+    let slotCount: number | null = null
+    if (typeof rawSlotCount === 'number' && Number.isFinite(rawSlotCount)) {
+      const n = Math.trunc(rawSlotCount)
+      if (isValidRequestedSlotCount(blockType, n)) {
+        slotCount = n
+      }
+    } else if (slotLimits.min === slotLimits.max) {
+      slotCount = slotLimits.min
+    }
+
+    if (slotCount === null) {
+      const message =
+        blockType === 'article-grid'
+          ? `slotCount must be 4 or 8 for "${blockType}".`
+          : `slotCount must be between ${slotLimits.min} and ${slotLimits.max} for "${blockType}".`
+      return NextResponse.json({ message }, { status: 400, headers })
     }
 
     const payload = await getPayload({ config })
@@ -157,11 +165,16 @@ export async function POST(req: NextRequest) {
       slotCount,
       items: [],
     }
-    if (blockType === 'featured-articles' || blockType === 'location-grid') {
+    if (homepageBlockSupportsSectionHeading(blockType)) {
       const sh = body?.sectionHeading
       if (typeof sh === 'string') {
         const t = sh.trim().slice(0, HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX)
         if (t) newBlock.sectionHeading = t
+      }
+      const ss = body?.sectionSubheading
+      if (typeof ss === 'string') {
+        const t = ss.trim().slice(0, HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX)
+        if (t) newBlock.sectionSubheading = t
       }
     }
     const mergeData = mergeHomepageBlockFields(globalDoc, field, [...existingBlocks, newBlock])
@@ -202,9 +215,11 @@ export async function POST(req: NextRequest) {
                     ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
                         totalSlots: slotCount,
                       })
-              : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                  totalSlots: slotCount,
-                })
+              : block.blockType === 'newsletter-signup'
+                ? getNewsletterSignupPlaceholderSelection()
+                : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                    totalSlots: slotCount,
+                  })
           return curatedBlockApiPayload(block, selection)
         }
         return block
@@ -303,9 +318,11 @@ export async function DELETE(req: NextRequest) {
                     ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
                         totalSlots: slotCount,
                       })
-              : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                  totalSlots: slotCount,
-                })
+              : block.blockType === 'newsletter-signup'
+                ? getNewsletterSignupPlaceholderSelection()
+                : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                    totalSlots: slotCount,
+                  })
           return curatedBlockApiPayload(block, selection)
         }
         return block
@@ -392,9 +409,11 @@ export async function PATCH(req: NextRequest) {
                     ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
                         totalSlots: slotCount,
                       })
-              : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                  totalSlots: slotCount,
-                })
+              : block.blockType === 'newsletter-signup'
+                ? getNewsletterSignupPlaceholderSelection()
+                : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                    totalSlots: slotCount,
+                  })
           return curatedBlockApiPayload(block, selection)
         }
         return block

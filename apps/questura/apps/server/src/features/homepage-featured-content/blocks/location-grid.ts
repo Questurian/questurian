@@ -1,5 +1,10 @@
 import type { Block } from 'payload'
 
+import {
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
+  HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
+} from '../featured-articles-section-heading'
+
 export const LocationGridBlock: Block = {
   slug: 'location-grid',
   labels: {
@@ -21,9 +26,34 @@ export const LocationGridBlock: Block = {
       name: 'sectionHeading',
       type: 'text',
       required: false,
-      maxLength: 120,
+      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
       admin: {
         description: 'Optional headline shown above this block on the public homepage.',
+      },
+    },
+    {
+      name: 'sectionSubheading',
+      type: 'text',
+      required: false,
+      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
+      admin: {
+        description: 'Optional supporting line under the section heading.',
+      },
+    },
+    {
+      name: 'mediaAspect',
+      dbName: 'lg_ma',
+      type: 'select',
+      required: false,
+      defaultValue: 'rectangle',
+      options: [
+        { label: 'Rectangle (wide)', value: 'rectangle' },
+        { label: 'Square', value: 'square' },
+        { label: 'Portrait (taller)', value: 'portrait' },
+      ],
+      admin: {
+        description:
+          'Shape of each location card image: wide banner, square, or a modest portrait crop.',
       },
     },
     {

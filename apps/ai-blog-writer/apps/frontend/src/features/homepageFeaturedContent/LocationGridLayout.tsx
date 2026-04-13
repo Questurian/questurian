@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react'
 import type {
   HomepageLocationGridInvalidItem,
   HomepageLocationGridLevel,
+  LocationGridMediaAspect,
 } from './locationGridTypes'
 import type { LocationGridSlotValue } from './useHomepageLocationGridSlots'
 
@@ -15,6 +16,7 @@ function getInvalidMessage(item: HomepageLocationGridInvalidItem): string {
 type Props = {
   slots: LocationGridSlotValue[]
   childLevel: HomepageLocationGridLevel
+  mediaAspect?: LocationGridMediaAspect
   invalidItemsBySlot: Map<number, HomepageLocationGridInvalidItem>
   onSlotClick: (slotIndex: number) => void
   onMove: (slotIndex: number, direction: -1 | 1) => void
@@ -24,6 +26,7 @@ type Props = {
 export default function LocationGridLayout({
   slots,
   childLevel,
+  mediaAspect = 'rectangle',
   invalidItemsBySlot,
   onSlotClick,
   onMove,
@@ -36,7 +39,7 @@ export default function LocationGridLayout({
   }
 
   return (
-    <div className="hf-location-grid">
+    <div className={`hf-location-grid hf-location-grid--aspect-${mediaAspect}`}>
       {slots.map((item, slotIndex) => {
         const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
 

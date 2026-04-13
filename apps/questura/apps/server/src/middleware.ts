@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
-import type { JwtPayload } from './features/auth/types/jwt'
+import { tryVerifyJwtWithAppSecrets } from './features/auth/lib/verify-jwt-with-app-secrets'
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.PAYLOAD_SECRET || ''
 const FRONTEND_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'development'
 
-if (!JWT_SECRET) {
+const HAS_JWT_SECRET = Boolean(process.env.JWT_SECRET || process.env.PAYLOAD_SECRET)
+if (!HAS_JWT_SECRET) {
   console.error('⚠️ Middleware: JWT_SECRET or PAYLOAD_SECRET not configured')
 }
 
@@ -38,12 +37,9 @@ export function middleware(req: NextRequest) {
       return NextResponse.next()
     }
 
-    // Verify and decode token
-    let decoded: JwtPayload
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
-    } catch (error) {
-      console.log('🔐 Middleware: Invalid/expired token - allowing access to /admin login page:', error instanceof Error ? error.message : 'Unknown error')
+    const decoded = tryVerifyJwtWithAppSecrets(token)
+    if (!decoded) {
+      console.log('🔐 Middleware: Invalid/expired token - allowing access to /admin login page')
       return NextResponse.next()
     }
 

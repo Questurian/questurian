@@ -1,5 +1,6 @@
 /**
- * Block types that store an optional `sectionHeading` in Payload (same max length everywhere).
+ * Block types that store optional `sectionHeading` and `sectionSubheading` in Payload (see
+ * featured-articles-section-heading for max lengths).
  */
 export const HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING = [
   'featured-articles',
@@ -11,6 +12,7 @@ export const HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING = [
   'things-to-do-listicles',
   'hotel-grid',
   'things-to-do-attractions',
+  'newsletter-signup',
 ] as const
 
 export type HomepageBlockTypeWithOptionalSectionHeading =

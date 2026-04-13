@@ -9,12 +9,19 @@ import type {
 import type {
   HomepageLocationGridCandidatesResponse,
   HomepageLocationGridItemRef,
+  LocationGridMediaAspect,
 } from './locationGridTypes'
 import type {
   HomepageHotelGridCandidatesResponse,
   HomepageHotelGridItemRef,
 } from './hotelGridTypes'
-import type { PageBlockResponse } from './pageBlocks'
+import type {
+  ArticleGridFourLayout,
+  FeaturedArticlesSlot3Layout,
+  FeaturedArticlesSlot4Layout,
+  FeaturedArticlesSlot5Layout,
+  PageBlockResponse,
+} from './pageBlocks'
 
 const LOCATION_HOMEPAGE_REQUEST_TIMEOUT_MS = 12000
 
@@ -157,6 +164,104 @@ export async function updateLocationHomepageFeaturedSectionHeading(
   })
 }
 
+export async function updateLocationHomepageFeaturedSectionSubheading(
+  token: string,
+  id: number,
+  blockId: string,
+  sectionSubheading: string | null,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(withHomepageMode(`/api/location-homepages/${id}`, mode), token, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, sectionSubheading }),
+  })
+}
+
+export async function updateLocationHomepageFeaturedSlot3Layout(
+  token: string,
+  homepageId: number,
+  blockId: string,
+  slot3Layout: FeaturedArticlesSlot3Layout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
+    token,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ blockId, slot3Layout }),
+    },
+  )
+}
+
+export async function updateLocationHomepageFeaturedSlot4Layout(
+  token: string,
+  homepageId: number,
+  blockId: string,
+  slot4Layout: FeaturedArticlesSlot4Layout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
+    token,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ blockId, slot4Layout }),
+    },
+  )
+}
+
+export async function updateLocationHomepageFeaturedSlot5Layout(
+  token: string,
+  homepageId: number,
+  blockId: string,
+  slot5Layout: FeaturedArticlesSlot5Layout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
+    token,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ blockId, slot5Layout }),
+    },
+  )
+}
+
+export async function updateLocationHomepageLocationGridMediaAspect(
+  token: string,
+  homepageId: number,
+  blockId: string,
+  mediaAspect: LocationGridMediaAspect,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
+    token,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ blockId, mediaAspect }),
+    },
+  )
+}
+
+export async function updateLocationHomepageArticleGridFourLayout(
+  token: string,
+  homepageId: number,
+  blockId: string,
+  articleGridFourLayout: ArticleGridFourLayout,
+  mode: HomepageEditorMode = 'explore',
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(
+    withHomepageMode(`/api/location-homepages/${homepageId}`, mode),
+    token,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ blockId, articleGridFourLayout }),
+    },
+  )
+}
+
 /** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
 export async function convertLocationHomepageFeaturedArticlesBlock(
   token: string,
@@ -183,10 +288,14 @@ export async function addLocationHomepageBlock(
   slotCount: number,
   mode: HomepageEditorMode = 'explore',
   sectionHeading?: string | null,
+  sectionSubheading?: string | null,
 ): Promise<LocationHomepageResponse> {
   const body: Record<string, unknown> = { blockType, slotCount }
   if (typeof sectionHeading === 'string' && sectionHeading.trim()) {
     body.sectionHeading = sectionHeading.trim()
+  }
+  if (typeof sectionSubheading === 'string' && sectionSubheading.trim()) {
+    body.sectionSubheading = sectionSubheading.trim()
   }
   return locationHomepageRequest(
     withHomepageMode(`/api/location-homepages/${id}/blocks`, mode),

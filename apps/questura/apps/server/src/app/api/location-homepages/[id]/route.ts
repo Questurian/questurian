@@ -36,9 +36,16 @@ import {
   buildHomepageFeaturedGlobalData,
   curatedBlockApiPayload,
   getHomepageFeaturedSelectionFromItems,
+  getNewsletterSignupPlaceholderSelection,
   homepageBlockSupportsSectionHeading,
   normalizeHomepageFeaturedInput,
   parseSectionHeadingBodyField,
+  parseSectionSubheadingBodyField,
+  parseSlot3LayoutBodyField,
+  parseSlot4LayoutBodyField,
+  parseSlot5LayoutBodyField,
+  parseLocationGridMediaAspectBodyField,
+  parseArticleGridFourLayoutBodyField,
   validateHomepageFeaturedItems,
   resolveStoredSlotCountForBlockType,
 } from '@/features/homepage-featured-content'
@@ -76,6 +83,12 @@ type RawBlock = {
   blockType: string
   slotCount?: number
   sectionHeading?: string | null
+  sectionSubheading?: string | null
+  slot3Layout?: string
+  slot4Layout?: string
+  slot5Layout?: string
+  mediaAspect?: string
+  articleGridFourLayout?: string
   items?: unknown
 }
 
@@ -100,7 +113,8 @@ function isCuratedBlockType(
   | 'hotel-grid'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
-  | 'things-to-do-attractions' {
+  | 'things-to-do-attractions'
+  | 'newsletter-signup' {
   return value === 'featured-article'
     || value === 'featured-articles'
     || value === 'article-grid'
@@ -110,6 +124,7 @@ function isCuratedBlockType(
     || value === 'where-to-eat-drink'
     || value === 'things-to-do-listicles'
     || value === 'things-to-do-attractions'
+    || value === 'newsletter-signup'
 }
 
 async function resolveLocationGridScope(
@@ -170,9 +185,11 @@ async function resolvePageBlocks(
                   ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
                       totalSlots: slotCount,
                     })
-            : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                totalSlots: slotCount,
-              })
+            : block.blockType === 'newsletter-signup'
+              ? getNewsletterSignupPlaceholderSelection()
+              : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
         return curatedBlockApiPayload(block, selection)
       }
 
@@ -275,10 +292,55 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ message: sectionHeadingParse.message }, { status: 400, headers })
     }
 
-    const hasItems = Array.isArray(body.items)
-    if (!hasItems && sectionHeadingParse.omit) {
+    const sectionSubheadingParse = parseSectionSubheadingBodyField(body)
+    if (!sectionSubheadingParse.ok) {
+      return NextResponse.json({ message: sectionSubheadingParse.message }, { status: 400, headers })
+    }
+
+    const slot3LayoutParse = parseSlot3LayoutBodyField(body)
+    if (!slot3LayoutParse.ok) {
+      return NextResponse.json({ message: slot3LayoutParse.message }, { status: 400, headers })
+    }
+
+    const slot4LayoutParse = parseSlot4LayoutBodyField(body)
+    if (!slot4LayoutParse.ok) {
+      return NextResponse.json({ message: slot4LayoutParse.message }, { status: 400, headers })
+    }
+
+    const slot5LayoutParse = parseSlot5LayoutBodyField(body)
+    if (!slot5LayoutParse.ok) {
+      return NextResponse.json({ message: slot5LayoutParse.message }, { status: 400, headers })
+    }
+
+    const mediaAspectParse = parseLocationGridMediaAspectBodyField(body)
+    if (!mediaAspectParse.ok) {
+      return NextResponse.json({ message: mediaAspectParse.message }, { status: 400, headers })
+    }
+
+    const articleGridFourLayoutParse = parseArticleGridFourLayoutBodyField(body)
+    if (!articleGridFourLayoutParse.ok) {
       return NextResponse.json(
-        { message: 'Provide items (array) and/or sectionHeading to update this block.' },
+        { message: articleGridFourLayoutParse.message },
+        { status: 400, headers },
+      )
+    }
+
+    const hasItems = Array.isArray(body.items)
+    if (
+      !hasItems
+      && sectionHeadingParse.omit
+      && sectionSubheadingParse.omit
+      && slot3LayoutParse.omit
+      && slot4LayoutParse.omit
+      && slot5LayoutParse.omit
+      && mediaAspectParse.omit
+      && articleGridFourLayoutParse.omit
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            'Provide items (array) and/or sectionHeading and/or sectionSubheading and/or slot3Layout and/or slot4Layout and/or slot5Layout and/or mediaAspect and/or articleGridFourLayout to update this block.',
+        },
         { status: 400, headers },
       )
     }
@@ -313,9 +375,72 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       )
     }
 
+    if (!slot3LayoutParse.omit) {
+      const slot3SlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+      if (block.blockType !== 'featured-articles' || slot3SlotCount !== 3) {
+        return NextResponse.json(
+          {
+            message: 'slot3Layout is only supported for featured-articles blocks with 3 slots.',
+          },
+          { status: 400, headers },
+        )
+      }
+    }
+
+    if (!slot4LayoutParse.omit) {
+      const slot4SlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+      if (block.blockType !== 'featured-articles' || slot4SlotCount !== 4) {
+        return NextResponse.json(
+          {
+            message: 'slot4Layout is only supported for featured-articles blocks with 4 slots.',
+          },
+          { status: 400, headers },
+        )
+      }
+    }
+
+    if (!slot5LayoutParse.omit) {
+      const slot5SlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+      if (block.blockType !== 'featured-articles' || slot5SlotCount !== 5) {
+        return NextResponse.json(
+          {
+            message: 'slot5Layout is only supported for featured-articles blocks with 5 slots.',
+          },
+          { status: 400, headers },
+        )
+      }
+    }
+
+    if (!mediaAspectParse.omit && block.blockType !== 'location-grid') {
+      return NextResponse.json(
+        { message: 'mediaAspect is only supported for location-grid blocks.' },
+        { status: 400, headers },
+      )
+    }
+
+    if (!articleGridFourLayoutParse.omit) {
+      const agSlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+      if (block.blockType !== 'article-grid' || agSlotCount !== 4) {
+        return NextResponse.json(
+          {
+            message:
+              'articleGridFourLayout is only supported for article-grid blocks with 4 slots.',
+          },
+          { status: 400, headers },
+        )
+      }
+    }
+
     if (!sectionHeadingParse.omit && !homepageBlockSupportsSectionHeading(block.blockType)) {
       return NextResponse.json(
         { message: 'sectionHeading is not supported for this block type.' },
+        { status: 400, headers },
+      )
+    }
+
+    if (!sectionSubheadingParse.omit && !homepageBlockSupportsSectionHeading(block.blockType)) {
+      return NextResponse.json(
+        { message: 'sectionSubheading is not supported for this block type.' },
         { status: 400, headers },
       )
     }
@@ -324,25 +449,92 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const updatedBlocks = [...rawBlocks]
 
     if (!hasItems) {
-      if (!homepageBlockSupportsSectionHeading(block.blockType)) {
+      const blockSlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+      const wantsHeading = !sectionHeadingParse.omit
+      const wantsSubheading = !sectionSubheadingParse.omit
+      const wantsSlot3 = !slot3LayoutParse.omit
+      const wantsSlot4 = !slot4LayoutParse.omit
+      const wantsSlot5 = !slot5LayoutParse.omit
+      const wantsMediaAspect = !mediaAspectParse.omit
+      const wantsArticleGridFour = !articleGridFourLayoutParse.omit
+
+      if (
+        !wantsHeading
+        && !wantsSubheading
+        && !wantsSlot3
+        && !wantsSlot4
+        && !wantsSlot5
+        && !wantsMediaAspect
+        && !wantsArticleGridFour
+      ) {
         return NextResponse.json(
-          { message: 'sectionHeading-only updates are not supported for this block type.' },
+          {
+            message:
+              'Provide sectionHeading (string or null) and/or sectionSubheading (string or null) and/or slot3Layout and/or slot4Layout and/or slot5Layout and/or mediaAspect and/or articleGridFourLayout when items are omitted.',
+          },
           { status: 400, headers },
         )
       }
 
-      if (sectionHeadingParse.omit) {
+      if (wantsHeading && !homepageBlockSupportsSectionHeading(block.blockType)) {
         return NextResponse.json(
-          { message: 'Provide sectionHeading (string or null) when items are omitted.' },
+          { message: 'sectionHeading is not supported for this block type.' },
           { status: 400, headers },
         )
       }
 
-      updatedBlocks[blockIndex] = {
+      if (wantsSubheading && !homepageBlockSupportsSectionHeading(block.blockType)) {
+        return NextResponse.json(
+          { message: 'sectionSubheading is not supported for this block type.' },
+          { status: 400, headers },
+        )
+      }
+
+      if (wantsMediaAspect && block.blockType !== 'location-grid') {
+        return NextResponse.json(
+          { message: 'mediaAspect is only supported for location-grid blocks.' },
+          { status: 400, headers },
+        )
+      }
+
+      if (wantsArticleGridFour) {
+        if (block.blockType !== 'article-grid' || blockSlotCount !== 4) {
+          return NextResponse.json(
+            {
+              message:
+                'articleGridFourLayout is only supported for article-grid blocks with 4 slots.',
+            },
+            { status: 400, headers },
+          )
+        }
+      }
+
+      let next: RawBlock = {
         ...block,
-        slotCount: resolveStoredSlotCountForBlockType(block.blockType, block.slotCount),
-        sectionHeading: sectionHeadingParse.value,
+        slotCount: blockSlotCount,
       }
+      if (wantsHeading) {
+        next = { ...next, sectionHeading: sectionHeadingParse.value }
+      }
+      if (wantsSubheading) {
+        next = { ...next, sectionSubheading: sectionSubheadingParse.value }
+      }
+      if (wantsSlot3) {
+        next = { ...next, slot3Layout: slot3LayoutParse.value }
+      }
+      if (wantsSlot4) {
+        next = { ...next, slot4Layout: slot4LayoutParse.value }
+      }
+      if (wantsSlot5) {
+        next = { ...next, slot5Layout: slot5LayoutParse.value }
+      }
+      if (wantsMediaAspect) {
+        next = { ...next, mediaAspect: mediaAspectParse.value }
+      }
+      if (wantsArticleGridFour) {
+        next = { ...next, articleGridFourLayout: articleGridFourLayoutParse.value }
+      }
+      updatedBlocks[blockIndex] = next
     } else {
       const items = body.items as unknown[]
 
@@ -474,6 +666,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           slotCount: blockSlotCount,
           ...buildThingsToDoAttractionsGlobalData(validatedRefs),
         }
+      } else if (block.blockType === 'newsletter-signup') {
+        return NextResponse.json(
+          { message: '"newsletter-signup" blocks do not support item updates.' },
+          { status: 400, headers },
+        )
       } else {
         const refs = normalizeHomepageFeaturedInput(items)
         const validatedRefs = await validateHomepageFeaturedItems(payload, refs, {
@@ -492,6 +689,64 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         updatedBlocks[blockIndex] = {
           ...updatedBlocks[blockIndex],
           sectionHeading: sectionHeadingParse.value,
+        }
+      }
+
+      if (homepageBlockSupportsSectionHeading(block.blockType) && !sectionSubheadingParse.omit) {
+        updatedBlocks[blockIndex] = {
+          ...updatedBlocks[blockIndex],
+          sectionSubheading: sectionSubheadingParse.value,
+        }
+      }
+
+      if (
+        block.blockType === 'featured-articles'
+        && blockSlotCount === 3
+        && !slot3LayoutParse.omit
+      ) {
+        updatedBlocks[blockIndex] = {
+          ...updatedBlocks[blockIndex],
+          slot3Layout: slot3LayoutParse.value,
+        }
+      }
+
+      if (
+        block.blockType === 'featured-articles'
+        && blockSlotCount === 4
+        && !slot4LayoutParse.omit
+      ) {
+        updatedBlocks[blockIndex] = {
+          ...updatedBlocks[blockIndex],
+          slot4Layout: slot4LayoutParse.value,
+        }
+      }
+
+      if (
+        block.blockType === 'featured-articles'
+        && blockSlotCount === 5
+        && !slot5LayoutParse.omit
+      ) {
+        updatedBlocks[blockIndex] = {
+          ...updatedBlocks[blockIndex],
+          slot5Layout: slot5LayoutParse.value,
+        }
+      }
+
+      if (block.blockType === 'location-grid' && !mediaAspectParse.omit) {
+        updatedBlocks[blockIndex] = {
+          ...updatedBlocks[blockIndex],
+          mediaAspect: mediaAspectParse.value,
+        }
+      }
+
+      if (
+        block.blockType === 'article-grid'
+        && blockSlotCount === 4
+        && !articleGridFourLayoutParse.omit
+      ) {
+        updatedBlocks[blockIndex] = {
+          ...updatedBlocks[blockIndex],
+          articleGridFourLayout: articleGridFourLayoutParse.value,
         }
       }
     }
