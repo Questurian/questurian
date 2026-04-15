@@ -57,6 +57,7 @@ type LocationHomepageDoc = {
 
 const SUPPORTED_BLOCK_TYPES = [
   'featured-article',
+  'featured-article-carousel',
   'featured-articles',
   'article-grid',
   'location-grid',
@@ -71,6 +72,7 @@ type SupportedBlockType = (typeof SUPPORTED_BLOCK_TYPES)[number]
 
 const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }> = {
   'featured-article': { min: 1, max: 1 },
+  'featured-article-carousel': { min: 2, max: 10 },
   'featured-articles': { min: 3, max: 9 },
   'article-grid': { min: 4, max: 8 },
   'location-grid': { min: LOCATION_GRID_MIN_SLOTS, max: LOCATION_GRID_MAX_SLOTS },

@@ -44,7 +44,7 @@ export class DistrictExtractionService {
       ["PE", [8]], // Peru: adminLevel 8 (districts like Miraflores, Barranco)
       ["CO", [8]], // Colombia: adminLevel 8 (districts like Chapinero, Santa Fe)
       ["BR", [10, 8]], // Brazil: adminLevel 10 (bairros like Grajau), fallback to 8 (municipality)
-      ["MX", [8, 10]], // Mexico: colonia / neighborhood levels vary by metro
+      ["MX", [9, 6, 8, 10]], // Mexico: routed to Geoapify; kept as fallback reference
       ["AR", [8, 10]], // Argentina: barrio / comuna levels vary by city
       ["CL", [8, 10]], // Chile: comuna / barrio levels vary by city
     ]);

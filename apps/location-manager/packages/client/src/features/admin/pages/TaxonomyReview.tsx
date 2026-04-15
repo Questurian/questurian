@@ -30,7 +30,6 @@ export function TaxonomyReview() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLocationKey, setSelectedLocationKey] = useState<string | undefined>(undefined);
-  const [defaultPartType, setDefaultPartType] = useState<"country" | "city" | "neighborhood">("city");
 
   // Filter state for Approved Taxonomy
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -69,13 +68,11 @@ export function TaxonomyReview() {
 
   const handleQuickFill = (locationKey: string) => {
     setSelectedLocationKey(locationKey);
-    setDefaultPartType("city"); // Default to city as most common case
     setModalOpen(true);
   };
 
   const handleAddCorrectionRule = () => {
     setSelectedLocationKey(undefined);
-    setDefaultPartType("neighborhood");
     setModalOpen(true);
   };
 
@@ -356,7 +353,6 @@ export function TaxonomyReview() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         locationKey={selectedLocationKey}
-        defaultPartType={defaultPartType}
       />
     </div>
   );

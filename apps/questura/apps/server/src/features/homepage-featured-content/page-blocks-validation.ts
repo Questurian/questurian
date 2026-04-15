@@ -46,6 +46,7 @@ export function isCuratedHomepageBlockType(
   value: unknown,
 ): value is
   | 'featured-article'
+  | 'featured-article-carousel'
   | 'featured-articles'
   | 'article-grid'
   | 'location-grid'
@@ -56,6 +57,7 @@ export function isCuratedHomepageBlockType(
   | 'things-to-do-attractions'
   | 'newsletter-signup' {
   return value === 'featured-article'
+    || value === 'featured-article-carousel'
     || value === 'featured-articles'
     || value === 'article-grid'
     || value === 'location-grid'

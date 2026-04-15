@@ -18,6 +18,7 @@ import {
  */
 export const HOMEPAGE_BLOCK_SLOT_LIMITS = {
   'featured-article': { min: 1, max: 1 },
+  'featured-article-carousel': { min: 2, max: 10 },
   'featured-articles': { min: 3, max: 9 },
   /** Only 4 or 8 are valid; see {@link resolveStoredSlotCountForBlockType}. */
   'article-grid': { min: 4, max: 8 },

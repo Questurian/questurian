@@ -52,6 +52,22 @@ async function testDistrictExtraction() {
       expectedDistrict: 'Rio de Janeiro', // Note: BigDataCloud may not have bairro-level granularity
       expectedAdminLevel: 8
     },
+    {
+      name: 'Roma Norte, Mexico City, Mexico',
+      lat: 19.4187,
+      lng: -99.1588,
+      expectedCountry: 'MX',
+      expectedDistrict: 'Roma Norte',
+      expectedAdminLevel: 9
+    },
+    {
+      name: 'Condesa, Mexico City, Mexico',
+      lat: 19.4116,
+      lng: -99.1736,
+      expectedCountry: 'MX',
+      expectedDistrict: 'Condesa',
+      expectedAdminLevel: 9
+    },
   ];
 
   let passedTests = 0;

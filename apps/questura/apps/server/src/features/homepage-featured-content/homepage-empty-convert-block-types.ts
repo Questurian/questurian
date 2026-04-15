@@ -11,6 +11,7 @@
 export const HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES = [
   'featured-articles',
   'featured-article',
+  'featured-article-carousel',
   'article-grid',
   'location-grid',
   'questurian-maps',

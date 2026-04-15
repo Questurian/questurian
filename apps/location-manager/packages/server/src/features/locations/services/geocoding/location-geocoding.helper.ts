@@ -28,7 +28,7 @@ interface GeocodeResponse {
   }>;
 }
 
-type GeocodeResult = { lat: number; lng: number; countryCode?: string };
+type GeocodeResult = { lat: number; lng: number; countryCode?: string; sublocality?: string };
 
 type BigDataCloudLocationData = {
   countryName: string;
@@ -283,11 +283,15 @@ export async function geocode(address: string, apiKey?: string): Promise<Geocode
         const countryComponent = result.address_components?.find((component) =>
           component.types?.includes("country")
         );
+        const sublocalityComponent = result.address_components?.find((component) =>
+          component.types?.includes("sublocality_level_1") || component.types?.includes("sublocality")
+        );
 
         return {
           lat: location.lat,
           lng: location.lng,
           countryCode: countryComponent?.short_name,
+          sublocality: sublocalityComponent?.long_name,
         };
       }
     }
@@ -364,11 +368,13 @@ export async function reverseGeocodeWithBigDataCloud(
     const data = await container.bigDataCloudClient.reverseGeocode(latitude, longitude);
 
     // Extract district using country-specific service
-    const district = container.districtExtractionService.extractDistrict(
+    const rawDistrict = container.districtExtractionService.extractDistrict(
       countryCode || data.countryCode,  // Prefer passed countryCode, fallback to API
       data.localityInfo?.administrative || [],
       data.localityInfo?.informative  // Pass informative array for Brazil tourism zones
     );
+
+    const district = rawDistrict;
 
     // Extract and slugify location parts (country, city, district)
     // Use district from extraction service for precise, stable location keys
@@ -412,10 +418,15 @@ async function reverseGeocodeWithGeoapify(
 
     const data = await container.geoapifyClient.reverseGeocode(latitude, longitude);
 
-    // For Brazil: suburb is the bairro (e.g., "Copacabana")
-    // We prefer suburb over district for Brazilian neighborhoods
     const city = data.city || data.state || "";
-    const district = data.suburb || null;
+    const resolvedCode = (countryCode || data.country_code || "").toUpperCase();
+
+    // Mexico: prefer `district` (colonia-level, e.g. "Roma Norte", "Roma Sur")
+    // over `suburb` which may be less specific. Fall back to suburb if district absent.
+    // Brazil: `suburb` is the bairro (e.g. "Copacabana") — district is too coarse there.
+    const district = resolvedCode === "MX"
+      ? (data.district || data.suburb || null)
+      : (data.suburb || null);
 
     // Slugify and create locationKey (country|city|district)
     // Note: We use Google's country code if available (more reliable)
@@ -448,10 +459,10 @@ async function reverseGeocodeWithRouting(
 ): Promise<BigDataCloudLocationData | null> {
   const routedCountryCode = countryCode?.toUpperCase();
 
-  if (routedCountryCode === 'BR') {
+  if (routedCountryCode === 'BR' || routedCountryCode === 'MX') {
     return reverseGeocodeWithGeoapify(latitude, longitude, countryCode);
   } else {
-    // Default: BigDataCloud for non-Brazil approved countries
+    // Default: BigDataCloud for non-Brazil/Mexico approved countries
     return reverseGeocodeWithBigDataCloud(latitude, longitude, countryCode);
   }
 }
@@ -555,11 +566,21 @@ export async function createFromMaps(
           coords.countryCode  // Pass Google's countryCode for better accuracy
         );
         if (reverseGeoData) {
-          if (reverseGeoData.locationKey) {
-            entry.locationKey = reverseGeoData.locationKey;
-          }
-          if (reverseGeoData.district) {
-            entry.district = reverseGeoData.district;
+          // For Mexico: Google's sublocality_level_1 returns the colonia with full
+          // Norte/Sur precision (e.g. "Roma Norte"). Override Geoapify's district
+          // which only gets to suburb/alcaldía level.
+          const isMexico = coords.countryCode?.toUpperCase() === "MX";
+          if (isMexico && coords.sublocality) {
+            const locationParts = [
+              slugifyLocationPart(reverseGeoData.countryName),
+              slugifyLocationPart(reverseGeoData.city),
+              slugifyLocationPart(coords.sublocality),
+            ].filter(Boolean);
+            entry.locationKey = locationParts.join("|");
+            entry.district = coords.sublocality;
+          } else {
+            if (reverseGeoData.locationKey) entry.locationKey = reverseGeoData.locationKey;
+            if (reverseGeoData.district) entry.district = reverseGeoData.district;
           }
         }
       } catch (reverseGeoError) {

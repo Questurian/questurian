@@ -4538,3 +4538,79 @@
     justify-content: flex-start;
   }
 }
+
+/* ── Featured Article Carousel editor ────────────────────────── */
+
+.hf-carousel-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.hf-carousel-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.hf-carousel-arrow:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.hf-carousel-counter {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.25rem;
+}
+
+.hf-carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem clamp(1.5rem, 4vw, 3rem);
+  background: #000;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hf-carousel-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.18);
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.hf-carousel-dot.active {
+  background: #fff;
+  border-color: #fff;
+  transform: scale(1.25);
+}
+
+.hf-carousel-dot.empty {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.hf-carousel-dot.invalid {
+  background: rgba(220, 60, 60, 0.7);
+  border-color: rgba(220, 60, 60, 0.9);
+}

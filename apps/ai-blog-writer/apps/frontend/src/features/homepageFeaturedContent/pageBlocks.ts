@@ -4,6 +4,7 @@ import type { HomepageHotelGridSelection } from './hotelGridTypes'
 
 export type CuratedHomepageBlockType =
   | 'featured-article'
+  | 'featured-article-carousel'
   | 'featured-articles'
   | 'article-grid'
   | 'location-grid'
@@ -16,6 +17,7 @@ export type CuratedHomepageBlockType =
 
 export type ArticleCuratedHomepageBlockType =
   | 'featured-article'
+  | 'featured-article-carousel'
   | 'featured-articles'
   | 'article-grid'
   | 'questurian-maps'
@@ -42,6 +44,14 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 1,
     minSlotCount: 1,
     maxSlotCount: 1,
+  },
+  'featured-article-carousel': {
+    label: 'Featured Article Carousel',
+    description: 'Full-width dark hero with left/right arrows to cycle through multiple articles',
+    quickSlotCounts: [2, 3, 4, 5],
+    defaultSlotCount: 3,
+    minSlotCount: 2,
+    maxSlotCount: 10,
   },
   'featured-articles': {
     label: 'Featured Articles',
@@ -132,6 +142,7 @@ export function isValidHomepageBlockSlotCount(
 
 export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'featured-article',
+  'featured-article-carousel',
   'featured-articles',
   'article-grid',
   'location-grid',
@@ -152,6 +163,7 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
  */
 export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'featured-article',
+  'featured-article-carousel',
   'article-grid',
   'location-grid',
   'questurian-maps',
@@ -165,6 +177,14 @@ export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBloc
 export type FeaturedArticleBlockResponse = {
   id: string
   blockType: 'featured-article'
+  selection: HomepageFeaturedSelection
+  sectionHeading: string | null
+  sectionSubheading: string | null
+}
+
+export type FeaturedArticleCarouselBlockResponse = {
+  id: string
+  blockType: 'featured-article-carousel'
   selection: HomepageFeaturedSelection
   sectionHeading: string | null
   sectionSubheading: string | null
@@ -267,6 +287,7 @@ export type NewsletterSignupBlockResponse = {
 
 export type ArticleCuratedHomepageBlockResponse =
   | FeaturedArticleBlockResponse
+  | FeaturedArticleCarouselBlockResponse
   | FeaturedArticlesBlockResponse
   | ArticleGridBlockResponse
   | QuesturianMapsBlockResponse
@@ -276,6 +297,7 @@ export type ArticleCuratedHomepageBlockResponse =
 /** Block types edited with {@link CuratedHomepageBlockEditor}; empty blocks may convert to another type. */
 export const ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES: ArticleCuratedHomepageBlockType[] = [
   'featured-article',
+  'featured-article-carousel',
   'featured-articles',
   'article-grid',
   'questurian-maps',
@@ -330,6 +352,7 @@ export function isCuratedHomepageBlock(
 ): block is CuratedHomepageBlockResponse {
   return (
     block.blockType === 'featured-article'
+    || block.blockType === 'featured-article-carousel'
     || block.blockType === 'featured-articles'
     || block.blockType === 'article-grid'
     || block.blockType === 'location-grid'
@@ -346,6 +369,7 @@ export function isArticleCuratedHomepageBlock(
   block: PageBlockResponse,
 ): block is ArticleCuratedHomepageBlockResponse {
   return block.blockType === 'featured-article'
+    || block.blockType === 'featured-article-carousel'
     || block.blockType === 'featured-articles'
     || block.blockType === 'article-grid'
     || block.blockType === 'questurian-maps'

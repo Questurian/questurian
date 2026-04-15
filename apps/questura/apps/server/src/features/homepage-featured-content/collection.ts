@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { ArticleGridBlock } from './blocks/article-grid'
 import { FeaturedArticleBlock } from './blocks/featured-article'
+import { FeaturedArticleCarouselBlock } from './blocks/featured-article-carousel'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
 import { HotelGridBlock } from './blocks/hotel-grid'
 import { LocationGridBlock } from './blocks/location-grid'
@@ -17,6 +18,7 @@ import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
 
 const HOMEPAGE_BLOCK_TYPES = [
   FeaturedArticleBlock,
+  FeaturedArticleCarouselBlock,
   FeaturedArticlesBlock,
   ArticleGridBlock,
   LocationGridBlock,

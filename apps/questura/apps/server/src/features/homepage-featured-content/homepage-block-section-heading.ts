@@ -8,6 +8,7 @@ export const HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING = [
   'article-grid',
   'questurian-maps',
   'featured-article',
+  'featured-article-carousel',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'hotel-grid',

@@ -183,7 +183,7 @@ function CardList({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         type="button"
         className={`hf-l9-card-list${invalid ? ' invalid' : ''}`}
         onClick={onClick}
-        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+        style={{ width: '100%', background: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
       >
         <div className="hf-l9-body">
           <div className="hf-l9-num-row">
