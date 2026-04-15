@@ -77,6 +77,10 @@ export class EnvConfig {
       warnings.push("Payload CMS not configured - sync to Payload disabled");
     }
 
+    if (!process.env.GOOGLE_CLOUD_PROJECT) {
+      warnings.push("GOOGLE_CLOUD_PROJECT not set - Vertex AI not configured (alt text and neighborhood descriptions will fail)");
+    }
+
     // LEADS_API_URL defaults to localhost for review translation
 
     if (warnings.length > 0 && this.NODE_ENV !== "test") {

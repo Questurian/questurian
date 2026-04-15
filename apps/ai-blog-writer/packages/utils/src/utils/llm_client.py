@@ -45,8 +45,9 @@ def get_vertex_llm(
     resolved_project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
     if not resolved_project:
         raise RuntimeError(
-            "GOOGLE_CLOUD_PROJECT environment variable is required. "
-            "Set it or pass project parameter explicitly."
+            "Vertex AI not configured — GOOGLE_CLOUD_PROJECT is not set. "
+            "Set GOOGLE_CLOUD_PROJECT (and optionally GOOGLE_CLOUD_LOCATION) "
+            "once the new GCP project is ready."
         )
 
     # Resolve location

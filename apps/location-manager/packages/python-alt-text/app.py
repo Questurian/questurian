@@ -168,6 +168,13 @@ def generate_text_from_prompt(
 
 @app.on_event("startup")
 def startup() -> None:
+    project = (os.getenv("GOOGLE_CLOUD_PROJECT") or "").strip()
+    if not project:
+        logger.warning(
+            "⚠️  VERTEX AI NOT CONFIGURED — GOOGLE_CLOUD_PROJECT is not set. "
+            "Alt text and neighborhood description endpoints will fail until a new GCP project is wired up."
+        )
+        return
     try:
         ensure_vertex_initialized()
     except Exception as exc:
