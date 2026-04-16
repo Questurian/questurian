@@ -90,8 +90,20 @@ And check out CloudProvider in the description below. See you next time!""",
 )
 
 
+VALID_Y2B_MODELS = {
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-3.1-pro-preview",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-image-preview",
+}
+
+
 class YouTubeUrlRequest(BaseModel):
     url: str = Field(..., min_length=1)
+    model: str | None = Field(default=None)
 
 
 def _read_langgraph_trace(run_id: str) -> dict[str, str]:
@@ -118,6 +130,12 @@ async def start_from_youtube_url(
     background_tasks: BackgroundTasks,
 ) -> JSONResponse:
     """Queue a YouTube2Blog run directly from a YouTube video URL."""
+    if request.model is not None and request.model not in VALID_Y2B_MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid model '{request.model}'. Valid options: {sorted(VALID_Y2B_MODELS)}",
+        )
+
     try:
         source = parse_youtube_video_url(request.url)
     except ValueError as exc:
@@ -154,7 +172,7 @@ async def start_from_youtube_url(
         source="youtube-url",
         notes=f"url:{source.canonical_url}",
     )
-    background_tasks.add_task(process_run, record, meta)
+    background_tasks.add_task(process_run, record, meta, model_name=request.model)
 
     return JSONResponse({
         "run_id": meta.run_id,

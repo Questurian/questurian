@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { MediaAsset } from '../../../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../../../types'
+import type { EditorModelName } from '../types'
 import {
   getEditorialComponentDefaultLabel,
   resolveEditorModelName,
@@ -35,7 +36,7 @@ type UseEditorialStageBlocksParams = {
   rewriteBlockWithAi: (input: {
     prompt: string
     blockContent: string
-    modelName?: 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash'
+    modelName?: EditorModelName
     articleTitle?: string
     articleContext?: string
   }) => Promise<{ rewritten_content: string }>

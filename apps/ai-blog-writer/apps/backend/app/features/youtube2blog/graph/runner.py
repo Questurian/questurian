@@ -230,9 +230,13 @@ class YouTube2BlogGraphState(TypedDict, total=False):
 def run_youtube2blog_graph(
     record: RawVideoRecord,
     meta: PipelineMeta,
+    model_name: str | None = None,
 ) -> str:
     """Run YouTube2Blog as a gated multi-node LangGraph workflow."""
     from langgraph.graph import END, START, StateGraph
+    from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL as _DEFAULT_MODEL
+
+    _active_model = model_name or _DEFAULT_MODEL
 
     run_id = meta.run_id
     current_stage = "stage_1"
@@ -273,7 +277,7 @@ def run_youtube2blog_graph(
 
     def stage_1_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_1")
-        stage1 = stage_1_clean_transcript(record)
+        stage1 = stage_1_clean_transcript(record, model_name=_active_model)
         stage_results = _record_stage_result(
             state,
             stage_name="stage_1",
@@ -317,6 +321,7 @@ def run_youtube2blog_graph(
         repaired_stage1 = stage_1_repair_transcript(
             record,
             previous_stage1.cleaned_transcript,
+            model_name=_active_model,
         )
         retry_count = int(state.get("stage1_retry_count", 0)) + 1
 
@@ -356,6 +361,7 @@ def run_youtube2blog_graph(
             stage1,
             allowed_types,
             classification_mode="primary",
+            model_name=_active_model,
         )
         stage_results = _record_stage_result(
             state,
@@ -424,6 +430,7 @@ def run_youtube2blog_graph(
             stage1,
             allowed_types,
             classification_mode="retry",
+            model_name=_active_model,
         )
 
         stage_results = _record_stage_result(
@@ -478,6 +485,7 @@ def run_youtube2blog_graph(
         coverage = stage_3_coverage_check(
             transcript=stage1.cleaned_transcript,
             guideline=guideline,
+            model_name=_active_model,
         )
         stage_results = _record_stage_result(
             state,
@@ -510,6 +518,7 @@ def run_youtube2blog_graph(
             transcript=stage1.cleaned_transcript,
             missing_sections=missing_sections,
             article_type=stage2.classification,
+            model_name=_active_model,
         )
         stage_results = _record_stage_result(
             state,
@@ -544,6 +553,7 @@ def run_youtube2blog_graph(
             guideline=guideline,
             article_type=stage2.classification,
             title=stage1.title,
+            model_name=_active_model,
         )
 
         stage3 = Stage3Output(
@@ -598,7 +608,7 @@ def run_youtube2blog_graph(
         _write_running_status("stage_3_quality_gate")
         stage3 = Stage3Output.model_validate(state["stage3"])
         retry_count = int(state.get("stage3_quality_retry_count", 0))
-        assessment = stage_3_assess_article_quality(stage3=stage3)
+        assessment = stage_3_assess_article_quality(stage3=stage3, model_name=_active_model)
         dimension_scores_raw = assessment.get("dimension_scores")
         dimension_scores = (
             dict(dimension_scores_raw) if isinstance(dimension_scores_raw, dict) else {}
@@ -711,6 +721,7 @@ def run_youtube2blog_graph(
             rewrite_brief=list(targeted_feedback.get("rewrite_brief") or rewrite_brief),
             mode=mode,
             focus_dimensions=list(targeted_feedback.get("focus_dimensions") or []),
+            model_name=_active_model,
         )
 
         improve_prompt = str(improved.get("debug_improve_prompt") or "")
@@ -772,7 +783,7 @@ def run_youtube2blog_graph(
     def stage_seo_brief_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_seo_brief")
         stage3 = Stage3Output.model_validate(state["stage3"])
-        seo_brief = stage_seo_generate_brief(stage3=stage3)
+        seo_brief = stage_seo_generate_brief(stage3=stage3, model_name=_active_model)
         stage_results = _record_stage_result(
             state,
             stage_name="stage_seo_brief",
@@ -792,6 +803,7 @@ def run_youtube2blog_graph(
             stage3=stage3,
             seo_brief=seo_brief,
             mode="primary",
+            model_name=_active_model,
         )
 
         seo_article = str(seo_output.get("seo_article") or stage3.final_article)
@@ -908,6 +920,7 @@ def run_youtube2blog_graph(
             seo_brief=seo_brief,
             mode="retry",
             feedback=feedback,
+            model_name=_active_model,
         )
         seo_article = str(
             seo_output.get("seo_article") or stage3_for_editorial.final_article
@@ -1025,7 +1038,7 @@ def run_youtube2blog_graph(
     def stage_editorial_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_editorial_augmentation")
         stage3 = Stage3Output.model_validate(state["stage3_for_editorial"])
-        stage_editorial = stage_editorial_augmentation(stage3, fail_fast=True)
+        stage_editorial = stage_editorial_augmentation(stage3, fail_fast=True, model_name=_active_model)
         stage_results = _record_stage_result(
             state,
             stage_name="stage_editorial_augmentation",
@@ -1100,7 +1113,7 @@ def run_youtube2blog_graph(
         stage3_for_title = Stage3Output.model_validate(state["stage3_for_title"])
         gate_data = dict(state.get("stage_editorial_gate") or {})
         seo_source_stage = str(gate_data.get("seo_source_stage") or "stage_seo_enrich")
-        stage4 = stage_4_generate_title(stage3_for_title)
+        stage4 = stage_4_generate_title(stage3_for_title, model_name=_active_model)
         input_refs = {
             "stage_editorial_augmentation": _stage_ref(
                 run_id,
@@ -1183,6 +1196,7 @@ def run_youtube2blog_graph(
         retried_stage4 = stage_5_generate_title_retry(
             stage3_for_title,
             feedback=feedback,
+            model_name=_active_model,
         )
         stage_results = _record_stage_result(
             state,

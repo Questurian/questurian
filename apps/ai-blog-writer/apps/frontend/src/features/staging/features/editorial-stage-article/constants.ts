@@ -24,6 +24,9 @@ export const IMG_TRIO_DEFAULT_FORMAT: ImgTrioFormat = 'square'
 export const DEFAULT_EDITOR_MODEL_NAME: EditorModelName = 'gemini-2.5-flash'
 
 export const EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string }> = [
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — best quality)' },
+  { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (Preview — fast & cheap)' },
+  { value: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash Image (Preview — multimodal)' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
@@ -111,6 +114,9 @@ export function getEditorialComponentDefaultLabel(component: string): string {
 }
 
 export function resolveEditorModelName(value?: string): EditorModelName {
+  if (value === 'gemini-3.1-pro-preview') return value
+  if (value === 'gemini-3.1-flash-lite-preview') return value
+  if (value === 'gemini-3.1-flash-image-preview') return value
   if (value === 'gemini-2.5-flash') return value
   if (value === 'gemini-2.5-pro') return value
   if (value === 'gemini-2.0-flash') return value

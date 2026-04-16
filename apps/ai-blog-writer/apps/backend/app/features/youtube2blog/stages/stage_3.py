@@ -26,11 +26,11 @@ logger = logging.getLogger(__name__)
 GENERAL_GUIDELINES_PATH = Path(__file__).parent.parent.parent.parent / "data" / "general.md"
 
 
-def _stage3_llm():
+def _stage3_llm(model_name: str = Y2B_PRIMARY_MODEL):
     return get_vertex_llm(
         temperature=0.3,
         max_tokens=8192,
-        model_name=Y2B_PRIMARY_MODEL,
+        model_name=model_name,
     )
 
 
@@ -320,9 +320,10 @@ def stage_3_coverage_check(
     *,
     transcript: str,
     guideline: str,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> dict[str, object]:
     """Run coverage analysis as an explicit graph branch node."""
-    llm = _stage3_llm()
+    llm = _stage3_llm(model_name)
     (
         coverage_sufficient,
         analysis,
@@ -344,9 +345,10 @@ def stage_3_generate_supplement(
     transcript: str,
     missing_sections: list[str],
     article_type: str,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> dict[str, str]:
     """Generate supplemental markdown for missing sections."""
-    llm = _stage3_llm()
+    llm = _stage3_llm(model_name)
     supplemental_content, supplement_prompt, supplement_response = _gather_missing_info(
         transcript,
         missing_sections,
@@ -367,9 +369,10 @@ def stage_3_compose_from_parts(
     guideline: str,
     article_type: str,
     title: str,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> dict[str, str]:
     """Compose article from explicit inputs used by branch nodes."""
-    llm = _stage3_llm()
+    llm = _stage3_llm(model_name)
     final_article, composition_prompt, composition_response = _compose_article(
         transcript,
         supplemental,

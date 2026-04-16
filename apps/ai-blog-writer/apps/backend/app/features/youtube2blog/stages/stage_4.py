@@ -191,6 +191,7 @@ def _generate_title_impl(
     stage3: Stage3Output,
     mode: str,
     retry_feedback: str | None = None,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> Stage4Output:
     if mode not in {"primary", "retry"}:
         raise ValueError(f"Unsupported title generation mode: {mode}")
@@ -205,7 +206,7 @@ def _generate_title_impl(
     llm = get_vertex_llm(
         temperature=0.1,
         max_tokens=1024,
-        model_name=Y2B_PRIMARY_MODEL,
+        model_name=model_name,
     )
 
     logger.info("  Step 1: Retrieving title guideline...")
@@ -255,19 +256,21 @@ def _generate_title_impl(
     )
 
 
-def stage_4_generate_title(stage3: Stage3Output) -> Stage4Output:
+def stage_4_generate_title(stage3: Stage3Output, *, model_name: str = Y2B_PRIMARY_MODEL) -> Stage4Output:
     """Primary title generation pass."""
-    return _generate_title_impl(stage3=stage3, mode="primary")
+    return _generate_title_impl(stage3=stage3, mode="primary", model_name=model_name)
 
 
 def stage_5_generate_title_retry(
     stage3: Stage3Output,
     *,
     feedback: str,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> Stage4Output:
     """Retry title generation with explicit quality feedback."""
     return _generate_title_impl(
         stage3=stage3,
         mode="retry",
         retry_feedback=feedback,
+        model_name=model_name,
     )

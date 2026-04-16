@@ -717,6 +717,9 @@ export default function Url2BlogPage() {
                   onChange={(event) => setModelName(event.target.value as Url2BlogModel)}
                   className="url2blog-url-field"
                 >
+                  <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Preview — best quality)</option>
+                  <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (Preview — fast &amp; cheap)</option>
+                  <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Flash Image (Preview — multimodal)</option>
                   <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast, less robotic)</option>
                   <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deeper, slower)</option>
                   <option value="gemini-2.0-flash">Gemini 2.0 Flash (Lightweight)</option>

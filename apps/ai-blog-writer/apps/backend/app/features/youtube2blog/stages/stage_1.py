@@ -183,6 +183,7 @@ def _clean_transcript_impl(
     record: RawVideoRecord,
     mode: str,
     previous_cleaned: str | None = None,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> Stage1Output:
     """Clean transcript in primary or repair mode."""
     if mode not in {"primary", "repair"}:
@@ -197,7 +198,7 @@ def _clean_transcript_impl(
     llm = get_vertex_llm(
         temperature=0.1,
         max_tokens=Y2B_STAGE1_MAX_OUTPUT_TOKENS,
-        model_name=Y2B_PRIMARY_MODEL,
+        model_name=model_name,
     )
 
     logger.info("  Sending to Vertex AI...")
@@ -263,18 +264,21 @@ def _clean_transcript_impl(
     return output
 
 
-def stage_1_clean_transcript(record: RawVideoRecord) -> Stage1Output:
+def stage_1_clean_transcript(record: RawVideoRecord, *, model_name: str = Y2B_PRIMARY_MODEL) -> Stage1Output:
     """Primary stage-1 transcript cleaning."""
-    return _clean_transcript_impl(record=record, mode="primary")
+    return _clean_transcript_impl(record=record, mode="primary", model_name=model_name)
 
 
 def stage_1_repair_transcript(
     record: RawVideoRecord,
     previous_cleaned: str | None,
+    *,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> Stage1Output:
     """Repair cleaning pass used by branch retry."""
     return _clean_transcript_impl(
         record=record,
         mode="repair",
         previous_cleaned=previous_cleaned,
+        model_name=model_name,
     )

@@ -9,6 +9,7 @@ import {
 } from '../api'
 import type { ResultTab } from '../types/youtube2blog.types'
 import type { StatusResponse, UploadResponse } from '@shared/types'
+import { DEFAULT_Y2B_MODEL, type Y2BModelName } from '../../staging/api/ai/models'
 
 type RunInputType = 'url' | null
 
@@ -22,6 +23,7 @@ function resolveMutationError(error: unknown, fallback: string): string {
 export function useYouTube2BlogRun() {
   const queryClient = useQueryClient()
   const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [selectedModel, setSelectedModel] = useState<Y2BModelName>(DEFAULT_Y2B_MODEL)
   const [runIds, setRunIds] = useState<string[]>([])
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [activeRunInputType, setActiveRunInputType] = useState<RunInputType>(null)
@@ -38,7 +40,8 @@ export function useYouTube2BlogRun() {
   }
 
   const fromUrlMutation = useMutation({
-    mutationFn: startFromYoutubeUrl,
+    mutationFn: ({ url, model }: { url: string; model: string }) =>
+      startFromYoutubeUrl(url, model),
     onMutate: () => {
       setStartError(null)
     },
@@ -97,7 +100,7 @@ export function useYouTube2BlogRun() {
       return
     }
 
-    fromUrlMutation.mutate(normalizedUrl)
+    fromUrlMutation.mutate({ url: normalizedUrl, model: selectedModel })
   }
 
   const clear = () => {
@@ -124,6 +127,8 @@ export function useYouTube2BlogRun() {
   return {
     youtubeUrl,
     setYoutubeUrl,
+    selectedModel,
+    setSelectedModel,
     runIds,
     activeRunId,
     setActiveRunId,

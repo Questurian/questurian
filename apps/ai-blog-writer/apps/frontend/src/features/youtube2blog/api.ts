@@ -69,13 +69,13 @@ async function resolveErrorMessage(response: Response, fallback: string): Promis
   }
 }
 
-export async function startFromYoutubeUrl(url: string): Promise<UploadResponse> {
+export async function startFromYoutubeUrl(url: string, model?: string): Promise<UploadResponse> {
   const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/from-url`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, ...(model ? { model } : {}) }),
   })
 
   if (!response.ok) {

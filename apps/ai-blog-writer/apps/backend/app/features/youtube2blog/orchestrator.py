@@ -317,8 +317,8 @@ def _process_run_stages(record: RawVideoRecord, meta: PipelineMeta) -> str:
         raise
 
 
-def process_run(record: RawVideoRecord, meta: PipelineMeta) -> str:
+def process_run(record: RawVideoRecord, meta: PipelineMeta, *, model_name: str | None = None) -> str:
     """
     Run YouTube2Blog through LangGraph orchestration.
     """
-    return run_youtube2blog_graph(record, meta)
+    return run_youtube2blog_graph(record, meta, model_name=model_name)

@@ -2,7 +2,7 @@ import type { LocationCategory, Location, InstagramEmbed, Upload } from "../mode
 import type { BigDataCloudResponse, AdministrativeLevel } from "../integrations/clients/bigdatacloud-api.client";
 import { BadRequestError } from "@server/shared/core/errors/http-error";
 
-const APPROVED_COUNTRIES = ['PE', 'CO', 'BR', 'MX', 'AR', 'CL'] as const;
+const APPROVED_COUNTRIES = ['PE', 'CO', 'BR', 'MX', 'AR', 'CL', 'PA'] as const;
 
 export function generateGoogleMapsUrl(name: string, address: string): string {
   const query = `${name}, ${address}`;
@@ -552,7 +552,7 @@ export async function createFromMaps(
         const normalizedCode = coords.countryCode.toUpperCase();
         if (!APPROVED_COUNTRIES.includes(normalizedCode as any)) {
           throw new BadRequestError(
-            "Location not allowed. Only Peru, Colombia, Brazil, Mexico, Argentina, and Chile are supported."
+            "Location not allowed. Only Peru, Colombia, Brazil, Mexico, Argentina, Chile, and Panama are supported."
           );
         }
         entry.countryCode = coords.countryCode;

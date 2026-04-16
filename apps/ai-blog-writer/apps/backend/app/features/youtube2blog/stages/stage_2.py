@@ -21,6 +21,7 @@ def stage_2_classify_article_type(
     allowed_article_types: list[str],
     *,
     classification_mode: str = "primary",
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> Stage2Output:
     """
     Stage 2: Classify the cleaned transcript into one of 42 article types.
@@ -51,7 +52,7 @@ def stage_2_classify_article_type(
     llm = get_vertex_llm(
         temperature=0.1,
         max_tokens=2048,
-        model_name=Y2B_PRIMARY_MODEL,
+        model_name=model_name,
     )
 
     # Build the article types list for the prompt

@@ -1,13 +1,16 @@
 import type { FormEvent } from 'react'
+import { Y2B_MODEL_OPTIONS, type Y2BModelName } from '../../staging/api/ai/models'
 
 type UploadPanelProps = {
   youtubeUrl: string
+  selectedModel: Y2BModelName
   runIds: string[]
   activeRunId: string | null
   startPending: boolean
   clearPending: boolean
   startError: string | null
   onYoutubeUrlChange: (value: string) => void
+  onModelChange: (model: Y2BModelName) => void
   onSubmit: (event: FormEvent) => void
   onClear: () => void
   onSelectRun: (runId: string) => void
@@ -15,12 +18,14 @@ type UploadPanelProps = {
 
 export function UploadPanel({
   youtubeUrl,
+  selectedModel,
   runIds,
   activeRunId,
   startPending,
   clearPending,
   startError,
   onYoutubeUrlChange,
+  onModelChange,
   onSubmit,
   onClear,
   onSelectRun,
@@ -48,6 +53,20 @@ export function UploadPanel({
             placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
             autoComplete="off"
           />
+        </div>
+        <div className="form-group">
+          <label htmlFor="y2b-model-select">AI Model</label>
+          <select
+            id="y2b-model-select"
+            value={selectedModel}
+            onChange={(event) => onModelChange(event.target.value as Y2BModelName)}
+          >
+            {Y2B_MODEL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="button-row">

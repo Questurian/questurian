@@ -90,7 +90,13 @@ export type Url2BlogPipelineV2Request = {
   model_name?: Url2BlogModel
 }
 
-export type Url2BlogModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash'
+export type Url2BlogModel =
+  | 'gemini-3.1-pro-preview'
+  | 'gemini-3.1-flash-lite-preview'
+  | 'gemini-3.1-flash-image-preview'
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.0-flash'
 export type Url2BlogExecutionProfile = 'standard' | 'lean'
 
 export type Url2BlogStageTrace = {

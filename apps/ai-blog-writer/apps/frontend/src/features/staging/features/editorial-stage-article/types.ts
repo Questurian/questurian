@@ -23,7 +23,13 @@ export type BlockImageModalMode = 'default' | 'img' | 'img-trio'
 export type ImgTrioFormat = 'square' | 'landscape'
 export type PexelsOrientationOption = PexelsOrientation | ''
 export type ImageSourceOption = 'payload' | 'upload' | 'unsplash' | 'pexels'
-export type EditorModelName = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash'
+export type EditorModelName =
+  | 'gemini-3.1-pro-preview'
+  | 'gemini-3.1-flash-lite-preview'
+  | 'gemini-3.1-flash-image-preview'
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.0-flash'
 
 export type EditorialStageArticleApi = {
   fetchLocations: (

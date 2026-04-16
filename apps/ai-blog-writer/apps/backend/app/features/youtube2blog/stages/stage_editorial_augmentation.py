@@ -508,7 +508,7 @@ def _sanitize_editorial_augmentation(
     }
 
 
-def _invoke_json_llm(*, prompt: str) -> tuple[dict[str, Any], str]:
+def _invoke_json_llm(*, prompt: str, model_name: str = DEFAULT_MODEL) -> tuple[dict[str, Any], str]:
     strict_prompt = (
         f"{prompt}\n\n"
         "CRITICAL OUTPUT RULE:\n"
@@ -519,7 +519,7 @@ def _invoke_json_llm(*, prompt: str) -> tuple[dict[str, Any], str]:
     llm = get_vertex_llm(
         temperature=0.05,
         max_tokens=6144,
-        model_name=DEFAULT_MODEL,
+        model_name=model_name,
     )
 
     current_prompt = strict_prompt
@@ -557,6 +557,7 @@ def stage_editorial_augmentation(
     stage3: Stage3Output,
     *,
     fail_fast: bool = False,
+    model_name: str = DEFAULT_MODEL,
 ) -> StageEditorialAugmentationOutput:
     """Apply optional editorial augmentation to stage 3 content."""
     prompt = (
@@ -569,7 +570,7 @@ def stage_editorial_augmentation(
     fallback = _sanitize_editorial_augmentation({}, fallback_content=stage3.final_article)
 
     try:
-        parsed, raw_response = _invoke_json_llm(prompt=prompt)
+        parsed, raw_response = _invoke_json_llm(prompt=prompt, model_name=model_name)
         editorial = _sanitize_editorial_augmentation(
             parsed,
             fallback_content=stage3.final_article,

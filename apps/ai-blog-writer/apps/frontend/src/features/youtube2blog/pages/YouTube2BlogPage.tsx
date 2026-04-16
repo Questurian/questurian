@@ -18,12 +18,14 @@ export default function YouTube2BlogPage() {
         {!run.activeRunId ? (
           <UploadPanel
             youtubeUrl={run.youtubeUrl}
+            selectedModel={run.selectedModel}
             runIds={run.runIds}
             activeRunId={run.activeRunId}
             startPending={run.startPending}
             clearPending={run.clearPending}
             startError={run.startError}
             onYoutubeUrlChange={run.setYoutubeUrl}
+            onModelChange={run.setSelectedModel}
             onSubmit={run.handleSubmit}
             onClear={run.clear}
             onSelectRun={run.setActiveRunId}

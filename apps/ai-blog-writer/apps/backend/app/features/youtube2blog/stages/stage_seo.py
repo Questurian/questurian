@@ -217,12 +217,12 @@ def _fallback_secondary_keywords(stage3: Stage3Output, focus_keyword: str) -> li
     return [token for token, _ in ranked[:8]]
 
 
-def stage_seo_generate_brief(*, stage3: Stage3Output) -> dict[str, Any]:
+def stage_seo_generate_brief(*, stage3: Stage3Output, model_name: str = Y2B_PRIMARY_MODEL) -> dict[str, Any]:
     """Generate SEO brief (intent + focus/secondary keywords) from article content."""
     llm = get_vertex_llm(
         temperature=0.1,
         max_tokens=2048,
-        model_name=Y2B_PRIMARY_MODEL,
+        model_name=model_name,
     )
     prompt = PromptTemplate(
         input_variables=["title", "article_type", "guideline", "article"],
@@ -341,6 +341,7 @@ def stage_seo_enrich_article(
     seo_brief: dict[str, Any],
     mode: str,
     feedback: str | None = None,
+    model_name: str = Y2B_PRIMARY_MODEL,
 ) -> dict[str, Any]:
     """Rewrite article to improve SEO quality while preserving factual integrity."""
     if mode not in {"primary", "retry"}:
@@ -349,7 +350,7 @@ def stage_seo_enrich_article(
     llm = get_vertex_llm(
         temperature=0.2,
         max_tokens=8192,
-        model_name=Y2B_PRIMARY_MODEL,
+        model_name=model_name,
     )
     prompt = PromptTemplate(
         input_variables=[
