@@ -7,6 +7,7 @@ import {
   fetchStatus,
   runUrl2BlogPipelineV2,
   type Url2BlogExecutionProfile,
+  type Url2BlogInputMode,
   type Url2BlogModel,
   type Url2BlogPipelineV2Response,
   type Url2BlogStageTrace,
@@ -159,6 +160,30 @@ const NARRATIVE_FOCUS_PRESETS: NarrativeFocusPreset[] = [
   },
 ]
 
+const URL2BLOG_TEXT_PROGRESS_STEPS: Url2BlogProgressStep[] = [
+  { key: 'submitted', stage: null, label: 'Text submitted' },
+  { key: 'stage_1', stage: 'stage_1', label: 'Stage 1: Clean pasted text' },
+  { key: 'stage_2', stage: 'stage_2', label: 'Stage 2: Classify article type' },
+  {
+    key: 'editorial_blueprint',
+    stage: 'editorial_blueprint',
+    label: 'Plan editorial blueprint',
+  },
+  { key: 'rewrite_quality', stage: 'rewrite_quality', label: 'Rewrite + quality checks' },
+  { key: 'fact_length', stage: 'fact_length', label: 'Fact retention + length checks' },
+  {
+    key: 'editorial_augmentation',
+    stage: 'editorial_augmentation',
+    label: 'Editorial augmentation',
+  },
+  {
+    key: 'editorial_post_recheck',
+    stage: 'editorial_post_recheck',
+    label: 'Post-editorial recheck',
+  },
+  { key: 'complete', stage: 'complete', label: 'Finalize output' },
+]
+
 const URL2BLOG_PROGRESS_STEPS: Url2BlogProgressStep[] = [
   { key: 'submitted', stage: null, label: 'URL submitted' },
   { key: 'stage_1', stage: 'stage_1', label: 'Stage 1: Extract article' },
@@ -254,6 +279,7 @@ function getTraceCallLabel(stage: string): string {
 
   const labels: Record<string, string> = {
     stage1_extract_article: 'Extract article from URL',
+    stage1_cleanup_pasted_text: 'Clean pasted article text',
     stage1_translate_article: 'Translate article to English',
     stage2_classification: 'Classify article type',
     editorial_blueprint: 'Plan editorial blueprint',
@@ -424,7 +450,9 @@ function groupPipelineTrace(trace: Url2BlogStageTrace[]) {
 }
 
 export default function Url2BlogPage() {
+  const [inputMode, setInputMode] = useState<Url2BlogInputMode>('url')
   const [url, setUrl] = useState('')
+  const [pastedText, setPastedText] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId] = useState('')
@@ -462,12 +490,13 @@ export default function Url2BlogPage() {
   const pipelineMutation = useMutation<
     Url2BlogPipelineV2Response,
     Error,
-    { runId: string; url: string }
+    { runId: string; url?: string; pastedText?: string }
   >({
-    mutationFn: async ({ runId, url: normalizedUrl }) => {
+    mutationFn: async ({ runId, url: normalizedUrl, pastedText: text }) => {
       return runUrl2BlogPipelineV2({
         run_id: runId,
-        url: normalizedUrl,
+        ...(normalizedUrl ? { url: normalizedUrl } : {}),
+        ...(text ? { pasted_text: text } : {}),
         include_debug: includeDebug,
         narrative_focus: narrativeFocus.trim() || undefined,
         model_name: modelName,
@@ -538,11 +567,13 @@ export default function Url2BlogPage() {
   const liveStageLabel = getStageLabel(activeStage)
   const processingSteps = useMemo(
     () =>
-      URL2BLOG_PROGRESS_STEPS.map((step) => ({
-        ...step,
-        state: getProgressItemState(step, activeStatus),
-      })),
-    [activeStatus]
+      (inputMode === 'text' ? URL2BLOG_TEXT_PROGRESS_STEPS : URL2BLOG_PROGRESS_STEPS).map(
+        (step) => ({
+          ...step,
+          state: getProgressItemState(step, activeStatus),
+        })
+      ),
+    [activeStatus, inputMode]
   )
   const statusErrorMessage =
     activeStatus?.state === 'failed' && activeStatus.error
@@ -564,6 +595,26 @@ export default function Url2BlogPage() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
+
+    if (inputMode === 'text') {
+      const trimmedText = pastedText.trim()
+      if (!trimmedText) {
+        setInputError('Paste some article text to continue.')
+        return
+      }
+      const runId = createRunId()
+      setInputError(null)
+      setActiveRunId(runId)
+      setRunSubmittedAt(Date.now())
+      setResult(null)
+      setShowDetails(false)
+      setShowRaw(false)
+      setShowTrace(false)
+      pipelineMutation.reset()
+      pipelineMutation.mutate({ runId, pastedText: trimmedText })
+      return
+    }
+
     const normalizedUrl = normalizeArticleUrlInput(url)
     if (!normalizedUrl) {
       setInputError('Enter a valid article URL. Bare domains are fine; we will add https:// for you.')
@@ -585,6 +636,7 @@ export default function Url2BlogPage() {
 
   const handleStartOver = () => {
     setUrl('')
+    setPastedText('')
     setActiveRunId(null)
     setRunSubmittedAt(null)
     setSelectedNarrativeFocusPresetId('')
@@ -640,31 +692,86 @@ export default function Url2BlogPage() {
           <section className="url2blog-panel u2b-wizard-panel">
             <div className="url2blog-panel-header">
               <h2>Run URL2Blog v2</h2>
-              <p>Paste an article URL and get a clean markdown output.</p>
+              <p>
+                {inputMode === 'url'
+                  ? 'Paste an article URL and get a clean markdown output.'
+                  : 'Paste raw article text — we clean it up and convert it to a guideline-aligned draft.'}
+              </p>
             </div>
             <form className="url2blog-panel-body" onSubmit={handleSubmit}>
               <div className="url2blog-url-input">
-                <label htmlFor="article-url">Article URL</label>
-                <input
-                  id="article-url"
-                  type="text"
-                  inputMode="url"
-                  placeholder="https://example.com/article"
-                  value={url}
-                  onChange={(event) => {
-                    setUrl(event.target.value)
-                    if (inputError) {
+                <label>Input Mode</label>
+                <div className="url2blog-mode-toggle">
+                  <button
+                    type="button"
+                    className={`url2blog-mode-btn${inputMode === 'url' ? ' active' : ''}`}
+                    onClick={() => {
+                      setInputMode('url')
                       setInputError(null)
-                    }
-                  }}
-                  className="url2blog-url-field"
-                  autoFocus
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-                {inputError ? <p className="url2blog-error">{inputError}</p> : null}
+                    }}
+                  >
+                    Article URL
+                  </button>
+                  <button
+                    type="button"
+                    className={`url2blog-mode-btn${inputMode === 'text' ? ' active' : ''}`}
+                    onClick={() => {
+                      setInputMode('text')
+                      setInputError(null)
+                    }}
+                  >
+                    Paste Text
+                  </button>
+                </div>
               </div>
+
+              {inputMode === 'url' ? (
+                <div className="url2blog-url-input">
+                  <label htmlFor="article-url">Article URL</label>
+                  <input
+                    id="article-url"
+                    type="text"
+                    inputMode="url"
+                    placeholder="https://example.com/article"
+                    value={url}
+                    onChange={(event) => {
+                      setUrl(event.target.value)
+                      if (inputError) {
+                        setInputError(null)
+                      }
+                    }}
+                    className="url2blog-url-field"
+                    autoFocus
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                  {inputError ? <p className="url2blog-error">{inputError}</p> : null}
+                </div>
+              ) : (
+                <div className="url2blog-url-input">
+                  <label htmlFor="article-pasted-text">Pasted Article Text</label>
+                  <p className="url2blog-focus-preview">
+                    Copy the full page content from any article — navigation, ads, and sidebar clutter will be stripped automatically.
+                  </p>
+                  <textarea
+                    id="article-pasted-text"
+                    placeholder="Paste the raw article text here. Messy copy is fine — the pipeline will clean it up."
+                    value={pastedText}
+                    onChange={(event) => {
+                      setPastedText(event.target.value)
+                      if (inputError) {
+                        setInputError(null)
+                      }
+                    }}
+                    className="url2blog-url-field url2blog-text-area"
+                    rows={10}
+                    autoFocus
+                    spellCheck={false}
+                  />
+                  {inputError ? <p className="url2blog-error">{inputError}</p> : null}
+                </div>
+              )}
               <div className="url2blog-url-input">
                 <label htmlFor="narrative-focus-preset">Narrative / Audience Focus (Optional)</label>
                 <select
@@ -755,9 +862,12 @@ export default function Url2BlogPage() {
                 <button
                   type="submit"
                   className="url2blog-submit-btn"
-                  disabled={!url.trim() || pipelineMutation.isPending}
+                  disabled={
+                    (inputMode === 'url' ? !url.trim() : !pastedText.trim()) ||
+                    pipelineMutation.isPending
+                  }
                 >
-                  Run Simple Pipeline
+                  {inputMode === 'text' ? 'Clean & Run Pipeline' : 'Run Simple Pipeline'}
                 </button>
               </div>
               {pipelineMutation.isError ? (
@@ -805,7 +915,11 @@ export default function Url2BlogPage() {
                 <span>Pipeline Complete</span>
               </div>
               <h2>{result.improved_article.title || result.article.original_title || 'Improved Article'}</h2>
-              <p className="u2b-source-url">{result.article.source_url}</p>
+              {result.article.source_url ? (
+                <p className="u2b-source-url">{result.article.source_url}</p>
+              ) : (
+                <p className="u2b-source-url">Pasted text input</p>
+              )}
             </div>
 
             <div className="url2blog-panel-body">

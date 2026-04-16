@@ -39,6 +39,9 @@ import {
 import { FeaturedImageModal } from './editorial-stage/FeaturedImageModal'
 import { BlockImageModal } from './editorial-stage/BlockImageModal'
 import { EditorialTimelineList } from './editorial-stage/EditorialTimelineList'
+import { ArticleExpansionModal } from '../../youtube2blog/components/ArticleExpansionModal'
+import { useArticleExpansion } from '../../youtube2blog/hooks/useArticleExpansion'
+import { parseMarkdownToBlocks } from '../features/editorial-stage-article/workflow.service'
 import '../../singleTypeListicles/styles.css'
 import './standard-article-stage-builder.css'
 
@@ -96,6 +99,8 @@ export function StandardArticleStageBuilder({
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [isUploadingOgImage, setIsUploadingOgImage] = useState(false)
   const lastAutoStructuredDataRef = useRef<string>('')
+
+  const [isExpansionModalOpen, setIsExpansionModalOpen] = useState(false)
 
   const viewModel = useEditorialStageArticleScreenViewModel({
     storageKey,
@@ -194,6 +199,31 @@ export function StandardArticleStageBuilder({
   const setStageArticle = useCallback((updates: Partial<NonNullable<typeof stagedArticle>>) => {
     sidebarProps?.onUpdateStagedArticle(updates)
   }, [sidebarProps])
+
+  const expansion = useArticleExpansion(stagedArticle?.runId ?? null)
+
+  const handleOpenDeepExpand = useCallback(() => {
+    if (!stagedArticle) return
+    expansion.reset()
+    expansion.startExpansion(
+      stagedArticle.content,
+      stagedArticle.originalType,
+      stagedArticle.title || stagedArticle.originalTitle,
+    )
+    setIsExpansionModalOpen(true)
+  }, [expansion, stagedArticle])
+
+  const handleAcceptExpansion = useCallback((expandedMarkdown: string) => {
+    const blocks = parseMarkdownToBlocks(expandedMarkdown)
+    setStageArticle({ blocks, content: expandedMarkdown, lexicalConverted: false })
+    expansion.reset()
+    setIsExpansionModalOpen(false)
+  }, [expansion, setStageArticle])
+
+  const handleCloseExpansion = useCallback(() => {
+    expansion.reset()
+    setIsExpansionModalOpen(false)
+  }, [expansion])
 
   const updateSeoSection = useCallback((next: typeof seoSection | ((current: typeof seoSection) => typeof seoSection)) => {
     if (!stagedArticle || !sidebarProps) return
@@ -711,6 +741,9 @@ export function StandardArticleStageBuilder({
                     <button type="button" className="stl-btn stl-btn-secondary" onClick={layout.onResetToOriginalBlocks}>
                       Reset to Original
                     </button>
+                    <button type="button" className="stl-btn stl-btn-secondary" onClick={handleOpenDeepExpand}>
+                      Deep Expand
+                    </button>
                     {isStep3Locked ? (
                       stagedArticle.step3_in_update_mode ? (
                         <>
@@ -851,6 +884,21 @@ export function StandardArticleStageBuilder({
 
       <FeaturedImageModal {...featuredModalProps} />
       <BlockImageModal {...blockModalProps} />
+
+      <ArticleExpansionModal
+        isOpen={isExpansionModalOpen}
+        phase={expansion.phase}
+        expandedArticle={expansion.expandedArticle}
+        expansionPlan={expansion.expansionPlan}
+        error={expansion.error}
+        originalArticle={stagedArticle?.content ?? ''}
+        articleType={stagedArticle?.originalType ?? ''}
+        title={stagedArticle?.title || stagedArticle?.originalTitle || ''}
+        listicleDetection={expansion.listicleDetection}
+        onAccept={handleAcceptExpansion}
+        onClose={handleCloseExpansion}
+        onProceed={expansion.proceedWithExpansion}
+      />
     </>
   )
 }

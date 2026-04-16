@@ -32,6 +32,7 @@ type EditorialSidebarProps = {
   locations: Location[]
   onUpdateStagedArticle: (updates: Partial<StagedArticle>) => void
   onPublish: (targetStatus: 'draft' | 'published') => void
+  onDeepExpand?: () => void
 }
 
 export function EditorialSidebar({
@@ -48,6 +49,7 @@ export function EditorialSidebar({
   locations,
   onUpdateStagedArticle,
   onPublish,
+  onDeepExpand,
 }: EditorialSidebarProps) {
   const { user } = useAuth()
   const hasBlockingEditorial = editorialBlockingMessages.length > 0
@@ -343,6 +345,22 @@ export function EditorialSidebar({
             ))}
           </select>
         </div>
+
+        {onDeepExpand && !isEditingLocked && (
+          <div className="stage-article-sidebar-section">
+            <label className="stage-article-label">AI Tools</label>
+            <button
+              type="button"
+              onClick={onDeepExpand}
+              className="stage-article-deep-expand-btn"
+            >
+              Deep Expand Article
+            </button>
+            <p className="stage-article-publish-checklist-more">
+              Adds new sections and deeper content while keeping everything existing intact.
+            </p>
+          </div>
+        )}
 
         <div className="stage-article-sidebar-section stage-article-info-box">
           <p><strong>Run ID:</strong> {stagedArticle.runId}</p>

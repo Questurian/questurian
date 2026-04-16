@@ -78,9 +78,12 @@ export type Stage2ClassifyResponse = {
   raw_response: string
 }
 
+export type Url2BlogInputMode = 'url' | 'text'
+
 export type Url2BlogPipelineV2Request = {
   run_id?: string
-  url: string
+  url?: string
+  pasted_text?: string
   include_debug?: boolean
   narrative_focus?: string
   enable_web_enrichment?: boolean

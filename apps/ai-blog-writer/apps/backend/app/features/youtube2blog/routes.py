@@ -9,10 +9,13 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from uuid import uuid4
+
 from shared import RawVideoRecord
 from app.core import read_stage_result, read_status, read_output, clear_all_runs
 
 from .orchestrator import initialize_run, process_run
+from .stages.stage_deep_expand import detect_listicle, run_deep_expand
 from .storage import (
     get_all_completed_articles,
     mark_article_synced,
@@ -104,6 +107,7 @@ VALID_Y2B_MODELS = {
 class YouTubeUrlRequest(BaseModel):
     url: str = Field(..., min_length=1)
     model: str | None = Field(default=None)
+    forced_article_type: str | None = Field(default=None)
 
 
 def _read_langgraph_trace(run_id: str) -> dict[str, str]:
@@ -172,7 +176,13 @@ async def start_from_youtube_url(
         source="youtube-url",
         notes=f"url:{source.canonical_url}",
     )
-    background_tasks.add_task(process_run, record, meta, model_name=request.model)
+    background_tasks.add_task(
+        process_run,
+        record,
+        meta,
+        model_name=request.model,
+        forced_article_type=request.forced_article_type,
+    )
 
     return JSONResponse({
         "run_id": meta.run_id,
@@ -313,6 +323,84 @@ async def mark_article_as_synced(run_id: str, request: dict) -> JSONResponse:
         "run_id": run_id,
         "payload_article_id": payload_article_id,
     })
+
+
+class ListicleDetectRequest(BaseModel):
+    article: str = Field(..., min_length=1)
+    title: str = Field(default="")
+    model: str | None = Field(default=None)
+
+
+class DeepExpandRequest(BaseModel):
+    article: str = Field(..., min_length=1)
+    article_type: str = Field(default="")
+    title: str = Field(default="")
+    model: str | None = Field(default=None)
+    rewrite_items: list[str] | None = Field(default=None)
+
+
+@router.post("/{run_id}/expand/detect")
+async def detect_article_listicle(
+    run_id: str,
+    request: ListicleDetectRequest,
+) -> JSONResponse:
+    """Synchronously detect whether an article is a listicle and extract its items."""
+    if request.model is not None and request.model not in VALID_Y2B_MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid model '{request.model}'. Valid options: {sorted(VALID_Y2B_MODELS)}",
+        )
+    result = detect_listicle(
+        request.article,
+        request.title,
+        model_name=request.model or "gemini-2.5-flash-lite",
+    )
+    return JSONResponse(result)
+
+
+@router.post("/{run_id}/expand")
+async def start_deep_expand(
+    run_id: str,
+    request: DeepExpandRequest,
+    background_tasks: BackgroundTasks,
+) -> JSONResponse:
+    """Start a deep expansion job for a completed article."""
+    if request.model is not None and request.model not in VALID_Y2B_MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid model '{request.model}'. Valid options: {sorted(VALID_Y2B_MODELS)}",
+        )
+
+    expand_job_id = str(uuid4())
+    background_tasks.add_task(
+        run_deep_expand,
+        expand_job_id,
+        request.article,
+        request.article_type,
+        request.title,
+        request.model or "gemini-2.5-flash-lite",
+        request.rewrite_items or None,
+    )
+
+    return JSONResponse({"expand_job_id": expand_job_id})
+
+
+@router.get("/expand/{expand_job_id}/status")
+async def get_expand_status(expand_job_id: str) -> JSONResponse:
+    """Poll the status of a deep expansion job."""
+    status = read_status(expand_job_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Expansion job not found.")
+    return JSONResponse(status)
+
+
+@router.get("/expand/{expand_job_id}/result")
+async def get_expand_result(expand_job_id: str) -> JSONResponse:
+    """Get the result of a completed deep expansion job."""
+    result = read_stage_result(expand_job_id, "expand_result")
+    if not result:
+        raise HTTPException(status_code=404, detail="Expansion result not available yet.")
+    return JSONResponse(result)
 
 
 @router.get("/articles/{run_id}/sync")

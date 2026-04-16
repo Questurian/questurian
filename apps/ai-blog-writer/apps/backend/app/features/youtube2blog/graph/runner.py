@@ -223,6 +223,8 @@ class YouTube2BlogGraphState(TypedDict, total=False):
     stage5_gate_decision: str
     stage5_feedback: str
 
+    forced_article_type: str | None
+
     stage_results: dict[str, dict[str, Any]]
     markdown: str
 
@@ -231,6 +233,7 @@ def run_youtube2blog_graph(
     record: RawVideoRecord,
     meta: PipelineMeta,
     model_name: str | None = None,
+    forced_article_type: str | None = None,
 ) -> str:
     """Run YouTube2Blog as a gated multi-node LangGraph workflow."""
     from langgraph.graph import END, START, StateGraph
@@ -461,16 +464,27 @@ def run_youtube2blog_graph(
 
     def stage_3_guideline_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_3_guideline")
-        stage2 = Stage2Output.model_validate(state["stage2"])
-        guideline = stage_3_retrieve_guideline(stage2.classification)
+        forced_type = (state.get("forced_article_type") or "").strip()
+        if forced_type:
+            # User pre-selected an article type — fetch its guideline from DB directly,
+            # bypassing stage_2 classification
+            guideline = stage_3_retrieve_guideline(forced_type)
+            article_type = forced_type
+            source = "user_selected"
+        else:
+            stage2 = Stage2Output.model_validate(state["stage2"])
+            guideline = stage_3_retrieve_guideline(stage2.classification)
+            article_type = stage2.classification
+            source = "auto_classified"
         stage_results = _record_stage_result(
             state,
             stage_name="stage_3_guideline",
             input_refs={"stage_2": _stage_ref(run_id, "stage_2")},
             data={
-                "article_type": stage2.classification,
+                "article_type": article_type,
                 "guideline": guideline,
                 "guideline_length": len(guideline),
+                "source": source,
             },
         )
         return {
@@ -643,6 +657,11 @@ def run_youtube2blog_graph(
         elif near_pass:
             decision = "pass"
             pass_mode = "near_pass"
+        elif not critical_failed:
+            # Source content quality is low but no critical dimensions failed.
+            # Accept the best result rather than blocking the pipeline.
+            decision = "pass"
+            pass_mode = "best_effort"
         else:
             raise RuntimeError(
                 "Stage 3 quality gate failed after retries; "
@@ -1421,6 +1440,7 @@ def run_youtube2blog_graph(
                 final_state = graph.invoke(
                     {
                         "run_id": run_id,
+                        "forced_article_type": forced_article_type or None,
                         "stage1_retry_count": 0,
                         "stage2_retry_count": 0,
                         "stage3_quality_retry_count": 0,

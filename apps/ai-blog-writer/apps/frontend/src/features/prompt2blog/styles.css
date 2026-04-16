@@ -141,11 +141,19 @@
 
 .p2b-panel-header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
   margin-bottom: var(--space-5);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border);
+}
+
+.p2b-panel-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .p2b-panel-header h2 {
@@ -162,6 +170,27 @@
   color: var(--muted);
   margin: 0;
   line-height: 1.6;
+}
+
+.p2b-section-clear-btn {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  margin-top: 2px;
+}
+
+.p2b-section-clear-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink-light);
+  background: var(--surface);
 }
 
 .p2b-panel-body {

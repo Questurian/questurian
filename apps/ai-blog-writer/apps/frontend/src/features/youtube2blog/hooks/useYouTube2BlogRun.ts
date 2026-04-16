@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   clearDatabase,
+  fetchArticleTypes,
   fetchDebug,
   fetchStatus,
   startFromYoutubeUrl,
@@ -24,6 +25,7 @@ export function useYouTube2BlogRun() {
   const queryClient = useQueryClient()
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [selectedModel, setSelectedModel] = useState<Y2BModelName>(DEFAULT_Y2B_MODEL)
+  const [forcedArticleType, setForcedArticleType] = useState('')
   const [runIds, setRunIds] = useState<string[]>([])
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [activeRunInputType, setActiveRunInputType] = useState<RunInputType>(null)
@@ -39,9 +41,22 @@ export function useYouTube2BlogRun() {
     setStartError(null)
   }
 
+  const articleTypesQuery = useQuery({
+    queryKey: ['article-types'],
+    queryFn: fetchArticleTypes,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const fromUrlMutation = useMutation({
-    mutationFn: ({ url, model }: { url: string; model: string }) =>
-      startFromYoutubeUrl(url, model),
+    mutationFn: ({
+      url,
+      model,
+      forcedArticleType: articleType,
+    }: {
+      url: string
+      model: string
+      forcedArticleType?: string
+    }) => startFromYoutubeUrl(url, model, articleType),
     onMutate: () => {
       setStartError(null)
     },
@@ -55,6 +70,7 @@ export function useYouTube2BlogRun() {
     mutationFn: clearDatabase,
     onSuccess: () => {
       setYoutubeUrl('')
+      setForcedArticleType('')
       setRunIds([])
       setActiveRunId(null)
       setActiveRunInputType(null)
@@ -100,7 +116,7 @@ export function useYouTube2BlogRun() {
       return
     }
 
-    fromUrlMutation.mutate({ url: normalizedUrl, model: selectedModel })
+    fromUrlMutation.mutate({ url: normalizedUrl, model: selectedModel, forcedArticleType })
   }
 
   const clear = () => {
@@ -129,6 +145,9 @@ export function useYouTube2BlogRun() {
     setYoutubeUrl,
     selectedModel,
     setSelectedModel,
+    forcedArticleType,
+    setForcedArticleType,
+    articleTypes: articleTypesQuery.data ?? [],
     runIds,
     activeRunId,
     setActiveRunId,

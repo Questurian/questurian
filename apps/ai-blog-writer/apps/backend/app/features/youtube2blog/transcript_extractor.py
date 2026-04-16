@@ -14,6 +14,16 @@ from youtube_transcript_api._errors import (
 )
 
 
+def _fetch_best_transcript(video_id: str):
+    """Fetch English transcript first; fall back to any available language."""
+    api = YouTubeTranscriptApi()
+    try:
+        return api.fetch(video_id)  # defaults to English
+    except NoTranscriptFound:
+        transcript_list = api.list(video_id)
+        return next(iter(transcript_list)).fetch()
+
+
 def extract_transcript_sync(video_id: str) -> dict[str, Any]:
     """
     Extract transcript text for a YouTube video.
@@ -24,7 +34,7 @@ def extract_transcript_sync(video_id: str) -> dict[str, Any]:
     - {"status": "failed", "error": "..."}
     """
     try:
-        transcript = YouTubeTranscriptApi().fetch(video_id)
+        transcript = _fetch_best_transcript(video_id)
         lines: list[str] = []
 
         for snippet in transcript.snippets:

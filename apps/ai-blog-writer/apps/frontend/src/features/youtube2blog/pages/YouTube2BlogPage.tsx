@@ -19,6 +19,8 @@ export default function YouTube2BlogPage() {
           <UploadPanel
             youtubeUrl={run.youtubeUrl}
             selectedModel={run.selectedModel}
+            forcedArticleType={run.forcedArticleType}
+            articleTypes={run.articleTypes}
             runIds={run.runIds}
             activeRunId={run.activeRunId}
             startPending={run.startPending}
@@ -26,6 +28,7 @@ export default function YouTube2BlogPage() {
             startError={run.startError}
             onYoutubeUrlChange={run.setYoutubeUrl}
             onModelChange={run.setSelectedModel}
+            onForcedArticleTypeChange={run.setForcedArticleType}
             onSubmit={run.handleSubmit}
             onClear={run.clear}
             onSelectRun={run.setActiveRunId}
@@ -44,6 +47,7 @@ export default function YouTube2BlogPage() {
             debugData={run.debugData}
             lexicalCopyStatus={lexicalCopy.status}
             onCopyLexical={lexicalCopy.copy}
+            runId={run.activeRunId}
           />
         )}
 

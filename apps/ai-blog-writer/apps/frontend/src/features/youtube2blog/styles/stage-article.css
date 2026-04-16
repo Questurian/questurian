@@ -535,6 +535,27 @@
   transform: translateY(0);
 }
 
+.stage-article-deep-expand-btn {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: center;
+}
+
+.stage-article-deep-expand-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .stage-article-publish-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

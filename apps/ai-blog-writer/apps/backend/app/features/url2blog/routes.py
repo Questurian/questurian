@@ -18,7 +18,7 @@ from uuid import uuid4
 import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.core import (
     get_all_runs,
@@ -86,6 +86,11 @@ URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS = 3
 URL2BLOG_EDITORIAL_RECHECK_MIN_QUALITY_SCORE = 8.0
 URL2BLOG_EDITORIAL_RECHECK_MIN_FACT_SCORE = 8.0
 URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN = 0.5
+URL2BLOG_TEXT_CLEANUP_CHUNKING_CHAR_THRESHOLD = 18_000
+URL2BLOG_TEXT_CLEANUP_CHUNK_TARGET_CHARS = 12_000
+URL2BLOG_TEXT_CLEANUP_MAX_OUTPUT_TOKENS = 8_192
+URL2BLOG_TEXT_CLEANUP_MAX_REMOVED_BLOCKS = 10
+URL2BLOG_TEXT_CLEANUP_REMOVED_EXCERPT_CHARS = 220
 _json_parse_tracking_ctx: contextvars.ContextVar[dict[str, Any] | None] = (
     contextvars.ContextVar("url2blog_json_parse_tracking", default=None)
 )
@@ -155,6 +160,77 @@ ORIGINAL CONTENT:
 {content}
 """
 
+
+URL2BLOG_TEXT_CLEANUP_PROMPT = """You are cleaning pasted article source material for downstream article generation.
+
+This is a cleanup and extraction task, not a summarization task.
+
+Return strict JSON only:
+{{
+  "title": "string",
+  "language": "string",
+  "cleaned_text": "string",
+  "removed_blocks": [
+    {{
+      "label": "string",
+      "reason": "string",
+      "excerpt": "string"
+    }}
+  ]
+}}
+
+Hard rules:
+- Preserve factual article content in the original order whenever practical.
+- Keep the main article body, advice, facts, guidance, and practical information.
+- Remove navigation, header/footer, legal/privacy/cookie blocks, social/share prompts, contact info, ads, CTAs, related-article sections, site branding, and boilerplate.
+- Remove decorative image captions unless they add factual value.
+- If a paragraph mixes factual content with promotion, preserve the factual portion and remove the promotional phrasing.
+- Do not rewrite or summarize — preserve the original wording of article content.
+- cleaned_text must be plain text only, preserving paragraph and list structure where useful.
+- removed_blocks must contain at most 10 items.
+- Each removed_blocks excerpt must be 220 characters or fewer.
+- For language: return the full language name (e.g. "English", "Spanish", "French") not a code.
+- If title or language is unclear, return an empty string for that field.
+- Do not invent facts, dates, or metadata.
+
+SOURCE MATERIAL:
+{source_text}
+"""
+
+URL2BLOG_TEXT_CLEANUP_CHUNK_PROMPT = """You are cleaning chunk {chunk_index} of {chunk_count} from a longer pasted article for downstream article generation.
+
+This is a cleanup and extraction task, not a summarization task.
+
+Return strict JSON only:
+{{
+  "title": "string",
+  "language": "string",
+  "cleaned_text": "string",
+  "removed_blocks": [
+    {{
+      "label": "string",
+      "reason": "string",
+      "excerpt": "string"
+    }}
+  ]
+}}
+
+Hard rules:
+- Preserve factual article content in the original order within this chunk whenever practical.
+- Keep the main article body, advice, facts, guidance, and practical information.
+- Remove navigation, header/footer, legal/privacy/cookie blocks, social/share prompts, contact info, ads, CTAs, related-article sections, site branding, and boilerplate.
+- Remove decorative image captions unless they add factual value.
+- If a paragraph mixes factual content with promotion, preserve the factual portion and remove the promotional phrasing.
+- Do not rewrite or summarize — preserve the original wording of article content.
+- cleaned_text must be plain text only, preserving paragraph and list structure where useful.
+- removed_blocks must contain at most 10 items.
+- Each removed_blocks excerpt must be 220 characters or fewer.
+- Only return title or language if they are clearly visible in this chunk.
+- Do not invent facts, dates, or metadata.
+
+SOURCE CHUNK:
+{source_text}
+"""
 
 CLASSIFY_ARTICLE_TYPE_PROMPT = """You are an article-type classification engine.
 
@@ -1105,7 +1181,8 @@ class Stage2ClassifyRequest(BaseModel):
 
 class PipelineV2Request(BaseModel):
     run_id: str | None = None
-    url: str
+    url: str | None = None
+    pasted_text: str | None = None
     include_debug: bool = False
     narrative_focus: str | None = None
     enable_web_enrichment: bool = True
@@ -1113,6 +1190,14 @@ class PipelineV2Request(BaseModel):
     execution_profile: str | None = URL2BLOG_DEFAULT_EXECUTION_PROFILE
     max_external_context_items: int = DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS
     model_name: str | None = URL2BLOG_DEFAULT_MODEL
+
+    @model_validator(mode="after")
+    def validate_input_source(self) -> "PipelineV2Request":
+        has_url = bool((self.url or "").strip())
+        has_text = bool((self.pasted_text or "").strip())
+        if not has_url and not has_text:
+            raise ValueError("Either url or pasted_text must be provided")
+        return self
 
 
 def _now_iso() -> str:
@@ -1286,6 +1371,216 @@ def _strip_html(html: str) -> str:
     # Restore some paragraph breaks at block boundaries
     text = re.sub(r"\s{2,}", "\n\n", text)
     return text.strip()
+
+
+def _preclean_pasted_text(raw_text: str) -> str:
+    """Basic normalization of pasted webpage text before AI cleanup."""
+    text = _strip_html(raw_text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = text.split("\n")
+    cleaned_lines = []
+    for line in lines:
+        normalized = re.sub(r"\s+", " ", line).strip()
+        if re.fullmatch(r"https?://\S+", normalized):
+            continue
+        cleaned_lines.append(normalized)
+    text = "\n".join(cleaned_lines)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _chunk_text_for_cleanup(text: str, max_chars: int) -> list[str]:
+    """Split text into chunks of at most max_chars by paragraph boundaries."""
+    segments = [s.strip() for s in re.split(r"\n\s*\n", text) if s.strip()]
+    if not segments:
+        stripped = text.strip()
+        return [stripped] if stripped else []
+
+    chunks: list[str] = []
+    current = ""
+
+    def _split_long(segment: str) -> None:
+        words = segment.split()
+        buf = ""
+        for word in words:
+            candidate = f"{buf} {word}".strip()
+            if buf and len(candidate) > max_chars:
+                chunks.append(buf)
+                buf = word
+            else:
+                buf = candidate
+        if buf:
+            chunks.append(buf)
+
+    for segment in segments:
+        if len(segment) > max_chars:
+            if current:
+                chunks.append(current)
+                current = ""
+            _split_long(segment)
+            continue
+        candidate = f"{current}\n\n{segment}".strip() if current else segment
+        if current and len(candidate) > max_chars:
+            chunks.append(current)
+            current = segment
+        else:
+            current = candidate
+
+    if current:
+        chunks.append(current)
+
+    return chunks
+
+
+def _merge_cleanup_text_chunks(chunks: list[str]) -> str:
+    """Merge cleaned chunks, deduplicating repeated paragraphs at boundaries."""
+    merged: list[str] = []
+    for chunk in chunks:
+        paragraphs = [s.strip() for s in re.split(r"\n\s*\n", chunk) if s.strip()]
+        for paragraph in paragraphs:
+            normalized = re.sub(r"\s+", " ", paragraph).lower()
+            if not normalized:
+                continue
+            if merged:
+                last_normalized = re.sub(r"\s+", " ", merged[-1]).lower()
+                if normalized == last_normalized:
+                    continue
+                if len(normalized) > 80 and normalized in last_normalized:
+                    continue
+                if len(last_normalized) > 80 and last_normalized in normalized:
+                    merged[-1] = paragraph
+                    continue
+            merged.append(paragraph)
+    return "\n\n".join(merged).strip()
+
+
+def _cleanup_pasted_article_text(
+    *,
+    raw_text: str,
+    model_name: str,
+) -> dict[str, Any]:
+    """
+    Clean messy pasted article text using AI chunked cleanup.
+
+    Returns a stage1-compatible payload dict matching the extract_article response shape.
+    """
+    precleaned = _preclean_pasted_text(raw_text)
+
+    fallback_parsed = {
+        "title": "",
+        "content": precleaned,
+        "language": "English",
+    }
+    fallback_payload: dict[str, Any] = {
+        "message": "URL2Blog text cleanup completed (fallback)",
+        "source_url": "",
+        "raw_text_length": len(raw_text or ""),
+        "raw_response": "",
+        "parsed": fallback_parsed,
+        "parse_error": None,
+        "translated": None,
+        "translation_skipped": True,
+        "translation_error": None,
+        "text_cleanup_applied": True,
+        "text_cleanup_fallback": True,
+        "removed_blocks": [],
+    }
+
+    if not precleaned:
+        return fallback_payload
+
+    chunks = (
+        _chunk_text_for_cleanup(precleaned, max_chars=URL2BLOG_TEXT_CLEANUP_CHUNK_TARGET_CHARS)
+        if len(precleaned) >= URL2BLOG_TEXT_CLEANUP_CHUNKING_CHAR_THRESHOLD
+        else [precleaned]
+    )
+    if not chunks:
+        return fallback_payload
+
+    try:
+        cleaned_chunks: list[str] = []
+        title = ""
+        language = ""
+        removed_blocks: list[dict[str, str]] = []
+
+        for chunk_index, chunk in enumerate(chunks, start=1):
+            prompt_template = (
+                URL2BLOG_TEXT_CLEANUP_CHUNK_PROMPT
+                if len(chunks) > 1
+                else URL2BLOG_TEXT_CLEANUP_PROMPT
+            )
+            prompt = prompt_template.format(
+                chunk_index=chunk_index,
+                chunk_count=len(chunks),
+                source_text=chunk,
+            )
+            parsed, raw_response = _invoke_json_llm(
+                prompt=prompt,
+                max_tokens=URL2BLOG_TEXT_CLEANUP_MAX_OUTPUT_TOKENS,
+                temperature=0.1,
+                model_name=model_name,
+            )
+            cleaned_text_chunk = _safe_str(parsed.get("cleaned_text"))
+            if not cleaned_text_chunk:
+                raise RuntimeError("AI text cleanup returned empty cleaned_text")
+            cleaned_chunks.append(cleaned_text_chunk)
+            if not title:
+                title = _safe_str(parsed.get("title"))
+            if not language:
+                language = _safe_str(parsed.get("language"))
+
+            remaining = URL2BLOG_TEXT_CLEANUP_MAX_REMOVED_BLOCKS - len(removed_blocks)
+            if remaining > 0:
+                for block in (parsed.get("removed_blocks") or [])[:remaining]:
+                    if isinstance(block, dict):
+                        excerpt = _safe_str(block.get("excerpt"))
+                        if len(excerpt) > URL2BLOG_TEXT_CLEANUP_REMOVED_EXCERPT_CHARS:
+                            excerpt = (
+                                excerpt[: URL2BLOG_TEXT_CLEANUP_REMOVED_EXCERPT_CHARS - 1] + "…"
+                            )
+                        removed_blocks.append(
+                            {
+                                "label": _safe_str(block.get("label")) or "Removed block",
+                                "reason": (
+                                    _safe_str(block.get("reason")) or "Noise or promotional content"
+                                ),
+                                "excerpt": excerpt,
+                            }
+                        )
+
+        cleaned_text = (
+            _merge_cleanup_text_chunks(cleaned_chunks)
+            if len(cleaned_chunks) > 1
+            else cleaned_chunks[0]
+        )
+        cleaned_text = re.sub(r"\n{3,}", "\n\n", cleaned_text)
+        cleaned_text = re.sub(r"[ \t]{2,}", " ", cleaned_text).strip()
+
+        if not cleaned_text:
+            raise RuntimeError("Merged text cleanup output was empty")
+
+        return {
+            "message": "URL2Blog text cleanup completed",
+            "source_url": "",
+            "raw_text_length": len(raw_text or ""),
+            "raw_response": "",
+            "parsed": {
+                "title": title,
+                "content": cleaned_text,
+                "language": language or "English",
+            },
+            "parse_error": None,
+            "translated": None,
+            "translation_skipped": True,
+            "translation_error": None,
+            "text_cleanup_applied": True,
+            "text_cleanup_fallback": False,
+            "removed_blocks": removed_blocks,
+        }
+
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("URL2Blog pasted text cleanup failed: %s", exc)
+        return fallback_payload
 
 
 def _extract_json_from_response(
@@ -3701,11 +3996,8 @@ async def _pipeline_v2_run_stage1(
     stage_trace: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Execute URL2Blog stage 1 extraction and normalization."""
-    url = request.url.strip()
-    if not url.startswith(("http://", "https://")):
-        raise HTTPException(
-            status_code=400, detail="URL must start with http:// or https://"
-        )
+    pasted_text = _safe_str(request.pasted_text or "")
+    url = _safe_str(request.url or "")
 
     trace = list(stage_trace or [])
     write_status(
@@ -3720,27 +4012,61 @@ async def _pipeline_v2_run_stage1(
         feature=FEATURE_NAME,
     )
 
-    stage1_response = await extract_article(
-        ExtractRequest(
-            url=url,
+    if pasted_text:
+        # Text mode: run AI cleanup pipeline on the pasted article
+        stage1_payload = _cleanup_pasted_article_text(
+            raw_text=pasted_text,
             model_name=selected_model_name,
-            include_debug=include_debug,
         )
-    )
-    stage1_payload = json.loads(stage1_response.body.decode("utf-8"))
+        if include_debug:
+            trace.append(
+                {
+                    "stage": "stage1_cleanup_pasted_text",
+                    "model_name": selected_model_name,
+                    "max_tokens": URL2BLOG_TEXT_CLEANUP_MAX_OUTPUT_TOKENS,
+                    "temperature": 0.1,
+                    "input": {"raw_text_length": len(pasted_text)},
+                    "output": {
+                        "title": _safe_dict(stage1_payload.get("parsed")).get("title", ""),
+                        "language": _safe_dict(stage1_payload.get("parsed")).get("language", ""),
+                        "cleaned_chars": len(
+                            _safe_dict(stage1_payload.get("parsed")).get("content", "")
+                        ),
+                        "removed_blocks_count": len(
+                            stage1_payload.get("removed_blocks") or []
+                        ),
+                        "fallback_used": stage1_payload.get("text_cleanup_fallback", False),
+                    },
+                }
+            )
+    elif url.startswith(("http://", "https://")):
+        # URL mode: fetch and extract article
+        stage1_response = await extract_article(
+            ExtractRequest(
+                url=url,
+                model_name=selected_model_name,
+                include_debug=include_debug,
+            )
+        )
+        stage1_payload = json.loads(stage1_response.body.decode("utf-8"))
+        if include_debug:
+            stage1_debug = _safe_dict(stage1_payload.get("debug"))
+            stage1_trace = stage1_debug.get("trace")
+            if isinstance(stage1_trace, list):
+                for entry in stage1_trace:
+                    if isinstance(entry, dict):
+                        trace.append(entry)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Either a valid URL (http:// or https://) or pasted_text must be provided.",
+        )
+
     write_stage_result(
         run_id,
         "stage_1",
         {"created_at": _now_iso(), "data": stage1_payload},
     )
-
-    if include_debug:
-        stage1_debug = _safe_dict(stage1_payload.get("debug"))
-        stage1_trace = stage1_debug.get("trace")
-        if isinstance(stage1_trace, list):
-            for entry in stage1_trace:
-                if isinstance(entry, dict):
-                    trace.append(entry)
 
     parsed_article = _safe_dict(stage1_payload.get("parsed"))
     if not parsed_article:
@@ -3822,7 +4148,7 @@ async def _pipeline_v2_run_stage2(
             Stage2ClassifyRequest(
                 title=normalized_title,
                 content=normalized_content,
-                source_url=request.url.strip(),
+                source_url=_safe_str(request.url or ""),
                 language=normalized_language,
                 model_name=selected_model_name,
                 include_debug=include_debug,
@@ -3926,11 +4252,7 @@ def _pipeline_v2_prepare_context(
     stage_trace: list[dict[str, Any]] | None,
     json_parse_metrics: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    url = request.url.strip()
-    if not url.startswith(("http://", "https://")):
-        raise HTTPException(
-            status_code=400, detail="URL must start with http:// or https://"
-        )
+    url = _safe_str(request.url or "")
 
     include_debug = request.include_debug
     is_lean_profile = execution_profile == "lean"

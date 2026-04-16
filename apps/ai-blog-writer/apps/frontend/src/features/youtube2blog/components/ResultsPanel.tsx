@@ -12,6 +12,7 @@ type ResultsPanelProps = {
   debugData?: DebugResponse
   lexicalCopyStatus: LexicalCopyStatus
   onCopyLexical: (markdown: string) => void
+  runId?: string | null
 }
 
 export function ResultsPanel({
@@ -20,6 +21,7 @@ export function ResultsPanel({
   debugData,
   lexicalCopyStatus,
   onCopyLexical,
+  runId,
 }: ResultsPanelProps) {
   return (
     <section className="panel result">
@@ -71,7 +73,7 @@ export function ResultsPanel({
         ) : null}
         {resultTab === 'transcript' ? <TranscriptTab debugData={debugData} /> : null}
         {resultTab === 'classification' ? <ClassificationTab debugData={debugData} /> : null}
-        {resultTab === 'article' ? <ArticleTab debugData={debugData} /> : null}
+        {resultTab === 'article' ? <ArticleTab debugData={debugData} runId={runId} /> : null}
         {resultTab === 'title' ? <TitleTab debugData={debugData} /> : null}
       </div>
     </section>

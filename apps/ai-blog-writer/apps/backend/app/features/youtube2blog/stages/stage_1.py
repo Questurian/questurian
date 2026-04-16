@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 PRIMARY_CLEANING_PROMPT = """You are cleaning a video transcript for downstream article generation.
 
-This is a cleaning task, not a summarization task. Preserve the speaker's
-substantive material in the original order and wording whenever practical.
+This is a cleaning and translation task. The output must always be in English,
+regardless of the transcript's source language.
 
 REMOVE ONLY:
 - greetings, channel branding, and outros
@@ -36,6 +36,7 @@ KEEP INTACT OR NEAR-INTACT:
 - warnings, caveats, comparisons, and nuanced details
 
 Rules:
+- If the transcript is not in English, translate it to English as you clean it.
 - Do not compress several paragraphs into a short summary.
 - If a passage contains useful instruction or analysis, keep it.
 - When unsure, keep more rather than less.
@@ -47,8 +48,8 @@ Transcript:
 PRIMARY_CHUNK_CLEANING_PROMPT = """You are cleaning chunk {chunk_index} of {chunk_count}
 from a longer video transcript for downstream article generation.
 
-This is a cleaning task, not a summarization task. Preserve the original order
-inside this chunk and keep substantive passages close to their original wording.
+This is a cleaning and translation task. The output must always be in English,
+regardless of the transcript's source language.
 
 REMOVE ONLY:
 - greetings, channel branding, and outros
@@ -61,6 +62,7 @@ KEEP INTACT OR NEAR-INTACT:
 - warnings, caveats, comparisons, and nuanced details
 
 Rules:
+- If the transcript is not in English, translate it to English as you clean it.
 - Do not compress this chunk into an abstract or recap.
 - If a passage contains useful instruction or analysis, keep it.
 - When unsure, keep more rather than less.
@@ -71,6 +73,9 @@ Transcript chunk:
 
 REPAIR_CLEANING_PROMPT = """You are repairing a transcript-cleaning attempt that was too compressed.
 
+The output must always be in English. If the original transcript was in another
+language, continue working in English.
+
 Goal:
 - Keep meaningful core instructional content.
 - Remove intros/outros, ads, calls-to-action, and filler.
@@ -79,11 +84,11 @@ Goal:
 
 Hard constraints:
 - This is still cleaning, not summarizing.
-- Preserve chronology and the speaker's substantive wording whenever practical.
+- Preserve chronology and the speaker's substantive meaning whenever practical.
 - Keep major examples, key claims, explanatory paragraphs, and transitions.
 - Do not summarize into bullets.
 - Do not output JSON or commentary.
-- When unsure, keep more of the original transcript.
+- When unsure, keep more of the original transcript's content.
 
 Original transcript:
 {transcript}
@@ -91,6 +96,25 @@ Original transcript:
 Previous cleaned attempt (too aggressive or too noisy):
 {previous_cleaned}
 """
+
+TRANSLATION_ENFORCEMENT_PROMPT = """If the following text is already in English, return it exactly as-is without any changes.
+If it is in any other language, translate it to English while preserving all content, meaning, and structure.
+Return only the text with no commentary or preamble.
+
+Text:
+{text}"""
+
+
+def _ensure_english(text: str, llm: object) -> str:
+    """
+    Always run an idempotent English enforcement pass.
+    The LLM returns English text unchanged and translates anything else.
+    """
+    logger.info("  Running English enforcement pass...")
+    prompt = PromptTemplate(input_variables=["text"], template=TRANSLATION_ENFORCEMENT_PROMPT)
+    result = llm.invoke(prompt.format(text=text))
+    logger.info("  English enforcement complete: %d chars", len(result.strip()))
+    return result.strip()
 
 
 def _chunk_transcript(transcript: str, max_chars: int) -> list[str]:
@@ -249,9 +273,12 @@ def _clean_transcript_impl(
         )
     logger.info("  Received response from Vertex AI")
 
+    cleaned_transcript = _ensure_english(cleaned_transcript, llm)
+    english_title = _ensure_english(record.title, llm)
+
     output = Stage1Output(
         video_id=record.video_id,
-        title=record.title,
+        title=english_title,
         cleaned_transcript=cleaned_transcript,
     )
 

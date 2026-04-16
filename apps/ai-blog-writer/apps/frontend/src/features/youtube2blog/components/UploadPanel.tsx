@@ -1,9 +1,14 @@
 import type { FormEvent } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import type { ArticleType } from '@shared/types'
 import { Y2B_MODEL_OPTIONS, type Y2BModelName } from '../../staging/api/ai/models'
 
 type UploadPanelProps = {
   youtubeUrl: string
   selectedModel: Y2BModelName
+  forcedArticleType: string
+  articleTypes: ArticleType[]
   runIds: string[]
   activeRunId: string | null
   startPending: boolean
@@ -11,6 +16,7 @@ type UploadPanelProps = {
   startError: string | null
   onYoutubeUrlChange: (value: string) => void
   onModelChange: (model: Y2BModelName) => void
+  onForcedArticleTypeChange: (value: string) => void
   onSubmit: (event: FormEvent) => void
   onClear: () => void
   onSelectRun: (runId: string) => void
@@ -19,6 +25,8 @@ type UploadPanelProps = {
 export function UploadPanel({
   youtubeUrl,
   selectedModel,
+  forcedArticleType,
+  articleTypes,
   runIds,
   activeRunId,
   startPending,
@@ -26,12 +34,15 @@ export function UploadPanel({
   startError,
   onYoutubeUrlChange,
   onModelChange,
+  onForcedArticleTypeChange,
   onSubmit,
   onClear,
   onSelectRun,
 }: UploadPanelProps) {
   const canSubmit = Boolean(youtubeUrl.trim())
   const submitLabel = startPending ? 'Starting...' : 'Start pipeline'
+  const selectedTypeGuideline =
+    articleTypes.find((t) => t.name === forcedArticleType)?.guideline ?? null
 
   return (
     <section className="panel upload">
@@ -68,6 +79,29 @@ export function UploadPanel({
             ))}
           </select>
         </div>
+
+        {articleTypes.length > 0 ? (
+          <div className="form-group">
+            <label htmlFor="forced-article-type-select">Article type (optional)</label>
+            <select
+              id="forced-article-type-select"
+              value={forcedArticleType}
+              onChange={(event) => onForcedArticleTypeChange(event.target.value)}
+            >
+              <option value="">Auto-detect</option>
+              {articleTypes.map((type) => (
+                <option key={type.id} value={type.name}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+            {selectedTypeGuideline ? (
+              <div className="guideline-preview">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedTypeGuideline}</ReactMarkdown>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="button-row">
           <button type="submit" disabled={!canSubmit || startPending}>

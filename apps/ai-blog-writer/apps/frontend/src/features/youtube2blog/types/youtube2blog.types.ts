@@ -73,3 +73,12 @@ export type TypedDebugStages = {
 }
 
 export type DebugData = DebugResponse | undefined
+
+export type ExpansionPhase = 'idle' | 'detecting' | 'personalizing' | 'analyzing' | 'expanding' | 'rewriting' | 'completed' | 'error'
+
+export type ListicleDetection = {
+  is_listicle: boolean
+  list_type: string | null
+  list_topic: string | null
+  detected_items: string[]
+}

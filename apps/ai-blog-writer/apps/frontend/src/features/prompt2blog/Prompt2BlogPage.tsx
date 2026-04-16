@@ -804,6 +804,35 @@ export default function Prompt2BlogPage() {
     localStorage.removeItem(RUN_STORAGE_KEY)
   }, [])
 
+  const handleClearCoreInputs = useCallback(() => {
+    setArticleTypeId(DEFAULT_STATE.articleTypeId)
+    setArticleGoal(DEFAULT_STATE.articleGoal)
+    setTargetReader(DEFAULT_STATE.targetReader)
+    setDestinationContext(DEFAULT_STATE.destinationContext)
+  }, [])
+
+  const handleClearPromptProfiles = useCallback(() => {
+    setModelName(DEFAULT_STATE.modelName)
+    setToneId(inputOptions ? findDefaultOption(inputOptions.tones) : DEFAULT_STATE.toneId)
+    setLengthId(inputOptions ? findDefaultOption(inputOptions.lengths) : DEFAULT_STATE.lengthId)
+    setBrandVoiceId(inputOptions ? findDefaultOption(inputOptions.brand_voices) : DEFAULT_STATE.brandVoiceId)
+    setCreativityLevel(DEFAULT_STATE.creativityLevel)
+    setAudienceProfile(DEFAULT_STATE.audienceProfile)
+    setNegativeInstructions(DEFAULT_STATE.negativeInstructions)
+    setPromptEnhance(DEFAULT_STATE.promptEnhance)
+    setEnableEditorialAugmentation(DEFAULT_STATE.enableEditorialAugmentation)
+  }, [inputOptions])
+
+  const handleClearSeoConstraints = useCallback(() => {
+    setPrimaryKeyword(DEFAULT_STATE.primaryKeyword)
+    setSecondaryKeywords(DEFAULT_STATE.secondaryKeywords)
+    setMustInclude(DEFAULT_STATE.mustInclude)
+  }, [])
+
+  const handleClearSourceMaterial = useCallback(() => {
+    setBlobs(DEFAULT_STATE.blobs)
+  }, [])
+
   const handleClear = useCallback(() => {
     setArticleTypeId(DEFAULT_STATE.articleTypeId)
     setArticleGoal(DEFAULT_STATE.articleGoal)
@@ -1019,8 +1048,13 @@ export default function Prompt2BlogPage() {
         <form className="p2b-form" onSubmit={(event) => event.preventDefault()}>
           <section className="p2b-panel">
             <div className="p2b-panel-header">
-              <h2>Core Inputs</h2>
-              <p>Select article type and provide intent/context.</p>
+              <div className="p2b-panel-header-text">
+                <h2>Core Inputs</h2>
+                <p>Select article type and provide intent/context.</p>
+              </div>
+              <button type="button" className="p2b-section-clear-btn" onClick={handleClearCoreInputs}>
+                Clear section
+              </button>
             </div>
             <div className="p2b-panel-body">
               <div className="p2b-field">
@@ -1111,8 +1145,13 @@ export default function Prompt2BlogPage() {
 
           <section className="p2b-panel">
             <div className="p2b-panel-header">
-              <h2>Prompt Profiles</h2>
-              <p>These dropdowns are loaded from markdown option catalogs.</p>
+              <div className="p2b-panel-header-text">
+                <h2>Prompt Profiles</h2>
+                <p>These dropdowns are loaded from markdown option catalogs.</p>
+              </div>
+              <button type="button" className="p2b-section-clear-btn" onClick={handleClearPromptProfiles}>
+                Clear section
+              </button>
             </div>
             <div className="p2b-panel-body">
               <div className="p2b-field-row p2b-field-row--3">
@@ -1233,7 +1272,12 @@ export default function Prompt2BlogPage() {
 
           <section className="p2b-panel">
             <div className="p2b-panel-header">
-              <h2>SEO + Constraints</h2>
+              <div className="p2b-panel-header-text">
+                <h2>SEO + Constraints</h2>
+              </div>
+              <button type="button" className="p2b-section-clear-btn" onClick={handleClearSeoConstraints}>
+                Clear section
+              </button>
             </div>
             <div className="p2b-panel-body">
               <div className="p2b-field-row p2b-field-row--2">
@@ -1274,8 +1318,13 @@ export default function Prompt2BlogPage() {
 
           <section className="p2b-panel">
             <div className="p2b-panel-header">
-              <h2>Source Material</h2>
-              <p>Paste source text blocks. Messy copy-paste is cleaned in pipeline.</p>
+              <div className="p2b-panel-header-text">
+                <h2>Source Material</h2>
+                <p>Paste source text blocks. Messy copy-paste is cleaned in pipeline.</p>
+              </div>
+              <button type="button" className="p2b-section-clear-btn" onClick={handleClearSourceMaterial}>
+                Clear section
+              </button>
             </div>
             <div className="p2b-panel-body">
               {blobs.map((blob, index) => (

@@ -69,13 +69,21 @@ async function resolveErrorMessage(response: Response, fallback: string): Promis
   }
 }
 
-export async function startFromYoutubeUrl(url: string, model?: string): Promise<UploadResponse> {
+export async function startFromYoutubeUrl(
+  url: string,
+  model?: string,
+  forcedArticleType?: string,
+): Promise<UploadResponse> {
   const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/from-url`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ url, ...(model ? { model } : {}) }),
+    body: JSON.stringify({
+      url,
+      ...(model ? { model } : {}),
+      ...(forcedArticleType?.trim() ? { forced_article_type: forcedArticleType.trim() } : {}),
+    }),
   })
 
   if (!response.ok) {
@@ -218,6 +226,100 @@ export async function deleteArticleType(id: number): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete article type')
   }
+}
+
+export type ListicleDetectionResponse = {
+  is_listicle: boolean
+  list_type: string | null
+  list_topic: string | null
+  detected_items: string[]
+}
+
+export type ExpandGap = {
+  type: string
+  topic: string
+  reason: string
+  suggested_section_title: string
+}
+
+export type ExpandStatusResponse = {
+  run_id: string
+  state: 'running' | 'completed' | 'failed'
+  stage: 'analyzing' | 'expanding' | 'completed' | 'error'
+  updated_at: string
+  error?: string | null
+}
+
+export type ExpandResultResponse = {
+  expanded_article: string
+  gaps: ExpandGap[]
+  expansion_plan: string
+}
+
+export async function detectArticleListicle(
+  runId: string,
+  article: string,
+  title: string,
+  model?: string,
+): Promise<ListicleDetectionResponse> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/${runId}/expand/detect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ article, title, ...(model ? { model } : {}) }),
+  })
+
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'Failed to detect article type'))
+  }
+
+  return response.json()
+}
+
+export async function startArticleExpansion(
+  runId: string,
+  article: string,
+  articleType: string,
+  title: string,
+  model?: string,
+  rewriteItems?: string[],
+): Promise<{ expand_job_id: string }> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/${runId}/expand`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      article,
+      article_type: articleType,
+      title,
+      ...(model ? { model } : {}),
+      ...(rewriteItems && rewriteItems.length > 0 ? { rewrite_items: rewriteItems } : {}),
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'Failed to start article expansion'))
+  }
+
+  return response.json()
+}
+
+export async function fetchExpandStatus(expandJobId: string): Promise<ExpandStatusResponse> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/expand/${expandJobId}/status`)
+
+  if (!response.ok) {
+    throw new Error('Expansion status fetch failed')
+  }
+
+  return response.json()
+}
+
+export async function fetchExpandResult(expandJobId: string): Promise<ExpandResultResponse> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/expand/${expandJobId}/result`)
+
+  if (!response.ok) {
+    throw new Error('Expansion result fetch failed')
+  }
+
+  return response.json()
 }
 
 export async function markArticleSynced(

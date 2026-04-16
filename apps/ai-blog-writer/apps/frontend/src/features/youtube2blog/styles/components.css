@@ -165,3 +165,62 @@
 .cancel-btn:hover {
   background: var(--ink-light) !important;
 }
+
+.guideline-hint {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Guideline markdown preview */
+.guideline-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: var(--space-4);
+  max-height: 20rem;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.guideline-preview h1,
+.guideline-preview h2,
+.guideline-preview h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: var(--space-3) 0 var(--space-2);
+  color: var(--ink);
+}
+
+.guideline-preview h1 { font-size: 1rem; }
+.guideline-preview h2 { font-size: 0.9375rem; }
+.guideline-preview h3 { font-size: 0.875rem; }
+
+.guideline-preview p {
+  margin: 0 0 var(--space-2);
+}
+
+.guideline-preview ul,
+.guideline-preview ol {
+  padding-left: var(--space-5);
+  margin: 0 0 var(--space-2);
+}
+
+.guideline-preview li {
+  margin-bottom: var(--space-1);
+}
+
+.guideline-preview strong {
+  font-weight: 600;
+}
+
+.guideline-preview code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  background: var(--surface-raised, #f5f5f5);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
