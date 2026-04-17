@@ -1,5 +1,4 @@
 import { Block } from 'payload'
-import { itineraryDurationRow, itineraryTimeRow } from './utils/timeField'
 
 const isValidAbsoluteUrl = (value: string | null | undefined): boolean => {
   if (!value) return true
@@ -37,8 +36,6 @@ export const ItineraryTourAgencyBlock: Block = {
     plural: 'Tour Agency Stops',
   },
   fields: [
-    itineraryTimeRow,
-    itineraryDurationRow,
     {
       name: 'title',
       type: 'text',

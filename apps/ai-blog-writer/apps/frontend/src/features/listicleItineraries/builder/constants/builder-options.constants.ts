@@ -1,9 +1,6 @@
 import type {
   DayAudience,
-  DurationMinute,
   ItineraryBlockType,
-  Meridiem,
-  QuarterMinute,
   RelatedItemOption,
 } from '../../types'
 
@@ -21,10 +18,6 @@ export const BLOCK_TYPE_OPTIONS: Array<{ label: string; value: ItineraryBlockTyp
   { label: 'Key Location Stop (areas, transit hubs)', value: 'itinerary-key-location' },
   { label: 'Tour Agency Stop (manual listing)', value: 'itinerary-tour-agency' },
 ]
-
-export const QUARTER_MINUTE_OPTIONS: QuarterMinute[] = ['00', '15', '30', '45']
-export const DURATION_MINUTE_OPTIONS: DurationMinute[] = ['0', '15', '30', '45']
-export const PERIOD_OPTIONS: Meridiem[] = ['AM', 'PM']
 
 export const EMPTY_RELATED_BY_BLOCK_TYPE: Record<ItineraryBlockType, RelatedItemOption[]> = {
   'itinerary-dining': [],

@@ -7,7 +7,6 @@ import {
 } from '../../types'
 import { validateListicleItineraryStructuredDataShape } from '../services/structured-data-template.service'
 import { validateItemMediaSelections } from './media.validators'
-import { validateItemTimeline } from './timeline.validators'
 
 const isValidAbsoluteUrl = (value: string): boolean => {
   if (!value.trim()) return true
@@ -50,9 +49,8 @@ export function validateStep3(
 ): string[] {
   const issues: string[] = []
 
-  const timelineIssues = validateItemTimeline(draft, 'published')
-  if (timelineIssues.length > 0) {
-    issues.push(...timelineIssues)
+  if (draft.items.length < 1) {
+    issues.push('Step 3 requires at least one itinerary stop before locking.')
   }
 
   const mediaIssues = validateItemMediaSelections(draft, relatedByBlockType)

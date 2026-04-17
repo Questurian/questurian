@@ -16,9 +16,35 @@ import type {
   LocationOption,
   RelatedItemOption,
 } from '../../types'
-import { autoChainItems, createNewItem, withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateStep2, validateStep3 } from '../validators/step.validators'
+
+function createNewItem(): ItineraryItemBlock {
+  return {
+    id: `item_${Date.now()}`,
+    blockType: 'itinerary-dining',
+    item: null,
+    mediaMode: 'photos',
+    selectedPhotos: [],
+    selectedInstagramPost: null,
+    title: '',
+    operator: '',
+    price: '',
+    url: '',
+    tourDuration: 1,
+    startingPoint: {
+      label: '',
+      latitude: '',
+      longitude: '',
+    },
+    keyLocations: [],
+    image: null,
+    instagramPost: null,
+    blurbMarkdown: '',
+    blurbLexical: undefined,
+    blurbJsonText: '',
+  }
+}
 
 type UseBuilderDraftActionsParams = {
   draft: ListicleItineraryDraft | null
@@ -35,12 +61,7 @@ type UseBuilderDraftActionsResult = {
   selectedLocationRefId: number | null
   updateDraft: (next: Partial<ListicleItineraryDraft>) => void
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
-  endHereOnLastStop: () => void
-  updateItem: (
-    itemId: string,
-    updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
-    options?: { cascadeSchedule?: boolean },
-  ) => void
+  updateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
   removeItem: (itemId: string) => void
   moveItem: (itemId: string, direction: 'up' | 'down') => void
   addItem: () => void
@@ -121,34 +142,14 @@ export function useBuilderDraftActions({
     })
   }
 
-  function endHereOnLastStop() {
-    setDraft((current) => {
-      if (!current || current.items.length === 0) return current
-      return withEndAlignedToLastItem(current)
-    })
-  }
-
-  function updateItem(
-    itemId: string,
-    updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
-    options?: { cascadeSchedule?: boolean },
-  ) {
+  function updateItem(itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) {
     setDraft((current) => {
       if (!current) return current
-      const index = current.items.findIndex((item) => item.id === itemId)
-      if (index < 0) return current
-
-      const next: ListicleItineraryDraft = {
-        ...current,
-        items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
-      }
-
-      if (options?.cascadeSchedule) {
-        return autoChainItems(next, index + 1)
-      }
+      if (!current.items.some((item) => item.id === itemId)) return current
 
       return {
-        ...next,
+        ...current,
+        items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
       }
     })
   }
@@ -156,11 +157,10 @@ export function useBuilderDraftActions({
   function removeItem(itemId: string) {
     setDraft((current) => {
       if (!current) return current
-      const next: ListicleItineraryDraft = {
+      return {
         ...current,
         items: current.items.filter((item) => item.id !== itemId),
       }
-      return autoChainItems(next, 1)
     })
   }
 
@@ -174,22 +174,20 @@ export function useBuilderDraftActions({
       if (target < 0 || target >= items.length) return current
       const [item] = items.splice(index, 1)
       items.splice(target, 0, item)
-      const next: ListicleItineraryDraft = {
+      return {
         ...current,
         items,
       }
-      return autoChainItems(next, 1)
     })
   }
 
   function addItem() {
     setDraft((current) => {
       if (!current) return current
-      const next: ListicleItineraryDraft = {
+      return {
         ...current,
-        items: [...current.items, createNewItem(current)],
+        items: [...current.items, createNewItem()],
       }
-      return autoChainItems(next, next.items.length - 1)
     })
   }
 
@@ -413,7 +411,6 @@ export function useBuilderDraftActions({
     selectedLocationRefId,
     updateDraft,
     updateHeader,
-    endHereOnLastStop,
     updateItem,
     removeItem,
     moveItem,

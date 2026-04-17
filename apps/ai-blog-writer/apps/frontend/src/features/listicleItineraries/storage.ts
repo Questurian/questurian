@@ -124,21 +124,6 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       selectedInstagramPost: typeof itemValue.selectedInstagramPost === 'number'
         ? itemValue.selectedInstagramPost
         : null,
-      timeHour: typeof itemValue.timeHour === 'number' ? itemValue.timeHour : 9,
-      timeMinute:
-        itemValue.timeMinute === '15'
-        || itemValue.timeMinute === '30'
-        || itemValue.timeMinute === '45'
-          ? itemValue.timeMinute
-          : '00',
-      timePeriod: itemValue.timePeriod === 'PM' ? 'PM' : 'AM',
-      durationHours: typeof itemValue.durationHours === 'number' ? itemValue.durationHours : 1,
-      durationMinutes:
-        itemValue.durationMinutes === '15'
-        || itemValue.durationMinutes === '30'
-        || itemValue.durationMinutes === '45'
-          ? itemValue.durationMinutes
-          : '0',
       title: typeof itemValue.title === 'string' ? itemValue.title : '',
       operator: typeof itemValue.operator === 'string' ? itemValue.operator : '',
       price: isTourAgencyPriceTier(itemValue.price) ? itemValue.price : '',
@@ -185,24 +170,6 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       || value.dayAudience === 'weekend'
         ? value.dayAudience
         : '',
-    itineraryStartHour: typeof value.itineraryStartHour === 'number' ? value.itineraryStartHour : 9,
-    itineraryStartMinute:
-      value.itineraryStartMinute === '00'
-      || value.itineraryStartMinute === '15'
-      || value.itineraryStartMinute === '30'
-      || value.itineraryStartMinute === '45'
-        ? value.itineraryStartMinute
-        : '00',
-    itineraryStartPeriod: value.itineraryStartPeriod === 'PM' ? 'PM' : 'AM',
-    itineraryEndHour: typeof value.itineraryEndHour === 'number' ? value.itineraryEndHour : 6,
-    itineraryEndMinute:
-      value.itineraryEndMinute === '00'
-      || value.itineraryEndMinute === '15'
-      || value.itineraryEndMinute === '30'
-      || value.itineraryEndMinute === '45'
-        ? value.itineraryEndMinute
-        : '00',
-    itineraryEndPeriod: value.itineraryEndPeriod === 'AM' ? 'AM' : 'PM',
     tripIntent: normalizeTripIntent(value.tripIntent),
     step1_complete: Boolean(value.step1_complete),
     in_update_mode: Boolean(value.in_update_mode),
@@ -289,12 +256,6 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     locationRef: null,
     sharedNeighborhoods: [],
     dayAudience: '',
-    itineraryStartHour: 9,
-    itineraryStartMinute: '00',
-    itineraryStartPeriod: 'AM',
-    itineraryEndHour: 6,
-    itineraryEndMinute: '00',
-    itineraryEndPeriod: 'PM',
     tripIntent: [...DEFAULT_TRIP_INTENT],
     step1_complete: false,
     in_update_mode: false,

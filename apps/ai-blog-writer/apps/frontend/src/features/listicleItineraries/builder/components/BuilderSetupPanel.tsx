@@ -1,11 +1,5 @@
-import { DAY_AUDIENCE_OPTIONS, PERIOD_OPTIONS, QUARTER_MINUTE_OPTIONS } from '../constants/builder-options.constants'
-import type {
-  DayAudience,
-  ListicleItineraryDraft,
-  LocationOption,
-  Meridiem,
-  QuarterMinute,
-} from '../../types'
+import { DAY_AUDIENCE_OPTIONS } from '../constants/builder-options.constants'
+import type { DayAudience, ListicleItineraryDraft, LocationOption } from '../../types'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import { TRIP_INTENT_OPTIONS } from '../../../trip-intent'
@@ -215,46 +209,6 @@ export function BuilderSetupPanel({
         </label>
       </div>
 
-      <div className="stl-grid stl-grid-2">
-        <div className="stl-field">
-          <span>Itinerary Start *</span>
-          <div className="stl-grid stl-grid-3">
-            <input
-              type="number"
-              min={1}
-              max={12}
-              value={draft.itineraryStartHour}
-              disabled={draft.step1_complete && !draft.in_update_mode}
-              onChange={(event) => updateDraft({ itineraryStartHour: Number(event.target.value) || 0 })}
-            />
-            <select
-              value={draft.itineraryStartMinute}
-              disabled={draft.step1_complete && !draft.in_update_mode}
-              onChange={(event) => updateDraft({ itineraryStartMinute: event.target.value as QuarterMinute })}
-            >
-              {QUARTER_MINUTE_OPTIONS.map((minute) => (
-                <option key={minute} value={minute}>
-                  {minute}
-                </option>
-              ))}
-            </select>
-            <select
-              value={draft.itineraryStartPeriod}
-              disabled={draft.step1_complete && !draft.in_update_mode}
-              onChange={(event) => updateDraft({ itineraryStartPeriod: event.target.value as Meridiem })}
-            >
-              {PERIOD_OPTIONS.map((period) => (
-                <option key={period} value={period}>
-                  {period}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-      <p className="stl-summary-note">
-        Total itinerary end time is derived from your last stop. Use "End Here" on the last stop to lock it now.
-      </p>
     </section>
   )
 }

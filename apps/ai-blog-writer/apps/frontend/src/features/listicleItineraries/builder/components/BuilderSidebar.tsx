@@ -7,7 +7,6 @@ import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 type BuilderSidebarProps = {
   completionPercent: number
   draft: ListicleItineraryDraft
-  hasContinuousCoverage: boolean
   isSetupReady: boolean
   editorModelName: EditorAssistModelName
   onEditorModelChange: (modelName: string) => void
@@ -23,7 +22,6 @@ type BuilderSidebarProps = {
 export function BuilderSidebar({
   completionPercent,
   draft,
-  hasContinuousCoverage,
   isSetupReady,
   editorModelName,
   onEditorModelChange,
@@ -58,7 +56,6 @@ export function BuilderSidebar({
           <li className={isStep3Locked ? 'done' : ''}>
             Step 3: {isStep3Locked ? 'Locked' : draft.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
           </li>
-          <li className={hasContinuousCoverage ? 'done' : ''}>Coverage: {hasContinuousCoverage ? 'Continuous' : 'Has gaps'}</li>
           <li className={seoCoreComplete ? 'done' : ''}>
             SEO core: {seoCoreComplete ? 'Complete' : 'Missing SEO title or meta description'}
           </li>

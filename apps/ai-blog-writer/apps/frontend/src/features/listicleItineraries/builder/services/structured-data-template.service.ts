@@ -13,7 +13,6 @@ import {
   resolveImageUrl,
   resolveInstagramPermalink,
 } from '../utils/item-media.utils'
-import { formatMinutes, toMinutesFromMidnight } from '../../time'
 import {
   getItinerarySchemaPublisherConfig,
   type ItinerarySchemaPublisherConfig,
@@ -71,13 +70,6 @@ const toSchemaDate = (value: string | undefined): string | undefined => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return undefined
   return date.toISOString()
-}
-
-const toSchemaDay = (value: string | undefined): string | undefined => {
-  if (!value) return undefined
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return undefined
-  return date.toISOString().slice(0, 10)
 }
 
 const toHumanReadableLocationName = (value: string | undefined): string | undefined => {
@@ -523,21 +515,6 @@ function buildManualKeyLocationEntities(
     .filter((entry): entry is Record<string, unknown> => Boolean(entry))
 }
 
-function resolveTripTime(value: {
-  date: string | undefined
-  hour: number
-  minute: string
-  period: string
-}): string | undefined {
-  try {
-    if (!value.date) return undefined
-    const minutes = toMinutesFromMidnight(value.hour, value.minute, value.period)
-    return `${value.date}T${formatMinutes(minutes)}:00`
-  } catch {
-    return undefined
-  }
-}
-
 function buildStopEntity(input: {
   itineraryItem: ItineraryItemBlock
   relatedItem?: RelatedItemOption
@@ -665,7 +642,6 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
   const schemaDatePublished = resolvedStatus === 'published'
     ? toSchemaDate(draft.payloadPublishedAt || draft.updatedAt)
     : undefined
-  const tripDate = toSchemaDay(draft.payloadUpdatedAt || draft.updatedAt)
   const articleImageUrl = normalizeAbsoluteUrl(draft.seoSection.openGraph.imageUrl)
     || normalizeAbsoluteUrl(draft.seoSection.twitterCard.imageUrl)
   const tripId = canonicalUrl ? `${canonicalUrl}#listicle-itinerary-trip` : '#listicle-itinerary-trip'
@@ -676,18 +652,6 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
     extractDraftText(draft.header.introMarkdown, draft.header.introJsonText),
   )
   const authorName = normalizeText(draft.payloadAuthorName) || publisherConfig.defaultAuthorName
-  const startTime = resolveTripTime({
-    date: tripDate,
-    hour: draft.itineraryStartHour,
-    minute: draft.itineraryStartMinute,
-    period: draft.itineraryStartPeriod,
-  })
-  const endTime = resolveTripTime({
-    date: tripDate,
-    hour: draft.itineraryEndHour,
-    minute: draft.itineraryEndMinute,
-    period: draft.itineraryEndPeriod,
-  })
 
   const itemListElement = draft.items.map((itineraryItem, index) => {
     const position = index + 1
@@ -725,8 +689,6 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
     '@id': tripId,
     name: articleTitle,
     description: intro || 'AI_FILL_TRIP_DESCRIPTION',
-    departureTime: startTime,
-    arrivalTime: endTime,
     itinerary: {
       '@id': itemListId,
     },

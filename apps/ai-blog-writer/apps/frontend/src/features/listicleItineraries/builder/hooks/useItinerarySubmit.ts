@@ -19,7 +19,6 @@ import {
   buildListicleItineraryStructuredDataTemplate,
   serializeStructuredDataTemplate,
 } from '../services/structured-data-template.service'
-import { withEndAlignedToLastItem } from '../services/itinerary-timeline.service'
 import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
@@ -65,7 +64,7 @@ export function useItinerarySubmit({
     onError('')
     setResult(null)
 
-    const submitDraft = withEndAlignedToLastItem(draft)
+    const submitDraft = draft
     const schemaPublisherConfig = getSchemaPublisherConfig()
 
     const stepIssues = validateStep1(submitDraft)
@@ -169,11 +168,6 @@ export function useItinerarySubmit({
 
           payloadItems.push({
             blockType: item.blockType,
-            timeHour: item.timeHour,
-            timeMinute: item.timeMinute,
-            timePeriod: item.timePeriod,
-            durationHours: item.durationHours,
-            durationMinutes: item.durationMinutes,
             title: item.title.trim(),
             operator: item.operator.trim(),
             price: item.price || undefined,
@@ -219,11 +213,6 @@ export function useItinerarySubmit({
 
         payloadItems.push({
           blockType: item.blockType,
-          timeHour: item.timeHour,
-          timeMinute: item.timeMinute,
-          timePeriod: item.timePeriod,
-          durationHours: item.durationHours,
-          durationMinutes: item.durationMinutes,
           item: item.item,
           mediaMode: item.mediaMode,
           selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
@@ -238,12 +227,6 @@ export function useItinerarySubmit({
         locationRef: selectedLocationRefId,
         sharedNeighborhoods: submitDraft.sharedNeighborhoods,
         dayAudience: submitDraft.dayAudience,
-        itineraryStartHour: submitDraft.itineraryStartHour,
-        itineraryStartMinute: submitDraft.itineraryStartMinute,
-        itineraryStartPeriod: submitDraft.itineraryStartPeriod,
-        itineraryEndHour: submitDraft.itineraryEndHour,
-        itineraryEndMinute: submitDraft.itineraryEndMinute,
-        itineraryEndPeriod: submitDraft.itineraryEndPeriod,
         step1_complete: true,
         in_update_mode: false,
         tripIntent: normalizeTripIntent(submitDraft.tripIntent),

@@ -23,12 +23,6 @@ function buildDraft(): ListicleItineraryDraft {
     locationRef: 1,
     sharedNeighborhoods: [],
     dayAudience: 'anyday',
-    itineraryStartHour: 9,
-    itineraryStartMinute: '00',
-    itineraryStartPeriod: 'AM',
-    itineraryEndHour: 6,
-    itineraryEndMinute: '00',
-    itineraryEndPeriod: 'PM',
     step1_complete: true,
     in_update_mode: false,
     step2_complete: true,
@@ -48,11 +42,6 @@ function buildDraft(): ListicleItineraryDraft {
         mediaMode: 'photos',
         selectedPhotos: [],
         selectedInstagramPost: null,
-        timeHour: 9,
-        timeMinute: '00',
-        timePeriod: 'AM',
-        durationHours: 1,
-        durationMinutes: '0',
         title: '',
         operator: '',
         price: '',
@@ -76,11 +65,6 @@ function buildDraft(): ListicleItineraryDraft {
         mediaMode: 'photos',
         selectedPhotos: [],
         selectedInstagramPost: null,
-        timeHour: 11,
-        timeMinute: '00',
-        timePeriod: 'AM',
-        durationHours: 2,
-        durationMinutes: '0',
         title: '',
         operator: '',
         price: '',
@@ -163,8 +147,6 @@ describe('listicleItineraries structured data template', () => {
     expect(blogPostingNode).toBeTruthy()
     expect(tripNode).toBeTruthy()
     expect(itemListNode).toBeTruthy()
-    expect(tripNode?.departureTime).toBe('2026-03-03T09:00:00')
-    expect(tripNode?.arrivalTime).toBe('2026-03-03T18:00:00')
     expect(blogPostingNode?.['@id']).toBe(
       'https://example.com/one-day-lima-itinerary#listicle-itinerary-blog-posting',
     )
@@ -221,11 +203,6 @@ describe('listicleItineraries structured data template', () => {
         mediaMode: 'photos',
         selectedPhotos: [],
         selectedInstagramPost: null,
-        timeHour: 1,
-        timeMinute: '00',
-        timePeriod: 'PM',
-        durationHours: 4,
-        durationMinutes: '0',
         title: 'Sacred Valley Day Tour',
         operator: 'Andes Routes',
         price: '$$',

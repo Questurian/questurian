@@ -360,13 +360,11 @@ export function buildSeoAiPrompt(input: {
   articleType: string
   location?: string
   dayAudience?: string
-  itineraryWindow?: string
   target?: SeoAiTarget
   structuredDataTemplate?: string
 }): string {
   const locationText = input.location?.trim() ? input.location.trim() : 'Unknown location'
   const dayAudience = input.dayAudience?.trim() ? input.dayAudience : 'any audience'
-  const itineraryWindow = input.itineraryWindow?.trim() ? input.itineraryWindow : 'unknown timeframe'
   const target = input.target || 'all'
   const shouldIncludeStructuredTemplate = (
     target === 'structuredData'
@@ -393,7 +391,6 @@ export function buildSeoAiPrompt(input: {
     `Article type: ${input.articleType}`,
     `Location: ${locationText}`,
     `Audience: ${dayAudience}`,
-    `Time window: ${itineraryWindow}`,
     `Target: ${getSeoAiTargetLabel(target)}`,
   ]
 

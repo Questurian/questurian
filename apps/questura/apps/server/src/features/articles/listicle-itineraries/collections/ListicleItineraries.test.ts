@@ -35,11 +35,6 @@ function buildReq() {
 function buildTourAgencyItem(overrides: Record<string, unknown> = {}) {
   return {
     blockType: 'itinerary-tour-agency',
-    timeHour: 9,
-    timeMinute: '00',
-    timePeriod: 'AM',
-    durationHours: 2,
-    durationMinutes: '0',
     title: 'Sacred Valley Day Tour',
     operator: 'Andes Routes',
     price: '$$',
@@ -66,12 +61,7 @@ function buildData(itemOverrides: Record<string, unknown> = {}) {
     locationRef: 1,
     sharedNeighborhoods: [],
     dayAudience: 'anyday',
-    itineraryStartHour: 9,
-    itineraryStartMinute: '00',
-    itineraryStartPeriod: 'AM',
-    itineraryEndHour: 6,
-    itineraryEndMinute: '00',
-    itineraryEndPeriod: 'PM',
+    tripIntent: ['explore'],
     step1_complete: true,
     status: 'draft',
     items: [buildTourAgencyItem(itemOverrides)],
@@ -194,6 +184,18 @@ describe('ListicleItineraries manual tour-agency validation', () => {
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
       'Item 1 starting point must include valid latitude and longitude.',
+    )
+  })
+
+  it('rejects publishing without itinerary items', async () => {
+    const data = {
+      ...buildData(),
+      status: 'published',
+      items: [],
+    }
+
+    await expect(runBeforeValidate(data)).rejects.toThrow(
+      'Publishing requires at least one itinerary item.',
     )
   })
 })

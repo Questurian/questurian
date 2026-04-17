@@ -6,7 +6,6 @@ describe('listicleItineraries seo ai service', () => {
       articleType: 'listicle-itinerary',
       location: 'Lima, Peru',
       dayAudience: 'anyday',
-      itineraryWindow: '09:00 - 18:00',
       target: 'structuredData',
       structuredDataTemplate: JSON.stringify({
         '@context': 'https://schema.org',

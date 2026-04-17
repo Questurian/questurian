@@ -1,7 +1,6 @@
 import { Block } from 'payload'
 import { createLocationFilter } from './utils/locationFilter'
 import { createItineraryItemMediaFields } from './utils/itemMedia'
-import { itineraryDurationRow, itineraryTimeRow } from './utils/timeField'
 
 export const ItineraryKeyLocationsBlock: Block = {
   slug: 'itinerary-key-location',
@@ -10,8 +9,6 @@ export const ItineraryKeyLocationsBlock: Block = {
     plural: 'Key Location Stops',
   },
   fields: [
-    itineraryTimeRow,
-    itineraryDurationRow,
     {
       name: 'item',
       type: 'relationship',

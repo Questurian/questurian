@@ -18,12 +18,6 @@ export function isManualItineraryBlockType(blockType: ItineraryBlockType): boole
   return blockType === TOUR_AGENCY_BLOCK_TYPE
 }
 
-export type Meridiem = 'AM' | 'PM'
-
-export type QuarterMinute = '00' | '15' | '30' | '45'
-
-export type DurationMinute = '0' | '15' | '30' | '45'
-
 export type MediaMode = 'photos' | 'instagram' | 'both'
 
 export type RelatedItemCollection =
@@ -93,11 +87,6 @@ export type ItineraryItemBlock = {
   mediaMode: MediaMode
   selectedPhotos: number[]
   selectedInstagramPost: number | null
-  timeHour: number
-  timeMinute: QuarterMinute
-  timePeriod: Meridiem
-  durationHours: number
-  durationMinutes: DurationMinute
   title: string
   operator: string
   price: TourAgencyPriceTier | ''
@@ -126,12 +115,6 @@ export type ListicleItineraryDraft = {
   locationRef: number | null
   sharedNeighborhoods: number[]
   dayAudience: DayAudience | ''
-  itineraryStartHour: number
-  itineraryStartMinute: QuarterMinute
-  itineraryStartPeriod: Meridiem
-  itineraryEndHour: number
-  itineraryEndMinute: QuarterMinute
-  itineraryEndPeriod: Meridiem
   tripIntent?: TripIntent[]
   step1_complete: boolean
   in_update_mode: boolean
@@ -167,12 +150,6 @@ export type PayloadItineraryDoc = {
   locationRef?: number | { id?: number }
   sharedNeighborhoods?: Array<number | { id?: number }>
   dayAudience?: DayAudience
-  itineraryStartHour?: number
-  itineraryStartMinute?: QuarterMinute
-  itineraryStartPeriod?: Meridiem
-  itineraryEndHour?: number
-  itineraryEndMinute?: QuarterMinute
-  itineraryEndPeriod?: Meridiem
   tripIntent?: TripIntent[]
   step1_complete?: boolean
   in_update_mode?: boolean
@@ -187,11 +164,6 @@ export type PayloadItineraryDoc = {
   items?: Array<{
     id?: string
     blockType?: ItineraryBlockType
-    timeHour?: number
-    timeMinute?: QuarterMinute
-    timePeriod?: Meridiem
-    durationHours?: number
-    durationMinutes?: DurationMinute
     item?: number | { id?: number }
     mediaMode?: MediaMode
     selectedPhotos?: Array<number | { id?: number }>

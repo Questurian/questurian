@@ -11,7 +11,7 @@ import {
   type TourAgencyStartingPoint,
 } from '../../types'
 import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
-import { getRelationshipId, normalizeDurationMinute, normalizePeriod, normalizeQuarterMinute } from '../utils/field-normalizers.utils'
+import { getRelationshipId } from '../utils/field-normalizers.utils'
 import { getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 import { normalizeTripIntent } from '../../../trip-intent'
 
@@ -78,11 +78,6 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
       mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
       selectedPhotos: getRelationshipIds(item.selectedPhotos),
       selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
-      timeHour: typeof item.timeHour === 'number' ? item.timeHour : 9,
-      timeMinute: normalizeQuarterMinute(item.timeMinute),
-      timePeriod: normalizePeriod(item.timePeriod),
-      durationHours: typeof item.durationHours === 'number' ? item.durationHours : 1,
-      durationMinutes: normalizeDurationMinute(item.durationMinutes),
       title: item.title?.trim() || '',
       operator: item.operator?.trim() || '',
       price: isTourAgencyPriceTier(item.price) ? item.price : '',
@@ -123,12 +118,6 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     locationRef: getRelationshipId(doc.locationRef),
     sharedNeighborhoods: getRelationshipIds(doc.sharedNeighborhoods),
     dayAudience: doc.dayAudience || '',
-    itineraryStartHour: typeof doc.itineraryStartHour === 'number' ? doc.itineraryStartHour : 9,
-    itineraryStartMinute: normalizeQuarterMinute(doc.itineraryStartMinute),
-    itineraryStartPeriod: normalizePeriod(doc.itineraryStartPeriod),
-    itineraryEndHour: typeof doc.itineraryEndHour === 'number' ? doc.itineraryEndHour : 6,
-    itineraryEndMinute: normalizeQuarterMinute(doc.itineraryEndMinute),
-    itineraryEndPeriod: normalizePeriod(doc.itineraryEndPeriod),
     step1_complete: Boolean(doc.step1_complete),
     in_update_mode: Boolean(doc.in_update_mode),
     tripIntent: normalizeTripIntent(doc.tripIntent),

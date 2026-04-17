@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import type { ListicleItineraryDraft } from '../../types'
-import { hasContinuousCoverage } from '../services/itinerary-timeline.service'
 import { validateStep1 } from '../validators/setup.validators'
 import { isSeoCoreComplete } from '../validators/step.validators'
 
@@ -11,7 +10,6 @@ type UseBuilderProgressParams = {
 type UseBuilderProgressResult = {
   stepIssues: string[]
   isSetupReady: boolean
-  hasContinuous: boolean
   completionPercent: number
 }
 
@@ -21,14 +19,12 @@ export function useBuilderProgress({ draft }: UseBuilderProgressParams): UseBuil
       return {
         stepIssues: [],
         isSetupReady: false,
-        hasContinuous: false,
         completionPercent: 8,
       }
     }
 
     const stepIssues = validateStep1(draft)
     const isSetupReady = stepIssues.length === 0
-    const hasContinuous = hasContinuousCoverage(draft)
     const seoCoreComplete = isSeoCoreComplete(draft)
     const isStep1Locked = draft.step1_complete && !draft.in_update_mode
     const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
@@ -54,7 +50,6 @@ export function useBuilderProgress({ draft }: UseBuilderProgressParams): UseBuil
     return {
       stepIssues,
       isSetupReady,
-      hasContinuous,
       completionPercent,
     }
   }, [draft])

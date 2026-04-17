@@ -406,13 +406,11 @@ export default function ListicleItineraryBuilderPage() {
     setIsGeneratingSeoTarget(target)
 
     try {
-      const itineraryWindow = `${draft.itineraryStartHour}:${draft.itineraryStartMinute} ${draft.itineraryStartPeriod} - ${draft.itineraryEndHour}:${draft.itineraryEndMinute} ${draft.itineraryEndPeriod}`
       const response = await rewriteBlockWithAi({
         prompt: buildSeoAiPrompt({
           articleType: 'listicle-itinerary',
           location: draft.location,
           dayAudience: draft.dayAudience || undefined,
-          itineraryWindow,
           target,
           structuredDataTemplate: target === 'structuredData'
             ? structuredDataTemplate
@@ -583,7 +581,6 @@ export default function ListicleItineraryBuilderPage() {
               isLoadingRelated={isLoadingRelated}
               relatedByBlockType={relatedByBlockType}
               onAddItem={actions.addItem}
-              onEndHereOnLastStop={actions.endHereOnLastStop}
               onMoveItem={actions.moveItem}
               onRemoveItem={actions.removeItem}
               onUpdateItem={actions.updateItem}
@@ -624,7 +621,6 @@ export default function ListicleItineraryBuilderPage() {
         <BuilderSidebar
           completionPercent={progress.completionPercent}
           draft={draft}
-          hasContinuousCoverage={progress.hasContinuous}
           isSetupReady={progress.isSetupReady}
           editorModelName={draft.editorModelName}
           onEditorModelChange={actions.setEditorModelName}

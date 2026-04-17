@@ -114,11 +114,6 @@ function buildManualTourAgencyItem(): ItineraryItemBlock {
     mediaMode: 'photos',
     selectedPhotos: [],
     selectedInstagramPost: null,
-    timeHour: 9,
-    timeMinute: '00',
-    timePeriod: 'AM',
-    durationHours: 2,
-    durationMinutes: '0',
     title: 'Sacred Valley Day Tour',
     operator: 'Andes Routes',
     price: '',
@@ -204,7 +199,6 @@ function Harness({
       isLoadingRelated={false}
       relatedByBlockType={relatedItems}
       onAddItem={() => {}}
-      onEndHereOnLastStop={() => {}}
       onMoveItem={() => {}}
       onRemoveItem={() => {}}
       onUpdateItem={(itemId, updater) => {

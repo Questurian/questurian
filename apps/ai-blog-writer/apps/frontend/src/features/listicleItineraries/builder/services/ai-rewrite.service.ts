@@ -15,23 +15,6 @@ function buildSection(label: string, content: string): string | null {
   return `### ${label}\n${normalizedContent}`
 }
 
-function buildStopTimeLabel(item: ItineraryItemBlock): string {
-  const durationParts: string[] = []
-  const durationMinutes = Number(item.durationMinutes)
-
-  if (item.durationHours > 0) {
-    durationParts.push(`${item.durationHours}h`)
-  }
-  if (durationMinutes > 0) {
-    durationParts.push(`${durationMinutes}m`)
-  }
-  if (durationParts.length === 0) {
-    durationParts.push('0m')
-  }
-
-  return `${item.timeHour}:${item.timeMinute} ${item.timePeriod} (${durationParts.join(' ')})`
-}
-
 export function getItineraryAiArticleTitle(draft: ListicleItineraryDraft): string {
   return draft.title.trim() || 'Untitled itinerary'
 }
@@ -51,7 +34,7 @@ export function buildItineraryAiArticleContext(draft: ListicleItineraryDraft): s
         ? ` (#${item.item})`
         : ''
     const blurbSection = buildSection(
-      `Stop ${index + 1}: ${ITINERARY_BLOCK_LABELS[item.blockType]} at ${buildStopTimeLabel(item)}${itemReferenceLabel}`,
+      `Stop ${index + 1}: ${ITINERARY_BLOCK_LABELS[item.blockType]}${itemReferenceLabel}`,
       item.blurbMarkdown,
     )
 

@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../../providers/useAuth'
 import { fetchItineraries } from '../api'
 import { listDrafts, removeDraft } from '../storage'
-import { formatMinutes, toMinutesFromMidnight } from '../time'
-import type { ListicleItineraryDraft, PayloadItineraryDoc } from '../types'
+import type { PayloadItineraryDoc } from '../types'
 import '../styles.css'
 
 function formatDate(value?: string): string {
@@ -18,37 +17,6 @@ function formatDate(value?: string): string {
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-type ItineraryWindowInput = Pick<
-  PayloadItineraryDoc | ListicleItineraryDraft,
-  'itineraryStartHour'
-  | 'itineraryStartMinute'
-  | 'itineraryStartPeriod'
-  | 'itineraryEndHour'
-  | 'itineraryEndMinute'
-  | 'itineraryEndPeriod'
->
-
-function formatWindow(doc: ItineraryWindowInput): string {
-  if (
-    typeof doc.itineraryStartHour !== 'number' ||
-    !doc.itineraryStartMinute ||
-    !doc.itineraryStartPeriod ||
-    typeof doc.itineraryEndHour !== 'number' ||
-    !doc.itineraryEndMinute ||
-    !doc.itineraryEndPeriod
-  ) {
-    return '-'
-  }
-
-  try {
-    const start = toMinutesFromMidnight(doc.itineraryStartHour, doc.itineraryStartMinute, doc.itineraryStartPeriod)
-    const end = toMinutesFromMidnight(doc.itineraryEndHour, doc.itineraryEndMinute, doc.itineraryEndPeriod)
-    return `${formatMinutes(start)}-${formatMinutes(end)}`
-  } catch {
-    return '-'
-  }
 }
 
 export default function ListicleItinerariesPage() {
@@ -111,7 +79,6 @@ export default function ListicleItinerariesPage() {
       title: doc.title || 'Untitled',
       location: doc.location || '-',
       dayAudience: doc.dayAudience || '-',
-      window: formatWindow(doc),
       status: doc.status || 'draft',
       updatedAt: formatDate(doc.updatedAt),
     }))
@@ -126,7 +93,6 @@ export default function ListicleItinerariesPage() {
         title: draft.title || 'Untitled',
         location: draft.location || '-',
         dayAudience: draft.dayAudience || '-',
-        window: formatWindow(draft),
         updatedAt: formatDate(draft.updatedAt),
       }))
   }, [localDrafts])
@@ -176,7 +142,6 @@ export default function ListicleItinerariesPage() {
                   <th>Title</th>
                   <th>Location</th>
                   <th>Day Type</th>
-                  <th>Window</th>
                   <th>Source</th>
                   <th>Updated</th>
                   <th></th>
@@ -188,7 +153,6 @@ export default function ListicleItinerariesPage() {
                     <td>{row.title}</td>
                     <td>{row.location}</td>
                     <td>{row.dayAudience}</td>
-                    <td>{row.window}</td>
                     <td>{row.payloadId ? `Payload #${row.payloadId}` : 'Local only'}</td>
                     <td>{row.updatedAt}</td>
                     <td>
@@ -238,7 +202,6 @@ export default function ListicleItinerariesPage() {
                     <th>Title</th>
                     <th>Location</th>
                     <th>Day Type</th>
-                    <th>Window</th>
                     <th>Status</th>
                     <th>Updated</th>
                     <th></th>
@@ -250,7 +213,6 @@ export default function ListicleItinerariesPage() {
                       <td>{row.title}</td>
                       <td>{row.location}</td>
                       <td>{row.dayAudience}</td>
-                      <td>{row.window}</td>
                       <td>
                         <span className={`stl-status stl-status-${row.status}`}>{row.status}</span>
                       </td>

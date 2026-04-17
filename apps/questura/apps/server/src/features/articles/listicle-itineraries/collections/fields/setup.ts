@@ -10,18 +10,6 @@ const dayAudienceOptions = [
   { label: 'Weekend', value: 'weekend' },
 ]
 
-const quarterHourOptions = [
-  { label: '00', value: '00' },
-  { label: '15', value: '15' },
-  { label: '30', value: '30' },
-  { label: '45', value: '45' },
-]
-
-const periodOptions = [
-  { label: 'AM', value: 'AM' },
-  { label: 'PM', value: 'PM' },
-]
-
 export const title: Field = {
   name: 'title',
   label: 'Title',
@@ -65,70 +53,6 @@ export const dayAudience: Field = {
       Field: 'src/features/articles/listicle-itineraries/components/field-components/SmartField.tsx',
     },
   },
-}
-
-export const itineraryStart: Field = {
-  type: 'row',
-  fields: [
-    {
-      name: 'itineraryStartHour',
-      label: 'Start Hour',
-      type: 'number',
-      required: true,
-      min: 1,
-      max: 12,
-      admin: { width: '34%' },
-    },
-    {
-      name: 'itineraryStartMinute',
-      label: 'Start Minute',
-      type: 'select',
-      required: true,
-      defaultValue: '00',
-      options: quarterHourOptions,
-      admin: { width: '33%' },
-    },
-    {
-      name: 'itineraryStartPeriod',
-      label: 'Start',
-      type: 'select',
-      required: true,
-      options: periodOptions,
-      admin: { width: '33%' },
-    },
-  ],
-}
-
-export const itineraryEnd: Field = {
-  type: 'row',
-  fields: [
-    {
-      name: 'itineraryEndHour',
-      label: 'End Hour',
-      type: 'number',
-      required: true,
-      min: 1,
-      max: 12,
-      admin: { width: '34%' },
-    },
-    {
-      name: 'itineraryEndMinute',
-      label: 'End Minute',
-      type: 'select',
-      required: true,
-      defaultValue: '00',
-      options: quarterHourOptions,
-      admin: { width: '33%' },
-    },
-    {
-      name: 'itineraryEndPeriod',
-      label: 'End',
-      type: 'select',
-      required: true,
-      options: periodOptions,
-      admin: { width: '33%' },
-    },
-  ],
 }
 
 export const step1UiWrapper: Field = {

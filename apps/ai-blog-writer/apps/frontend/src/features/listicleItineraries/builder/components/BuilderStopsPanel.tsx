@@ -3,22 +3,14 @@ import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
 import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
-import {
-  BLOCK_TYPE_OPTIONS,
-  DURATION_MINUTE_OPTIONS,
-  PERIOD_OPTIONS,
-  QUARTER_MINUTE_OPTIONS,
-} from '../constants/builder-options.constants'
+import { BLOCK_TYPE_OPTIONS } from '../constants/builder-options.constants'
 import type {
-  DurationMinute,
   InstagramPostOption,
   ItineraryBlockType,
   ItineraryItemBlock,
   ListicleItineraryDraft,
   MediaAssetOption,
   MediaMode,
-  Meridiem,
-  QuarterMinute,
   RelatedItemCollection,
   RelatedItemOption,
   TourAgencyKeyLocationRow,
@@ -60,14 +52,9 @@ type BuilderStopsPanelProps = {
   isLoadingRelated: boolean
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
   onAddItem: () => void
-  onEndHereOnLastStop: () => void
   onMoveItem: (itemId: string, direction: 'up' | 'down') => void
   onRemoveItem: (itemId: string) => void
-  onUpdateItem: (
-    itemId: string,
-    updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
-    options?: { cascadeSchedule?: boolean },
-  ) => void
+  onUpdateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
   onStopBlurbAiAutoWrite: (itemId: string) => Promise<void>
   onStopBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
   activeAiItemId: string | null
@@ -313,7 +300,6 @@ export function BuilderStopsPanel({
   isLoadingRelated,
   relatedByBlockType,
   onAddItem,
-  onEndHereOnLastStop,
   onMoveItem,
   onRemoveItem,
   onUpdateItem,
@@ -385,7 +371,18 @@ export function BuilderStopsPanel({
 
       if (cancelled) return
 
-      const hydratedAssets = responses.filter((asset): asset is MediaAssetOption => Boolean(asset))
+      const hydratedAssets = responses
+        .filter((asset): asset is NonNullable<(typeof responses)[number]> => Boolean(asset))
+        .map((asset) => ({
+          id: asset.id,
+          filename: asset.filename,
+          alt: asset.alt,
+          alt_text: asset.alt_text,
+          altText: asset.altText,
+          mediaSet: asset.mediaSet,
+          url: asset.url,
+          variant: asset.variant,
+        } satisfies MediaAssetOption))
       if (hydratedAssets.length < 1) return
 
       setFetchedManualImageAssets((current) => {
@@ -471,7 +468,7 @@ export function BuilderStopsPanel({
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
-          <span className="stl-kicker">Step 3</span> Stops & Timeline ({draft.items.length})
+          <span className="stl-kicker">Step 3</span> Stops ({draft.items.length})
         </h2>
         <div className="stl-inline-actions">
           <button type="button" className="stl-btn" onClick={onAddItem} disabled={isLocked}>
@@ -499,7 +496,6 @@ export function BuilderStopsPanel({
           ) : null}
         </div>
       </div>
-      <p className="stl-summary-note">Schedule assist: each stop chains from the previous stop.</p>
 
       <fieldset className="stl-panel-fieldset" disabled={isLocked}>
         {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
@@ -547,7 +543,6 @@ export function BuilderStopsPanel({
               ? existingStopOptions.find((option) => option.selectionKey === selectedStartingPointExistingStopKey) || null
               : null
             const selectedExistingRouteKeys = getSelectedExistingRouteKeys(item)
-            const isLastItem = index === draft.items.length - 1
             const selectedPhotoPreviews = item.selectedPhotos
               .map((photoId) => {
                 const photo = photoObjects.find((p) => p.id === photoId)
@@ -573,11 +568,6 @@ export function BuilderStopsPanel({
                 <header className="stl-item-header">
                   <h3>Item {index + 1}</h3>
                   <div className="stl-inline-actions">
-                    {isLastItem ? (
-                      <button type="button" className="stl-btn" onClick={onEndHereOnLastStop}>
-                        End Here
-                      </button>
-                    ) : null}
                     <button type="button" className="stl-btn stl-btn-secondary" onClick={() => onMoveItem(item.id, 'up')}>
                       Up
                     </button>
@@ -1242,89 +1232,6 @@ export function BuilderStopsPanel({
                     ) : null}
                   </div>
                 ) : null}
-
-                <div className="stl-grid stl-grid-2">
-                  <div className="stl-field">
-                    <span>Start Time * (auto-chained)</span>
-                    <div className="stl-grid stl-grid-3">
-                      <input
-                        type="number"
-                        min={1}
-                        max={12}
-                        value={item.timeHour}
-                        onChange={(event) =>
-                          onUpdateItem(item.id, (current) => ({
-                            ...current,
-                            timeHour: Number(event.target.value) || 0,
-                          }), { cascadeSchedule: true })
-                        }
-                      />
-                      <select
-                        value={item.timeMinute}
-                        onChange={(event) =>
-                          onUpdateItem(item.id, (current) => ({
-                            ...current,
-                            timeMinute: event.target.value as QuarterMinute,
-                          }), { cascadeSchedule: true })
-                        }
-                      >
-                        {QUARTER_MINUTE_OPTIONS.map((minute) => (
-                          <option key={minute} value={minute}>
-                            {minute}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={item.timePeriod}
-                        onChange={(event) =>
-                          onUpdateItem(item.id, (current) => ({
-                            ...current,
-                            timePeriod: event.target.value as Meridiem,
-                          }), { cascadeSchedule: true })
-                        }
-                      >
-                        {PERIOD_OPTIONS.map((period) => (
-                          <option key={period} value={period}>
-                            {period}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="stl-field">
-                    <span>Duration *</span>
-                    <div className="stl-grid stl-grid-2">
-                      <input
-                        type="number"
-                        min={0}
-                        max={24}
-                        value={item.durationHours}
-                        onChange={(event) =>
-                          onUpdateItem(item.id, (current) => ({
-                            ...current,
-                            durationHours: Number(event.target.value) || 0,
-                          }), { cascadeSchedule: true })
-                        }
-                      />
-                      <select
-                        value={item.durationMinutes}
-                        onChange={(event) =>
-                          onUpdateItem(item.id, (current) => ({
-                            ...current,
-                            durationMinutes: event.target.value as DurationMinute,
-                          }), { cascadeSchedule: true })
-                        }
-                      >
-                        {DURATION_MINUTE_OPTIONS.map((minute) => (
-                          <option key={minute} value={minute}>
-                            {minute} min
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="stl-field">
                   <div className="stl-field-label-row">

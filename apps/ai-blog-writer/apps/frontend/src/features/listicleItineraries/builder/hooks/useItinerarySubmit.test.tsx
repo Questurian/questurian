@@ -45,6 +45,7 @@ function buildDraft(): ListicleItineraryDraft {
   draft.location = 'peru|cusco'
   draft.locationRef = 1
   draft.dayAudience = 'anyday'
+  draft.tripIntent = ['explore']
   draft.step1_complete = true
   draft.step2_complete = true
   draft.step3_complete = true
@@ -56,11 +57,6 @@ function buildDraft(): ListicleItineraryDraft {
     mediaMode: 'photos',
     selectedPhotos: [],
     selectedInstagramPost: null,
-    timeHour: 9,
-    timeMinute: '00',
-    timePeriod: 'AM',
-    durationHours: 2,
-    durationMinutes: '0',
     title: 'Sacred Valley Day Tour',
     operator: 'Andes Routes',
     price: '$$$',
@@ -118,22 +114,23 @@ describe('useItinerarySubmit', () => {
       await result.current.submit('draft')
     })
 
-    expect(createItineraryMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        items: [
-          expect.objectContaining({
-            price: '$$$',
-            tourDuration: 8,
-            startingPoint: {
-              label: 'Plaza de Armas',
-              latitude: -13.516,
-              longitude: -71.978,
-            },
-          }),
-        ],
-      }),
-      'test-token',
-    )
+    expect(createItineraryMock).toHaveBeenCalledTimes(1)
+    const submitBody = createItineraryMock.mock.calls[0]?.[0] as Record<string, unknown>
+    const submitItems = submitBody.items as Array<Record<string, unknown>>
+    const firstItem = submitItems[0] || {}
+
+    expect(submitBody).not.toHaveProperty('itineraryStartHour')
+    expect(firstItem).not.toHaveProperty('timeHour')
+    expect(firstItem).not.toHaveProperty('durationHours')
+    expect(firstItem).toMatchObject({
+      price: '$$$',
+      tourDuration: 8,
+      startingPoint: {
+        label: 'Plaza de Armas',
+        latitude: -13.516,
+        longitude: -71.978,
+      },
+    })
     expect(onError).not.toHaveBeenCalledWith(expect.stringMatching(/\S/))
   })
 })

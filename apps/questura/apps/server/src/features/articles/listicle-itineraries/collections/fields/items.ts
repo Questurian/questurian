@@ -8,7 +8,7 @@ export const items: Field = {
   maxRows: 96,
   blocks: listicleItineraryBlocks,
   admin: {
-    description: 'Add itinerary items in chronological order. On publish, they must cover the entire time window without gaps.',
+    description: 'Add itinerary items in the order they should appear in the article.',
     condition: (data) => Boolean(data?.step1_complete && !data?.in_update_mode),
   },
 }

@@ -20,12 +20,6 @@ function buildDraft(): ListicleItineraryDraft {
     locationRef: 1,
     sharedNeighborhoods: [2],
     dayAudience: 'weekend',
-    itineraryStartHour: 9,
-    itineraryStartMinute: '00',
-    itineraryStartPeriod: 'AM',
-    itineraryEndHour: 10,
-    itineraryEndMinute: '30',
-    itineraryEndPeriod: 'PM',
     step1_complete: true,
     in_update_mode: false,
     step2_complete: true,
@@ -44,11 +38,6 @@ function buildDraft(): ListicleItineraryDraft {
         mediaMode: 'photos',
         selectedPhotos: [8],
         selectedInstagramPost: null,
-        timeHour: 9,
-        timeMinute: '00',
-        timePeriod: 'AM',
-        durationHours: 1,
-        durationMinutes: '30',
         title: '',
         operator: '',
         price: '',
@@ -71,11 +60,6 @@ function buildDraft(): ListicleItineraryDraft {
         mediaMode: 'instagram',
         selectedPhotos: [],
         selectedInstagramPost: 19,
-        timeHour: 1,
-        timeMinute: '15',
-        timePeriod: 'PM',
-        durationHours: 1,
-        durationMinutes: '0',
         title: '',
         operator: '',
         price: '',
@@ -180,7 +164,7 @@ describe('listicleItineraries ai autowrite service', () => {
 
     expect(request.articleType).toBe('listicle-itinerary')
     expect(request.locationLabel).toBe('Lima, Peru (focus neighborhoods: Barranco)')
-    expect(request.articleContext).toContain('### Stop 2: Dining at 1:15 PM (1h) (#202)')
+    expect(request.articleContext).toContain('### Stop 2: Dining (#202)')
     expect(request.targets).toEqual([
       expect.objectContaining({
         targetId: introTargetId,
@@ -254,11 +238,6 @@ describe('listicleItineraries ai autowrite service', () => {
       mediaMode: 'photos',
       selectedPhotos: [],
       selectedInstagramPost: null,
-      timeHour: 8,
-      timeMinute: '00',
-      timePeriod: 'AM',
-      durationHours: 1,
-      durationMinutes: '0',
       title: 'Sacred Valley Day Tour',
       operator: 'Andes Routes',
       price: '$$$',

@@ -64,20 +64,6 @@ function mapBlockTypeToCategory(blockType: ItineraryBlockType): ListicleWriterCa
   }
 }
 
-function buildStopTimeLabel(item: ListicleItineraryDraft['items'][number]): string {
-  const durationParts: string[] = []
-  if (item.durationHours > 0) {
-    durationParts.push(`${item.durationHours}h`)
-  }
-  if (Number(item.durationMinutes) > 0) {
-    durationParts.push(`${item.durationMinutes}m`)
-  }
-  if (durationParts.length < 1) {
-    durationParts.push('0m')
-  }
-  return `${item.timeHour}:${item.timeMinute} ${item.timePeriod} (${durationParts.join(' ')})`
-}
-
 function buildManualKeyLocationContext(
   item: ListicleItineraryDraft['items'][number],
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
@@ -125,10 +111,8 @@ function buildIntroTarget(
     })
     .filter(Boolean)
 
-  const itineraryWindow = `${draft.itineraryStartHour}:${draft.itineraryStartMinute} ${draft.itineraryStartPeriod} to ${draft.itineraryEndHour}:${draft.itineraryEndMinute} ${draft.itineraryEndPeriod}`
   const supportingContext = [
     `Day audience: ${draft.dayAudience || 'anyday'}`,
-    `Itinerary window: ${itineraryWindow}`,
     selectedTitles.length > 0 ? `Selected stops: ${selectedTitles.join(', ')}` : '',
   ].filter(Boolean).join('\n')
 
@@ -165,7 +149,6 @@ function buildStopTarget(
     : undefined
   const supportingContext = [
     `Article title: ${draft.title.trim()}`,
-    `Stop time: ${buildStopTimeLabel(item)}`,
     `Block category: ${mapBlockTypeToCategory(item.blockType)}`,
     isManualStop ? `Operator: ${item.operator.trim() || 'Unknown'}` : '',
     isManualStop && item.price ? `Price: ${item.price}` : '',
@@ -260,7 +243,6 @@ export function buildItineraryGenerateListicleContentRequest(params: {
         locationLabel: relatedItem.location?.trim() || articleLocationLabel,
         supportingContext: [
           `Article title: ${draft.title.trim()}`,
-          `Stop time: ${buildStopTimeLabel(item)}`,
           `Block category: ${mapBlockTypeToCategory(item.blockType)}`,
           relatedItem.location?.trim() ? `Known item location: ${relatedItem.location.trim()}` : '',
           `Media mode: ${item.mediaMode}`,
