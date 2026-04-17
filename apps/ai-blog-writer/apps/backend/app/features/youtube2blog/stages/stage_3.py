@@ -11,11 +11,13 @@ This stage:
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 
 from langchain_core.prompts import PromptTemplate
 
 from app.core import get_article_type_by_name
+from app.config import ARTICLE_GUIDELINES_DIR
 from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
 from shared import Stage1Output, Stage2Output, Stage3Output
 from utils import get_vertex_llm, parse_json_response
@@ -48,8 +50,48 @@ def _load_general_guidelines() -> str:
         return ""
 
 
+def _normalize_guideline_key(value: str) -> str:
+    normalized = value.replace("’", "'").replace("`", "'")
+    normalized = normalized.lower()
+    normalized = re.sub(r"\.md$", "", normalized)
+    normalized = normalized.replace("&", " and ")
+    normalized = re.sub(r"[^a-z0-9]+", "", normalized)
+    return normalized
+
+
+def _load_guideline_from_file(article_type: str) -> str:
+    """Load guideline markdown from filesystem when a matching file exists."""
+    if not ARTICLE_GUIDELINES_DIR.exists():
+        return ""
+
+    exact_path = ARTICLE_GUIDELINES_DIR / f"{article_type}.md"
+    if exact_path.exists():
+        try:
+            return exact_path.read_text(encoding="utf-8").strip()
+        except Exception as exc:
+            logger.warning("Failed reading guideline file %s: %s", exact_path, exc)
+            return ""
+
+    target_key = _normalize_guideline_key(article_type)
+    if not target_key:
+        return ""
+
+    for candidate in ARTICLE_GUIDELINES_DIR.glob("*.md"):
+        if _normalize_guideline_key(candidate.stem) == target_key:
+            try:
+                return candidate.read_text(encoding="utf-8").strip()
+            except Exception as exc:
+                logger.warning("Failed reading guideline file %s: %s", candidate, exc)
+                return ""
+    return ""
+
+
 def _retrieve_guideline(article_type: str) -> str:
-    """Fetch guideline from article_types table."""
+    """Fetch guideline from markdown files first, DB second."""
+    file_guideline = _load_guideline_from_file(article_type)
+    if file_guideline:
+        return file_guideline
+
     article_type_data = get_article_type_by_name(article_type)
     if not article_type_data:
         logger.warning(f"No article type found for: {article_type}")

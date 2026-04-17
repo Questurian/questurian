@@ -2,6 +2,8 @@
 Shared article types API routes.
 """
 import sqlite3
+import re
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
@@ -15,15 +17,58 @@ from app.core import (
     update_article_type_by_id,
     write_article_type,
 )
+from app.config import ARTICLE_GUIDELINES_DIR
 
 router = APIRouter(prefix="/article-types", tags=["article-types"])
+
+GUIDELINES_DIR = ARTICLE_GUIDELINES_DIR
+
+
+def _normalize_guideline_key(value: str) -> str:
+    normalized = value.replace("’", "'").replace("`", "'")
+    normalized = normalized.lower()
+    normalized = re.sub(r"\.md$", "", normalized)
+    normalized = normalized.replace("&", " and ")
+    normalized = re.sub(r"[^a-z0-9]+", "", normalized)
+    return normalized
+
+
+def _load_file_guideline(article_type_name: str) -> str | None:
+    """Load the guideline markdown file content for an article type when available."""
+    if not GUIDELINES_DIR.exists():
+        return None
+
+    # Fast path: exact filename match.
+    exact_path = GUIDELINES_DIR / f"{article_type_name}.md"
+    if exact_path.exists():
+        return exact_path.read_text(encoding="utf-8")
+
+    target_key = _normalize_guideline_key(article_type_name)
+    if not target_key:
+        return None
+
+    for candidate in GUIDELINES_DIR.glob("*.md"):
+        if _normalize_guideline_key(candidate.stem) == target_key:
+            return candidate.read_text(encoding="utf-8")
+    return None
+
+
+def _with_file_guideline(article_type: dict) -> dict:
+    """Return payload with guideline overridden by file content when present."""
+    payload = dict(article_type)
+    name = payload.get("name")
+    if isinstance(name, str) and name.strip():
+        file_guideline = _load_file_guideline(name)
+        if file_guideline is not None:
+            payload["guideline"] = file_guideline
+    return payload
 
 
 @router.get("")
 async def get_article_types() -> JSONResponse:
     """Get all article types with their definitions."""
     try:
-        article_types = read_article_types()
+        article_types = [_with_file_guideline(row) for row in read_article_types()]
         return JSONResponse(article_types)
     except Exception as exc:
         raise HTTPException(
@@ -53,6 +98,7 @@ async def get_article_type_guidelines_by_id(article_type_id: int) -> JSONRespons
         if not article_type:
             raise HTTPException(status_code=404, detail="Article type not found")
 
+        article_type = _with_file_guideline(article_type)
         return JSONResponse(
             {
                 "id": article_type["id"],
@@ -78,6 +124,7 @@ async def get_article_type_guidelines_by_name(name: str) -> JSONResponse:
         if not article_type:
             raise HTTPException(status_code=404, detail="Article type not found")
 
+        article_type = _with_file_guideline(article_type)
         return JSONResponse(
             {
                 "id": article_type["id"],
