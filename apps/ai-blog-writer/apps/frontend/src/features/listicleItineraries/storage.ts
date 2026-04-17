@@ -8,7 +8,6 @@ import {
   type TourAgencyKeyLocationRow,
   type TourAgencyStartingPoint,
 } from './types'
-import { DEFAULT_TRIP_INTENT, normalizeTripIntent } from '../trip-intent'
 import { normalizeLocationIds } from '../locationScope/scope'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v6_tour_agency_normalized_fields'
@@ -164,13 +163,6 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
     location: typeof value.location === 'string' ? value.location : '',
     locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,
     sharedNeighborhoods: normalizeLocationIds(value.sharedNeighborhoods),
-    dayAudience:
-      value.dayAudience === 'anyday'
-      || value.dayAudience === 'weekday'
-      || value.dayAudience === 'weekend'
-        ? value.dayAudience
-        : '',
-    tripIntent: normalizeTripIntent(value.tripIntent),
     step1_complete: Boolean(value.step1_complete),
     in_update_mode: Boolean(value.in_update_mode),
     step2_complete: Boolean(value.step2_complete),
@@ -255,8 +247,6 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     location: '',
     locationRef: null,
     sharedNeighborhoods: [],
-    dayAudience: '',
-    tripIntent: [...DEFAULT_TRIP_INTENT],
     step1_complete: false,
     in_update_mode: false,
     step2_complete: false,

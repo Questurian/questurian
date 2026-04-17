@@ -19,7 +19,6 @@ function buildDraft(): ListicleItineraryDraft {
     location: 'peru|lima',
     locationRef: 1,
     sharedNeighborhoods: [2],
-    dayAudience: 'weekend',
     step1_complete: true,
     in_update_mode: false,
     step2_complete: true,

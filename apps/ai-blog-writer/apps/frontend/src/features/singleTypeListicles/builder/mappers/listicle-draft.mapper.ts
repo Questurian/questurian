@@ -5,7 +5,6 @@ import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } f
 import { buildPayloadListicleMetadataPatch } from '../services/payload-listicle-metadata.service'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
-import { normalizeTripIntent } from '../../../trip-intent'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
@@ -58,7 +57,6 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     items,
     seoSection: normalizedSeoSection,
     status: doc.status || 'draft',
-    tripIntent: normalizeTripIntent(doc.tripIntent),
     articleType: 'single-type-listicle',
     updatedAt: doc.updatedAt || new Date().toISOString(),
   }

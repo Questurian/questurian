@@ -5,7 +5,6 @@ describe('listicleItineraries seo ai service', () => {
     const prompt = buildSeoAiPrompt({
       articleType: 'listicle-itinerary',
       location: 'Lima, Peru',
-      dayAudience: 'anyday',
       target: 'structuredData',
       structuredDataTemplate: JSON.stringify({
         '@context': 'https://schema.org',

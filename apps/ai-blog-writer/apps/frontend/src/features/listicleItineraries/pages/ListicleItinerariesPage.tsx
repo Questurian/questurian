@@ -78,7 +78,6 @@ export default function ListicleItinerariesPage() {
       id: doc.id,
       title: doc.title || 'Untitled',
       location: doc.location || '-',
-      dayAudience: doc.dayAudience || '-',
       status: doc.status || 'draft',
       updatedAt: formatDate(doc.updatedAt),
     }))
@@ -92,7 +91,6 @@ export default function ListicleItinerariesPage() {
         payloadId: draft.payloadId,
         title: draft.title || 'Untitled',
         location: draft.location || '-',
-        dayAudience: draft.dayAudience || '-',
         updatedAt: formatDate(draft.updatedAt),
       }))
   }, [localDrafts])
@@ -141,7 +139,6 @@ export default function ListicleItinerariesPage() {
                 <tr>
                   <th>Title</th>
                   <th>Location</th>
-                  <th>Day Type</th>
                   <th>Source</th>
                   <th>Updated</th>
                   <th></th>
@@ -152,7 +149,6 @@ export default function ListicleItinerariesPage() {
                   <tr key={row.draftId}>
                     <td>{row.title}</td>
                     <td>{row.location}</td>
-                    <td>{row.dayAudience}</td>
                     <td>{row.payloadId ? `Payload #${row.payloadId}` : 'Local only'}</td>
                     <td>{row.updatedAt}</td>
                     <td>
@@ -201,7 +197,6 @@ export default function ListicleItinerariesPage() {
                   <tr>
                     <th>Title</th>
                     <th>Location</th>
-                    <th>Day Type</th>
                     <th>Status</th>
                     <th>Updated</th>
                     <th></th>
@@ -212,7 +207,6 @@ export default function ListicleItinerariesPage() {
                     <tr key={row.id}>
                       <td>{row.title}</td>
                       <td>{row.location}</td>
-                      <td>{row.dayAudience}</td>
                       <td>
                         <span className={`stl-status stl-status-${row.status}`}>{row.status}</span>
                       </td>

@@ -1,14 +1,7 @@
 import type {
-  DayAudience,
   ItineraryBlockType,
   RelatedItemOption,
 } from '../../types'
-
-export const DAY_AUDIENCE_OPTIONS: Array<{ label: string; value: DayAudience }> = [
-  { label: 'Any Day', value: 'anyday' },
-  { label: 'Weekday', value: 'weekday' },
-  { label: 'Weekend', value: 'weekend' },
-]
 
 export const BLOCK_TYPE_OPTIONS: Array<{ label: string; value: ItineraryBlockType }> = [
   { label: 'Dining Stop (restaurants, cafes)', value: 'itinerary-dining' },

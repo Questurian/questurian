@@ -23,7 +23,6 @@ import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
-import { normalizeTripIntent } from '../../../trip-intent'
 
 type UseItinerarySubmitParams = {
   token?: string | null
@@ -226,10 +225,8 @@ export function useItinerarySubmit({
         location: submitDraft.location,
         locationRef: selectedLocationRefId,
         sharedNeighborhoods: submitDraft.sharedNeighborhoods,
-        dayAudience: submitDraft.dayAudience,
         step1_complete: true,
         in_update_mode: false,
-        tripIntent: normalizeTripIntent(submitDraft.tripIntent),
         step2_complete: submitDraft.step2_complete,
         step2_in_update_mode: false,
         step3_complete: submitDraft.step3_complete,

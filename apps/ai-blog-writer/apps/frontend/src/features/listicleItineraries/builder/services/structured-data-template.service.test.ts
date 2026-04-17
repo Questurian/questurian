@@ -22,7 +22,6 @@ function buildDraft(): ListicleItineraryDraft {
     location: 'Peru|Lima|Barranco',
     locationRef: 1,
     sharedNeighborhoods: [],
-    dayAudience: 'anyday',
     step1_complete: true,
     in_update_mode: false,
     step2_complete: true,

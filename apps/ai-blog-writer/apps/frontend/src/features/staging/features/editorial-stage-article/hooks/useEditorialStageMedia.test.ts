@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 import type { MediaAsset } from '../../../api'
 import type { StagedArticle } from '../../../types'
 import { createEmptySeoSection } from '../../../../shared/seo/services/seo-section.service'
-import { DEFAULT_TRIP_INTENT } from '../../../../trip-intent'
 import { useEditorialStageMedia } from './useEditorialStageMedia'
 
 function buildMediaAsset(id: number): MediaAsset {
@@ -56,7 +55,6 @@ function buildStagedArticle(): StagedArticle {
     ],
     editorialBlocks: [],
     sharedNeighborhoods: [],
-    tripIntent: [...DEFAULT_TRIP_INTENT],
     seoSection: createEmptySeoSection(),
     syncBehavior: 'finalize',
     lexicalConverted: false,

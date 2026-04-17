@@ -20,7 +20,6 @@ import {
 import type { MediaVariant } from '../types'
 import type { TimelineItem } from '../workflow.service'
 import type { EditorialStageUiEvent, PublishPhase } from '../state/editorialStageUiMachine'
-import { normalizeTripIntent } from '../../../../trip-intent'
 import { getLocationDisplayName } from '../utils/editorial-stage-view.utils'
 import { sanitizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
 
@@ -248,7 +247,6 @@ export function useEditorialStagePublishWorkflow({
         locationRef: location.id,
         sharedNeighborhoods,
         step1_complete: true,
-        tripIntent: normalizeTripIntent(stagedArticle.tripIntent),
         status: targetStatus,
         headerSection: {
           featuredImage: featuredImageId,

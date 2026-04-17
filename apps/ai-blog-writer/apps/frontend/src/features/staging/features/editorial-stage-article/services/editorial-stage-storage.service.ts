@@ -1,7 +1,6 @@
 import type { StagedArticle } from '../../../types'
 import { resolveEditorModelName } from '../constants'
 import { createEmptySeoSection, normalizeSeoSection } from '../../../../shared/seo/services/seo-section.service'
-import { normalizeTripIntent } from '../../../../trip-intent'
 import { normalizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
@@ -48,7 +47,6 @@ export function normalizeStagedArticle(value: unknown): StagedArticle | null {
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined
     ),
     featuredImageId,
-    tripIntent: normalizeTripIntent(value.tripIntent),
     step1_complete: typeof value.step1_complete === 'boolean' ? value.step1_complete : derivedStep1Complete,
     in_update_mode: typeof value.in_update_mode === 'boolean' ? value.in_update_mode : false,
     step2_complete: typeof value.step2_complete === 'boolean' ? value.step2_complete : derivedStep2Complete,

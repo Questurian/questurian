@@ -66,7 +66,6 @@ function buildStagedArticle(): StagedArticle {
         follow: 'follow',
       },
     },
-    tripIntent: ['explore'],
     syncBehavior: 'draft-sync',
     lexicalConverted: false,
     publishedToPayload: false,

@@ -137,7 +137,6 @@ function buildDraft(): ListicleItineraryDraft {
   draft.title = 'Cusco Tour Plan'
   draft.location = 'peru|cusco'
   draft.locationRef = 1
-  draft.dayAudience = 'anyday'
   draft.step1_complete = true
   draft.step2_complete = true
   draft.header.introMarkdown = 'Intro copy'

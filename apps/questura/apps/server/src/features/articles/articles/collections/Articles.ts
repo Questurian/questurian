@@ -22,7 +22,6 @@ import {
   seo,
   slug,
   status,
-  tripIntent,
   author,
   publishedAt,
   category,
@@ -122,7 +121,6 @@ export const Articles: CollectionConfig = {
     // Sidebar / Meta fields
     slug,
     status,
-    tripIntent,
     author,
     publishedAt,
     category,

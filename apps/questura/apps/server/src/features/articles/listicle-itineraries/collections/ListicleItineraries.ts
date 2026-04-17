@@ -25,13 +25,11 @@ import {
   location,
   locationRef,
   sharedNeighborhoods,
-  dayAudience,
   step1UiWrapper,
   headerSection,
   items,
   seo,
   status,
-  tripIntent,
   author,
   publishedAt,
   articleType,
@@ -116,7 +114,7 @@ export const ListicleItineraries: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'location', 'dayAudience', 'status', 'author'],
+    defaultColumns: ['title', 'location', 'status', 'author'],
     group: 'Articles',
   },
   access: {
@@ -173,7 +171,6 @@ export const ListicleItineraries: CollectionConfig = {
     location,
     locationRef,
     sharedNeighborhoods,
-    dayAudience,
     step1UiWrapper,
 
     headerSection,
@@ -181,7 +178,6 @@ export const ListicleItineraries: CollectionConfig = {
     seo,
 
     status,
-    tripIntent,
     author,
     publishedAt,
     articleType,
@@ -232,7 +228,7 @@ export const ListicleItineraries: CollectionConfig = {
           (operation === 'create' || operation === 'update')
           && !getValue<boolean>(merged, 'step1_complete')
         ) {
-          throw new Error('Please complete setup: title, location, and day type.')
+          throw new Error('Please complete setup: title and location.')
         }
 
         const requiredTitle = typeof getValue<string>(merged, 'title') === 'string'
@@ -245,16 +241,6 @@ export const ListicleItineraries: CollectionConfig = {
         const requiredLocation = getValue<string>(merged, 'location')
         if (!requiredLocation) {
           throw new Error('Location is required.')
-        }
-
-        const requiredDayAudience = getValue<string>(merged, 'dayAudience')
-        if (!requiredDayAudience) {
-          throw new Error('Day type is required: anyday, weekday, or weekend.')
-        }
-
-        const selectedTripIntent = getValue<unknown>(merged, 'tripIntent')
-        if (!Array.isArray(selectedTripIntent) || selectedTripIntent.length < 1) {
-          throw new Error('Trip intent is required.')
         }
 
         const itemsValue = Array.isArray(getValue<unknown[]>(merged, 'items'))

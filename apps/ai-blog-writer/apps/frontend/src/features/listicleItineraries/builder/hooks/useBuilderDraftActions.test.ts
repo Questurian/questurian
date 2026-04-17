@@ -28,8 +28,6 @@ function buildDraft(): ListicleItineraryDraft {
   draft.title = 'A day in Lima'
   draft.location = 'peru|lima'
   draft.locationRef = 2
-  draft.dayAudience = 'anyday'
-  draft.tripIntent = ['explore']
   draft.step1_complete = true
   draft.step2_complete = true
   draft.step3_complete = true

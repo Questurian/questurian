@@ -1,5 +1,3 @@
-import type { TripIntent } from '../../../trip-intent'
-
 export type PayloadArticleAuthor = {
   id?: number
   firstName?: string | null
@@ -25,7 +23,6 @@ export type CreateArticlePayload = {
   sharedNeighborhoods?: number[]
   step1_complete: boolean
   status?: 'draft' | 'published'
-  tripIntent: TripIntent[]
   category?: number
   tags?: number[]
   headerSection?: {

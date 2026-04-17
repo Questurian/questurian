@@ -359,12 +359,10 @@ export function getSeoAiTargetLabel(target: SeoAiTarget): string {
 export function buildSeoAiPrompt(input: {
   articleType: string
   location?: string
-  dayAudience?: string
   target?: SeoAiTarget
   structuredDataTemplate?: string
 }): string {
   const locationText = input.location?.trim() ? input.location.trim() : 'Unknown location'
-  const dayAudience = input.dayAudience?.trim() ? input.dayAudience : 'any audience'
   const target = input.target || 'all'
   const shouldIncludeStructuredTemplate = (
     target === 'structuredData'
@@ -390,7 +388,6 @@ export function buildSeoAiPrompt(input: {
     '',
     `Article type: ${input.articleType}`,
     `Location: ${locationText}`,
-    `Audience: ${dayAudience}`,
     `Target: ${getSeoAiTargetLabel(target)}`,
   ]
 

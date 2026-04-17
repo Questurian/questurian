@@ -1,8 +1,5 @@
 import type { EditorAssistModelName } from '../staging/api'
-import type { TripIntent } from '../trip-intent'
 import type { LocationLevel } from '../locationScope/types'
-
-export type DayAudience = 'anyday' | 'weekday' | 'weekend'
 
 export type ItineraryBlockType =
   | 'itinerary-dining'
@@ -114,8 +111,6 @@ export type ListicleItineraryDraft = {
   location: string
   locationRef: number | null
   sharedNeighborhoods: number[]
-  dayAudience: DayAudience | ''
-  tripIntent?: TripIntent[]
   step1_complete: boolean
   in_update_mode: boolean
   step2_complete: boolean
@@ -149,8 +144,6 @@ export type PayloadItineraryDoc = {
   location?: string
   locationRef?: number | { id?: number }
   sharedNeighborhoods?: Array<number | { id?: number }>
-  dayAudience?: DayAudience
-  tripIntent?: TripIntent[]
   step1_complete?: boolean
   in_update_mode?: boolean
   step2_complete?: boolean

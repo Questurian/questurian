@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../providers/useAuth'
-import type { TripIntent } from '../../trip-intent'
-import { TRIP_INTENT_OPTIONS } from '../../trip-intent'
 import {
   generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured,
   uploadSocialImage as requestUploadSocialImage,
@@ -55,11 +53,10 @@ type StandardArticleStageBuilderProps = {
   syncBehavior?: 'finalize' | 'draft-sync'
 }
 
-function validateSetupStep(title: string, locationId?: number, tripIntent?: TripIntent[]): string[] {
+function validateSetupStep(title: string, locationId?: number): string[] {
   const issues: string[] = []
   if (!title.trim()) issues.push('Step 1 requires an article title.')
   if (!locationId) issues.push('Step 1 requires a location.')
-  if (!tripIntent || tripIntent.length === 0) issues.push('Step 1 requires at least one trip intent.')
   return issues
 }
 
@@ -139,8 +136,8 @@ export function StandardArticleStageBuilder({
   )
 
   const step1Issues = useMemo(
-    () => validateSetupStep(stagedArticle?.title || '', stagedArticle?.locationId, stagedArticle?.tripIntent),
-    [stagedArticle?.title, stagedArticle?.locationId, stagedArticle?.tripIntent],
+    () => validateSetupStep(stagedArticle?.title || '', stagedArticle?.locationId),
+    [stagedArticle?.title, stagedArticle?.locationId],
   )
   const step2Issues = useMemo(
     () => validateFeaturedImageStep(stagedArticle?.featuredImageId),
@@ -167,7 +164,6 @@ export function StandardArticleStageBuilder({
   const featuredImageTriggerLabel = featuredImageId
     ? sidebarProps?.selectedFeaturedImage?.filename || `Image #${featuredImageId} selected`
     : 'Select Featured Image...'
-  const selectedTripIntent = stagedArticle?.tripIntent || []
   const headerPreviewTitle = stagedArticle?.title.trim() || 'Your article headline will appear here'
   const isFeaturedImagePlaceholder = !featuredImageId
   const canManagePublished = user?.role === 'admin' || user?.role === 'editor'
@@ -331,23 +327,6 @@ export function StandardArticleStageBuilder({
       step3_in_update_mode: false,
     })
   }, [sidebarProps, step3Issues])
-
-  const handleTripIntentToggle = useCallback((intent: TripIntent, checked: boolean) => {
-    if (!stagedArticle || !sidebarProps) return
-    if (!checked && stagedArticle.tripIntent?.length === 1 && stagedArticle.tripIntent[0] === intent) return
-
-    const nextTripIntent = checked
-      ? stagedArticle.tripIntent?.includes(intent)
-        ? stagedArticle.tripIntent
-        : [...(stagedArticle.tripIntent || []), intent]
-      : (stagedArticle.tripIntent || []).filter((value) => value !== intent)
-
-    if (nextTripIntent.length === 0) return
-
-    sidebarProps.onUpdateStagedArticle({
-      tripIntent: nextTripIntent,
-    })
-  }, [stagedArticle, sidebarProps])
 
   const handleGenerateSeoWithAi = useCallback(async (target: SeoAiTarget = 'all') => {
     if (!stagedArticle) return
@@ -627,41 +606,11 @@ export function StandardArticleStageBuilder({
                     ))}
                   </select>
                 </label>
-
-                <label className="stl-field">
-                  <span>Trip Intent *</span>
-                  <div className="sab-stage-trip-intent-options stl-trip-intent-options">
-                    {TRIP_INTENT_OPTIONS.map((intent) => {
-                      const isChecked = selectedTripIntent.includes(intent.value)
-                      const isDisabled = isStep1Locked || (isChecked && selectedTripIntent.length === 1)
-
-                      return (
-                        <label
-                          key={intent.value}
-                          className={`stl-trip-intent-option${isChecked ? ' is-selected' : ''}${isDisabled ? ' is-disabled' : ''}`}
-                        >
-                          <input
-                            className="stl-trip-intent-input"
-                            type="checkbox"
-                            checked={isChecked}
-                            disabled={isDisabled}
-                            aria-label={`Trip intent ${intent.label}`}
-                            onChange={(event) => handleTripIntentToggle(intent.value, event.target.checked)}
-                          />
-                          <span className="stl-trip-intent-copy">
-                            <span className="stl-trip-intent-label">{intent.label}</span>
-                            <span className="stl-trip-intent-description">{intent.description}</span>
-                          </span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                </label>
               </div>
 
               {isStep1Locked ? (
                 <p className="sab-stage-summary">
-                  Locked with title, primary location, optional shared neighborhoods, trip intent, and AI model. Updating setup will unlock later steps.
+                  Locked with title, primary location, optional shared neighborhoods, and AI model. Updating setup will unlock later steps.
                 </p>
               ) : null}
             </section>

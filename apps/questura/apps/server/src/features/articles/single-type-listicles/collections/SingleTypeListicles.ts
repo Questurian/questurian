@@ -33,7 +33,6 @@ import {
   items,
   seo,
   status,
-  tripIntent,
   author,
   publishedAt,
   articleType,
@@ -113,7 +112,6 @@ export const SingleTypeListicles: CollectionConfig = {
     seo,
 
     status,
-    tripIntent,
     author,
     publishedAt,
     articleType,

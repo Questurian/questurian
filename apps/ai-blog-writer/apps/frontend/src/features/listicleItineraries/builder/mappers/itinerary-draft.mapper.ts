@@ -13,7 +13,6 @@ import {
 import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
 import { getRelationshipId } from '../utils/field-normalizers.utils'
 import { getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
-import { normalizeTripIntent } from '../../../trip-intent'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
@@ -117,10 +116,8 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),
     sharedNeighborhoods: getRelationshipIds(doc.sharedNeighborhoods),
-    dayAudience: doc.dayAudience || '',
     step1_complete: Boolean(doc.step1_complete),
     in_update_mode: Boolean(doc.in_update_mode),
-    tripIntent: normalizeTripIntent(doc.tripIntent),
     step2_complete: Boolean(doc.step2_complete) || hasStep2Content,
     step2_in_update_mode: Boolean(doc.step2_in_update_mode),
     step3_complete: Boolean(doc.step3_complete) || hasStep3Content,

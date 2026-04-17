@@ -4,7 +4,6 @@ import type { Location, MediaAsset } from '../../../api'
 import type { StagedArticle } from '../../../types'
 import { createEmptySeoSection } from '../../../../shared/seo/services/seo-section.service'
 import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
-import { DEFAULT_TRIP_INTENT } from '../../../../trip-intent'
 import type { EditorialStageArticleApi } from '../types'
 import { DEFAULT_EDITOR_MODEL_NAME, resolveEditorModelName } from '../constants'
 import { extractEditorialBlocks, getEditorialBlockBody } from '../editorial-markdown.service'
@@ -219,7 +218,6 @@ export function useEditorialStagePageData({
               editorialBlocks,
               sharedNeighborhoods: [],
               editorModelName: DEFAULT_EDITOR_MODEL_NAME,
-              tripIntent: [...DEFAULT_TRIP_INTENT],
               step1_complete: false,
               in_update_mode: false,
               step2_complete: false,

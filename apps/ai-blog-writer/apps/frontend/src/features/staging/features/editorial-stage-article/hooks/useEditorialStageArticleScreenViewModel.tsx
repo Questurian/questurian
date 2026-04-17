@@ -13,7 +13,6 @@ import {
   createInitialEditorialStageUiState,
   editorialStageUiReducer,
 } from '../state/editorialStageUiMachine'
-import { DEFAULT_TRIP_INTENT } from '../../../../trip-intent'
 import type {
   ExternalImageCropContext,
   EditorialStageArticlePageProps,
@@ -45,7 +44,6 @@ const EMPTY_STAGED_ARTICLE: StagedArticle = {
   blocks: [],
   editorialBlocks: [],
   sharedNeighborhoods: [],
-  tripIntent: [...DEFAULT_TRIP_INTENT],
   seoSection: createEmptySeoSection(),
   syncBehavior: 'finalize',
   lexicalConverted: false,

@@ -94,7 +94,6 @@ function buildStagedArticle(overrides?: Partial<StagedArticle>): StagedArticle {
     step3_complete: false,
     step3_in_update_mode: false,
     seoSection: buildSeoSection(),
-    tripIntent: ['explore'],
     syncBehavior: 'draft-sync',
     lexicalConverted: false,
     publishedToPayload: false,
@@ -214,12 +213,11 @@ describe('StandardArticleStageBuilder', () => {
     expect(screen.getByRole('heading', { name: 'SEO & Sync' })).toBeInTheDocument()
   })
 
-  it('blocks Step 1 until title, location, and trip intent are provided', () => {
+  it('blocks Step 1 until title and location are provided', () => {
     mockedViewModel = buildViewModel({
       stagedArticle: buildStagedArticle({
         title: '',
         locationId: undefined,
-        tripIntent: [],
       }),
     })
 

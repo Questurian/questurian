@@ -4,12 +4,6 @@ import {
   createSharedNeighborhoodsField,
 } from '@/shared/location/server/fields'
 
-const dayAudienceOptions = [
-  { label: 'Any Day', value: 'anyday' },
-  { label: 'Weekday', value: 'weekday' },
-  { label: 'Weekend', value: 'weekend' },
-]
-
 export const title: Field = {
   name: 'title',
   label: 'Title',
@@ -39,21 +33,6 @@ export const location: Field = {
 export const locationRef: Field = createLocationRefField()
 
 export const sharedNeighborhoods: Field = createSharedNeighborhoodsField()
-
-export const dayAudience: Field = {
-  name: 'dayAudience',
-  label: 'Day Type',
-  type: 'select',
-  required: true,
-  defaultValue: 'anyday',
-  options: dayAudienceOptions,
-  admin: {
-    description: 'Choose whether this itinerary fits any day, weekdays, or weekends',
-    components: {
-      Field: 'src/features/articles/listicle-itineraries/components/field-components/SmartField.tsx',
-    },
-  },
-}
 
 export const step1UiWrapper: Field = {
   type: 'ui',

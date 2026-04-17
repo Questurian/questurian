@@ -16,7 +16,6 @@ interface PendingChange {
 
 interface Step1WorkflowState {
   location: string | undefined
-  dayAudience: string | undefined
   title: string | undefined
   step1_complete: boolean | undefined
   in_update_mode: boolean | undefined
@@ -33,10 +32,9 @@ interface Step1WorkflowState {
 }
 
 export const useStep1Workflow = (): Step1WorkflowState => {
-  const { location, dayAudience, title, step1_complete, in_update_mode } = useFormFields(
+  const { location, title, step1_complete, in_update_mode } = useFormFields(
     ([fields]) => ({
       location: fields.location?.value as string | undefined,
-      dayAudience: fields.dayAudience?.value as string | undefined,
       title: fields.title?.value as string | undefined,
       step1_complete: fields.step1_complete?.value as boolean | undefined,
       in_update_mode: fields.in_update_mode?.value as boolean | undefined,
@@ -54,8 +52,8 @@ export const useStep1Workflow = (): Step1WorkflowState => {
   const prevLocationRef = useRef<string | undefined>(location)
 
   const isStep1Complete = useMemo(() => {
-    return Boolean(title && location && dayAudience)
-  }, [title, location, dayAudience])
+    return Boolean(title && location)
+  }, [title, location])
 
   useEffect(() => {
     if (!in_update_mode || !step1_complete) return
@@ -77,12 +75,11 @@ export const useStep1Workflow = (): Step1WorkflowState => {
     const errors: ValidationError[] = []
 
     if (!location) errors.push({ field: 'location', message: 'Location is required' })
-    if (!dayAudience) errors.push({ field: 'dayAudience', message: 'Day type is required' })
     if (!title) errors.push({ field: 'title', message: 'Title is required' })
 
     setValidationErrors(errors)
     return errors.length === 0
-  }, [location, dayAudience, title])
+  }, [location, title])
 
   const handleContinue = useCallback(async () => {
     if (!validateStep1()) return
@@ -124,7 +121,6 @@ export const useStep1Workflow = (): Step1WorkflowState => {
 
   return {
     location,
-    dayAudience,
     title,
     step1_complete,
     in_update_mode,

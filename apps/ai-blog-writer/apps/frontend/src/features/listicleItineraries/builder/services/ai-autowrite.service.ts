@@ -112,7 +112,6 @@ function buildIntroTarget(
     .filter(Boolean)
 
   const supportingContext = [
-    `Day audience: ${draft.dayAudience || 'anyday'}`,
     selectedTitles.length > 0 ? `Selected stops: ${selectedTitles.join(', ')}` : '',
   ].filter(Boolean).join('\n')
 

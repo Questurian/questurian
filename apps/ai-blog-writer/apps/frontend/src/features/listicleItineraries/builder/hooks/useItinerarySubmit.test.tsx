@@ -30,6 +30,14 @@ vi.mock('../../api', async () => {
   }
 })
 
+vi.mock('../../storage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../storage')>()
+  return {
+    ...actual,
+    saveDraft: vi.fn(),
+  }
+})
+
 const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> = {
   'itinerary-dining': [],
   'itinerary-accommodations': [],
@@ -44,8 +52,6 @@ function buildDraft(): ListicleItineraryDraft {
   draft.title = 'Cusco Tour Plan'
   draft.location = 'peru|cusco'
   draft.locationRef = 1
-  draft.dayAudience = 'anyday'
-  draft.tripIntent = ['explore']
   draft.step1_complete = true
   draft.step2_complete = true
   draft.step3_complete = true

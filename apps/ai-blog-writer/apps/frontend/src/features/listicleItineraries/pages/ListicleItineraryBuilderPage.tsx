@@ -410,7 +410,6 @@ export default function ListicleItineraryBuilderPage() {
         prompt: buildSeoAiPrompt({
           articleType: 'listicle-itinerary',
           location: draft.location,
-          dayAudience: draft.dayAudience || undefined,
           target,
           structuredDataTemplate: target === 'structuredData'
             ? structuredDataTemplate

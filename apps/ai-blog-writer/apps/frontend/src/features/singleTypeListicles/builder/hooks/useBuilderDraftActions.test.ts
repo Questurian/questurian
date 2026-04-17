@@ -39,7 +39,6 @@ function buildDraft(): SingleTypeListicleDraft {
   draft.locationRef = 2
   draft.listicleType = 'dining'
   draft.targetItemCount = 2
-  draft.tripIntent = ['explore']
   draft.step1_complete = true
   draft.step2_complete = true
   draft.step3_complete = true

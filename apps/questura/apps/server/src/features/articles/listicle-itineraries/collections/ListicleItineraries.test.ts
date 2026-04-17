@@ -60,8 +60,6 @@ function buildData(itemOverrides: Record<string, unknown> = {}) {
     location: 'peru|cusco',
     locationRef: 1,
     sharedNeighborhoods: [],
-    dayAudience: 'anyday',
-    tripIntent: ['explore'],
     step1_complete: true,
     status: 'draft',
     items: [buildTourAgencyItem(itemOverrides)],

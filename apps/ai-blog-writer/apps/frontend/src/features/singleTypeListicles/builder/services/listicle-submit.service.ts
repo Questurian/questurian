@@ -11,7 +11,6 @@ import {
 import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
 import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
 import { validateSubmit } from '../validators/submit.validators'
-import { normalizeTripIntent } from '../../../trip-intent'
 
 export type SubmitListicleParams = {
   draft: SingleTypeListicleDraft
@@ -96,7 +95,6 @@ export async function submitListicle({
     targetItemCount: draft.targetItemCount,
     step1_complete: true,
     in_update_mode: false,
-    tripIntent: normalizeTripIntent(draft.tripIntent),
     step2_complete: draft.step2_complete,
     step2_in_update_mode: false,
     step3_complete: draft.step3_complete,
