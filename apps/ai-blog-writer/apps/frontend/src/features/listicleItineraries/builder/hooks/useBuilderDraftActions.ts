@@ -18,11 +18,11 @@ import type {
 } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateStep2, validateStep3 } from '../validators/step.validators'
-import { WHERE_STAYING_BLOCK_TYPE } from '../../types'
+import { createEmptyDaySlice, WHERE_STAYING_BLOCK_TYPE } from '../../types'
 
 function createNewItem(): ItineraryItemBlock {
   return {
-    id: `item_${Date.now()}`,
+    id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     blockType: 'itinerary-dining',
     item: null,
     mediaMode: 'photos',
@@ -72,8 +72,8 @@ type UseBuilderDraftActionsResult = {
   updateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
   removeItem: (itemId: string) => void
   moveItem: (itemId: string, direction: 'up' | 'down') => void
-  addItem: () => void
-  addWhereStayingItem: () => void
+  addItem: (dayIndex: number) => void
+  addWhereStayingItem: (dayIndex: number) => void
   handleContinue: () => void
   handleUpdateSetup: () => void
   handleSaveSetup: () => void
@@ -154,84 +154,98 @@ export function useBuilderDraftActions({
   function updateItem(itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) {
     setDraft((current) => {
       if (!current) return current
-      if (current.whereStaying.some((item) => item.id === itemId)) {
-        return {
-          ...current,
-          whereStaying: current.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
+      const nextDays = current.days.map((day) => {
+        if (day.whereStaying.some((item) => item.id === itemId)) {
+          return {
+            ...day,
+            whereStaying: day.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
+          }
         }
-      }
-      if (current.items.some((item) => item.id === itemId)) {
-        return {
-          ...current,
-          items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
+        if (day.items.some((item) => item.id === itemId)) {
+          return {
+            ...day,
+            items: day.items.map((item) => (item.id === itemId ? updater(item) : item)),
+          }
         }
-      }
-      return current
+        return day
+      })
+      return { ...current, days: nextDays }
     })
   }
 
   function removeItem(itemId: string) {
     setDraft((current) => {
       if (!current) return current
-      if (current.whereStaying.some((item) => item.id === itemId)) {
-        return {
-          ...current,
-          whereStaying: current.whereStaying.filter((item) => item.id !== itemId),
+      const nextDays = current.days.map((day) => {
+        if (day.whereStaying.some((item) => item.id === itemId)) {
+          return {
+            ...day,
+            whereStaying: day.whereStaying.filter((item) => item.id !== itemId),
+          }
         }
-      }
-      return {
-        ...current,
-        items: current.items.filter((item) => item.id !== itemId),
-      }
+        if (day.items.some((item) => item.id === itemId)) {
+          return {
+            ...day,
+            items: day.items.filter((item) => item.id !== itemId),
+          }
+        }
+        return day
+      })
+      return { ...current, days: nextDays }
     })
   }
 
   function moveItem(itemId: string, direction: 'up' | 'down') {
     setDraft((current) => {
       if (!current) return current
-      const wsIndex = current.whereStaying.findIndex((item) => item.id === itemId)
-      if (wsIndex >= 0) {
-        const whereStaying = [...current.whereStaying]
-        const target = direction === 'up' ? wsIndex - 1 : wsIndex + 1
-        if (target < 0 || target >= whereStaying.length) return current
-        const [row] = whereStaying.splice(wsIndex, 1)
-        whereStaying.splice(target, 0, row)
-        return {
-          ...current,
-          whereStaying,
+      const nextDays = current.days.map((day) => {
+        const wsIndex = day.whereStaying.findIndex((item) => item.id === itemId)
+        if (wsIndex >= 0) {
+          const whereStaying = [...day.whereStaying]
+          const target = direction === 'up' ? wsIndex - 1 : wsIndex + 1
+          if (target < 0 || target >= whereStaying.length) return day
+          const [row] = whereStaying.splice(wsIndex, 1)
+          whereStaying.splice(target, 0, row)
+          return { ...day, whereStaying }
         }
-      }
-      const items = [...current.items]
-      const index = items.findIndex((item) => item.id === itemId)
-      if (index < 0) return current
-      const target = direction === 'up' ? index - 1 : index + 1
-      if (target < 0 || target >= items.length) return current
-      const [item] = items.splice(index, 1)
-      items.splice(target, 0, item)
-      return {
-        ...current,
-        items,
-      }
+        const items = [...day.items]
+        const index = items.findIndex((item) => item.id === itemId)
+        if (index < 0) return day
+        const target = direction === 'up' ? index - 1 : index + 1
+        if (target < 0 || target >= items.length) return day
+        const [item] = items.splice(index, 1)
+        items.splice(target, 0, item)
+        return { ...day, items }
+      })
+      return { ...current, days: nextDays }
     })
   }
 
-  function addItem() {
+  function addItem(dayIndex: number) {
     setDraft((current) => {
       if (!current) return current
-      return {
-        ...current,
-        items: [...current.items, createNewItem()],
+      const day = current.days[dayIndex]
+      if (!day) return current
+      const nextDays = [...current.days]
+      nextDays[dayIndex] = {
+        ...day,
+        items: [...day.items, createNewItem()],
       }
+      return { ...current, days: nextDays }
     })
   }
 
-  function addWhereStayingItem() {
+  function addWhereStayingItem(dayIndex: number) {
     setDraft((current) => {
       if (!current) return current
-      return {
-        ...current,
-        whereStaying: [...current.whereStaying, createNewWhereStayingItem()],
+      const day = current.days[dayIndex]
+      if (!day) return current
+      const nextDays = [...current.days]
+      nextDays[dayIndex] = {
+        ...day,
+        whereStaying: [...day.whereStaying, createNewWhereStayingItem()],
       }
+      return { ...current, days: nextDays }
     })
   }
 
@@ -281,7 +295,10 @@ export function useBuilderDraftActions({
       ? !areLocationIdSelectionsEqual(setupBaseline.sharedNeighborhoods, draft.sharedNeighborhoods)
       : false
 
-    if ((locationChanged || sharedNeighborhoodsChanged) && (draft.items.length > 0 || draft.whereStaying.length > 0)) {
+    if (
+      (locationChanged || sharedNeighborhoodsChanged)
+      && draft.days.some((d) => d.items.length > 0 || d.whereStaying.length > 0)
+    ) {
       const confirmed = window.confirm(
         'Changing location or shared neighborhoods clears lodging and itinerary stops. Continue?',
       )
@@ -290,8 +307,7 @@ export function useBuilderDraftActions({
         if (!current) return current
         return {
           ...current,
-          whereStaying: [],
-          items: [],
+          days: current.days.map(() => createEmptyDaySlice()),
           in_update_mode: false,
           step1_complete: true,
           step2_complete: false,
@@ -307,16 +323,19 @@ export function useBuilderDraftActions({
     }
 
     if (locationChanged || sharedNeighborhoodsChanged) {
-      updateDraft({
-        whereStaying: [],
-        items: [],
-        in_update_mode: false,
-        step1_complete: true,
-        step2_complete: false,
-        step2_in_update_mode: false,
-        step3_complete: false,
-        step3_in_update_mode: false,
-        locationRef: selectedLocationRefId,
+      setDraft((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          days: current.days.map(() => createEmptyDaySlice()),
+          in_update_mode: false,
+          step1_complete: true,
+          step2_complete: false,
+          step2_in_update_mode: false,
+          step3_complete: false,
+          step3_in_update_mode: false,
+          locationRef: selectedLocationRefId ?? current.locationRef,
+        }
       })
       setSetupBaseline(null)
       onError('')

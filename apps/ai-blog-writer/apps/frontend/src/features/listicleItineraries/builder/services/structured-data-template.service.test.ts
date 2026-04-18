@@ -1,5 +1,6 @@
 import type {
   InstagramPostOption,
+  ItineraryItemBlock,
   ListicleItineraryDraft,
   MediaAssetOption,
   RelatedItemOption,
@@ -33,52 +34,59 @@ function buildDraft(): ListicleItineraryDraft {
       introJsonText: '',
       featuredImage: null,
     },
-    items: [
+    dayCount: 1,
+    days: [
       {
-        id: 'item-1',
-        blockType: 'itinerary-dining',
-        item: 101,
-        mediaMode: 'photos',
-        selectedPhotos: [],
-        selectedInstagramPost: null,
-        title: '',
-        operator: '',
-        price: '',
-        url: '',
-        tourDuration: 1,
-        startingPoint: {
-          label: '',
-          latitude: '',
-          longitude: '',
-        },
-        keyLocations: [],
-        image: null,
-        instagramPost: null,
-        blurbMarkdown: 'Discover a top brunch stop in Barranco.',
-        blurbJsonText: '',
-      },
-      {
-        id: 'item-2',
-        blockType: 'itinerary-attractions',
-        item: 202,
-        mediaMode: 'photos',
-        selectedPhotos: [],
-        selectedInstagramPost: null,
-        title: '',
-        operator: '',
-        price: '',
-        url: '',
-        tourDuration: 1,
-        startingPoint: {
-          label: '',
-          latitude: '',
-          longitude: '',
-        },
-        keyLocations: [],
-        image: null,
-        instagramPost: null,
-        blurbMarkdown: 'Explore iconic views and cultural highlights.',
-        blurbJsonText: '',
+        id: 'day_1',
+        whereStaying: [],
+        items: [
+          {
+            id: 'item-1',
+            blockType: 'itinerary-dining',
+            item: 101,
+            mediaMode: 'photos',
+            selectedPhotos: [],
+            selectedInstagramPost: null,
+            title: '',
+            operator: '',
+            price: '',
+            url: '',
+            tourDuration: 1,
+            startingPoint: {
+              label: '',
+              latitude: '',
+              longitude: '',
+            },
+            keyLocations: [],
+            image: null,
+            instagramPost: null,
+            blurbMarkdown: 'Discover a top brunch stop in Barranco.',
+            blurbJsonText: '',
+          },
+          {
+            id: 'item-2',
+            blockType: 'itinerary-attractions',
+            item: 202,
+            mediaMode: 'photos',
+            selectedPhotos: [],
+            selectedInstagramPost: null,
+            title: '',
+            operator: '',
+            price: '',
+            url: '',
+            tourDuration: 1,
+            startingPoint: {
+              label: '',
+              latitude: '',
+              longitude: '',
+            },
+            keyLocations: [],
+            image: null,
+            instagramPost: null,
+            blurbMarkdown: 'Explore iconic views and cultural highlights.',
+            blurbJsonText: '',
+          },
+        ],
       },
     ],
     seoSection: {
@@ -108,7 +116,7 @@ function buildDraft(): ListicleItineraryDraft {
   }
 }
 
-function buildRelatedByType(): Record<ListicleItineraryDraft['items'][number]['blockType'], RelatedItemOption[]> {
+function buildRelatedByType(): Record<ItineraryItemBlock['blockType'], RelatedItemOption[]> {
   return {
     'itinerary-dining': [{ id: 101, title: 'Brunch Spot' }],
     'itinerary-accommodations': [],
@@ -195,7 +203,9 @@ describe('listicleItineraries structured data template', () => {
 
   it('serializes manual tour-agency key locations and instagram permalink', () => {
     const draft = buildDraft()
-    draft.items = [
+    draft.days = [{
+      ...draft.days[0],
+      items: [
       {
         id: 'tour-stop',
         blockType: 'itinerary-tour-agency',
@@ -238,7 +248,8 @@ describe('listicleItineraries structured data template', () => {
         blurbMarkdown: 'A scenic full-day circuit through the Sacred Valley.',
         blurbJsonText: '',
       },
-    ]
+    ],
+    }]
 
     const mediaAssets: MediaAssetOption[] = [
       {

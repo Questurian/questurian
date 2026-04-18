@@ -22,9 +22,53 @@ export function isWhereStayingBlockType(blockType: ItineraryBlockType): boolean 
   return blockType === WHERE_STAYING_BLOCK_TYPE
 }
 
-/** Lodging rows first, then stops (matches Payload field order and article sections). */
+/** Lodging rows first, then stops, Day1→DayN (matches Payload `itineraryDays` order). */
 export function getItineraryBlocksInArticleOrder(draft: ListicleItineraryDraft): ItineraryItemBlock[] {
-  return [...draft.whereStaying, ...draft.items]
+  return draft.days.flatMap((day) => [...day.whereStaying, ...day.items])
+}
+
+export function findItineraryItemById(
+  draft: ListicleItineraryDraft,
+  itemId: string,
+): { dayIndex: number; item: ItineraryItemBlock } | null {
+  for (let dayIndex = 0; dayIndex < draft.days.length; dayIndex += 1) {
+    const day = draft.days[dayIndex]
+    const ws = day.whereStaying.find((row) => row.id === itemId)
+    if (ws) return { dayIndex, item: ws }
+    const st = day.items.find((row) => row.id === itemId)
+    if (st) return { dayIndex, item: st }
+  }
+  return null
+}
+
+export type ItineraryDaySlice = {
+  id: string
+  whereStaying: ItineraryItemBlock[]
+  items: ItineraryItemBlock[]
+}
+
+export function createEmptyDaySlice(): ItineraryDaySlice {
+  return {
+    id: `day_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    whereStaying: [],
+    items: [],
+  }
+}
+
+export function resizeItineraryDays(draft: ListicleItineraryDraft, nextCount: number): ListicleItineraryDraft {
+  const clamped = Math.max(1, Math.min(7, Math.floor(nextCount)))
+  const nextDays = [...draft.days]
+  while (nextDays.length < clamped) {
+    nextDays.push(createEmptyDaySlice())
+  }
+  if (nextDays.length > clamped) {
+    nextDays.splice(clamped)
+  }
+  return {
+    ...draft,
+    dayCount: clamped,
+    days: nextDays,
+  }
 }
 
 export type MediaMode = 'photos' | 'instagram' | 'both'
@@ -135,8 +179,10 @@ export type ListicleItineraryDraft = {
     introJsonText?: string
     featuredImage: number | null
   }
-  whereStaying: ItineraryItemBlock[]
-  items: ItineraryItemBlock[]
+  /** 1–7; always equals `days.length`. */
+  dayCount: number
+  /** One entry per itinerary day; order is Day 1 … Day N. */
+  days: ItineraryDaySlice[]
   seoSection: SeoSection
   status: 'draft' | 'published'
   articleType: 'listicle-itinerary'
@@ -167,6 +213,69 @@ export type PayloadItineraryDoc = {
     intro?: PayloadRichText
     featuredImage?: number | { id?: number }
   }
+  dayCount?: number
+  itineraryDays?: Array<{
+    id?: string
+    whereStaying?: Array<{
+      id?: string
+      blockType?: ItineraryBlockType
+      item?: number | { id?: number }
+      mediaMode?: MediaMode
+      selectedPhotos?: Array<number | { id?: number }>
+      selectedInstagramPost?: number | { id?: number } | null
+      title?: string | null
+      operator?: string | null
+      price?: TourAgencyPriceTier | null
+      url?: string | null
+      tourDuration?: number | null
+      startingPoint?: {
+        label?: string | null
+        latitude?: number | null
+        longitude?: number | null
+      } | null
+      keyLocations?: Array<{
+        id?: string
+        source?: TourAgencyKeyLocationSource | null
+        relatedItem?: PolymorphicRelatedItemValue | null
+        title?: string | null
+        latitude?: number | null
+        longitude?: number | null
+      }> | null
+      image?: number | { id?: number } | null
+      instagramPost?: number | { id?: number } | null
+      blurb?: PayloadRichText
+    }>
+    items?: Array<{
+      id?: string
+      blockType?: ItineraryBlockType
+      item?: number | { id?: number }
+      mediaMode?: MediaMode
+      selectedPhotos?: Array<number | { id?: number }>
+      selectedInstagramPost?: number | { id?: number } | null
+      title?: string | null
+      operator?: string | null
+      price?: TourAgencyPriceTier | null
+      url?: string | null
+      tourDuration?: number | null
+      startingPoint?: {
+        label?: string | null
+        latitude?: number | null
+        longitude?: number | null
+      } | null
+      keyLocations?: Array<{
+        id?: string
+        source?: TourAgencyKeyLocationSource | null
+        relatedItem?: PolymorphicRelatedItemValue | null
+        title?: string | null
+        latitude?: number | null
+        longitude?: number | null
+      }> | null
+      image?: number | { id?: number } | null
+      instagramPost?: number | { id?: number } | null
+      blurb?: PayloadRichText
+    }>
+  }>
+  /** @deprecated Prefer `itineraryDays`; migrated to day 1 server-side. */
   whereStaying?: Array<{
     id?: string
     blockType?: ItineraryBlockType

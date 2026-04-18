@@ -33,31 +33,34 @@ function buildDraft(): ListicleItineraryDraft {
   draft.step3_complete = true
   draft.header.introMarkdown = 'Keep this itinerary intro'
   draft.seoSection.metaDescription = 'Keep this itinerary SEO description'
-  draft.items = [
-    {
-      id: 'stop-1',
-      blockType: 'itinerary-dining',
-      item: 101,
-      mediaMode: 'photos',
-      selectedPhotos: [9001],
-      selectedInstagramPost: null,
-      title: '',
-      operator: '',
-      price: '',
-      url: '',
-      tourDuration: 1,
-      startingPoint: {
-        label: '',
-        latitude: '',
-        longitude: '',
+  draft.days = [{
+    ...draft.days[0],
+    items: [
+      {
+        id: 'stop-1',
+        blockType: 'itinerary-dining',
+        item: 101,
+        mediaMode: 'photos',
+        selectedPhotos: [9001],
+        selectedInstagramPost: null,
+        title: '',
+        operator: '',
+        price: '',
+        url: '',
+        tourDuration: 1,
+        startingPoint: {
+          label: '',
+          latitude: '',
+          longitude: '',
+        },
+        keyLocations: [],
+        image: null,
+        instagramPost: null,
+        blurbMarkdown: 'Existing stop copy',
+        blurbJsonText: '',
       },
-      keyLocations: [],
-      image: null,
-      instagramPost: null,
-      blurbMarkdown: 'Existing stop copy',
-      blurbJsonText: '',
-    },
-  ]
+    ],
+  }]
   return draft
 }
 
@@ -111,6 +114,6 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     expect(result.current.draft?.step3_complete).toBe(false)
     expect(result.current.draft?.header.introMarkdown).toBe('Keep this itinerary intro')
     expect(result.current.draft?.seoSection.metaDescription).toBe('Keep this itinerary SEO description')
-    expect(result.current.draft?.items).toEqual([])
+    expect(result.current.draft?.days[0]?.items).toEqual([])
   })
 })

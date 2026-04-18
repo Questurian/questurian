@@ -41,6 +41,7 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
 import { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { findItineraryItemById } from '../types'
 import '../styles.css'
 
 type AiRewriteInput = {
@@ -66,6 +67,7 @@ export default function ListicleItineraryBuilderPage() {
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [activeAiTargetId, setActiveAiTargetId] = useState<string | null>(null)
   const [isAutoWritingEmptyFields, setIsAutoWritingEmptyFields] = useState(false)
+  const [activeDayIndex, setActiveDayIndex] = useState(0)
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -85,6 +87,13 @@ export default function ListicleItineraryBuilderPage() {
     setSearchParams,
     onError,
   })
+
+  useEffect(() => {
+    if (!draft) return
+    if (activeDayIndex >= draft.dayCount) {
+      setActiveDayIndex(Math.max(0, draft.dayCount - 1))
+    }
+  }, [draft, activeDayIndex])
 
   useBuilderAutosave({ draft })
 
@@ -310,8 +319,8 @@ export default function ListicleItineraryBuilderPage() {
   const autoWriteStopBlurb = useCallback(async (itemId: string): Promise<void> => {
     if (!draft) return
 
-    const item = draft.whereStaying.find((entry) => entry.id === itemId)
-      ?? draft.items.find((entry) => entry.id === itemId)
+    const found = findItineraryItemById(draft, itemId)
+    const item = found?.item
     if (!item) {
       onError('Selected stop was not found.')
       return
@@ -572,28 +581,47 @@ export default function ListicleItineraryBuilderPage() {
           ) : null}
 
           {isStep1LockedView && isStep2LockedView ? (
-            <BuilderStopsPanel
-              draft={draft}
-              token={token ?? null}
-              locationRef={actions.selectedLocationRefId}
-              mediaAssets={mediaAssets}
-              instagramPosts={instagramPosts}
-              isLoadingRelated={isLoadingRelated}
-              relatedByBlockType={relatedByBlockType}
-              onAddWhereStaying={actions.addWhereStayingItem}
-              onAddItem={actions.addItem}
-              onMoveItem={actions.moveItem}
-              onRemoveItem={actions.removeItem}
-              onUpdateItem={actions.updateItem}
-              onStopBlurbAiAutoWrite={autoWriteStopBlurb}
-              onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
-              activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
-              isLocked={isStep3LockedView}
-              onContinueStep3={actions.handleContinueStep3}
-              onUpdateStep3={actions.handleUpdateStep3}
-              onSaveStep3={actions.handleSaveStep3}
-              onCancelStep3Update={actions.cancelUpdateStep3}
-            />
+            <>
+              {draft.dayCount > 1 ? (
+                <div className="stl-day-tabs" role="tablist" aria-label="Itinerary days">
+                  {Array.from({ length: draft.dayCount }, (_, dayTabIndex) => (
+                    <button
+                      key={draft.days[dayTabIndex]?.id ?? `day_tab_${dayTabIndex}`}
+                      type="button"
+                      className={activeDayIndex === dayTabIndex ? 'stl-day-tab stl-day-tab--active' : 'stl-day-tab'}
+                      role="tab"
+                      aria-selected={activeDayIndex === dayTabIndex}
+                      onClick={() => setActiveDayIndex(dayTabIndex)}
+                    >
+                      Day {dayTabIndex + 1}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <BuilderStopsPanel
+                draft={draft}
+                activeDayIndex={activeDayIndex}
+                token={token ?? null}
+                locationRef={actions.selectedLocationRefId}
+                mediaAssets={mediaAssets}
+                instagramPosts={instagramPosts}
+                isLoadingRelated={isLoadingRelated}
+                relatedByBlockType={relatedByBlockType}
+                onAddWhereStaying={() => actions.addWhereStayingItem(activeDayIndex)}
+                onAddItem={() => actions.addItem(activeDayIndex)}
+                onMoveItem={actions.moveItem}
+                onRemoveItem={actions.removeItem}
+                onUpdateItem={actions.updateItem}
+                onStopBlurbAiAutoWrite={autoWriteStopBlurb}
+                onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
+                activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
+                isLocked={isStep3LockedView}
+                onContinueStep3={actions.handleContinueStep3}
+                onUpdateStep3={actions.handleUpdateStep3}
+                onSaveStep3={actions.handleSaveStep3}
+                onCancelStep3Update={actions.cancelUpdateStep3}
+              />
+            </>
           ) : null}
 
           {isStep1LockedView && isStep2LockedView && isStep3LockedView ? (

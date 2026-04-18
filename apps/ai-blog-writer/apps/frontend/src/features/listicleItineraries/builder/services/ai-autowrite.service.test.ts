@@ -6,6 +6,7 @@ import {
   getItineraryIntroTargetId,
 } from './ai-autowrite.service'
 import type {
+  ItineraryItemBlock,
   ListicleItineraryDraft,
   LocationOption,
   RelatedItemOption,
@@ -29,50 +30,57 @@ function buildDraft(): ListicleItineraryDraft {
       introMarkdown: '',
       featuredImage: null,
     },
-    items: [
+    dayCount: 1,
+    days: [
       {
-        id: 'stop-1',
-        blockType: 'itinerary-key-location',
-        item: 201,
-        mediaMode: 'photos',
-        selectedPhotos: [8],
-        selectedInstagramPost: null,
-        title: '',
-        operator: '',
-        price: '',
-        url: '',
-        tourDuration: 1,
-        startingPoint: {
-          label: '',
-          latitude: '',
-          longitude: '',
-        },
-        keyLocations: [],
-        image: null,
-        instagramPost: null,
-        blurbMarkdown: '',
-      },
-      {
-        id: 'stop-2',
-        blockType: 'itinerary-dining',
-        item: 202,
-        mediaMode: 'instagram',
-        selectedPhotos: [],
-        selectedInstagramPost: 19,
-        title: '',
-        operator: '',
-        price: '',
-        url: '',
-        tourDuration: 1,
-        startingPoint: {
-          label: '',
-          latitude: '',
-          longitude: '',
-        },
-        keyLocations: [],
-        image: null,
-        instagramPost: null,
-        blurbMarkdown: 'Existing lunch copy',
+        id: 'day_1',
+        whereStaying: [],
+        items: [
+          {
+            id: 'stop-1',
+            blockType: 'itinerary-key-location',
+            item: 201,
+            mediaMode: 'photos',
+            selectedPhotos: [8],
+            selectedInstagramPost: null,
+            title: '',
+            operator: '',
+            price: '',
+            url: '',
+            tourDuration: 1,
+            startingPoint: {
+              label: '',
+              latitude: '',
+              longitude: '',
+            },
+            keyLocations: [],
+            image: null,
+            instagramPost: null,
+            blurbMarkdown: '',
+          },
+          {
+            id: 'stop-2',
+            blockType: 'itinerary-dining',
+            item: 202,
+            mediaMode: 'instagram',
+            selectedPhotos: [],
+            selectedInstagramPost: 19,
+            title: '',
+            operator: '',
+            price: '',
+            url: '',
+            tourDuration: 1,
+            startingPoint: {
+              label: '',
+              latitude: '',
+              longitude: '',
+            },
+            keyLocations: [],
+            image: null,
+            instagramPost: null,
+            blurbMarkdown: 'Existing lunch copy',
+          },
+        ],
       },
     ],
     seoSection: {
@@ -185,7 +193,7 @@ describe('listicleItineraries ai autowrite service', () => {
     const draft = buildDraft()
 
     expect(getItineraryAutoWriteTargetIds(draft, buildRelatedByBlockType() as Record<
-      ListicleItineraryDraft['items'][number]['blockType'],
+      ItineraryItemBlock['blockType'],
       RelatedItemOption[]
     >)).toEqual([
       getItineraryIntroTargetId(draft),
@@ -225,34 +233,37 @@ describe('listicleItineraries ai autowrite service', () => {
     })
 
     expect(nextDraft.header.introMarkdown).toBe('Weekend intro')
-    expect(nextDraft.items[0]?.blurbMarkdown).toBe('Bridge blurb')
-    expect(nextDraft.items[1]?.blurbMarkdown).toBe('Existing lunch copy')
+    expect(nextDraft.days[0]?.items[0]?.blurbMarkdown).toBe('Bridge blurb')
+    expect(nextDraft.days[0]?.items[1]?.blurbMarkdown).toBe('Existing lunch copy')
   })
 
   it('formats manual tour-agency context with tiered price, hour duration, and coordinate starting point', () => {
     const draft = buildDraft()
-    draft.items = [{
-      id: 'tour-stop',
-      blockType: 'itinerary-tour-agency',
-      item: null,
-      mediaMode: 'photos',
-      selectedPhotos: [],
-      selectedInstagramPost: null,
-      title: 'Sacred Valley Day Tour',
-      operator: 'Andes Routes',
-      price: '$$$',
-      url: 'https://example.com/tours/sacred-valley',
-      tourDuration: 8,
-      startingPoint: {
-        label: 'Plaza de Armas',
-        latitude: '-13.516',
-        longitude: '-71.978',
-      },
-      keyLocations: [],
-      image: null,
-      instagramPost: null,
-      blurbMarkdown: '',
-      blurbJsonText: '',
+    draft.days = [{
+      ...draft.days[0],
+      items: [{
+        id: 'tour-stop',
+        blockType: 'itinerary-tour-agency',
+        item: null,
+        mediaMode: 'photos',
+        selectedPhotos: [],
+        selectedInstagramPost: null,
+        title: 'Sacred Valley Day Tour',
+        operator: 'Andes Routes',
+        price: '$$$',
+        url: 'https://example.com/tours/sacred-valley',
+        tourDuration: 8,
+        startingPoint: {
+          label: 'Plaza de Armas',
+          latitude: '-13.516',
+          longitude: '-71.978',
+        },
+        keyLocations: [],
+        image: null,
+        instagramPost: null,
+        blurbMarkdown: '',
+        blurbJsonText: '',
+      }],
     }]
 
     const request = buildItineraryGenerateListicleContentRequest({

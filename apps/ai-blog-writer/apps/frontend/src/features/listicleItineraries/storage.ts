@@ -1,16 +1,18 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import {
+  createEmptyDaySlice,
   isRelatedItemCollection,
   isTourAgencyPriceTier,
   type ItineraryItemBlock,
+  type ItineraryDaySlice,
   type ListicleItineraryDraft,
   type TourAgencyKeyLocationRow,
   type TourAgencyStartingPoint,
 } from './types'
 import { normalizeLocationIds } from '../locationScope/scope'
 
-const STORAGE_KEY = 'listicle_itineraries_staged_v6_tour_agency_normalized_fields'
+const STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -177,6 +179,41 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
     },
     ...(() => {
+      if (Array.isArray(value.days) && value.days.length > 0) {
+        const days: ItineraryDaySlice[] = value.days.map((dayVal: unknown, dayIndex: number) => {
+          if (!isRecord(dayVal)) {
+            return {
+              ...createEmptyDaySlice(),
+              id: `day_${normalizedDraftId}_${dayIndex}`,
+            }
+          }
+          const rawWhere = Array.isArray(dayVal.whereStaying) ? dayVal.whereStaying : []
+          const rawItems = Array.isArray(dayVal.items) ? dayVal.items : []
+          const mappedWhere = rawWhere
+            .map((item, itemIndex) => normalizeStoredItem(item, itemIndex))
+            .filter((item): item is ItineraryItemBlock => Boolean(item))
+          const mappedItems = rawItems
+            .map((item, itemIndex) => normalizeStoredItem(item, itemIndex))
+            .filter((item): item is ItineraryItemBlock => Boolean(item))
+          const lodgingFromItems = mappedItems.filter((item) => item.blockType === 'itinerary-where-staying')
+          const stops = mappedItems.filter((item) => item.blockType !== 'itinerary-where-staying')
+          const dayId = typeof dayVal.id === 'string' && dayVal.id.trim()
+            ? dayVal.id
+            : `day_${normalizedDraftId}_${dayIndex}`
+          return {
+            id: dayId,
+            whereStaying: [...mappedWhere, ...lodgingFromItems],
+            items: stops,
+          }
+        })
+        const dc = typeof value.dayCount === 'number'
+          ? Math.min(7, Math.max(1, value.dayCount))
+          : Math.min(7, Math.max(1, days.length))
+        return {
+          dayCount: dc,
+          days: days.slice(0, dc),
+        }
+      }
       const rawWhere = Array.isArray(value.whereStaying) ? value.whereStaying : []
       const rawItems = Array.isArray(value.items) ? value.items : []
       const mappedWhere = rawWhere
@@ -188,8 +225,14 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       const lodgingFromItems = mappedItems.filter((item) => item.blockType === 'itinerary-where-staying')
       const stops = mappedItems.filter((item) => item.blockType !== 'itinerary-where-staying')
       return {
-        whereStaying: [...mappedWhere, ...lodgingFromItems],
-        items: stops,
+        dayCount: 1,
+        days: [
+          {
+            id: `day_${normalizedDraftId}_0`,
+            whereStaying: [...mappedWhere, ...lodgingFromItems],
+            items: stops,
+          },
+        ],
       }
     })(),
     seoSection: normalizeSeoSection(value.seoSection ?? createEmptySeoSection()),
@@ -270,8 +313,8 @@ export function createEmptyDraft(): ListicleItineraryDraft {
       introJsonText: '',
       featuredImage: null,
     },
-    whereStaying: [],
-    items: [],
+    dayCount: 1,
+    days: [createEmptyDaySlice()],
     seoSection: createEmptySeoSection(),
     status: 'draft',
     articleType: 'listicle-itinerary',

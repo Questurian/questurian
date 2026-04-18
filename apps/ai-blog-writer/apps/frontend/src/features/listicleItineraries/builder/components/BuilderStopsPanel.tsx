@@ -46,6 +46,8 @@ type AiRewriteInput = {
 
 type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
+  /** Index of the day tab being edited (0-based). */
+  activeDayIndex: number
   token: string | null
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
@@ -295,6 +297,7 @@ function resetItemForBlockType(item: ItineraryItemBlock, blockType: ItineraryBlo
 
 export function BuilderStopsPanel({
   draft,
+  activeDayIndex,
   token,
   locationRef,
   mediaAssets,
@@ -316,6 +319,10 @@ export function BuilderStopsPanel({
   onCancelStep3Update,
 }: BuilderStopsPanelProps) {
   const resolvedToken = token ?? ''
+  const dayDraft = useMemo(() => {
+    const day = draft.days[activeDayIndex] ?? draft.days[0]
+    return day ?? { id: '', whereStaying: [] as ItineraryItemBlock[], items: [] as ItineraryItemBlock[] }
+  }, [draft.days, activeDayIndex])
   const [activePicker, setActivePicker] = useState<ActivePicker>(null)
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null)
   const [copyErrorItemId, setCopyErrorItemId] = useState<string | null>(null)
@@ -326,18 +333,18 @@ export function BuilderStopsPanel({
 
   const step3Rows = useMemo(
     () => [
-      ...draft.whereStaying.map((item, index) => ({
+      ...dayDraft.whereStaying.map((item, index) => ({
         item,
         section: 'whereStaying' as const,
         localIndex: index,
       })),
-      ...draft.items.map((item, index) => ({
+      ...dayDraft.items.map((item, index) => ({
         item,
         section: 'stops' as const,
         localIndex: index,
       })),
     ],
-    [draft.whereStaying, draft.items],
+    [dayDraft.whereStaying, dayDraft.items],
   )
 
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
@@ -354,7 +361,7 @@ export function BuilderStopsPanel({
       ...Object.keys(fetchedManualImageAssets).map((id) => Number(id)),
     ])
 
-    const allStep3Items = [...draft.whereStaying, ...draft.items]
+    const allStep3Items = [...dayDraft.whereStaying, ...dayDraft.items]
 
     return Array.from(new Set(
       allStep3Items
@@ -362,7 +369,7 @@ export function BuilderStopsPanel({
         .map((item) => item.image)
         .filter((imageId): imageId is number => typeof imageId === 'number' && !loadedIds.has(imageId)),
     ))
-  }, [draft.whereStaying, draft.items, fetchedManualImageAssets, mediaAssets, resolvedToken])
+  }, [dayDraft.whereStaying, dayDraft.items, fetchedManualImageAssets, mediaAssets, resolvedToken])
 
   useEffect(() => {
     if (!copiedItemId) return
@@ -446,7 +453,7 @@ export function BuilderStopsPanel({
   }, [activeInstagramEmbedPreviewItemId])
 
   useEffect(() => {
-    ;[...draft.whereStaying, ...draft.items].forEach((item) => {
+    ;[...dayDraft.whereStaying, ...dayDraft.items].forEach((item) => {
       if (isManualBlockType(item.blockType)) {
         return
       }
@@ -468,7 +475,7 @@ export function BuilderStopsPanel({
         selectedInstagramPost: requiresInstagram(fallbackMode) ? current.selectedInstagramPost : null,
       }))
     })
-  }, [draft.whereStaying, draft.items, onUpdateItem, relatedByBlockType])
+  }, [dayDraft.whereStaying, dayDraft.items, onUpdateItem, relatedByBlockType])
 
   const handleCopyRelatedItemTitle = async (itemId: string, title: string) => {
     if (!title.trim()) return
@@ -492,7 +499,8 @@ export function BuilderStopsPanel({
           <span className="stl-kicker">Step 3</span> Lodging & stops
           <span className="stl-step3-header-counts">
             {' '}
-            ({draft.whereStaying.length} lodging · {draft.items.length} stops)
+            {draft.dayCount > 1 ? `Day ${activeDayIndex + 1} · ` : ''}
+            ({dayDraft.whereStaying.length} lodging · {dayDraft.items.length} stops)
           </span>
         </h2>
         <div className="stl-inline-actions">

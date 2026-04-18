@@ -548,6 +548,35 @@
   color: #5a6b85;
 }
 
+.stl-day-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 0.85rem;
+}
+
+.stl-day-tab {
+  border: 1px solid var(--stl-border);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: #fff;
+  color: #4a5b72;
+  cursor: pointer;
+}
+
+.stl-day-tab:hover {
+  border-color: #9eb0c9;
+}
+
+.stl-day-tab--active {
+  border-color: #3d5c93;
+  background: #eef3fb;
+  color: #2a3f63;
+  font-weight: 600;
+}
+
 .stl-item-card {
   border: 1px solid var(--stl-border);
   border-radius: 12px;

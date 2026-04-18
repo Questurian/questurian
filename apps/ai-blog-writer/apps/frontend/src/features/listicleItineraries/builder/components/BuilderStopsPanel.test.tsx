@@ -141,38 +141,46 @@ function buildDraft(): ListicleItineraryDraft {
   draft.step1_complete = true
   draft.step2_complete = true
   draft.header.introMarkdown = 'Intro copy'
-  draft.items = [buildManualTourAgencyItem()]
+  draft.days = [{
+    ...draft.days[0],
+    whereStaying: [],
+    items: [buildManualTourAgencyItem()],
+  }]
   return draft
 }
 
 function buildDraftWithKeyLocations(): ListicleItineraryDraft {
+  const base = buildDraft()
   return {
-    ...buildDraft(),
-    items: [
-      {
-        ...buildManualTourAgencyItem(),
-        keyLocations: [
-          {
-            id: 'existing-restaurant-row',
-            source: 'existing',
-            relatedCollection: 'dining',
-            relatedItem: 201,
-            title: '',
-            latitude: '',
-            longitude: '',
-          },
-          {
-            id: 'manual-overlook-row',
-            source: 'manual',
-            relatedCollection: null,
-            relatedItem: null,
-            title: 'Manual overlook',
-            latitude: '-13.51',
-            longitude: '-71.97',
-          },
-        ],
-      },
-    ],
+    ...base,
+    days: [{
+      ...base.days[0],
+      items: [
+        {
+          ...buildManualTourAgencyItem(),
+          keyLocations: [
+            {
+              id: 'existing-restaurant-row',
+              source: 'existing',
+              relatedCollection: 'dining',
+              relatedItem: 201,
+              title: '',
+              latitude: '',
+              longitude: '',
+            },
+            {
+              id: 'manual-overlook-row',
+              source: 'manual',
+              relatedCollection: null,
+              relatedItem: null,
+              title: 'Manual overlook',
+              latitude: '-13.51',
+              longitude: '-71.97',
+            },
+          ],
+        },
+      ],
+    }],
   }
 }
 
@@ -192,6 +200,7 @@ function Harness({
   return (
     <BuilderStopsPanel
       draft={draft}
+      activeDayIndex={0}
       token={null}
       locationRef={1}
       mediaAssets={[]}
@@ -204,16 +213,23 @@ function Harness({
       onRemoveItem={() => {}}
       onUpdateItem={(itemId, updater) => {
         setDraft((current) => {
-          if (current.whereStaying.some((item) => item.id === itemId)) {
-            return {
-              ...current,
-              whereStaying: current.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
+          const dayIdx = 0
+          const day = current.days[dayIdx]
+          if (!day) return current
+          if (day.whereStaying.some((item) => item.id === itemId)) {
+            const nextDays = [...current.days]
+            nextDays[dayIdx] = {
+              ...day,
+              whereStaying: day.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
             }
+            return { ...current, days: nextDays }
           }
-          return {
-            ...current,
-            items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
+          const nextDays = [...current.days]
+          nextDays[dayIdx] = {
+            ...day,
+            items: day.items.map((item) => (item.id === itemId ? updater(item) : item)),
           }
+          return { ...current, days: nextDays }
         })
       }}
       onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite}

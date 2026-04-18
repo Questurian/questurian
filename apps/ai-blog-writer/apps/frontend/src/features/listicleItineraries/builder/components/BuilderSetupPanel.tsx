@@ -1,4 +1,4 @@
-import type { ListicleItineraryDraft, LocationOption } from '../../types'
+import { resizeItineraryDays, type ListicleItineraryDraft, type LocationOption } from '../../types'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import {
@@ -110,6 +110,31 @@ export function BuilderSetupPanel({
             {locations.map((location) => (
               <option key={location.id} value={location.locationKey}>
                 {formatLocationLabel(location)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="stl-field">
+          <span>Itinerary length (days) *</span>
+          <select
+            value={draft.dayCount}
+            disabled={isSetupLocked}
+            onChange={(event) => {
+              const next = Number(event.target.value)
+              if (next === draft.dayCount) return
+              if (next < draft.dayCount) {
+                const ok = window.confirm(
+                  'Fewer days permanently removes lodging and stops on the dropped days. Continue?',
+                )
+                if (!ok) return
+              }
+              updateDraft(resizeItineraryDays(draft, next))
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <option key={n} value={n}>
+                {n} {n === 1 ? 'day' : 'days'}
               </option>
             ))}
           </select>

@@ -4,6 +4,7 @@ import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-sect
 import {
   isRelatedItemCollection,
   isTourAgencyPriceTier,
+  type ItineraryDaySlice,
   type ItineraryItemBlock,
   type ListicleItineraryDraft,
   type PayloadItineraryDoc,
@@ -98,21 +99,72 @@ function mapPayloadBlockRowToItem(item: PayloadBlockRow, index: number): Itinera
   }
 }
 
-export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: string): ListicleItineraryDraft {
+function mapPayloadDayRowToSlice(
+  doc: PayloadItineraryDoc,
+  row: NonNullable<PayloadItineraryDoc['itineraryDays']>[number],
+  dayIndex: number,
+): ItineraryDaySlice {
+  const rawItems = row.items || []
+  const rawWhereStaying = row.whereStaying || []
+  const lodgingFromItems = rawItems.filter((r) => r.blockType === 'itinerary-where-staying')
+  const stopsOnly = rawItems.filter((r) => r.blockType !== 'itinerary-where-staying')
+  const whereStayingRows = [...rawWhereStaying, ...lodgingFromItems]
+  const base = dayIndex * 1000
+  const whereStaying = whereStayingRows.map((r, i) => mapPayloadBlockRowToItem(r, base + i))
+  const items = stopsOnly.map((r, i) => mapPayloadBlockRowToItem(r, base + 500 + i))
+  const rowId = row && typeof row === 'object' && 'id' in row && typeof row.id === 'string' && row.id.trim()
+    ? row.id
+    : `day_${doc.id ?? 'new'}_${dayIndex}`
+  return {
+    id: rowId,
+    whereStaying,
+    items,
+  }
+}
+
+function mapLegacyTopLevelToDays(doc: PayloadItineraryDoc): ItineraryDaySlice[] {
   const rawItems = doc.items || []
   const rawWhereStaying = doc.whereStaying || []
   const lodgingFromItems = rawItems.filter((row) => row.blockType === 'itinerary-where-staying')
   const stopsOnly = rawItems.filter((row) => row.blockType !== 'itinerary-where-staying')
   const whereStayingRows = [...rawWhereStaying, ...lodgingFromItems]
-
   const whereStaying = whereStayingRows.map((row, index) => mapPayloadBlockRowToItem(row, index))
   const items = stopsOnly.map((row, index) => mapPayloadBlockRowToItem(row, index))
+  return [
+    {
+      id: `day_${doc.id ?? 'legacy'}`,
+      whereStaying,
+      items,
+    },
+  ]
+}
+
+function mapDocToDaysAndCount(doc: PayloadItineraryDoc): {
+  dayCount: number
+  days: ItineraryDaySlice[]
+} {
+  const rows = doc.itineraryDays
+  if (Array.isArray(rows) && rows.length > 0) {
+    const days = rows.map((row, dayIndex) => mapPayloadDayRowToSlice(doc, row, dayIndex))
+    return {
+      dayCount: Math.min(7, Math.max(1, days.length)),
+      days,
+    }
+  }
+  return {
+    dayCount: 1,
+    days: mapLegacyTopLevelToDays(doc),
+  }
+}
+
+export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: string): ListicleItineraryDraft {
+  const { dayCount, days } = mapDocToDaysAndCount(doc)
 
   const hasStep2Content = Boolean(
     (doc.header?.intro && typeof doc.header.intro === 'object')
     || getRelationshipId(doc.header?.featuredImage),
   )
-  const hasStep3Content = whereStaying.length > 0 || items.length > 0
+  const hasStep3Content = days.some((d) => d.whereStaying.length > 0 || d.items.length > 0)
   const normalizedSeoSection = normalizeSeoSection(doc.seoSection || createEmptySeoSection())
 
   return {
@@ -138,8 +190,8 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
       introJsonText: doc.header?.intro ? JSON.stringify(doc.header.intro, null, 2) : '',
       featuredImage: getRelationshipId(doc.header?.featuredImage),
     },
-    whereStaying,
-    items,
+    dayCount,
+    days,
     seoSection: normalizedSeoSection,
     status: doc.status || 'draft',
     articleType: 'listicle-itinerary',

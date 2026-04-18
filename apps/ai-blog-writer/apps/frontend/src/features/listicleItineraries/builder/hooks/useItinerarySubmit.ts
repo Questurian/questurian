@@ -223,26 +223,37 @@ export function useItinerarySubmit({
         throw new Error('Header intro is required (markdown or lexical JSON)')
       }
 
-      const payloadWhereStaying = [] as Array<Record<string, unknown>>
-      for (let index = 0; index < submitDraft.whereStaying.length; index += 1) {
-        payloadWhereStaying.push(
-          await itineraryItemToPayloadBlock({
-            item: submitDraft.whereStaying[index],
-            humanLabel: `Where you're staying ${index + 1}`,
-            relatedByBlockType,
-          }),
-        )
-      }
+      const payloadItineraryDays: Array<Record<string, unknown>> = []
+      for (let dayIndex = 0; dayIndex < submitDraft.days.length; dayIndex += 1) {
+        const day = submitDraft.days[dayIndex]
+        const dayLabel = `Day ${dayIndex + 1}`
 
-      const payloadItems = [] as Array<Record<string, unknown>>
-      for (let index = 0; index < submitDraft.items.length; index += 1) {
-        payloadItems.push(
-          await itineraryItemToPayloadBlock({
-            item: submitDraft.items[index],
-            humanLabel: `Stop ${index + 1}`,
-            relatedByBlockType,
-          }),
-        )
+        const payloadWhereStaying = [] as Array<Record<string, unknown>>
+        for (let index = 0; index < day.whereStaying.length; index += 1) {
+          payloadWhereStaying.push(
+            await itineraryItemToPayloadBlock({
+              item: day.whereStaying[index],
+              humanLabel: `${dayLabel} — Where you're staying ${index + 1}`,
+              relatedByBlockType,
+            }),
+          )
+        }
+
+        const payloadItems = [] as Array<Record<string, unknown>>
+        for (let index = 0; index < day.items.length; index += 1) {
+          payloadItems.push(
+            await itineraryItemToPayloadBlock({
+              item: day.items[index],
+              humanLabel: `${dayLabel} — Stop ${index + 1}`,
+              relatedByBlockType,
+            }),
+          )
+        }
+
+        payloadItineraryDays.push({
+          whereStaying: payloadWhereStaying,
+          items: payloadItems,
+        })
       }
 
       const body: Record<string, unknown> = {
@@ -256,12 +267,12 @@ export function useItinerarySubmit({
         step2_in_update_mode: false,
         step3_complete: submitDraft.step3_complete,
         step3_in_update_mode: false,
+        dayCount: submitDraft.dayCount,
+        itineraryDays: payloadItineraryDays,
         header: {
           intro: headerIntro,
           featuredImage: submitDraft.header.featuredImage || undefined,
         },
-        whereStaying: payloadWhereStaying,
-        items: payloadItems,
         seoSection: buildSeoPayload(seoSectionForSubmit),
         status: targetStatus,
         articleType: 'listicle-itinerary',
@@ -301,16 +312,26 @@ export function useItinerarySubmit({
         }
       }
 
+      const blurbsById = new Map<string, string>()
+      submitDraft.days.forEach((day) => {
+        ;[...day.whereStaying, ...day.items].forEach((item) => {
+          blurbsById.set(item.id, item.blurbMarkdown)
+        })
+      })
+
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
       nextDraft.editorModelName = draft.editorModelName
       nextDraft.header.introMarkdown = submitDraft.header.introMarkdown
-      nextDraft.whereStaying = nextDraft.whereStaying.map((nextItem, index) => ({
-        ...nextItem,
-        blurbMarkdown: submitDraft.whereStaying[index]?.blurbMarkdown || '',
-      }))
-      nextDraft.items = nextDraft.items.map((nextItem, index) => ({
-        ...nextItem,
-        blurbMarkdown: submitDraft.items[index]?.blurbMarkdown || '',
+      nextDraft.days = nextDraft.days.map((day) => ({
+        ...day,
+        whereStaying: day.whereStaying.map((row) => ({
+          ...row,
+          blurbMarkdown: blurbsById.get(row.id) ?? row.blurbMarkdown,
+        })),
+        items: day.items.map((row) => ({
+          ...row,
+          blurbMarkdown: blurbsById.get(row.id) ?? row.blurbMarkdown,
+        })),
       }))
       setDraft(nextDraft)
       saveDraft(nextDraft)

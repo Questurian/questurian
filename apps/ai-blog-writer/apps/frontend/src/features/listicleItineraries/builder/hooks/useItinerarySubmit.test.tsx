@@ -57,28 +57,31 @@ function buildDraft(): ListicleItineraryDraft {
   draft.step2_complete = true
   draft.step3_complete = true
   draft.header.introMarkdown = 'Intro copy'
-  draft.items = [{
-    id: 'tour-stop-1',
-    blockType: 'itinerary-tour-agency',
-    item: null,
-    mediaMode: 'photos',
-    selectedPhotos: [],
-    selectedInstagramPost: null,
-    title: 'Sacred Valley Day Tour',
-    operator: 'Andes Routes',
-    price: '$$$',
-    url: 'https://example.com/tours/sacred-valley',
-    tourDuration: 8,
-    startingPoint: {
-      label: 'Plaza de Armas',
-      latitude: '-13.516',
-      longitude: '-71.978',
-    },
-    keyLocations: [],
-    image: null,
-    instagramPost: null,
-    blurbMarkdown: 'Manual stop blurb',
-    blurbJsonText: '',
+  draft.days = [{
+    ...draft.days[0],
+    items: [{
+      id: 'tour-stop-1',
+      blockType: 'itinerary-tour-agency',
+      item: null,
+      mediaMode: 'photos',
+      selectedPhotos: [],
+      selectedInstagramPost: null,
+      title: 'Sacred Valley Day Tour',
+      operator: 'Andes Routes',
+      price: '$$$',
+      url: 'https://example.com/tours/sacred-valley',
+      tourDuration: 8,
+      startingPoint: {
+        label: 'Plaza de Armas',
+        latitude: '-13.516',
+        longitude: '-71.978',
+      },
+      keyLocations: [],
+      image: null,
+      instagramPost: null,
+      blurbMarkdown: 'Manual stop blurb',
+      blurbJsonText: '',
+    }],
   }]
   return draft
 }
@@ -92,6 +95,8 @@ describe('useItinerarySubmit', () => {
         intro: { root: { type: 'root' } },
         featuredImage: null,
       },
+      itineraryDays: [{ whereStaying: [], items: [] }],
+      dayCount: 1,
       items: [],
       updatedAt: '2026-04-07T12:00:00.000Z',
       createdAt: '2026-04-07T12:00:00.000Z',
@@ -123,7 +128,8 @@ describe('useItinerarySubmit', () => {
 
     expect(createItineraryMock).toHaveBeenCalledTimes(1)
     const submitBody = createItineraryMock.mock.calls[0]?.[0] as Record<string, unknown>
-    const submitItems = submitBody.items as Array<Record<string, unknown>>
+    const itineraryDays = submitBody.itineraryDays as Array<{ items: Array<Record<string, unknown>> }>
+    const submitItems = itineraryDays[0]?.items ?? []
     const firstItem = submitItems[0] || {}
 
     expect(submitBody).not.toHaveProperty('itineraryStartHour')

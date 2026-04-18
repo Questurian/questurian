@@ -80,16 +80,22 @@ export function validateItemMediaSelections(
   draft: ListicleItineraryDraft,
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
 ): string[] {
-  return [
-    ...validateItemMediaRows(
-      draft.whereStaying,
-      relatedByBlockType,
-      (index) => `Where you're staying (${index + 1})`,
-    ),
-    ...validateItemMediaRows(
-      draft.items,
-      relatedByBlockType,
-      (index) => `Stop ${index + 1}`,
-    ),
-  ]
+  const issues: string[] = []
+  for (let dayIndex = 0; dayIndex < draft.days.length; dayIndex += 1) {
+    const day = draft.days[dayIndex]
+    const dayPrefix = `Day ${dayIndex + 1}`
+    issues.push(
+      ...validateItemMediaRows(
+        day.whereStaying,
+        relatedByBlockType,
+        (index) => `${dayPrefix} — Where you're staying (${index + 1})`,
+      ),
+      ...validateItemMediaRows(
+        day.items,
+        relatedByBlockType,
+        (index) => `${dayPrefix} — Stop ${index + 1}`,
+      ),
+    )
+  }
+  return issues
 }

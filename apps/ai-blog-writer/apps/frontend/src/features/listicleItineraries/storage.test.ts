@@ -1,11 +1,43 @@
+import { afterEach, beforeEach, vi } from 'vitest'
 import { createEmptyDraft, listDrafts, saveDraft } from './storage'
 
-const CURRENT_STORAGE_KEY = 'listicle_itineraries_staged_v6_tour_agency_normalized_fields'
+const CURRENT_STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
 const LEGACY_STORAGE_KEY = 'listicle_itineraries_staged_v3_inline_seo'
+
+/** In-memory Storage — Node's experimental localStorage can omit or break Web Storage methods. */
+function createMemoryStorage(): Storage {
+  const store = new Map<string, string>()
+  const keyAt = (index: number) => Array.from(store.keys())[index] ?? null
+
+  return {
+    get length() {
+      return store.size
+    },
+    clear() {
+      store.clear()
+    },
+    getItem(key: string) {
+      return store.get(key) ?? null
+    },
+    setItem(key: string, value: string) {
+      store.set(key, String(value))
+    },
+    removeItem(key: string) {
+      store.delete(key)
+    },
+    key(index: number) {
+      return keyAt(index)
+    },
+  } as Storage
+}
 
 describe('listicleItineraries storage', () => {
   beforeEach(() => {
-    localStorage.clear()
+    vi.stubGlobal('localStorage', createMemoryStorage())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('stores and normalizes shared neighborhoods under the v5 key', () => {
@@ -22,7 +54,9 @@ describe('listicleItineraries storage', () => {
 
   it('round-trips manual tour-agency instagram and key-location rows', () => {
     const draft = createEmptyDraft()
-    draft.items = [{
+    draft.days = [{
+      ...draft.days[0],
+      items: [{
       id: 'tour-stop-1',
       blockType: 'itinerary-tour-agency',
       item: null,
@@ -63,19 +97,20 @@ describe('listicleItineraries storage', () => {
       instagramPost: 42,
       blurbMarkdown: 'A curated half-day route through the Sacred Valley.',
       blurbJsonText: '',
-    }]
+    }],
+  }]
 
     saveDraft(draft)
 
     const restored = listDrafts()[0]
-    expect(restored?.items[0]?.instagramPost).toBe(42)
-    expect(restored?.items[0]?.tourDuration).toBe(4)
-    expect(restored?.items[0]?.startingPoint).toEqual({
+    expect(restored?.days[0]?.items[0]?.instagramPost).toBe(42)
+    expect(restored?.days[0]?.items[0]?.tourDuration).toBe(4)
+    expect(restored?.days[0]?.items[0]?.startingPoint).toEqual({
       label: 'Cusco Plaza',
       latitude: '-13.516',
       longitude: '-71.978',
     })
-    expect(restored?.items[0]?.keyLocations).toEqual([
+    expect(restored?.days[0]?.items[0]?.keyLocations).toEqual([
       {
         id: 'existing-stop',
         source: 'existing',
@@ -98,7 +133,9 @@ describe('listicleItineraries storage', () => {
   })
 
   it('drops legacy schedule fields while preserving current-key drafts', () => {
-    localStorage.setItem(CURRENT_STORAGE_KEY, JSON.stringify([{
+    // Legacy flat `items` / `whereStaying` must migrate when `days` is absent; spreading
+    // `createEmptyDraft()` alone would leave `days` populated and skip the legacy path.
+    const legacyDraft = {
       ...createEmptyDraft(),
       draftId: 'legacy-current-draft',
       itineraryStartHour: 9,
@@ -135,13 +172,17 @@ describe('listicleItineraries storage', () => {
         blurbMarkdown: 'Legacy blurb',
         blurbJsonText: '',
       }],
-    }]))
+    }
+    delete (legacyDraft as Record<string, unknown>).days
+    delete (legacyDraft as Record<string, unknown>).dayCount
+
+    localStorage.setItem(CURRENT_STORAGE_KEY, JSON.stringify([legacyDraft]))
 
     const restored = listDrafts()[0]
     expect(restored?.title).toBe('')
-    expect(restored?.items[0]?.title).toBe('Legacy Sacred Valley Circuit')
+    expect(restored?.days[0]?.items[0]?.title).toBe('Legacy Sacred Valley Circuit')
     expect('itineraryStartHour' in (restored as Record<string, unknown>)).toBe(false)
-    expect('timeHour' in ((restored?.items[0] ?? {}) as Record<string, unknown>)).toBe(false)
+    expect('timeHour' in ((restored?.days[0]?.items[0] ?? {}) as Record<string, unknown>)).toBe(false)
   })
 
   it('ignores legacy staged drafts instead of migrating them', () => {

@@ -16,6 +16,8 @@ import {
   sharedNeighborhoods,
   step1UiWrapper,
   headerSection,
+  dayCount,
+  itineraryDays,
   whereStaying,
   items,
   seo,
@@ -24,10 +26,23 @@ import {
   publishedAt,
   articleType,
 } from './fields'
-import { validateListicleItineraryBlockRows } from './validateListicleItineraryBlockRows'
+import {
+  type ComputedItineraryBlock,
+  validateListicleItineraryBlockRows,
+} from './validateListicleItineraryBlockRows'
 
 const getValue = <T,>(data: Record<string, unknown> | undefined, key: string): T | undefined => {
   return data?.[key] as T | undefined
+}
+
+function normalizeDayRowBlocks(
+  rawWhere: Record<string, unknown>[],
+  rawItems: Record<string, unknown>[],
+): { whereStaying: Record<string, unknown>[]; items: Record<string, unknown>[] } {
+  const lodgingFromItems = rawItems.filter((b) => String(b.blockType) === 'itinerary-where-staying')
+  const stopsOnly = rawItems.filter((b) => String(b.blockType) !== 'itinerary-where-staying')
+  const normalizedWhereStaying = [...rawWhere, ...lodgingFromItems]
+  return { whereStaying: normalizedWhereStaying, items: stopsOnly }
 }
 
 export const ListicleItineraries: CollectionConfig = {
@@ -98,6 +113,8 @@ export const ListicleItineraries: CollectionConfig = {
     step1UiWrapper,
 
     headerSection,
+    dayCount,
+    itineraryDays,
     whereStaying,
     items,
     seo,
@@ -168,47 +185,87 @@ export const ListicleItineraries: CollectionConfig = {
           throw new Error('Location is required.')
         }
 
-        const rawItems = Array.isArray(getValue<unknown[]>(merged, 'items'))
+        const rawLegacyItems = Array.isArray(getValue<unknown[]>(merged, 'items'))
           ? (getValue<unknown[]>(merged, 'items') as Record<string, unknown>[])
           : []
-        const rawWhereStaying = Array.isArray(getValue<unknown[]>(merged, 'whereStaying'))
+        const rawLegacyWhereStaying = Array.isArray(getValue<unknown[]>(merged, 'whereStaying'))
           ? (getValue<unknown[]>(merged, 'whereStaying') as Record<string, unknown>[])
           : []
 
-        const lodgingFromItems = rawItems.filter((b) => String(b.blockType) === 'itinerary-where-staying')
-        const stopsOnly = rawItems.filter((b) => String(b.blockType) !== 'itinerary-where-staying')
-        const normalizedWhereStaying = [...rawWhereStaying, ...lodgingFromItems]
+        const rawItineraryDays = Array.isArray(getValue<unknown[]>(merged, 'itineraryDays'))
+          ? (getValue<unknown[]>(merged, 'itineraryDays') as Record<string, unknown>[])
+          : []
 
-        if (data && (operation === 'create' || operation === 'update')) {
-          data.whereStaying = normalizedWhereStaying
-          data.items = stopsOnly
+        let normalizedDays: Array<{ whereStaying: Record<string, unknown>[]; items: Record<string, unknown>[] }>
+
+        if (rawItineraryDays.length > 0) {
+          normalizedDays = rawItineraryDays.map((dayRow) => {
+            const wr = Array.isArray(dayRow.whereStaying)
+              ? (dayRow.whereStaying as Record<string, unknown>[])
+              : []
+            const it = Array.isArray(dayRow.items)
+              ? (dayRow.items as Record<string, unknown>[])
+              : []
+            return normalizeDayRowBlocks(wr, it)
+          })
+        } else {
+          const single = normalizeDayRowBlocks(rawLegacyWhereStaying, rawLegacyItems)
+          normalizedDays = [single]
         }
 
-        const whereStayingValue = normalizedWhereStaying
-        const itemsValue = stopsOnly
+        if (normalizedDays.length < 1) {
+          normalizedDays = [{ whereStaying: [], items: [] }]
+        }
+
+        if (normalizedDays.length > 7) {
+          normalizedDays = normalizedDays.slice(0, 7)
+        }
+
+        if (data && (operation === 'create' || operation === 'update')) {
+          const existingRows = rawItineraryDays.length > 0 ? rawItineraryDays : []
+          data.itineraryDays = normalizedDays.map((day, index) => {
+            const existingRow = existingRows[index] as Record<string, unknown> | undefined
+            const id = existingRow && typeof existingRow.id === 'string' ? existingRow.id : undefined
+            return {
+              ...(id ? { id } : {}),
+              whereStaying: day.whereStaying,
+              items: day.items,
+            }
+          })
+          data.dayCount = normalizedDays.length
+          data.whereStaying = normalizedDays[0]?.whereStaying ?? []
+          data.items = normalizedDays[0]?.items ?? []
+        }
 
         const sourceItemCache = new Map<string, Record<string, unknown> | null>()
         const instagramPostCache = new Map<string, boolean>()
 
-        const computedWhere = await validateListicleItineraryBlockRows({
-          req,
-          blocks: whereStayingValue,
-          section: 'whereStaying',
-          labelAt: (i) => `Where you're staying (${i + 1})`,
-          sourceItemCache,
-          instagramPostCache,
-        })
+        const computed: ComputedItineraryBlock[] = []
 
-        const computedStops = await validateListicleItineraryBlockRows({
-          req,
-          blocks: itemsValue,
-          section: 'stops',
-          labelAt: (i) => `Stop ${i + 1}`,
-          sourceItemCache,
-          instagramPostCache,
-        })
+        for (let dayIndex = 0; dayIndex < normalizedDays.length; dayIndex += 1) {
+          const day = normalizedDays[dayIndex]
+          const dayPrefix = `Day ${dayIndex + 1} — `
 
-        const computed = [...computedWhere, ...computedStops]
+          const computedWhere = await validateListicleItineraryBlockRows({
+            req,
+            blocks: day.whereStaying,
+            section: 'whereStaying',
+            labelAt: (i) => `${dayPrefix}Where you're staying (${i + 1})`,
+            sourceItemCache,
+            instagramPostCache,
+          })
+
+          const computedStops = await validateListicleItineraryBlockRows({
+            req,
+            blocks: day.items,
+            section: 'stops',
+            labelAt: (i) => `${dayPrefix}Stop ${i + 1}`,
+            sourceItemCache,
+            instagramPostCache,
+          })
+
+          computed.push(...computedWhere, ...computedStops)
+        }
 
         const parentLocation = getValue<string>(merged, 'location')
         if (parentLocation) {
@@ -229,8 +286,14 @@ export const ListicleItineraries: CollectionConfig = {
         }
 
         const currentStatus = getValue<string>(merged, 'status')
-        if (currentStatus === 'published' && itemsValue.length < 1) {
-          throw new Error('Publishing requires at least one itinerary stop.')
+        if (currentStatus === 'published') {
+          for (let dayIndex = 0; dayIndex < normalizedDays.length; dayIndex += 1) {
+            if (normalizedDays[dayIndex].items.length < 1) {
+              throw new Error(
+                `Publishing requires at least one itinerary stop on day ${dayIndex + 1}.`,
+              )
+            }
+          }
         }
 
         return data

@@ -115,7 +115,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     })
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Item 1 key location 1 must include a title, latitude, and longitude.',
+      "Day 1 — Stop 1 key location 1 must include a title, latitude, and longitude.",
     )
   })
 
@@ -125,7 +125,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     })
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Item 1 must include a tour operator.',
+      'Day 1 — Stop 1 must include a tour operator.',
     )
   })
 
@@ -135,7 +135,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     })
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Item 1 must include a valid absolute URL.',
+      'Day 1 — Stop 1 must include a valid absolute URL.',
     )
   })
 
@@ -145,7 +145,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     })
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Item 1 price must be $, $$, $$$, or $$$$.',
+      'Day 1 — Stop 1 price must be $, $$, $$$, or $$$$.',
     )
   })
 
@@ -155,7 +155,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     })
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Item 1 must include a tour duration between 1 and 24 hours.',
+      'Day 1 — Stop 1 must include a tour duration between 1 and 24 hours.',
     )
   })
 
@@ -167,7 +167,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     })
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Item 1 starting point must include valid latitude and longitude.',
+      'Day 1 — Stop 1 starting point must include valid latitude and longitude.',
     )
   })
 
@@ -181,7 +181,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     })
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Item 1 starting point must include valid latitude and longitude.',
+      'Day 1 — Stop 1 starting point must include valid latitude and longitude.',
     )
   })
 
@@ -193,7 +193,7 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     }
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
-      'Publishing requires at least one itinerary item.',
+      'Publishing requires at least one itinerary stop on day 1.',
     )
   })
 })

@@ -7,6 +7,7 @@ import type {
 } from '../../../staging/api'
 import type {
   ItineraryBlockType,
+  ItineraryItemBlock,
   ListicleItineraryDraft,
   LocationOption,
   RelatedItemOption,
@@ -70,7 +71,7 @@ function mapBlockTypeToCategory(blockType: ItineraryBlockType): ListicleWriterCa
 }
 
 function buildManualKeyLocationContext(
-  item: ListicleItineraryDraft['items'][number],
+  item: ItineraryItemBlock,
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
 ): string {
   const labels = item.keyLocations.map((location) => {
@@ -131,7 +132,7 @@ function buildIntroTarget(
 
 function buildStopTarget(
   draft: ListicleItineraryDraft,
-  item: ListicleItineraryDraft['items'][number],
+  item: ItineraryItemBlock,
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
   articleLocationLabel: string,
 ): GenerateListicleContentTarget {
@@ -286,27 +287,30 @@ export function applyItineraryGeneratedContent(
           introJsonText: '',
         }
       : draft.header,
-    whereStaying: draft.whereStaying.map((item) => {
-      const result = response.results[`${item.id}_blurb`]
-      if (result?.status !== 'generated' || !result.markdown) {
-        return item
-      }
-      return {
-        ...item,
-        blurbMarkdown: result.markdown,
-        blurbJsonText: '',
-      }
-    }),
-    items: draft.items.map((item) => {
-      const result = response.results[`${item.id}_blurb`]
-      if (result?.status !== 'generated' || !result.markdown) {
-        return item
-      }
-      return {
-        ...item,
-        blurbMarkdown: result.markdown,
-        blurbJsonText: '',
-      }
-    }),
+    days: draft.days.map((day) => ({
+      ...day,
+      whereStaying: day.whereStaying.map((item) => {
+        const result = response.results[`${item.id}_blurb`]
+        if (result?.status !== 'generated' || !result.markdown) {
+          return item
+        }
+        return {
+          ...item,
+          blurbMarkdown: result.markdown,
+          blurbJsonText: '',
+        }
+      }),
+      items: day.items.map((item) => {
+        const result = response.results[`${item.id}_blurb`]
+        if (result?.status !== 'generated' || !result.markdown) {
+          return item
+        }
+        return {
+          ...item,
+          blurbMarkdown: result.markdown,
+          blurbJsonText: '',
+        }
+      }),
+    })),
   }
 }

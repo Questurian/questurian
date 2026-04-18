@@ -2,6 +2,7 @@ import {
   isManualItineraryBlockType,
   isTourAgencyPriceTier,
   type ItineraryBlockType,
+  type ItineraryItemBlock,
   type ListicleItineraryDraft,
   type RelatedItemOption,
 } from '../../types'
@@ -44,7 +45,7 @@ export function validateStep2(draft: ListicleItineraryDraft): string[] {
 }
 
 function validateItineraryStopRows(
-  rows: ListicleItineraryDraft['items'],
+  rows: ItineraryItemBlock[],
   humanLabel: (index: number) => string,
 ): string[] {
   const issues: string[] = []
@@ -119,8 +120,12 @@ export function validateStep3(
 ): string[] {
   const issues: string[] = []
 
-  if (draft.items.length < 1) {
-    issues.push('Step 3 requires at least one itinerary stop before locking.')
+  for (let dayIndex = 0; dayIndex < draft.days.length; dayIndex += 1) {
+    const day = draft.days[dayIndex]
+    const dayPrefix = `Day ${dayIndex + 1}`
+    if (day.items.length < 1) {
+      issues.push(`${dayPrefix}: add at least one itinerary stop before locking Step 3.`)
+    }
   }
 
   const mediaIssues = validateItemMediaSelections(draft, relatedByBlockType)
@@ -128,18 +133,22 @@ export function validateStep3(
     issues.push(...mediaIssues)
   }
 
-  issues.push(
-    ...validateItineraryStopRows(
-      draft.whereStaying,
-      (index) => `Where you're staying (${index + 1})`,
-    ),
-  )
-  issues.push(
-    ...validateItineraryStopRows(
-      draft.items,
-      (index) => `Stop ${index + 1}`,
-    ),
-  )
+  for (let dayIndex = 0; dayIndex < draft.days.length; dayIndex += 1) {
+    const day = draft.days[dayIndex]
+    const dayPrefix = `Day ${dayIndex + 1}`
+    issues.push(
+      ...validateItineraryStopRows(
+        day.whereStaying,
+        (index) => `${dayPrefix} — Where you're staying (${index + 1})`,
+      ),
+    )
+    issues.push(
+      ...validateItineraryStopRows(
+        day.items,
+        (index) => `${dayPrefix} — Stop ${index + 1}`,
+      ),
+    )
+  }
 
   return issues
 }
