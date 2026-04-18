@@ -5,6 +5,7 @@ import { ItineraryDiningBlock } from './ItineraryDiningBlock'
 import { ItineraryKeyLocationsBlock } from './ItineraryKeyLocationsBlock'
 import { ItineraryNightlifeBlock } from './ItineraryNightlifeBlock'
 import { ItineraryTourAgencyBlock } from './ItineraryTourAgencyBlock'
+import { ItineraryWhereStayingBlock } from './ItineraryWhereStayingBlock'
 
 export {
   ItineraryAccommodationsBlock,
@@ -13,9 +14,11 @@ export {
   ItineraryKeyLocationsBlock,
   ItineraryNightlifeBlock,
   ItineraryTourAgencyBlock,
+  ItineraryWhereStayingBlock,
 }
 
-export const listicleItineraryBlocks: Block[] = [
+/** Stops only (dining, attractions, tour agency, etc.) — lodging lives in `whereStaying`. */
+export const listicleItineraryStopBlocks: Block[] = [
   ItineraryDiningBlock,
   ItineraryAccommodationsBlock,
   ItineraryAttractionsBlock,
@@ -23,3 +26,5 @@ export const listicleItineraryBlocks: Block[] = [
   ItineraryKeyLocationsBlock,
   ItineraryTourAgencyBlock,
 ]
+
+export const listicleItineraryWhereStayingBlocks: Block[] = [ItineraryWhereStayingBlock]

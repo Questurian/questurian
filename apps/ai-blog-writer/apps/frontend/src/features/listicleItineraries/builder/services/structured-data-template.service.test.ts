@@ -112,6 +112,7 @@ function buildRelatedByType(): Record<ListicleItineraryDraft['items'][number]['b
   return {
     'itinerary-dining': [{ id: 101, title: 'Brunch Spot' }],
     'itinerary-accommodations': [],
+    'itinerary-where-staying': [],
     'itinerary-attractions': [{ id: 202, title: 'Scenic Mirador' }],
     'itinerary-nightlife': [],
     'itinerary-key-location': [],

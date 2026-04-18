@@ -105,6 +105,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       id: itemId,
       blockType:
         itemValue.blockType === 'itinerary-accommodations'
+        || itemValue.blockType === 'itinerary-where-staying'
         || itemValue.blockType === 'itinerary-attractions'
         || itemValue.blockType === 'itinerary-nightlife'
         || itemValue.blockType === 'itinerary-key-location'
@@ -175,11 +176,22 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       introJsonText: typeof header.introJsonText === 'string' ? header.introJsonText : '',
       featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
     },
-    items: Array.isArray(value.items)
-      ? value.items
-          .map((item, itemIndex) => normalizeStoredItem(item, itemIndex))
-          .filter((item): item is ItineraryItemBlock => Boolean(item))
-      : [],
+    ...(() => {
+      const rawWhere = Array.isArray(value.whereStaying) ? value.whereStaying : []
+      const rawItems = Array.isArray(value.items) ? value.items : []
+      const mappedWhere = rawWhere
+        .map((item, itemIndex) => normalizeStoredItem(item, itemIndex))
+        .filter((item): item is ItineraryItemBlock => Boolean(item))
+      const mappedItems = rawItems
+        .map((item, itemIndex) => normalizeStoredItem(item, itemIndex))
+        .filter((item): item is ItineraryItemBlock => Boolean(item))
+      const lodgingFromItems = mappedItems.filter((item) => item.blockType === 'itinerary-where-staying')
+      const stops = mappedItems.filter((item) => item.blockType !== 'itinerary-where-staying')
+      return {
+        whereStaying: [...mappedWhere, ...lodgingFromItems],
+        items: stops,
+      }
+    })(),
     seoSection: normalizeSeoSection(value.seoSection ?? createEmptySeoSection()),
     status: value.status === 'published' ? 'published' : 'draft',
     articleType: 'listicle-itinerary',
@@ -258,6 +270,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
       introJsonText: '',
       featuredImage: null,
     },
+    whereStaying: [],
     items: [],
     seoSection: createEmptySeoSection(),
     status: 'draft',

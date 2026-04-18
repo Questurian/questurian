@@ -6,15 +6,22 @@ import type {
 export const BLOCK_TYPE_OPTIONS: Array<{ label: string; value: ItineraryBlockType }> = [
   { label: 'Dining Stop (restaurants, cafes)', value: 'itinerary-dining' },
   { label: 'Accommodation Stop (hotel check-in, stay)', value: 'itinerary-accommodations' },
+  { label: "Where You're Staying (nightly lodging)", value: 'itinerary-where-staying' },
   { label: 'Attraction Stop (landmarks, activities)', value: 'itinerary-attractions' },
   { label: 'Nightlife Stop (bars, clubs, evening)', value: 'itinerary-nightlife' },
   { label: 'Key Location Stop (areas, transit hubs)', value: 'itinerary-key-location' },
   { label: 'Tour Agency Stop (manual listing)', value: 'itinerary-tour-agency' },
 ]
 
+/** Step 3 “Stops” section — lodging uses the separate Where you're staying section. */
+export const BLOCK_TYPE_OPTIONS_STOPS = BLOCK_TYPE_OPTIONS.filter(
+  (option) => option.value !== 'itinerary-where-staying',
+)
+
 export const EMPTY_RELATED_BY_BLOCK_TYPE: Record<ItineraryBlockType, RelatedItemOption[]> = {
   'itinerary-dining': [],
   'itinerary-accommodations': [],
+  'itinerary-where-staying': [],
   'itinerary-attractions': [],
   'itinerary-nightlife': [],
   'itinerary-key-location': [],

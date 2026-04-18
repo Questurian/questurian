@@ -16,10 +16,11 @@ import { getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
-type PayloadKeyLocationRows = NonNullable<PayloadItineraryDoc['items']>[number]['keyLocations']
+type PayloadBlockRow = NonNullable<PayloadItineraryDoc['items']>[number]
+type PayloadKeyLocationRows = PayloadBlockRow['keyLocations']
 
 function normalizePayloadStartingPoint(
-  value: NonNullable<PayloadItineraryDoc['items']>[number]['startingPoint'],
+  value: PayloadBlockRow['startingPoint'],
 ): TourAgencyStartingPoint {
   if (!value || typeof value !== 'object') {
     return {
@@ -66,43 +67,52 @@ function normalizePayloadKeyLocations(
   })
 }
 
-export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: string): ListicleItineraryDraft {
-  const items: ItineraryItemBlock[] = (doc.items || []).map((item, index) => {
-    const itemId = item.id || `item_${Date.now()}_${index}`
+function mapPayloadBlockRowToItem(item: PayloadBlockRow, index: number): ItineraryItemBlock {
+  const itemId = item.id || `item_${Date.now()}_${index}`
 
-    return {
-      id: itemId,
-      blockType: item.blockType || 'itinerary-dining',
-      item: getRelationshipId(item.item),
-      mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
-      selectedPhotos: getRelationshipIds(item.selectedPhotos),
-      selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
-      title: item.title?.trim() || '',
-      operator: item.operator?.trim() || '',
-      price: isTourAgencyPriceTier(item.price) ? item.price : '',
-      url: item.url?.trim() || '',
-      tourDuration:
-        typeof item.tourDuration === 'number'
-        && Number.isInteger(item.tourDuration)
-        && item.tourDuration >= 1
-        && item.tourDuration <= 24
-          ? item.tourDuration
-          : 1,
-      startingPoint: normalizePayloadStartingPoint(item.startingPoint),
-      keyLocations: normalizePayloadKeyLocations(item.keyLocations, itemId),
-      image: getRelationshipId(item.image),
-      instagramPost: getRelationshipId(item.instagramPost),
-      blurbMarkdown: '',
-      blurbLexical: item.blurb,
-      blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
-    }
-  })
+  return {
+    id: itemId,
+    blockType: item.blockType || 'itinerary-dining',
+    item: getRelationshipId(item.item),
+    mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
+    selectedPhotos: getRelationshipIds(item.selectedPhotos),
+    selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
+    title: item.title?.trim() || '',
+    operator: item.operator?.trim() || '',
+    price: isTourAgencyPriceTier(item.price) ? item.price : '',
+    url: item.url?.trim() || '',
+    tourDuration:
+      typeof item.tourDuration === 'number'
+      && Number.isInteger(item.tourDuration)
+      && item.tourDuration >= 1
+      && item.tourDuration <= 24
+        ? item.tourDuration
+        : 1,
+    startingPoint: normalizePayloadStartingPoint(item.startingPoint),
+    keyLocations: normalizePayloadKeyLocations(item.keyLocations, itemId),
+    image: getRelationshipId(item.image),
+    instagramPost: getRelationshipId(item.instagramPost),
+    blurbMarkdown: '',
+    blurbLexical: item.blurb,
+    blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
+  }
+}
+
+export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: string): ListicleItineraryDraft {
+  const rawItems = doc.items || []
+  const rawWhereStaying = doc.whereStaying || []
+  const lodgingFromItems = rawItems.filter((row) => row.blockType === 'itinerary-where-staying')
+  const stopsOnly = rawItems.filter((row) => row.blockType !== 'itinerary-where-staying')
+  const whereStayingRows = [...rawWhereStaying, ...lodgingFromItems]
+
+  const whereStaying = whereStayingRows.map((row, index) => mapPayloadBlockRowToItem(row, index))
+  const items = stopsOnly.map((row, index) => mapPayloadBlockRowToItem(row, index))
 
   const hasStep2Content = Boolean(
     (doc.header?.intro && typeof doc.header.intro === 'object')
     || getRelationshipId(doc.header?.featuredImage),
   )
-  const hasStep3Content = items.length > 0
+  const hasStep3Content = whereStaying.length > 0 || items.length > 0
   const normalizedSeoSection = normalizeSeoSection(doc.seoSection || createEmptySeoSection())
 
   return {
@@ -128,6 +138,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
       introJsonText: doc.header?.intro ? JSON.stringify(doc.header.intro, null, 2) : '',
       featuredImage: getRelationshipId(doc.header?.featuredImage),
     },
+    whereStaying,
     items,
     seoSection: normalizedSeoSection,
     status: doc.status || 'draft',

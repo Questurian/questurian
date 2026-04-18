@@ -8,6 +8,7 @@ import {
   isManualItineraryBlockType,
   type ItineraryBlockType,
   type InstagramPostOption,
+  type ItineraryItemBlock,
   type ListicleItineraryDraft,
   type MediaAssetOption,
   type RelatedItemOption,
@@ -40,6 +41,87 @@ type UseItinerarySubmitParams = {
 type UseItinerarySubmitResult = {
   isSaving: boolean
   submit: (targetStatus: 'draft' | 'published') => Promise<void>
+}
+
+async function itineraryItemToPayloadBlock(params: {
+  item: ItineraryItemBlock
+  humanLabel: string
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
+}): Promise<Record<string, unknown>> {
+  const { item, humanLabel, relatedByBlockType } = params
+
+  const blurb = item.blurbMarkdown.trim()
+    ? await markdownToLexical(item.blurbMarkdown)
+    : readLexicalFromJsonText(item.blurbJsonText || '', `${humanLabel} blurb`)
+
+  if (!item.blurbMarkdown.trim() && !item.blurbJsonText?.trim()) {
+    throw new Error(`${humanLabel} blurb is required (markdown or lexical JSON)`)
+  }
+
+  if (isManualItineraryBlockType(item.blockType)) {
+    const startingPointLabel = item.startingPoint.label.trim()
+    const startingPointLatitude = item.startingPoint.latitude.trim()
+    const startingPointLongitude = item.startingPoint.longitude.trim()
+    const startingPoint = startingPointLabel || startingPointLatitude || startingPointLongitude
+      ? {
+          label: startingPointLabel || undefined,
+          latitude: startingPointLatitude ? Number(startingPointLatitude) : undefined,
+          longitude: startingPointLongitude ? Number(startingPointLongitude) : undefined,
+        }
+      : undefined
+
+    return {
+      blockType: item.blockType,
+      title: item.title.trim(),
+      operator: item.operator.trim(),
+      price: item.price || undefined,
+      url: item.url.trim(),
+      tourDuration: item.tourDuration,
+      startingPoint,
+      keyLocations: item.keyLocations.map((location) => (
+        location.source === 'existing'
+          ? {
+              id: location.id,
+              source: location.source,
+              relatedItem: location.relatedCollection && location.relatedItem
+                ? {
+                    relationTo: location.relatedCollection,
+                    value: location.relatedItem,
+                  }
+                : undefined,
+            }
+          : {
+              id: location.id,
+              source: location.source,
+              title: location.title.trim() || undefined,
+              latitude: location.latitude.trim() ? Number(location.latitude) : undefined,
+              longitude: location.longitude.trim() ? Number(location.longitude) : undefined,
+            }
+      )),
+      image: item.image || undefined,
+      instagramPost: item.instagramPost || undefined,
+      blurb,
+    }
+  }
+
+  if (!item.item) {
+    throw new Error(`${humanLabel} is missing related entry selection`)
+  }
+
+  const relatedOptions = relatedByBlockType[item.blockType] || []
+  const selectedRelated = relatedOptions.find((entry) => entry.id === item.item)
+  if (!selectedRelated) {
+    throw new Error(`${humanLabel} selected related entry is unavailable for current itinerary filters`)
+  }
+
+  return {
+    blockType: item.blockType,
+    item: item.item,
+    mediaMode: item.mediaMode,
+    selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
+    selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,
+    blurb,
+  }
 }
 
 export function useItinerarySubmit({
@@ -141,83 +223,26 @@ export function useItinerarySubmit({
         throw new Error('Header intro is required (markdown or lexical JSON)')
       }
 
+      const payloadWhereStaying = [] as Array<Record<string, unknown>>
+      for (let index = 0; index < submitDraft.whereStaying.length; index += 1) {
+        payloadWhereStaying.push(
+          await itineraryItemToPayloadBlock({
+            item: submitDraft.whereStaying[index],
+            humanLabel: `Where you're staying ${index + 1}`,
+            relatedByBlockType,
+          }),
+        )
+      }
+
       const payloadItems = [] as Array<Record<string, unknown>>
       for (let index = 0; index < submitDraft.items.length; index += 1) {
-        const item = submitDraft.items[index]
-
-        const blurb = item.blurbMarkdown.trim()
-          ? await markdownToLexical(item.blurbMarkdown)
-          : readLexicalFromJsonText(item.blurbJsonText || '', `Item ${index + 1} blurb`)
-
-        if (!item.blurbMarkdown.trim() && !item.blurbJsonText?.trim()) {
-          throw new Error(`Item ${index + 1} blurb is required (markdown or lexical JSON)`)
-        }
-
-        if (isManualItineraryBlockType(item.blockType)) {
-          const startingPointLabel = item.startingPoint.label.trim()
-          const startingPointLatitude = item.startingPoint.latitude.trim()
-          const startingPointLongitude = item.startingPoint.longitude.trim()
-          const startingPoint = startingPointLabel || startingPointLatitude || startingPointLongitude
-            ? {
-                label: startingPointLabel || undefined,
-                latitude: startingPointLatitude ? Number(startingPointLatitude) : undefined,
-                longitude: startingPointLongitude ? Number(startingPointLongitude) : undefined,
-              }
-            : undefined
-
-          payloadItems.push({
-            blockType: item.blockType,
-            title: item.title.trim(),
-            operator: item.operator.trim(),
-            price: item.price || undefined,
-            url: item.url.trim(),
-            tourDuration: item.tourDuration,
-            startingPoint,
-            keyLocations: item.keyLocations.map((location) => (
-              location.source === 'existing'
-                ? {
-                    id: location.id,
-                    source: location.source,
-                    relatedItem: location.relatedCollection && location.relatedItem
-                      ? {
-                          relationTo: location.relatedCollection,
-                          value: location.relatedItem,
-                        }
-                      : undefined,
-                  }
-                : {
-                    id: location.id,
-                    source: location.source,
-                    title: location.title.trim() || undefined,
-                    latitude: location.latitude.trim() ? Number(location.latitude) : undefined,
-                    longitude: location.longitude.trim() ? Number(location.longitude) : undefined,
-                  }
-            )),
-            image: item.image || undefined,
-            instagramPost: item.instagramPost || undefined,
-            blurb,
-          })
-          continue
-        }
-
-        if (!item.item) {
-          throw new Error(`Item ${index + 1} is missing related entry selection`)
-        }
-
-        const relatedOptions = relatedByBlockType[item.blockType] || []
-        const selectedRelated = relatedOptions.find((entry) => entry.id === item.item)
-        if (!selectedRelated) {
-          throw new Error(`Item ${index + 1} selected related entry is unavailable for current itinerary filters`)
-        }
-
-        payloadItems.push({
-          blockType: item.blockType,
-          item: item.item,
-          mediaMode: item.mediaMode,
-          selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
-          selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,
-          blurb,
-        })
+        payloadItems.push(
+          await itineraryItemToPayloadBlock({
+            item: submitDraft.items[index],
+            humanLabel: `Stop ${index + 1}`,
+            relatedByBlockType,
+          }),
+        )
       }
 
       const body: Record<string, unknown> = {
@@ -235,6 +260,7 @@ export function useItinerarySubmit({
           intro: headerIntro,
           featuredImage: submitDraft.header.featuredImage || undefined,
         },
+        whereStaying: payloadWhereStaying,
         items: payloadItems,
         seoSection: buildSeoPayload(seoSectionForSubmit),
         status: targetStatus,
@@ -278,6 +304,10 @@ export function useItinerarySubmit({
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
       nextDraft.editorModelName = draft.editorModelName
       nextDraft.header.introMarkdown = submitDraft.header.introMarkdown
+      nextDraft.whereStaying = nextDraft.whereStaying.map((nextItem, index) => ({
+        ...nextItem,
+        blurbMarkdown: submitDraft.whereStaying[index]?.blurbMarkdown || '',
+      }))
       nextDraft.items = nextDraft.items.map((nextItem, index) => ({
         ...nextItem,
         blurbMarkdown: submitDraft.items[index]?.blurbMarkdown || '',

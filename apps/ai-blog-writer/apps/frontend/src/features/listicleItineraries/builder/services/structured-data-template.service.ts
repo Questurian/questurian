@@ -6,7 +6,11 @@ import type {
   MediaAssetOption,
   RelatedItemOption,
 } from '../../types'
-import { isManualItineraryBlockType, relatedCollectionToBlockType } from '../../types'
+import {
+  getItineraryBlocksInArticleOrder,
+  isManualItineraryBlockType,
+  relatedCollectionToBlockType,
+} from '../../types'
 import {
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
@@ -263,6 +267,7 @@ const normalizePriceRange = (rawValue: string | undefined): string | undefined =
 export const ITINERARY_STOP_SCHEMA_TYPE: Record<ItineraryBlockType, string> = {
   'itinerary-dining': 'Restaurant',
   'itinerary-accommodations': 'LodgingBusiness',
+  'itinerary-where-staying': 'LodgingBusiness',
   'itinerary-attractions': 'TouristAttraction',
   'itinerary-nightlife': 'NightClub',
   'itinerary-key-location': 'Place',
@@ -279,6 +284,13 @@ const ITINERARY_STOP_ALLOWED_SCHEMA_TYPES: Record<ItineraryBlockType, string[]> 
     'FastFoodRestaurant',
   ],
   'itinerary-accommodations': [
+    'LodgingBusiness',
+    'Hotel',
+    'Hostel',
+    'BedAndBreakfast',
+    'Resort',
+  ],
+  'itinerary-where-staying': [
     'LodgingBusiness',
     'Hotel',
     'Hostel',
@@ -313,6 +325,8 @@ function getStopTypeLabel(blockType: ItineraryBlockType): string {
       return 'Dining'
     case 'itinerary-accommodations':
       return 'Accommodations'
+    case 'itinerary-where-staying':
+      return "Where You're Staying"
     case 'itinerary-attractions':
       return 'Attractions'
     case 'itinerary-nightlife':
@@ -653,7 +667,8 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
   )
   const authorName = normalizeText(draft.payloadAuthorName) || publisherConfig.defaultAuthorName
 
-  const itemListElement = draft.items.map((itineraryItem, index) => {
+  const blocksInArticleOrder = getItineraryBlocksInArticleOrder(draft)
+  const itemListElement = blocksInArticleOrder.map((itineraryItem, index) => {
     const position = index + 1
     const relatedItem = (relatedByBlockType[itineraryItem.blockType] || [])
       .find((entry) => entry.id === itineraryItem.item)
@@ -667,10 +682,14 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
       includeUrlFields: Boolean(canonicalUrl),
     })
 
+    const segmentLabel = itineraryItem.blockType === 'itinerary-where-staying'
+      ? `${getStopTypeLabel(itineraryItem.blockType)} ${position}`
+      : `${getStopTypeLabel(itineraryItem.blockType)} stop ${position}`
+
     return {
       '@type': 'ListItem',
       position,
-      name: `${getStopTypeLabel(itineraryItem.blockType)} stop ${position}`,
+      name: segmentLabel,
       item: stopEntity,
     }
   })
@@ -678,9 +697,9 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
   const itemListNode: Record<string, unknown> = {
     '@type': 'ItemList',
     '@id': itemListId,
-    name: `${articleTitle} itinerary stops`,
+    name: `${articleTitle} itinerary (lodging and stops)`,
     itemListOrder: 'https://schema.org/ItemListOrderAscending',
-    numberOfItems: draft.items.length,
+    numberOfItems: blocksInArticleOrder.length,
     itemListElement,
   }
 
@@ -924,13 +943,14 @@ export function validateListicleItineraryStructuredDataShape(input: {
     return issues
   }
 
-  if (itemListElement.length !== draft.items.length) {
-    issues.push(`Structured Data ItemList must contain ${draft.items.length} ListItem entries.`)
+  const blocksInArticleOrder = getItineraryBlocksInArticleOrder(draft)
+  if (itemListElement.length !== blocksInArticleOrder.length) {
+    issues.push(`Structured Data ItemList must contain ${blocksInArticleOrder.length} ListItem entries.`)
   }
 
   for (let index = 0; index < itemListElement.length; index += 1) {
     const expectedPosition = index + 1
-    const draftItem = draft.items[index]
+    const draftItem = blocksInArticleOrder[index]
     const entry = itemListElement[index]
     const listItem = isRecord(entry) ? entry : null
 

@@ -1,6 +1,7 @@
 import {
   isManualItineraryBlockType,
   type ItineraryBlockType,
+  type ItineraryItemBlock,
   type ListicleItineraryDraft,
   type RelatedItemOption,
 } from '../../types'
@@ -12,33 +13,35 @@ import {
   requiresPhotos,
 } from '../utils/item-media.utils'
 
-export function validateItemMediaSelections(
-  draft: ListicleItineraryDraft,
+function validateItemMediaRows(
+  rows: ItineraryItemBlock[],
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+  labelAt: (index: number) => string,
 ): string[] {
   const issues: string[] = []
 
-  for (let index = 0; index < draft.items.length; index += 1) {
-    const item = draft.items[index]
+  for (let index = 0; index < rows.length; index += 1) {
+    const item = rows[index]
+    const label = labelAt(index)
 
     if (isManualItineraryBlockType(item.blockType)) {
       continue
     }
 
     if (!item.item) {
-      issues.push(`Item ${index + 1} is missing related entry selection`)
+      issues.push(`${label} is missing related entry selection`)
       continue
     }
 
     const relatedOptions = relatedByBlockType[item.blockType] || []
     const selectedRelated = relatedOptions.find((entry) => entry.id === item.item)
     if (!selectedRelated) {
-      issues.push(`Item ${index + 1} selected related entry is unavailable for the current filters`)
+      issues.push(`${label} selected related entry is unavailable for the current filters`)
       continue
     }
 
     if (!isMediaMode(item.mediaMode)) {
-      issues.push(`Item ${index + 1} must select a media mode (photos, instagram, or both)`)
+      issues.push(`${label} must select a media mode (photos, instagram, or both)`)
       continue
     }
 
@@ -47,28 +50,46 @@ export function validateItemMediaSelections(
 
     if (requiresPhotos(item.mediaMode)) {
       if (item.selectedPhotos.length < 1 || item.selectedPhotos.length > 6) {
-        issues.push(`Item ${index + 1} must select between 1 and 6 photos`)
+        issues.push(`${label} must select between 1 and 6 photos`)
         continue
       }
 
       const invalidPhotoId = item.selectedPhotos.find((photoId) => !availablePhotoIds.has(photoId))
       if (invalidPhotoId !== undefined) {
-        issues.push(`Item ${index + 1} selected photo ${invalidPhotoId} is not in the source gallery`)
+        issues.push(`${label} selected photo ${invalidPhotoId} is not in the source gallery`)
         continue
       }
     }
 
     if (requiresInstagram(item.mediaMode)) {
       if (!item.selectedInstagramPost) {
-        issues.push(`Item ${index + 1} must select one Instagram embed`)
+        issues.push(`${label} must select one Instagram embed`)
         continue
       }
 
       if (!availableInstagramPostIds.has(item.selectedInstagramPost)) {
-        issues.push(`Item ${index + 1} selected Instagram embed is not in the source gallery`)
+        issues.push(`${label} selected Instagram embed is not in the source gallery`)
       }
     }
   }
 
   return issues
+}
+
+export function validateItemMediaSelections(
+  draft: ListicleItineraryDraft,
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): string[] {
+  return [
+    ...validateItemMediaRows(
+      draft.whereStaying,
+      relatedByBlockType,
+      (index) => `Where you're staying (${index + 1})`,
+    ),
+    ...validateItemMediaRows(
+      draft.items,
+      relatedByBlockType,
+      (index) => `Stop ${index + 1}`,
+    ),
+  ]
 }

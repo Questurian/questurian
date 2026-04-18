@@ -1,6 +1,7 @@
 export * from './state'
 export * from './setup'
 export * from './header'
+export * from './whereStaying'
 export * from './items'
 export * from './seo'
 export * from './meta'

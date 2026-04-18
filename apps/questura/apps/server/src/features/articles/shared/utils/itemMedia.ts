@@ -7,6 +7,7 @@ type ItemMediaBlockSlug =
   | 'data-nightlife'
   | 'itinerary-dining'
   | 'itinerary-accommodations'
+  | 'itinerary-where-staying'
   | 'itinerary-attractions'
   | 'itinerary-nightlife'
   | 'itinerary-key-location'
@@ -116,6 +117,7 @@ export const blockSlugToSourceCollection: Record<ItemMediaBlockSlug, ItemMediaSo
   'data-nightlife': 'nightlife',
   'itinerary-dining': 'dining',
   'itinerary-accommodations': 'accommodations',
+  'itinerary-where-staying': 'accommodations',
   'itinerary-attractions': 'attractions',
   'itinerary-nightlife': 'nightlife',
   'itinerary-key-location': 'key-locations',

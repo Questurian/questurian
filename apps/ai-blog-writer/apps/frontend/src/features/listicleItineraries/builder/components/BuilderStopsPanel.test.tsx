@@ -49,6 +49,7 @@ function buildRelatedByBlockType(
   return {
     'itinerary-dining': [],
     'itinerary-accommodations': [],
+    'itinerary-where-staying': [],
     'itinerary-attractions': [],
     'itinerary-nightlife': [],
     'itinerary-key-location': [],
@@ -197,14 +198,23 @@ function Harness({
       instagramPosts={[]}
       isLoadingRelated={false}
       relatedByBlockType={relatedItems}
+      onAddWhereStaying={() => {}}
       onAddItem={() => {}}
       onMoveItem={() => {}}
       onRemoveItem={() => {}}
       onUpdateItem={(itemId, updater) => {
-        setDraft((current) => ({
-          ...current,
-          items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
-        }))
+        setDraft((current) => {
+          if (current.whereStaying.some((item) => item.id === itemId)) {
+            return {
+              ...current,
+              whereStaying: current.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
+            }
+          }
+          return {
+            ...current,
+            items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
+          }
+        })
       }}
       onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite}
       onStopBlurbAiRewrite={async () => ''}

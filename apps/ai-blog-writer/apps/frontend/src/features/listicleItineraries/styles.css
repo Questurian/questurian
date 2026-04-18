@@ -533,6 +533,21 @@
   gap: 0.95rem;
 }
 
+.stl-step3-header-counts {
+  font-weight: 500;
+  font-size: 0.88rem;
+  color: var(--stl-muted);
+}
+
+.stl-step3-section-heading {
+  margin: 0;
+  font-size: 0.82rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a6b85;
+}
+
 .stl-item-card {
   border: 1px solid var(--stl-border);
   border-radius: 12px;

@@ -1,8 +1,10 @@
 import type { ItineraryItemBlock, ListicleItineraryDraft } from '../../types'
+import { getItineraryBlocksInArticleOrder } from '../../types'
 
 const ITINERARY_BLOCK_LABELS: Record<ItineraryItemBlock['blockType'], string> = {
   'itinerary-dining': 'Dining',
   'itinerary-accommodations': 'Accommodations',
+  'itinerary-where-staying': "Where You're Staying",
   'itinerary-attractions': 'Attractions',
   'itinerary-nightlife': 'Nightlife',
   'itinerary-key-location': 'Key Location',
@@ -27,14 +29,17 @@ export function buildItineraryAiArticleContext(draft: ListicleItineraryDraft): s
     sections.push(introSection)
   }
 
-  draft.items.forEach((item, index) => {
+  getItineraryBlocksInArticleOrder(draft).forEach((item, index) => {
     const itemReferenceLabel = item.title.trim()
       ? ` (${item.title.trim()})`
       : item.item
         ? ` (#${item.item})`
         : ''
+    const sectionHeading = item.blockType === 'itinerary-where-staying'
+      ? `Where you're staying ${index + 1}${itemReferenceLabel}`
+      : `Stop ${index + 1}: ${ITINERARY_BLOCK_LABELS[item.blockType]}${itemReferenceLabel}`
     const blurbSection = buildSection(
-      `Stop ${index + 1}: ${ITINERARY_BLOCK_LABELS[item.blockType]}${itemReferenceLabel}`,
+      sectionHeading,
       item.blurbMarkdown,
     )
 

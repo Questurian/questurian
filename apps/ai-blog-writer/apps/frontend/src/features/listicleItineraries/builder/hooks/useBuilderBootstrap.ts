@@ -6,6 +6,7 @@ import { fetchInstagramPosts, fetchItineraryById, fetchLocations, fetchMediaAsse
 import { createEmptyDraft, findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../../storage'
 import { normalizeSeoSection } from '../services/seo-section.service'
 import {
+  getItineraryBlocksInArticleOrder,
   isManualItineraryBlockType,
   type InstagramPostOption,
   type ListicleItineraryDraft,
@@ -55,7 +56,7 @@ function collectMissingMediaAssetIds(
     requestedIds.add(draft.header.featuredImage)
   }
 
-  draft.items.forEach((item) => {
+  getItineraryBlocksInArticleOrder(draft).forEach((item) => {
     if (!isManualItineraryBlockType(item.blockType) || !item.image || knownIds.has(item.image)) {
       return
     }
@@ -72,7 +73,7 @@ function collectMissingInstagramPostIds(
   const knownIds = new Set(instagramPosts.map((post) => post.id))
   const requestedIds = new Set<number>()
 
-  draft.items.forEach((item) => {
+  getItineraryBlocksInArticleOrder(draft).forEach((item) => {
     if (!isManualItineraryBlockType(item.blockType) || !item.instagramPost || knownIds.has(item.instagramPost)) {
       return
     }

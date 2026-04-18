@@ -70,6 +70,7 @@ function useHarness(initialDraft: ListicleItineraryDraft) {
     relatedByBlockType: {
       'itinerary-dining': [],
       'itinerary-accommodations': [],
+      'itinerary-where-staying': [],
       'itinerary-attractions': [],
       'itinerary-nightlife': [],
       'itinerary-key-location': [],

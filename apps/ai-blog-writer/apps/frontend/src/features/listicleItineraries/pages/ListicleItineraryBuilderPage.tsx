@@ -310,7 +310,8 @@ export default function ListicleItineraryBuilderPage() {
   const autoWriteStopBlurb = useCallback(async (itemId: string): Promise<void> => {
     if (!draft) return
 
-    const item = draft.items.find((entry) => entry.id === itemId)
+    const item = draft.whereStaying.find((entry) => entry.id === itemId)
+      ?? draft.items.find((entry) => entry.id === itemId)
     if (!item) {
       onError('Selected stop was not found.')
       return
@@ -579,6 +580,7 @@ export default function ListicleItineraryBuilderPage() {
               instagramPosts={instagramPosts}
               isLoadingRelated={isLoadingRelated}
               relatedByBlockType={relatedByBlockType}
+              onAddWhereStaying={actions.addWhereStayingItem}
               onAddItem={actions.addItem}
               onMoveItem={actions.moveItem}
               onRemoveItem={actions.removeItem}

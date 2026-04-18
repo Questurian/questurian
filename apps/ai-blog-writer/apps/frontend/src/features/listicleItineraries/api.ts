@@ -40,6 +40,7 @@ function relatedCollectionForBlockType(
     case 'itinerary-dining':
       return 'dining'
     case 'itinerary-accommodations':
+    case 'itinerary-where-staying':
       return 'accommodations'
     case 'itinerary-attractions':
       return 'attractions'

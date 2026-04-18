@@ -18,6 +18,7 @@ import type {
 } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateStep2, validateStep3 } from '../validators/step.validators'
+import { WHERE_STAYING_BLOCK_TYPE } from '../../types'
 
 function createNewItem(): ItineraryItemBlock {
   return {
@@ -46,6 +47,13 @@ function createNewItem(): ItineraryItemBlock {
   }
 }
 
+function createNewWhereStayingItem(): ItineraryItemBlock {
+  return {
+    ...createNewItem(),
+    blockType: WHERE_STAYING_BLOCK_TYPE,
+  }
+}
+
 type UseBuilderDraftActionsParams = {
   draft: ListicleItineraryDraft | null
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
@@ -65,6 +73,7 @@ type UseBuilderDraftActionsResult = {
   removeItem: (itemId: string) => void
   moveItem: (itemId: string, direction: 'up' | 'down') => void
   addItem: () => void
+  addWhereStayingItem: () => void
   handleContinue: () => void
   handleUpdateSetup: () => void
   handleSaveSetup: () => void
@@ -145,18 +154,31 @@ export function useBuilderDraftActions({
   function updateItem(itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) {
     setDraft((current) => {
       if (!current) return current
-      if (!current.items.some((item) => item.id === itemId)) return current
-
-      return {
-        ...current,
-        items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
+      if (current.whereStaying.some((item) => item.id === itemId)) {
+        return {
+          ...current,
+          whereStaying: current.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
+        }
       }
+      if (current.items.some((item) => item.id === itemId)) {
+        return {
+          ...current,
+          items: current.items.map((item) => (item.id === itemId ? updater(item) : item)),
+        }
+      }
+      return current
     })
   }
 
   function removeItem(itemId: string) {
     setDraft((current) => {
       if (!current) return current
+      if (current.whereStaying.some((item) => item.id === itemId)) {
+        return {
+          ...current,
+          whereStaying: current.whereStaying.filter((item) => item.id !== itemId),
+        }
+      }
       return {
         ...current,
         items: current.items.filter((item) => item.id !== itemId),
@@ -167,6 +189,18 @@ export function useBuilderDraftActions({
   function moveItem(itemId: string, direction: 'up' | 'down') {
     setDraft((current) => {
       if (!current) return current
+      const wsIndex = current.whereStaying.findIndex((item) => item.id === itemId)
+      if (wsIndex >= 0) {
+        const whereStaying = [...current.whereStaying]
+        const target = direction === 'up' ? wsIndex - 1 : wsIndex + 1
+        if (target < 0 || target >= whereStaying.length) return current
+        const [row] = whereStaying.splice(wsIndex, 1)
+        whereStaying.splice(target, 0, row)
+        return {
+          ...current,
+          whereStaying,
+        }
+      }
       const items = [...current.items]
       const index = items.findIndex((item) => item.id === itemId)
       if (index < 0) return current
@@ -187,6 +221,16 @@ export function useBuilderDraftActions({
       return {
         ...current,
         items: [...current.items, createNewItem()],
+      }
+    })
+  }
+
+  function addWhereStayingItem() {
+    setDraft((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        whereStaying: [...current.whereStaying, createNewWhereStayingItem()],
       }
     })
   }
@@ -237,15 +281,16 @@ export function useBuilderDraftActions({
       ? !areLocationIdSelectionsEqual(setupBaseline.sharedNeighborhoods, draft.sharedNeighborhoods)
       : false
 
-    if ((locationChanged || sharedNeighborhoodsChanged) && draft.items.length > 0) {
+    if ((locationChanged || sharedNeighborhoodsChanged) && (draft.items.length > 0 || draft.whereStaying.length > 0)) {
       const confirmed = window.confirm(
-        'Changing location or shared neighborhoods clears current itinerary stops. Continue?',
+        'Changing location or shared neighborhoods clears lodging and itinerary stops. Continue?',
       )
       if (!confirmed) return
       setDraft((current) => {
         if (!current) return current
         return {
           ...current,
+          whereStaying: [],
           items: [],
           in_update_mode: false,
           step1_complete: true,
@@ -263,6 +308,7 @@ export function useBuilderDraftActions({
 
     if (locationChanged || sharedNeighborhoodsChanged) {
       updateDraft({
+        whereStaying: [],
         items: [],
         in_update_mode: false,
         step1_complete: true,
@@ -415,6 +461,7 @@ export function useBuilderDraftActions({
     removeItem,
     moveItem,
     addItem,
+    addWhereStayingItem,
     handleContinue,
     handleUpdateSetup,
     handleSaveSetup,

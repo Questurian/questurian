@@ -41,6 +41,7 @@ vi.mock('../../storage', async (importOriginal) => {
 const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> = {
   'itinerary-dining': [],
   'itinerary-accommodations': [],
+  'itinerary-where-staying': [],
   'itinerary-attractions': [],
   'itinerary-nightlife': [],
   'itinerary-key-location': [],

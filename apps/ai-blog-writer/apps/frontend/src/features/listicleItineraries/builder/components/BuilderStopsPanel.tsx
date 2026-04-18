@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
 import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
 import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
-import { BLOCK_TYPE_OPTIONS } from '../constants/builder-options.constants'
+import { BLOCK_TYPE_OPTIONS, BLOCK_TYPE_OPTIONS_STOPS } from '../constants/builder-options.constants'
 import type {
   InstagramPostOption,
   ItineraryBlockType,
@@ -21,6 +21,7 @@ import {
   isManualItineraryBlockType as isManualBlockType,
   relatedCollectionToBlockType,
   TOUR_AGENCY_PRICE_TIERS,
+  WHERE_STAYING_BLOCK_TYPE,
 } from '../../types'
 import {
   getRelatedInstagramPostObjects,
@@ -51,6 +52,7 @@ type BuilderStopsPanelProps = {
   instagramPosts: InstagramPostOption[]
   isLoadingRelated: boolean
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
+  onAddWhereStaying: () => void
   onAddItem: () => void
   onMoveItem: (itemId: string, direction: 'up' | 'down') => void
   onRemoveItem: (itemId: string) => void
@@ -299,6 +301,7 @@ export function BuilderStopsPanel({
   instagramPosts,
   isLoadingRelated,
   relatedByBlockType,
+  onAddWhereStaying,
   onAddItem,
   onMoveItem,
   onRemoveItem,
@@ -321,6 +324,22 @@ export function BuilderStopsPanel({
   const [imagePickerItemId, setImagePickerItemId] = useState<string | null>(null)
   const [fetchedManualImageAssets, setFetchedManualImageAssets] = useState<Record<number, MediaAssetOption>>({})
 
+  const step3Rows = useMemo(
+    () => [
+      ...draft.whereStaying.map((item, index) => ({
+        item,
+        section: 'whereStaying' as const,
+        localIndex: index,
+      })),
+      ...draft.items.map((item, index) => ({
+        item,
+        section: 'stops' as const,
+        localIndex: index,
+      })),
+    ],
+    [draft.whereStaying, draft.items],
+  )
+
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
   const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
   const activeInstagramPicker = activePicker?.type === 'instagram' ? activePicker : null
@@ -335,13 +354,15 @@ export function BuilderStopsPanel({
       ...Object.keys(fetchedManualImageAssets).map((id) => Number(id)),
     ])
 
+    const allStep3Items = [...draft.whereStaying, ...draft.items]
+
     return Array.from(new Set(
-      draft.items
+      allStep3Items
         .filter((item) => isManualBlockType(item.blockType) && typeof item.image === 'number')
         .map((item) => item.image)
         .filter((imageId): imageId is number => typeof imageId === 'number' && !loadedIds.has(imageId)),
     ))
-  }, [draft.items, fetchedManualImageAssets, mediaAssets, resolvedToken])
+  }, [draft.whereStaying, draft.items, fetchedManualImageAssets, mediaAssets, resolvedToken])
 
   useEffect(() => {
     if (!copiedItemId) return
@@ -425,7 +446,7 @@ export function BuilderStopsPanel({
   }, [activeInstagramEmbedPreviewItemId])
 
   useEffect(() => {
-    draft.items.forEach((item) => {
+    ;[...draft.whereStaying, ...draft.items].forEach((item) => {
       if (isManualBlockType(item.blockType)) {
         return
       }
@@ -447,7 +468,7 @@ export function BuilderStopsPanel({
         selectedInstagramPost: requiresInstagram(fallbackMode) ? current.selectedInstagramPost : null,
       }))
     })
-  }, [draft.items, onUpdateItem, relatedByBlockType])
+  }, [draft.whereStaying, draft.items, onUpdateItem, relatedByBlockType])
 
   const handleCopyRelatedItemTitle = async (itemId: string, title: string) => {
     if (!title.trim()) return
@@ -468,11 +489,18 @@ export function BuilderStopsPanel({
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
-          <span className="stl-kicker">Step 3</span> Stops ({draft.items.length})
+          <span className="stl-kicker">Step 3</span> Lodging & stops
+          <span className="stl-step3-header-counts">
+            {' '}
+            ({draft.whereStaying.length} lodging · {draft.items.length} stops)
+          </span>
         </h2>
         <div className="stl-inline-actions">
+          <button type="button" className="stl-btn" onClick={onAddWhereStaying} disabled={isLocked}>
+            Add lodging
+          </button>
           <button type="button" className="stl-btn" onClick={onAddItem} disabled={isLocked}>
-            Add Stop
+            Add stop
           </button>
           {!draft.step3_complete ? (
             <button type="button" className="stl-btn" onClick={onContinueStep3}>
@@ -501,7 +529,9 @@ export function BuilderStopsPanel({
         {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
 
         <div className="stl-list">
-          {draft.items.map((item, index) => {
+          {step3Rows.map((row, idx) => {
+            const { item, section, localIndex } = row
+            const showHeading = idx === 0 || step3Rows[idx - 1].section !== section
             const isManualStop = isManualBlockType(item.blockType)
             const relatedOptions = relatedByBlockType[item.blockType] || []
             const selectedRelatedItem = relatedOptions.find((entry) => entry.id === item.item) || null
@@ -564,9 +594,15 @@ export function BuilderStopsPanel({
             const activePhotoPreview = selectedPhotoPreviews[activePhotoPreviewIndex]
 
             return (
-              <article key={item.id} className="stl-item-card">
+              <Fragment key={item.id}>
+                {showHeading ? (
+                  <h3 className="stl-step3-section-heading">
+                    {section === 'whereStaying' ? "Where you're staying" : 'Stops'}
+                  </h3>
+                ) : null}
+                <article className="stl-item-card">
                 <header className="stl-item-header">
-                  <h3>Item {index + 1}</h3>
+                  <h3>{section === 'whereStaying' ? `Lodging ${localIndex + 1}` : `Stop ${localIndex + 1}`}</h3>
                   <div className="stl-inline-actions">
                     <button type="button" className="stl-btn stl-btn-secondary" onClick={() => onMoveItem(item.id, 'up')}>
                       Up
@@ -589,6 +625,7 @@ export function BuilderStopsPanel({
                     <span>Block Type *</span>
                     <select
                       value={item.blockType}
+                      disabled={section === 'whereStaying'}
                       onChange={(event) =>
                         onUpdateItem(item.id, (current) => resetItemForBlockType(
                           current,
@@ -596,7 +633,10 @@ export function BuilderStopsPanel({
                         ))
                       }
                     >
-                      {BLOCK_TYPE_OPTIONS.map((blockType) => (
+                      {(section === 'whereStaying'
+                        ? BLOCK_TYPE_OPTIONS.filter((option) => option.value === WHERE_STAYING_BLOCK_TYPE)
+                        : BLOCK_TYPE_OPTIONS_STOPS
+                      ).map((blockType) => (
                         <option key={blockType.value} value={blockType.value}>
                           {blockType.label}
                         </option>
@@ -1138,7 +1178,11 @@ export function BuilderStopsPanel({
                             <button
                               type="button"
                               className="stl-item-photo-preview__nav stl-item-photo-preview__nav--prev"
-                              aria-label={`Show previous photo for item ${index + 1}`}
+                              aria-label={
+                        section === 'whereStaying'
+                          ? `Show previous photo for lodging ${localIndex + 1}`
+                          : `Show previous photo for stop ${localIndex + 1}`
+                      }
                               onClick={() =>
                                 setPhotoPreviewIndexByItem((prev) => ({
                                   ...prev,
@@ -1152,7 +1196,11 @@ export function BuilderStopsPanel({
                             <button
                               type="button"
                               className="stl-item-photo-preview__nav stl-item-photo-preview__nav--next"
-                              aria-label={`Show next photo for item ${index + 1}`}
+                              aria-label={
+                        section === 'whereStaying'
+                          ? `Show next photo for lodging ${localIndex + 1}`
+                          : `Show next photo for stop ${localIndex + 1}`
+                      }
                               onClick={() =>
                                 setPhotoPreviewIndexByItem((prev) => ({
                                   ...prev,
@@ -1267,7 +1315,11 @@ export function BuilderStopsPanel({
                     placeholder="Write editorial context for this stop..."
                     className="stl-markdown-textarea"
                     rows={5}
-                    ariaLabel={`Blurb for stop ${index + 1}`}
+                    ariaLabel={
+                      section === 'whereStaying'
+                        ? `Blurb for lodging ${localIndex + 1}`
+                        : `Blurb for stop ${localIndex + 1}`
+                    }
                   />
                 </div>
                 {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
@@ -1429,7 +1481,11 @@ export function BuilderStopsPanel({
                           <div className="stl-instagram-embed-modal__frame-wrap">
                             <iframe
                               src={selectedInstagramEmbedUrl}
-                              title={`Instagram post embed for item ${index + 1}`}
+                              title={
+                                section === 'whereStaying'
+                                  ? `Instagram post embed for lodging ${localIndex + 1}`
+                                  : `Instagram post embed for stop ${localIndex + 1}`
+                              }
                               className="stl-instagram-embed-modal__frame"
                               loading="lazy"
                               allow="encrypted-media; fullscreen; picture-in-picture"
@@ -1469,6 +1525,7 @@ export function BuilderStopsPanel({
                   </div>
                 ) : null}
               </article>
+              </Fragment>
             )
           })}
         </div>

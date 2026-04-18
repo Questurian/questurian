@@ -4,6 +4,7 @@ import type { LocationLevel } from '../locationScope/types'
 export type ItineraryBlockType =
   | 'itinerary-dining'
   | 'itinerary-accommodations'
+  | 'itinerary-where-staying'
   | 'itinerary-attractions'
   | 'itinerary-nightlife'
   | 'itinerary-key-location'
@@ -13,6 +14,17 @@ export const TOUR_AGENCY_BLOCK_TYPE = 'itinerary-tour-agency'
 
 export function isManualItineraryBlockType(blockType: ItineraryBlockType): boolean {
   return blockType === TOUR_AGENCY_BLOCK_TYPE
+}
+
+export const WHERE_STAYING_BLOCK_TYPE = 'itinerary-where-staying' as const
+
+export function isWhereStayingBlockType(blockType: ItineraryBlockType): boolean {
+  return blockType === WHERE_STAYING_BLOCK_TYPE
+}
+
+/** Lodging rows first, then stops (matches Payload field order and article sections). */
+export function getItineraryBlocksInArticleOrder(draft: ListicleItineraryDraft): ItineraryItemBlock[] {
+  return [...draft.whereStaying, ...draft.items]
 }
 
 export type MediaMode = 'photos' | 'instagram' | 'both'
@@ -123,6 +135,7 @@ export type ListicleItineraryDraft = {
     introJsonText?: string
     featuredImage: number | null
   }
+  whereStaying: ItineraryItemBlock[]
   items: ItineraryItemBlock[]
   seoSection: SeoSection
   status: 'draft' | 'published'
@@ -154,6 +167,35 @@ export type PayloadItineraryDoc = {
     intro?: PayloadRichText
     featuredImage?: number | { id?: number }
   }
+  whereStaying?: Array<{
+    id?: string
+    blockType?: ItineraryBlockType
+    item?: number | { id?: number }
+    mediaMode?: MediaMode
+    selectedPhotos?: Array<number | { id?: number }>
+    selectedInstagramPost?: number | { id?: number } | null
+    title?: string | null
+    operator?: string | null
+    price?: TourAgencyPriceTier | null
+    url?: string | null
+    tourDuration?: number | null
+    startingPoint?: {
+      label?: string | null
+      latitude?: number | null
+      longitude?: number | null
+    } | null
+    keyLocations?: Array<{
+      id?: string
+      source?: TourAgencyKeyLocationSource | null
+      relatedItem?: PolymorphicRelatedItemValue | null
+      title?: string | null
+      latitude?: number | null
+      longitude?: number | null
+    }> | null
+    image?: number | { id?: number } | null
+    instagramPost?: number | { id?: number } | null
+    blurb?: PayloadRichText
+  }>
   items?: Array<{
     id?: string
     blockType?: ItineraryBlockType

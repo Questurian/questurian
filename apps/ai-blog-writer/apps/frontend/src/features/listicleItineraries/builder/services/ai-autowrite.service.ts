@@ -11,7 +11,11 @@ import type {
   LocationOption,
   RelatedItemOption,
 } from '../../types'
-import { isManualItineraryBlockType, relatedCollectionToBlockType } from '../../types'
+import {
+  getItineraryBlocksInArticleOrder,
+  isManualItineraryBlockType,
+  relatedCollectionToBlockType,
+} from '../../types'
 import { buildItineraryAiArticleContext, getItineraryAiArticleTitle } from './ai-rewrite.service'
 
 const INTRO_TARGET_ID_SUFFIX = '_header_intro'
@@ -49,6 +53,7 @@ function buildArticleLocationLabel(
 function mapBlockTypeToCategory(blockType: ItineraryBlockType): ListicleWriterCategory {
   switch (blockType) {
     case 'itinerary-accommodations':
+    case 'itinerary-where-staying':
       return 'accommodations'
     case 'itinerary-attractions':
       return 'attractions'
@@ -101,7 +106,7 @@ function buildIntroTarget(
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
   articleLocationLabel: string,
 ): GenerateListicleContentTarget {
-  const selectedTitles = draft.items
+  const selectedTitles = getItineraryBlocksInArticleOrder(draft)
     .map((item) => {
       if (isManualItineraryBlockType(item.blockType)) {
         return item.title.trim() || item.operator.trim() || ''
@@ -179,7 +184,7 @@ export function getItineraryAutoWriteTargetIds(
     targetIds.push(getItineraryIntroTargetId(draft))
   }
 
-  draft.items.forEach((item) => {
+  getItineraryBlocksInArticleOrder(draft).forEach((item) => {
     if (item.blurbMarkdown.trim()) return
     if (!isManualItineraryBlockType(item.blockType)) {
       if (!item.item) return
@@ -225,7 +230,7 @@ export function buildItineraryGenerateListicleContentRequest(params: {
     targets.push(introTarget)
   }
 
-  draft.items.forEach((item) => {
+  getItineraryBlocksInArticleOrder(draft).forEach((item) => {
     let target: GenerateListicleContentTarget | null = null
 
     if (isManualItineraryBlockType(item.blockType)) {
@@ -281,6 +286,17 @@ export function applyItineraryGeneratedContent(
           introJsonText: '',
         }
       : draft.header,
+    whereStaying: draft.whereStaying.map((item) => {
+      const result = response.results[`${item.id}_blurb`]
+      if (result?.status !== 'generated' || !result.markdown) {
+        return item
+      }
+      return {
+        ...item,
+        blurbMarkdown: result.markdown,
+        blurbJsonText: '',
+      }
+    }),
     items: draft.items.map((item) => {
       const result = response.results[`${item.id}_blurb`]
       if (result?.status !== 'generated' || !result.markdown) {
