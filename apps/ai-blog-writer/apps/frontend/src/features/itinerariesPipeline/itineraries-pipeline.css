@@ -1,0 +1,19 @@
+.ip-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ip-pipeline .stl-hero {
+  margin-bottom: 0;
+}
+
+/* Align Prompt2Blog guideline panel with full-width stl panels on this page */
+.ip-pipeline .p2b-form-container {
+  width: 100%;
+}
+
+.ip-pipeline .p2b-form-container .p2b-form {
+  max-width: none;
+  width: 100%;
+}

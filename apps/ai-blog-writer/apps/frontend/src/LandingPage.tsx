@@ -218,12 +218,40 @@ const LANDING_CARDS: LandingCardConfig[] = [
     ),
   },
   {
+    id: 'itineraries-pipeline',
+    title: 'Itineraries Pipeline',
+    description: 'Run and manage the itineraries pipeline workflow from a single place.',
+    to: '/itineraries-pipeline',
+    section: 'structured-publishing',
+    priority: 3,
+    accentClass: 'landing-card--itineraries-pipeline',
+    actionLabel: 'Open Pipeline',
+    icon: (
+      <>
+        <path
+          d="M4 19h16M6 5v10M10 5v10M14 5v10M18 5v10"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M8 9h4M12 13h4"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </>
+    ),
+  },
+  {
     id: 'location-documents',
     title: 'Location Documents',
     description: 'Compose and sync full Payload location hierarchy documents with shared guide sections, mode-specific content, and AI assist.',
     to: '/location-documents',
     section: 'structured-publishing',
-    priority: 3,
+    priority: 4,
     accentClass: 'landing-card--locations',
     actionLabel: 'Open Builder',
     icon: (
@@ -258,7 +286,7 @@ const LANDING_CARDS: LandingCardConfig[] = [
     description: 'Manage the exact 10 front-page content slots shared with Payload and the site homepage.',
     to: '/homepage-featured-content',
     section: 'structured-publishing',
-    priority: 4,
+    priority: 5,
     accentClass: 'landing-card--locations',
     actionLabel: 'Open Manager',
     roles: ['admin', 'editor'],

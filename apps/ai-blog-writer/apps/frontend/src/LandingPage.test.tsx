@@ -10,6 +10,7 @@ const PRIMARY_CARD_TITLES = [
   'Prompt → Articles',
   'Single Type Listicles',
   'Listicle Itineraries',
+  'Itineraries Pipeline',
   'Location Documents',
   'Homepage Featured Content',
 ]

@@ -1,4 +1,5 @@
 import { resizeItineraryDays, type ListicleItineraryDraft, type LocationOption } from '../../types'
+import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
 import {
@@ -132,7 +133,7 @@ export function BuilderSetupPanel({
               updateDraft(resizeItineraryDays(draft, next))
             }}
           >
-            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+            {ITINERARY_DAY_COUNT_OPTIONS.map((n) => (
               <option key={n} value={n}>
                 {n} {n === 1 ? 'day' : 'days'}
               </option>

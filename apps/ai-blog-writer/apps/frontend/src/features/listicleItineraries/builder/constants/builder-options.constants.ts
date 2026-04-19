@@ -3,6 +3,9 @@ import type {
   RelatedItemOption,
 } from '../../types'
 
+/** Matches Payload / builder setup: 1–7 day itineraries. */
+export const ITINERARY_DAY_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 7] as const
+
 export const BLOCK_TYPE_OPTIONS: Array<{ label: string; value: ItineraryBlockType }> = [
   { label: 'Dining Stop (restaurants, cafes)', value: 'itinerary-dining' },
   { label: 'Accommodation Stop (hotel check-in, stay)', value: 'itinerary-accommodations' },
