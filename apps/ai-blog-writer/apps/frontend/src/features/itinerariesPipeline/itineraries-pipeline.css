@@ -17,3 +17,66 @@
   max-width: none;
   width: 100%;
 }
+
+.ip-pipeline-model {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--stl-border, #d9dee8);
+}
+
+.ip-pipeline-model-field {
+  max-width: 42rem;
+}
+
+.ip-tabs {
+  margin-top: -0.25rem;
+}
+
+.ip-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--stl-border, #d9dee8);
+}
+
+.ip-tab {
+  position: relative;
+  margin-bottom: -1px;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--stl-muted, #5f6675);
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.ip-tab:hover {
+  color: var(--stl-ink, #151821);
+  background: var(--stl-bg, #f5f6f8);
+}
+
+.ip-tab--active {
+  color: var(--stl-ink, #151821);
+  background: var(--stl-surface, #fff);
+  border-color: var(--stl-border, #d9dee8);
+  border-bottom-color: var(--stl-surface, #fff);
+  font-weight: 600;
+}
+
+.ip-tab:focus-visible {
+  outline: 2px solid var(--stl-accent, #2f4f8f);
+  outline-offset: 2px;
+}
+
+.ip-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ip-tab-panel--empty {
+  min-height: 0;
+}

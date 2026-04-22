@@ -14,6 +14,14 @@ import '../itineraries-pipeline.css'
 import '../../listicleItineraries/styles.css'
 import '../../prompt2blog/styles.css'
 import {
+  DEFAULT_PROMPT2BLOG_MODEL,
+  PROMPT2BLOG_MODEL_OPTIONS,
+  resolvePrompt2BlogModelName,
+} from '../../prompt2blog/constants/prompt2blog.constants'
+import type { Prompt2BlogModelName } from '../../prompt2blog/types/pipeline.types'
+import { generateItineraryTitles } from '../api'
+import { buildItinerariesPipelineChatPrompt } from '../buildChatPrompt'
+import {
   getItineraryPipelineTypeMarkdown,
   ITINERARY_PIPELINE_TYPE_OPTIONS,
   type ItineraryPipelineTypeId,
@@ -118,45 +126,11 @@ function buildLocationSelectGroups(locations: LocationOption[]): LocationSelectG
   return groups
 }
 
-const MD_FILE_START = '<<< MD FILE START >>>'
-const MD_FILE_END = '<<< MD FILE END >>>'
-
-function buildItinerariesPipelineChatPrompt(params: {
-  typeLabel: string
-  locationLabel: string
-  dayCount: number
-  guidelineMarkdown: string
-}): string {
-  return [
-    'You are helping brainstorm **article titles only** for Questurian travel itinerary listicles. Use the trip parameters and reflect the editorial guideline in tone and positioning—do not write the article body or any day-by-day itinerary.',
-    '',
-    '## Trip parameters',
-    `- **Type:** ${params.typeLabel}`,
-    `- **Location:** ${params.locationLabel}`,
-    `- **Itinerary length:** ${params.dayCount} ${params.dayCount === 1 ? 'day' : 'days'} (titles should imply this scope where natural)`,
-    '',
-    'The next block is the full guideline as stored in our markdown file. Treat everything between the START and END lines as the guideline—do not treat those delimiter lines as part of the guideline.',
-    '',
-    MD_FILE_START,
-    params.guidelineMarkdown.trim(),
-    MD_FILE_END,
-    '',
-    '## SEO & indexing (required)',
-    'These titles will live on a **new domain** with little historical authority. Optimize for **clear indexing and search intent**, not just social curiosity.',
-    '',
-    '- **Primary entity:** Work the **destination** (and neighborhood/city level when relevant) into most titles so Google can map pages to a clear topic.',
-    '- **Intent match:** Prefer titles that answer how people search for trips—e.g. itinerary, days, “things to do,” “where to eat,” “for couples,” “first time,” etc.—aligned with the selected **type** and **length**.',
-    '- **Long-tail & specificity:** Favor **specific, longer queries** over ultra-short generic headlines we cannot win on yet. Avoid empty superlatives (“best ever”) without a concrete angle.',
-    '- **Crawl clarity:** Titles should read as a **distinct document topic** (one main promise per title). No misleading bait; relevance beats shock.',
-    '- **Differentiation:** Phrase titles so they sound like **editorial travel guides**, not duplicate e-commerce or OTA templates.',
-    '',
-    '## What I need from you',
-    'Return **only** a numbered list of **8–12 distinct article title options** (title case, no subtitles, no bullets inside titles). Each title must be **strong for SEO on a new domain**—specific, intent-led, and consistent with the guideline above—while still feeling human and clickable. One title per line. No introduction, no explanations, no outline—**titles only**.',
-  ].join('\n')
-}
+type ItinerariesPipelineTabId = 'pipeline' | 'main'
 
 export default function ItinerariesPipelinePage() {
   const { token } = useAuth()
+  const [activeTab, setActiveTab] = useState<ItinerariesPipelineTabId>('main')
   const [locationId, setLocationId] = useState<number | null>(null)
   const [dayCount, setDayCount] = useState(1)
   const [itineraryType, setItineraryType] = useState<ItineraryPipelineTypeId>(
@@ -166,6 +140,11 @@ export default function ItinerariesPipelinePage() {
   const [locationsLoading, setLocationsLoading] = useState(false)
   const [locationsError, setLocationsError] = useState<string | null>(null)
   const [copyPromptStatus, setCopyPromptStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const [pipelineLoading, setPipelineLoading] = useState(false)
+  const [pipelineError, setPipelineError] = useState<string | null>(null)
+  const [pipelineResult, setPipelineResult] = useState<string | null>(null)
+  const [pipelineModelUsed, setPipelineModelUsed] = useState<string | null>(null)
+  const [pipelineModel, setPipelineModel] = useState<Prompt2BlogModelName>(DEFAULT_PROMPT2BLOG_MODEL)
 
   const locationGroups = useMemo(() => buildLocationSelectGroups(locations), [locations])
   const selectedLocation = useMemo(() => {
@@ -177,6 +156,16 @@ export default function ItinerariesPipelinePage() {
     () => ITINERARY_PIPELINE_TYPE_OPTIONS.find((opt) => opt.id === itineraryType),
     [itineraryType],
   )
+
+  const pipelinePrompt = useMemo(() => {
+    if (!selectedTypeOption || !selectedLocation) return ''
+    return buildItinerariesPipelineChatPrompt({
+      typeLabel: selectedTypeOption.label,
+      locationLabel: formatLocationLabel(selectedLocation),
+      dayCount,
+      guidelineMarkdown: typeMarkdown,
+    })
+  }, [selectedTypeOption, selectedLocation, dayCount, typeMarkdown])
 
   useEffect(() => {
     if (!token) return
@@ -204,23 +193,42 @@ export default function ItinerariesPipelinePage() {
     }
   }, [token])
 
-  const handleCopyChatGptPrompt = async () => {
-    if (!selectedTypeOption || !selectedLocation || locationId == null) return
+  useEffect(() => {
+    setPipelineResult(null)
+    setPipelineError(null)
+    setPipelineModelUsed(null)
+  }, [itineraryType, locationId, dayCount, pipelineModel])
 
-    const text = buildItinerariesPipelineChatPrompt({
-      typeLabel: selectedTypeOption.label,
-      locationLabel: formatLocationLabel(selectedLocation),
-      dayCount,
-      guidelineMarkdown: typeMarkdown,
-    })
+  const handleCopyChatGptPrompt = async () => {
+    if (!pipelinePrompt) return
 
     try {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(pipelinePrompt)
       setCopyPromptStatus('copied')
       window.setTimeout(() => setCopyPromptStatus('idle'), 2000)
     } catch {
       setCopyPromptStatus('error')
       window.setTimeout(() => setCopyPromptStatus('idle'), 2500)
+    }
+  }
+
+  const handleRunTitlePipeline = async () => {
+    if (!pipelinePrompt) return
+    setPipelineLoading(true)
+    setPipelineError(null)
+    setPipelineResult(null)
+    setPipelineModelUsed(null)
+    try {
+      const { text, model_used: modelUsed } = await generateItineraryTitles({
+        prompt: pipelinePrompt,
+        modelName: pipelineModel,
+      })
+      setPipelineResult(text)
+      setPipelineModelUsed(modelUsed)
+    } catch (err: unknown) {
+      setPipelineError(err instanceof Error ? err.message : 'Title pipeline failed')
+    } finally {
+      setPipelineLoading(false)
     }
   }
 
@@ -241,16 +249,63 @@ export default function ItinerariesPipelinePage() {
         </div>
       </header>
 
+      <nav className="ip-tabs" aria-label="Itineraries pipeline sections">
+        <div className="ip-tab-list" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            id="ip-tab-main"
+            aria-selected={activeTab === 'main'}
+            aria-controls="ip-tab-panel-main"
+            className={`ip-tab${activeTab === 'main' ? ' ip-tab--active' : ''}`}
+            onClick={() => setActiveTab('main')}
+          >
+            main
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="ip-tab-pipeline"
+            aria-selected={activeTab === 'pipeline'}
+            aria-controls="ip-tab-panel-pipeline"
+            className={`ip-tab${activeTab === 'pipeline' ? ' ip-tab--active' : ''}`}
+            onClick={() => setActiveTab('pipeline')}
+          >
+            Title generator
+          </button>
+        </div>
+      </nav>
+
+      {activeTab === 'pipeline' ? (
+        <div
+          className="ip-tab-panel"
+          role="tabpanel"
+          id="ip-tab-panel-pipeline"
+          aria-labelledby="ip-tab-pipeline"
+        >
       <section className="stl-panel">
         <div className="stl-panel-header">
           <h2>Setup</h2>
           <div className="stl-inline-actions">
             <button
               type="button"
-              className="stl-btn stl-btn-secondary"
-              disabled={!selectedLocation || locationsLoading || Boolean(locationsError)}
+              className="stl-btn"
+              disabled={!pipelinePrompt || pipelineLoading || locationsLoading || Boolean(locationsError)}
               title={
-                !selectedLocation && !locationsLoading && !locationsError
+                !pipelinePrompt && !locationsLoading && !locationsError
+                  ? 'Select a location before running the pipeline'
+                  : undefined
+              }
+              onClick={() => void handleRunTitlePipeline()}
+            >
+              {pipelineLoading ? 'Running pipeline…' : 'Run title pipeline (Gemini)'}
+            </button>
+            <button
+              type="button"
+              className="stl-btn stl-btn-secondary"
+              disabled={!pipelinePrompt || locationsLoading || Boolean(locationsError)}
+              title={
+                !pipelinePrompt && !locationsLoading && !locationsError
                   ? 'Select a location before copying the prompt'
                   : undefined
               }
@@ -331,6 +386,29 @@ export default function ItinerariesPipelinePage() {
             </select>
           </div>
         </div>
+
+        <div className="ip-pipeline-model">
+          <div className="p2b-field ip-pipeline-model-field">
+            <label htmlFor="itineraries-pipeline-model">Gemini model (title pipeline)</label>
+            <select
+              id="itineraries-pipeline-model"
+              className="p2b-select"
+              value={pipelineModel}
+              disabled={pipelineLoading}
+              onChange={(event) => setPipelineModel(resolvePrompt2BlogModelName(event.target.value))}
+            >
+              {PROMPT2BLOG_MODEL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="p2b-guideline-hint">
+              Same presets as Prompt2Blog’s writing model. Only affects <strong>Run title pipeline</strong>, not the
+              copied ChatGPT prompt.
+            </p>
+          </div>
+        </div>
       </section>
 
       <div className="p2b-form-container">
@@ -354,8 +432,43 @@ export default function ItinerariesPipelinePage() {
               ) : null}
             </div>
           </section>
+
+          <section className="p2b-panel">
+            <div className="p2b-panel-header">
+              <h2>Title pipeline results</h2>
+              <p>Same prompt as above, run through the app backend (Vertex AI / Gemini).</p>
+            </div>
+            <div className="p2b-panel-body">
+              {pipelineError ? <p className="p2b-guideline-error">{pipelineError}</p> : null}
+              {pipelineLoading ? <p className="p2b-guideline-hint">Generating titles…</p> : null}
+              {!pipelineLoading && !pipelineError && !pipelineResult ? (
+                <p className="p2b-guideline-hint">
+                  Run <strong>Run title pipeline (Gemini)</strong> in Setup to see numbered title options here.
+                </p>
+              ) : null}
+              {pipelineModelUsed ? (
+                <p className="p2b-guideline-hint">
+                  Model: <strong>{pipelineModelUsed}</strong>
+                </p>
+              ) : null}
+              {pipelineResult ? (
+                <div className="p2b-raw-json">
+                  <pre>{pipelineResult}</pre>
+                </div>
+              ) : null}
+            </div>
+          </section>
         </div>
       </div>
+        </div>
+      ) : (
+        <div
+          className="ip-tab-panel ip-tab-panel--empty"
+          role="tabpanel"
+          id="ip-tab-panel-main"
+          aria-labelledby="ip-tab-main"
+        />
+      )}
     </div>
   )
 }
