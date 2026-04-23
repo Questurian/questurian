@@ -28,8 +28,8 @@ Next.js frontend with authentication, Google OAuth, and membership system using 
 ## Installation
 
 ### Prerequisites
-- **Node.js** 18.0 or higher
-- **pnpm** package manager
+- **Node.js** 18.18 or higher
+- **npm**
 - A running backend API (see [Backend](#backend) section below)
 
 ### Setup Steps
@@ -42,7 +42,7 @@ Next.js frontend with authentication, Google OAuth, and membership system using 
 
 2. **Install dependencies**
    ```bash
-   pnpm install
+   npm install
    ```
 
 3. **Create environment configuration**
@@ -64,7 +64,7 @@ Next.js frontend with authentication, Google OAuth, and membership system using 
 
 4. **Start the development server**
    ```bash
-   pnpm run dev
+   npm run dev
    ```
 
    The app will be available at `http://localhost:3000`
@@ -81,13 +81,10 @@ Next.js frontend with authentication, Google OAuth, and membership system using 
 ### Available Scripts
 
 ```bash
-pnpm run dev              # Start dev server with Turbopack
-pnpm run build            # Build for production
-pnpm start                # Start production server
-pnpm run lint             # Run ESLint
-pnpm test                 # Run Jest tests
-pnpm run test:watch       # Run tests in watch mode
-pnpm run test:coverage    # Generate test coverage report
+npm run dev              # Start dev server with Turbopack
+npm run build            # Build for production
+npm start                # Start production server
+npm run lint             # Run ESLint
 ```
 
 ---
@@ -131,4 +128,3 @@ The backend provides cookie-based authentication, Google OAuth, and Stripe subsc
 - Type-safe throughout
 
 ---
-
