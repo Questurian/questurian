@@ -2,9 +2,6 @@ export type SceneCategoryId =
   | 'landscape-only'
   | 'scenic-viewpoint'
   | 'tourist-landmark'
-  | 'tourist-landmark-no-people'
-  | 'tourist-landmark-sparse-people'
-  | 'tourist-landmark-crowd'
   | 'city-street-scene'
   | 'street-art-mural'
   | 'market-food-stall'
@@ -57,6 +54,7 @@ export type PeopleHandlingId =
   | 'reshuffle-and-add-people-naturally'
   | 'people-secondary-environment-primary'
   | 'environment-dominant-with-people'
+  | 'custom-people-handling'
 
 export type CrowdCharacterId =
   | 'match-reference-crowd'
@@ -75,6 +73,13 @@ export type PrimarySubjectEmphasisId =
   | 'landmark-first'
   | 'person-first'
   | 'balanced-scene'
+
+export type PeopleStrategyId =
+  | 'match-source'
+  | 'keep'
+  | 'reduce'
+  | 'remove'
+  | 'recast-or-add'
 
 export type CameraPresetId =
   | 'sony-a7r-v'
@@ -208,12 +213,20 @@ export type FilterLookId =
 export type LightingId =
   | 'match-reference-lighting'
   | 'clear-bright-midday-sun'
+  | 'clear-morning-sun'
   | 'soft-morning-light'
+  | 'pastel-sunrise-light'
+  | 'sun-through-thin-cloud'
+  | 'broken-cloud-sun'
   | 'golden-hour'
   | 'sunset-glow'
+  | 'after-rain-sunbreaks'
   | 'blue-hour'
+  | 'after-sunset-twilight'
   | 'overcast-soft-light'
+  | 'bright-high-overcast'
   | 'diffused-cloudy-daylight'
+  | 'heavy-overcast-dark-clouds'
   | 'dramatic-storm-light'
   | 'hazy-afternoon-light'
   | 'backlit-sunlight'
@@ -285,10 +298,8 @@ export interface ImageRecreationFormState {
   presetId: PromptPresetId
   sceneCategory: SceneCategoryId
   referenceHasPeople: boolean
-  peoplePresence: PeoplePresenceId
-  peopleHandling: PeopleHandlingId
-  crowdCharacter: CrowdCharacterId
-  primarySubjectEmphasis: PrimarySubjectEmphasisId
+  peopleStrategy: PeopleStrategyId
+  peopleOverrideText: string
   cameraPreset: CameraPresetId
   lensPreset: LensPresetId
   captureStyle: CaptureStyleId
@@ -297,13 +308,12 @@ export interface ImageRecreationFormState {
   filterLook: FilterLookId
   lighting: LightingId
   preservationStrength: PreservationStrengthId
-  allowedVariation: AllowedVariationId
   environmentEnhancement: EnvironmentEnhancementId
   modelId: FluxModelId
   safetyTolerance: FluxSafetyToleranceId
   enablePromptUpsampling: boolean
   seedValue: string
-  extraInstructions: string
+  creativeDirection: string
 }
 
 export interface SelectOption<TId extends string> {
@@ -331,16 +341,16 @@ export interface PromptPreset {
   values: Omit<
     ImageRecreationFormState,
     | 'presetId'
-    | 'extraInstructions'
     | 'referenceHasPeople'
     | 'centerMainSubject'
     | 'modelId'
     | 'safetyTolerance'
     | 'enablePromptUpsampling'
     | 'seedValue'
+    | 'creativeDirection'
   > & {
     referenceHasPeople?: boolean
     centerMainSubject?: boolean
-    extraInstructions?: string
+    creativeDirection?: string
   }
 }
