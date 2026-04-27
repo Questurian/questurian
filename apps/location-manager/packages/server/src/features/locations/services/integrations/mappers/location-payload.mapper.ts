@@ -49,6 +49,43 @@ const WEEKDAY_LABELS: Record<string, string> = {
 
 const MAX_ATTRACTION_GALLERY_ITEMS = 20;
 
+/** Questura `accommodations` multi-selects — LM also stores "none" for absent amenities, which Payload rejects. */
+const PAYLOAD_ACCOMMODATIONS_PARKING = new Set(["onsite", "valet", "street", "garage"]);
+const PAYLOAD_ACCOMMODATIONS_JACUZZI = new Set(["private", "shared", "rooftop"]);
+const PAYLOAD_ACCOMMODATIONS_POOL = new Set(["indoor", "outdoor", "rooftop", "infinity"]);
+const PAYLOAD_ACCOMMODATIONS_WORKSPACE = new Set([
+  "None",
+  "Shared Lounge",
+  "Dedicated Desk",
+  "Co-working Space",
+]);
+
+function filterPayloadMultiSelect(
+  values: string[] | undefined,
+  allowed: Set<string>
+): string[] | undefined {
+  if (!values?.length) return undefined;
+  const filtered = values.filter((v) => allowed.has(v));
+  return filtered.length > 0 ? filtered : undefined;
+}
+
+function normalizeWorkspaceForPayload(raw: unknown): string | undefined {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    return PAYLOAD_ACCOMMODATIONS_WORKSPACE.has(trimmed) ? trimmed : undefined;
+  }
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item !== "string") continue;
+      const trimmed = item.trim();
+      if (PAYLOAD_ACCOMMODATIONS_WORKSPACE.has(trimmed)) {
+        return trimmed;
+      }
+    }
+  }
+  return undefined;
+}
+
 function dedupePreservingOrder(ids: string[]): string[] {
   return Array.from(new Set(ids));
 }
@@ -311,23 +348,37 @@ function parseAccommodationsGroups(location: LocationResponse): Record<string, u
     ...(asString(core?.type) ? { type: asString(core?.type) } : {}),
   };
 
+  const parkingForPayload = filterPayloadMultiSelect(
+    asStringArray(theStay?.parking),
+    PAYLOAD_ACCOMMODATIONS_PARKING
+  );
+  const poolForPayload = filterPayloadMultiSelect(
+    asStringArray(theExperience?.pool),
+    PAYLOAD_ACCOMMODATIONS_POOL
+  );
+  const jacuzziForPayload = filterPayloadMultiSelect(
+    asStringArray(theExperience?.jacuzzi),
+    PAYLOAD_ACCOMMODATIONS_JACUZZI
+  );
+  const workspaceForPayload = normalizeWorkspaceForPayload(theExperience?.workspace);
+
   const payloadStay = {
     ...(asStringArray(theStay?.perfect_for) ? { perfectFor: asStringArray(theStay?.perfect_for) } : {}),
     ...(asBoolean(theStay?.kid_friendly) !== undefined ? { kidFriendly: asBoolean(theStay?.kid_friendly) } : {}),
     ...(asBoolean(theStay?.ac) !== undefined ? { ac: asBoolean(theStay?.ac) } : {}),
     ...(asBoolean(theStay?.wifi) !== undefined ? { wifi: asBoolean(theStay?.wifi) } : {}),
     ...(asBoolean(theStay?.extra_guest_fee) !== undefined ? { extraGuestFee: asBoolean(theStay?.extra_guest_fee) } : {}),
-    ...(asStringArray(theStay?.parking) ? { parking: asStringArray(theStay?.parking) } : {}),
+    ...(parkingForPayload ? { parking: parkingForPayload } : {}),
     ...(asBoolean(theStay?.breakfast_served) !== undefined ? { breakfastServed: asBoolean(theStay?.breakfast_served) } : {}),
   };
 
   const payloadExperience = {
     ...(asStringArray(theExperience?.vibe) ? { vibe: asStringArray(theExperience?.vibe) } : {}),
-    ...(asString(theExperience?.workspace) ? { workspace: asString(theExperience?.workspace) } : {}),
+    ...(workspaceForPayload ? { workspace: workspaceForPayload } : {}),
     ...(asBoolean(theExperience?.restaurant) !== undefined ? { restaurant: asBoolean(theExperience?.restaurant) } : {}),
-    ...(asStringArray(theExperience?.pool) ? { pool: asStringArray(theExperience?.pool) } : {}),
+    ...(poolForPayload ? { pool: poolForPayload } : {}),
     ...(asBoolean(theExperience?.rooftop_lounge) !== undefined ? { rooftopLounge: asBoolean(theExperience?.rooftop_lounge) } : {}),
-    ...(asStringArray(theExperience?.jacuzzi) ? { jacuzzi: asStringArray(theExperience?.jacuzzi) } : {}),
+    ...(jacuzziForPayload ? { jacuzzi: jacuzziForPayload } : {}),
     ...(asString(theExperience?.gym) ? { gym: asString(theExperience?.gym) } : {}),
   };
 
@@ -372,6 +423,7 @@ function mapSharedPayloadFields(
   | "sourceName"
 > {
   const galleryImageIds = getGalleryImageIds(location, uploadedImages);
+  const payloadCountryCode = convertIsoToPhoneCountryCode(location.contact.countryCode || undefined);
 
   return {
     title: location.title || location.source.name,
@@ -385,7 +437,7 @@ function mapSharedPayloadFields(
       post: toPayloadRelationshipId(id),
     })),
     address: location.contact.url || "",
-    countryCode: convertIsoToPhoneCountryCode(location.contact.countryCode || undefined) || "",
+    ...(payloadCountryCode ? { countryCode: payloadCountryCode } : {}),
     phoneNumber: extractPhoneNumber(location.contact.phoneNumber || undefined) || "",
     website: location.contact.website || "",
     latitude: location.coordinates.lat || undefined,
@@ -440,7 +492,8 @@ function mapAccommodationsPayload(
 function mapAttractionsPayload(
   location: LocationResponse,
   uploadedImages: UploadedImagesResult,
-  locationRef: string
+  locationRef: string,
+  tourPayloadIds?: string[]
 ): PayloadEntryData {
   const {
     website,
@@ -456,6 +509,7 @@ function mapAttractionsPayload(
     ...(location.contact.website?.trim() ? { website } : {}),
     ...(operationHours ? { operationHours } : {}),
     ...(Object.keys(attractionsDetails).length > 0 ? { attractionsDetails } : {}),
+    ...(tourPayloadIds ? { tours: tourPayloadIds.map(toPayloadRelationshipId) } : {}),
   };
 }
 
@@ -508,7 +562,8 @@ function stripLegacyLmFields(payload: PayloadEntryData): PayloadEntryData {
 export function mapLocationToPayloadFormat(
   location: LocationResponse,
   uploadedImages: UploadedImagesResult,
-  locationRef: string
+  locationRef: string,
+  options: { tourPayloadIds?: string[] } = {}
 ): PayloadEntryData {
   let mapped: PayloadEntryData;
   switch (location.category) {
@@ -519,7 +574,7 @@ export function mapLocationToPayloadFormat(
       mapped = mapAccommodationsPayload(location, uploadedImages, locationRef);
       break;
     case "attractions":
-      mapped = mapAttractionsPayload(location, uploadedImages, locationRef);
+      mapped = mapAttractionsPayload(location, uploadedImages, locationRef, options.tourPayloadIds);
       break;
     case "nightlife":
       mapped = mapNightlifePayload(location, uploadedImages, locationRef);

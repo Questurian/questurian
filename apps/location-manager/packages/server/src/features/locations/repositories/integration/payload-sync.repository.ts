@@ -126,6 +126,7 @@ export function deleteSyncState(locationId?: number): boolean {
         .run({ $locationId: locationId });
     } else {
       db.query("DELETE FROM payload_sync_state").run();
+      db.query("DELETE FROM tour_payload_sync_state").run();
       db.query("UPDATE entities SET payload_location_ref = NULL").run();
     }
     return true;

@@ -16,6 +16,30 @@ export interface NeighborhoodDescriptionGenerationInput {
   address?: string | null;
 }
 
+export interface AccommodationsFieldSuggestionAiRequest {
+  field_key: string;
+  field_label: string;
+  kind: "single" | "multi";
+  allowed_options: Array<{
+    value: string;
+    label: string;
+    description?: string;
+  }>;
+  form_values: Record<string, unknown>;
+  api_context: Record<string, unknown>;
+}
+
+export interface AccommodationsFieldSuggestionAiResponse {
+  suggestion: string | string[] | null;
+  confidence: number;
+  reason: string;
+  sources?: Array<{
+    label?: string;
+    url?: string;
+    snippet?: string;
+  }>;
+}
+
 export class AltTextApiClient {
   private baseUrl: string;
 
@@ -87,5 +111,30 @@ export class AltTextApiClient {
 
     const result = await response.json() as { description: string };
     return result.description;
+  }
+
+  /**
+   * Suggest one accommodations option field from grounded Gemini research.
+   */
+  async suggestAccommodationsField(
+    input: AccommodationsFieldSuggestionAiRequest
+  ): Promise<AccommodationsFieldSuggestionAiResponse> {
+    const response = await fetch(`${this.baseUrl}/accommodations-field-suggestion`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const errorDetail = (await response.text().catch(() => "")).trim();
+      const errorMessage = errorDetail || response.statusText;
+      throw new Error(
+        `Accommodations field suggestion failed (${response.status}): ${errorMessage}`
+      );
+    }
+
+    return response.json() as Promise<AccommodationsFieldSuggestionAiResponse>;
   }
 }

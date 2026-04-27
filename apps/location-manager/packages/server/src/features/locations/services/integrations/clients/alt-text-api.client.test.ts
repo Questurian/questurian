@@ -82,4 +82,65 @@ describe("AltTextApiClient", () => {
       "Neighborhood description generation failed (503): Vertex unavailable"
     );
   });
+
+  test("returns accommodations field suggestion when API responds with success", async () => {
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:8642/accommodations-field-suggestion");
+      expect(init?.method).toBe("POST");
+      expect(init?.headers).toEqual({ "Content-Type": "application/json" });
+
+      return new Response(
+        JSON.stringify({
+          suggestion: "yes",
+          confidence: 0.86,
+          reason: "The official amenities page lists WiFi.",
+          sources: [{ label: "Official site", url: "https://example.com" }],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }
+      );
+    }) as unknown as typeof fetch;
+
+    const client = new AltTextApiClient("http://localhost:8642");
+    const result = await client.suggestAccommodationsField({
+      field_key: "wifi",
+      field_label: "WiFi",
+      kind: "single",
+      allowed_options: [
+        { value: "yes", label: "Yes" },
+        { value: "no", label: "No" },
+      ],
+      form_values: { name: "Hotel", address: "123 Main St" },
+      api_context: {},
+    });
+
+    expect(result.suggestion).toBe("yes");
+    expect(result.confidence).toBe(0.86);
+  });
+
+  test("throws detailed error when accommodations field suggestion fails", async () => {
+    globalThis.fetch = (async () => {
+      return new Response("Vertex unavailable", {
+        status: 503,
+        statusText: "Service Unavailable",
+      });
+    }) as unknown as typeof fetch;
+
+    const client = new AltTextApiClient("http://localhost:8642");
+
+    await expect(
+      client.suggestAccommodationsField({
+        field_key: "wifi",
+        field_label: "WiFi",
+        kind: "single",
+        allowed_options: [{ value: "yes", label: "Yes" }],
+        form_values: { name: "Hotel", address: "123 Main St" },
+        api_context: {},
+      })
+    ).rejects.toThrow(
+      "Accommodations field suggestion failed (503): Vertex unavailable"
+    );
+  });
 });

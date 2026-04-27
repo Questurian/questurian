@@ -28,6 +28,7 @@ export function HotelGridPickerModal({
   onClose,
   setSearchValue,
   setCandidatePage,
+  itemLabel = 'hotel',
 }: {
   slotIndex: number
   candidatesQuery: ReturnType<typeof useQuery<HomepageHotelGridCandidatesResponse>>
@@ -39,6 +40,7 @@ export function HotelGridPickerModal({
   onClose: () => void
   setSearchValue: (v: string) => void
   setCandidatePage: (v: number | ((prev: number) => number)) => void
+  itemLabel?: string
 }) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -51,19 +53,28 @@ export function HotelGridPickerModal({
 
   const candidateError = candidatesQuery.error instanceof Error ? candidatesQuery.error.message : null
   const totalPages = candidatesQuery.data?.totalPages ?? 1
+  const isFetchingHotels = candidatesQuery.isFetching
+  const showInitialLoad = candidatesQuery.isPending && !candidatesQuery.data
+  const showUpdatingBanner = isFetchingHotels && Boolean(candidatesQuery.data)
 
   return (
-    <div className="hf-modal-backdrop" onClick={onClose}>
+    <div
+      className="hf-modal-backdrop"
+      onClick={() => {
+        // Keep the dialog open while a request is in flight so a slow list load is not dismissed accidentally.
+        if (!isFetchingHotels) onClose()
+      }}
+    >
       <div
         className="hf-modal"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`Pick hotel for Slot ${slotIndex + 1}`}
+        aria-label={`Pick ${itemLabel} for Slot ${slotIndex + 1}`}
       >
         <div className="hf-modal-top">
           <div className="hf-modal-title-row">
-            <h2>Slot {slotIndex + 1} - Pick a hotel</h2>
+            <h2>Slot {slotIndex + 1} - Pick a {itemLabel}</h2>
             <button
               type="button"
               className="hf-modal-close"
@@ -78,29 +89,48 @@ export function HotelGridPickerModal({
             <span className="hf-modal-search-icon">⌕</span>
             <input
               type="search"
-              placeholder="Search hotel name or slug..."
+              placeholder={`Search ${itemLabel} name…`}
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               autoFocus
             />
           </div>
+          {showUpdatingBanner ? (
+            <p className="hf-modal-empty" style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }} role="status">
+              Updating list…
+            </p>
+          ) : null}
         </div>
 
         <div className="hf-modal-body">
           {candidateError ? (
             <p className="hf-modal-empty">{candidateError}</p>
-          ) : candidatesQuery.isLoading && !candidatesQuery.data ? (
-            <p className="hf-modal-empty">Loading hotels...</p>
+          ) : showInitialLoad ? (
+            <p className="hf-modal-empty">Loading {itemLabel}s…</p>
           ) : candidatesQuery.data && candidatesQuery.data.docs.length > 0 ? (
             candidatesQuery.data.docs.map((candidate) => {
               const isCurrentSlot = candidate.id === currentSlotId
               const isUsedElsewhere = usedIds.has(candidate.id) && !isCurrentSlot
+              const thumbSrc =
+                typeof candidate.imageUrl === 'string' && candidate.imageUrl.trim()
+                  ? candidate.imageUrl.trim()
+                  : null
 
               return (
                 <div
                   key={candidate.id}
                   className={`hf-location-picker-row${isUsedElsewhere ? ' used' : ''}`}
                 >
+                  <div className="hf-location-picker-thumb">
+                    {thumbSrc ? (
+                      <img
+                        src={thumbSrc}
+                        alt={candidate.title}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : null}
+                  </div>
                   <div className="hf-location-picker-body">
                     <p className="hf-location-picker-title">{candidate.title}</p>
                     <div className="hf-location-picker-meta">
@@ -123,7 +153,7 @@ export function HotelGridPickerModal({
               )
             })
           ) : (
-            <p className="hf-modal-empty">No hotels matched your search.</p>
+            <p className="hf-modal-empty">No {itemLabel}s matched your search.</p>
           )}
         </div>
 

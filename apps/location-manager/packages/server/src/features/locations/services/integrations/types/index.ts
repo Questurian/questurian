@@ -1,4 +1,4 @@
-export type { SyncResult, SyncStatusResponse, UploadedImagesResult } from './payload-sync.types';
+export type { SyncResult, SyncStatusResponse, TourPayloadSyncResult, UploadedImagesResult } from './payload-sync.types';
 
 
 

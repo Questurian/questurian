@@ -17,6 +17,7 @@ import {
   PayloadSyncService,
   TripAdvisorPlaceService
 } from "../services";
+import { AccommodationsFieldSuggestionService } from "../services/integrations/accommodations-field-suggestion.service";
 
 export class ServiceContainer {
   private static instance: ServiceContainer;
@@ -38,6 +39,7 @@ export class ServiceContainer {
   readonly locationMutationService: LocationMutationService;
   readonly payloadSyncService: PayloadSyncService;
   readonly tripAdvisorPlaceService: TripAdvisorPlaceService;
+  readonly accommodationsFieldSuggestionService: AccommodationsFieldSuggestionService;
 
   private constructor() {
     // Singletons
@@ -66,6 +68,7 @@ export class ServiceContainer {
       this.imageStorage
     );
     this.uploadsService = new UploadsService(this.imageStorage, this.altTextApiClient);
+    this.accommodationsFieldSuggestionService = new AccommodationsFieldSuggestionService(this.altTextApiClient);
     this.locationQueryService = new LocationQueryService();
     this.locationMutationService = new LocationMutationService(this.imageStorage);
     this.payloadSyncService = new PayloadSyncService(

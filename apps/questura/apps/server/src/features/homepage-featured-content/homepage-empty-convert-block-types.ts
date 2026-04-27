@@ -16,6 +16,7 @@ export const HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES = [
   'location-grid',
   'questurian-maps',
   'hotel-grid',
+  'tour-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',

@@ -5,15 +5,17 @@ import { Link } from "react-router-dom";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
+import { TourSelector } from "@client/shared/components/tours/TourSelector";
 import { OperationHoursModal } from "./OperationHoursModal";
 import type { AddAttractionsFormData } from "../validation/add-attractions.schema";
 
-type AttractionsFormSection = "step1" | "entities" | "profile" | "visitContact";
+type AttractionsFormSection = "step1" | "entities" | "profile" | "tours" | "visitContact";
 
 const ATTRACTIONS_SECTION_ORDER: AttractionsFormSection[] = [
   "step1",
   "entities",
   "profile",
+  "tours",
   "visitContact",
 ];
 
@@ -60,6 +62,7 @@ export function AddAttractionsStagedForm({
     hasValue(form.watch("type")) &&
     hasValue(form.watch("priceLevel")) &&
     hasValue(form.watch("bookingRequired"));
+  const toursComplete = true;
   const visitContactComplete = hasValue(form.watch("hours"));
 
   const flowSections: Array<{
@@ -70,6 +73,7 @@ export function AddAttractionsStagedForm({
     { key: "step1", label: "Step 1", complete: stepOneComplete },
     { key: "entities", label: "Entities", complete: entitiesComplete },
     { key: "profile", label: "Profile", complete: profileComplete },
+    { key: "tours", label: "Tours", complete: toursComplete },
     { key: "visitContact", label: "Visit & Contact", complete: visitContactComplete },
   ];
 
@@ -107,6 +111,11 @@ export function AddAttractionsStagedForm({
         "priceLevel",
         "bookingRequired",
       ]);
+      if (!isValid) return;
+    }
+
+    if (activeSection === "tours") {
+      const isValid = await form.trigger(["tourIds"]);
       if (!isValid) return;
     }
 
@@ -161,7 +170,7 @@ export function AddAttractionsStagedForm({
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {flowSections.map((section, index) => {
                 const isActive = activeSection === section.key;
                 const isDisabled = !canOpenSection(section.key);
@@ -379,6 +388,31 @@ export function AddAttractionsStagedForm({
                     </select>
                   </div>
                 </div>
+
+                <div className="flex justify-between border-t border-border/70 pt-4">
+                  <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                    Previous
+                  </Button>
+                  <Button type="button" onClick={() => void goToNextSection()}>
+                    Next
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {isPrefillReady && activeSection === "tours" && (
+              <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">Tours</h2>
+                <TourSelector
+                  selectedTourIds={form.watch("tourIds") ?? []}
+                  onChange={(tourIds) =>
+                    form.setValue("tourIds", tourIds, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                      shouldTouch: true,
+                    })
+                  }
+                />
 
                 <div className="flex justify-between border-t border-border/70 pt-4">
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>

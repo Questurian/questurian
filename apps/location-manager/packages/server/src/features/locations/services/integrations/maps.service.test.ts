@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-const createFromMapsMock = mock(async () => ({
+const createFromMapsMock = mock(async (): Promise<any> => ({
   name: "Nebula",
   title: null,
   address: "123 Main St, Lima",
@@ -12,6 +12,8 @@ const generateGoogleMapsUrlMock = mock(() => "https://www.google.com/maps");
 const findPotentialDuplicateLocationsMock = mock<() => any[]>(() => []);
 const getLocationByIdForUpdateMock = mock<(id?: number) => any>(() => null as any);
 const saveLocationOrThrowMock = mock(() => 101);
+const setAttractionToursMock = mock(() => []);
+const getAttractionToursMock = mock(() => []);
 const updateLocationByIdMock = mock(() => true);
 const getInstagramEmbedsByLocationIdMock = mock<(id?: number) => any[]>(() => []);
 const getUploadsByLocationIdMock = mock<(id?: number) => any[]>(() => []);
@@ -26,6 +28,8 @@ mock.module("../../repositories/core", () => ({
   findPotentialDuplicateLocations: findPotentialDuplicateLocationsMock,
   getLocationByIdForUpdate: getLocationByIdForUpdateMock,
   saveLocationOrThrow: saveLocationOrThrowMock,
+  setAttractionTours: setAttractionToursMock,
+  getAttractionTours: getAttractionToursMock,
   updateLocationById: updateLocationByIdMock,
 }));
 
@@ -47,6 +51,8 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
     findPotentialDuplicateLocationsMock.mockReset();
     getLocationByIdForUpdateMock.mockReset();
     saveLocationOrThrowMock.mockReset();
+    setAttractionToursMock.mockReset();
+    getAttractionToursMock.mockReset();
     updateLocationByIdMock.mockReset();
     getInstagramEmbedsByLocationIdMock.mockReset();
     getUploadsByLocationIdMock.mockReset();
@@ -64,6 +70,8 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
     findPotentialDuplicateLocationsMock.mockReturnValue([]);
     getLocationByIdForUpdateMock.mockReturnValue(null);
     saveLocationOrThrowMock.mockReturnValue(101);
+    setAttractionToursMock.mockReturnValue([]);
+    getAttractionToursMock.mockReturnValue([]);
     updateLocationByIdMock.mockReturnValue(true);
     getInstagramEmbedsByLocationIdMock.mockReturnValue([]);
     getUploadsByLocationIdMock.mockReturnValue([]);
@@ -239,5 +247,67 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
     ).rejects.toThrow("Attractions gallery supports up to 20 Payload media sets total.");
 
     expect(updateLocationByIdMock).not.toHaveBeenCalled();
+  });
+
+  test("links tours when creating an attraction", async () => {
+    createFromMapsMock.mockResolvedValue({
+      name: "Museum",
+      title: null,
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "attractions",
+      type: "museum",
+    });
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.addMapsLocation(
+      {
+        name: "Museum",
+        title: "Museum",
+        address: "123 Main St, Lima",
+        category: "attractions",
+        attractionsDetails: { core: { attraction_type: "museum" } },
+        tourIds: [1, 2, 1],
+      },
+      "attractions"
+    );
+
+    expect(setAttractionToursMock).toHaveBeenCalledWith(101, [1, 2]);
+  });
+
+  test("updates attraction tour links without other field changes", async () => {
+    const currentLocation = {
+      id: 90,
+      name: "Museum",
+      title: "Museum",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "attractions",
+      type: "museum",
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(90, {
+      tourIds: [3, 4, 3],
+    } as any);
+
+    expect(updateLocationByIdMock).not.toHaveBeenCalled();
+    expect(setAttractionToursMock).toHaveBeenCalledWith(90, [3, 4]);
   });
 });

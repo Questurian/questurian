@@ -20,6 +20,7 @@ export const ISO_TO_PHONE_COUNTRY_CODE: Record<string, string> = {
   "CO": "+57",
   "AR": "+54",
   "CL": "+56",
+  "PA": "+507",
 };
 
 

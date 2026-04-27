@@ -2,6 +2,9 @@ import { z } from "zod";
 
 const PRICE_LEVEL_VALUES = ["free", "$", "$$", "$$$", "$$$$"] as const;
 const BOOKING_REQUIRED_VALUES = ["yes", "no"] as const;
+const tourIdsSchema = z
+  .array(z.number().int().positive())
+  .refine((ids) => new Set(ids).size === ids.length, "Tour selections must be unique");
 
 type OperationHoursRow = { day: string; hours: string };
 
@@ -115,6 +118,7 @@ export const addAttractionsSchema = z.object({
       (value) => parseOperationHoursJson(value) !== null,
       "Set hours using the schedule editor"
     ),
+  tourIds: tourIdsSchema,
 });
 
 export const addAttractionsSubmitSchema = z

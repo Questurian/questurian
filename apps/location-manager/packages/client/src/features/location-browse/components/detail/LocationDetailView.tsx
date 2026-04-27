@@ -4,6 +4,7 @@ import { LocationCompleteness } from "./LocationCompleteness";
 import { LocationReviewsSection } from "./LocationReviewsSection";
 import { LocationIdealForEditor } from "./LocationIdealForEditor";
 import { LocationMediaGallery } from "./LocationMediaGallery";
+import { AttractionToursManager } from "@client/shared/components/tours/AttractionToursManager";
 
 interface LocationDetailViewProps {
   locationDetail: LocationResponse | null | undefined;
@@ -49,6 +50,10 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
         <LocationReviewsSection locationDetail={locationDetail} />
 
         <LocationIdealForEditor locationDetail={locationDetail} />
+
+        {locationDetail.category === "attractions" && (
+          <AttractionToursManager locationDetail={locationDetail} />
+        )}
 
         {/* Title field - only show if different from source name */}
         {locationDetail.title && locationDetail.title !== locationDetail.source?.name && (

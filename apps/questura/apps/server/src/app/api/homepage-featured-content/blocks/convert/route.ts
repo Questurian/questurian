@@ -14,6 +14,7 @@ import {
   getHomepageFeaturedSelectionFromItems,
   getNewsletterSignupPlaceholderSelection,
   getHotelGridSelectionFromItems,
+  getTourGridSelectionFromItems,
   getLocationGridSelectionFromItems,
   getQuesturianMapsSelectionFromItems,
   getThingsToDoAttractionsSelectionFromItems,
@@ -21,6 +22,8 @@ import {
   getWhereToEatDrinkSelectionFromItems,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_TOUR_GRID_MAX_SLOTS,
+  HOMEPAGE_TOUR_GRID_MIN_SLOTS,
   HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
@@ -61,6 +64,7 @@ const SUPPORTED_BLOCK_TYPES = [
   'location-grid',
   'questurian-maps',
   'hotel-grid',
+  'tour-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
@@ -79,6 +83,7 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
     max: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
   },
   'hotel-grid': { min: HOMEPAGE_HOTEL_GRID_MIN_SLOTS, max: HOMEPAGE_HOTEL_GRID_MAX_SLOTS },
+  'tour-grid': { min: HOMEPAGE_TOUR_GRID_MIN_SLOTS, max: HOMEPAGE_TOUR_GRID_MAX_SLOTS },
   'where-to-eat-drink': {
     min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
     max: HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
@@ -117,6 +122,10 @@ async function resolvePageBlocks(
               })
             : block.blockType === 'hotel-grid'
               ? await getHotelGridSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
+              : block.blockType === 'tour-grid'
+              ? await getTourGridSelectionFromItems(payload, block.items, {
                   totalSlots: slotCount,
                 })
               : block.blockType === 'where-to-eat-drink'

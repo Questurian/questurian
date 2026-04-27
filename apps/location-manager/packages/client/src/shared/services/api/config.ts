@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
   GET_LOCATION_BY_ID: (category: Category, id: number) => `/api/${category}/${id}`,
   CREATE_LOCATION: (category: Category) => `/api/${category}`,
   GOOGLE_PREFILL: (category: Category) => `/api/${category}/google-prefill`,
+  ACCOMMODATIONS_FIELD_SUGGESTIONS: "/api/accommodations/field-suggestions",
   UPDATE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   DELETE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   REFETCH_PLACE_ID: (category: Category, id: number) => `/api/${category}/${id}/refetch-place-id`,
@@ -39,6 +40,9 @@ export const API_ENDPOINTS = {
   UPDATE_UPLOAD_PHOTOGRAPHER_CREDIT: (uploadId: number) =>
     `/api/uploads/${uploadId}/photographer-credit`,
   CLEAR_DB: "/api/clear-db",
+  TOURS: "/api/tours",
+  TOUR_BY_ID: (id: number) => `/api/tours/${id}`,
+  TOUR_MEDIA_SET: "/api/tours/media-set",
 
   // Location hierarchy
   HIERARCHY: "/api/location-hierarchy",
@@ -58,6 +62,7 @@ export const API_ENDPOINTS = {
 
   // Payload CMS sync
   PAYLOAD_SYNC: (locationId: number) => `/api/payload/sync/${locationId}`,
+  PAYLOAD_SYNC_TOUR: (tourId: number) => `/api/payload/sync-tour/${tourId}`,
   PAYLOAD_SYNC_ALL: "/api/payload/sync-all",
   PAYLOAD_MEDIA_SETS: "/api/payload/media-sets",
   PAYLOAD_SYNC_STATUS: "/api/payload/sync-status",

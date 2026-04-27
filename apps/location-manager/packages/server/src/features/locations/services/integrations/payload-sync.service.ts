@@ -1,4 +1,5 @@
 import type { LocationCategory } from "../../models/location";
+import type { Tour } from "../../models/location";
 import { BadRequestError, NotFoundError, ServiceUnavailableError } from "@shared/errors/http-error";
 import type {
   PayloadApiClient,
@@ -8,13 +9,22 @@ import type {
 import { ImageStorageService } from "../storage/image-storage.service";
 import { LocationQueryService } from "../core/location-query.service";
 import * as PayloadSyncRepo from "../../repositories/integration";
-import { updateLocationById } from "../../repositories/core";
+import {
+  getAllTours,
+  getAttractionTours,
+  getTourById,
+  getTourSyncState,
+  saveTourSyncState,
+  updateLocationById,
+} from "../../repositories/core";
 
 // Import sub-modules
-import type { SyncResult, SyncStatusResponse } from "./types";
+import type { SyncResult, SyncStatusResponse, TourPayloadSyncResult } from "./types";
 import { uploadLocationImages } from "./handlers";
 import type { PayloadCollection } from "./mappers/location-payload.mapper";
 import { mapLocationToPayloadFormat, mapCategoryToCollection } from "./mappers";
+import type { PayloadTourData } from "./clients/payload/payload-api.types";
+import { ensurePayloadLocationRefForKey } from "./resolvers/payload-location.resolver";
 
 export class PayloadSyncService {
   constructor(
@@ -93,8 +103,14 @@ export class PayloadSyncService {
       galleryIds = uploadedImages.galleryImageIds;
       instagramIds = uploadedImages.instagramPostIds;
 
+      const tourPayloadIds = location.category === "attractions"
+        ? await this.syncLinkedTours(locationId)
+        : undefined;
+
       // Map location data to Payload format (locationRef is guaranteed at this point)
-      const payloadData = mapLocationToPayloadFormat(location, uploadedImages, locationRef);
+      const payloadData = mapLocationToPayloadFormat(location, uploadedImages, locationRef, {
+        tourPayloadIds,
+      });
 
       console.log(`🔄 [SYNC] Location ${locationId} type value:`, location.type);
       console.log(`🔄 [SYNC] Payload data type:`, payloadData.type);
@@ -198,6 +214,10 @@ export class PayloadSyncService {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
+    if (category === undefined || category === "attractions") {
+      await this.syncAllTours();
+    }
+
     // Get all locations
     const locations = this.locationQuery.listLocations(category);
 
@@ -212,6 +232,94 @@ export class PayloadSyncService {
     }
 
     return results;
+  }
+
+  private toPayloadRelationshipId(id: string): string | number {
+    const trimmed = id.trim();
+    if (/^\d+$/.test(trimmed)) {
+      return Number(trimmed);
+    }
+    return trimmed;
+  }
+
+  private async buildPayloadTourData(tour: Tour): Promise<PayloadTourData> {
+    const base: PayloadTourData = {
+      title: tour.title,
+      img: this.toPayloadRelationshipId(tour.imgPayloadMediaSetId),
+      bookingLink: tour.bookingLink,
+      price: tour.price,
+      status: "published",
+    };
+    const locationRef = await ensurePayloadLocationRefForKey(tour.locationKey, this.payloadClient);
+    if (locationRef) {
+      base.locationRef = this.toPayloadRelationshipId(locationRef);
+    }
+    return base;
+  }
+
+  private async syncAllTours(): Promise<void> {
+    const tours = getAllTours();
+
+    for (const tour of tours) {
+      await this.syncTour(tour.id);
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+
+  private async syncLinkedTours(locationId: number): Promise<string[]> {
+    const tours = getAttractionTours(locationId);
+    const payloadIds: string[] = [];
+
+    for (const tour of tours) {
+      payloadIds.push(await this.syncTour(tour.id));
+    }
+
+    return payloadIds;
+  }
+
+  /**
+   * Create or update one tour in Payload. Returns result (does not throw on Payload failure).
+   */
+  async syncTourToPayload(tourId: number): Promise<TourPayloadSyncResult> {
+    if (!this.payloadClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const tour = getTourById(tourId);
+    if (!tour) {
+      throw new NotFoundError("Tour", tourId);
+    }
+
+    saveTourSyncState(tourId, "", "pending");
+
+    try {
+      const payloadData = await this.buildPayloadTourData(tour);
+      const existingSyncState = getTourSyncState(tourId);
+      const existingDocId =
+        existingSyncState?.payloadDocId || await this.payloadClient.findTourByTitle(tour.title);
+
+      const response = existingDocId
+        ? await this.payloadClient.updateTour(existingDocId, payloadData)
+        : await this.payloadClient.createTour(payloadData);
+
+      const now = new Date();
+      now.setMilliseconds(0);
+      const syncTimestamp = now.toISOString().replace("T", " ").replace(".000Z", "");
+      saveTourSyncState(tourId, response.doc.id, "success", undefined, syncTimestamp);
+      return { tourId, payloadDocId: response.doc.id, status: "success" };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      saveTourSyncState(tourId, "", "failed", errorMessage);
+      return { tourId, payloadDocId: "", status: "failed", error: errorMessage };
+    }
+  }
+
+  private async syncTour(tourId: number): Promise<string> {
+    const result = await this.syncTourToPayload(tourId);
+    if (result.status === "failed") {
+      throw new Error(result.error || `Failed to sync tour ${tourId}`);
+    }
+    return result.payloadDocId;
   }
 
   /**

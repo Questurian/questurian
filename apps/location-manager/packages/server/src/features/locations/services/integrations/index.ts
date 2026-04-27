@@ -8,4 +8,4 @@ export { UploadsService } from './uploads.service';
 export { TripAdvisorPlaceService } from './tripadvisor-place.service';
 
 // Re-export types for external usage
-export type { SyncResult, SyncStatusResponse, UploadedImagesResult } from './types';
+export type { SyncResult, SyncStatusResponse, TourPayloadSyncResult, UploadedImagesResult } from './types';

@@ -74,7 +74,7 @@ export interface AccommodationsDetailsPayload extends Record<string, unknown> {
   };
   the_experience: {
     vibe: string[];
-    workspace: string;
+    workspace: string[];
     restaurant: boolean;
     pool: string[];
     rooftop_lounge: boolean;
@@ -106,7 +106,7 @@ export interface BuildAccommodationsDetailsInput {
   parking: string[];
   breakfastServed: boolean;
   vibe: string[];
-  workspace: string;
+  workspace: string[];
   restaurant: boolean;
   pool: string[];
   rooftopLounge: boolean;
@@ -177,7 +177,7 @@ export interface ParsedAccommodationsDetails {
   parking: string[];
   breakfastServed: boolean | null;
   vibe: string[];
-  workspace: string | null;
+  workspace: string[];
   restaurant: boolean | null;
   pool: string[];
   rooftopLounge: boolean | null;
@@ -210,7 +210,7 @@ export function parseAccommodationsDetails(details: unknown): ParsedAccommodatio
     parking: asStringArray(getNestedValue(root, ["the_stay", "parking"])),
     breakfastServed: asBoolean(getNestedValue(root, ["the_stay", "breakfast_served"])),
     vibe: asStringArray(getNestedValue(root, ["the_experience", "vibe"])),
-    workspace: asString(getNestedValue(root, ["the_experience", "workspace"])),
+    workspace: asStringArray(getNestedValue(root, ["the_experience", "workspace"])),
     restaurant: asBoolean(getNestedValue(root, ["the_experience", "restaurant"])),
     pool: asStringArray(getNestedValue(root, ["the_experience", "pool"])),
     rooftopLounge: asBoolean(getNestedValue(root, ["the_experience", "rooftop_lounge"])),

@@ -9,7 +9,7 @@
     "lint": "python3 -m py_compile app.py",
     "test": "pnpm run py:ensure && .venv/bin/python -m unittest -q test_app",
     "py:dev": ".venv/bin/python app.py",
-    "py:ensure": "UV_CACHE_DIR=../../../../.uv-cache uv venv --python \"$(node scripts/resolve-python.cjs)\" --allow-existing .venv && (.venv/bin/python -c \"import uvicorn, vertexai\" >/dev/null 2>&1 || UV_CACHE_DIR=../../../../.uv-cache uv pip install --python .venv/bin/python -r requirements.txt)",
+    "py:ensure": "UV_CACHE_DIR=../../../../.uv-cache uv venv --python \"$(node scripts/resolve-python.cjs)\" --allow-existing .venv && (.venv/bin/python -c \"import uvicorn, vertexai, google.genai\" >/dev/null 2>&1 || UV_CACHE_DIR=../../../../.uv-cache uv pip install --python .venv/bin/python -r requirements.txt)",
     "py:install": "UV_CACHE_DIR=../../../../.uv-cache uv venv --python \"$(node scripts/resolve-python.cjs)\" --clear .venv && UV_CACHE_DIR=../../../../.uv-cache uv pip install --python .venv/bin/python -r requirements.txt",
     "py:install:system": "pip3 install -r requirements.txt",
     "test:connection": "bun run test-connection.ts"

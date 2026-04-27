@@ -9,6 +9,13 @@ import {
 } from '@/features/auth/lib/auth-middleware'
 import { searchHotelGridCandidates } from '@/features/homepage-featured-content'
 
+type LocationHomepageDoc = {
+  location?: {
+    id?: number
+    locationKey?: string | null
+  } | number | null
+}
+
 function parsePositiveInt(value: string | null): number | undefined {
   if (!value) return undefined
   const parsed = Number(value)
@@ -20,8 +27,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
-// [id] is accepted for route symmetry with other block candidate endpoints.
-export async function GET(req: NextRequest, { params: _params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const headers = getCorsHeaders(req)
 
   try {
@@ -34,12 +40,35 @@ export async function GET(req: NextRequest, { params: _params }: { params: Promi
       return NextResponse.json({ message: authResult.error }, { status: authResult.status, headers })
     }
 
+    const { id } = await params
     const payload = await getPayload({ config })
+    const doc = (await payload.findByID({
+      collection: 'location-homepages',
+      id,
+      depth: 1,
+      overrideAccess: true,
+    })) as LocationHomepageDoc
+
+    const rawLocation =
+      typeof doc.location === 'object' && doc.location !== null ? doc.location : null
+    const locationKey =
+      rawLocation && typeof rawLocation.locationKey === 'string' && rawLocation.locationKey.trim()
+        ? rawLocation.locationKey.trim()
+        : null
+
+    if (!locationKey) {
+      return NextResponse.json(
+        { message: 'Location homepage is missing a location with a valid location key.' },
+        { status: 400, headers },
+      )
+    }
+
     const { searchParams } = new URL(req.url)
     const response = await searchHotelGridCandidates(payload, {
       query: searchParams.get('q') || undefined,
       page: parsePositiveInt(searchParams.get('page')),
       limit: parsePositiveInt(searchParams.get('limit')),
+      locationKey,
     })
 
     return NextResponse.json(response, { headers })

@@ -16,5 +16,6 @@ export const countryCodes = [
   { label: 'Colombia (+57)', value: '+57' },
   { label: 'Argentina (+54)', value: '+54' },
   { label: 'Chile (+56)', value: '+56' },
+  { label: 'Panama (+507)', value: '+507' },
 ]
 

@@ -26,6 +26,11 @@ import {
   validateThingsToDoAttractionsItems,
 } from './things-to-do-attractions-service'
 import {
+  buildTourGridGlobalData,
+  normalizeTourGridInput,
+  validateTourGridItems,
+} from './tour-grid-service'
+import {
   buildThingsToDoListiclesGlobalData,
   normalizeThingsToDoListiclesInput,
   validateThingsToDoListiclesItems,
@@ -63,6 +68,7 @@ export function isCuratedHomepageBlockType(
     || value === 'location-grid'
     || value === 'questurian-maps'
     || value === 'hotel-grid'
+    || value === 'tour-grid'
     || value === 'where-to-eat-drink'
     || value === 'things-to-do-listicles'
     || value === 'things-to-do-attractions'
@@ -162,6 +168,13 @@ export async function normalizePageBlocksArrayInPlace(
         slotCount,
       })
       blockRecord.items = buildThingsToDoAttractionsGlobalData(refs).items
+    } else if (blockRecord.blockType === 'tour-grid') {
+      const refs = normalizeTourGridInput(blockRecord.items)
+      await validateTourGridItems(req.payload, refs, {
+        allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+        slotCount,
+      })
+      blockRecord.items = buildTourGridGlobalData(refs).items
     } else {
       const refs = normalizeHomepageFeaturedInput(blockRecord.items)
       await validateHomepageFeaturedItems(req.payload, refs, {

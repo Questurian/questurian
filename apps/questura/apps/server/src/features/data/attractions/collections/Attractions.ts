@@ -67,6 +67,15 @@ export const Attractions: CollectionConfig = {
                 description: 'Price range indicator',
               },
             },
+            {
+              name: 'tours',
+              type: 'relationship',
+              relationTo: 'tours',
+              hasMany: true,
+              admin: {
+                description: 'Ordered tours linked from Location Manager',
+              },
+            },
           ],
         },
         {

@@ -74,6 +74,59 @@ class AltTextServiceTests(unittest.TestCase):
         self.assertIn("Miraflores mixes leafy residential streets", result["description"])
         mocked_generate.assert_called_once()
 
+    def test_parse_json_object_handles_markdown_fences(self) -> None:
+        parsed = app.parse_json_object(
+            '```json\n{"suggestion":"yes","confidence":0.8,"reason":"Listed amenity","sources":[]}\n```'
+        )
+
+        self.assertEqual(parsed["suggestion"], "yes")
+        self.assertEqual(parsed["confidence"], 0.8)
+
+    def test_accommodations_prompt_includes_allowed_options_and_context(self) -> None:
+        request = app.AccommodationsFieldSuggestionRequest(
+            field_key="wifi",
+            field_label="WiFi",
+            kind="single",
+            allowed_options=[
+                app.AccommodationsOption(value="yes", label="Yes"),
+                app.AccommodationsOption(value="no", label="No"),
+            ],
+            form_values={"name": "Example Hotel", "address": "123 Main St"},
+            api_context={"website": "https://example.com"},
+        )
+
+        prompt = app.build_accommodations_field_suggestion_prompt(request)
+
+        self.assertIn("allowed_options", prompt)
+        self.assertIn('"value": "yes"', prompt)
+        self.assertIn("Example Hotel", prompt)
+        self.assertIn("Return only JSON", prompt)
+
+    def test_accommodations_field_suggestion_endpoint_returns_generated_json(self) -> None:
+        request = app.AccommodationsFieldSuggestionRequest(
+            field_key="wifi",
+            field_label="WiFi",
+            kind="single",
+            allowed_options=[app.AccommodationsOption(value="yes", label="Yes")],
+            form_values={"name": "Example Hotel", "address": "123 Main St"},
+            api_context={},
+        )
+
+        with patch(
+            "app.generate_accommodations_field_suggestion",
+            return_value={
+                "suggestion": "yes",
+                "confidence": 0.91,
+                "reason": "Official amenities mention WiFi.",
+                "sources": [{"label": "Official site", "url": "https://example.com"}],
+            },
+        ) as mocked_generate:
+            result = asyncio.run(app.accommodations_field_suggestion(request=request))
+
+        self.assertEqual(result["suggestion"], "yes")
+        self.assertEqual(result["confidence"], 0.91)
+        mocked_generate.assert_called_once_with(request)
+
 
 if __name__ == "__main__":
     unittest.main()

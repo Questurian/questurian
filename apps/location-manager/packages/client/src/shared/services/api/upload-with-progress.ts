@@ -1,12 +1,12 @@
 import { API_BASE_URL } from "./config";
-import { unwrapEntry } from "./client";
+import { type ApiResponse, unwrapEntry } from "./client";
 import type { UploadResponse } from "./types";
 
-export function uploadWithProgress(
+export function uploadFormDataWithProgress<T>(
   endpoint: string,
   formData: FormData,
   onProgress?: (percent: number) => void
-): Promise<UploadResponse["entry"]> {
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
@@ -20,8 +20,12 @@ export function uploadWithProgress(
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
-          const response = JSON.parse(xhr.responseText) as UploadResponse;
-          resolve(unwrapEntry(response));
+          const response = JSON.parse(xhr.responseText) as ApiResponse<T>;
+          if (response.success && response.data !== undefined) {
+            resolve(response.data);
+            return;
+          }
+          resolve(response as T);
         } catch {
           reject(new Error("Failed to parse response"));
         }
@@ -36,4 +40,13 @@ export function uploadWithProgress(
     xhr.open("POST", `${API_BASE_URL}${endpoint}`);
     xhr.send(formData);
   });
+}
+
+export async function uploadWithProgress(
+  endpoint: string,
+  formData: FormData,
+  onProgress?: (percent: number) => void
+): Promise<UploadResponse["entry"]> {
+  const response = await uploadFormDataWithProgress<UploadResponse>(endpoint, formData, onProgress);
+  return unwrapEntry(response);
 }

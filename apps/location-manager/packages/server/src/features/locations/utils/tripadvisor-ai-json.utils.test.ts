@@ -38,6 +38,8 @@ function buildLocationResponse(overrides: Partial<LocationResponse> = {}): Locat
     tripadvisorLocationId: "123",
     payload_location_ref: null,
     selectedPayloadMediaSetIds: null,
+    tourIds: null,
+    tours: [],
     neighborhoodDescription: null,
     idealFor: ["date night", "seafood lovers"],
     nightlifeDetails: null,

@@ -7,9 +7,15 @@ import {
   generateGoogleMapsUrl,
 } from "../geocoding/location-geocoding.helper";
 import {
+  type AccommodationsApiHints,
+  FoursquareApiClient,
+} from "./clients/foursquare-api.client";
+import {
   findPotentialDuplicateLocations,
+  getAttractionTours,
   getLocationByIdForUpdate,
   saveLocationOrThrow,
+  setAttractionTours,
   updateLocationById,
 } from "../../repositories/core";
 import { getInstagramEmbedsByLocationId } from "../../repositories/content";
@@ -39,19 +45,26 @@ export interface GooglePrefillResult {
   ianaTimeId: string | null;
   phoneNumber: string | null;
   website: string | null;
+  priceLevel: string | null;
   operationHours: Record<string, unknown> | null;
+  accommodationsHints: AccommodationsApiHints | null;
 }
 
 const MAX_ATTRACTION_GALLERY_ITEMS = 20;
 
 export class MapsService {
+  private readonly foursquareClient: FoursquareApiClient;
+
   constructor(
     private readonly config: EnvConfig,
     private readonly taxonomyService: TaxonomyService,
     private readonly taxonomyCorrectionService: TaxonomyCorrectionService,
     private readonly payloadClient: PayloadApiClient,
-    private readonly tripAdvisorPlaceService: TripAdvisorPlaceService
-  ) {}
+    private readonly tripAdvisorPlaceService: TripAdvisorPlaceService,
+    foursquareClient?: FoursquareApiClient
+  ) {
+    this.foursquareClient = foursquareClient ?? new FoursquareApiClient(config);
+  }
 
   private normalizeOperationHours(
     input?: Record<string, unknown> | string | null
@@ -86,6 +99,11 @@ export class MapsService {
     );
 
     return normalized.length > 0 ? JSON.stringify(normalized) : null;
+  }
+
+  private normalizeTourIds(input?: number[]): number[] | undefined {
+    if (input === undefined) return undefined;
+    return Array.from(new Set(input.filter((id) => Number.isInteger(id) && id > 0)));
   }
 
   private normalizeNightlifeDetails(
@@ -416,7 +434,8 @@ export class MapsService {
 
   private async mergeDuplicateLocation(
     existingLocation: Location,
-    incomingEntry: Location
+    incomingEntry: Location,
+    options: { allowNoFieldUpdates?: boolean } = {}
   ): Promise<number> {
     if (!existingLocation.id) {
       throw new BadRequestError("Duplicate location found without a valid ID");
@@ -461,6 +480,10 @@ export class MapsService {
 
     const hasUpdates = Object.keys(updateData).length > 0;
     if (!hasUpdates) {
+      if (options.allowNoFieldUpdates) {
+        return existingLocation.id;
+      }
+
       throw new BadRequestError(
         `Duplicate location detected. "${existingLocation.name}" already exists with the same category.`
       );
@@ -499,17 +522,20 @@ export class MapsService {
 
     const instagramEmbeds = getInstagramEmbedsByLocationId(id);
     const uploads = getUploadsByLocationId(id);
+    const tours = location.category === "attractions" ? getAttractionTours(id) : [];
 
     return transformLocationToResponse({
       ...location,
       instagram_embeds: instagramEmbeds,
       uploads,
+      tours,
     });
   }
 
   async resolveGooglePrefill(
     name: string,
-    address: string
+    address: string,
+    category?: LocationCategory
   ): Promise<GooglePrefillResult> {
     const trimmedName = name.trim();
     const trimmedAddress = address.trim();
@@ -550,6 +576,14 @@ export class MapsService {
       }
     })();
 
+    const accommodationsHints = await this.resolveAccommodationsHints(
+      category,
+      trimmedName,
+      trimmedAddress,
+      entry.lat,
+      entry.lng
+    );
+
     return {
       googleUrl: generateGoogleMapsUrl(trimmedName, trimmedAddress),
       placeId: entry.placeId,
@@ -560,8 +594,32 @@ export class MapsService {
       ianaTimeId: entry.ianaTimeId ?? null,
       phoneNumber: entry.phoneNumber ?? null,
       website: entry.website ?? null,
+      priceLevel: entry.priceLevel ?? accommodationsHints?.price ?? null,
       operationHours,
+      accommodationsHints,
     };
+  }
+
+  private async resolveAccommodationsHints(
+    category: LocationCategory | undefined,
+    name: string,
+    address: string,
+    lat?: number | null,
+    lng?: number | null
+  ): Promise<AccommodationsApiHints | null> {
+    if (category !== "accommodations") return null;
+
+    try {
+      return await this.foursquareClient.getAccommodationsHints({
+        name,
+        address,
+        lat,
+        lng,
+      });
+    } catch (error) {
+      console.warn("[MapsService] Foursquare accommodations enrichment failed:", error);
+      return null;
+    }
   }
 
   async addMapsLocation(
@@ -577,6 +635,11 @@ export class MapsService {
     }
 
     const category = validateCategory(payload.category);
+    const tourIds = this.normalizeTourIds(payload.tourIds);
+    if (tourIds !== undefined && category !== "attractions") {
+      throw new BadRequestError("Tours can only be linked to attractions");
+    }
+
     const shouldAutoEnrichFromApis = category !== "nightlife";
     const apiKey = shouldAutoEnrichFromApis && this.config.hasGoogleMapsKey()
       ? this.config.GOOGLE_MAPS_API_KEY
@@ -692,11 +755,19 @@ export class MapsService {
     // Cross-category entries (for example dining + nightlife) are allowed as separate docs.
     const duplicate = this.findDuplicateCandidate(entry);
     if (duplicate) {
-      const mergedId = await this.mergeDuplicateLocation(duplicate, entry);
+      const mergedId = await this.mergeDuplicateLocation(duplicate, entry, {
+        allowNoFieldUpdates: tourIds !== undefined,
+      });
+      if (tourIds !== undefined) {
+        setAttractionTours(mergedId, tourIds);
+      }
       return this.buildLocationResponseById(mergedId, duplicate);
     }
 
     const savedId = saveLocationOrThrow(entry);
+    if (tourIds !== undefined) {
+      setAttractionTours(savedId, tourIds);
+    }
 
     // Auto-fetch TripAdvisor place data whenever a TripAdvisor location ID is available.
     if (entry.tripadvisorLocationId) {
@@ -730,6 +801,10 @@ export class MapsService {
       throw new NotFoundError("Location", id);
     }
     const category = validateCategory(currentLocation.category);
+    const tourIds = this.normalizeTourIds(updates.tourIds);
+    if (tourIds !== undefined && category !== "attractions") {
+      throw new BadRequestError("Tours can only be linked to attractions");
+    }
 
     const nextName = updates.name ?? currentLocation.name;
     const nextAddress = updates.address ?? currentLocation.address;
@@ -814,10 +889,16 @@ export class MapsService {
       ...(updates.tripadvisorUrl !== undefined && this.resolveTripadvisorFields(updates.tripadvisorUrl)),
     };
 
-    const success = updateLocationById(id, updateData);
+    if (Object.keys(updateData).length > 0) {
+      const success = updateLocationById(id, updateData);
 
-    if (!success) {
-      throw new BadRequestError("Failed to update location");
+      if (!success) {
+        throw new BadRequestError("Failed to update location");
+      }
+    }
+
+    if (tourIds !== undefined) {
+      setAttractionTours(id, tourIds);
     }
 
     const updatedLocation = getLocationByIdForUpdate(id);

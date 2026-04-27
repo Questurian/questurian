@@ -23,3 +23,11 @@ export { useUpdateUploadPhotographerCredit } from "./useUpdateUploadPhotographer
 export { useReprocessUploadVariants } from "./useReprocessUploadVariants";
 export { useReplaceUploadVariants } from "./useReplaceUploadVariants";
 export { usePayloadMediaSets } from "./usePayloadMediaSets";
+export { useGenerateAltText } from "./useGenerateAltText";
+export {
+  useCreateTour,
+  useSyncPayloadTour,
+  useTours,
+  useUpdateTour,
+  useUploadTourMediaSet,
+} from "./useTours";

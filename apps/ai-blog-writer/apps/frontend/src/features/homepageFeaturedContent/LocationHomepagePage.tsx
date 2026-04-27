@@ -18,6 +18,7 @@ import {
   fetchLocationHomepage,
   fetchLocationHomepageCandidates,
   fetchLocationHomepageHotelGridCandidates,
+  fetchLocationHomepageTourGridCandidates,
   fetchLocationHomepageLocationGridCandidates,
   fetchLocationHomepageThingsToDoAttractionCandidates,
   fetchLocationHomepageThingsToDoListicleCandidates,
@@ -45,6 +46,7 @@ import {
   HOMEPAGE_PAGE_BLOCK_TYPES,
   homepageBlockShapeIdentity,
   isHotelGridBlock,
+  isTourGridBlock,
   isThingsToDoAttractionsBlock,
   isArticleCuratedHomepageBlock,
   isLocationGridBlock,
@@ -431,7 +433,7 @@ export default function LocationHomepagePage() {
                 />
               )
             }
-            if (isHotelGridBlock(block) || isThingsToDoAttractionsBlock(block)) {
+            if (isHotelGridBlock(block) || isTourGridBlock(block) || isThingsToDoAttractionsBlock(block)) {
               const gridBlock = block
               return (
                 <HotelGridBlockEditor
@@ -469,7 +471,9 @@ export default function LocationHomepagePage() {
                         numericId,
                         params,
                       )
-                      : fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
+                      : gridBlock.blockType === 'tour-grid'
+                        ? fetchLocationHomepageTourGridCandidates(currentToken, numericId, params)
+                        : fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
                   convertBlockTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
                     await convertLocationHomepageFeaturedArticlesBlock(currentToken, numericId, gridBlock.id, blockType, slotCount)

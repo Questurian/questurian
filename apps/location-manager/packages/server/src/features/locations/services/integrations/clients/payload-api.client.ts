@@ -8,9 +8,11 @@ import { PayloadInstagramClient } from "./payload/payload-instagram.client";
 import { PayloadLocationsClient } from "./payload/payload-locations.client";
 import { PayloadMediaClient } from "./payload/payload-media.client";
 import { PayloadMediaSetsClient } from "./payload/payload-media-sets.client";
+import { PayloadToursClient } from "./payload/payload-tours.client";
 
 export type {
   PayloadCollection,
+  PayloadRelationshipId,
   PayloadMediaVariantType,
   PayloadAuthResponse,
   PayloadMediaAssetResponse,
@@ -31,6 +33,8 @@ export type {
   PayloadMediaSetListResponse,
   PayloadMediaSetSearchResponse,
   PayloadEntryData,
+  PayloadTourData,
+  PayloadTourResponse,
 } from "./payload/payload-api.types";
 import type {
   PayloadCollection,
@@ -40,6 +44,8 @@ import type {
   PayloadLocationCreateData,
   PayloadMediaSetData,
   PayloadMediaSetListResponse,
+  PayloadTourData,
+  PayloadTourResponse,
 } from "./payload/payload-api.types";
 
 export class PayloadApiClient {
@@ -49,6 +55,7 @@ export class PayloadApiClient {
   private readonly mediaClient: PayloadMediaClient;
   private readonly instagramClient: PayloadInstagramClient;
   private readonly mediaSetsClient: PayloadMediaSetsClient;
+  private readonly toursClient: PayloadToursClient;
   private readonly galleryMerger: PayloadGalleryMergerService;
 
   constructor(config: EnvConfig) {
@@ -58,6 +65,7 @@ export class PayloadApiClient {
     this.mediaClient = new PayloadMediaClient(this.authClient);
     this.instagramClient = new PayloadInstagramClient(this.authClient);
     this.mediaSetsClient = new PayloadMediaSetsClient(this.authClient);
+    this.toursClient = new PayloadToursClient(this.authClient);
     this.galleryMerger = new PayloadGalleryMergerService(this.entriesClient);
   }
 
@@ -183,5 +191,17 @@ export class PayloadApiClient {
 
   async findOrCreateMediaSet(data: PayloadMediaSetData): Promise<string> {
     return await this.mediaSetsClient.findOrCreateMediaSet(data);
+  }
+
+  async findTourByTitle(title: string): Promise<string | null> {
+    return await this.toursClient.findTourByTitle(title);
+  }
+
+  async createTour(data: PayloadTourData): Promise<PayloadTourResponse> {
+    return await this.toursClient.createTour(data);
+  }
+
+  async updateTour(docId: string, data: PayloadTourData): Promise<PayloadTourResponse> {
+    return await this.toursClient.updateTour(docId, data);
   }
 }

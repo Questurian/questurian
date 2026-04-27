@@ -1,6 +1,8 @@
 import type { Payload } from 'payload'
 
+import { getMediaSetPreviewAsset } from '@/features/media/lib/media-set-preview'
 import { APP_CONFIG } from '@/shared/config'
+import { getLocationScope } from '@/shared/location/server/locationScope'
 
 import {
   HOMEPAGE_FEATURED_CONTENT_SLOTS,
@@ -51,6 +53,11 @@ function extractImageUrl(doc: AccommodationDocLike): string | null {
   if (!isRecord(first)) return null
   const image = first.image
   if (!isRecord(image)) return null
+  // Gallery `image` is a relationship to `media-sets` (variant URLs), not a flat media doc.
+  const fromMediaSet = getMediaSetPreviewAsset(image)
+  if (fromMediaSet?.url && typeof fromMediaSet.url === 'string' && fromMediaSet.url) {
+    return fromMediaSet.url
+  }
   const bunnyUrl = image.bunny_original_url
   if (typeof bunnyUrl === 'string' && bunnyUrl) return bunnyUrl
   const url = image.url
@@ -120,7 +127,7 @@ async function findHotelDoc(payload: Payload, ref: HomepageHotelItemRef): Promis
     const doc = await payload.findByID({
       collection: 'accommodations',
       id: ref.id,
-      depth: 1,
+      depth: 2,
       overrideAccess: true,
     })
     return normalizeHotelCandidate(doc as AccommodationDocLike)
@@ -210,7 +217,14 @@ function sortHotels(left: HomepageHotelCandidate, right: HomepageHotelCandidate)
 
 export async function searchHotelGridCandidates(
   payload: Payload,
-  options: { query?: string; page?: number; limit?: number; allowDrafts?: boolean } = {},
+  options: {
+    query?: string
+    page?: number
+    limit?: number
+    allowDrafts?: boolean
+    /** When set, only accommodations in this location scope (see getLocationScope). */
+    locationKey?: string
+  } = {},
 ): Promise<HomepageHotelCandidatesResponse> {
   const query = options.query?.trim() || ''
   const allowDrafts = options.allowDrafts ?? APP_CONFIG.features.homepageFeaturedAllowDrafts
@@ -229,10 +243,33 @@ export async function searchHotelGridCandidates(
     whereClauses.push({ status: { equals: 'published' } })
   }
 
+  const scopedKey = options.locationKey?.trim()
+  if (scopedKey) {
+    const scope = await getLocationScope(payload, scopedKey)
+    const scopeOr: PayloadFindWhere[] = []
+    if (scope.keys.length > 0) {
+      scopeOr.push({ location: { in: scope.keys } })
+    }
+    if (scope.refs.length > 0) {
+      scopeOr.push({ locationRef: { in: scope.refs } })
+    }
+    if (scopeOr.length === 0) {
+      return {
+        docs: [],
+        totalDocs: 0,
+        totalPages: 1,
+        page,
+        limit,
+        allowDrafts,
+      }
+    }
+    whereClauses.push(scopeOr.length === 1 ? scopeOr[0]! : { or: scopeOr })
+  }
+
   const where: PayloadFindWhere | undefined = whereClauses.length > 1 ? { and: whereClauses } : whereClauses[0]
   const response = await payload.find({
     collection: 'accommodations',
-    depth: 1,
+    depth: 2,
     limit,
     page,
     sort: '-updatedAt',

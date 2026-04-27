@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACCOMMODATIONS_SUGGESTION_FIELD_KEYS } from "@shared/types/accommodations-options";
 import type { LocationCategory } from "@shared/types/location-category";
 import { getIdealForTags, isValidIdealForTag } from "@shared/types/location-ideal-for";
 
@@ -23,6 +24,12 @@ const selectedPayloadMediaSetIdsSchema = z
   .max(20, "Select up to 20 Payload media sets")
   .refine((ids) => new Set(ids).size === ids.length, {
     message: "Payload media-set IDs must be unique",
+  });
+
+const tourIdsSchema = z
+  .array(z.coerce.number().int().positive("Tour ID must be positive"))
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: "Tour IDs must be unique",
   });
 
 function validateIdealForTagsForCategory(
@@ -97,6 +104,7 @@ export const createMapsSchema = z.object({
     z.string().trim(),
   ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   reviewsEnabled: z.boolean().optional(),
+  tourIds: tourIdsSchema.optional(),
 }).superRefine((data, ctx) => {
   validateIdealForTagsForCategory(data.category, data.idealFor, ctx);
 
@@ -149,6 +157,23 @@ export const googlePrefillSchema = z.object({
   address: z.string().trim().min(1, "Address is required"),
 });
 
+const accommodationsOptionSchema = z.object({
+  value: z.string().trim().min(1),
+  label: z.string().trim().min(1),
+  description: z.string().trim().optional().default(""),
+});
+
+export const accommodationsFieldSuggestionSchema = z.object({
+  fieldKey: z.enum(ACCOMMODATIONS_SUGGESTION_FIELD_KEYS),
+  formValues: z.record(z.any()).refine((values) => {
+    const name = typeof values.name === "string" ? values.name.trim() : "";
+    const address = typeof values.address === "string" ? values.address.trim() : "";
+    return name.length > 0 && address.length > 0;
+  }, "Run Step 1 with a valid name and address before requesting AI suggestions."),
+  apiContext: z.record(z.any()).optional(),
+  allowedOptions: z.array(accommodationsOptionSchema).optional(),
+});
+
 // PATCH /api/maps/:id schema - only updatable fields allowed
 export const patchMapsSchema = z.object({
   // Updatable fields only
@@ -186,6 +211,7 @@ export const patchMapsSchema = z.object({
   priceLevel: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   selectedPayloadMediaSetIds: selectedPayloadMediaSetIdsSchema.optional().nullable(),
+  tourIds: tourIdsSchema.optional(),
   operationHours: recordOrStringSchema.optional(),
   tripadvisorMealTypes: z.union([
     z.array(z.string().trim()),
@@ -238,6 +264,7 @@ export const patchMapsSchema = z.object({
          data.attractionsDetails !== undefined ||
          data.keyLocationsDetails !== undefined ||
          data.selectedPayloadMediaSetIds !== undefined ||
+         data.tourIds !== undefined ||
          data.operationHours !== undefined ||
          data.priceLevel !== undefined ||
          data.tripadvisorMealTypes !== undefined ||
@@ -250,4 +277,5 @@ export const patchMapsSchema = z.object({
 
 export type CreateMapsDto = z.infer<typeof createMapsSchema>;
 export type GooglePrefillDto = z.infer<typeof googlePrefillSchema>;
+export type AccommodationsFieldSuggestionDto = z.infer<typeof accommodationsFieldSuggestionSchema>;
 export type PatchMapsDto = z.infer<typeof patchMapsSchema>;

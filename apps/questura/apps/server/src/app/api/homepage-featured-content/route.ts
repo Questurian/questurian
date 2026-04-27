@@ -9,10 +9,12 @@ import {
 } from '@/features/auth/lib/auth-middleware'
 import {
   buildHotelGridGlobalData,
+  buildTourGridGlobalData,
   buildThingsToDoAttractionsGlobalData,
   buildThingsToDoListiclesGlobalData,
   buildWhereToEatDrinkGlobalData,
   getHotelGridSelectionFromItems,
+  getTourGridSelectionFromItems,
   buildLocationGridGlobalData,
   buildQuesturianMapsGlobalData,
   getLocationGridSelectionFromItems,
@@ -20,6 +22,7 @@ import {
   getThingsToDoAttractionsSelectionFromItems,
   getThingsToDoListiclesSelectionFromItems,
   getWhereToEatDrinkSelectionFromItems,
+  normalizeTourGridInput,
   normalizeHotelGridInput,
   MAIN_LOCATION_GRID_SCOPE,
   normalizeLocationGridInput,
@@ -27,6 +30,7 @@ import {
   normalizeThingsToDoAttractionsInput,
   normalizeThingsToDoListiclesInput,
   normalizeWhereToEatDrinkInput,
+  validateTourGridItems,
   validateHotelGridItems,
   validateLocationGridItems,
   validateQuesturianMapsItems,
@@ -54,6 +58,8 @@ import {
   HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_TOUR_GRID_MAX_SLOTS,
+  HOMEPAGE_TOUR_GRID_MIN_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
   HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
@@ -95,6 +101,7 @@ function isCuratedBlockType(
   | 'location-grid'
   | 'questurian-maps'
   | 'hotel-grid'
+  | 'tour-grid'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
   | 'things-to-do-attractions'
@@ -106,6 +113,7 @@ function isCuratedBlockType(
     || value === 'location-grid'
     || value === 'questurian-maps'
     || value === 'hotel-grid'
+    || value === 'tour-grid'
     || value === 'where-to-eat-drink'
     || value === 'things-to-do-listicles'
     || value === 'things-to-do-attractions'
@@ -131,6 +139,10 @@ async function resolvePageBlocks(
               })
             : block.blockType === 'hotel-grid'
             ? await getHotelGridSelectionFromItems(payload, block.items, {
+                totalSlots: slotCount,
+              })
+            : block.blockType === 'tour-grid'
+            ? await getTourGridSelectionFromItems(payload, block.items, {
                 totalSlots: slotCount,
               })
             : block.blockType === 'where-to-eat-drink'
@@ -507,6 +519,29 @@ export async function PUT(req: NextRequest) {
           ...block,
           slotCount: blockSlotCount,
           ...buildHotelGridGlobalData(validatedRefs),
+        }
+      } else if (block.blockType === 'tour-grid') {
+        if (
+          blockSlotCount < HOMEPAGE_TOUR_GRID_MIN_SLOTS
+          || blockSlotCount > HOMEPAGE_TOUR_GRID_MAX_SLOTS
+        ) {
+          return NextResponse.json(
+            {
+              message: `slotCount must be between ${HOMEPAGE_TOUR_GRID_MIN_SLOTS} and ${HOMEPAGE_TOUR_GRID_MAX_SLOTS} for "tour-grid".`,
+            },
+            { status: 400, headers },
+          )
+        }
+
+        const refs = normalizeTourGridInput(items)
+        const validatedRefs = await validateTourGridItems(payload, refs, {
+          allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
+          slotCount: blockSlotCount,
+        })
+        rawBlocks[blockIndex] = {
+          ...block,
+          slotCount: blockSlotCount,
+          ...buildTourGridGlobalData(validatedRefs),
         }
       } else if (block.blockType === 'where-to-eat-drink') {
         if (

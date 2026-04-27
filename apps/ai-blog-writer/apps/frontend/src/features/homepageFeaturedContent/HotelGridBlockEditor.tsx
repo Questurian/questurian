@@ -22,8 +22,8 @@ import {
 } from './useHomepageHotelGridSlots'
 
 function getInvalidMessage(blockType: HotelOrAttractionGridBlockResponse['blockType'], count: number): string {
-  const noun = blockType === 'things-to-do-attractions' ? 'place' : 'hotel'
-  const plural = blockType === 'things-to-do-attractions' ? 'places' : 'hotels'
+  const noun = blockType === 'things-to-do-attractions' ? 'place' : blockType === 'tour-grid' ? 'tour' : 'hotel'
+  const plural = blockType === 'things-to-do-attractions' ? 'places' : blockType === 'tour-grid' ? 'tours' : 'hotels'
   if (count === 1) return `One saved ${noun} is no longer eligible. Replace it before saving again.`
   return `${count} saved ${plural} are no longer eligible. Replace them before saving.`
 }
@@ -254,6 +254,7 @@ export default function HotelGridBlockEditor({
           onSlotClick={setPickerSlotIndex}
           onMove={handleMove}
           onRemove={handleRemove}
+          itemLabel={block.blockType === 'tour-grid' ? 'tour' : block.blockType === 'things-to-do-attractions' ? 'place' : 'hotel'}
         />
       </div>
 
@@ -269,6 +270,7 @@ export default function HotelGridBlockEditor({
           onClose={() => setPickerSlotIndex(null)}
           setSearchValue={setSearchValue}
           setCandidatePage={setCandidatePage}
+          itemLabel={block.blockType === 'tour-grid' ? 'tour' : block.blockType === 'things-to-do-attractions' ? 'place' : 'hotel'}
         />
       )}
     </div>

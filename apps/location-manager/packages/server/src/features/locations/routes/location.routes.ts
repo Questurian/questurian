@@ -1,7 +1,12 @@
 import { app } from "@server/shared/http/server";
 import { validateBody, validateParams, validateQuery } from "@server/shared/core/middleware/validation.middleware";
 import { errorResponse } from "@shared/types/api-response";
-import { createMapsSchema, googlePrefillSchema, patchMapsSchema } from "../validation/schemas/maps.schemas";
+import {
+  accommodationsFieldSuggestionSchema,
+  createMapsSchema,
+  googlePrefillSchema,
+  patchMapsSchema,
+} from "../validation/schemas/maps.schemas";
 import { addInstagramSchema, addInstagramParamsSchema, deleteInstagramEmbedParamsSchema } from "../validation/schemas/instagram.schemas";
 import {
   addUploadParamsSchema,
@@ -11,6 +16,12 @@ import {
 import { listLocationsQuerySchema, deleteLocationIdSchema } from "../validation/schemas/locations.schemas";
 import { taxonomyLocationKeyParamsSchema } from "../validation/schemas/taxonomy.schemas";
 import { createCorrectionSchema, deleteCorrectionParamsSchema } from "../validation/schemas/taxonomy-correction.schemas";
+import {
+  createTourSchema,
+  listToursQuerySchema,
+  tourIdParamsSchema,
+  updateTourSchema,
+} from "../validation/schemas/tours.schemas";
 import {
   syncLocationIdSchema,
   syncAllSchema,
@@ -24,8 +35,9 @@ import {
   // Core
   getLocations, getLocationsBasic, getLocationById, deleteLocationById,
   refetchPlaceId,
+  getTours, getTour, postTour, patchTour, postTourMediaSet,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
-  postAddMaps, patchMapsById, postGooglePrefill,
+  postAddMaps, patchMapsById, postGooglePrefill, postAccommodationsFieldSuggestion,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
   // Content
@@ -45,7 +57,8 @@ import {
   checkLeadsApiHealth,
 
   // Integration
-  postSyncLocation, postSyncAll, getSyncStatus, getPayloadMediaSets, getTestConnection, deletePayloadSyncState,
+  postSyncLocation, postSyncAll, postSyncTour,
+  getSyncStatus, getPayloadMediaSets, getTestConnection, deletePayloadSyncState,
 } from "../controllers";
 
 const CATEGORY_ROUTES: readonly LocationCategory[] = [
@@ -150,6 +163,11 @@ for (const category of CATEGORY_ROUTES) {
 }
 
 app.post("/api/generate-alt-text", postGenerateAltText);
+app.post(
+  "/api/accommodations/field-suggestions",
+  validateBody(accommodationsFieldSuggestionSchema),
+  postAccommodationsFieldSuggestion
+);
 app.delete(
   "/api/uploads/:id",
   validateParams(deleteUploadParamsSchema),
@@ -177,6 +195,17 @@ app.delete(
   deleteInstagramEmbed
 );
 app.get("/api/clear-db", clearDatabase);
+
+app.get("/api/tours", validateQuery(listToursQuerySchema), getTours);
+app.get("/api/tours/:id", validateParams(tourIdParamsSchema), getTour);
+app.post("/api/tours", validateBody(createTourSchema), postTour);
+app.post("/api/tours/media-set", postTourMediaSet);
+app.patch(
+  "/api/tours/:id",
+  validateParams(tourIdParamsSchema),
+  validateBody(updateTourSchema),
+  patchTour
+);
 
 // Admin orphan cleanup routes
 app.get("/api/admin/orphaned-files", scanOrphanedFiles);
@@ -243,6 +272,11 @@ app.post(
   "/api/payload/sync-all",
   validateBody(syncAllSchema),
   postSyncAll
+);
+app.post(
+  "/api/payload/sync-tour/:id",
+  validateParams(tourIdParamsSchema),
+  postSyncTour
 );
 app.get(
   "/api/payload/media-sets",

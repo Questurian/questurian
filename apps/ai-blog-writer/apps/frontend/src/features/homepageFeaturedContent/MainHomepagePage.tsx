@@ -10,6 +10,7 @@ import {
   fetchHomepageFeaturedCandidates,
   fetchHomepageHotelGridCandidates,
   fetchHomepageLocationGridCandidates,
+  fetchTourGridCandidates,
   fetchThingsToDoAttractionCandidates,
   fetchThingsToDoListicleCandidates,
   fetchWhereToEatDrinkCandidates,
@@ -40,6 +41,7 @@ import {
 } from './homepageEditorCacheKeys'
 import {
   isHotelGridBlock,
+  isTourGridBlock,
   isThingsToDoAttractionsBlock,
   isArticleCuratedHomepageBlock,
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
@@ -372,7 +374,7 @@ export default function MainHomepagePage() {
                 />
               )
             }
-            if (isHotelGridBlock(block) || isThingsToDoAttractionsBlock(block)) {
+            if (isHotelGridBlock(block) || isTourGridBlock(block) || isThingsToDoAttractionsBlock(block)) {
               const gridBlock = block
               return (
                 <HotelGridBlockEditor
@@ -405,7 +407,9 @@ export default function MainHomepagePage() {
                   fetchCandidates={(currentToken, params) =>
                     gridBlock.blockType === 'things-to-do-attractions'
                       ? fetchThingsToDoAttractionCandidates(currentToken, params)
-                      : fetchHomepageHotelGridCandidates(currentToken, params)}
+                      : gridBlock.blockType === 'tour-grid'
+                        ? fetchTourGridCandidates(currentToken, params)
+                        : fetchHomepageHotelGridCandidates(currentToken, params)}
                   convertBlockTargets={CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES}
                   onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
                     await convertMainHomepageFeaturedArticlesBlock(currentToken, gridBlock.id, blockType, slotCount)

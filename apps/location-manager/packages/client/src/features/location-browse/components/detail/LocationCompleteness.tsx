@@ -129,6 +129,7 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
 
     if (isAccommodations) {
       return [
+        { key: "title", label: "Title", present: Boolean(locationDetail.title?.trim()) },
         { key: "name", label: "Name", present: Boolean(source.name?.trim() || accommodationsDetails.coreName) },
         { key: "sourceAddress", label: "Address", present: Boolean(source.address?.trim() || accommodationsDetails.address) },
         { key: "category", label: "Category", present: Boolean(locationDetail.category) },

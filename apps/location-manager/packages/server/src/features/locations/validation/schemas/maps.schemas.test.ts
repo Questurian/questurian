@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createMapsSchema, googlePrefillSchema, patchMapsSchema } from "./maps.schemas";
+import {
+  accommodationsFieldSuggestionSchema,
+  createMapsSchema,
+  googlePrefillSchema,
+  patchMapsSchema,
+} from "./maps.schemas";
 
 const basePayload = {
   name: "Test Location",
@@ -227,6 +232,32 @@ describe("google prefill schema", () => {
   });
 });
 
+describe("accommodations field suggestion schema", () => {
+  test("accepts valid suggestion request with Step 1 context", () => {
+    const result = accommodationsFieldSuggestionSchema.safeParse({
+      fieldKey: "wifi",
+      formValues: {
+        name: "Example Hotel",
+        address: "123 Main St",
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("rejects missing Step 1 context", () => {
+    const result = accommodationsFieldSuggestionSchema.safeParse({
+      fieldKey: "wifi",
+      formValues: {
+        name: "Example Hotel",
+        address: "",
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("maps patch schema reviews toggle", () => {
   test("accepts reviewsEnabled as the only patch field", () => {
     const result = patchMapsSchema.safeParse({
@@ -320,6 +351,25 @@ describe("maps patch schema reviews toggle", () => {
   test("rejects selectedPayloadMediaSetIds when more than twenty are provided", () => {
     const result = patchMapsSchema.safeParse({
       selectedPayloadMediaSetIds: Array.from({ length: 21 }, (_, index) => `media-${index}`),
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("accepts unique attraction tour IDs on patch", () => {
+    const result = patchMapsSchema.safeParse({
+      tourIds: [1, 2, 3],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tourIds).toEqual([1, 2, 3]);
+    }
+  });
+
+  test("rejects duplicate attraction tour IDs on patch", () => {
+    const result = patchMapsSchema.safeParse({
+      tourIds: [1, 1],
     });
 
     expect(result.success).toBe(false);

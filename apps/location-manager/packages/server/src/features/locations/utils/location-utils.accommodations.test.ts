@@ -94,6 +94,28 @@ describe("accommodations completeness", () => {
     expect(basic.isComplete).toBe(true);
   });
 
+  test("treats workspace as complete when stored as string array (form shape)", () => {
+    const details = buildAccommodationsDetails({
+      the_experience: {
+        vibe: ["Luxury", "Social"],
+        workspace: ["Dedicated Desk", "Shared Lounge"],
+        restaurant: true,
+        pool: ["indoor", "rooftop"],
+        rooftop_lounge: true,
+        jacuzzi: ["private", "rooftop"],
+        gym: "24/7",
+      },
+    });
+
+    const location = buildAccommodationsLocation({
+      accommodationsDetailsJson: JSON.stringify(details),
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.isComplete).toBe(true);
+  });
+
   test("marks accommodations location incomplete when representative required fields are missing", () => {
     const incompleteDetails = buildAccommodationsDetails({
       the_stay: {

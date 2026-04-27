@@ -9,6 +9,7 @@ import {
   AddNightlifeLocation,
   AddRestaurantLocation,
 } from "@client/features/location-create";
+import { Tours } from "@client/features/tours";
 import { TaxonomyReview } from "@client/features/admin/pages/TaxonomyReview";
 import { PayloadSync } from "@client/features/admin/pages/PayloadSync";
 import { Health } from "@client/features/health/Health";
@@ -29,6 +30,7 @@ function App() {
             <Route path="/add/attractions" element={<AddAttractionsLocation />} />
             <Route path="/add/key-locations" element={<AddKeyLocationsLocation />} />
             <Route path="/edit/:category/:id" element={<EditLocationRoute />} />
+            <Route path="/tours" element={<Tours />} />
 
             <Route path="/admin/taxonomy" element={<TaxonomyReview />} />
             <Route path="/admin/payload-sync" element={<PayloadSync />} />

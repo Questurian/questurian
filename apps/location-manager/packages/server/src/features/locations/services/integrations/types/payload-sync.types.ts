@@ -8,6 +8,14 @@ export interface SyncResult {
   error?: string;
 }
 
+/** Single tour upsert to Payload `tours` collection (from Location Manager). */
+export interface TourPayloadSyncResult {
+  tourId: number;
+  payloadDocId: string;
+  status: "success" | "failed";
+  error?: string;
+}
+
 export interface SyncStatusResponse {
   locationId: number;
   title: string;

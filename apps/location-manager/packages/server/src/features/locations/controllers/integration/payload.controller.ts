@@ -6,6 +6,7 @@ import type {
   SyncAllDto,
   PayloadMediaSetsQueryDto,
 } from "../../validation/schemas/payload.schemas";
+import type { TourIdParamsDto } from "../../validation/schemas/tours.schemas";
 import * as PayloadSyncRepo from "../../repositories/integration/payload-sync.repository";
 
 const container = ServiceContainer.getInstance();
@@ -28,6 +29,16 @@ export async function postSyncAll(c: Context) {
   const dto = c.get("validatedBody") as SyncAllDto;
   const results = await container.payloadSyncService.syncAllLocations(dto.category);
   return c.json(successResponse({ results }));
+}
+
+/**
+ * POST /api/payload/sync-tour/:id
+ * Upsert a single tour into Payload CMS `tours` collection.
+ */
+export async function postSyncTour(c: Context) {
+  const { id } = c.get("validatedParams") as TourIdParamsDto;
+  const result = await container.payloadSyncService.syncTourToPayload(id);
+  return c.json(successResponse({ result }));
 }
 
 /**

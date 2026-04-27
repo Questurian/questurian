@@ -37,6 +37,7 @@ export function buildAccommodationsPrefillSignature(name: string, address: strin
 
 export const addAccommodationsSchema = z.object({
   name: z.string().trim().min(1, "Location name is required").max(200, "Name must be less than 200 characters"),
+  title: z.string().trim().max(200, "Title must be less than 200 characters").optional().or(z.literal("")),
   address: z.string().trim().min(1, "Address is required").max(500, "Address must be less than 500 characters"),
 
   type: z.string().trim().optional().or(z.literal("")).transform((value) => (value === "" ? undefined : value)),
@@ -51,7 +52,7 @@ export const addAccommodationsSchema = z.object({
   breakfastServed: z.enum(YES_NO_VALUES),
 
   vibe: z.array(z.enum(VIBE_VALUES)).min(1, "Select at least 1 vibe option"),
-  workspace: z.enum(WORKSPACE_VALUES),
+  workspace: z.array(z.enum(WORKSPACE_VALUES)).min(1, "Select at least 1 workspace option"),
   restaurant: z.enum(YES_NO_VALUES),
   pool: z.array(z.enum(POOL_VALUES)).min(1, "Select at least 1 pool option"),
   rooftopLounge: z.enum(YES_NO_VALUES),

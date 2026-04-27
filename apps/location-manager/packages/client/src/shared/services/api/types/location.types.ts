@@ -20,6 +20,26 @@ export interface SourceInfo {
   address: string;
 }
 
+export interface TourPayloadSyncSummary {
+  payloadDocId: string | null;
+  lastSyncedAt: string | null;
+  syncStatus: "success" | "failed" | "pending";
+  errorMessage: string | null;
+}
+
+export interface Tour {
+  id: number;
+  title: string;
+  imgPayloadMediaSetId: string;
+  bookingLink: string;
+  price: string;
+  /** Pipe taxonomy key; synced to Payload `tours.locationRef` when set. */
+  locationKey: string | null;
+  created_at: string;
+  updated_at: string;
+  payloadSync?: TourPayloadSyncSummary | null;
+}
+
 export interface InstagramEmbed {
   id?: number;
   location_id: number;
@@ -112,6 +132,8 @@ export interface LocationResponse {
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
   selectedPayloadMediaSetIds: string[] | null;
+  tourIds: number[] | null;
+  tours: Tour[];
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
   attractionsDetails: Record<string, unknown> | null;

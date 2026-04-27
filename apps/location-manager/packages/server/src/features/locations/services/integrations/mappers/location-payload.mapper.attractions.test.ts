@@ -54,7 +54,8 @@ describe("mapLocationToPayloadFormat attractions", () => {
     const payload = mapLocationToPayloadFormat(
       location,
       { galleryImageIds: [], instagramPostIds: [] },
-      "789"
+      "789",
+      { tourPayloadIds: ["101", "tour-abc"] }
     );
 
     expect(payload.location).toBe("peru|lima|miraflores");
@@ -70,6 +71,7 @@ describe("mapLocationToPayloadFormat attractions", () => {
         bookingRequired: true,
       },
     });
+    expect(payload.tours).toEqual([101, "tour-abc"]);
     expect(payload).not.toHaveProperty("idealFor");
   });
 

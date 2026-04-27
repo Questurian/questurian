@@ -9,25 +9,35 @@ function getInvalidMessage(item: HomepageHotelGridInvalidItem): string {
   return 'Invalid hotel'
 }
 
+/** Avoid RangeError: String.repeat requires a finite integer (bad API data would white-screen the page). */
+function formatPriceLevelDollars(priceLevel: string | null | undefined): string | null {
+  if (priceLevel == null || priceLevel === '') return null
+  const n = parseInt(String(priceLevel), 10)
+  if (!Number.isFinite(n) || n < 1) return null
+  return '$'.repeat(Math.min(4, n))
+}
+
 export default function HotelGridLayout({
   slots,
   invalidItemsBySlot,
   onSlotClick,
   onMove,
   onRemove,
+  itemLabel = 'hotel',
 }: {
   slots: HotelGridSlotValue[]
   invalidItemsBySlot: Map<number, HomepageHotelGridInvalidItem>
   onSlotClick: (slotIndex: number) => void
   onMove: (slotIndex: number, direction: -1 | 1) => void
   onRemove: (slotIndex: number) => void
+  itemLabel?: string
 }) {
   function stopEvent(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation()
   }
 
   return (
-    <div className="hf-location-grid">
+    <div className="hf-location-grid hf-location-grid--aspect-rectangle">
       {slots.map((item, slotIndex) => {
         const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
         if (!item) {
@@ -48,20 +58,37 @@ export default function HotelGridLayout({
               ) : (
                 <>
                   <span style={{ fontSize: '1.7rem', color: 'var(--muted)' }}>＋</span>
-                  <span className="hf-location-grid-empty-label">Add hotel</span>
+                  <span className="hf-location-grid-empty-label">Add {itemLabel}</span>
                 </>
               )}
             </button>
           )
         }
 
+        const imageSrc =
+          typeof item.imageUrl === 'string' && item.imageUrl.trim() ? item.imageUrl.trim() : null
+        const priceDollars = formatPriceLevelDollars(item.priceLevel)
+
         return (
-          <article key={`slot-${slotIndex + 1}`} className="hf-location-grid-card">
+          <article
+            key={`slot-${slotIndex + 1}`}
+            className="hf-location-grid-card hf-location-grid-card--filled"
+          >
             <span className="hf-slot-card-num">{slotIndex + 1}</span>
+            {imageSrc ? (
+              <div className="hf-location-grid-media">
+                <img
+                  src={imageSrc}
+                  alt={item.title}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            ) : null}
             <div className="hf-location-grid-body">
               <div className="hf-location-grid-meta">
                 <span className="hf-level-tag">{item.type ?? 'hotel'}</span>
-                {item.priceLevel && <span className="hf-location-grid-subtitle">{'$'.repeat(Number(item.priceLevel))}</span>}
+                {priceDollars ? <span className="hf-location-grid-subtitle">{priceDollars}</span> : null}
               </div>
               <p className="hf-location-grid-title">{item.title}</p>
               <p className="hf-location-grid-key">{item.location ?? item.slug ?? 'No location'}</p>

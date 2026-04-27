@@ -8,6 +8,7 @@ export class EnvConfig {
   readonly GEOAPIFY_API_KEY: string;
   readonly BIGDATACLOUD_API_KEY: string;
   readonly SERPAPI_KEY: string;
+  readonly FOURSQUARE_API_KEY: string;
   readonly PAYLOAD_API_URL: string;
   readonly PAYLOAD_SERVICE_EMAIL: string;
   readonly PAYLOAD_SERVICE_PASSWORD: string;
@@ -24,6 +25,7 @@ export class EnvConfig {
     this.GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || "";
     this.BIGDATACLOUD_API_KEY = process.env.BIGDATACLOUD_API_KEY || "";
     this.SERPAPI_KEY = process.env.SERPAPI_KEY || "";
+    this.FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY || "";
     this.PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || "";
     this.PAYLOAD_SERVICE_EMAIL = process.env.PAYLOAD_SERVICE_EMAIL || "";
     this.PAYLOAD_SERVICE_PASSWORD = process.env.PAYLOAD_SERVICE_PASSWORD || "";
@@ -73,6 +75,10 @@ export class EnvConfig {
       warnings.push("SERPAPI_KEY not set - TripAdvisor place data fetch disabled");
     }
 
+    if (!this.FOURSQUARE_API_KEY) {
+      warnings.push("FOURSQUARE_API_KEY not set - Foursquare accommodations enrichment disabled");
+    }
+
     if (!this.PAYLOAD_API_URL || !this.PAYLOAD_SERVICE_EMAIL || !this.PAYLOAD_SERVICE_PASSWORD) {
       warnings.push("Payload CMS not configured - sync to Payload disabled");
     }
@@ -114,6 +120,10 @@ export class EnvConfig {
 
   hasSerpApiKey(): boolean {
     return !!this.SERPAPI_KEY;
+  }
+
+  hasFoursquareApiKey(): boolean {
+    return !!this.FOURSQUARE_API_KEY;
   }
 
   isPayloadConfigured(): boolean {

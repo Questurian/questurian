@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { MapPin, Plus, Settings, ArrowUpDown } from "lucide-react";
+import { MapPin, Plus, Settings, ArrowUpDown, Ticket } from "lucide-react";
 import { usePendingTaxonomy } from "@client/shared/services/api/hooks";
 
 export function Navbar() {
@@ -9,6 +9,7 @@ export function Navbar() {
 
   const navItems = [
     { to: "/add", label: "Add Location", shortLabel: "Add", icon: Plus },
+    { to: "/tours", label: "Tours", shortLabel: "Tours", icon: Ticket },
     {
       to: "/admin/taxonomy",
       label: "Taxonomy",
@@ -38,7 +39,7 @@ export function Navbar() {
             <span className="truncate text-sm font-semibold leading-tight">Location Manager</span>
           </Link>
 
-          <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-1">
+          <div className="grid w-full grid-cols-4 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.to);

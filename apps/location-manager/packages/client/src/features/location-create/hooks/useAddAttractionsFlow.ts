@@ -53,6 +53,7 @@ const ATTRACTIONS_FORM_DEFAULT_VALUES: AddAttractionsFormData = {
   district: "",
   ianaTimeId: "",
   hours: "",
+  tourIds: [],
 };
 
 interface AttractionsDraftPayload {
@@ -348,6 +349,7 @@ export function useAddAttractionsFlow() {
         website: data.website || undefined,
         phoneNumber: data.phone || undefined,
         attractionsDetails,
+        tourIds: data.tourIds,
       },
       {
         onSuccess: (response) => {

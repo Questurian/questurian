@@ -10,6 +10,7 @@ export type CuratedHomepageBlockType =
   | 'location-grid'
   | 'questurian-maps'
   | 'hotel-grid'
+  | 'tour-grid'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
   | 'things-to-do-attractions'
@@ -93,6 +94,14 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     minSlotCount: 3,
     maxSlotCount: 12,
   },
+  'tour-grid': {
+    label: 'Tour Grid',
+    description: 'A curated tour card grid sourced from tour documents',
+    quickSlotCounts: [3, 4, 6, 8],
+    defaultSlotCount: 4,
+    minSlotCount: 3,
+    maxSlotCount: 12,
+  },
   'where-to-eat-drink': {
     label: 'Where to Eat & Drink',
     description: 'Dining-only single-type listicles',
@@ -148,6 +157,7 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'location-grid',
   'questurian-maps',
   'hotel-grid',
+  'tour-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
@@ -168,6 +178,7 @@ export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBloc
   'location-grid',
   'questurian-maps',
   'hotel-grid',
+  'tour-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
@@ -253,6 +264,14 @@ export type HotelGridBlockResponse = {
   sectionSubheading: string | null
 }
 
+export type TourGridBlockResponse = {
+  id: string
+  blockType: 'tour-grid'
+  selection: HomepageHotelGridSelection
+  sectionHeading: string | null
+  sectionSubheading: string | null
+}
+
 export type WhereToEatDrinkBlockResponse = {
   id: string
   blockType: 'where-to-eat-drink'
@@ -309,6 +328,7 @@ export type CuratedHomepageBlockResponse =
   | ArticleCuratedHomepageBlockResponse
   | LocationGridBlockResponse
   | HotelGridBlockResponse
+  | TourGridBlockResponse
   | ThingsToDoAttractionsBlockResponse
   | NewsletterSignupBlockResponse
 
@@ -358,6 +378,7 @@ export function isCuratedHomepageBlock(
     || block.blockType === 'location-grid'
     || block.blockType === 'questurian-maps'
     || block.blockType === 'hotel-grid'
+    || block.blockType === 'tour-grid'
     || block.blockType === 'where-to-eat-drink'
     || block.blockType === 'things-to-do-listicles'
     || block.blockType === 'things-to-do-attractions'
@@ -389,6 +410,12 @@ export function isHotelGridBlock(
   return block.blockType === 'hotel-grid'
 }
 
+export function isTourGridBlock(
+  block: PageBlockResponse,
+): block is TourGridBlockResponse {
+  return block.blockType === 'tour-grid'
+}
+
 export function isThingsToDoAttractionsBlock(
   block: PageBlockResponse,
 ): block is ThingsToDoAttractionsBlockResponse {
@@ -401,4 +428,4 @@ export function isNewsletterSignupBlock(
   return block.blockType === 'newsletter-signup'
 }
 
-export type HotelOrAttractionGridBlockResponse = HotelGridBlockResponse | ThingsToDoAttractionsBlockResponse
+export type HotelOrAttractionGridBlockResponse = HotelGridBlockResponse | TourGridBlockResponse | ThingsToDoAttractionsBlockResponse

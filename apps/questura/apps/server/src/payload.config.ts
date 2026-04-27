@@ -16,6 +16,7 @@ import { Locations } from './features/location/collections/Locations'
 import { Accommodations } from './features/data/accommodations/collections/Accommodations'
 import { Dining } from './features/data/dining/collections/Dining'
 import { Attractions } from './features/data/attractions/collections/Attractions'
+import { Tours } from './features/data/tours/collections/Tours'
 import { Nightlife } from './features/data/nightlife/collections/Nightlife'
 import { KeyLocations } from './features/data/key-locations/collections/KeyLocations'
 import { AffiliateProducts } from './features/data/affiliate/collections/AffiliateProducts'
@@ -43,7 +44,7 @@ export default buildConfig({
   serverURL: APP_URLS.backendLocal,
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
-  collections: [Users, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, Locations, Categories, Tags, Accommodations, Dining, Attractions, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages],
+  collections: [Users, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages],
   globals: [HomepageFeaturedContent],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,

@@ -8,6 +8,7 @@
 // API namespaces
 export { locationsApi } from "./locations.api";
 export { hierarchyApi } from "./hierarchy.api";
+export { toursApi } from "./tours.api";
 
 // React Query hooks
 export * from "./hooks";

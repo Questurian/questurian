@@ -1,5 +1,35 @@
 export type LocationCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key_locations';
 
+/** Last Payload `tours` doc sync for this LM row (from `tour_payload_sync_state`). */
+export interface TourPayloadSyncSummary {
+  payloadDocId: string | null;
+  lastSyncedAt: string | null;
+  syncStatus: "success" | "failed" | "pending";
+  errorMessage: string | null;
+}
+
+export interface Tour {
+  id: number;
+  title: string;
+  imgPayloadMediaSetId: string;
+  bookingLink: string;
+  price: string;
+  /** Pipe-delimited taxonomy key; synced to Payload `tours.locationRef` → `locations`. */
+  locationKey: string | null;
+  created_at: string;
+  updated_at: string;
+  payloadSync?: TourPayloadSyncSummary | null;
+}
+
+export interface TourPayloadSyncState {
+  id: number;
+  tourId: number;
+  payloadDocId: string;
+  lastSyncedAt: string;
+  syncStatus: "success" | "failed" | "pending";
+  errorMessage: string | null;
+}
+
 // Hierarchical Location Taxonomy Types
 export interface NeighborhoodData {
   label: string;
@@ -67,6 +97,7 @@ export interface Location {
   tripadvisorLocationId?: string | null;
   payload_location_ref?: string | null;  // Payload CMS location hierarchy ID
   selectedPayloadMediaSetIdsJson?: string | null;
+  tours?: Tour[];
   // Reviews tracking fields
   reviewsFetchedAt?: string | null;      // Timestamp of last fetch
   reviewsCount?: number | null;          // Total merged reviews
@@ -127,6 +158,7 @@ export type Upload = ImageSetUpload;
 export interface LocationWithNested extends Location {
   instagram_embeds?: InstagramEmbed[];
   uploads?: Upload[];
+  tours?: Tour[];
 }
 
 export interface CreateMapsRequest {
@@ -161,6 +193,7 @@ export interface CreateMapsRequest {
   tripadvisorCuisines?: string[] | string;
   tripadvisorFeatures?: string[] | string;
   reviewsEnabled?: boolean;
+  tourIds?: number[];
 }
 
 
@@ -204,6 +237,8 @@ export interface LocationResponse {
   tripadvisorLocationId: string | null;
   payload_location_ref: string | null;
   selectedPayloadMediaSetIds: string[] | null;
+  tourIds: number[] | null;
+  tours: Tour[];
   neighborhoodDescription: string | null;
   idealFor: string[] | null;
   nightlifeDetails: Record<string, unknown> | null;

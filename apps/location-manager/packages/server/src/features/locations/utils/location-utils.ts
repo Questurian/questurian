@@ -304,6 +304,10 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     selectedPayloadMediaSetIds: parseSelectedPayloadMediaSetIds(
       location.selectedPayloadMediaSetIdsJson || null
     ),
+    tourIds: location.tours?.length
+      ? location.tours.map((tour) => tour.id)
+      : null,
+    tours: location.tours || [],
     neighborhoodDescription: location.neighborhoodDescription || null,
     idealFor: parseIdealFor(location.idealForJson || null),
     nightlifeDetails: parseNightlifeDetails(location.nightlifeDetailsJson || null),
@@ -647,7 +651,9 @@ export function transformLocationToBasicResponse(
   const hasAccommodationsParking = accommodationsArrayHasValues(accommodationsParking);
   const hasAccommodationsBreakfastServed = accommodationsBooleanPresent(accommodationsBreakfastServed);
   const hasAccommodationsVibe = accommodationsArrayHasValues(accommodationsVibe);
-  const hasAccommodationsWorkspace = Boolean(accommodationsString(accommodationsWorkspace));
+  const hasAccommodationsWorkspace =
+    accommodationsArrayHasValues(accommodationsWorkspace) ||
+    Boolean(accommodationsString(accommodationsWorkspace));
   const hasAccommodationsRestaurant = accommodationsBooleanPresent(accommodationsRestaurant);
   const hasAccommodationsPool = accommodationsArrayHasValues(accommodationsPool);
   const hasAccommodationsRooftopLounge = accommodationsBooleanPresent(accommodationsRooftopLounge);

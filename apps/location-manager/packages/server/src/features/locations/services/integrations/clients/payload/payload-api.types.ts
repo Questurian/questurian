@@ -3,7 +3,8 @@ export type PayloadCollection =
   | "accommodations"
   | "attractions"
   | "nightlife"
-  | "key-locations";
+  | "key-locations"
+  | "tours";
 
 export type PayloadRelationshipId = string | number;
 
@@ -191,6 +192,7 @@ export interface PayloadNightlifeDetails {
 export interface PayloadMediaSetData {
   title: string;
   alt_text: string;
+  photographer_credit?: string;
   externalRef?: string;
   location?: string;
   tags?: string[];
@@ -317,9 +319,34 @@ export interface PayloadEntryData {
   theExperience?: Record<string, unknown>;
   theDetails?: Record<string, unknown>;
   attractionsDetails?: Record<string, unknown>;
+  tours?: PayloadRelationshipId[];
   keyLocationsDetails?: Record<string, unknown>;
   ianaTimeId?: string;
   latitude?: number;
   longitude?: number;
   status: "draft" | "published";
+}
+
+export interface PayloadTourData {
+  title: string;
+  img: PayloadRelationshipId;
+  bookingLink: string;
+  price: string;
+  locationRef?: PayloadRelationshipId;
+  status: "draft" | "published";
+}
+
+export interface PayloadTourResponse {
+  message?: string;
+  doc: {
+    id: string;
+    title: string;
+    img?: unknown;
+    bookingLink: string;
+    price: string;
+    locationRef?: unknown;
+    status: "draft" | "published";
+    createdAt?: string;
+    updatedAt?: string;
+  };
 }

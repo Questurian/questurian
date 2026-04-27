@@ -309,6 +309,7 @@ interface PlaceDetailsResult {
   international_phone_number?: string;
   formatted_phone_number?: string;
   place_id?: string;
+  price_level?: number;
   opening_hours?: GoogleOpeningHours;
 }
 
@@ -335,7 +336,7 @@ export async function getPlaceDetails(name: string, address: string, apiKey?: st
       const placeId = searchData.results[0]!.place_id;
 
       // Get detailed place information
-      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,website,international_phone_number,formatted_phone_number,opening_hours&key=${apiKey}`;
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,website,international_phone_number,formatted_phone_number,price_level,opening_hours&key=${apiKey}`;
 
       const detailsResponse = await fetch(detailsUrl);
       const detailsData = await detailsResponse.json() as PlacesApiResponse;
@@ -626,6 +627,9 @@ export async function createFromMaps(
         }
         if (placeDetails.place_id) {
           entry.placeId = placeDetails.place_id;
+        }
+        if (typeof placeDetails.price_level === "number" && placeDetails.price_level >= 1) {
+          entry.priceLevel = "$".repeat(Math.min(placeDetails.price_level, 4));
         }
       }
     } catch (placesError) {

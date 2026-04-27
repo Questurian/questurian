@@ -9,6 +9,7 @@ import {
 } from '@/features/auth/lib/auth-middleware'
 import {
   getHotelGridSelectionFromItems,
+  getTourGridSelectionFromItems,
   getHomepageFeaturedSelectionFromItems,
   getLocationGridSelectionFromItems,
   getNewsletterSignupPlaceholderSelection,
@@ -22,6 +23,8 @@ import {
   homepageBlockSupportsSectionHeading,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+  HOMEPAGE_TOUR_GRID_MAX_SLOTS,
+  HOMEPAGE_TOUR_GRID_MIN_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
   HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
@@ -65,6 +68,7 @@ const SUPPORTED_BLOCK_TYPES = [
   'location-grid',
   'questurian-maps',
   'hotel-grid',
+  'tour-grid',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'things-to-do-attractions',
@@ -82,6 +86,7 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
     max: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
   },
   'hotel-grid': { min: HOMEPAGE_HOTEL_GRID_MIN_SLOTS, max: HOMEPAGE_HOTEL_GRID_MAX_SLOTS },
+  'tour-grid': { min: HOMEPAGE_TOUR_GRID_MIN_SLOTS, max: HOMEPAGE_TOUR_GRID_MAX_SLOTS },
   'where-to-eat-drink': {
     min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
     max: HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
@@ -197,6 +202,10 @@ export async function POST(req: NextRequest) {
               ? await getHotelGridSelectionFromItems(payload, block.items, {
                   totalSlots: slotCount,
                 })
+              : block.blockType === 'tour-grid'
+              ? await getTourGridSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
               : block.blockType === 'where-to-eat-drink'
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
                     totalSlots: slotCount,
@@ -296,6 +305,10 @@ export async function DELETE(req: NextRequest) {
               ? await getHotelGridSelectionFromItems(payload, block.items, {
                   totalSlots: slotCount,
                 })
+              : block.blockType === 'tour-grid'
+              ? await getTourGridSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
               : block.blockType === 'where-to-eat-drink'
                 ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
                     totalSlots: slotCount,
@@ -381,6 +394,10 @@ export async function PATCH(req: NextRequest) {
                 })
               : block.blockType === 'hotel-grid'
               ? await getHotelGridSelectionFromItems(payload, block.items, {
+                  totalSlots: slotCount,
+                })
+              : block.blockType === 'tour-grid'
+              ? await getTourGridSelectionFromItems(payload, block.items, {
                   totalSlots: slotCount,
                 })
               : block.blockType === 'where-to-eat-drink'

@@ -2,13 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
-import { BedDouble, CheckCircle2, ChevronLeft } from "lucide-react";
+import { BedDouble, CheckCircle2, ChevronLeft, Loader2, Sparkles } from "lucide-react";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
 import { locationsApi } from "@client/shared/services/api";
 import { useCreateLocation } from "@client/shared/services/api/hooks";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
+import type {
+  AccommodationsFieldSuggestionResponse,
+  GooglePrefillResponse,
+} from "@client/shared/services/api/types";
 import { buildAccommodationsDetails } from "@client/shared/lib/accommodations-details";
 import {
   addAccommodationsSchema,
@@ -17,15 +21,24 @@ import {
   normalizeAccommodationsAddress,
   type AddAccommodationsFormData,
 } from "../validation/add-accommodations.schema";
+import { isAccommodationOptionSuggestionEligible } from "../utils/accommodations-ai-suggestions";
 import {
   BOOLEAN_OPTIONS,
+  ACCOMMODATIONS_SUGGESTION_FIELDS,
+  CHECK_IN_TIME_OPTIONS,
+  CHECK_OUT_TIME_OPTIONS,
   GYM_OPTIONS,
   JACUZZI_OPTIONS,
   PARKING_OPTIONS,
+  PARKING_VALUES,
   PERFECT_FOR_OPTIONS,
+  PERFECT_FOR_VALUES,
   POOL_OPTIONS,
+  POOL_VALUES,
   PRICE_OPTIONS,
+  PRICE_VALUES,
   type AccommodationsOption,
+  type AccommodationsSuggestionFieldKey,
   VIBE_OPTIONS,
   WALKABILITY_OPTIONS,
   WORKSPACE_OPTIONS,
@@ -39,7 +52,26 @@ type AccommodationsFormSection =
   | "experience"
   | "details";
 
-type MultiField = "perfectFor" | "parking" | "vibe" | "pool" | "jacuzzi";
+type MultiField = "perfectFor" | "parking" | "vibe" | "workspace" | "pool" | "jacuzzi";
+type AiSuggestedField = AccommodationsSuggestionFieldKey;
+
+type ApiFilledField =
+  | "googleUrl"
+  | "googleMapsUrl"
+  | "placeId"
+  | "latitude"
+  | "longitude"
+  | "locationKey"
+  | "district"
+  | "ianaTimeId"
+  | "phone"
+  | "websiteUrl"
+  | "price"
+  | "perfectFor"
+  | "ac"
+  | "wifi"
+  | "parking"
+  | "pool";
 
 interface OptionSelectProps {
   label: string;
@@ -47,6 +79,12 @@ interface OptionSelectProps {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  apiFilled?: boolean;
+  aiSuggested?: boolean;
+  manuallySelected?: boolean;
+  canSuggest?: boolean;
+  isSuggesting?: boolean;
+  onSuggest?: () => void;
 }
 
 interface MultiOptionTableProps {
@@ -55,11 +93,20 @@ interface MultiOptionTableProps {
   values: string[];
   onToggle: (value: string) => void;
   error?: string;
+  apiFilled?: boolean;
+  aiSuggested?: boolean;
+  manuallySelected?: boolean;
+  canSuggest?: boolean;
+  isSuggesting?: boolean;
+  onSuggest?: () => void;
 }
 
 interface SectionHeaderProps {
   title: string;
   isComplete?: boolean;
+  canSuggestAll?: boolean;
+  isSuggestingAll?: boolean;
+  onSuggestAll?: () => void;
 }
 
 interface AccommodationsDraftPayload {
@@ -82,28 +129,29 @@ const ACCOMMODATIONS_SECTION_ORDER: AccommodationsFormSection[] = [
   "details",
 ];
 
-const ACCOMMODATIONS_FORM_DEFAULT_VALUES: AddAccommodationsFormData = {
+const ACCOMMODATIONS_FORM_DEFAULT_VALUES = {
   name: "",
+  title: "",
   address: "",
   type: "",
-  price: "$$$",
-  perfectFor: ["Solo"],
-  kidFriendly: "yes",
-  ac: "yes",
-  wifi: "yes",
-  extraGuestFee: "no",
-  parking: ["onsite"],
-  breakfastServed: "yes",
-  vibe: ["Luxury"],
-  workspace: "Dedicated Desk",
-  restaurant: "yes",
-  pool: ["outdoor"],
-  rooftopLounge: "no",
-  jacuzzi: ["shared"],
-  gym: "Basic",
-  walkability: "Walkable Downtown",
-  checkInTime: "15:00",
-  checkOutTime: "11:00",
+  price: "",
+  perfectFor: [],
+  kidFriendly: "",
+  ac: "",
+  wifi: "",
+  extraGuestFee: "",
+  parking: [],
+  breakfastServed: "",
+  vibe: [],
+  workspace: [],
+  restaurant: "",
+  pool: [],
+  rooftopLounge: "",
+  jacuzzi: [],
+  gym: "",
+  walkability: "",
+  checkInTime: "",
+  checkOutTime: "",
   phone: "",
   websiteUrl: "",
   bookingUrl: "",
@@ -115,7 +163,7 @@ const ACCOMMODATIONS_FORM_DEFAULT_VALUES: AddAccommodationsFormData = {
   locationKey: "",
   district: "",
   ianaTimeId: "",
-};
+} as unknown as AddAccommodationsFormData;
 
 function isDraftEffectivelyEmpty(payload: AccommodationsDraftPayload) {
   if (payload.prefillSignature !== null) return false;
@@ -180,15 +228,162 @@ function toBoolean(value: "yes" | "no"): boolean {
   return value === "yes";
 }
 
-function OptionSelect({ label, options, value, onChange, error }: OptionSelectProps) {
+function isAllowedValue<T extends string>(value: string | null | undefined, allowed: readonly T[]): value is T {
+  return Boolean(value && (allowed as readonly string[]).includes(value));
+}
+
+function filterAllowedValues<T extends string>(values: string[] | undefined, allowed: readonly T[]): T[] {
+  if (!values) return [];
+  const allowedSet = new Set<string>(allowed);
+  return Array.from(new Set(values)).filter((value): value is T => allowedSet.has(value));
+}
+
+function getSuggestionField(fieldKey: AiSuggestedField) {
+  return ACCOMMODATIONS_SUGGESTION_FIELDS.find((field) => field.key === fieldKey);
+}
+
+function getSuggestionFieldOptions(
+  fieldKey: AiSuggestedField,
+  locationTypes: Array<{ value: string; label: string }>
+): AccommodationsOption[] {
+  if (fieldKey === "type") {
+    return locationTypes.map((option) => ({
+      value: option.value,
+      label: option.label,
+      description: "Accommodation type from the configured taxonomy.",
+    }));
+  }
+  if (fieldKey === "checkInTime") return [...CHECK_IN_TIME_OPTIONS];
+  if (fieldKey === "checkOutTime") return [...CHECK_OUT_TIME_OPTIONS];
+
+  return [...(getSuggestionField(fieldKey)?.options || [])];
+}
+
+function formatSuggestionValue(
+  suggestion: string | string[] | null,
+  options: AccommodationsOption[]
+) {
+  if (!suggestion) return "No suggestion";
+  const labelsByValue = new Map(options.map((option) => [option.value, option.label]));
+  const values = Array.isArray(suggestion) ? suggestion : [suggestion];
+  return values.map((value) => labelsByValue.get(value) || value).join(", ");
+}
+
+function validateClientSuggestion(
+  suggestion: string | string[] | null,
+  options: AccommodationsOption[],
+  isMulti: boolean
+) {
+  const allowed = new Set(options.map((option) => option.value));
+  if (isMulti) {
+    if (!Array.isArray(suggestion)) return null;
+    const validValues = Array.from(
+      new Set(suggestion.filter((value): value is string => typeof value === "string" && allowed.has(value)))
+    );
+    return validValues.length > 0 ? validValues : null;
+  }
+
+  return typeof suggestion === "string" && allowed.has(suggestion) ? suggestion : null;
+}
+
+function ApiFilledBadge() {
+  return (
+    <span className="inline-flex items-center rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-normal text-emerald-500">
+      API filled
+    </span>
+  );
+}
+
+function AiSuggestedBadge() {
+  return (
+    <span className="inline-flex items-center rounded-sm border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-normal text-sky-500">
+      AI suggested
+    </span>
+  );
+}
+
+function ManuallySelectedBadge() {
+  return (
+    <span className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-normal text-amber-500">
+      Manually selected
+    </span>
+  );
+}
+
+function FieldLabel({
+  children,
+  apiFilled,
+  aiSuggested,
+  manuallySelected,
+  canSuggest,
+  isSuggesting,
+  onSuggest,
+}: {
+  children: string;
+  apiFilled?: boolean;
+  aiSuggested?: boolean;
+  manuallySelected?: boolean;
+  canSuggest?: boolean;
+  isSuggesting?: boolean;
+  onSuggest?: () => void;
+}) {
+  return (
+    <Label className="flex flex-wrap items-center gap-2">
+      <span>{children}</span>
+      {apiFilled && <ApiFilledBadge />}
+      {aiSuggested && <AiSuggestedBadge />}
+      {manuallySelected && <ManuallySelectedBadge />}
+      {canSuggest && onSuggest && (
+        <button
+          type="button"
+          onClick={onSuggest}
+          disabled={isSuggesting}
+          title={`Suggest ${children}`}
+          className="inline-flex h-6 items-center gap-1 rounded-sm border border-border bg-background px-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSuggesting ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          {isSuggesting ? "Suggesting..." : "Suggest"}
+        </button>
+      )}
+    </Label>
+  );
+}
+
+function OptionSelect({
+  label,
+  options,
+  value,
+  onChange,
+  error,
+  apiFilled,
+  aiSuggested,
+  manuallySelected,
+  canSuggest,
+  isSuggesting,
+  onSuggest,
+}: OptionSelectProps) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <FieldLabel
+        apiFilled={apiFilled}
+        aiSuggested={aiSuggested}
+        manuallySelected={manuallySelected}
+        canSuggest={canSuggest}
+        isSuggesting={isSuggesting}
+        onSuggest={onSuggest}
+      >
+        {label}
+      </FieldLabel>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
       >
+        <option value="" disabled>— Select —</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -218,10 +413,31 @@ function OptionSelect({ label, options, value, onChange, error }: OptionSelectPr
   );
 }
 
-function MultiOptionTable({ label, options, values, onToggle, error }: MultiOptionTableProps) {
+function MultiOptionTable({
+  label,
+  options,
+  values,
+  onToggle,
+  error,
+  apiFilled,
+  aiSuggested,
+  manuallySelected,
+  canSuggest,
+  isSuggesting,
+  onSuggest,
+}: MultiOptionTableProps) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <FieldLabel
+        apiFilled={apiFilled}
+        aiSuggested={aiSuggested}
+        manuallySelected={manuallySelected}
+        canSuggest={canSuggest}
+        isSuggesting={isSuggesting}
+        onSuggest={onSuggest}
+      >
+        {label}
+      </FieldLabel>
       <div className="rounded-md border border-border overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-muted/40">
@@ -259,9 +475,15 @@ function MultiOptionTable({ label, options, values, onToggle, error }: MultiOpti
   );
 }
 
-function SectionHeader({ title, isComplete = false }: SectionHeaderProps) {
+function SectionHeader({
+  title,
+  isComplete = false,
+  canSuggestAll,
+  isSuggestingAll,
+  onSuggestAll,
+}: SectionHeaderProps) {
   return (
-    <div className="space-y-2">
+    <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
         {isComplete && (
@@ -271,9 +493,188 @@ function SectionHeader({ title, isComplete = false }: SectionHeaderProps) {
           </span>
         )}
       </div>
+      {onSuggestAll && (
+        <button
+          type="button"
+          onClick={onSuggestAll}
+          disabled={!canSuggestAll || isSuggestingAll}
+          className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-400 transition-colors hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSuggestingAll ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          {isSuggestingAll ? "Suggesting step..." : "Suggest all"}
+        </button>
+      )}
     </div>
   );
 }
+
+function SuggestionStackOverlay({
+  stack,
+  locationTypes,
+  pendingCount,
+  onApply,
+  onDismiss,
+}: {
+  stack: AccommodationsFieldSuggestionResponse[];
+  locationTypes: Array<{ value: string; label: string }>;
+  pendingCount: number;
+  onApply: (item: AccommodationsFieldSuggestionResponse) => void;
+  onDismiss: (item: AccommodationsFieldSuggestionResponse) => void;
+}) {
+  if (stack.length === 0) return null;
+
+  const top = stack[stack.length - 1];
+  const backgroundDepth = Math.min(stack.length - 1, 2);
+  const topOptions = getSuggestionFieldOptions(top.fieldKey as AiSuggestedField, locationTypes);
+  const topValue = formatSuggestionValue(top.suggestion, topOptions);
+  const canApply = Boolean(top.suggestion && !top.error);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="relative w-full max-w-xl">
+        {Array.from({ length: backgroundDepth }).map((_, i) => {
+          const depth = backgroundDepth - i;
+          return (
+            <div
+              key={i}
+              className="absolute inset-0 rounded-lg border border-border bg-card"
+              style={{
+                transform: `translate(${depth * 8}px, ${depth * 8}px)`,
+                zIndex: i,
+                opacity: 1 - depth * 0.2,
+              }}
+            />
+          );
+        })}
+
+        <div
+          className="relative rounded-lg border border-border bg-card shadow-2xl"
+          style={{ zIndex: backgroundDepth + 1 }}
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-sky-400" />
+              <span className="font-semibold text-foreground">
+                {top.fieldLabel || top.fieldKey}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {stack.length > 1 && (
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  {stack.length - 1} more ready
+                </span>
+              )}
+              {pendingCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {pendingCount} fetching
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4 p-5 text-sm">
+            <div className="rounded-md border border-border bg-muted/25 p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Proposed value
+              </div>
+              <div className="mt-1 text-base font-semibold text-foreground">{topValue || "—"}</div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Confidence
+                </div>
+                <div className="mt-1 text-foreground">{Math.round(top.confidence * 100)}%</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Evidence
+                </div>
+                <div className="mt-1 text-foreground">
+                  {top.source === "existing-data" ? "Google/Foursquare" : "Gemini research"}
+                </div>
+              </div>
+            </div>
+
+            {top.reason && (
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Reason
+                </div>
+                <p className="mt-1 leading-relaxed text-foreground">{top.reason}</p>
+              </div>
+            )}
+
+            {top.sources && top.sources.length > 0 && (
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Sources
+                </div>
+                <div className="mt-2 space-y-2">
+                  {top.sources.map((source, idx) => (
+                    <div
+                      key={`${source.label}-${idx}`}
+                      className="rounded-md border border-border p-2"
+                    >
+                      {source.url ? (
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {source.label}
+                        </a>
+                      ) : (
+                        <div className="font-medium text-foreground">{source.label}</div>
+                      )}
+                      {source.snippet && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {source.snippet}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {top.error && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-destructive">
+                {top.error}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
+            <Button type="button" variant="outline" onClick={() => onDismiss(top)}>
+              Dismiss
+            </Button>
+            <Button type="button" disabled={!canApply} onClick={() => onApply(top)}>
+              Apply suggestion
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CORE_SUGGESTION_FIELDS: AiSuggestedField[] = ["type", "price"];
+const STAY_SUGGESTION_FIELDS: AiSuggestedField[] = [
+  "perfectFor", "kidFriendly", "ac", "wifi", "extraGuestFee", "parking", "breakfastServed",
+];
+const EXPERIENCE_SUGGESTION_FIELDS: AiSuggestedField[] = [
+  "vibe", "workspace", "restaurant", "pool", "rooftopLounge", "jacuzzi", "gym",
+];
+const DETAILS_SUGGESTION_FIELDS: AiSuggestedField[] = ["walkability", "checkInTime", "checkOutTime"];
 
 export function AddAccommodationsLocation() {
   const [activeSection, setActiveSection] = useState<AccommodationsFormSection>("step1");
@@ -281,6 +682,12 @@ export function AddAccommodationsLocation() {
   const [prefillMessage, setPrefillMessage] = useState<string | null>(null);
   const [prefillError, setPrefillError] = useState<string | null>(null);
   const [prefillSignature, setPrefillSignature] = useState<string | null>(null);
+  const [apiFilledFields, setApiFilledFields] = useState<Set<ApiFilledField>>(() => new Set());
+  const [googlePrefillContext, setGooglePrefillContext] = useState<GooglePrefillResponse | null>(null);
+  const [aiSuggestedFields, setAiSuggestedFields] = useState<Set<AiSuggestedField>>(() => new Set());
+  const [manuallySelectedFields, setManuallySelectedFields] = useState<Set<AiSuggestedField>>(() => new Set());
+  const [pendingFields, setPendingFields] = useState<Set<AiSuggestedField>>(() => new Set());
+  const [suggestionStack, setSuggestionStack] = useState<AccommodationsFieldSuggestionResponse[]>([]);
   const [createdName, setCreatedName] = useState<string | null>(null);
   const hasHydratedDraftRef = useRef(false);
 
@@ -338,6 +745,25 @@ export function AddAccommodationsLocation() {
   );
   const isPrefillReady = prefillSignature !== null && prefillSignature === currentPrefillSignature;
   const prefillIsStale = prefillSignature !== null && !isPrefillReady;
+  const isApiFilled = (field: string) => apiFilledFields.has(field as ApiFilledField);
+  const isAiSuggested = (field: AiSuggestedField) => aiSuggestedFields.has(field);
+  const isManuallySelected = (field: AiSuggestedField) => manuallySelectedFields.has(field);
+  const getCanSuggestField = (field: AiSuggestedField) => {
+    if (pendingFields.has(field) || suggestionStack.some((s) => s.fieldKey === field)) return false;
+    const options = getSuggestionFieldOptions(field, locationTypes);
+    const isDirty = Boolean(form.formState.dirtyFields[field]);
+    const currentValue = form.watch(field) as AddAccommodationsFormData[AiSuggestedField];
+
+    return isAccommodationOptionSuggestionEligible({
+      value: currentValue,
+      defaultValue: ACCOMMODATIONS_FORM_DEFAULT_VALUES[field],
+      isPrefillReady,
+      optionsCount: options.length,
+      isDirty,
+      isApiFilled: isApiFilled(field),
+      isAiSuggested: isAiSuggested(field),
+    });
+  };
 
   const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
   const stepOneComplete = isPrefillReady;
@@ -348,6 +774,7 @@ export function AddAccommodationsLocation() {
     (form.watch("parking")?.length ?? 0) > 0;
   const experienceComplete =
     (form.watch("vibe")?.length ?? 0) > 0 &&
+    (form.watch("workspace")?.length ?? 0) > 0 &&
     (form.watch("pool")?.length ?? 0) > 0 &&
     (form.watch("jacuzzi")?.length ?? 0) > 0;
   const detailsComplete =
@@ -382,6 +809,22 @@ export function AddAccommodationsLocation() {
     }
   };
 
+  const handleClearExceptStep1 = () => {
+    const name = form.getValues("name");
+    const address = form.getValues("address");
+    form.reset({ ...ACCOMMODATIONS_FORM_DEFAULT_VALUES, name, address });
+    setPrefillSignature(null);
+    setPrefillMessage(null);
+    setPrefillError(null);
+    setApiFilledFields(new Set());
+    setAiSuggestedFields(new Set());
+    setManuallySelectedFields(new Set());
+    setGooglePrefillContext(null);
+    setPendingFields(new Set());
+    setSuggestionStack([]);
+    clearAccommodationsDraftFromStorage();
+  };
+
   const flowSections: Array<{ key: AccommodationsFormSection; label: string; complete: boolean }> = [
     { key: "step1", label: "Step 1", complete: stepOneComplete },
     { key: "entities", label: "Entities", complete: entitiesComplete },
@@ -397,6 +840,27 @@ export function AddAccommodationsLocation() {
     }
   }, [isPrefillReady, activeSection]);
 
+  const setSingleOptionField = <TField extends Exclude<AiSuggestedField, MultiField>>(
+    field: TField,
+    value: AddAccommodationsFormData[TField]
+  ) => {
+    form.setValue(field, value, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    setAiSuggestedFields((current) => {
+      const next = new Set(current);
+      next.delete(field);
+      return next;
+    });
+    setManuallySelectedFields((current) => {
+      const next = new Set(current);
+      next.add(field);
+      return next;
+    });
+  };
+
   const toggleMultiOption = (field: MultiField, value: string) => {
     const currentValues = (form.getValues(field) || []) as string[];
     const nextValues = currentValues.includes(value)
@@ -408,11 +872,27 @@ export function AddAccommodationsLocation() {
       shouldValidate: true,
       shouldTouch: true,
     });
+    setAiSuggestedFields((current) => {
+      const next = new Set(current);
+      next.delete(field);
+      return next;
+    });
+    setManuallySelectedFields((current) => {
+      const next = new Set(current);
+      next.add(field);
+      return next;
+    });
   };
 
   const handleGooglePrefill = async () => {
     setPrefillError(null);
     setPrefillMessage(null);
+    setApiFilledFields(new Set());
+    setAiSuggestedFields(new Set());
+    setManuallySelectedFields(new Set());
+    setGooglePrefillContext(null);
+    setPendingFields(new Set());
+    setSuggestionStack([]);
 
     const isStepValid = await form.trigger(["name", "address"]);
     if (!isStepValid) {
@@ -436,53 +916,63 @@ export function AddAccommodationsLocation() {
         name,
         address: normalizedAddress,
       });
+      const nextApiFilledFields = new Set<ApiFilledField>();
 
       form.setValue("placeId", prefill.placeId, {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      nextApiFilledFields.add("placeId");
       form.setValue("latitude", String(prefill.lat), {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      nextApiFilledFields.add("latitude");
       form.setValue("longitude", String(prefill.lng), {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      nextApiFilledFields.add("longitude");
       form.setValue("googleUrl", prefill.googleUrl, {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      nextApiFilledFields.add("googleUrl");
       form.setValue("googleMapsUrl", prefill.googleUrl, {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      nextApiFilledFields.add("googleMapsUrl");
       form.setValue("locationKey", prefill.locationKey || "", {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      if (prefill.locationKey) nextApiFilledFields.add("locationKey");
       form.setValue("district", prefill.district || "", {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      if (prefill.district) nextApiFilledFields.add("district");
       form.setValue("ianaTimeId", prefill.ianaTimeId || "", {
         shouldDirty: true,
         shouldValidate: true,
         shouldTouch: true,
       });
+      if (prefill.ianaTimeId) nextApiFilledFields.add("ianaTimeId");
       if (prefill.phoneNumber) {
         form.setValue("phone", prefill.phoneNumber, {
           shouldDirty: true,
           shouldValidate: true,
           shouldTouch: true,
         });
+        nextApiFilledFields.add("phone");
       }
       if (prefill.website) {
         form.setValue("websiteUrl", prefill.website, {
@@ -490,20 +980,178 @@ export function AddAccommodationsLocation() {
           shouldValidate: true,
           shouldTouch: true,
         });
+        nextApiFilledFields.add("websiteUrl");
       }
 
+      const appliedEnrichmentFields: string[] = [];
+      const hints = prefill.accommodationsHints;
+      const priceHint = hints?.price || prefill.priceLevel;
+
+      if (isAllowedValue(priceHint, PRICE_VALUES)) {
+        form.setValue("price", priceHint, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+        appliedEnrichmentFields.push("price");
+        nextApiFilledFields.add("price");
+      }
+
+      const perfectForHints = filterAllowedValues(hints?.perfectFor, PERFECT_FOR_VALUES);
+      if (perfectForHints.length > 0) {
+        form.setValue("perfectFor", perfectForHints, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+        appliedEnrichmentFields.push("perfect for");
+        nextApiFilledFields.add("perfectFor");
+      }
+
+      const acHint = hints?.ac;
+      if (isAllowedValue(acHint, ["yes", "no"] as const)) {
+        form.setValue("ac", acHint, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+        appliedEnrichmentFields.push("AC");
+        nextApiFilledFields.add("ac");
+      }
+
+      const wifiHint = hints?.wifi;
+      if (isAllowedValue(wifiHint, ["yes", "no"] as const)) {
+        form.setValue("wifi", wifiHint, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+        appliedEnrichmentFields.push("wifi");
+        nextApiFilledFields.add("wifi");
+      }
+
+      const parkingHints = filterAllowedValues(hints?.parking, PARKING_VALUES);
+      if (parkingHints.length > 0) {
+        form.setValue("parking", parkingHints, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+        appliedEnrichmentFields.push("parking");
+        nextApiFilledFields.add("parking");
+      }
+
+      const poolHints = filterAllowedValues(hints?.pool, POOL_VALUES);
+      if (poolHints.length > 0) {
+        form.setValue("pool", poolHints, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+        appliedEnrichmentFields.push("pool");
+        nextApiFilledFields.add("pool");
+      }
+
+      setApiFilledFields(nextApiFilledFields);
+      setGooglePrefillContext(prefill);
       setPrefillSignature(buildAccommodationsPrefillSignature(name, normalizedAddress));
       setPrefillMessage(
-        "Google lookup complete. Place ID, coordinates, location key, district, time zone, phone, and website were prefilled when available."
+        `Google lookup complete. Place ID, coordinates, location key, district, time zone, phone, and website were prefilled when available.${
+          appliedEnrichmentFields.length > 0
+            ? ` Additional enrichment filled ${appliedEnrichmentFields.join(", ")}.`
+            : ""
+        }`
       );
       setActiveSection("entities");
     } catch (lookupError) {
       setPrefillSignature(null);
+      setGooglePrefillContext(null);
       setPrefillError(getErrorMessage(lookupError));
     } finally {
       setIsPrefillingGoogle(false);
     }
   };
+
+  const queueSuggestion = async (fieldKey: AiSuggestedField) => {
+    const field = getSuggestionField(fieldKey);
+    const allowedOptions = getSuggestionFieldOptions(fieldKey, locationTypes);
+    if (!field || allowedOptions.length === 0) return;
+
+    setPendingFields((prev) => new Set(prev).add(fieldKey));
+
+    try {
+      const response = await locationsApi.suggestAccommodationsField({
+        fieldKey,
+        formValues: form.getValues() as unknown as Record<string, unknown>,
+        apiContext: {
+          googleUrl: googlePrefillContext?.googleUrl || form.getValues("googleUrl") || null,
+          placeId: googlePrefillContext?.placeId || form.getValues("placeId") || null,
+          locationKey: googlePrefillContext?.locationKey || form.getValues("locationKey") || null,
+          district: googlePrefillContext?.district || form.getValues("district") || null,
+          ianaTimeId: googlePrefillContext?.ianaTimeId || form.getValues("ianaTimeId") || null,
+          phoneNumber: googlePrefillContext?.phoneNumber || form.getValues("phone") || null,
+          website: googlePrefillContext?.website || form.getValues("websiteUrl") || null,
+          priceLevel: googlePrefillContext?.priceLevel || null,
+          accommodationsHints: googlePrefillContext?.accommodationsHints || null,
+        },
+        allowedOptions,
+      });
+      setSuggestionStack((prev) => [...prev, response]);
+    } catch (err) {
+      setSuggestionStack((prev) => [
+        ...prev,
+        {
+          fieldKey,
+          fieldLabel: field.label,
+          suggestion: null,
+          kind: field.kind,
+          confidence: 0,
+          source: "ai",
+          reason: "",
+          sources: [],
+          error: getErrorMessage(err),
+        },
+      ]);
+    } finally {
+      setPendingFields((prev) => {
+        const next = new Set(prev);
+        next.delete(fieldKey);
+        return next;
+      });
+    }
+  };
+
+  const applyStackedSuggestion = (item: AccommodationsFieldSuggestionResponse) => {
+    const fieldKey = item.fieldKey as AiSuggestedField;
+    const allowedOptions = getSuggestionFieldOptions(fieldKey, locationTypes);
+    const validatedSuggestion = validateClientSuggestion(item.suggestion, allowedOptions, item.kind === "multi");
+
+    if (validatedSuggestion) {
+      form.setValue(fieldKey, validatedSuggestion as AddAccommodationsFormData[typeof fieldKey], {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
+      });
+      setAiSuggestedFields((prev) => new Set(prev).add(fieldKey));
+      setManuallySelectedFields((prev) => {
+        const next = new Set(prev);
+        next.delete(fieldKey);
+        return next;
+      });
+    }
+    setSuggestionStack((prev) => prev.filter((s) => s !== item));
+  };
+
+  const dismissStackedSuggestion = (item: AccommodationsFieldSuggestionResponse) => {
+    setSuggestionStack((prev) => prev.filter((s) => s !== item));
+  };
+
+  const suggestAllFields = (fields: AiSuggestedField[]) => {
+    fields.filter((f) => getCanSuggestField(f)).forEach((f) => void queueSuggestion(f));
+  };
+
+  const isSectionPending = (fields: AiSuggestedField[]) =>
+    fields.some((f) => pendingFields.has(f));
 
   const onSubmit = (data: AddAccommodationsFormData) => {
     const submitValidation = addAccommodationsSubmitSchema.safeParse({
@@ -553,7 +1201,7 @@ export function AddAccommodationsLocation() {
     createLocation(
       {
         name: data.name,
-        title: data.name,
+        title: data.title?.trim() || data.name,
         address: normalizedAddress,
         category: "accommodations",
         type: data.type || undefined,
@@ -576,12 +1224,19 @@ export function AddAccommodationsLocation() {
           setPrefillSignature(null);
           setPrefillMessage(null);
           setPrefillError(null);
+          setApiFilledFields(new Set());
+          setAiSuggestedFields(new Set());
+          setManuallySelectedFields(new Set());
+          setGooglePrefillContext(null);
+          setPendingFields(new Set());
+          setSuggestionStack([]);
           setActiveSection("step1");
           clearAccommodationsDraftFromStorage();
         },
       }
     );
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
@@ -664,7 +1319,14 @@ export function AddAccommodationsLocation() {
                   </div>
                 </div>
 
-                <div className="flex justify-end border-t border-border/70 pt-4">
+                <div className="flex justify-between border-t border-border/70 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClearExceptStep1}
+                  >
+                    Clear All Except Step 1
+                  </Button>
                   <Button
                     type="button"
                     onClick={() => void handleGooglePrefill()}
@@ -699,49 +1361,49 @@ export function AddAccommodationsLocation() {
                 <SectionHeader title="Entities Fields (Optional Manual Overrides)" isComplete={entitiesComplete} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Google URL</Label>
+                    <FieldLabel apiFilled={isApiFilled("googleUrl")}>Google URL</FieldLabel>
                     <Input placeholder="https://www.google.com/maps/..." {...form.register("googleUrl")} />
                     {form.formState.errors.googleUrl && (
                       <p className="text-xs text-destructive">{form.formState.errors.googleUrl.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Place ID</Label>
+                    <FieldLabel apiFilled={isApiFilled("placeId")}>Place ID</FieldLabel>
                     <Input placeholder="ChIJ..." {...form.register("placeId")} />
                     {form.formState.errors.placeId && (
                       <p className="text-xs text-destructive">{form.formState.errors.placeId.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Latitude</Label>
+                    <FieldLabel apiFilled={isApiFilled("latitude")}>Latitude</FieldLabel>
                     <Input placeholder="25.7743" {...form.register("latitude")} />
                     {form.formState.errors.latitude && (
                       <p className="text-xs text-destructive">{form.formState.errors.latitude.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Longitude</Label>
+                    <FieldLabel apiFilled={isApiFilled("longitude")}>Longitude</FieldLabel>
                     <Input placeholder="-80.1937" {...form.register("longitude")} />
                     {form.formState.errors.longitude && (
                       <p className="text-xs text-destructive">{form.formState.errors.longitude.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Time Zone (IANA)</Label>
+                    <FieldLabel apiFilled={isApiFilled("ianaTimeId")}>Time Zone (IANA)</FieldLabel>
                     <Input placeholder="America/New_York" {...form.register("ianaTimeId")} />
                     {form.formState.errors.ianaTimeId && (
                       <p className="text-xs text-destructive">{form.formState.errors.ianaTimeId.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>District</Label>
+                    <FieldLabel apiFilled={isApiFilled("district")}>District</FieldLabel>
                     <Input placeholder="Financial District" {...form.register("district")} />
                     {form.formState.errors.district && (
                       <p className="text-xs text-destructive">{form.formState.errors.district.message}</p>
                     )}
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label>Location Key</Label>
+                    <FieldLabel apiFilled={isApiFilled("locationKey")}>Location Key</FieldLabel>
                     <Input placeholder="united-states|miami|financial-district" {...form.register("locationKey")} />
                     {form.formState.errors.locationKey && (
                       <p className="text-xs text-destructive">{form.formState.errors.locationKey.message}</p>
@@ -761,19 +1423,27 @@ export function AddAccommodationsLocation() {
 
             {isPrefillReady && activeSection === "core" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
-                <SectionHeader title="Core" isComplete={coreComplete} />
+                <SectionHeader
+                  title="Core"
+                  isComplete={coreComplete}
+                  canSuggestAll={CORE_SUGGESTION_FIELDS.some((f) => getCanSuggestField(f))}
+                  isSuggestingAll={isSectionPending(CORE_SUGGESTION_FIELDS)}
+                  onSuggestAll={() => suggestAllFields(CORE_SUGGESTION_FIELDS)}
+                />
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
-                    <Label>Type</Label>
+                    <FieldLabel
+                      aiSuggested={isAiSuggested("type")}
+                      manuallySelected={isManuallySelected("type")}
+                      canSuggest={getCanSuggestField("type")}
+                      isSuggesting={pendingFields.has("type")}
+                      onSuggest={() => void queueSuggestion("type")}
+                    >
+                      Type
+                    </FieldLabel>
                     <select
                       value={form.watch("type") || ""}
-                      onChange={(event) =>
-                        form.setValue("type", event.target.value, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                          shouldTouch: true,
-                        })
-                      }
+                      onChange={(event) => setSingleOptionField("type", event.target.value)}
                       disabled={isLoadingTypes}
                       className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
                     >
@@ -795,9 +1465,15 @@ export function AddAccommodationsLocation() {
                     options={PRICE_OPTIONS}
                     value={form.watch("price")}
                     onChange={(value) =>
-                      form.setValue("price", value as AddAccommodationsFormData["price"], { shouldValidate: true })
+                      setSingleOptionField("price", value as AddAccommodationsFormData["price"])
                     }
                     error={form.formState.errors.price?.message}
+                    apiFilled={isApiFilled("price")}
+                    aiSuggested={isAiSuggested("price")}
+                    manuallySelected={isManuallySelected("price")}
+                    canSuggest={getCanSuggestField("price")}
+                    isSuggesting={pendingFields.has("price")}
+                    onSuggest={() => void queueSuggestion("price")}
                   />
                 </div>
                 <div className="flex justify-between border-t border-border/70 pt-4">
@@ -813,13 +1489,25 @@ export function AddAccommodationsLocation() {
 
             {isPrefillReady && activeSection === "stay" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
-                <SectionHeader title="The Stay" isComplete={stayComplete} />
+                <SectionHeader
+                  title="The Stay"
+                  isComplete={stayComplete}
+                  canSuggestAll={STAY_SUGGESTION_FIELDS.some((f) => getCanSuggestField(f))}
+                  isSuggestingAll={isSectionPending(STAY_SUGGESTION_FIELDS)}
+                  onSuggestAll={() => suggestAllFields(STAY_SUGGESTION_FIELDS)}
+                />
                 <MultiOptionTable
                   label="Perfect For"
                   options={PERFECT_FOR_OPTIONS}
                   values={form.watch("perfectFor")}
                   onToggle={(value) => toggleMultiOption("perfectFor", value)}
                   error={form.formState.errors.perfectFor?.message}
+                  apiFilled={isApiFilled("perfectFor")}
+                  aiSuggested={isAiSuggested("perfectFor")}
+                  manuallySelected={isManuallySelected("perfectFor")}
+                  canSuggest={getCanSuggestField("perfectFor")}
+                  isSuggesting={pendingFields.has("perfectFor")}
+                  onSuggest={() => void queueSuggestion("perfectFor")}
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <OptionSelect
@@ -827,36 +1515,58 @@ export function AddAccommodationsLocation() {
                     options={BOOLEAN_OPTIONS}
                     value={form.watch("kidFriendly")}
                     onChange={(value) =>
-                      form.setValue("kidFriendly", value as AddAccommodationsFormData["kidFriendly"], { shouldValidate: true })
+                      setSingleOptionField("kidFriendly", value as AddAccommodationsFormData["kidFriendly"])
                     }
                     error={form.formState.errors.kidFriendly?.message}
+                    aiSuggested={isAiSuggested("kidFriendly")}
+                    manuallySelected={isManuallySelected("kidFriendly")}
+                    canSuggest={getCanSuggestField("kidFriendly")}
+                    isSuggesting={pendingFields.has("kidFriendly")}
+                    onSuggest={() => void queueSuggestion("kidFriendly")}
                   />
                   <OptionSelect
                     label="AC"
                     options={BOOLEAN_OPTIONS}
                     value={form.watch("ac")}
                     onChange={(value) =>
-                      form.setValue("ac", value as AddAccommodationsFormData["ac"], { shouldValidate: true })
+                      setSingleOptionField("ac", value as AddAccommodationsFormData["ac"])
                     }
                     error={form.formState.errors.ac?.message}
+                    apiFilled={isApiFilled("ac")}
+                    aiSuggested={isAiSuggested("ac")}
+                    manuallySelected={isManuallySelected("ac")}
+                    canSuggest={getCanSuggestField("ac")}
+                    isSuggesting={pendingFields.has("ac")}
+                    onSuggest={() => void queueSuggestion("ac")}
                   />
                   <OptionSelect
                     label="WiFi"
                     options={BOOLEAN_OPTIONS}
                     value={form.watch("wifi")}
                     onChange={(value) =>
-                      form.setValue("wifi", value as AddAccommodationsFormData["wifi"], { shouldValidate: true })
+                      setSingleOptionField("wifi", value as AddAccommodationsFormData["wifi"])
                     }
                     error={form.formState.errors.wifi?.message}
+                    apiFilled={isApiFilled("wifi")}
+                    aiSuggested={isAiSuggested("wifi")}
+                    manuallySelected={isManuallySelected("wifi")}
+                    canSuggest={getCanSuggestField("wifi")}
+                    isSuggesting={pendingFields.has("wifi")}
+                    onSuggest={() => void queueSuggestion("wifi")}
                   />
                   <OptionSelect
-                    label="Extra Guest Fee"
+                    label="Extra Adult Guest Fee"
                     options={BOOLEAN_OPTIONS}
                     value={form.watch("extraGuestFee")}
                     onChange={(value) =>
-                      form.setValue("extraGuestFee", value as AddAccommodationsFormData["extraGuestFee"], { shouldValidate: true })
+                      setSingleOptionField("extraGuestFee", value as AddAccommodationsFormData["extraGuestFee"])
                     }
                     error={form.formState.errors.extraGuestFee?.message}
+                    aiSuggested={isAiSuggested("extraGuestFee")}
+                    manuallySelected={isManuallySelected("extraGuestFee")}
+                    canSuggest={getCanSuggestField("extraGuestFee")}
+                    isSuggesting={pendingFields.has("extraGuestFee")}
+                    onSuggest={() => void queueSuggestion("extraGuestFee")}
                   />
                 </div>
                 <MultiOptionTable
@@ -865,15 +1575,26 @@ export function AddAccommodationsLocation() {
                   values={form.watch("parking")}
                   onToggle={(value) => toggleMultiOption("parking", value)}
                   error={form.formState.errors.parking?.message}
+                  apiFilled={isApiFilled("parking")}
+                  aiSuggested={isAiSuggested("parking")}
+                  manuallySelected={isManuallySelected("parking")}
+                  canSuggest={getCanSuggestField("parking")}
+                  isSuggesting={pendingFields.has("parking")}
+                  onSuggest={() => void queueSuggestion("parking")}
                 />
                 <OptionSelect
                   label="Breakfast Served"
                   options={BOOLEAN_OPTIONS}
                   value={form.watch("breakfastServed")}
                   onChange={(value) =>
-                    form.setValue("breakfastServed", value as AddAccommodationsFormData["breakfastServed"], { shouldValidate: true })
+                    setSingleOptionField("breakfastServed", value as AddAccommodationsFormData["breakfastServed"])
                   }
                   error={form.formState.errors.breakfastServed?.message}
+                  aiSuggested={isAiSuggested("breakfastServed")}
+                  manuallySelected={isManuallySelected("breakfastServed")}
+                  canSuggest={getCanSuggestField("breakfastServed")}
+                  isSuggesting={pendingFields.has("breakfastServed")}
+                  onSuggest={() => void queueSuggestion("breakfastServed")}
                 />
                 <div className="flex justify-between border-t border-border/70 pt-4">
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>
@@ -888,31 +1609,50 @@ export function AddAccommodationsLocation() {
 
             {isPrefillReady && activeSection === "experience" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
-                <SectionHeader title="The Experience" isComplete={experienceComplete} />
+                <SectionHeader
+                  title="The Experience"
+                  isComplete={experienceComplete}
+                  canSuggestAll={EXPERIENCE_SUGGESTION_FIELDS.some((f) => getCanSuggestField(f))}
+                  isSuggestingAll={isSectionPending(EXPERIENCE_SUGGESTION_FIELDS)}
+                  onSuggestAll={() => suggestAllFields(EXPERIENCE_SUGGESTION_FIELDS)}
+                />
                 <MultiOptionTable
                   label="Vibe"
                   options={VIBE_OPTIONS}
                   values={form.watch("vibe")}
                   onToggle={(value) => toggleMultiOption("vibe", value)}
                   error={form.formState.errors.vibe?.message}
+                  aiSuggested={isAiSuggested("vibe")}
+                  manuallySelected={isManuallySelected("vibe")}
+                  canSuggest={getCanSuggestField("vibe")}
+                  isSuggesting={pendingFields.has("vibe")}
+                  onSuggest={() => void queueSuggestion("vibe")}
                 />
-                <OptionSelect
+                <MultiOptionTable
                   label="Workspace"
                   options={WORKSPACE_OPTIONS}
-                  value={form.watch("workspace")}
-                  onChange={(value) =>
-                    form.setValue("workspace", value as AddAccommodationsFormData["workspace"], { shouldValidate: true })
-                  }
+                  values={form.watch("workspace")}
+                  onToggle={(value) => toggleMultiOption("workspace", value)}
                   error={form.formState.errors.workspace?.message}
+                  aiSuggested={isAiSuggested("workspace")}
+                  manuallySelected={isManuallySelected("workspace")}
+                  canSuggest={getCanSuggestField("workspace")}
+                  isSuggesting={pendingFields.has("workspace")}
+                  onSuggest={() => void queueSuggestion("workspace")}
                 />
                 <OptionSelect
                   label="Restaurant"
                   options={BOOLEAN_OPTIONS}
                   value={form.watch("restaurant")}
                   onChange={(value) =>
-                    form.setValue("restaurant", value as AddAccommodationsFormData["restaurant"], { shouldValidate: true })
+                    setSingleOptionField("restaurant", value as AddAccommodationsFormData["restaurant"])
                   }
                   error={form.formState.errors.restaurant?.message}
+                  aiSuggested={isAiSuggested("restaurant")}
+                  manuallySelected={isManuallySelected("restaurant")}
+                  canSuggest={getCanSuggestField("restaurant")}
+                  isSuggesting={pendingFields.has("restaurant")}
+                  onSuggest={() => void queueSuggestion("restaurant")}
                 />
                 <MultiOptionTable
                   label="Pool"
@@ -920,15 +1660,26 @@ export function AddAccommodationsLocation() {
                   values={form.watch("pool")}
                   onToggle={(value) => toggleMultiOption("pool", value)}
                   error={form.formState.errors.pool?.message}
+                  apiFilled={isApiFilled("pool")}
+                  aiSuggested={isAiSuggested("pool")}
+                  manuallySelected={isManuallySelected("pool")}
+                  canSuggest={getCanSuggestField("pool")}
+                  isSuggesting={pendingFields.has("pool")}
+                  onSuggest={() => void queueSuggestion("pool")}
                 />
                 <OptionSelect
                   label="Rooftop Lounge"
                   options={BOOLEAN_OPTIONS}
                   value={form.watch("rooftopLounge")}
                   onChange={(value) =>
-                    form.setValue("rooftopLounge", value as AddAccommodationsFormData["rooftopLounge"], { shouldValidate: true })
+                    setSingleOptionField("rooftopLounge", value as AddAccommodationsFormData["rooftopLounge"])
                   }
                   error={form.formState.errors.rooftopLounge?.message}
+                  aiSuggested={isAiSuggested("rooftopLounge")}
+                  manuallySelected={isManuallySelected("rooftopLounge")}
+                  canSuggest={getCanSuggestField("rooftopLounge")}
+                  isSuggesting={pendingFields.has("rooftopLounge")}
+                  onSuggest={() => void queueSuggestion("rooftopLounge")}
                 />
                 <MultiOptionTable
                   label="Jacuzzi"
@@ -936,15 +1687,25 @@ export function AddAccommodationsLocation() {
                   values={form.watch("jacuzzi")}
                   onToggle={(value) => toggleMultiOption("jacuzzi", value)}
                   error={form.formState.errors.jacuzzi?.message}
+                  aiSuggested={isAiSuggested("jacuzzi")}
+                  manuallySelected={isManuallySelected("jacuzzi")}
+                  canSuggest={getCanSuggestField("jacuzzi")}
+                  isSuggesting={pendingFields.has("jacuzzi")}
+                  onSuggest={() => void queueSuggestion("jacuzzi")}
                 />
                 <OptionSelect
                   label="Gym"
                   options={GYM_OPTIONS}
                   value={form.watch("gym")}
                   onChange={(value) =>
-                    form.setValue("gym", value as AddAccommodationsFormData["gym"], { shouldValidate: true })
+                    setSingleOptionField("gym", value as AddAccommodationsFormData["gym"])
                   }
                   error={form.formState.errors.gym?.message}
+                  aiSuggested={isAiSuggested("gym")}
+                  manuallySelected={isManuallySelected("gym")}
+                  canSuggest={getCanSuggestField("gym")}
+                  isSuggesting={pendingFields.has("gym")}
+                  onSuggest={() => void queueSuggestion("gym")}
                 />
                 <div className="flex justify-between border-t border-border/70 pt-4">
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>
@@ -959,40 +1720,65 @@ export function AddAccommodationsLocation() {
 
             {isPrefillReady && activeSection === "details" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
-                <SectionHeader title="The Details" isComplete={detailsComplete} />
+                <SectionHeader
+                  title="The Details"
+                  isComplete={detailsComplete}
+                  canSuggestAll={DETAILS_SUGGESTION_FIELDS.some((f) => getCanSuggestField(f))}
+                  isSuggestingAll={isSectionPending(DETAILS_SUGGESTION_FIELDS)}
+                  onSuggestAll={() => suggestAllFields(DETAILS_SUGGESTION_FIELDS)}
+                />
                 <OptionSelect
                   label="Walkability"
                   options={WALKABILITY_OPTIONS}
                   value={form.watch("walkability")}
                   onChange={(value) =>
-                    form.setValue("walkability", value as AddAccommodationsFormData["walkability"], { shouldValidate: true })
+                    setSingleOptionField("walkability", value as AddAccommodationsFormData["walkability"])
                   }
                   error={form.formState.errors.walkability?.message}
+                  aiSuggested={isAiSuggested("walkability")}
+                  manuallySelected={isManuallySelected("walkability")}
+                  canSuggest={getCanSuggestField("walkability")}
+                  isSuggesting={pendingFields.has("walkability")}
+                  onSuggest={() => void queueSuggestion("walkability")}
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Check-In Time</Label>
+                    <FieldLabel
+                      aiSuggested={isAiSuggested("checkInTime")}
+                      canSuggest={getCanSuggestField("checkInTime")}
+                      isSuggesting={pendingFields.has("checkInTime")}
+                      onSuggest={() => void queueSuggestion("checkInTime")}
+                    >
+                      Check-In Time
+                    </FieldLabel>
                     <Input type="time" {...form.register("checkInTime")} />
                     {form.formState.errors.checkInTime && (
                       <p className="text-xs text-destructive">{form.formState.errors.checkInTime.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Check-Out Time</Label>
+                    <FieldLabel
+                      aiSuggested={isAiSuggested("checkOutTime")}
+                      canSuggest={getCanSuggestField("checkOutTime")}
+                      isSuggesting={pendingFields.has("checkOutTime")}
+                      onSuggest={() => void queueSuggestion("checkOutTime")}
+                    >
+                      Check-Out Time
+                    </FieldLabel>
                     <Input type="time" {...form.register("checkOutTime")} />
                     {form.formState.errors.checkOutTime && (
                       <p className="text-xs text-destructive">{form.formState.errors.checkOutTime.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Phone</Label>
+                    <FieldLabel apiFilled={isApiFilled("phone")}>Phone</FieldLabel>
                     <Input placeholder="+1 (555) 700-1200" {...form.register("phone")} />
                     {form.formState.errors.phone && (
                       <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Website URL</Label>
+                    <FieldLabel apiFilled={isApiFilled("websiteUrl")}>Website URL</FieldLabel>
                     <Input placeholder="https://example.com/hotel" {...form.register("websiteUrl")} />
                     {form.formState.errors.websiteUrl && (
                       <p className="text-xs text-destructive">{form.formState.errors.websiteUrl.message}</p>
@@ -1006,7 +1792,7 @@ export function AddAccommodationsLocation() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Google Maps URL</Label>
+                    <FieldLabel apiFilled={isApiFilled("googleMapsUrl")}>Google Maps URL</FieldLabel>
                     <Input placeholder="https://maps.google.com/..." {...form.register("googleMapsUrl")} />
                     {form.formState.errors.googleMapsUrl && (
                       <p className="text-xs text-destructive">{form.formState.errors.googleMapsUrl.message}</p>
@@ -1029,7 +1815,16 @@ export function AddAccommodationsLocation() {
                 Error: {error.message}
               </div>
             )}
+
           </form>
+
+          <SuggestionStackOverlay
+            stack={suggestionStack}
+            locationTypes={locationTypes}
+            pendingCount={pendingFields.size}
+            onApply={applyStackedSuggestion}
+            onDismiss={dismissStackedSuggestion}
+          />
         </div>
       </div>
     </div>

@@ -34,6 +34,17 @@ export interface SyncAllResponse {
   results: SyncResult[];
 }
 
+export interface TourPayloadSyncResult {
+  tourId: number;
+  payloadDocId: string;
+  status: "success" | "failed";
+  error?: string;
+}
+
+export interface PostSyncTourResponse {
+  result: TourPayloadSyncResult;
+}
+
 export interface GetSyncStatusResponse {
   status: SyncStatusResponse[];
 }

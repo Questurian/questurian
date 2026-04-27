@@ -9,6 +9,8 @@ import type {
   SyncResult,
   SyncLocationResponse,
   SyncAllResponse,
+  PostSyncTourResponse,
+  TourPayloadSyncResult,
   GetSyncStatusResponse,
   SyncStatusResponse,
   ConnectionStatusResponse,
@@ -36,6 +38,11 @@ export const payloadApi = {
       { category }
     );
     return response.results;
+  },
+
+  async syncTour(tourId: number): Promise<TourPayloadSyncResult> {
+    const response = await apiPost<PostSyncTourResponse>(API_ENDPOINTS.PAYLOAD_SYNC_TOUR(tourId), {});
+    return response.result;
   },
 
   /**

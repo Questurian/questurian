@@ -12,6 +12,7 @@ declare const expect: (value: unknown) => {
 
 const validBaseForm = {
   name: "The Meridian Grand",
+  title: "",
   address: "220 Market Street, Financial District",
   type: "hotel",
   price: "$$$$",
@@ -23,7 +24,7 @@ const validBaseForm = {
   parking: ["onsite", "valet"],
   breakfastServed: "yes",
   vibe: ["Luxury", "Social"],
-  workspace: "Dedicated Desk",
+  workspace: ["Dedicated Desk"],
   restaurant: "yes",
   pool: ["indoor", "rooftop"],
   rooftopLounge: "yes",

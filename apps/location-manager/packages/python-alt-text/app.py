@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import threading
@@ -16,6 +17,7 @@ app = FastAPI()
 
 DEFAULT_MODEL = "gemini-2.5-pro"
 DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL = "gemini-2.5-flash"
+DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = "gemini-2.5-flash"
 DEFAULT_LOCATION = "us-central1"
 
 
@@ -53,6 +55,13 @@ NEIGHBORHOOD_DESCRIPTION_MODEL = (
     ).strip()
     or DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL
 )
+ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = (
+    os.getenv(
+        "ACCOMMODATIONS_FIELD_SUGGESTION_MODEL",
+        DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
+    ).strip()
+    or DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL
+)
 
 _vertex_initialized = False
 _vertex_init_lock = threading.Lock()
@@ -67,6 +76,21 @@ class NeighborhoodDescriptionRequest(BaseModel):
     city: str | None = None
     country: str | None = None
     address: str | None = None
+
+
+class AccommodationsOption(BaseModel):
+    value: str
+    label: str
+    description: str | None = None
+
+
+class AccommodationsFieldSuggestionRequest(BaseModel):
+    field_key: str
+    field_label: str
+    kind: str
+    allowed_options: list[AccommodationsOption]
+    form_values: dict
+    api_context: dict | None = None
 
 
 def ensure_vertex_initialized() -> None:
@@ -137,6 +161,80 @@ def build_neighborhood_description_prompt(
     )
 
 
+def build_accommodations_field_suggestion_prompt(
+    request: AccommodationsFieldSuggestionRequest,
+) -> str:
+    allowed_options = [
+        {
+            "value": option.value,
+            "label": option.label,
+            "description": option.description or "",
+        }
+        for option in request.allowed_options
+    ]
+
+    context = {
+        "field": {
+            "key": request.field_key,
+            "label": request.field_label,
+            "kind": request.kind,
+        },
+        "allowed_options": allowed_options,
+        "current_form_values": request.form_values,
+        "google_foursquare_prefill": request.api_context or {},
+    }
+
+    return (
+        "You suggest one missing accommodations form option for a location-management database.\n"
+        "Use Google/Foursquare prefill evidence first. If that is insufficient, use Google Search grounding.\n"
+        "Return only JSON. Do not return markdown.\n"
+        "The suggestion must use exact option value strings from allowed_options only.\n"
+        "For kind=single, suggestion must be one string or null.\n"
+        "For kind=multi, suggestion must be an array of strings or null.\n"
+        "If evidence is weak, return suggestion null and confidence below 0.6.\n"
+        "Do not invent amenities. Do not use values outside allowed_options.\n\n"
+        "Return schema:\n"
+        '{ "suggestion": string | string[] | null, "confidence": number, '
+        '"reason": "short evidence-backed reason", '
+        '"sources": [{ "label": "source name", "url": "https://...", "snippet": "short evidence" }] }\n\n'
+        "Context JSON:\n"
+        f"{json.dumps(context, ensure_ascii=False)}"
+    )
+
+
+def parse_json_object(text: str) -> dict:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.removeprefix("```json").removeprefix("```").strip()
+        cleaned = cleaned.removesuffix("```").strip()
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        raise ValueError("Model did not return a JSON object.")
+
+    parsed = json.loads(cleaned[start : end + 1])
+    if not isinstance(parsed, dict):
+        raise ValueError("Model JSON response must be an object.")
+    return parsed
+
+
+def extract_grounding_sources(response) -> list[dict]:
+    sources: list[dict] = []
+    for candidate in getattr(response, "candidates", []) or []:
+        metadata = getattr(candidate, "grounding_metadata", None)
+        for chunk in getattr(metadata, "grounding_chunks", []) or []:
+            web = getattr(chunk, "web", None)
+            if not web:
+                continue
+            url = (getattr(web, "uri", "") or "").strip()
+            title = (getattr(web, "title", "") or "").strip()
+            if not url and not title:
+                continue
+            sources.append({"label": title or url, "url": url})
+    return sources[:5]
+
+
 def generate_alt_text_from_data(image_data: bytes, content_type: str) -> str:
     ensure_vertex_initialized()
 
@@ -166,13 +264,62 @@ def generate_text_from_prompt(
     return text
 
 
+def generate_grounded_json_from_prompt(
+    prompt: str,
+    model_name: str,
+) -> dict:
+    project = (os.getenv("GOOGLE_CLOUD_PROJECT") or "").strip()
+    location = (os.getenv("GOOGLE_CLOUD_LOCATION") or DEFAULT_LOCATION).strip() or DEFAULT_LOCATION
+    if not project:
+        raise RuntimeError("GOOGLE_CLOUD_PROJECT environment variable is required.")
+
+    try:
+        from google import genai
+        from google.genai.types import GenerateContentConfig, GoogleSearch, Tool
+
+        client = genai.Client(vertexai=True, project=project, location=location)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=GenerateContentConfig(
+                tools=[Tool(google_search=GoogleSearch())],
+            ),
+        )
+        text = (response.text or "").strip()
+        if not text:
+            raise RuntimeError("Vertex AI returned empty JSON.")
+        parsed = parse_json_object(text)
+        if not parsed.get("sources"):
+            parsed["sources"] = extract_grounding_sources(response)
+        return parsed
+    except ImportError:
+        logger.warning(
+            "google-genai is not installed; falling back to non-grounded Vertex generation."
+        )
+        return parse_json_object(generate_text_from_prompt(prompt, model_name))
+
+
+def generate_accommodations_field_suggestion(
+    request: AccommodationsFieldSuggestionRequest,
+) -> dict:
+    if request.kind not in {"single", "multi"}:
+        raise ValueError("kind must be single or multi.")
+    if not request.allowed_options:
+        raise ValueError("allowed_options cannot be empty.")
+
+    return generate_grounded_json_from_prompt(
+        build_accommodations_field_suggestion_prompt(request),
+        ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
+    )
+
+
 @app.on_event("startup")
 def startup() -> None:
     project = (os.getenv("GOOGLE_CLOUD_PROJECT") or "").strip()
     if not project:
         logger.warning(
             "⚠️  VERTEX AI NOT CONFIGURED — GOOGLE_CLOUD_PROJECT is not set. "
-            "Alt text and neighborhood description endpoints will fail until a new GCP project is wired up."
+            "Alt text, neighborhood description, and field suggestion endpoints will fail until a new GCP project is wired up."
         )
         return
     try:
@@ -190,6 +337,7 @@ async def test_endpoint():
         "provider": "vertex-gemini",
         "model": ALT_TEXT_MODEL,
         "neighborhood_description_model": NEIGHBORHOOD_DESCRIPTION_MODEL,
+        "accommodations_field_suggestion_model": ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
     }
 
 
@@ -238,6 +386,28 @@ async def neighborhood_description(
         raise
     except Exception as exc:
         logger.exception("Vertex neighborhood description generation failed")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/accommodations-field-suggestion")
+async def accommodations_field_suggestion(
+    request: AccommodationsFieldSuggestionRequest,
+):
+    try:
+        result = await asyncio.to_thread(
+            generate_accommodations_field_suggestion,
+            request,
+        )
+        return {
+            "suggestion": result.get("suggestion"),
+            "confidence": result.get("confidence", 0),
+            "reason": result.get("reason", ""),
+            "sources": result.get("sources", []),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Vertex accommodations field suggestion failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

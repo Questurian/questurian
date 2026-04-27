@@ -273,6 +273,50 @@ function ensureEntitySchema(db: Database): void {
   ensurePayloadSyncStateAcceptsKeyLocations(db);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS tours (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      img_payload_media_set_id TEXT NOT NULL,
+      booking_link TEXT NOT NULL,
+      price TEXT NOT NULL,
+      location_key TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(title)
+    )
+  `);
+
+  const tourColumns = getTableColumns(db, "tours");
+  if (!tourColumns.has("location_key")) {
+    db.run("ALTER TABLE tours ADD COLUMN location_key TEXT");
+  }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS attraction_tours (
+      attraction_entity_id INTEGER NOT NULL,
+      tour_id INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY(attraction_entity_id, tour_id),
+      FOREIGN KEY(attraction_entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+      FOREIGN KEY(tour_id) REFERENCES tours(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tour_payload_sync_state (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tour_id INTEGER NOT NULL,
+      payload_doc_id TEXT NOT NULL,
+      last_synced_at TEXT NOT NULL,
+      sync_status TEXT NOT NULL DEFAULT 'success' CHECK(sync_status IN ('success', 'failed', 'pending')),
+      error_message TEXT,
+      FOREIGN KEY(tour_id) REFERENCES tours(id) ON DELETE CASCADE,
+      UNIQUE(tour_id)
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS location_taxonomy (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       country TEXT NOT NULL,
@@ -307,6 +351,10 @@ function ensureEntityIndexesAndTriggers(db: Database): void {
   db.run("CREATE INDEX IF NOT EXISTS idx_payload_sync_entity ON payload_sync_state(entity_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_payload_sync_status ON payload_sync_state(sync_status)");
   db.run("CREATE INDEX IF NOT EXISTS idx_payload_sync_collection ON payload_sync_state(payload_collection)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_tours_updated_at ON tours(updated_at)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_attraction_tours_attraction ON attraction_tours(attraction_entity_id, sort_order)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_attraction_tours_tour ON attraction_tours(tour_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_tour_payload_sync_status ON tour_payload_sync_state(sync_status)");
   db.run("CREATE INDEX IF NOT EXISTS idx_corrections_lookup ON taxonomy_corrections(incorrect_value, part_type)");
   db.run("CREATE INDEX IF NOT EXISTS idx_location_taxonomy_status_key ON location_taxonomy(status, locationKey)");
 
@@ -382,6 +430,32 @@ function ensureEntityIndexesAndTriggers(db: Database): void {
     FOR EACH ROW
     BEGIN
       UPDATE entities SET updated_at = datetime('now') WHERE id = OLD.entity_id;
+    END;
+  `);
+
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_tours_update
+    AFTER UPDATE ON tours
+    FOR EACH ROW
+    WHEN NEW.updated_at = OLD.updated_at
+    BEGIN
+      UPDATE tours SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_attraction_tours_insert
+    AFTER INSERT ON attraction_tours
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.attraction_entity_id;
+    END;
+  `);
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS touch_entities_from_attraction_tours_delete
+    AFTER DELETE ON attraction_tours
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = OLD.attraction_entity_id;
     END;
   `);
 

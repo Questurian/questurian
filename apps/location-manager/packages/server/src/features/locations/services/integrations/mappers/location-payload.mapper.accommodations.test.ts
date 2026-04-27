@@ -74,4 +74,85 @@ describe("mapLocationToPayloadFormat accommodations", () => {
     expect(payload).not.toHaveProperty("locationKey");
     expect(payload).not.toHaveProperty("tripadvisorLocationId");
   });
+
+  test("drops LM-only none and keeps Payload parking/jacuzzi/pool options", () => {
+    const location = {
+      id: 2,
+      title: "Filter Test",
+      category: "accommodations",
+      type: "hotel",
+      locationKey: "peru|lima|miraflores",
+      district: "Miraflores",
+      ianaTimeId: "America/Lima",
+      payload_location_ref: "999",
+      neighborhoodDescription: null,
+      idealFor: null,
+      nightlifeDetails: null,
+      accommodationsDetails: {
+        core: { name: "Filter Test", price: "$$", district: "Miraflores", type: "hotel" },
+        the_stay: {
+          perfect_for: ["Solo"],
+          kid_friendly: true,
+          ac: true,
+          wifi: true,
+          extra_guest_fee: false,
+          parking: ["none", "onsite", "garage"],
+          breakfast_served: true,
+        },
+        the_experience: {
+          vibe: ["Luxury"],
+          workspace: ["Dedicated Desk", "Shared Lounge"],
+          restaurant: false,
+          pool: ["none", "rooftop"],
+          rooftop_lounge: false,
+          jacuzzi: ["none", "shared"],
+          gym: "Basic",
+        },
+        the_details: {
+          address: "Av. Test 1",
+          walkability: "Walkable Downtown",
+          check_in_time: "15:00",
+          check_out_time: "11:00",
+          phone: "+51 1",
+          website_url: "https://example.com",
+        },
+      },
+      attractionsDetails: null,
+      keyLocationsDetails: null,
+      operationHours: null,
+      tripadvisorMealTypes: null,
+      tripadvisorCuisines: null,
+      tripadvisorFeatures: null,
+      priceLevel: "$$",
+      contact: {
+        countryCode: "PE",
+        phoneNumber: "+51 1",
+        website: "https://example.com",
+        url: "https://maps.google.com/?q=test",
+      },
+      coordinates: { lat: -12.0, lng: -77.0 },
+      source: { name: "Filter Test", address: "Av. Test 1" },
+      instagram_embeds: [],
+      uploads: [],
+      slug: null,
+      reviewsFetchedAt: null,
+      reviewsCount: null,
+      reviewsGoogleCount: null,
+      reviewsTripadvisorCount: null,
+      reviewsEnabled: false,
+      created_at: "2026-01-01 00:00:00",
+      updated_at: "2026-01-01 00:00:00",
+    } as unknown as LocationResponse;
+
+    const payload = mapLocationToPayloadFormat(
+      location,
+      { galleryImageIds: [], instagramPostIds: [] },
+      "999"
+    );
+
+    expect(payload.theStay?.parking).toEqual(["onsite", "garage"]);
+    expect(payload.theExperience?.jacuzzi).toEqual(["shared"]);
+    expect(payload.theExperience?.pool).toEqual(["rooftop"]);
+    expect(payload.theExperience?.workspace).toBe("Dedicated Desk");
+  });
 });

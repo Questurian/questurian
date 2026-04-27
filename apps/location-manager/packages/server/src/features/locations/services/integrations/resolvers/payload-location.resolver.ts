@@ -10,36 +10,44 @@ export async function resolvePayloadLocationRef(
   location: LocationResponse,
   payloadClient: PayloadApiClient
 ): Promise<string | null> {
-  const locationKey = location.locationKey || "";
+  const locationKey = location.locationKey?.trim() || "";
 
   if (!locationKey) {
     console.warn(`⚠️  Location ${location.id} missing locationKey; skipping Payload location lookup`);
     return null;
   }
 
-  const locationRef = await payloadClient.getLocationRefByKey(locationKey);
+  return ensurePayloadLocationRefForKey(locationKey, payloadClient);
+}
 
-  if (locationRef) {
-    return locationRef;
-  }
+/**
+ * Find or create a Payload `locations` doc for a pipe-delimited taxonomy key.
+ */
+export async function ensurePayloadLocationRefForKey(
+  locationKey: string | null | undefined,
+  payloadClient: PayloadApiClient
+): Promise<string | null> {
+  const key = typeof locationKey === "string" ? locationKey.trim() : "";
+  if (!key) return null;
 
-  console.warn(`⚠️  No Payload location found for locationKey: ${locationKey}`);
+  const existing = await payloadClient.getLocationRefByKey(key);
+  if (existing) return existing;
 
-  const createPayload = buildPayloadLocationData(locationKey);
+  console.warn(`⚠️  No Payload location found for locationKey: ${key}`);
+
+  const createPayload = buildPayloadLocationData(key);
   if (!createPayload) {
-    console.warn(`⚠️  Unable to build Payload location payload for ${locationKey}`);
+    console.warn(`⚠️  Unable to build Payload location payload for ${key}`);
     return null;
   }
 
-  const createdRef = await payloadClient.createLocation(createPayload);
-
-  return createdRef;
+  return await payloadClient.createLocation(createPayload);
 }
 
 /**
  * Build a Payload location payload from a locationKey
  */
-function buildPayloadLocationData(locationKey: string): PayloadLocationCreateData | null {
+export function buildPayloadLocationData(locationKey: string): PayloadLocationCreateData | null {
   const parsed = parseLocationValue(locationKey);
   if (!parsed) {
     return null;

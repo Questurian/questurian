@@ -1,5 +1,5 @@
 import type { LocationWithNested, LocationResponse, LocationBasic } from "../../models/location";
-import { getAllLocations, getLocationsByCategory, getLocationById } from "../../repositories/core";
+import { getAllLocations, getAttractionTours, getLocationsByCategory, getLocationById } from "../../repositories/core";
 import { getInstagramEmbedsByLocationIds, getInstagramEmbedsByLocationId } from "../../repositories/content";
 import { getUploadsByLocationIds, getUploadsByLocationId } from "../../repositories/content";
 import { transformLocationToResponse, transformLocationToBasicResponse, isLocationInScope } from "../../utils/location-utils";
@@ -68,6 +68,7 @@ export class LocationQueryService {
       ...location,
       instagram_embeds,
       uploads,
+      tours: location.category === "attractions" ? getAttractionTours(id) : [],
     };
 
     // Step 4: Transform to LocationResponse format

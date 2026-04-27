@@ -57,7 +57,7 @@ export class PayloadLocationsClient {
       locationRef: firstDoc?.id || null,
     });
 
-    return firstDoc?.id || null;
+    return firstDoc?.id != null ? String(firstDoc.id) : null;
   }
 
   async createLocation(data: PayloadLocationCreateData): Promise<string> {
@@ -100,6 +100,6 @@ export class PayloadLocationsClient {
       locationKey: result.doc.locationKey || null,
     });
 
-    return result.doc.id;
+    return String(result.doc.id);
   }
 }

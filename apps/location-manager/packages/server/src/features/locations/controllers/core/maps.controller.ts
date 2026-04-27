@@ -16,7 +16,8 @@ export async function postAddMaps(c: Context) {
 
 export async function postGooglePrefill(c: Context) {
   const dto = c.get("validatedBody") as GooglePrefillDto;
-  const result = await container.mapsService.resolveGooglePrefill(dto.name, dto.address);
+  const routeCategory = c.get("routeCategory") as LocationCategory | undefined;
+  const result = await container.mapsService.resolveGooglePrefill(dto.name, dto.address, routeCategory);
   return c.json(successResponse(result));
 }
 

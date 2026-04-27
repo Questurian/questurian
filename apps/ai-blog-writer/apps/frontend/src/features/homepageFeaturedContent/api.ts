@@ -372,6 +372,35 @@ export async function fetchThingsToDoListicleCandidates(
   )
 }
 
+export async function fetchTourGridCandidates(
+  token: string,
+  params: {
+    query?: string
+    page?: number
+    limit?: number
+  } = {},
+): Promise<HomepageHotelGridCandidatesResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.query?.trim()) {
+    searchParams.set('q', params.query.trim())
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page))
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit))
+  }
+
+  const query = searchParams.toString()
+  return homepageFeaturedRequest(
+    `/api/homepage-featured-content/tour-candidates${query ? `?${query}` : ''}`,
+    token,
+  )
+}
+
 export async function fetchThingsToDoAttractionCandidates(
   token: string,
   params: {

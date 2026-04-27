@@ -35,7 +35,7 @@ import {
   WORKSPACE_OPTIONS,
 } from "../constants/accommodations-options";
 
-type MultiField = "perfectFor" | "parking" | "vibe" | "pool" | "jacuzzi";
+type MultiField = "perfectFor" | "parking" | "vibe" | "workspace" | "pool" | "jacuzzi";
 
 interface OptionSelectProps {
   label: string;
@@ -172,6 +172,7 @@ function MultiOptionTable({ label, options, values, onToggle, error }: MultiOpti
 
 const DEFAULT_FORM_VALUES: AddAccommodationsFormData = {
   name: "",
+  title: "",
   address: "",
   type: "",
   price: "$$$",
@@ -183,7 +184,7 @@ const DEFAULT_FORM_VALUES: AddAccommodationsFormData = {
   parking: ["onsite"],
   breakfastServed: "yes",
   vibe: ["Luxury"],
-  workspace: "Dedicated Desk",
+  workspace: ["Dedicated Desk"],
   restaurant: "yes",
   pool: ["outdoor"],
   rooftopLounge: "no",
@@ -234,6 +235,13 @@ export function EditAccommodationsLocation() {
     return current !== prefillSignature;
   }, [form, prefillSignature]);
 
+  const needsTitleBackfill = useMemo(() => {
+    if (!location) return false;
+    if (location.title?.trim()) return false;
+    const details = parseAccommodationsDetails(location.accommodationsDetails);
+    return Boolean(location.source.name?.trim() || details.coreName?.trim());
+  }, [location]);
+
   useEffect(() => {
     if (!location) return;
 
@@ -241,6 +249,11 @@ export function EditAccommodationsLocation() {
 
     const values: AddAccommodationsFormData = {
       name: location.source.name || details.coreName || DEFAULT_FORM_VALUES.name,
+      title:
+        location.title?.trim() ||
+        location.source.name ||
+        details.coreName ||
+        DEFAULT_FORM_VALUES.title,
       address: location.source.address || details.address || DEFAULT_FORM_VALUES.address,
       type: location.type || details.coreType || "",
       price: pickSingleOption(details.corePrice || location.priceLevel || null, ["$", "$$", "$$$", "$$$$"] as const, DEFAULT_FORM_VALUES.price),
@@ -249,20 +262,20 @@ export function EditAccommodationsLocation() {
       ac: booleanToYesNo(details.ac, "yes"),
       wifi: booleanToYesNo(details.wifi, "yes"),
       extraGuestFee: booleanToYesNo(details.extraGuestFee, "no"),
-      parking: pickMultiOptions(details.parking, ["onsite", "valet", "street", "garage"] as const, DEFAULT_FORM_VALUES.parking),
+      parking: pickMultiOptions(details.parking, ["none", "onsite", "valet", "street", "garage"] as const, DEFAULT_FORM_VALUES.parking),
       breakfastServed: booleanToYesNo(details.breakfastServed, "yes"),
       vibe: pickMultiOptions(
         details.vibe,
         ["Luxury", "Social", "Quiet", "Boutique", "Family-Friendly", "Business-Friendly"] as const,
         DEFAULT_FORM_VALUES.vibe
       ),
-      workspace: pickSingleOption(
+      workspace: pickMultiOptions(
         details.workspace,
         ["None", "Shared Lounge", "Dedicated Desk", "Co-working Space"] as const,
         DEFAULT_FORM_VALUES.workspace
       ),
       restaurant: booleanToYesNo(details.restaurant, "yes"),
-      pool: pickMultiOptions(details.pool, ["indoor", "outdoor", "rooftop", "infinity"] as const, DEFAULT_FORM_VALUES.pool),
+      pool: pickMultiOptions(details.pool, ["none", "indoor", "outdoor", "rooftop", "infinity"] as const, DEFAULT_FORM_VALUES.pool),
       rooftopLounge: booleanToYesNo(details.rooftopLounge, "no"),
       jacuzzi: pickMultiOptions(details.jacuzzi, ["private", "shared", "rooftop"] as const, DEFAULT_FORM_VALUES.jacuzzi),
       gym: pickSingleOption(details.gym, ["None", "Basic", "Full", "24/7"] as const, DEFAULT_FORM_VALUES.gym),
@@ -394,6 +407,7 @@ export function EditAccommodationsLocation() {
         id: locationId,
         data: {
           name: data.name,
+          title: data.title?.trim() || undefined,
           address: normalizedAddress,
           type: data.type || undefined,
           priceLevel: data.price,
@@ -493,6 +507,19 @@ export function EditAccommodationsLocation() {
                 <Input placeholder="Location Name" {...form.register("name")} />
                 {form.formState.errors.name && (
                   <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  placeholder="Display title (listings, CMS)"
+                  {...form.register("title")}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Public display name. Can differ from the maps/source name above.
+                </p>
+                {form.formState.errors.title && (
+                  <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -686,13 +713,11 @@ export function EditAccommodationsLocation() {
               onToggle={(value) => toggleMultiOption("vibe", value)}
               error={form.formState.errors.vibe?.message}
             />
-            <OptionSelect
+            <MultiOptionTable
               label="Workspace"
               options={WORKSPACE_OPTIONS}
-              value={form.watch("workspace")}
-              onChange={(value) =>
-                form.setValue("workspace", value as AddAccommodationsFormData["workspace"], { shouldValidate: true })
-              }
+              values={form.watch("workspace")}
+              onToggle={(value) => toggleMultiOption("workspace", value)}
               error={form.formState.errors.workspace?.message}
             />
             <OptionSelect
@@ -798,7 +823,7 @@ export function EditAccommodationsLocation() {
           <div className="space-y-2 mt-6">
             <Button
               type="submit"
-              disabled={!form.formState.isDirty || isPending}
+              disabled={isPending || (!form.formState.isDirty && !needsTitleBackfill)}
               className="w-full h-10 text-sm font-normal bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isPending ? "Updating..." : "Update Accommodations"}
