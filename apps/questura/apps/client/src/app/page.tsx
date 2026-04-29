@@ -1,8 +1,5 @@
-'use client';
-
-import { CitySelectionPage } from '@/features/CityDiscovery';
+import { redirect } from 'next/navigation'
 
 export default function HomePage() {
-  // Middleware handles redirects for onboarded users, so we only show onboarding here
-  return <CitySelectionPage />;
+  redirect('/peru/lima')
 }

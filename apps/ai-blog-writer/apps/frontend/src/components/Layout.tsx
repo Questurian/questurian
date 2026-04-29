@@ -66,7 +66,7 @@ export default function Layout() {
         <div className="nav-container">
           <div className="nav-brand">
             <Link to="/" className="nav-brand-link">
-              <h1>AI Blog Writer</h1>
+              <h1 className="nav-title">AI Blog Writer</h1>
             </Link>
           </div>
 

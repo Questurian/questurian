@@ -47,7 +47,7 @@ export const ThingsToDoListiclesBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: 'single-type-listicles',
+      relationTo: ['single-type-listicles'] as const,
       hasMany: true,
       admin: {
         description: 'Single-type listicles with data type Attractions only.',

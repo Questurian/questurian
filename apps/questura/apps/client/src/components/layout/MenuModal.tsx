@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Compass, BedDouble, PlaneTakeoff, MapPin, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useAuth } from "@/lib/user/hooks";
 import { useLoginModalStore } from "@/lib/stores/loginModalStore";
 
@@ -9,12 +9,6 @@ interface MenuModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const hiddenNavItems = [
-  { label: "Explore", Icon: Compass },
-  { label: "Stay", Icon: BedDouble },
-  { label: "Move", Icon: PlaneTakeoff },
-] as const;
 
 export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
   const { isAuthenticated } = useAuth();
@@ -91,33 +85,7 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
             </button>
           </div>
 
-          <div className="mb-6 rounded-xl border border-white/15 bg-white/5 px-3.5 py-3">
-            <div className="flex items-center gap-2.5">
-              <MapPin className="h-4 w-4 text-white/80" />
-              <span className="text-sm font-medium">Lima, Peru</span>
-            </div>
-          </div>
-
-          <nav aria-label="Hidden mobile navigation" className="space-y-2">
-            {hiddenNavItems.map(({ label, Icon }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={onClose}
-                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-left transition-colors hover:bg-white/10"
-              >
-                <span className="flex items-center gap-2.5 text-sm font-semibold tracking-[0.03em]">
-                  <Icon className="h-4 w-4 text-white/80" />
-                  {label}
-                </span>
-                <span className="text-xs uppercase tracking-[0.08em] text-white/55">
-                  Open
-                </span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="mt-7 space-y-2">
+          <div className="space-y-2">
             <Link
               href="/join"
               onClick={onClose}

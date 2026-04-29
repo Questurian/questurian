@@ -1,4 +1,4 @@
-import { get, isServiceUnavailableError, post } from '@/lib/api';
+import { isServiceUnavailableError, post } from '@/lib/api';
 
 import {
   SUBSCRIPTION_DEFAULT_MESSAGES,
@@ -9,8 +9,6 @@ import type {
   CheckoutSessionResponse,
   PortalSessionResponse,
   RenewalResult,
-  SubscriptionDetails,
-  SubscriptionDetailsApiResponse,
 } from '../types/subscription-mutations.types';
 
 function mapSubscriptionError(error: unknown): unknown {
@@ -47,11 +45,6 @@ export async function renewSubscriptionRequest(): Promise<RenewalResult> {
   } catch (error) {
     throw mapSubscriptionError(error);
   }
-}
-
-export async function fetchSubscriptionDetails(): Promise<SubscriptionDetails | null> {
-  const data = await get<SubscriptionDetailsApiResponse>('/api/payments/subscription-details');
-  return data.subscriptionDetails || null;
 }
 
 export async function createPortalSessionRequest(): Promise<string | null> {

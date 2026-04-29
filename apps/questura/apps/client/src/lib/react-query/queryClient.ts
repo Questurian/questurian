@@ -43,13 +43,3 @@ export const queryClient = new QueryClient({
     },
   },
 });
-
-/**
- * Create a new QueryClient instance
- * Useful for testing or creating isolated client instances
- */
-export function createQueryClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: queryClient.getDefaultOptions(),
-  });
-}

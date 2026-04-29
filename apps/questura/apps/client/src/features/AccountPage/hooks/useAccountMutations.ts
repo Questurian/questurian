@@ -54,40 +54,6 @@ export function useAddPasswordMutation() {
 }
 
 /**
- * Remove password mutation
- */
-interface RemovePasswordResponse {
-  success: boolean;
-  message?: string;
-}
-
-export function useRemovePasswordMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (): Promise<RemovePasswordResponse> => {
-      try {
-        return post<RemovePasswordResponse>('/api/account/remove-password', {
-          confirmation: 'REMOVE_PASSWORD',
-        });
-      } catch (error) {
-        // Check if it's a service unavailability error
-        if (isServiceUnavailableError(error)) {
-          throw new Error('Service is unavailable. Please try again later.');
-        }
-
-        // Re-throw other errors
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      // Invalidate user query to refetch updated auth methods
-      queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
-    },
-  });
-}
-
-/**
  * Link Google account mutation
  */
 interface LinkGoogleResponse {
@@ -145,59 +111,6 @@ export function useUnlinkGoogleMutation() {
     onSuccess: () => {
       // Invalidate user query to refetch updated auth methods
       queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
-    },
-  });
-}
-
-/**
- * Request password change mutation
- */
-export function useRequestPasswordChangeMutation() {
-  return useMutation({
-    mutationFn: async (): Promise<void> => {
-      try {
-        await post('/api/auth/request-password-change', {});
-      } catch (error) {
-        // Check if it's a service unavailability error
-        if (isServiceUnavailableError(error)) {
-          throw new Error('Service is unavailable. Please try again later.');
-        }
-
-        // Re-throw other errors
-        throw error;
-      }
-    },
-  });
-}
-
-/**
- * Check if user can disconnect auth method
- */
-interface CanDisconnectVariables {
-  method: 'password' | 'google';
-}
-
-interface CanDisconnectResponse {
-  canDisconnect: boolean;
-  reason?: string;
-}
-
-export function useCanDisconnectQuery() {
-  return useMutation({
-    mutationFn: async (variables: CanDisconnectVariables): Promise<CanDisconnectResponse> => {
-      try {
-        return post<CanDisconnectResponse>('/api/account/can-disconnect', {
-          method: variables.method,
-        });
-      } catch (error) {
-        // Check if it's a service unavailability error
-        if (isServiceUnavailableError(error)) {
-          throw new Error('Service is unavailable. Please try again later.');
-        }
-
-        // Re-throw other errors
-        throw error;
-      }
     },
   });
 }

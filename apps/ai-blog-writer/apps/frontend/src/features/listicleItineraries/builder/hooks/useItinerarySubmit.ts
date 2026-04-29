@@ -21,7 +21,8 @@ import {
   serializeStructuredDataTemplate,
 } from '../services/structured-data-template.service'
 import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
-import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
+import { stripNestedRowIdsFromItineraryDays } from '../utils/itinerary-payload-sanitize'
+import { readLexicalFromJsonText, stripLexicalEditorStateId } from '../utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
 
@@ -50,9 +51,10 @@ async function itineraryItemToPayloadBlock(params: {
 }): Promise<Record<string, unknown>> {
   const { item, humanLabel, relatedByBlockType } = params
 
-  const blurb = item.blurbMarkdown.trim()
+  const blurbRaw = item.blurbMarkdown.trim()
     ? await markdownToLexical(item.blurbMarkdown)
     : readLexicalFromJsonText(item.blurbJsonText || '', `${humanLabel} blurb`)
+  const blurb = stripLexicalEditorStateId(blurbRaw)
 
   if (!item.blurbMarkdown.trim() && !item.blurbJsonText?.trim()) {
     throw new Error(`${humanLabel} blurb is required (markdown or lexical JSON)`)
@@ -81,7 +83,6 @@ async function itineraryItemToPayloadBlock(params: {
       keyLocations: item.keyLocations.map((location) => (
         location.source === 'existing'
           ? {
-              id: location.id,
               source: location.source,
               relatedItem: location.relatedCollection && location.relatedItem
                 ? {
@@ -91,7 +92,6 @@ async function itineraryItemToPayloadBlock(params: {
                 : undefined,
             }
           : {
-              id: location.id,
               source: location.source,
               title: location.title.trim() || undefined,
               latitude: location.latitude.trim() ? Number(location.latitude) : undefined,
@@ -215,9 +215,10 @@ export function useItinerarySubmit({
     try {
       setIsSaving(true)
 
-      const headerIntro = submitDraft.header.introMarkdown.trim()
+      const headerIntroRaw = submitDraft.header.introMarkdown.trim()
         ? await markdownToLexical(submitDraft.header.introMarkdown)
         : readLexicalFromJsonText(submitDraft.header.introJsonText || '', 'Header intro')
+      const headerIntro = stripLexicalEditorStateId(headerIntroRaw)
 
       if (!submitDraft.header.introMarkdown.trim() && !submitDraft.header.introJsonText?.trim()) {
         throw new Error('Header intro is required (markdown or lexical JSON)')
@@ -277,6 +278,8 @@ export function useItinerarySubmit({
         status: targetStatus,
         articleType: 'listicle-itinerary',
       }
+
+      stripNestedRowIdsFromItineraryDays(body.itineraryDays)
 
       let doc = draft.payloadId
         ? await updateItinerary(draft.payloadId, body, authToken)

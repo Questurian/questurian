@@ -28,69 +28,8 @@ export interface UserWithMembership {
 }
 
 // ============================================================================
-// Payment & Stripe Types
-// ============================================================================
-
-/**
- * Payment form component props
- */
-export interface PaymentFormProps {
-  amount: number;
-  onSuccess?: () => void;
-  onError?: (error: string) => void;
-}
-
-/**
- * Stripe payment intent details
- */
-export interface PaymentIntent {
-  clientSecret: string;
-  amount: number;
-  currency: string;
-}
-
-/**
- * Result from payment processing
- */
-export interface PaymentResult {
-  success: boolean;
-  error?: string;
-  paymentIntent?: PaymentIntent;
-}
-
-// ============================================================================
-// Subscription Types
-// ============================================================================
-
-/**
- * Subscription details from Stripe
- */
-export interface SubscriptionDetails {
-  status: string;
-  currentPeriodEnd: string;
-}
-
-/**
- * Result from subscription cancellation
- */
-export interface CancellationResult {
-  success: boolean;
-  message: string;
-  subscriptionDetails?: SubscriptionDetails;
-}
-
-/**
- * Result from subscription renewal
- */
-export interface RenewalResult {
-  success: boolean;
-  message: string;
-}
-
-// ============================================================================
 // Component Props
 // ============================================================================
-
 /**
  * Props for MembershipGuard component
  */

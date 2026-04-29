@@ -8,10 +8,12 @@ import { useItinerarySubmit } from './useItinerarySubmit'
 const { createItineraryMock, markdownToLexicalMock } = vi.hoisted(() => ({
   createItineraryMock: vi.fn(),
   markdownToLexicalMock: vi.fn(async (markdown: string) => ({
+    id: 'reused-payload-lexical-id',
     root: {
       type: 'root',
       children: [
         {
+          id: 'lexical-node-dup',
           type: 'paragraph',
           children: [{ type: 'text', text: markdown }],
         },
@@ -76,7 +78,15 @@ function buildDraft(): ListicleItineraryDraft {
         latitude: '-13.516',
         longitude: '-71.978',
       },
-      keyLocations: [],
+      keyLocations: [{
+        id: 'tour-stop-1_key_location_0',
+        source: 'existing',
+        relatedCollection: 'attractions',
+        relatedItem: 202,
+        title: '',
+        latitude: '',
+        longitude: '',
+      }],
       image: null,
       instagramPost: null,
       blurbMarkdown: 'Manual stop blurb',
@@ -131,6 +141,13 @@ describe('useItinerarySubmit', () => {
     const itineraryDays = submitBody.itineraryDays as Array<{ items: Array<Record<string, unknown>> }>
     const submitItems = itineraryDays[0]?.items ?? []
     const firstItem = submitItems[0] || {}
+    const header = submitBody.header as { intro: Record<string, unknown> }
+
+    expect(header.intro).not.toHaveProperty('id')
+    const introRoot = (header.intro as { root?: { children?: Array<Record<string, unknown>> } }).root
+    expect(introRoot?.children?.[0]).not.toHaveProperty('id')
+    expect(firstItem.blurb).toBeDefined()
+    expect(firstItem.blurb as Record<string, unknown>).not.toHaveProperty('id')
 
     expect(submitBody).not.toHaveProperty('itineraryStartHour')
     expect(firstItem).not.toHaveProperty('timeHour')
@@ -143,6 +160,12 @@ describe('useItinerarySubmit', () => {
         latitude: -13.516,
         longitude: -71.978,
       },
+    })
+    const keyLocs = firstItem.keyLocations as Array<Record<string, unknown>>
+    expect(keyLocs[0]).not.toHaveProperty('id')
+    expect(keyLocs[0]).toMatchObject({
+      source: 'existing',
+      relatedItem: { relationTo: 'attractions', value: 202 },
     })
     expect(onError).not.toHaveBeenCalledWith(expect.stringMatching(/\S/))
   })

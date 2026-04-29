@@ -4,5 +4,4 @@
  */
 
 export * from './queryKeys';
-export * from './queryHelpers';
-export { queryClient, createQueryClient } from './queryClient';
+export { queryClient } from './queryClient';

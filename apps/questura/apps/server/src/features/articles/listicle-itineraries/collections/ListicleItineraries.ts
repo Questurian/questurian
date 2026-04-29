@@ -26,6 +26,7 @@ import {
   publishedAt,
   articleType,
 } from './fields'
+import { sanitizeListicleItineraryIncomingIds } from './sanitizeListicleClientIds'
 import {
   type ComputedItineraryBlock,
   validateListicleItineraryBlockRows,
@@ -149,6 +150,10 @@ export const ListicleItineraries: CollectionConfig = {
       },
     ],
     beforeValidate: [
+      async ({ data }) => {
+        sanitizeListicleItineraryIncomingIds(data as Record<string, unknown> | undefined)
+        return data
+      },
       syncLocationFields(),
       syncSharedNeighborhoodsField(),
       async ({ data, originalDoc, operation, req }) => {

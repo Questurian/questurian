@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams, notFound } from 'next/navigation';
 import { useProtectedRoute } from '@/lib/routing';
 import { useLoginModalStore } from '@/lib/stores/loginModalStore';
 import { useLocationStore } from '@/lib/stores/locationStore';
-
-type CityMode = 'explore' | 'stay' | 'move';
 
 function getParamValue(param: string | string[] | undefined): string | undefined {
   if (typeof param === 'string') {
@@ -20,43 +18,36 @@ function getParamValue(param: string | string[] | undefined): string | undefined
   return undefined;
 }
 
+const PRIMARY_COUNTRY = 'peru';
+const PRIMARY_CITY = 'lima';
+
 function CityDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams() ?? new URLSearchParams();
-  const params = ((useParams() ?? {}) as Record<string, string | string[]>);
+  const params = (useParams() ?? {}) as Record<string, string | string[]>;
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
   const setLastVisited = useLocationStore((state) => state.setLastVisited);
 
   const citySlug = getParamValue(params.city)?.toLowerCase();
   const countrySlug = getParamValue(params.country)?.toLowerCase();
-  const modeSlug = getParamValue(params.mode)?.toLowerCase();
-  const validModes: CityMode[] = ['explore', 'stay', 'move'];
-  const activeMode: CityMode = validModes.includes(modeSlug as CityMode) ? (modeSlug as CityMode) : 'explore';
 
-  useEffect(() => {
-    if (!countrySlug || !citySlug) {
-      return;
+  if (countrySlug && citySlug) {
+    if (countrySlug !== PRIMARY_COUNTRY || citySlug !== PRIMARY_CITY) {
+      notFound();
     }
-
-    const canonicalPath = `/${countrySlug}/${citySlug}/${activeMode}`;
-    const modeMissingOrInvalid = modeSlug !== activeMode;
-
-    if (modeMissingOrInvalid) {
-      router.replace(canonicalPath);
-    }
-  }, [router, countrySlug, citySlug, modeSlug, activeMode]);
+  }
 
   useEffect(() => {
     if (citySlug && countrySlug) {
-      setLastVisited({ cityId: citySlug, country: countrySlug, mode: activeMode });
+      setLastVisited({ cityId: citySlug, country: countrySlug });
     }
-  }, [citySlug, countrySlug, activeMode, setLastVisited]);
+  }, [citySlug, countrySlug, setLastVisited]);
 
   useProtectedRoute({
     onLoginRequired: (redirectPath) => {
       openLoginModal({
-        title: "Sign in required",
-        subtitle: "Please sign in to access your account",
+        title: 'Sign in required',
+        subtitle: 'Please sign in to access your account',
         onSuccess: () => {
           router.push(redirectPath);
         },
@@ -69,8 +60,6 @@ function CityDashboardContent() {
     const email = searchParams.get('email');
 
     if (error || email) {
-      console.log('📧 OAuth Error Query Params:', { error, email });
-
       let errorMessage = '';
       if (error === 'account_exists_local') {
         errorMessage = 'This email has a password. You can link Google in account page.';
@@ -83,26 +72,25 @@ function CityDashboardContent() {
       }
 
       openLoginModal({
-        title: "Sign In",
-        subtitle: "Please sign in to continue",
+        title: 'Sign In',
+        subtitle: 'Please sign in to continue',
         errorMessage,
-        prefillEmail: email || undefined
+        prefillEmail: email || undefined,
       });
 
-      const canonicalPath = `/${countrySlug}/${citySlug}/${activeMode}`;
-      router.replace(canonicalPath);
+      if (countrySlug && citySlug) {
+        router.replace(`/${countrySlug}/${citySlug}`);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, citySlug, countrySlug, activeMode]);
+  }, [searchParams, citySlug, countrySlug]);
 
   return null;
 }
 
 export function CityDashboardPage() {
   return (
-    <Suspense fallback={
-      null
-    }>
+    <Suspense fallback={null}>
       <CityDashboardContent />
     </Suspense>
   );

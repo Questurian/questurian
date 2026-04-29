@@ -9,11 +9,3 @@ export function getParamValue(param: string | string[] | undefined): string | un
 
   return undefined;
 }
-
-export function formatSlugLabel(value: string): string {
-  return value
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}

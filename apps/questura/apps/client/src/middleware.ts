@@ -3,9 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Only intercept requests to root "/"
   if (pathname === '/') {
-    // Allow users to browse the home page without redirect
     if (request.nextUrl.searchParams.has('browse')) {
       return NextResponse.next();
     }
@@ -14,11 +12,14 @@ export function middleware(request: NextRequest) {
 
     if (locationCookie) {
       try {
-        const { cityId, country, mode } = JSON.parse(locationCookie);
-        if (cityId && country && mode) {
-          return NextResponse.redirect(
-            new URL(`/${country}/${cityId}/${mode}`, request.url)
-          );
+        const parsed = JSON.parse(decodeURIComponent(locationCookie)) as {
+          cityId?: string;
+          country?: string;
+        };
+        const cityId = parsed.cityId;
+        const country = parsed.country;
+        if (cityId && country) {
+          return NextResponse.redirect(new URL(`/${country}/${cityId}`, request.url));
         }
       } catch {
         // Invalid cookie, continue to home page

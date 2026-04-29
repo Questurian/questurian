@@ -19,43 +19,45 @@ export default function MobileNavbar() {
 
   const countrySlug = getParamValue(params?.country)?.toLowerCase();
   const citySlug = getParamValue(params?.city)?.toLowerCase();
-  const modeSlug = getParamValue(params?.mode)?.toLowerCase();
   const hasCityContext = Boolean(countrySlug && citySlug);
-  const activeMode = (["explore", "stay", "move"] as const).includes(modeSlug as "explore" | "stay" | "move") ? modeSlug : "explore";
-  const logoHref = hasCityContext ? `/${countrySlug}/${citySlug}/${activeMode}` : "/";
+  const logoHref = hasCityContext ? `/${countrySlug}/${citySlug}` : "/";
 
   return (
-    <nav className="w-full border-b border-black/10 bg-[#ece9e3] px-3 py-2.5 380:px-4 380:py-3">
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <div className="flex h-8 min-w-0 items-center gap-2">
+    <nav className="h-[55px] min-h-[55px] w-full border-b border-black/10 bg-[#ece9e3] px-3 py-0">
+      <div className="flex h-[55px] min-h-[55px] items-center justify-between gap-3 max-[379.98px]:gap-2.5">
+        <div className="flex min-h-8 min-w-0 flex-1 items-center gap-2 max-[379.98px]:gap-2.5">
           <MenuIcon
             buttonClassName="h-8 w-8 shrink-0"
-            iconClassName="!text-black h-6 w-6"
+            iconClassName="!text-black block h-5 w-5 translate-y-px"
           />
-          <Link href={logoHref} className="cursor-pointer flex h-8 min-w-0 items-center">
-            <Logo className="whitespace-nowrap font-bold leading-none text-[0.92rem] tracking-[0.06em] 380:text-[1.02rem] 480:text-[1.12rem]" />
+          <Link
+            href={logoHref}
+            className="inline-flex min-w-0 cursor-pointer items-center self-center"
+          >
+            <Logo
+              variant="inline"
+              className="whitespace-nowrap font-bold leading-none text-[1.02rem] tracking-[0.06em] max-[479.98px]:font-extrabold 480:text-[1.35rem]"
+            />
           </Link>
         </div>
 
-        <div className="flex h-8 shrink-0 items-center gap-1.5 380:gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-[379.98px]:gap-2.5">
           {loading ? (
             <LoadingSpinner variant="inline" size="small" />
           ) : (
             <>
               {shouldShowSubscribe ? (
-                <Link href="/join" className="flex h-8 items-center">
-                  <div className="origin-right scale-90 380:scale-100">
-                    <SubscribeButton />
-                  </div>
+                <Link href="/join" className="flex h-8 items-center max-[379.98px]:h-auto">
+                  <SubscribeButton />
                 </Link>
               ) : null}
               {isAuthenticated ? (
                 <UserIcon
-                  buttonClassName="h-8 w-8"
-                  iconClassName="!text-black h-6 w-6"
+                  buttonClassName="h-8 w-8 shrink-0"
+                  iconClassName="!text-black h-5 w-5"
                 />
               ) : (
-                <SignInButton className="!text-black h-8 inline-flex items-center leading-none text-[0.63rem] 380:text-[0.69rem]" />
+                <SignInButton className="!text-black h-8 inline-flex items-center leading-none text-[0.69rem]" />
               )}
             </>
           )}

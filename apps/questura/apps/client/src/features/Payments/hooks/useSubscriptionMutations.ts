@@ -1,13 +1,10 @@
 /**
  * Subscription management mutation hooks
- * Handles subscription cancellation, renewal, and details
+ * Handles subscription cancellation, renewal, and checkout flows
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { queryKeys } from '@/lib/react-query';
-
-import { SUBSCRIPTION_CACHE } from '../constants/subscription.constants';
 import { resolveCheckoutReferralId } from '../services/checkout-referral.service';
 import {
   invalidateUserAfterCheckout,
@@ -19,7 +16,6 @@ import {
   cancelSubscriptionRequest,
   createCheckoutSessionRequest,
   createPortalSessionRequest,
-  fetchSubscriptionDetails,
   renewSubscriptionRequest,
 } from '../services/subscription-mutations.service';
 import type {
@@ -27,7 +23,6 @@ import type {
   CheckoutSessionResponse,
   CreateCheckoutSessionVariables,
   RenewalResult,
-  SubscriptionDetails,
   UserMutationContext,
 } from '../types/subscription-mutations.types';
 
@@ -52,15 +47,6 @@ export function useRenewSubscriptionMutation() {
     onError: (_error, _variables, context) => {
       rollbackUserMutation(queryClient, context);
     },
-  });
-}
-
-export function useSubscriptionDetailsQuery() {
-  return useQuery<SubscriptionDetails | null>({
-    queryKey: queryKeys.subscriptionDetails(),
-    queryFn: fetchSubscriptionDetails,
-    staleTime: SUBSCRIPTION_CACHE.staleTime,
-    gcTime: SUBSCRIPTION_CACHE.gcTime,
   });
 }
 

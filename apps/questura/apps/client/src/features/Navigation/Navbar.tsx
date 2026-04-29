@@ -15,7 +15,7 @@ export default function Navbar() {
   // This prevents hydration mismatches between server and client
   if (!hasMounted) {
     return (
-      <nav className="h-28 w-full animate-pulse bg-[#252629]/90" />
+      <nav className="h-[55px] w-full animate-pulse bg-[#ece9e3] 1024:h-24" />
     );
   }
 
@@ -24,7 +24,7 @@ export default function Navbar() {
       <div className="hidden 1024:block">
         <DesktopNavbar />
       </div>
-      <div className="1024:hidden">
+      <div className="h-[55px] 1024:hidden">
         <MobileNavbar />
       </div>
     </nav>

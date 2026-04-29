@@ -4,22 +4,35 @@ interface LogoProps {
   className?: string;
   subtitle?: string;
   subtitleClassName?: string;
+  /** Use in toolbars: single line, no centered block wrapper (pairs cleanly with icons). */
+  variant?: "default" | "inline";
 }
 
 export default function Logo({
   className = "",
   subtitle = "",
   subtitleClassName = "",
+  variant = "default",
 }: LogoProps) {
-  return (
-    <div className="text-center">
-      <h1
-        className={`
-          font-display text-[#25292d] uppercase font-semibold leading-none m-0 p-0
+  const isInline = variant === "inline";
+  const wrapClass = isInline ? "inline-flex min-w-0 items-center" : "text-center";
+  /* Inline logos pass all font sizes via `className`. Default sizes here fight those utilities below `380:` because Tailwind does not guarantee HTML class order for conflicts. */
+  const displayTypeScale = isInline
+    ? ""
+    : `
           tracking-[0.12em] text-[1.25rem]
           480:text-[1.4rem]
           550:text-[1.55rem]
           1024:text-[2.9rem]
+        `;
+
+  return (
+    <div className={wrapClass}>
+      <h1
+        className={`
+          font-display text-[#25292d] uppercase font-semibold leading-none m-0 p-0
+          ${displayTypeScale}
+          ${isInline ? "text-left" : ""}
           ${className}
         `}
       >

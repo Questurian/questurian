@@ -14,15 +14,5 @@ export const queryKeys = {
 
   // Subscription queries
   subscription: ['subscription'] as const,
-  subscriptionDetails: () => [...queryKeys.subscription, 'details'] as const,
 
-  // Payment queries
-  payment: ['payment'] as const,
-  paymentMethods: () => [...queryKeys.payment, 'methods'] as const,
 } as const;
-
-/**
- * Helper to invalidate all user-related queries
- * Use this after mutations that affect user data
- */
-export const userQueryKeys = [queryKeys.user, queryKeys.account, queryKeys.subscription] as const;

@@ -11,16 +11,6 @@ export interface RenewalResult {
   message: string;
 }
 
-export interface SubscriptionDetails {
-  status: string;
-  currentPeriodEnd: string;
-  [key: string]: unknown;
-}
-
-export interface SubscriptionDetailsApiResponse {
-  subscriptionDetails: SubscriptionDetails;
-}
-
 export interface PortalSessionResponse {
   url?: string;
 }

@@ -47,7 +47,7 @@ export const WhereToEatDrinkBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: 'single-type-listicles',
+      relationTo: ['single-type-listicles'] as const,
       hasMany: true,
       admin: {
         description: 'Dining single-type listicles in display order.',

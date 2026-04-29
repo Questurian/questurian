@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
-import { SubNav } from "../components/SubNav";
 import {
   MenuIcon,
   Logo,
@@ -10,7 +9,6 @@ import {
   SignInButton,
   UserIcon,
 } from "../shared/components";
-import { LocationPill } from "./components/LocationPill";
 import { useDesktopNavbarState } from "./hooks/use-desktop-navbar-state";
 
 export default function DesktopNavbar() {
@@ -21,46 +19,17 @@ export default function DesktopNavbar() {
     hasCityContext,
     countrySlug,
     citySlug,
-    activeMode,
-    cityName,
-    countryName,
-    countryCode,
-    activeCitySlug,
-    activeCountrySlug,
-    handleModeChange,
   } = useDesktopNavbarState();
 
   return (
     <div className="w-full overflow-hidden border-b border-black/10">
-      <nav className="w-full bg-[#252629] px-6 py-1.5">
-        <div className="flex w-full items-center justify-between gap-4">
-          <LocationPill
-            cityName={cityName}
-            countryName={countryName}
-            countryCode={countryCode}
-            currentCityId={activeCitySlug}
-            currentCountry={activeCountrySlug}
-          />
-          <SubNav
-            compact
-            activeMode={activeMode}
-            getHref={
-              hasCityContext
-                ? (mode) => `/${countrySlug}/${citySlug}/${mode}`
-                : undefined
-            }
-            onModeSelect={handleModeChange}
-          />
-        </div>
-      </nav>
-
-      <div className="w-full bg-[#ece9e3] px-8 py-6">
-        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center">
+      <div className="w-full bg-[#ece9e3] px-6 py-5 1024:px-8 1024:py-6">
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="justify-self-start">
-            <MenuIcon iconClassName="!text-black" />
+            <MenuIcon iconClassName="!text-black h-6 w-6" />
           </div>
           <Link
-            href={hasCityContext ? `/${countrySlug}/${citySlug}/${activeMode}` : "/"}
+            href={hasCityContext ? `/${countrySlug}/${citySlug}` : "/"}
             className="cursor-pointer justify-self-center"
           >
             <Logo />
@@ -76,7 +45,7 @@ export default function DesktopNavbar() {
                   </Link>
                 ) : null}
                 {isAuthenticated ? (
-                  <UserIcon iconClassName="!text-black" />
+                  <UserIcon iconClassName="!text-black h-6 w-6" />
                 ) : (
                   <SignInButton className="!text-black" />
                 )}
