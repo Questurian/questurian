@@ -45,7 +45,7 @@ export default function DesktopNavbar() {
                   </Link>
                 ) : null}
                 {isAuthenticated ? (
-                  <UserIcon iconClassName="!text-black h-6 w-6" />
+                  <UserIcon />
                 ) : (
                   <SignInButton className="!text-black" />
                 )}

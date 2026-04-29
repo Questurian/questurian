@@ -1,8 +1,12 @@
+'use client';
+
 import Link from 'next/link';
 import { isActiveMember } from '../lib/membership';
+import { useDevStore } from '@/lib/stores/devStore';
 import type { MembershipGuardProps } from '../types';
 
 export default function MembershipGuard({ user, children, fallback }: MembershipGuardProps) {
+  useDevStore((s) => s.membershipOverride);
   const hasActiveMembership = user ? isActiveMember(user) : false;
 
   if (hasActiveMembership) {

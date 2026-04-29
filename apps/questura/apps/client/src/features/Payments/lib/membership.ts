@@ -1,6 +1,11 @@
 import type { MembershipStatus, UserWithMembership } from '../types';
+import { useDevStore } from '@/lib/stores/devStore';
 
 export function isActiveMember(user: UserWithMembership): boolean {
+  if (process.env.NODE_ENV === 'development' && useDevStore.getState().membershipOverride) {
+    return true;
+  }
+
   if (!user.isPaidMember) {
     return false;
   }

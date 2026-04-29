@@ -3,6 +3,7 @@
 import { Logo, MenuIcon, SignInButton, SubscribeButton, UserIcon } from "./components";
 import Link from "next/link";
 import { useAuth } from "@/lib/user/hooks";
+import { useMembership } from "@/features/Payments/hooks/useMembership";
 import { useParams } from "next/navigation";
 import LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
 
@@ -15,7 +16,8 @@ function getParamValue(param: string | string[] | undefined): string | undefined
 export default function MobileNavbar() {
   const { user, loading, isAuthenticated } = useAuth();
   const params = useParams();
-  const shouldShowSubscribe = !isAuthenticated || user?.subscriptionStatus !== "active";
+  const { isActive } = useMembership(user);
+  const shouldShowSubscribe = !isAuthenticated || !isActive;
 
   const countrySlug = getParamValue(params?.country)?.toLowerCase();
   const citySlug = getParamValue(params?.city)?.toLowerCase();
@@ -52,10 +54,7 @@ export default function MobileNavbar() {
                 </Link>
               ) : null}
               {isAuthenticated ? (
-                <UserIcon
-                  buttonClassName="h-8 w-8 shrink-0"
-                  iconClassName="!text-black h-5 w-5"
-                />
+                <UserIcon buttonClassName="shrink-0" />
               ) : (
                 <SignInButton className="!text-black h-8 inline-flex items-center leading-none text-[0.69rem]" />
               )}

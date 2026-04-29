@@ -1,27 +1,35 @@
 "use client";
 
-import { User } from "lucide-react";
+import { User, ChevronDown } from "lucide-react";
 import { useUserModalStore } from "@/lib/stores/userModalStore";
 
 interface UserIconProps {
   buttonClassName?: string;
-  iconClassName?: string;
 }
 
-export default function UserIcon({ buttonClassName = "", iconClassName = "" }: UserIconProps) {
+export default function UserIcon({ buttonClassName = "" }: UserIconProps) {
   const { openUserModal } = useUserModalStore();
 
   return (
     <button
       onClick={openUserModal}
-      className={`inline-flex items-center justify-center p-0 leading-none bg-transparent border-0 cursor-pointer focus:outline-none ${buttonClassName}`}
-      aria-label="Open user modal"
+      className={`group inline-flex shrink-0 cursor-pointer items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-1 ${buttonClassName}`}
+      aria-label="Open user menu"
     >
-      <User
-        aria-hidden
-        strokeWidth={1.5}
-        className={`shrink-0 text-white cursor-pointer ${iconClassName}`}
-      />
+      <span className="flex h-8 items-center gap-2 rounded-full bg-[#e2ded8] pl-[5px] pr-3.5 transition-colors duration-150 group-hover:bg-[#d8d4cd] 480:h-10 480:pl-[6px] 480:pr-4">
+        <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#f5f3ef] to-[#e0dcd6] ring-1 ring-black/[0.04] 480:h-[28px] 480:w-[28px]">
+          <User
+            aria-hidden
+            strokeWidth={1.75}
+            className="h-[9px] w-[9px] text-stone-900 480:h-[11px] 480:w-[11px]"
+          />
+        </span>
+        <ChevronDown
+          aria-hidden
+          strokeWidth={2.5}
+          className="h-[9px] w-[9px] shrink-0 text-stone-500/70 480:h-[10px] 480:w-[10px]"
+        />
+      </span>
     </button>
   );
 }
