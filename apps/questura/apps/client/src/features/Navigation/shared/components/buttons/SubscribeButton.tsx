@@ -20,7 +20,7 @@ export default function SubscribeButton() {
         h-[32px] w-[90px] px-1.5 text-[0.690rem]
         rounded-[3px] border-2 border-white/20
         bg-[#3B5BDB]
-        text-white font-semibold font-[var(--font-geist-sans)] tracking-[0.02em]
+        text-white font-semibold font-[var(--font-dm-sans)] tracking-[0.02em]
         transition-colors duration-150 ease-out
         hover:bg-[#3451C7]
         active:bg-[#2F44B0]

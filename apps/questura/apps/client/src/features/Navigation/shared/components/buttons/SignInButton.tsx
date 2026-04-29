@@ -23,9 +23,9 @@ export default function SignInButton({ onClick, className = "" }: SignInButtonPr
         /* Base styles */
         cursor-pointer
         inline-flex items-center justify-center whitespace-nowrap leading-none
-        text-[0.690rem] text-white font-bold font-[var(--font-geist-sans)]
+        text-[0.690rem] text-white font-normal font-[var(--font-dm-sans)]
         hover:underline hover:opacity-80 transition-opacity
-        max-[379.98px]:h-[30px] max-[379.98px]:text-[0.72rem] max-[379.98px]:font-medium
+        max-[379.98px]:h-[30px] max-[379.98px]:text-[0.72rem] max-[379.98px]:font-normal
         /* 280px breakpoint */
         /* 320px breakpoint */
         /* 380px breakpoint */
