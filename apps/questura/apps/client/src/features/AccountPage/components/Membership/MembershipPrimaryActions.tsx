@@ -9,14 +9,14 @@ export function MembershipPrimaryActions({
   onReactivate,
 }: MembershipPrimaryActionsProps) {
   return (
-    <div className="flex flex-col gap-2 ml-4">
+    <div className="flex flex-col gap-2 480:ml-4 mt-3 480:mt-0">
       {showUpgradeButton && (
         <Link
           href="/purchase/monthly"
           className="
             inline-block bg-[#2C2C2C] hover:bg-[#1A1A1A]
-            text-white py-2 px-5 rounded
-            text-[0.82rem] font-medium transition-colors
+            text-white py-2 px-4 480:px-5 rounded
+            text-[0.8rem] 480:text-[0.84rem] font-medium transition-colors
             whitespace-nowrap
           "
         >
@@ -30,8 +30,8 @@ export function MembershipPrimaryActions({
           disabled={isRenewing}
           className="
             inline-block bg-[#2C2C2C] hover:bg-[#1A1A1A]
-            text-white py-2 px-5 rounded
-            text-[0.82rem] font-medium transition-colors
+            text-white py-2 px-4 480:px-5 rounded
+            text-[0.8rem] 480:text-[0.84rem] font-medium transition-colors
             whitespace-nowrap disabled:opacity-50
             disabled:cursor-not-allowed cursor-pointer
           "

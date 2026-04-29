@@ -13,18 +13,18 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
   const hasGoogleAuth = user?.authProvider === 'google' || user?.authProvider === 'dual';
 
   return (
-    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8">
+    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
       <div>
-        <h3 className="font-display text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">
+        <h3 className="font-display text-[1rem] 480:text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">
           Connected accounts
         </h3>
-        <p className="text-[0.84rem] text-[#6b6a68] leading-[1.65] mb-5">
+        <p className="text-[0.8rem] 480:text-[0.84rem] text-[#6b6a68] leading-[1.65] mb-4 480:mb-5">
           You connected these accounts when you signed in.
         </p>
 
         {hasGoogleAuth ? (
           <>
-            <div className="flex items-center justify-between p-4 bg-white border border-[#e5e2dc] rounded-sm mb-4">
+            <div className="flex flex-col 480:flex-row 480:items-center 480:justify-between p-3 480:p-4 bg-white border border-[#e5e2dc] rounded-sm mb-4">
               <div className="flex items-center space-x-3 min-w-0">
                 <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center border border-[#e5e2dc] flex-shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -35,8 +35,8 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[0.88rem] font-medium text-[#1A1A1A]">Google</div>
-                  <div className="text-[0.82rem] text-[#6b6a68] truncate">{user?.email}</div>
+                  <div className="text-[0.84rem] 480:text-[0.88rem] font-medium text-[#1A1A1A]">Google</div>
+                  <div className="text-[0.78rem] 480:text-[0.82rem] text-[#6b6a68] truncate">{user?.email}</div>
                 </div>
               </div>
               <button
@@ -44,7 +44,8 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
                 className="
                   text-[0.82rem] text-[#c62828] hover:text-[#b71c1c]
                   underline underline-offset-2 cursor-pointer
-                  transition-colors ml-4 flex-shrink-0
+                  transition-colors 480:ml-4 flex-shrink-0
+                  mt-2 480:mt-0 self-start 480:self-auto
                 "
               >
                 Disconnect
@@ -52,8 +53,8 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
             </div>
 
             {success && (
-              <div className="bg-[#e8f5e9] border border-[#c8e6c9] text-[#2e7d32] px-4 py-3 rounded-sm relative flex items-start justify-between">
-                <span className="text-[0.84rem] leading-[1.5]">{success}</span>
+              <div className="bg-[#e8f5e9] border border-[#c8e6c9] text-[#2e7d32] px-3 480:px-4 py-2.5 480:py-3 rounded-sm relative flex items-start justify-between">
+                <span className="text-[0.8rem] 480:text-[0.84rem] leading-[1.5]">{success}</span>
                 {onClearMessages && (
                   <button
                     onClick={onClearMessages}
@@ -68,8 +69,8 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
             )}
 
             {error && (
-              <div className="bg-[#fce4ec] border border-[#f8bbd0] text-[#c62828] px-4 py-3 rounded-sm relative flex items-start justify-between">
-                <span className="text-[0.84rem] leading-[1.5]">{error}</span>
+              <div className="bg-[#fce4ec] border border-[#f8bbd0] text-[#c62828] px-3 480:px-4 py-2.5 480:py-3 rounded-sm relative flex items-start justify-between">
+                <span className="text-[0.8rem] 480:text-[0.84rem] leading-[1.5]">{error}</span>
                 {onClearMessages && (
                   <button
                     onClick={onClearMessages}
@@ -84,12 +85,12 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
             )}
           </>
         ) : (
-          <div className="text-center py-6">
-            <p className="text-[0.84rem] text-[#9a9894] mb-4">No connected accounts</p>
+          <div className="py-4 480:py-6">
+            <p className="text-[0.82rem] 480:text-[0.84rem] text-[#9a9894] mb-3 480:mb-4">No connected accounts</p>
             <button
               onClick={onLinkGoogle}
               className="
-                inline-flex items-center px-5 py-2.5
+                w-full 480:w-auto inline-flex items-center justify-center px-5 py-2.5
                 border border-[#d7d4ce] text-[0.84rem] font-medium
                 rounded-sm text-[#1A1A1A] bg-white
                 hover:bg-[#f0efeb] cursor-pointer transition-colors

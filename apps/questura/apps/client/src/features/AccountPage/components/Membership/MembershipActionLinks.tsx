@@ -8,7 +8,7 @@ export function MembershipActionLinks({
   onOpenCancelModal,
 }: MembershipActionLinksProps) {
   return (
-    <div className="flex gap-4 mb-4">
+    <div className="flex flex-wrap gap-3 480:gap-4 mb-4">
       {canUpdatePayment && (
         <button
           onClick={onUpdatePayment}

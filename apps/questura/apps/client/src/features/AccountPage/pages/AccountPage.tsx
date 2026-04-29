@@ -63,40 +63,23 @@ function AccountContent() {
   return (
     <div className="min-h-screen">
       {/* ── Header ── */}
-      <header className="px-6 pt-10 pb-2 480:pt-12 768:pt-14">
+      <header className="px-4 480:px-6 pt-8 480:pt-12 768:pt-14">
         <div className="max-w-2xl mx-auto">
-          <p
-            className="
-              text-[0.68rem] uppercase tracking-[0.18em] font-semibold
-              text-[#9a9894] mb-3
-            "
-          >
-            Account Settings
-          </p>
           <h1
             className="
-              font-display text-[1.55rem] text-[#1A1A1A] leading-[1.15]
+              font-display text-[1.45rem] text-[#1A1A1A] leading-[1.15]
               480:text-[1.8rem]
               768:text-[2.1rem]
             "
           >
             Your Account
           </h1>
-          <p
-            className="
-              mt-2.5 text-[0.9rem] text-[#6b6a68] leading-[1.6]
-              480:text-[0.95rem]
-              768:text-[1rem]
-            "
-          >
-            {user?.email}
-          </p>
         </div>
       </header>
 
       {/* ── Sections ── */}
-      <section className="px-6 pt-8 pb-16 480:pt-10 768:pt-12 768:pb-20">
-        <div className="max-w-2xl mx-auto space-y-5 768:space-y-6">
+      <section className="px-4 480:px-6 pt-6 480:pt-10 pb-16 768:pt-12 768:pb-20">
+        <div className="max-w-2xl mx-auto space-y-4 480:space-y-5 768:space-y-6">
           <EmailSection user={user} />
 
           <PasswordSection

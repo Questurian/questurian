@@ -13,10 +13,10 @@ export function MembershipSection({ user }: MembershipSectionProps) {
   const vm = useMembershipSection(user);
 
   return (
-    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8">
-      <div className="flex justify-between items-start">
+    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
+      <div className="flex flex-col 480:flex-row 480:justify-between 480:items-start">
         <div className="flex-1 min-w-0">
-          <h3 className="font-display text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">Membership</h3>
+          <h3 className="font-display text-[1rem] 480:text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">Membership</h3>
 
           <MembershipAlerts
             isRenewing={vm.isRenewing}
