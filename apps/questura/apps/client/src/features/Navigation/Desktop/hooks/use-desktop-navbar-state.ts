@@ -18,6 +18,7 @@ export function useDesktopNavbarState() {
   return {
     loading,
     isAuthenticated,
+    isActive,
     shouldShowSubscribe,
     hasCityContext,
     countrySlug,

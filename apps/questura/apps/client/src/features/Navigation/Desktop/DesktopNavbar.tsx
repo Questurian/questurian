@@ -15,6 +15,7 @@ export default function DesktopNavbar() {
   const {
     loading,
     isAuthenticated,
+    isActive,
     shouldShowSubscribe,
     hasCityContext,
     countrySlug,
@@ -45,7 +46,7 @@ export default function DesktopNavbar() {
                   </Link>
                 ) : null}
                 {isAuthenticated ? (
-                  <UserIcon />
+                  <UserIcon isMember={isActive} />
                 ) : (
                   <SignInButton className="!text-black" />
                 )}

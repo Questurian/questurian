@@ -54,7 +54,7 @@ export default function MobileNavbar() {
                 </Link>
               ) : null}
               {isAuthenticated ? (
-                <UserIcon buttonClassName="shrink-0" />
+                <UserIcon buttonClassName="shrink-0" isMember={isActive} />
               ) : (
                 <SignInButton className="!text-black h-8 inline-flex items-center leading-none text-[0.69rem]" />
               )}
