@@ -17,6 +17,7 @@ vi.mock('@/features/auth/lib/auth-middleware', () => ({
 
 import { GET as getCandidates } from '@/app/api/homepage-featured-content/candidates/route'
 import { PUT as putHomepageFeaturedContent } from '@/app/api/homepage-featured-content/route'
+import { GET as getPublicLocationHomepage } from '@/app/api/public/location-homepages/[country]/[city]/route'
 import { authenticateRequest } from '@/features/auth/lib/auth-middleware'
 import { getPayload } from 'payload'
 
@@ -55,5 +56,36 @@ describe('homepage featured content routes', () => {
     expect(response.status).toBe(403)
     expect(data.message).toContain('Access denied')
     expect(getPayload).not.toHaveBeenCalled()
+  })
+
+  it('returns only pageBlocks from the public location homepage endpoint', async () => {
+    const payload = {
+      find: vi.fn()
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [{ id: 10, locationKey: 'peru|lima', level: 'city' }],
+        })
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [
+            {
+              id: 20,
+              isEnabled: true,
+              location: { id: 10, locationKey: 'peru|lima', level: 'city' },
+              pageBlocks: [],
+            },
+          ],
+        }),
+    }
+    vi.mocked(getPayload).mockResolvedValue(payload as never)
+
+    const response = await getPublicLocationHomepage(
+      new Request('http://localhost:4000/api/public/location-homepages/peru/lima') as never,
+      { params: Promise.resolve({ country: 'peru', city: 'lima' }) },
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data).toEqual({ pageBlocks: [] })
   })
 })

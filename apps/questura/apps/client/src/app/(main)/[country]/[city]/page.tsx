@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { CityDashboardPage, CityHomepageContent, fetchCityHomepage } from '@/features/CityDashboard';
+import {
+  CityDashboardPage,
+  CityHomepageContent,
+  CityHomepagePayloadDebugLogger,
+  fetchCityHomepage,
+} from '@/features/CityDashboard';
 
 const PRIMARY_COUNTRY = 'peru';
 const PRIMARY_CITY = 'lima';
@@ -14,9 +19,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {};
   }
 
-  const data = await fetchCityHomepage(country, city);
-  const cityLabel = data?.location?.cityName ?? 'Lima';
-  const countryLabel = data?.location?.countryName ?? 'Peru';
+  const cityLabel = 'Lima';
+  const countryLabel = 'Peru';
 
   return {
     title: `${cityLabel}, ${countryLabel} — Questurian`,
@@ -37,15 +41,14 @@ export default async function CityPage({ params }: Props) {
 
   const data = await fetchCityHomepage(country, city);
 
-  console.log('[CityPage] fetchCityHomepage result:', JSON.stringify(data, null, 2));
-
   if (!data) {
     notFound();
   }
 
   return (
     <>
-      <CityHomepageContent pageBlocks={data.pageBlocks} location={data.location} />
+      <CityHomepagePayloadDebugLogger data={data} />
+      <CityHomepageContent pageBlocks={data.pageBlocks} />
       <CityDashboardPage citySlug={city} countrySlug={country} />
     </>
   );

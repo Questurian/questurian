@@ -194,4 +194,79 @@ describe('homepage featured content service', () => {
     expect(selection.items[0]?.imageUrl).toBe('https://cdn.example/og.jpg')
     expect(selection.items[0]?.imageUrlSquare).toBe('https://cdn.example/sq.jpg')
   })
+
+  it('includes article preview metadata on selection items', async () => {
+    const payload = createPayloadMock()
+    payload.findGlobal.mockResolvedValue({
+      items: [{ relationTo: 'articles', value: 1 }],
+    })
+    payload.findByID.mockResolvedValue({
+      id: 1,
+      title: 'Article',
+      slug: 'article',
+      status: 'published',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      publishedAt: '2026-04-01T10:00:00.000Z',
+      seo: {
+        seoSection: {
+          metaDescription: 'Useful Lima preview copy.',
+        },
+      },
+      author: {
+        id: 7,
+        firstName: 'Ana',
+        lastName: 'Rivera',
+        email: 'ana@example.com',
+      },
+      category: {
+        id: 3,
+        name: 'Guides',
+        slug: 'guides',
+      },
+    })
+
+    const selection = await getHomepageFeaturedSelection(payload as never, { allowDrafts: true })
+
+    expect(selection.items[0]).toMatchObject({
+      metaDescription: 'Useful Lima preview copy.',
+      excerpt: 'Useful Lima preview copy.',
+      authorLabel: 'Ana Rivera',
+      author: {
+        id: 7,
+        name: 'Ana Rivera',
+        firstName: 'Ana',
+        lastName: 'Rivera',
+      },
+      category: {
+        id: 3,
+        name: 'Guides',
+        slug: 'guides',
+      },
+    })
+  })
+
+  it('reads metaDescription from top-level seoSection on listicles', async () => {
+    const payload = createPayloadMock()
+    payload.findGlobal.mockResolvedValue({
+      items: [{ relationTo: 'single-type-listicles', value: 12 }],
+    })
+    payload.findByID.mockResolvedValue({
+      id: 12,
+      title: 'Best Seafood Restaurants Near Miraflores',
+      slug: 'best-seafood-restaurants-near-miraflores',
+      status: 'draft',
+      seoSection: {
+        metaDescription: 'Discover the 21 best seafood restaurants in Miraflores, Lima.',
+      },
+    })
+
+    const selection = await getHomepageFeaturedSelection(payload as never, { allowDrafts: true })
+
+    expect(selection.items[0]).toMatchObject({
+      relationTo: 'single-type-listicles',
+      id: 12,
+      metaDescription: 'Discover the 21 best seafood restaurants in Miraflores, Lima.',
+      excerpt: 'Discover the 21 best seafood restaurants in Miraflores, Lima.',
+    })
+  })
 })

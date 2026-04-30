@@ -29,6 +29,19 @@ export type HomepageFeaturedItemRef = {
   id: number
 }
 
+export type HomepageFeaturedAuthor = {
+  id: number | null
+  name: string | null
+  firstName: string | null
+  lastName: string | null
+}
+
+export type HomepageFeaturedCategory = {
+  id: number | null
+  name: string | null
+  slug: string | null
+}
+
 export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   slot?: number
   title: string
@@ -44,9 +57,15 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
    */
   imageUrlSquare: string | null
   /** SEO meta description when present (articles, listicles, itineraries). */
+  metaDescription: string | null
+  /** Backward-compatible alias for `metaDescription`. */
   excerpt: string | null
+  /** Structured author preview when the author relationship is populated. */
+  author: HomepageFeaturedAuthor | null
   /** Resolved author display name when relationship populated at depth ≥ 1. */
   authorLabel: string | null
+  /** Structured article category preview when present. */
+  category: HomepageFeaturedCategory | null
 }
 
 export type HomepageFeaturedInvalidReason =

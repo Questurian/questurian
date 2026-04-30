@@ -1,20 +1,5 @@
 import { config } from '@/lib/config'
-
-export type CityHomepageLocation = {
-  id: number
-  locationKey: string | null
-  level: string | null
-  countryName: string | null
-  cityName: string | null
-  neighborhoodName: string | null
-}
-
-export type CityHomepageResponse = {
-  id: number
-  isEnabled: boolean
-  location: CityHomepageLocation | null
-  pageBlocks: unknown[]
-}
+import type { CityHomepageResponse } from '../types'
 
 export async function fetchCityHomepage(
   country: string,

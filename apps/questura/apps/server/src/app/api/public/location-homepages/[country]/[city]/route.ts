@@ -4,7 +4,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import {
   type LocationHomepageDoc,
-  formatHomepageDoc,
+  formatPublicLocationHomepageDoc,
   resolveLocationGridScope,
   resolvePageBlocks,
 } from '@/features/homepage-featured-content'
@@ -64,7 +64,7 @@ export async function GET(
     const locationGridScope = await resolveLocationGridScope(payload, doc.location)
     const resolvedBlocks = await resolvePageBlocks(payload, doc.pageBlocks ?? [], locationGridScope)
 
-    return NextResponse.json(formatHomepageDoc(doc, resolvedBlocks))
+    return NextResponse.json(formatPublicLocationHomepageDoc(resolvedBlocks))
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to load location homepage.') },

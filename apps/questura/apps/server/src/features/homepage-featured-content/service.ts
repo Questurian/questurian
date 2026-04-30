@@ -31,6 +31,8 @@ type PayloadDocLike = {
   headerSection?: unknown
   header?: unknown
   author?: unknown
+  category?: unknown
+  seoSection?: unknown
   seo?: unknown
 }
 
@@ -47,10 +49,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function extractSeoExcerpt(doc: PayloadDocLike): string | null {
+  const topLevelSection = isRecord(doc.seoSection) ? doc.seoSection : null
   const seoRoot = isRecord(doc.seo) ? doc.seo : null
-  if (!seoRoot) return null
+  const nestedSection = seoRoot && isRecord(seoRoot.seoSection) ? seoRoot.seoSection : null
 
-  const section = isRecord(seoRoot.seoSection) ? seoRoot.seoSection : null
+  const section = topLevelSection ?? nestedSection
   if (!section) return null
 
   const meta = section.metaDescription
@@ -59,17 +62,41 @@ function extractSeoExcerpt(doc: PayloadDocLike): string | null {
   return null
 }
 
-function extractAuthorLabel(doc: PayloadDocLike): string | null {
+function extractAuthorPreview(doc: PayloadDocLike): HomepageFeaturedCandidate['author'] {
   const author = doc.author
   if (!isRecord(author)) return null
 
   const first = typeof author.firstName === 'string' ? author.firstName.trim() : ''
   const last = typeof author.lastName === 'string' ? author.lastName.trim() : ''
   const name = [first, last].filter(Boolean).join(' ')
-  if (name) return name
 
   const email = typeof author.email === 'string' ? author.email.trim() : ''
-  return email || null
+  const displayName = name || email || null
+
+  return {
+    id: normalizeNumericId(author.id),
+    name: displayName,
+    firstName: first || null,
+    lastName: last || null,
+  }
+}
+
+function extractCategoryPreview(doc: PayloadDocLike): HomepageFeaturedCandidate['category'] {
+  const category = doc.category
+  if (!isRecord(category)) return null
+
+  const name = typeof category.name === 'string' && category.name.trim()
+    ? category.name.trim()
+    : null
+  const slug = typeof category.slug === 'string' && category.slug.trim()
+    ? category.slug.trim()
+    : null
+
+  return {
+    id: normalizeNumericId(category.id),
+    name,
+    slug,
+  }
 }
 
 function assetDisplayUrl(asset: Record<string, unknown>): string | null {
@@ -227,6 +254,9 @@ function normalizeHomepageFeaturedCandidate(
   relationTo: HomepageFeaturedCollection,
   doc: PayloadDocLike,
 ): HomepageFeaturedCandidate {
+  const metaDescription = extractSeoExcerpt(doc)
+  const author = extractAuthorPreview(doc)
+
   return {
     relationTo,
     id: normalizeNumericId(doc.id) ?? 0,
@@ -238,8 +268,11 @@ function normalizeHomepageFeaturedCandidate(
     collectionLabel: getHomepageFeaturedCollectionLabel(relationTo),
     imageUrl: extractFeaturedImageUrl(doc),
     imageUrlSquare: extractFeaturedSquareImageUrl(doc),
-    excerpt: extractSeoExcerpt(doc),
-    authorLabel: extractAuthorLabel(doc),
+    metaDescription,
+    excerpt: metaDescription,
+    author,
+    authorLabel: author?.name ?? null,
+    category: extractCategoryPreview(doc),
   }
 }
 

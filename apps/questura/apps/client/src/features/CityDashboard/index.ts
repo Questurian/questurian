@@ -1,5 +1,6 @@
 export { CityDashboardPage } from './pages';
 export { CityHomepageContent } from './components/CityHomepageContent';
+export { CityHomepagePayloadDebugLogger } from './components/CityHomepagePayloadDebugLogger';
 export { fetchCityHomepage } from './lib/fetchCityHomepage';
 export type { CityDashboardProps } from './types';
-export type { CityHomepageResponse, CityHomepageLocation } from './lib/fetchCityHomepage';
+export type { CityHomepageResponse, CityHomepageLocation } from './types';

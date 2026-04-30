@@ -1,15 +1,32 @@
-import type { CityHomepageLocation } from '../lib/fetchCityHomepage'
+import { createElement } from 'react'
 
-interface CityHomepageContentProps {
-  location: CityHomepageLocation | null
-  pageBlocks: unknown[]
+import { getHomepageBlockLayout } from '../lib/blockLayoutRegistry'
+import type { CityHomepageContentProps } from '../types'
+
+function getBlockKey(block: CityHomepageContentProps['pageBlocks'][number], index: number): string {
+  return 'id' in block && typeof block.id === 'string'
+    ? block.id
+    : `${block.blockType}-${index}`
 }
 
-export function CityHomepageContent({ location, pageBlocks }: CityHomepageContentProps) {
-  // Block rendering will be built out here as each block type gets a UI component.
-  // Returning null for now — the SSR metadata (generateMetadata) and data-fetch
-  // plumbing are already wired up regardless of what this renders.
-  void location
-  void pageBlocks
-  return null
+export function CityHomepageContent({ location = null, pageBlocks }: CityHomepageContentProps) {
+  const renderedBlocks = pageBlocks
+    .map((block, index) => {
+      const layout = getHomepageBlockLayout(block)
+
+      if (!layout) {
+        return null
+      }
+
+      const { Component } = layout
+
+      return createElement(Component, { key: getBlockKey(block, index), block, location })
+    })
+    .filter(Boolean)
+
+  if (renderedBlocks.length === 0) {
+    return null
+  }
+
+  return createElement('main', { className: 'bg-[#f5f0e8] text-[#1a1a1a]' }, renderedBlocks)
 }
