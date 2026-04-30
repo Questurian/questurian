@@ -64,8 +64,7 @@
   color: var(--ink);
 }
 
-/* class on h1 beats global `h1 { font-size: clamp(...) }` in base.css */
-h1.nav-title {
+.nav-brand h1 {
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 700;
@@ -474,13 +473,12 @@ h1.nav-title {
   cursor: not-allowed;
 }
 
-/* ============ Responsive Styles ============ */
 @media (max-width: 768px) {
   .nav-container {
     padding: var(--space-3) var(--space-4);
   }
 
-  h1.nav-title {
+  .nav-brand h1 {
     font-size: 1.25rem;
   }
 
@@ -506,24 +504,6 @@ h1.nav-title {
 
   .login-header h1 {
     font-size: 1.5rem;
-  }
-}
-
-@media (max-width: 380px) {
-  /* Mobile drawer: only the Log out control — smaller type, shorter height */
-  nav.navbar .nav-mobile-menu button.nav-mobile-logout {
-    -webkit-appearance: none;
-    appearance: none;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    margin: 0;
-    padding: 0.1875rem 0.5rem;
-    min-height: 0;
-    line-height: 1.2;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border-radius: var(--radius-sm);
   }
 }
 

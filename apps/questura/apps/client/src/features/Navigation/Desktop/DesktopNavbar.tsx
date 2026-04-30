@@ -24,7 +24,7 @@ export default function DesktopNavbar() {
 
   return (
     <div className="w-full overflow-hidden border-b border-black/10">
-      <div className="w-full bg-[#ece9e3] px-6 py-5 1024:px-8 1024:py-6">
+      <div className="w-full bg-[#ece9e3] px-4 py-5 1024:py-6">
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="justify-self-start">
             <MenuIcon iconClassName="!text-black h-6 w-6" />

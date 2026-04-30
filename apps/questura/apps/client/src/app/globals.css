@@ -28,6 +28,7 @@ html {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
+  --font-editorial: var(--font-editorial-serif);
 
   /* Custom Breakpoints */
   --breakpoint-280: 280px;
@@ -126,6 +127,15 @@ input:-webkit-autofill:active {
   }
 }
 
+@keyframes city-skeleton-shimmer {
+  from {
+    background-position: 140% 0;
+  }
+  to {
+    background-position: -140% 0;
+  }
+}
+
 @keyframes text-reveal {
   from {
     opacity: 0;
@@ -219,6 +229,50 @@ input:-webkit-autofill:active {
   transform: scale(1.08);
 }
 
+.city-article-image-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 1;
+  background: linear-gradient(90deg, #d1d7da 0%, #edf0f1 45%, #c9d0d3 100%);
+  background-size: 240% 100%;
+  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
+  transition: opacity 0.24s ease;
+}
+
+.city-article-card[data-image-loaded='true'] .city-article-image-shell::before {
+  opacity: 0;
+  animation: none;
+}
+
+.city-article-content {
+  opacity: 1;
+  transition: opacity 0.24s ease;
+}
+
+.city-article-text-skeleton {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.city-article-card[data-content-ready='false'] .city-article-content {
+  opacity: 0;
+}
+
+.city-article-card[data-content-ready='false'] .city-article-text-skeleton {
+  opacity: 1;
+}
+
+.city-skeleton-line {
+  display: block;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #d1d7da 0%, #edf0f1 45%, #c9d0d3 100%);
+  background-size: 240% 100%;
+  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
 .city-next-pop {
   position: relative;
   display: inline-block;
@@ -252,6 +306,16 @@ input:-webkit-autofill:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .city-article-image-shell::before {
+    animation: none;
+    background-position: 50% 0;
+  }
+
+  .city-skeleton-line {
+    animation: none;
+    background-position: 50% 0;
+  }
+
   .city-next-pop {
     animation: none;
     background-position: 45% 50%;

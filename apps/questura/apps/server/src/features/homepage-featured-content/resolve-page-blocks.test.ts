@@ -117,7 +117,7 @@ describe('formatPublicLocationHomepageDoc', () => {
 
     expect(response.pageBlocks[0]).toMatchObject({
       items: [
-        { articleType: 'Single Type Listicle' },
+        { articleType: 'Questurian Maps' },
         { articleType: 'Itinerary' },
       ],
     })

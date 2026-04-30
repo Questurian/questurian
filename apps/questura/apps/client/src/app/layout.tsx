@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Roboto, DM_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Roboto, DM_Sans, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import LoginModalRenderer from "../components/layout/LoginModalRenderer";
 import PasswordResetModalRenderer from "../components/layout/PasswordResetModalRenderer";
@@ -11,7 +11,11 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const roboto = Roboto({ variable: "--font-roboto", weight: ["400", "500", "700"], subsets: ["latin"] });
 const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"] });
-
+const editorialSerif = Cormorant_Garamond({
+  variable: "--font-editorial-serif",
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+});
 export const metadata: Metadata = {
   title: "Secure Payments | Google OAuth & Stripe Integration",
   description: "Manage your account, subscriptions, and payments securely with Google OAuth and Stripe integration",
@@ -38,7 +42,7 @@ export default function RootLayout({
         )}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} ${dmSans.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} ${dmSans.variable} ${editorialSerif.variable} antialiased`}
       >
         <div className="min-w-[280px] overflow-x-hidden">
           <QueryProvider>

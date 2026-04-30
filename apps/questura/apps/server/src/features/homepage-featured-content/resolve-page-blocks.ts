@@ -182,7 +182,7 @@ function formatPublicArticleType(
   const relationTo = stringOrNull(item.relationTo)
 
   if (relationTo === 'single-type-listicles') {
-    return 'Single Type Listicle'
+    return 'Questurian Maps'
   }
 
   if (relationTo === 'listicle-itineraries') {
