@@ -4,10 +4,66 @@ import { useState, useEffect } from 'react';
 import { User } from '@/lib/user/types';
 import { useRouter } from 'next/navigation';
 import { useAddPasswordMutation } from '@/features/AccountPage/hooks/useAccountMutations';
-import PasswordInput from '@/components/shared/ui/PasswordInput';
 import PasswordStrengthIndicator from '@/features/Auth/components/PasswordStrengthIndicator';
 import { validatePasswordRequirements, isPasswordValid } from '@/features/Auth/lib/auth-utils';
 import { isServiceUnavailableError } from '@/lib/api';
+
+function AccountPasswordInput({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  autoFocus,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div>
+      <label htmlFor={name} className="block text-[0.8rem] text-[#6b6a68] mb-1.5">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={name}
+          name={name}
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          autoFocus={autoFocus}
+          autoComplete="new-password"
+          required
+          className="
+            w-full px-3 py-2.5 pr-14 rounded-sm
+            bg-white border border-[#d7d4ce]
+            text-[0.84rem] text-[#1A1A1A]
+            placeholder-[#9a9894]
+            focus:outline-none focus:border-[#1A1A1A]
+            disabled:opacity-50
+          "
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setShow((s) => !s)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.78rem] text-[#6b6a68] hover:text-[#1A1A1A] transition-colors"
+        >
+          {show ? 'Hide' : 'Show'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface PasswordSectionProps {
   user: User | null;
@@ -164,10 +220,6 @@ export function PasswordSection({ user, passwordSuccess, passwordError, onClearP
       {/* Inline add-password form for OAuth-only accounts */}
       {showForm && (
         <form onSubmit={handleSubmit} className="mt-4 pt-4 border-t border-[#d7d4ce]">
-          <p className="text-[0.84rem] text-[#6b6a68] leading-[1.65] mb-4">
-            You currently sign in with Google only. Adding a password gives you an alternative way to access your account.
-          </p>
-
           {formError && (
             <div className="mb-4 p-3 bg-[#fce4ec] border border-[#f8bbd0] rounded-sm">
               <p className="text-[0.84rem] text-[#c62828]">{formError}</p>
@@ -175,28 +227,24 @@ export function PasswordSection({ user, passwordSuccess, passwordError, onClearP
           )}
 
           <div className="space-y-4">
-            <PasswordInput
+            <AccountPasswordInput
               label="Password"
               name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter new password"
-              autoComplete="new-password"
-              required
               disabled={addPasswordMutation.isPending}
               autoFocus
             />
 
             {password && <PasswordStrengthIndicator requirements={passwordRequirements} />}
 
-            <PasswordInput
+            <AccountPasswordInput
               label="Confirm Password"
               name="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm password"
-              autoComplete="new-password"
-              required
               disabled={addPasswordMutation.isPending}
             />
 

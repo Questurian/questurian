@@ -20,8 +20,10 @@ export interface MembershipStatus {
  * Generic user object with membership fields
  */
 export interface UserWithMembership {
-  isPaidMember?: boolean;
+  role?: string;
+  subscriptionStatus?: string | null;
   membershipExpiration?: string | Date | null;
+  cancelAtPeriodEnd?: boolean;
   email?: string;
   firstName?: string;
   lastName?: string;

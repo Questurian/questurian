@@ -1,46 +1,20 @@
 'use client';
 
 import { useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams, useParams, notFound } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useProtectedRoute } from '@/lib/routing';
 import { useLoginModalStore } from '@/lib/stores/loginModalStore';
 import { useLocationStore } from '@/lib/stores/locationStore';
+import type { CityDashboardProps } from '../types';
 
-function getParamValue(param: string | string[] | undefined): string | undefined {
-  if (typeof param === 'string') {
-    return param;
-  }
-
-  if (Array.isArray(param)) {
-    return param[0];
-  }
-
-  return undefined;
-}
-
-const PRIMARY_COUNTRY = 'peru';
-const PRIMARY_CITY = 'lima';
-
-function CityDashboardContent() {
+function CityDashboardContent({ citySlug, countrySlug }: CityDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams() ?? new URLSearchParams();
-  const params = (useParams() ?? {}) as Record<string, string | string[]>;
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
   const setLastVisited = useLocationStore((state) => state.setLastVisited);
 
-  const citySlug = getParamValue(params.city)?.toLowerCase();
-  const countrySlug = getParamValue(params.country)?.toLowerCase();
-
-  if (countrySlug && citySlug) {
-    if (countrySlug !== PRIMARY_COUNTRY || citySlug !== PRIMARY_CITY) {
-      notFound();
-    }
-  }
-
   useEffect(() => {
-    if (citySlug && countrySlug) {
-      setLastVisited({ cityId: citySlug, country: countrySlug });
-    }
+    setLastVisited({ cityId: citySlug, country: countrySlug });
   }, [citySlug, countrySlug, setLastVisited]);
 
   useProtectedRoute({
@@ -78,9 +52,7 @@ function CityDashboardContent() {
         prefillEmail: email || undefined,
       });
 
-      if (countrySlug && citySlug) {
-        router.replace(`/${countrySlug}/${citySlug}`);
-      }
+      router.replace(`/${countrySlug}/${citySlug}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, citySlug, countrySlug]);
@@ -88,10 +60,10 @@ function CityDashboardContent() {
   return null;
 }
 
-export function CityDashboardPage() {
+export function CityDashboardPage({ citySlug, countrySlug }: CityDashboardProps) {
   return (
     <Suspense fallback={null}>
-      <CityDashboardContent />
+      <CityDashboardContent citySlug={citySlug} countrySlug={countrySlug} />
     </Suspense>
   );
 }

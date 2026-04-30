@@ -15,13 +15,6 @@ import {
   buildWhereToEatDrinkGlobalData,
   buildLocationGridGlobalData,
   buildQuesturianMapsGlobalData,
-  getHotelGridSelectionFromItems,
-  getTourGridSelectionFromItems,
-  getWhereToEatDrinkSelectionFromItems,
-  getLocationGridSelectionFromItems,
-  getQuesturianMapsSelectionFromItems,
-  getThingsToDoAttractionsSelectionFromItems,
-  getThingsToDoListiclesSelectionFromItems,
   normalizeTourGridInput,
   normalizeHotelGridInput,
   normalizeThingsToDoAttractionsInput,
@@ -29,7 +22,6 @@ import {
   normalizeWhereToEatDrinkInput,
   normalizeLocationGridInput,
   normalizeQuesturianMapsInput,
-  resolveLocationGridScopeFromLocation,
   validateTourGridItems,
   validateHotelGridItems,
   validateThingsToDoAttractionsItems,
@@ -38,9 +30,6 @@ import {
   validateLocationGridItems,
   validateQuesturianMapsItems,
   buildHomepageFeaturedGlobalData,
-  curatedBlockApiPayload,
-  getHomepageFeaturedSelectionFromItems,
-  getNewsletterSignupPlaceholderSelection,
   homepageBlockSupportsSectionHeading,
   normalizeHomepageFeaturedInput,
   parseSectionHeadingBodyField,
@@ -52,6 +41,13 @@ import {
   parseArticleGridFourLayoutBodyField,
   validateHomepageFeaturedItems,
   resolveStoredSlotCountForBlockType,
+  type LocationDoc,
+  type RawBlock,
+  type LocationHomepageDoc,
+  isCuratedBlockType,
+  resolveLocationGridScope,
+  resolvePageBlocks,
+  formatHomepageDoc,
 } from '@/features/homepage-featured-content'
 import { APP_CONFIG } from '@/shared/config'
 import {
@@ -70,166 +66,6 @@ import {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
-}
-
-type LocationDoc = {
-  id: number
-  locationKey?: string
-  level?: string
-  countryName?: string
-  cityName?: string | null
-  neighborhoodName?: string | null
-}
-
-type RawBlock = {
-  id: string
-  blockType: string
-  slotCount?: number
-  sectionHeading?: string | null
-  sectionSubheading?: string | null
-  slot3Layout?: string
-  slot4Layout?: string
-  slot5Layout?: string
-  mediaAspect?: string
-  articleGridFourLayout?: string
-  items?: unknown
-}
-
-type LocationHomepageDoc = {
-  id: number
-  isEnabled?: boolean
-  updatedAt?: string
-  location?: LocationDoc | number | null
-  pageBlocks?: RawBlock[]
-}
-
-function isCuratedBlockType(
-  value: unknown,
-): value is
-  | 'featured-article'
-  | 'featured-article-carousel'
-  | 'featured-articles'
-  | 'article-grid'
-  | 'location-grid'
-  | 'questurian-maps'
-  | 'hotel-grid'
-  | 'tour-grid'
-  | 'where-to-eat-drink'
-  | 'things-to-do-listicles'
-  | 'things-to-do-attractions'
-  | 'newsletter-signup' {
-  return value === 'featured-article'
-    || value === 'featured-article-carousel'
-    || value === 'featured-articles'
-    || value === 'article-grid'
-    || value === 'location-grid'
-    || value === 'questurian-maps'
-    || value === 'hotel-grid'
-    || value === 'tour-grid'
-    || value === 'where-to-eat-drink'
-    || value === 'things-to-do-listicles'
-    || value === 'things-to-do-attractions'
-    || value === 'newsletter-signup'
-}
-
-async function resolveLocationGridScope(
-  payload: Awaited<ReturnType<typeof getPayload>>,
-  rawLocation: LocationHomepageDoc['location'],
-) {
-  if (typeof rawLocation === 'object' && rawLocation !== null) {
-    return resolveLocationGridScopeFromLocation(rawLocation)
-  }
-
-  if (!rawLocation) {
-    return null
-  }
-
-  const location = await payload.findByID({
-    collection: 'locations',
-    id: rawLocation,
-    depth: 0,
-    overrideAccess: true,
-  })
-
-  return resolveLocationGridScopeFromLocation(
-    location as { level?: unknown; locationKey?: unknown } | null,
-  )
-}
-
-async function resolvePageBlocks(
-  payload: Awaited<ReturnType<typeof getPayload>>,
-  rawBlocks: RawBlock[],
-  locationGridScope: Awaited<ReturnType<typeof resolveLocationGridScope>>,
-) {
-  return Promise.all(
-    rawBlocks.map(async (block) => {
-      if (isCuratedBlockType(block.blockType)) {
-        const slotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
-        const selection = block.blockType === 'location-grid'
-          ? await getLocationGridSelectionFromItems(payload, block.items, {
-              totalSlots: slotCount,
-              scope: locationGridScope,
-            })
-          : block.blockType === 'questurian-maps'
-            ? await getQuesturianMapsSelectionFromItems(payload, block.items, {
-                totalSlots: slotCount,
-              })
-            : block.blockType === 'hotel-grid'
-            ? await getHotelGridSelectionFromItems(payload, block.items, {
-                totalSlots: slotCount,
-              })
-            : block.blockType === 'tour-grid'
-            ? await getTourGridSelectionFromItems(payload, block.items, {
-                totalSlots: slotCount,
-              })
-            : block.blockType === 'where-to-eat-drink'
-              ? await getWhereToEatDrinkSelectionFromItems(payload, block.items, {
-                  totalSlots: slotCount,
-                })
-              : block.blockType === 'things-to-do-listicles'
-                ? await getThingsToDoListiclesSelectionFromItems(payload, block.items, {
-                    totalSlots: slotCount,
-                  })
-                : block.blockType === 'things-to-do-attractions'
-                  ? await getThingsToDoAttractionsSelectionFromItems(payload, block.items, {
-                      totalSlots: slotCount,
-                    })
-            : block.blockType === 'newsletter-signup'
-              ? getNewsletterSignupPlaceholderSelection()
-              : await getHomepageFeaturedSelectionFromItems(payload, block.items, {
-                  totalSlots: slotCount,
-                })
-        return curatedBlockApiPayload(block, selection)
-      }
-
-      // Unknown block types returned as-is (future-proof)
-      return block
-    }),
-  )
-}
-
-function formatHomepageDoc(
-  doc: LocationHomepageDoc,
-  resolvedBlocks: Awaited<ReturnType<typeof resolvePageBlocks>>,
-) {
-  const location =
-    typeof doc.location === 'object' && doc.location !== null ? doc.location : null
-
-  return {
-    id: doc.id,
-    isEnabled: doc.isEnabled ?? false,
-    location: location
-      ? {
-          id: location.id,
-          locationKey: location.locationKey ?? null,
-          level: location.level ?? null,
-          countryName: location.countryName ?? null,
-          cityName: location.cityName ?? null,
-          neighborhoodName: location.neighborhoodName ?? null,
-        }
-      : null,
-    pageBlocks: resolvedBlocks,
-  }
 }
 
 // GET /api/location-homepages/[id]

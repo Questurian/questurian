@@ -1,37 +1,47 @@
 import type { MembershipStatus, UserWithMembership } from '../types';
 import { useDevStore } from '@/lib/stores/devStore';
 
+const PRIVILEGED_ROLES = ['admin', 'editor', 'writer'];
+
 export function isActiveMember(user: UserWithMembership): boolean {
   if (process.env.NODE_ENV === 'development' && useDevStore.getState().membershipOverride) {
     return true;
   }
 
-  if (!user.isPaidMember) {
-    return false;
+  if (user.role && PRIVILEGED_ROLES.includes(user.role)) {
+    return true;
   }
 
-  if (!user.membershipExpiration) {
-    return false;
+  if (user.subscriptionStatus === 'active') {
+    return true;
   }
 
-  const expirationDate = typeof user.membershipExpiration === 'string' 
-    ? new Date(user.membershipExpiration)
-    : user.membershipExpiration;
+  if (
+    (user.subscriptionStatus === 'canceled' || user.subscriptionStatus === 'cancelled') &&
+    user.membershipExpiration
+  ) {
+    const expiration =
+      typeof user.membershipExpiration === 'string'
+        ? new Date(user.membershipExpiration)
+        : user.membershipExpiration;
+    return expiration > new Date();
+  }
 
-  return expirationDate > new Date();
+  return false;
 }
 
 export function getMembershipStatus(user: UserWithMembership): MembershipStatus {
-  const isPaid = !!user.isPaidMember;
-  const expiration = user.membershipExpiration 
-    ? (typeof user.membershipExpiration === 'string' 
-        ? new Date(user.membershipExpiration)
-        : user.membershipExpiration)
+  const expiration = user.membershipExpiration
+    ? typeof user.membershipExpiration === 'string'
+      ? new Date(user.membershipExpiration)
+      : user.membershipExpiration
     : null;
 
+  const isActive = isActiveMember(user);
+
   return {
-    isPaidMember: isPaid,
+    isPaidMember: isActive,
     membershipExpiration: expiration,
-    isActive: isActiveMember(user)
+    isActive,
   };
 }

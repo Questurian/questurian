@@ -2,12 +2,14 @@ import { useState } from 'react';
 
 import { isServiceUnavailableError } from '@/lib/api';
 import type { User } from '@/lib/user/types';
+import { useDevStore } from '@/lib/stores/devStore';
 
 import {
   useCancelSubscriptionMutation,
   useCreatePortalSessionMutation,
   useRenewSubscriptionMutation,
 } from '../../Payments/hooks/useSubscriptionMutations';
+import { useMembership } from '../../Payments/hooks/useMembership';
 import { getBillingInfo, getMembershipState } from '../services/membership.service';
 
 function getMutationErrorMessage(error: unknown): string | null {
@@ -28,8 +30,23 @@ function getMutationErrorMessage(error: unknown): string | null {
 }
 
 export function useMembershipSection(user: User | null) {
-  const membershipState = getMembershipState(user);
-  const billingInfo = getBillingInfo(user);
+  const { isActive } = useMembership(user);
+  const membershipOverride = useDevStore((s) => s.membershipOverride);
+
+  const effectiveUser = (() => {
+    if (process.env.NODE_ENV !== 'development' || !membershipOverride || !user) return user;
+    const fakeRenewal = new Date();
+    fakeRenewal.setDate(fakeRenewal.getDate() + 30);
+    return {
+      ...user,
+      subscriptionStatus: 'active' as const,
+      cancelAtPeriodEnd: false,
+      subscriptionRenewsAt: fakeRenewal.toISOString(),
+    };
+  })();
+
+  const membershipState = getMembershipState(effectiveUser);
+  const billingInfo = getBillingInfo(effectiveUser);
 
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -64,12 +81,13 @@ export function useMembershipSection(user: User | null) {
   return {
     membershipState,
     billingInfo,
+    isActive,
     error,
     isCancelling: cancelMutation.isPending,
     isRenewing: renewMutation.isPending,
     showCancellationModal,
     successMessage,
-    canUpdatePayment: user?.subscriptionStatus === 'active' || membershipState.showCancelButton,
+    canUpdatePayment: isActive || membershipState.showCancelButton,
     clearSuccess: () => setSuccessMessage(null),
     openCancelModal: () => setShowCancellationModal(true),
     handleCancelSubscription,
