@@ -1,4 +1,4 @@
-import type { ImageVariantType } from '../../utils/imageProcessing';
+import { VARIANT_SEQUENCE, type ImageVariantType } from '../../utils/imageProcessing';
 import { postFormData } from '../client/imageApiClient';
 import type { UploadImageResponse, UploadProgress } from '../contracts/image-api.contracts';
 import { normalizeRequestError, parseErrorMessage } from '../errors/image-api-error.utils';
@@ -13,6 +13,39 @@ type UploadVariantsParams = {
   onProgress?: (progress: UploadProgress) => void;
   tags?: number[];
 };
+
+export function validateVariantFilesForUpload(
+  variantFiles: { type: ImageVariantType; file: File }[]
+): void {
+  const required = new Set<ImageVariantType>(VARIANT_SEQUENCE);
+  const counts = new Map<ImageVariantType, number>();
+
+  for (const { type } of variantFiles) {
+    counts.set(type, (counts.get(type) ?? 0) + 1);
+  }
+
+  const missing = VARIANT_SEQUENCE.filter((type) => !counts.has(type));
+  const duplicate = VARIANT_SEQUENCE.filter((type) => (counts.get(type) ?? 0) > 1);
+  const invalid = variantFiles
+    .map(({ type }) => type)
+    .filter((type) => !required.has(type));
+
+  if (
+    variantFiles.length !== VARIANT_SEQUENCE.length ||
+    missing.length > 0 ||
+    duplicate.length > 0 ||
+    invalid.length > 0
+  ) {
+    throw new Error(
+      [
+        `Exactly ${VARIANT_SEQUENCE.length} crop variants are required before upload.`,
+        missing.length ? `Missing: ${missing.join(', ')}.` : '',
+        duplicate.length ? `Duplicate: ${duplicate.join(', ')}.` : '',
+        invalid.length ? `Invalid: ${invalid.join(', ')}.` : '',
+      ].filter(Boolean).join(' ')
+    );
+  }
+}
 
 export async function uploadVariantsApi({
   variantFiles,
@@ -29,6 +62,8 @@ export async function uploadVariantsApi({
     progress: 0,
     message: 'Preparing upload...',
   });
+
+  validateVariantFilesForUpload(variantFiles);
 
   const formData = new FormData();
 

@@ -62,6 +62,7 @@ export interface CropState {
   variantType: ImageVariantType;
   crop: { x: number; y: number };
   zoom: number;
+  draftAreaPixels: Area | null;
   croppedAreaPixels: Area | null;
   completed: boolean;
 }
@@ -200,11 +201,11 @@ export async function createMultiVariantImages(
   fileName: string,
   fileNamePrefix?: string
 ): Promise<{ type: ImageVariantType; file: File }[]> {
-  const variantPromises = Object.entries(cropStates).map(async ([type, state]) => {
-    const variantType = type as ImageVariantType;
+  const variantPromises = VARIANT_SEQUENCE.map(async (variantType) => {
+    const state = cropStates[variantType];
     const spec = VARIANT_SPECS[variantType];
 
-    if (!state.croppedAreaPixels) {
+    if (!state.completed || !state.croppedAreaPixels) {
       throw new Error(`Missing crop data for variant: ${variantType}`);
     }
 
@@ -231,21 +232,20 @@ export async function createMultiVariantImages(
  */
 export function initializeCropStates(imageWidth?: number, imageHeight?: number): CropStates {
   const states: CropStates = {
-    thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    open_graph: { variantType: 'open_graph', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    editorial: { variantType: 'editorial', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, draftAreaPixels: null, croppedAreaPixels: null, completed: false },
+    square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, draftAreaPixels: null, croppedAreaPixels: null, completed: false },
+    wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, draftAreaPixels: null, croppedAreaPixels: null, completed: false },
+    portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, draftAreaPixels: null, croppedAreaPixels: null, completed: false },
+    hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, draftAreaPixels: null, croppedAreaPixels: null, completed: false },
+    open_graph: { variantType: 'open_graph', crop: { x: 0, y: 0 }, zoom: 1, draftAreaPixels: null, croppedAreaPixels: null, completed: false },
+    editorial: { variantType: 'editorial', crop: { x: 0, y: 0 }, zoom: 1, draftAreaPixels: null, croppedAreaPixels: null, completed: false },
   };
 
-  // If we have image dimensions, calculate default centered crops
+  // Seed draft crop areas so users can explicitly save the centered default crop.
   if (imageWidth && imageHeight) {
     VARIANT_SEQUENCE.forEach(type => {
       const spec = VARIANT_SPECS[type];
-      states[type].croppedAreaPixels = calculateDefaultCrop(imageWidth, imageHeight, spec.ratio);
-      states[type].completed = true;
+      states[type].draftAreaPixels = calculateDefaultCrop(imageWidth, imageHeight, spec.ratio);
     });
   }
 

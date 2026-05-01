@@ -199,11 +199,11 @@ export default function FeaturedArticlesLayout7({ slots, invalidItemsBySlot, onS
   return (
     <div className="hf-l7">
       <div className="hf-l7-col hf-l7-col--left">
-        <LeftStackCard slotIndex={0} item={slots[0] ?? null} invalid={invalid(0)} onClick={() => onSlotClick(0)} />
         <LeftStackCard slotIndex={1} item={slots[1] ?? null} invalid={invalid(1)} onClick={() => onSlotClick(1)} />
+        <LeftStackCard slotIndex={2} item={slots[2] ?? null} invalid={invalid(2)} onClick={() => onSlotClick(2)} />
       </div>
       <div className="hf-l7-col hf-l7-col--center">
-        <CenterHero slotIndex={2} item={slots[2] ?? null} invalid={invalid(2)} onClick={() => onSlotClick(2)} />
+        <CenterHero slotIndex={0} item={slots[0] ?? null} invalid={invalid(0)} onClick={() => onSlotClick(0)} />
       </div>
       <div className="hf-l7-col hf-l7-col--right">
         {[3, 4, 5, 6].map((i) => (

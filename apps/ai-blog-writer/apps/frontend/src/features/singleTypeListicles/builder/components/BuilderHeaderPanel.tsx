@@ -257,6 +257,8 @@ export function BuilderHeaderPanel({
         token={resolvedToken}
         locationRef={locationRef}
         payloadVariant="wide"
+        uploadExternalRefBase={`${draft.draftId}-featured-upload`}
+        uploadFileNameTitle={draft.title || 'single-type-listicle'}
         prefetchedPayloadAssets={prefetchedPayloadAssets}
         onSelect={(id) => updateHeader({ featuredImage: id })}
         onClose={() => setPickerOpen(false)}

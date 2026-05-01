@@ -7,9 +7,35 @@ import type { MediaAsset, MediaSet } from '../../features/staging/api/payload/pa
 
 const fetchMediaAssetsMock = vi.fn()
 const fetchMediaSetsMock = vi.fn()
+const pickerMocks = vi.hoisted(() => ({
+  imageUploadProps: [] as Array<Record<string, unknown>>,
+  buildImageFileNamePrefix: vi.fn((title: string, externalRef: string) => `${title}-${externalRef}`),
+  pickVariantAssetId: vi.fn((_variantAssetIds: Record<string, string> | undefined, preferredVariant: string) =>
+    preferredVariant === 'wide' ? 202 : null
+  ),
+}))
 
 vi.mock('../../features/images', () => ({
-  ImageUpload: () => null,
+  ImageUpload: (props: Record<string, unknown>) => {
+    pickerMocks.imageUploadProps.push(props)
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          const onUploadComplete = props.onUploadComplete as (result: unknown) => void
+          onUploadComplete({
+            mediaSetId: '55',
+            variantAssetIds: {
+              wide: '202',
+              editorial: '203',
+            },
+          })
+        }}
+      >
+        Complete upload
+      </button>
+    )
+  },
   MultiVariantCropper: () => null,
   uploadImageVariants: vi.fn(),
 }))
@@ -33,10 +59,10 @@ vi.mock('../../features/staging/features/editorial-stage-article/media-utils', (
   buildExternalAltText: vi.fn(() => 'Alt text'),
   buildExternalImportRef: vi.fn(() => 'external-ref'),
   buildExternalPhotographerCredit: vi.fn(() => 'Photographer credit'),
-  buildImageFileNamePrefix: vi.fn(() => 'featured-image'),
+  buildImageFileNamePrefix: pickerMocks.buildImageFileNamePrefix,
   getPexelsPhotoImportUrl: vi.fn(() => 'https://example.com/pexels.jpg'),
   getUnsplashPhotoImportUrl: vi.fn(() => 'https://example.com/unsplash.jpg'),
-  pickVariantAssetId: vi.fn(() => null),
+  pickVariantAssetId: pickerMocks.pickVariantAssetId,
 }))
 
 function buildAsset(id: number, filename: string): MediaAsset {
@@ -66,6 +92,10 @@ afterEach(() => {
   cleanup()
   fetchMediaAssetsMock.mockReset()
   fetchMediaSetsMock.mockReset()
+  pickerMocks.imageUploadProps.length = 0
+  pickerMocks.buildImageFileNamePrefix.mockClear()
+  pickerMocks.pickVariantAssetId.mockClear()
+  vi.restoreAllMocks()
 })
 
 describe('FeaturedImagePicker', () => {
@@ -169,5 +199,52 @@ describe('FeaturedImagePicker', () => {
 
     expect(await screen.findByText('Sacred Valley · Sacred Valley alt')).toBeInTheDocument()
     expect(screen.getByText('Page 2 of 2')).toBeInTheDocument()
+  })
+
+  it('uses a unique upload identity and selects the configured preferred variant', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1775317303482)
+    fetchMediaAssetsMock.mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+      totalPages: 1,
+    })
+    const onSelect = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <FeaturedImagePicker
+        isOpen
+        selectedId={null}
+        token="token-123"
+        locationRef={10}
+        payloadVariant="wide"
+        uploadExternalRefBase="stl_123_featured_upload"
+        uploadFileNameTitle="Best Lima Restaurants"
+        requireMediaSet={false}
+        onSelect={onSelect}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /^upload$/i }))
+
+    await waitFor(() => {
+      expect(pickerMocks.imageUploadProps.length).toBeGreaterThan(0)
+    })
+    const uploadProps = pickerMocks.imageUploadProps.at(-1)
+    expect(uploadProps?.externalRef).toBe('stl_123_featured_upload_1775317303482')
+    expect(uploadProps?.fileNamePrefix).toBe('Best Lima Restaurants-stl_123_featured_upload_1775317303482')
+
+    fireEvent.click(screen.getByRole('button', { name: /complete upload/i }))
+
+    expect(pickerMocks.pickVariantAssetId).toHaveBeenCalledWith(
+      {
+        wide: '202',
+        editorial: '203',
+      },
+      'wide',
+    )
+    expect(onSelect).toHaveBeenCalledWith(202)
+    expect(onClose).toHaveBeenCalled()
   })
 })

@@ -60,6 +60,8 @@ type FeaturedImagePickerProps = {
   payloadSourceMode?: 'assets' | 'mediaSets'
   payloadVariant?: MediaAsset['variant']
   requireMediaSet?: boolean
+  uploadExternalRefBase?: string
+  uploadFileNameTitle?: string
   prefetchedPayloadAssets?: MediaAsset[]
   onSelect: (mediaAssetId: number) => void
   onClose: () => void
@@ -67,6 +69,16 @@ type FeaturedImagePickerProps = {
 
 const PAYLOAD_PAGE_SIZE = 48
 const EMPTY_PREFETCHED_PAYLOAD_ASSETS: MediaAsset[] = []
+
+function sanitizeUploadRef(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 48) || 'featured-image'
+}
 
 function resolveAssetUrl(asset: MediaAsset): string {
   if (asset.url) return asset.url
@@ -94,6 +106,17 @@ function appendUniqueMediaSet(mediaSets: MediaSet[], mediaSet: MediaSet | null |
   return [mediaSet, ...mediaSets]
 }
 
+function buildUploadIdentity(
+  externalRefBase: string,
+  fileNameTitle: string,
+) {
+  const externalRef = `${sanitizeUploadRef(externalRefBase)}_${Date.now()}`
+  return {
+    externalRef,
+    fileNamePrefix: buildImageFileNamePrefix(fileNameTitle, externalRef),
+  }
+}
+
 export function FeaturedImagePicker({
   isOpen,
   selectedId,
@@ -102,11 +125,16 @@ export function FeaturedImagePicker({
   payloadSourceMode = 'assets',
   payloadVariant,
   requireMediaSet = true,
+  uploadExternalRefBase = 'featured-image-picker',
+  uploadFileNameTitle = 'featured-image',
   prefetchedPayloadAssets = EMPTY_PREFETCHED_PAYLOAD_ASSETS,
   onSelect,
   onClose,
 }: FeaturedImagePickerProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('payload')
+  const [uploadIdentity, setUploadIdentity] = useState(() =>
+    buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle)
+  )
   const selectedPrefetchedAsset = useMemo(
     () => (
       selectedId === null
@@ -174,7 +202,8 @@ export function FeaturedImagePicker({
     setPayloadTotalPages(1)
     setPayloadSearch('')
     setPayloadError(null)
-  }, [isOpen, payloadSourceMode, payloadVariant])
+    setUploadIdentity(buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle))
+  }, [isOpen, payloadSourceMode, payloadVariant, uploadExternalRefBase, uploadFileNameTitle])
 
   useEffect(() => {
     if (!isOpen || selectedId === null || selectedPrefetchedAsset || !token) {
@@ -355,6 +384,9 @@ export function FeaturedImagePicker({
       setImportingId(null)
       resetExternalCropState()
     }
+    if (nextTab === 'upload') {
+      setUploadIdentity(buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle))
+    }
     setActiveTab(nextTab)
   }
 
@@ -364,7 +396,7 @@ export function FeaturedImagePicker({
   }
 
   const handleUploadComplete = (result: UploadImageResponse) => {
-    const id = pickVariantAssetId(result.variantAssetIds, 'editorial')
+    const id = pickVariantAssetId(result.variantAssetIds, payloadVariant ?? 'editorial')
     if (id) {
       onSelect(id)
       onClose()
@@ -492,9 +524,9 @@ export function FeaturedImagePicker({
         externalCropDraft.photographerCredit,
         (progress) => setExternalUploadProgress(progress)
       )
-      const id = pickVariantAssetId(result.variantAssetIds, 'editorial')
+      const id = pickVariantAssetId(result.variantAssetIds, payloadVariant ?? 'editorial')
       if (!id) {
-        throw new Error('Imported image is missing an editorial (4:3) variant.')
+        throw new Error(`Imported image is missing a ${payloadVariant ?? 'editorial'} variant.`)
       }
 
       resetExternalCropState()
@@ -811,8 +843,8 @@ export function FeaturedImagePicker({
               ) : (
                 <ImageUpload
                   className="fip-upload-flow"
-                  externalRef="featured-image-picker"
-                  fileNamePrefix="featured"
+                  externalRef={uploadIdentity.externalRef}
+                  fileNamePrefix={uploadIdentity.fileNamePrefix}
                   locationRef={locationRef}
                   token={token}
                   altText={uploadAltText}

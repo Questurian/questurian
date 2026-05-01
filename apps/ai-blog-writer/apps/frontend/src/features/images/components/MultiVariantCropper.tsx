@@ -73,40 +73,64 @@ export function MultiVariantCropper({
 
   // Create preview URL and load image dimensions when file changes
   useEffect(() => {
+    let cancelled = false;
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setImageDimensions(null);
+    setCropStates(initializeCropStates());
+    setCurrentVariantIndex(0);
+    setErrorMsg('');
+
     const loadAndInit = async () => {
-      const url = URL.createObjectURL(file);
       const img = await loadImage(url);
+      if (cancelled) return;
       const dimensions = { width: img.naturalWidth, height: img.naturalHeight };
 
-      setPreviewUrl(url);
       setImageDimensions(dimensions);
       setCropStates(initializeCropStates(dimensions.width, dimensions.height));
-
-      return () => URL.revokeObjectURL(url);
     };
 
-    loadAndInit();
+    loadAndInit().catch((error) => {
+      if (!cancelled) {
+        setErrorMsg(error instanceof Error ? error.message : 'Failed to load image');
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      URL.revokeObjectURL(url);
+    };
   }, [file]);
 
   const onCropChange = useCallback((crop: Point) => {
     setCropStates(prev => ({
       ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], crop }
+      [currentVariantType]: {
+        ...prev[currentVariantType],
+        crop,
+        croppedAreaPixels: null,
+        completed: false,
+      }
     }));
   }, [currentVariantType]);
 
   const onZoomChange = useCallback((zoom: number) => {
     setCropStates(prev => ({
       ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], zoom }
+      [currentVariantType]: {
+        ...prev[currentVariantType],
+        zoom,
+        croppedAreaPixels: null,
+        completed: false,
+      }
     }));
   }, [currentVariantType]);
 
-  // This is called when user releases the crop area
+  // Track the draft crop area separately from the confirmed upload crop.
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCropStates(prev => ({
       ...prev,
-      [currentVariantType]: { ...prev[currentVariantType], croppedAreaPixels, completed: true }
+      [currentVariantType]: { ...prev[currentVariantType], draftAreaPixels: croppedAreaPixels }
     }));
   }, [currentVariantType]);
 
@@ -126,14 +150,39 @@ export function MultiVariantCropper({
     setCurrentVariantIndex(index);
   };
 
+  const handleSaveCurrentCrop = () => {
+    setErrorMsg('');
+    const draftCrop = cropStates[currentVariantType].draftAreaPixels;
+    if (!draftCrop || draftCrop.width <= 0 || draftCrop.height <= 0) {
+      setErrorMsg(`Crop area is not ready for ${formatVariantLabel(currentVariantType)}.`);
+      return false;
+    }
+
+    setCropStates(prev => ({
+      ...prev,
+      [currentVariantType]: {
+        ...prev[currentVariantType],
+        croppedAreaPixels: draftCrop,
+        completed: true,
+      }
+    }));
+    return true;
+  };
+
+  const handleSaveAndNext = () => {
+    const saved = handleSaveCurrentCrop();
+    if (saved && currentVariantIndex < VARIANT_SEQUENCE.length - 1) {
+      setCurrentVariantIndex(currentVariantIndex + 1);
+    }
+  };
+
   const handleConfirmAll = async () => {
     setErrorMsg('');
     
     // Check each variant
-    const missingCrops = VARIANT_SEQUENCE.filter(type => !cropStates[type].croppedAreaPixels);
+    const missingCrops = VARIANT_SEQUENCE.filter(type => !cropStates[type].completed || !cropStates[type].croppedAreaPixels);
     if (missingCrops.length > 0) {
       setErrorMsg(`Missing crops for: ${missingCrops.join(', ')}`);
-      alert(`Missing crops for: ${missingCrops.join(', ')}. Please wait for images to load.`);
       return;
     }
 
@@ -159,9 +208,11 @@ export function MultiVariantCropper({
 
   const completedCount = VARIANT_SEQUENCE.filter(type => {
     const state = cropStates[type];
-    return state.croppedAreaPixels !== null && state.croppedAreaPixels.width > 0;
+    return state.completed && state.croppedAreaPixels !== null && state.croppedAreaPixels.width > 0;
   }).length;
   const totalVariants = VARIANT_SEQUENCE.length;
+  const allCropsSaved = completedCount === totalVariants;
+  const currentCropSaved = currentState.completed && currentState.croppedAreaPixels !== null;
 
   return (
     <div className="stage-article-cropper-container">
@@ -208,7 +259,7 @@ export function MultiVariantCropper({
         <div className="stage-article-cropper-variants">
           {VARIANT_SEQUENCE.map((type, idx) => {
             const isActive = idx === currentVariantIndex;
-            const isCompleted = cropStates[type].croppedAreaPixels !== null && cropStates[type].croppedAreaPixels!.width > 0;
+            const isCompleted = cropStates[type].completed && cropStates[type].croppedAreaPixels !== null && cropStates[type].croppedAreaPixels!.width > 0;
 
             return (
               <button
@@ -284,6 +335,29 @@ export function MultiVariantCropper({
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={handleSaveAndNext}
+            disabled={isProcessing || !currentState.draftAreaPixels}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 0.75rem',
+              background: currentCropSaved ? '#2f6f48' : '#f36f2b',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              cursor: isProcessing || !currentState.draftAreaPixels ? 'not-allowed' : 'pointer',
+              opacity: isProcessing || !currentState.draftAreaPixels ? 0.5 : 1
+            }}
+          >
+            <CheckIcon />
+            {currentVariantIndex === VARIANT_SEQUENCE.length - 1 ? 'Save crop' : 'Save & Next'}
+          </button>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button
               type="button"
@@ -307,19 +381,19 @@ export function MultiVariantCropper({
             <button
               type="button"
               onClick={handleConfirmAll}
-              disabled={isProcessing}
+              disabled={isProcessing || !allCropsSaved}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.5rem 1rem',
-                background: completedCount === totalVariants ? '#f36f2b' : '#3f3f46',
-                color: completedCount === totalVariants ? '#fff' : '#71717a',
+                background: allCropsSaved ? '#f36f2b' : '#3f3f46',
+                color: allCropsSaved ? '#fff' : '#71717a',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: 500,
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                cursor: isProcessing || !allCropsSaved ? 'not-allowed' : 'pointer',
                 opacity: isProcessing ? 0.5 : 1
               }}
             >
@@ -331,9 +405,9 @@ export function MultiVariantCropper({
               ) : (
                 <>
                   <CheckIcon />
-                  {completedCount === totalVariants
-                    ? 'Confirm All'
-                    : `Crop All (${completedCount}/${totalVariants})`}
+                  {allCropsSaved
+                    ? 'Generate crops'
+                    : `Saved ${completedCount}/${totalVariants}`}
                 </>
               )}
             </button>

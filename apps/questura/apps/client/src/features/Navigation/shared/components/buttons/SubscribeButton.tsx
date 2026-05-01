@@ -5,6 +5,8 @@
  * --breakpoint-280: 280px
  * --breakpoint-320: 320px
  * --breakpoint-380: 380px
+ * --breakpoint-480: 480px
+ * --breakpoint-550: 550px
  * --breakpoint-640: 640px
  * --breakpoint-768: 768px
  * --breakpoint-1024: 1024px
