@@ -51,6 +51,18 @@ export type LocationHomepageResponse = {
   pageBlocks: PageBlockResponse[]
 }
 
+export type DeleteLocationHomepageBlockResponse = {
+  deletedBlockId: string
+}
+
+export type ReorderLocationHomepageBlocksResponse = {
+  orderedBlockIds: string[]
+}
+
+export type ConvertLocationHomepageBlockResponse = {
+  block: PageBlockResponse
+}
+
 type HomepageBlockSaveItem =
   | HomepageFeaturedItemRef
   | HomepageLocationGridItemRef
@@ -233,11 +245,15 @@ export async function convertLocationHomepageFeaturedArticlesBlock(
   blockId: string,
   blockType: string,
   slotCount: number,
-): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${homepageId}/blocks/convert`, token, {
-    method: 'POST',
-    body: JSON.stringify({ blockId, blockType, slotCount }),
-  })
+): Promise<ConvertLocationHomepageBlockResponse> {
+  return locationHomepageRequest(
+    `/api/location-homepages/${homepageId}/blocks/convert?response=lean`,
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify({ blockId, blockType, slotCount }),
+    },
+  )
 }
 
 export async function addLocationHomepageBlock(
@@ -265,8 +281,8 @@ export async function deleteLocationHomepageBlock(
   token: string,
   id: number,
   blockId: string,
-): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
+): Promise<DeleteLocationHomepageBlockResponse> {
+  return locationHomepageRequest(`/api/location-homepages/${id}/blocks?response=lean`, token, {
     method: 'DELETE',
     body: JSON.stringify({ blockId }),
   })
@@ -276,8 +292,8 @@ export async function reorderLocationHomepageBlocks(
   token: string,
   id: number,
   orderedBlockIds: string[],
-): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${id}/blocks`, token, {
+): Promise<ReorderLocationHomepageBlocksResponse> {
+  return locationHomepageRequest(`/api/location-homepages/${id}/blocks?response=lean`, token, {
     method: 'PATCH',
     body: JSON.stringify({ orderedBlockIds }),
   })

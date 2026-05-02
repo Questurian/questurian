@@ -104,7 +104,7 @@ export default function LocationGridBlockEditor({
   const slotEditorState = useHomepageLocationGridSlots({
     token,
     canManage,
-    fetchSelection: () => Promise.resolve(block.selection),
+    selection: block.selection,
     saveSelection,
     fetchCandidates,
     selectionQueryKey,

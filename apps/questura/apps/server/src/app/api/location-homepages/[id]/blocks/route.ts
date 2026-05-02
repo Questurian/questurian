@@ -44,6 +44,10 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
+function wantsLeanResponse(req: NextRequest): boolean {
+  return new URL(req.url).searchParams.get('response') === 'lean'
+}
+
 type RawBlock = {
   id: string
   blockType: string
@@ -305,11 +309,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const { id } = await params
     const payload = await getPayload({ config })
+    const leanResponse = wantsLeanResponse(req)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
       id,
-      depth: 1,
+      depth: leanResponse ? 0 : 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
 
@@ -323,19 +328,23 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       )
     }
 
+    const updated = (await payload.update({
+      collection: 'location-homepages',
+      id,
+      data: { pageBlocks: updatedBlocks } as any,
+      depth: leanResponse ? 0 : 1,
+      overrideAccess: true,
+    })) as LocationHomepageDoc
+
+    if (leanResponse) {
+      return NextResponse.json({ deletedBlockId: blockId }, { headers })
+    }
+
     const rawLocation =
       typeof doc.location === 'object' && doc.location !== null
         ? doc.location as { level?: unknown; locationKey?: unknown; id?: unknown }
         : null
     const locationGridScope = resolveLocationGridScopeFromLocation(rawLocation)
-
-    const updated = (await payload.update({
-      collection: 'location-homepages',
-      id,
-      data: { pageBlocks: updatedBlocks } as any,
-      depth: 1,
-      overrideAccess: true,
-    })) as LocationHomepageDoc
 
     const location =
       typeof updated.location === 'object' && updated.location !== null
@@ -430,11 +439,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json().catch(() => null)
     const { id } = await params
     const payload = await getPayload({ config })
+    const leanResponse = wantsLeanResponse(req)
 
     const doc = (await payload.findByID({
       collection: 'location-homepages',
       id,
-      depth: 1,
+      depth: leanResponse ? 0 : 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
 
@@ -445,19 +455,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ message: reorderResult.message }, { status: 400, headers })
     }
 
+    const updated = (await payload.update({
+      collection: 'location-homepages',
+      id,
+      data: { pageBlocks: reorderResult.reordered } as any,
+      depth: leanResponse ? 0 : 1,
+      overrideAccess: true,
+    })) as LocationHomepageDoc
+
+    if (leanResponse) {
+      return NextResponse.json(
+        { orderedBlockIds: reorderResult.reordered.map((block) => block.id) },
+        { headers },
+      )
+    }
+
     const rawLocation =
       typeof doc.location === 'object' && doc.location !== null
         ? doc.location as { level?: unknown; locationKey?: unknown; id?: unknown }
         : null
     const locationGridScope = resolveLocationGridScopeFromLocation(rawLocation)
-
-    const updated = (await payload.update({
-      collection: 'location-homepages',
-      id,
-      data: { pageBlocks: reorderResult.reordered } as any,
-      depth: 1,
-      overrideAccess: true,
-    })) as LocationHomepageDoc
 
     const location =
       typeof updated.location === 'object' && updated.location !== null

@@ -199,7 +199,7 @@ export default function CuratedHomepageBlockEditor({
   const slotEditorState = useHomepageFeaturedSlots({
     token,
     canManage,
-    fetchSelection: () => Promise.resolve(block.selection),
+    selection: block.selection,
     saveSelection,
     fetchCandidates,
     selectionQueryKey,

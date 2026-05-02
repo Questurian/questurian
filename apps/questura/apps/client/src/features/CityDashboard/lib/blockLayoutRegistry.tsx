@@ -7,6 +7,7 @@ import type {
   HomepageBlockLayoutKey,
   HomepageBlockLayoutProps,
 } from '../types'
+import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
 import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesSevenArticlePreview'
 
 function homepageBlockLayoutKey(blockType: string, totalSlots: number): HomepageBlockLayoutKey {
@@ -37,6 +38,11 @@ const homepageBlockLayouts: HomepageBlockLayoutDefinition[] = [
     blockType: 'featured-articles',
     totalSlots: 7,
     Component: FeaturedArticlesSevenArticlePreview,
+  }),
+  defineHomepageBlockLayout<FeaturedArticlesBlock>({
+    blockType: 'featured-articles',
+    totalSlots: 8,
+    Component: FeaturedArticlesEightArticlePreview,
   }),
 ]
 

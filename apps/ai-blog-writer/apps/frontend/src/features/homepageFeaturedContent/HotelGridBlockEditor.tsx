@@ -74,7 +74,7 @@ export default function HotelGridBlockEditor({
   const slotEditorState = useHomepageHotelGridSlots({
     token,
     canManage,
-    fetchSelection: () => Promise.resolve(block.selection),
+    selection: block.selection,
     saveSelection,
     fetchCandidates,
     selectionQueryKey,

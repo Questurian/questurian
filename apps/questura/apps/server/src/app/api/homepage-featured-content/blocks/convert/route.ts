@@ -44,6 +44,10 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
+function wantsLeanResponse(req: NextRequest): boolean {
+  return new URL(req.url).searchParams.get('response') === 'lean'
+}
+
 type RawBlock = {
   id: string
   blockType: string
@@ -237,12 +241,22 @@ export async function POST(req: NextRequest) {
     const updatedBlocks = [...rawBlocks]
     updatedBlocks[blockIndex] = replacement as RawBlock
 
+    const leanResponse = wantsLeanResponse(req)
     const updated = (await payload.updateGlobal({
       slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
       data: { pageBlocks: updatedBlocks } as any,
-      depth: 0,
+      depth: leanResponse ? 0 : 1,
       overrideAccess: true,
     })) as MainHomepageGlobalDoc
+
+    if (leanResponse) {
+      const updatedBlock =
+        (updated.pageBlocks ?? []).find((candidate) => candidate.id === blockId)
+        ?? (replacement as RawBlock)
+      const [resolvedBlock] = await resolvePageBlocks(payload, [updatedBlock])
+
+      return NextResponse.json({ block: resolvedBlock }, { status: 200, headers })
+    }
 
     const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [])
 

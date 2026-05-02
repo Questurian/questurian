@@ -57,11 +57,8 @@ export default function HomepageBlocksSortableList<T extends { id: string }>({
     )
   }
 
-  const orderKey = ids.join('|')
-
   return (
     <DndContext
-      key={orderKey}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}

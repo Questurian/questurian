@@ -28,6 +28,18 @@ export type MainHomepageResponse = {
   pageBlocks: PageBlockResponse[]
 }
 
+export type DeleteHomepageBlockResponse = {
+  deletedBlockId: string
+}
+
+export type ReorderHomepageBlocksResponse = {
+  orderedBlockIds: string[]
+}
+
+export type ConvertHomepageBlockResponse = {
+  block: PageBlockResponse
+}
+
 type HomepageBlockSaveItem =
   | HomepageFeaturedItemRef
   | HomepageLocationGridItemRef
@@ -175,11 +187,15 @@ export async function convertMainHomepageFeaturedArticlesBlock(
   blockId: string,
   blockType: string,
   slotCount: number,
-): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest('/api/homepage-featured-content/blocks/convert', token, {
-    method: 'POST',
-    body: JSON.stringify({ blockId, blockType, slotCount }),
-  })
+): Promise<ConvertHomepageBlockResponse> {
+  return homepageFeaturedRequest(
+    '/api/homepage-featured-content/blocks/convert?response=lean',
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify({ blockId, blockType, slotCount }),
+    },
+  )
 }
 
 export async function addMainHomepageBlock(
@@ -205,8 +221,8 @@ export async function addMainHomepageBlock(
 export async function deleteMainHomepageBlock(
   token: string,
   blockId: string,
-): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
+): Promise<DeleteHomepageBlockResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks?response=lean', token, {
     method: 'DELETE',
     body: JSON.stringify({ blockId }),
   })
@@ -215,8 +231,8 @@ export async function deleteMainHomepageBlock(
 export async function reorderMainHomepageBlocks(
   token: string,
   orderedBlockIds: string[],
-): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest('/api/homepage-featured-content/blocks', token, {
+): Promise<ReorderHomepageBlocksResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content/blocks?response=lean', token, {
     method: 'PATCH',
     body: JSON.stringify({ orderedBlockIds }),
   })

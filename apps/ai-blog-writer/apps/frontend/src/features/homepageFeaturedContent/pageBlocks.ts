@@ -339,6 +339,15 @@ export type UnknownBlockResponse = {
 
 export type PageBlockResponse = CuratedHomepageBlockResponse | UnknownBlockResponse
 
+/** Stable identity for editor instances; layout-only setting changes should not remount a block. */
+export function homepageBlockEditorIdentity(block: {
+  id: string
+  blockType: string
+  selection: { totalSlots: number }
+}): readonly [string, string, number] {
+  return [block.id, block.blockType, block.selection.totalSlots]
+}
+
 /** Same Payload `id` can change `blockType` / slot count (convert). Include shape in React key + query key so editors remount and TanStack cache does not reuse old `selection`. */
 export function homepageBlockShapeIdentity(block: {
   id: string

@@ -732,6 +732,7 @@
 }
 
 .hf-city-block-name {
+  margin: 0;
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--ink);

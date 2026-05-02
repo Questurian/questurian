@@ -547,7 +547,7 @@ export default function HomepageFeaturedContentPage() {
                           return (
                             <div key={cityGroup.key} className="hf-city-block">
                               <div className={`hf-city-block-header${cityMissingHomepage ? ' is-missing' : ''}`}>
-                                <span className="hf-city-block-name">{cityGroup.cityLabel}</span>
+                                <h4 className="hf-city-block-name">{cityGroup.cityLabel}</h4>
                                 {cityMissingHomepage && (
                                   <span className="hf-city-missing-hint">No city homepage</span>
                                 )}

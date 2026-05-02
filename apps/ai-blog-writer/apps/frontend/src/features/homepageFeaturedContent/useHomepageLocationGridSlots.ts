@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import type {
   HomepageLocationGridCandidate,
@@ -76,7 +76,7 @@ export type LocationGridCandidateParams = {
 export type UseHomepageLocationGridSlotsOptions = {
   token: string | null
   canManage: boolean
-  fetchSelection: (token: string) => Promise<HomepageLocationGridSelection>
+  selection: HomepageLocationGridSelection
   saveSelection: (
     token: string,
     items: HomepageLocationGridItemRef[],
@@ -120,10 +120,9 @@ export type UseHomepageLocationGridSlotsResult = {
 export function useHomepageLocationGridSlots(
   options: UseHomepageLocationGridSlotsOptions,
 ): UseHomepageLocationGridSlotsResult {
-  const { token, canManage, fetchSelection, saveSelection, fetchCandidates, selectionQueryKey } =
+  const { token, canManage, selection, saveSelection, fetchCandidates, selectionQueryKey } =
     options
 
-  const queryClient = useQueryClient()
   const [searchValue, setSearchValue] = useState('')
   const deferredSearchValue = useDeferredValue(searchValue.trim())
   const [candidatePage, setCandidatePage] = useState(1)
@@ -135,30 +134,31 @@ export function useHomepageLocationGridSlots(
 
   const selectionKeyJson = JSON.stringify(selectionQueryKey)
   const prevSelectionKeyJsonRef = useRef<string | null>(null)
+  const prevSelectionRef = useRef<HomepageLocationGridSelection | null>(null)
 
   useLayoutEffect(() => {
-    if (prevSelectionKeyJsonRef.current === selectionKeyJson) return
+    if (
+      prevSelectionKeyJsonRef.current === selectionKeyJson
+      && prevSelectionRef.current === selection
+    ) {
+      return
+    }
     prevSelectionKeyJsonRef.current = selectionKeyJson
-    setDraftSlots(null)
-    setSavedSlots([])
-    setSavedInvalidItems([])
-    setPickerSlotIndex(null)
-  }, [selectionKeyJson])
-
-  const selectionQuery = useQuery({
-    queryKey: selectionQueryKey,
-    queryFn: () => fetchSelection(token!),
-    enabled: Boolean(token && canManage),
-  })
-
-  useEffect(() => {
-    if (!selectionQuery.data || draftSlots !== null) return
-
-    const nextSlots = mapSelectionToSlots(selectionQuery.data)
-    setSavedSlots(nextSlots)
+    prevSelectionRef.current = selection
+    const nextSlots = mapSelectionToSlots(selection)
     setDraftSlots(nextSlots)
-    setSavedInvalidItems(selectionQuery.data.invalidItems)
-  }, [draftSlots, selectionQuery.data])
+    setSavedSlots(nextSlots)
+    setSavedInvalidItems(selection.invalidItems)
+    setPickerSlotIndex(null)
+  }, [selection, selectionKeyJson])
+
+  const selectionQuery = {
+    data: selection,
+    error: null,
+    isLoading: false,
+    isPending: false,
+    isFetching: false,
+  } as ReturnType<typeof useQuery<HomepageLocationGridSelection>>
 
   useEffect(() => {
     setCandidatePage(1)
@@ -172,7 +172,7 @@ export function useHomepageLocationGridSlots(
         page: candidatePage,
         limit: CANDIDATE_PAGE_SIZE,
       }),
-    enabled: Boolean(token && canManage),
+    enabled: Boolean(token && canManage && pickerSlotIndex !== null),
     placeholderData: (previousData) => previousData,
   })
 
@@ -185,7 +185,6 @@ export function useHomepageLocationGridSlots(
       setSavedInvalidItems(selection.invalidItems)
       setPickerSlotIndex(null)
       setResultMessage('Homepage location grid saved.')
-      queryClient.setQueryData(selectionQueryKey, selection)
     },
     onError: (error: unknown) => {
       setResultMessage(

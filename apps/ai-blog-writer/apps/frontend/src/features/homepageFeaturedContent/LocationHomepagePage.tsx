@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../../providers/useAuth'
 import './homepageFeaturedContent.css'
-import HomepageBlocksReorderOverlay from './HomepageBlocksReorderOverlay'
 import HomepageBlocksSortableList from './HomepageBlocksSortableList'
 import AddHomepageBlockPicker from './AddHomepageBlockPicker'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
@@ -34,17 +33,19 @@ import {
   updateLocationHomepageFeaturedSlot4Layout,
   updateLocationHomepageFeaturedSlot5Layout,
   updateLocationHomepageArticleGridFourLayout,
+  type LocationHomepageResponse,
   type LocationRef,
 } from './locationHomepagesApi'
 import {
-  homepageFeaturedSelectionRevision,
-  homepageHotelGridSelectionRevision,
-  homepageLocationGridSelectionRevision,
-} from './homepageEditorCacheKeys'
+  buildOptimisticConvertedHomepageBlock,
+  deleteHomepageBlockFromCache,
+  reorderHomepageBlocksInCache,
+  replaceHomepageBlockInCache,
+} from './homepageBlockOptimisticUpdates'
 import {
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
   HOMEPAGE_PAGE_BLOCK_TYPES,
-  homepageBlockShapeIdentity,
+  homepageBlockEditorIdentity,
   isHotelGridBlock,
   isTourGridBlock,
   isThingsToDoAttractionsBlock,
@@ -101,7 +102,6 @@ export default function LocationHomepagePage() {
 
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
-  const [reorderCommitting, setReorderCommitting] = useState(false)
 
   const addBlockMutation = useMutation({
     mutationFn: ({
@@ -125,11 +125,20 @@ export default function LocationHomepagePage() {
   const deleteBlockMutation = useMutation({
     mutationFn: ({ blockId }: { blockId: string }) =>
       deleteLocationHomepageBlock(token!, numericId, blockId),
-    onMutate: ({ blockId }) => {
+    onMutate: async ({ blockId }) => {
       setDeletingBlockId(blockId)
+      await queryClient.cancelQueries({ queryKey: homepageQueryKey })
+      const previousHomepage =
+        queryClient.getQueryData<LocationHomepageResponse>(homepageQueryKey)
+      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
+        deleteHomepageBlockFromCache(current, blockId),
+      )
+      return { previousHomepage }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+    onError: (_error, _variables, context) => {
+      if (context?.previousHomepage) {
+        queryClient.setQueryData(homepageQueryKey, context.previousHomepage)
+      }
     },
     onSettled: () => {
       setDeletingBlockId(null)
@@ -139,18 +148,60 @@ export default function LocationHomepagePage() {
   const reorderBlocksMutation = useMutation({
     mutationFn: (orderedBlockIds: string[]) =>
       reorderLocationHomepageBlocks(token!, numericId, orderedBlockIds),
-    onMutate: () => setReorderCommitting(true),
-    onSuccess: async () => {
-      try {
-        await queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-      } finally {
-        setReorderCommitting(false)
+    onMutate: async (orderedBlockIds) => {
+      await queryClient.cancelQueries({ queryKey: homepageQueryKey })
+      const previousHomepage =
+        queryClient.getQueryData<LocationHomepageResponse>(homepageQueryKey)
+      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
+        reorderHomepageBlocksInCache(current, orderedBlockIds),
+      )
+      return { previousHomepage }
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
+        reorderHomepageBlocksInCache(current, result.orderedBlockIds),
+      )
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousHomepage) {
+        queryClient.setQueryData(homepageQueryKey, context.previousHomepage)
       }
     },
-    onError: () => {
-      setReorderCommitting(false)
-    },
   })
+
+  async function handleConvertBlock(
+    block: PageBlockResponse,
+    currentToken: string,
+    blockType: CuratedHomepageBlockType,
+    slotCount: number,
+  ) {
+    await queryClient.cancelQueries({ queryKey: homepageQueryKey })
+    const previousHomepage =
+      queryClient.getQueryData<LocationHomepageResponse>(homepageQueryKey)
+    const optimisticBlock = buildOptimisticConvertedHomepageBlock(block, blockType, slotCount)
+
+    queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
+      replaceHomepageBlockInCache(current, optimisticBlock),
+    )
+
+    try {
+      const result = await convertLocationHomepageFeaturedArticlesBlock(
+        currentToken,
+        numericId,
+        block.id,
+        blockType,
+        slotCount,
+      )
+      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
+        replaceHomepageBlockInCache(current, result.block),
+      )
+    } catch (error) {
+      if (previousHomepage) {
+        queryClient.setQueryData(homepageQueryKey, previousHomepage)
+      }
+      throw error
+    }
+  }
 
   function handleConfirmAddBlock(
     blockType: CuratedHomepageBlockType,
@@ -219,7 +270,6 @@ export default function LocationHomepagePage() {
 
   return (
     <div className="hf-page">
-      <HomepageBlocksReorderOverlay visible={reorderCommitting} />
       {/* ── Detail header ──────────────────────────────────── */}
       <div className="hf-detail-header">
         <div className="hf-detail-header-left">
@@ -263,7 +313,7 @@ export default function LocationHomepagePage() {
         <HomepageBlocksSortableList
           blocks={homepage.pageBlocks}
           disabled={
-            reorderCommitting
+            reorderBlocksMutation.isPending
             || deleteBlockMutation.isPending
             || addBlockMutation.isPending
           }
@@ -273,7 +323,7 @@ export default function LocationHomepagePage() {
             if (isArticleCuratedHomepageBlock(block)) {
               return (
                 <CuratedHomepageBlockEditor
-                  key={homepageBlockShapeIdentity(block).join(':')}
+                  key={homepageBlockEditorIdentity(block).join(':')}
                   block={block}
                   blockIndex={idx}
                   token={token}
@@ -284,8 +334,7 @@ export default function LocationHomepagePage() {
                   selectionQueryKey={[
                     'location-homepage-block',
                     numericId,
-                    ...homepageBlockShapeIdentity(block),
-                    homepageFeaturedSelectionRevision(block.selection),
+                    ...homepageBlockEditorIdentity(block),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -355,8 +404,7 @@ export default function LocationHomepagePage() {
                   }
                   convertEmptyFeaturedArticlesTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyFeaturedArticlesBlock={async (currentToken, blockType, slotCount) => {
-                    await convertLocationHomepageFeaturedArticlesBlock(currentToken, numericId, block.id, blockType, slotCount)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                    await handleConvertBlock(block, currentToken, blockType, slotCount)
                   }}
                 />
               )
@@ -364,7 +412,7 @@ export default function LocationHomepagePage() {
             if (isLocationGridBlock(block) && locationGridChildLevel) {
               return (
                 <LocationGridBlockEditor
-                  key={homepageBlockShapeIdentity(block).join(':')}
+                  key={homepageBlockEditorIdentity(block).join(':')}
                   block={block}
                   blockIndex={idx}
                   token={token}
@@ -376,8 +424,7 @@ export default function LocationHomepagePage() {
                   selectionQueryKey={[
                     'location-homepage-location-grid',
                     numericId,
-                    ...homepageBlockShapeIdentity(block),
-                    homepageLocationGridSelectionRevision(block.selection),
+                    ...homepageBlockEditorIdentity(block),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -406,8 +453,7 @@ export default function LocationHomepagePage() {
                   }}
                   convertBlockTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-                    await convertLocationHomepageFeaturedArticlesBlock(currentToken, numericId, block.id, blockType, slotCount)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                    await handleConvertBlock(block, currentToken, blockType, slotCount)
                   }}
                 />
               )
@@ -415,7 +461,7 @@ export default function LocationHomepagePage() {
             if (isNewsletterSignupBlock(block)) {
               return (
                 <NewsletterSignupBlockEditor
-                  key={homepageBlockShapeIdentity(block).join(':')}
+                  key={homepageBlockEditorIdentity(block).join(':')}
                   block={block}
                   blockIndex={idx}
                   token={token}
@@ -437,7 +483,7 @@ export default function LocationHomepagePage() {
               const gridBlock = block
               return (
                 <HotelGridBlockEditor
-                  key={homepageBlockShapeIdentity(gridBlock).join(':')}
+                  key={homepageBlockEditorIdentity(gridBlock).join(':')}
                   block={gridBlock}
                   blockIndex={idx}
                   token={token}
@@ -450,8 +496,7 @@ export default function LocationHomepagePage() {
                   selectionQueryKey={[
                     'location-homepage-hotel-grid',
                     numericId,
-                    ...homepageBlockShapeIdentity(gridBlock),
-                    homepageHotelGridSelectionRevision(gridBlock.selection),
+                    ...homepageBlockEditorIdentity(gridBlock),
                     token,
                   ]}
                   saveSelection={async (currentToken, items) => {
@@ -476,8 +521,7 @@ export default function LocationHomepagePage() {
                         : fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
                   convertBlockTargets={convertEmptyFeaturedArticlesTargets}
                   onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-                    await convertLocationHomepageFeaturedArticlesBlock(currentToken, numericId, gridBlock.id, blockType, slotCount)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+                    await handleConvertBlock(gridBlock, currentToken, blockType, slotCount)
                   }}
                   saveHotelGridSectionHeading={async (currentToken, value) => {
                     await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, gridBlock.id, value)
