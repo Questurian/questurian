@@ -393,7 +393,7 @@ input:-webkit-autofill:active {
 @media (min-width: 1024px) {
   .city-featured-seven-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(0, 720px) minmax(220px, 1fr);
+    grid-template-columns: minmax(200px, 1fr) minmax(0, clamp(400px, 40vw, 720px)) minmax(200px, 1fr);
     gap: 24px;
     align-items: stretch;
     width: min(calc(100% - 48px), 1600px);
@@ -418,6 +418,7 @@ input:-webkit-autofill:active {
     grid-row: 1;
     display: grid;
     gap: 24px;
+    align-content: start;
     padding-right: 16px;
     border-right: 1px solid rgba(95, 89, 82, 0.22);
   }
@@ -437,7 +438,7 @@ input:-webkit-autofill:active {
   }
 
   .city-featured-seven-layout .city-article-card {
-    gap: 12px;
+    gap: 8px;
   }
 
   .city-featured-seven-layout .city-article-image-shell {
@@ -472,9 +473,14 @@ input:-webkit-autofill:active {
     -webkit-line-clamp: 2;
   }
 
-  .city-article-card--center .city-article-content > p:last-child,
-  .city-article-card--left .city-article-content > p:last-child {
+  .city-article-card--center .city-article-content > p:last-child {
     margin-top: 14px;
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+  }
+
+  .city-article-card--left .city-article-content > p:last-child {
+    margin-top: 10px;
     font-size: 0.66rem;
     letter-spacing: 0.12em;
   }
@@ -484,13 +490,13 @@ input:-webkit-autofill:active {
   }
 
   .city-article-card--left h2 {
-    margin-top: 10px;
+    margin-top: 8px;
     font-size: 1.12rem;
     line-height: 1.06;
   }
 
   .city-article-card--left .city-article-content > p:nth-of-type(2) {
-    margin-top: 9px;
+    margin-top: 7px;
     font-size: 0.72rem;
     line-height: 1.32;
     -webkit-line-clamp: 2;
