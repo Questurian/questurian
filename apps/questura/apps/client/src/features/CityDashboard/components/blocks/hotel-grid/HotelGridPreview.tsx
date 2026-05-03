@@ -23,7 +23,7 @@ function HotelCard({ item, isPriority, isLast }: { item: HotelGridItem; isPriori
   const meta = [priceLabel, item.location?.toUpperCase()].filter(Boolean).join(' | ')
 
   return (
-    <article className={`flex-none w-[291px] ${isLast ? 'snap-end' : 'snap-start'} snap-always flex flex-col`}>
+    <article className={`flex-none snap-always flex flex-col w-[calc(100vw-5.25rem)] 380:w-[291px] 768:w-[340px] 1024:w-[400px] 1280:w-[460px] ${isLast ? 'snap-end' : 'snap-start'}`}>
       <div className="aspect-[3/2] overflow-hidden bg-[#d7dcde]">
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -120,30 +120,40 @@ export function HotelGridPreview({ block }: HomepageBlockLayoutProps<HotelGridBl
   }, [])
 
   return (
+    // PAGE-WIDTH RULE: every block section on this page must constrain its content
+    // to 1600px and center it with mx-auto, while keeping the section background
+    // full-width. Apply the inner wrapper pattern below to every new block section.
     <section className="relative py-8 bg-[#f5f0e8]">
+      <div className="mx-auto w-full max-w-[1600px]">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-6 mb-5">
         <div className="flex-1 min-w-0">
           {heading ? (
-            <h2 className="font-editorial text-[1.4rem] font-semibold leading-tight text-[#1a1a1a]">
+            <h2 className="font-editorial font-semibold leading-tight text-[#1a1a1a] text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
               {heading}
             </h2>
           ) : null}
           {subheading ? (
-            <p className="mt-1 font-[family-name:var(--font-dm-sans)] text-[0.75rem] text-[#3f3a35] leading-relaxed">
+            <p className="mt-1 font-[family-name:var(--font-dm-sans)] text-[0.75rem] 768:text-[0.85rem] 1024:text-[0.9rem] text-[#3f3a35] leading-relaxed">
               {subheading}
             </p>
           ) : null}
         </div>
 
         {items.length > 1 ? (
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 768:gap-2 shrink-0">
             <button
               type="button"
               onClick={() => scrollBy(-1)}
               disabled={activeIndex === 0}
               aria-label="Previous hotels"
-              className="flex items-center justify-center w-9 h-9 text-[1.4rem] text-[#1a1a1a] disabled:text-[#c8c2b8] transition-colors"
+              className="
+                flex items-center justify-center transition-colors
+                w-9 h-9 text-[1.5rem] text-[#1a1a1a] disabled:text-[#c8c2b8]
+                768:w-10 768:h-10 768:bg-[#1a1a1a] 768:text-white 768:text-[1.3rem]
+                768:hover:bg-[#2c2c2c] 768:disabled:bg-[#d4cfc8] 768:disabled:text-[#a09890]
+                1024:w-12 1024:h-12 1024:text-[1.6rem]
+              "
             >
               ‹
             </button>
@@ -152,7 +162,13 @@ export function HotelGridPreview({ block }: HomepageBlockLayoutProps<HotelGridBl
               onClick={() => scrollBy(1)}
               disabled={activeIndex >= items.length - 1}
               aria-label="Next hotels"
-              className="flex items-center justify-center w-9 h-9 text-[1.4rem] text-[#1a1a1a] disabled:text-[#c8c2b8] transition-colors"
+              className="
+                flex items-center justify-center transition-colors
+                w-9 h-9 text-[1.5rem] text-[#1a1a1a] disabled:text-[#c8c2b8]
+                768:w-10 768:h-10 768:bg-[#1a1a1a] 768:text-white 768:text-[1.3rem]
+                768:hover:bg-[#2c2c2c] 768:disabled:bg-[#d4cfc8] 768:disabled:text-[#a09890]
+                1024:w-12 1024:h-12 1024:text-[1.6rem]
+              "
             >
               ›
             </button>
@@ -172,7 +188,6 @@ export function HotelGridPreview({ block }: HomepageBlockLayoutProps<HotelGridBl
           ))}
           <div className="w-6 shrink-0" aria-hidden="true" />
         </div>
-        {/* Left edge mask — covers peeking previous card */}
         <div className="absolute inset-y-0 left-0 w-6 bg-[#f5f0e8] pointer-events-none" aria-hidden="true" />
       </div>
 
@@ -192,6 +207,7 @@ export function HotelGridPreview({ block }: HomepageBlockLayoutProps<HotelGridBl
           ))}
         </div>
       ) : null}
+      </div>
     </section>
   )
 }
