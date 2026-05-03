@@ -51,7 +51,19 @@ async function homepageFeaturedRequest<T>(
   init?: RequestInit,
 ): Promise<T> {
   const controller = new AbortController()
-  const timeoutId = window.setTimeout(() => controller.abort(), HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS)
+  const externalSignal = init?.signal
+  let didTimeout = false
+  const timeoutId = window.setTimeout(() => {
+    didTimeout = true
+    controller.abort()
+  }, HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS)
+  const abortFromExternalSignal = () => controller.abort(externalSignal?.reason)
+
+  if (externalSignal?.aborted) {
+    abortFromExternalSignal()
+  } else {
+    externalSignal?.addEventListener('abort', abortFromExternalSignal, { once: true })
+  }
 
   try {
     const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
@@ -77,7 +89,7 @@ async function homepageFeaturedRequest<T>(
 
     return response.json()
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (didTimeout && error instanceof Error && error.name === 'AbortError') {
       throw new Error(
         `Homepage featured content request timed out after ${Math.round(HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS / 1000)}s`,
       )
@@ -86,11 +98,15 @@ async function homepageFeaturedRequest<T>(
     throw error
   } finally {
     window.clearTimeout(timeoutId)
+    externalSignal?.removeEventListener('abort', abortFromExternalSignal)
   }
 }
 
-export async function fetchMainHomepage(token: string): Promise<MainHomepageResponse> {
-  return homepageFeaturedRequest('/api/homepage-featured-content', token)
+export async function fetchMainHomepage(
+  token: string,
+  signal?: AbortSignal,
+): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content', token, { signal })
 }
 
 export async function updateMainHomepageBlock(

@@ -5,15 +5,18 @@ import type {
   FeaturedArticlesBlock,
   HotelGridBlock,
   TourGridBlock,
+  LocationGridBlock,
   HomepageBlockLayoutDefinition,
   HomepageBlockLayoutFallbackDefinition,
   HomepageBlockLayoutKey,
   HomepageBlockLayoutProps,
 } from '../types'
 import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
+import { FeaturedArticlesFourArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFourArticlePreview'
 import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesSevenArticlePreview'
 import { HotelGridPreview } from '../components/blocks/hotel-grid/HotelGridPreview'
 import { TourGridPreview } from '../components/blocks/tour-grid/TourGridPreview'
+import { LocationGridPreview } from '../components/blocks/location-grid/LocationGridPreview'
 
 function homepageBlockLayoutKey(blockType: string, totalSlots: number): HomepageBlockLayoutKey {
   return `${blockType}:${totalSlots}`
@@ -49,6 +52,11 @@ export function getHomepageBlockTotalSlots(block: CityHomepageBlock): number | n
 const homepageBlockLayouts: HomepageBlockLayoutDefinition[] = [
   defineHomepageBlockLayout<FeaturedArticlesBlock>({
     blockType: 'featured-articles',
+    totalSlots: 4,
+    Component: FeaturedArticlesFourArticlePreview,
+  }),
+  defineHomepageBlockLayout<FeaturedArticlesBlock>({
+    blockType: 'featured-articles',
     totalSlots: 7,
     Component: FeaturedArticlesSevenArticlePreview,
   }),
@@ -75,6 +83,10 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
   defineHomepageBlockLayoutAnySlots<TourGridBlock>({
     blockType: 'tour-grid',
     Component: TourGridPreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<LocationGridBlock>({
+    blockType: 'location-grid',
+    Component: LocationGridPreview,
   }),
 ]
 

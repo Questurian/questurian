@@ -63,7 +63,7 @@ export default function MainHomepagePage() {
 
   const homepageQuery = useQuery({
     queryKey: mainHomepageQueryKey,
-    queryFn: () => fetchMainHomepage(token!),
+    queryFn: ({ signal }) => fetchMainHomepage(token!, signal),
     enabled: Boolean(token && canManage),
   })
 

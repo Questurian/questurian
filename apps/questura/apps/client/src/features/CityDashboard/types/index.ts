@@ -71,6 +71,8 @@ export type CityHomepageArticleBlock = {
   blockType: ArticleBackedHomepageBlockType
   totalSlots: number
   items: FeaturedArticleTeaser[]
+  sectionHeading?: string | null
+  sectionSubheading?: string | null
 }
 
 export type HotelGridItem = {
@@ -131,10 +133,43 @@ export type TourGridBlock = {
   selection: TourGridSelection
 }
 
+export type LocationGridItem = {
+  id: number
+  level: string | null
+  locationKey: string | null
+  parentKey: string | null
+  countryName: string | null
+  cityName: string | null
+  neighborhoodName: string | null
+  title: string
+  subtitle: string | null
+  updatedAt: string | null
+  coverImageUrl: string | null
+  coverImageAlt: string | null
+  slot?: number
+}
+
+export type LocationGridSelection = {
+  items: LocationGridItem[]
+  invalidItems: unknown[]
+  isComplete: boolean
+  totalSlots: number
+}
+
+export type LocationGridBlock = {
+  id: string
+  blockType: 'location-grid'
+  sectionHeading: string | null
+  sectionSubheading: string | null
+  mediaAspect: string | null
+  selection: LocationGridSelection
+}
+
 export type CityHomepageBlock<TItem = unknown> =
   | CityHomepageArticleBlock
   | HotelGridBlock
   | TourGridBlock
+  | LocationGridBlock
   | CityHomepageLegacyBlock<TItem>
 
 export type FeaturedArticlesBlock = CityHomepageArticleBlock & {

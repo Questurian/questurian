@@ -76,10 +76,22 @@ async function locationHomepageRequest<T>(
   init?: RequestInit,
 ): Promise<T> {
   const controller = new AbortController()
+  const externalSignal = init?.signal
+  let didTimeout = false
   const timeoutId = window.setTimeout(
-    () => controller.abort(),
+    () => {
+      didTimeout = true
+      controller.abort()
+    },
     LOCATION_HOMEPAGE_REQUEST_TIMEOUT_MS,
   )
+  const abortFromExternalSignal = () => controller.abort(externalSignal?.reason)
+
+  if (externalSignal?.aborted) {
+    abortFromExternalSignal()
+  } else {
+    externalSignal?.addEventListener('abort', abortFromExternalSignal, { once: true })
+  }
 
   try {
     const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
@@ -105,7 +117,7 @@ async function locationHomepageRequest<T>(
 
     return response.json()
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (didTimeout && error instanceof Error && error.name === 'AbortError') {
       throw new Error(
         `Location homepage request timed out after ${Math.round(LOCATION_HOMEPAGE_REQUEST_TIMEOUT_MS / 1000)}s`,
       )
@@ -114,6 +126,7 @@ async function locationHomepageRequest<T>(
     throw error
   } finally {
     window.clearTimeout(timeoutId)
+    externalSignal?.removeEventListener('abort', abortFromExternalSignal)
   }
 }
 
@@ -138,8 +151,9 @@ export async function createLocationHomepage(
 export async function fetchLocationHomepage(
   token: string,
   id: number,
+  signal?: AbortSignal,
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(`/api/location-homepages/${id}`, token)
+  return locationHomepageRequest(`/api/location-homepages/${id}`, token, { signal })
 }
 
 export async function updateLocationHomepageBlock(

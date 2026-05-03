@@ -80,7 +80,7 @@ export default function LocationHomepagePage() {
 
   const homepageQuery = useQuery({
     queryKey: homepageQueryKey,
-    queryFn: () => fetchLocationHomepage(token!, numericId),
+    queryFn: ({ signal }) => fetchLocationHomepage(token!, numericId, signal),
     enabled: Boolean(token && canManage && numericId),
   })
 
