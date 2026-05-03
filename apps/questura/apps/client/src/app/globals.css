@@ -728,6 +728,13 @@ input:-webkit-autofill:active {
   display: grid;
   gap: 0;
   background: var(--background);
+  padding: 0 24px;
+}
+
+@media (min-width: 768px) {
+  .city-four-hero-card {
+    padding: 0 30px;
+  }
 }
 
 .city-four-hero-image {

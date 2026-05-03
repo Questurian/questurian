@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 
 import type {
   CityHomepageBlock,
+  CityHomepageArticleBlock,
   FeaturedArticlesBlock,
   HotelGridBlock,
   TourGridBlock,
@@ -17,6 +18,7 @@ import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featur
 import { HotelGridPreview } from '../components/blocks/hotel-grid/HotelGridPreview'
 import { TourGridPreview } from '../components/blocks/tour-grid/TourGridPreview'
 import { LocationGridPreview } from '../components/blocks/location-grid/LocationGridPreview'
+import { QuestUrianMapsPreview } from '../components/blocks/questurian-maps/QuestUrianMapsPreview'
 
 function homepageBlockLayoutKey(blockType: string, totalSlots: number): HomepageBlockLayoutKey {
   return `${blockType}:${totalSlots}`
@@ -87,6 +89,10 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
   defineHomepageBlockLayoutAnySlots<LocationGridBlock>({
     blockType: 'location-grid',
     Component: LocationGridPreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
+    blockType: 'questurian-maps',
+    Component: QuestUrianMapsPreview,
   }),
 ]
 
