@@ -73,8 +73,38 @@ export type CityHomepageArticleBlock = {
   items: FeaturedArticleTeaser[]
 }
 
+export type HotelGridItem = {
+  id: number
+  title: string
+  slug: string | null
+  type: string | null
+  priceLevel: string | null
+  status: string | null
+  updatedAt: string | null
+  imageUrl: string | null
+  location: string | null
+  slot?: number
+}
+
+export type HotelGridSelection = {
+  items: HotelGridItem[]
+  invalidItems: unknown[]
+  allowDrafts: boolean
+  totalSlots: number
+  isComplete: boolean
+}
+
+export type HotelGridBlock = {
+  id: string
+  blockType: 'hotel-grid'
+  sectionHeading: string | null
+  sectionSubheading: string | null
+  selection: HotelGridSelection
+}
+
 export type CityHomepageBlock<TItem = unknown> =
   | CityHomepageArticleBlock
+  | HotelGridBlock
   | CityHomepageLegacyBlock<TItem>
 
 export type FeaturedArticlesBlock = CityHomepageArticleBlock & {
@@ -89,6 +119,11 @@ export type HomepageBlockLayoutProps<TBlock extends CityHomepageBlock = CityHome
 export type HomepageBlockLayoutDefinition = {
   blockType: string
   totalSlots: number
+  Component: ComponentType<HomepageBlockLayoutProps>
+}
+
+export type HomepageBlockLayoutFallbackDefinition = {
+  blockType: string
   Component: ComponentType<HomepageBlockLayoutProps>
 }
 
