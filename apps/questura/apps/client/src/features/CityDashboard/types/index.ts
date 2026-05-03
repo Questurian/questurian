@@ -102,9 +102,39 @@ export type HotelGridBlock = {
   selection: HotelGridSelection
 }
 
+export type TourGridItem = {
+  id: number
+  title: string
+  slug: string | null
+  type: string | null
+  priceLevel: string | null
+  status: string | null
+  updatedAt: string | null
+  imageUrl: string | null
+  location: string | null
+  slot?: number
+}
+
+export type TourGridSelection = {
+  items: TourGridItem[]
+  invalidItems: unknown[]
+  allowDrafts: boolean
+  totalSlots: number
+  isComplete: boolean
+}
+
+export type TourGridBlock = {
+  id: string
+  blockType: 'tour-grid'
+  sectionHeading: string | null
+  sectionSubheading: string | null
+  selection: TourGridSelection
+}
+
 export type CityHomepageBlock<TItem = unknown> =
   | CityHomepageArticleBlock
   | HotelGridBlock
+  | TourGridBlock
   | CityHomepageLegacyBlock<TItem>
 
 export type FeaturedArticlesBlock = CityHomepageArticleBlock & {

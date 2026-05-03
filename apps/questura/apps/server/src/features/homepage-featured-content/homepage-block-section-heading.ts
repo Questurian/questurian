@@ -12,6 +12,7 @@ export const HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING = [
   'where-to-eat-drink',
   'things-to-do-listicles',
   'hotel-grid',
+  'tour-grid',
   'things-to-do-attractions',
   'newsletter-signup',
 ] as const

@@ -4,6 +4,7 @@ import type {
   CityHomepageBlock,
   FeaturedArticlesBlock,
   HotelGridBlock,
+  TourGridBlock,
   HomepageBlockLayoutDefinition,
   HomepageBlockLayoutFallbackDefinition,
   HomepageBlockLayoutKey,
@@ -12,6 +13,7 @@ import type {
 import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
 import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesSevenArticlePreview'
 import { HotelGridPreview } from '../components/blocks/hotel-grid/HotelGridPreview'
+import { TourGridPreview } from '../components/blocks/tour-grid/TourGridPreview'
 
 function homepageBlockLayoutKey(blockType: string, totalSlots: number): HomepageBlockLayoutKey {
   return `${blockType}:${totalSlots}`
@@ -69,6 +71,10 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
   defineHomepageBlockLayoutAnySlots<HotelGridBlock>({
     blockType: 'hotel-grid',
     Component: HotelGridPreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<TourGridBlock>({
+    blockType: 'tour-grid',
+    Component: TourGridPreview,
   }),
 ]
 
