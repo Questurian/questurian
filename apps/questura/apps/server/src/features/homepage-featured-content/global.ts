@@ -1,6 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
 import { ArticleGridBlock } from './blocks/article-grid'
+import { ArticleListBlock } from './blocks/article-list'
 import { FeaturedArticleBlock } from './blocks/featured-article'
 import { FeaturedArticleCarouselBlock } from './blocks/featured-article-carousel'
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
@@ -29,6 +30,7 @@ const HOMEPAGE_BLOCK_TYPES = [
   ThingsToDoListiclesBlock,
   ThingsToDoAttractionsBlock,
   NewsletterSignupBlock,
+  ArticleListBlock,
 ] as const
 
 export const HomepageFeaturedContent: GlobalConfig = {

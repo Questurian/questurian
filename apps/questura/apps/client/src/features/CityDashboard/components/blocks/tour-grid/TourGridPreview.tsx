@@ -110,10 +110,10 @@ export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBloc
 
   return (
     // PAGE-WIDTH RULE: every block section on this page must constrain its content
-    // to 1600px and center it with mx-auto, while keeping the section background
+    // to 1400px and center it with mx-auto, while keeping the section background
     // full-width. Apply the inner wrapper pattern below to every new block section.
     <section className="relative py-8 bg-[#f5f0e8]">
-      <div className="mx-auto w-full max-w-[1600px]">
+      <div className="mx-auto w-full max-w-[1400px]">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-6 mb-5">
         <div className="flex-1 min-w-0">

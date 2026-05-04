@@ -113,10 +113,10 @@ export function QuestUrianMapsPreview({
 
   return (
     // PAGE-WIDTH RULE: every block section on this page must constrain its content
-    // to 1600px and center it with mx-auto, while keeping the section background
+    // to 1400px and center it with mx-auto, while keeping the section background
     // full-width. Apply the inner wrapper pattern below to every new block section.
     <section className="relative py-10 bg-[#fafaf8]">
-      <div className="mx-auto w-full max-w-[1600px]">
+      <div className="mx-auto w-full max-w-[1400px]">
 
         {/* Editorial rule-on-sides header */}
         <div className="flex items-center gap-4 px-6 mb-8">

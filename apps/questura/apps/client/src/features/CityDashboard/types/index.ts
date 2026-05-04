@@ -47,6 +47,7 @@ export type ArticleBackedHomepageBlockType =
   | 'questurian-maps'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
+  | 'article-list'
 
 export type FeaturedArticleTeaser = {
   title: string

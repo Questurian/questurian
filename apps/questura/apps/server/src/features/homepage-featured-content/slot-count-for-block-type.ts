@@ -45,6 +45,7 @@ export const HOMEPAGE_BLOCK_SLOT_LIMITS = {
   'tour-grid': { min: HOMEPAGE_TOUR_GRID_MIN_SLOTS, max: HOMEPAGE_TOUR_GRID_MAX_SLOTS },
   /** Placeholder section; no curated slots. */
   'newsletter-signup': { min: 0, max: 0 },
+  'article-list': { min: 5, max: 25 },
 } as const
 
 export type HomepageBlockSlotTyped = keyof typeof HOMEPAGE_BLOCK_SLOT_LIMITS

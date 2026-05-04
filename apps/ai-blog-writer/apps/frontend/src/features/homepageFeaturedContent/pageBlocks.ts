@@ -15,6 +15,7 @@ export type CuratedHomepageBlockType =
   | 'things-to-do-listicles'
   | 'things-to-do-attractions'
   | 'newsletter-signup'
+  | 'article-list'
 
 export type ArticleCuratedHomepageBlockType =
   | 'featured-article'
@@ -24,6 +25,7 @@ export type ArticleCuratedHomepageBlockType =
   | 'questurian-maps'
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
+  | 'article-list'
 
 export type CuratedHomepageBlockConfig = {
   label: string
@@ -134,6 +136,14 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     minSlotCount: 0,
     maxSlotCount: 0,
   },
+  'article-list': {
+    label: 'Article List',
+    description: 'Vertical list of articles — thumbnail left, title/excerpt/author right (5–25 items)',
+    quickSlotCounts: [5, 10, 15, 20],
+    defaultSlotCount: 10,
+    minSlotCount: 5,
+    maxSlotCount: 25,
+  },
 }
 
 /** Validates slot count when adding a block (article-grid allows only 4 or 8). */
@@ -162,6 +172,7 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
   'things-to-do-listicles',
   'things-to-do-attractions',
   'newsletter-signup',
+  'article-list',
 ]
 
 /**
@@ -183,6 +194,7 @@ export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBloc
   'things-to-do-listicles',
   'things-to-do-attractions',
   'newsletter-signup',
+  'article-list',
 ]
 
 export type FeaturedArticleBlockResponse = {
@@ -304,6 +316,14 @@ export type NewsletterSignupBlockResponse = {
   sectionSubheading: string | null
 }
 
+export type ArticleListBlockResponse = {
+  id: string
+  blockType: 'article-list'
+  selection: HomepageFeaturedSelection
+  sectionHeading: string | null
+  sectionSubheading: string | null
+}
+
 export type ArticleCuratedHomepageBlockResponse =
   | FeaturedArticleBlockResponse
   | FeaturedArticleCarouselBlockResponse
@@ -312,6 +332,7 @@ export type ArticleCuratedHomepageBlockResponse =
   | QuesturianMapsBlockResponse
   | WhereToEatDrinkBlockResponse
   | ThingsToDoListiclesBlockResponse
+  | ArticleListBlockResponse
 
 /** Block types edited with {@link CuratedHomepageBlockEditor}; empty blocks may convert to another type. */
 export const ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES: ArticleCuratedHomepageBlockType[] = [
@@ -322,6 +343,7 @@ export const ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES: ArticleCuratedHomepageBlockTy
   'questurian-maps',
   'where-to-eat-drink',
   'things-to-do-listicles',
+  'article-list',
 ]
 
 export type CuratedHomepageBlockResponse =
@@ -392,6 +414,7 @@ export function isCuratedHomepageBlock(
     || block.blockType === 'things-to-do-listicles'
     || block.blockType === 'things-to-do-attractions'
     || block.blockType === 'newsletter-signup'
+    || block.blockType === 'article-list'
   )
 }
 
@@ -405,6 +428,7 @@ export function isArticleCuratedHomepageBlock(
     || block.blockType === 'questurian-maps'
     || block.blockType === 'where-to-eat-drink'
     || block.blockType === 'things-to-do-listicles'
+    || block.blockType === 'article-list'
 }
 
 export function isLocationGridBlock(

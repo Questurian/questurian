@@ -48,7 +48,7 @@ export function LocationGridPreview({ block }: HomepageBlockLayoutProps<Location
   return (
     <section className="bg-[#f5f0e8]">
       {(heading || subheading) ? (
-        <div className="mx-auto w-full max-w-[1600px] px-6 pt-8 pb-4">
+        <div className="mx-auto w-full max-w-[1400px] px-6 pt-8 pb-4">
           {heading ? (
             <h2 className="font-editorial font-semibold leading-tight text-[#1a1a1a] text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
               {heading}
@@ -62,7 +62,7 @@ export function LocationGridPreview({ block }: HomepageBlockLayoutProps<Location
         </div>
       ) : null}
 
-      <div className="mx-auto w-full max-w-[1600px] 1024:max-w-none grid grid-cols-1 768:grid-cols-2 1024:grid-cols-4">
+      <div className="mx-auto w-full max-w-[1400px] 1024:max-w-none grid grid-cols-1 768:grid-cols-2 1024:grid-cols-4">
         {items.map((item, index) => (
           <LocationCard key={item.id} item={item} isPriority={index === 0} />
         ))}

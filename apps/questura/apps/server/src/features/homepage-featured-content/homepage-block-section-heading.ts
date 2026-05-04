@@ -15,6 +15,7 @@ export const HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING = [
   'tour-grid',
   'things-to-do-attractions',
   'newsletter-signup',
+  'article-list',
 ] as const
 
 export type HomepageBlockTypeWithOptionalSectionHeading =

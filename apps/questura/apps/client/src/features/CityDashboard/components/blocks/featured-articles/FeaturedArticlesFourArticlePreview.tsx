@@ -216,7 +216,7 @@ export function FeaturedArticlesFourArticlePreview({
   return (
     <section className="bg-[#f5f0e8]" aria-label="Featured articles">
       {sectionHeading ? (
-        <div className="mx-auto w-full max-w-[1600px] px-6 pt-8 pb-4 768:px-[30px]">
+        <div className="mx-auto w-full max-w-[1400px] px-6 pt-8 pb-4 768:px-[30px]">
           <h2 className="font-editorial font-semibold leading-tight text-[#1a1a1a] text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
             {sectionHeading}
           </h2>

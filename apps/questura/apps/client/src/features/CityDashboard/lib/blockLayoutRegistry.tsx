@@ -12,6 +12,7 @@ import type {
   HomepageBlockLayoutKey,
   HomepageBlockLayoutProps,
 } from '../types'
+import { FeaturedArticleOneArticlePreview } from '../components/blocks/featured-article/FeaturedArticleOneArticlePreview'
 import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
 import { FeaturedArticlesFourArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFourArticlePreview'
 import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesSevenArticlePreview'
@@ -19,6 +20,7 @@ import { HotelGridPreview } from '../components/blocks/hotel-grid/HotelGridPrevi
 import { TourGridPreview } from '../components/blocks/tour-grid/TourGridPreview'
 import { LocationGridPreview } from '../components/blocks/location-grid/LocationGridPreview'
 import { QuestUrianMapsPreview } from '../components/blocks/questurian-maps/QuestUrianMapsPreview'
+import { ArticleListPreview } from '../components/blocks/article-list/ArticleListPreview'
 
 function homepageBlockLayoutKey(blockType: string, totalSlots: number): HomepageBlockLayoutKey {
   return `${blockType}:${totalSlots}`
@@ -78,6 +80,10 @@ const homepageBlockLayoutMap = new Map<HomepageBlockLayoutKey, HomepageBlockLayo
 
 // Fallback: blockType only — matches any slot count not covered above
 const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
+  defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
+    blockType: 'featured-article',
+    Component: FeaturedArticleOneArticlePreview,
+  }),
   defineHomepageBlockLayoutAnySlots<HotelGridBlock>({
     blockType: 'hotel-grid',
     Component: HotelGridPreview,
@@ -93,6 +99,10 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
   defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
     blockType: 'questurian-maps',
     Component: QuestUrianMapsPreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
+    blockType: 'article-list',
+    Component: ArticleListPreview,
   }),
 ]
 

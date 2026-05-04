@@ -55,6 +55,7 @@ type CuratedBlockType =
   | 'things-to-do-listicles'
   | 'things-to-do-attractions'
   | 'newsletter-signup'
+  | 'article-list'
 
 export function isCuratedBlockType(value: unknown): value is CuratedBlockType {
   return (
@@ -70,6 +71,7 @@ export function isCuratedBlockType(value: unknown): value is CuratedBlockType {
     || value === 'things-to-do-listicles'
     || value === 'things-to-do-attractions'
     || value === 'newsletter-signup'
+    || value === 'article-list'
   )
 }
 
@@ -83,6 +85,7 @@ const PUBLIC_ARTICLE_BLOCK_TYPES = new Set([
   'questurian-maps',
   'where-to-eat-drink',
   'things-to-do-listicles',
+  'article-list',
 ])
 
 type PublicPreviewPerson = {
@@ -222,6 +225,8 @@ function formatPublicHomepageBlock(block: unknown) {
   return {
     blockType: String(block.blockType),
     totalSlots: normalizeTotalSlots(selection?.totalSlots),
+    sectionHeading: stringOrNull(block.sectionHeading),
+    sectionSubheading: stringOrNull(block.sectionSubheading),
     items: rawItems.map((item) => formatPublicArticleItem(item)),
   }
 }

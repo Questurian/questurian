@@ -77,6 +77,7 @@ const SUPPORTED_BLOCK_TYPES = [
   'things-to-do-listicles',
   'things-to-do-attractions',
   'newsletter-signup',
+  'article-list',
 ] as const
 type SupportedBlockType = (typeof SUPPORTED_BLOCK_TYPES)[number]
 const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }> = {
@@ -104,6 +105,7 @@ const BLOCK_SLOT_LIMITS: Record<SupportedBlockType, { min: number; max: number }
     max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
   },
   'newsletter-signup': { min: 0, max: 0 },
+  'article-list': { min: 5, max: 25 },
 }
 
 function isCuratedBlockType(value: unknown): value is SupportedBlockType {
