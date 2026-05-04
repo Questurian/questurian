@@ -1,4 +1,5 @@
 import { Navbar } from "../../features/Navigation";
+import Footer from "@/components/layout/Footer";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,8 @@ export default function MainLayout({
   return (
     <>
       <Navbar />
-      {children}
+      <main className="flex-1">{children}</main>
+      <Footer />
     </>
   );
 }
