@@ -105,11 +105,11 @@ export const ListicleItineraries: CollectionConfig = {
   fields: [
     step1Complete,
     inUpdateMode,
-    slug,
 
     title,
     location,
     locationRef,
+    slug,
     sharedNeighborhoods,
     step1UiWrapper,
 
@@ -130,14 +130,6 @@ export const ListicleItineraries: CollectionConfig = {
       async ({ data, req, operation }) => {
         if (operation === 'create' && req.user?.id) {
           data.author = req.user.id
-        }
-
-        if (data?.title && !data?.slug) {
-          data.slug = data.title
-            .toLowerCase()
-            .trim()
-            .replace(/\s+/g, '-')
-            .replace(/[^\w-]/g, '')
         }
 
         if (data?.status === 'published' && !data?.publishedAt) {

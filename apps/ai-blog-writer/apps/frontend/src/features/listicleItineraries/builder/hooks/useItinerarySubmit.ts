@@ -259,6 +259,7 @@ export function useItinerarySubmit({
 
       const body: Record<string, unknown> = {
         title: submitDraft.title.trim(),
+        ...(submitDraft.payloadSlug?.trim() ? { slug: submitDraft.payloadSlug.trim() } : {}),
         location: submitDraft.location,
         locationRef: selectedLocationRefId,
         sharedNeighborhoods: submitDraft.sharedNeighborhoods,

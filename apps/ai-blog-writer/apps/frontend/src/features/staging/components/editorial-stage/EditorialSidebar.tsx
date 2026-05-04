@@ -327,6 +327,21 @@ export function EditorialSidebar({
         ) : null}
 
         <div className="stage-article-sidebar-section">
+          <label className="stage-article-label">Slug</label>
+          <span className="stage-article-label-hint">
+            URL-friendly identifier (e.g. medellin-digital-nomad-guide-2026)
+          </span>
+          <input
+            type="text"
+            value={stagedArticle.payloadSlug || ''}
+            onChange={(event) => onUpdateStagedArticle({ payloadSlug: event.target.value })}
+            className="stage-article-select"
+            placeholder="auto-generated if blank"
+            disabled={isEditingLocked}
+          />
+        </div>
+
+        <div className="stage-article-sidebar-section">
           <label className="stage-article-label">
             AI Model
           </label>

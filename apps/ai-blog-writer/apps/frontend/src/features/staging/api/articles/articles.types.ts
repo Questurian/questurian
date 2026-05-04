@@ -18,6 +18,7 @@ export type PayloadArticleDoc = {
 
 export type CreateArticlePayload = {
   title: string
+  slug?: string
   location?: string
   locationRef?: number
   sharedNeighborhoods?: number[]

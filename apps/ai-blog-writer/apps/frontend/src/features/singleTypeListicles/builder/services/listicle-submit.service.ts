@@ -88,6 +88,7 @@ export async function submitListicle({
 
   const body: Record<string, unknown> = {
     title: draft.title.trim(),
+    ...(draft.payloadSlug?.trim() ? { slug: draft.payloadSlug.trim() } : {}),
     location: draft.location,
     locationRef: selectedLocationRefId,
     sharedNeighborhoods: draft.sharedNeighborhoods,

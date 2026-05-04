@@ -110,6 +110,7 @@ export const Articles: CollectionConfig = {
     title,
     location,
     locationRef,
+    slug,
     sharedNeighborhoods,
     step1UiWrapper,
 
@@ -119,7 +120,6 @@ export const Articles: CollectionConfig = {
     seo,
 
     // Sidebar / Meta fields
-    slug,
     status,
     author,
     publishedAt,
@@ -129,15 +129,6 @@ export const Articles: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, req, operation }) => {
-        // Auto-generate slug from title
-        if (data?.title && !data?.slug) {
-          data.slug = data.title
-            .toLowerCase()
-            .trim()
-            .replace(/\s+/g, '-')
-            .replace(/[^\w-]/g, '')
-        }
-
         // Set author on creation
         if (operation === 'create' && req.user?.id) {
           data.author = req.user.id

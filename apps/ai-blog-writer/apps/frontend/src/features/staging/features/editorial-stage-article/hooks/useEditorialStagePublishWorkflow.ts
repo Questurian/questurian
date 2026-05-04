@@ -243,6 +243,7 @@ export function useEditorialStagePublishWorkflow({
 
       const payload: CreateArticlePayload = {
         title: trimmedTitle,
+        ...(stagedArticle.payloadSlug?.trim() ? { slug: stagedArticle.payloadSlug.trim() } : {}),
         location: location.locationKey,
         locationRef: location.id,
         sharedNeighborhoods,

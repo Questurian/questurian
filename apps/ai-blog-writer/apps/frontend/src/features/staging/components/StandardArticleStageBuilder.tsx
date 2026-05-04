@@ -7,6 +7,7 @@ import {
 } from '../../images'
 import { SeoEditorPanel } from '../../shared/seo/components/SeoEditorPanel'
 import { getSchemaPublisherConfig } from '../../shared/seo/services/schema-publisher-config.service'
+import { buildArticleOgUrl } from '../../shared/seo/utils/buildArticleOgUrl'
 import {
   applySeoAiPatch,
   buildSeoAiSeed,
@@ -95,6 +96,7 @@ export function StandardArticleStageBuilder({
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [isUploadingOgImage, setIsUploadingOgImage] = useState(false)
+  const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
   const lastAutoStructuredDataRef = useRef<string>('')
 
   const [isExpansionModalOpen, setIsExpansionModalOpen] = useState(false)
@@ -184,13 +186,14 @@ export function StandardArticleStageBuilder({
   const syncIssues = useMemo(() => {
     const issues: string[] = []
     if (!isStep1Locked) issues.push('Lock Step 1 before syncing to Payload.')
+    if (!stagedArticle?.payloadSlug?.trim()) issues.push('Slug is required before syncing to Payload.')
     if (!isStep2Locked) issues.push('Lock Step 2 before syncing to Payload.')
     if (!isStep3Locked) issues.push('Lock Step 3 before syncing to Payload.')
     if (!seoCoreComplete) issues.push('Add SEO title and meta description before syncing to Payload.')
     if (step3Issues.length > 0) issues.push(step3Issues[0])
     if (seoIssues.length > 0) issues.push(seoIssues[0])
     return issues
-  }, [isStep1Locked, isStep2Locked, isStep3Locked, seoCoreComplete, seoIssues, step3Issues])
+  }, [isStep1Locked, isStep2Locked, isStep3Locked, seoCoreComplete, seoIssues, stagedArticle?.payloadSlug, step3Issues])
 
   const setStageArticle = useCallback((updates: Partial<NonNullable<typeof stagedArticle>>) => {
     sidebarProps?.onUpdateStagedArticle(updates)
@@ -280,10 +283,29 @@ export function StandardArticleStageBuilder({
     updateSeoSection,
   ])
 
+  const updateSeoSectionRef = useRef(updateSeoSection)
+  useEffect(() => { updateSeoSectionRef.current = updateSeoSection })
+
+  useEffect(() => {
+    const slug = stagedArticle?.payloadSlug?.trim()
+    const locationKey = selectedLocation?.locationKey
+    if (!slug || !locationKey) return
+    const newUrl = buildArticleOgUrl(locationKey, null, slug)
+    if (!newUrl) return
+    updateSeoSectionRef.current((current) => {
+      if (current.openGraph.url === newUrl) return current
+      return { ...current, openGraph: { ...current.openGraph, url: newUrl } }
+    })
+  }, [stagedArticle?.payloadSlug, selectedLocation?.locationKey])
+
   const handleContinueSetup = useCallback(() => {
     if (!stagedArticle || !sidebarProps) return
     if (step1Issues.length > 0) {
       setLocalError(step1Issues[0])
+      return
+    }
+    if (!stagedArticle.payloadSlug?.trim()) {
+      setLocalError('Slug is required before continuing.')
       return
     }
     setLocalError(null)
@@ -297,6 +319,26 @@ export function StandardArticleStageBuilder({
       step3_in_update_mode: false,
     })
   }, [sidebarProps, stagedArticle, step1Issues])
+
+  const handleGenerateSlugWithAi = useCallback(async () => {
+    if (!stagedArticle?.title.trim() || !sidebarProps) return
+    setIsGeneratingSlug(true)
+    try {
+      const response = await api.rewriteBlockWithAi({
+        prompt: `Generate a clean SEO-friendly URL slug for this article title:\n\nTitle: ${stagedArticle.title.trim()}\n\nRules:\n- Think like a real user searching Google.\n- Keep the most important search keywords.\n- Remove filler words like "the," "a," "an," "in," "of," "to," and "for" unless they are needed.\n- Keep it short, readable, and specific.\n- Use lowercase only.\n- Use hyphens between words.\n- Do not keyword-stuff.\n- Do not add words that are not strongly related to the title.\n- Prefer search-intent wording over matching the title exactly.\n- Return only the slug, no explanation.\n\nExample:\nTitle: The Best Steakhouses in Las Vegas\nSlug: best-steakhouses-las-vegas`,
+        blockContent: stagedArticle.title.trim(),
+        articleTitle: stagedArticle.title.trim(),
+      })
+      const slug = response.rewritten_content?.trim()
+      if (slug) {
+        sidebarProps.onUpdateStagedArticle({ payloadSlug: slug })
+      }
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Failed to generate slug with AI.')
+    } finally {
+      setIsGeneratingSlug(false)
+    }
+  }, [api, sidebarProps, stagedArticle])
 
   const handleContinueFeaturedImage = useCallback(() => {
     if (!sidebarProps) return
@@ -605,6 +647,32 @@ export function StandardArticleStageBuilder({
                       </option>
                     ))}
                   </select>
+                </label>
+
+                <label className="stl-field">
+                  <span>Slug *</span>
+                  <small>URL-friendly identifier (e.g. medellin-digital-nomad-guide-2026)</small>
+                  <div className="stl-seo-input-wrap">
+                    <input
+                      className="stl-seo-input-with-ai"
+                      value={stagedArticle.payloadSlug || ''}
+                      onChange={(event) => sidebarProps.onUpdateStagedArticle({ payloadSlug: event.target.value })}
+                      placeholder="e.g. best-steakhouses-las-vegas"
+                      disabled={isStep1Locked}
+                    />
+                    {!isStep1Locked ? (
+                      <span className="stl-seo-ai-trigger-wrap">
+                        <button
+                          type="button"
+                          className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                          onClick={() => void handleGenerateSlugWithAi()}
+                          disabled={isGeneratingSlug || !stagedArticle.title.trim()}
+                        >
+                          {isGeneratingSlug ? 'Generating...' : 'AI'}
+                        </button>
+                      </span>
+                    ) : null}
+                  </div>
                 </label>
               </div>
 

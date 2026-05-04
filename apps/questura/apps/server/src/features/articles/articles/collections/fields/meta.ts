@@ -6,8 +6,7 @@ export const slug: Field = {
   unique: true,
   index: true,
   admin: {
-    description: 'URL-friendly identifier (auto-generated from title)',
-    hidden: true,
+    description: 'URL-friendly slug (e.g. medellin-digital-nomad-guide-2026)',
   },
 }
 

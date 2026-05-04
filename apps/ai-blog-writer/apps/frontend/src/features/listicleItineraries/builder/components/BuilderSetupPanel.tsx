@@ -18,6 +18,8 @@ type BuilderSetupPanelProps = {
   onCancelUpdateSetup: () => void
   updateDraft: (next: Partial<ListicleItineraryDraft>) => void
   onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
+  onGenerateSlugWithAi?: () => Promise<void>
+  isGeneratingSlug?: boolean
 }
 
 function getAiTitleDisabledReason(draft: ListicleItineraryDraft): string | undefined {
@@ -36,6 +38,8 @@ export function BuilderSetupPanel({
   onCancelUpdateSetup,
   updateDraft,
   onTitleAiGenerate,
+  onGenerateSlugWithAi,
+  isGeneratingSlug,
 }: BuilderSetupPanelProps) {
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
   const isSetupLocked = draft.step1_complete && !draft.in_update_mode
@@ -139,6 +143,31 @@ export function BuilderSetupPanel({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="stl-field">
+          <span>Slug *</span>
+          <div className="stl-seo-input-wrap">
+            <input
+              className="stl-seo-input-with-ai"
+              value={draft.payloadSlug || ''}
+              disabled={isSetupLocked}
+              placeholder="e.g. best-steakhouses-las-vegas"
+              onChange={(event) => updateDraft({ payloadSlug: event.target.value })}
+            />
+            {onGenerateSlugWithAi && !isSetupLocked ? (
+              <span className="stl-seo-ai-trigger-wrap">
+                <button
+                  type="button"
+                  className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                  onClick={() => void onGenerateSlugWithAi()}
+                  disabled={isGeneratingSlug || !draft.title.trim()}
+                >
+                  {isGeneratingSlug ? 'Generating...' : 'AI'}
+                </button>
+              </span>
+            ) : null}
+          </div>
         </label>
 
         {showNeighborhoodPicker ? (

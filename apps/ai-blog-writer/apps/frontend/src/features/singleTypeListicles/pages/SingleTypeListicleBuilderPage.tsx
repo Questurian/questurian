@@ -46,6 +46,7 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { saveDraft } from '../storage'
+import { buildArticleOgUrl } from '../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
 
 type AiRewriteInput = {
@@ -243,6 +244,47 @@ export default function SingleTypeListicleBuilderPage() {
 
     return title
   }, [draft])
+
+  const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
+
+  const handleGenerateSlugWithAi = useCallback(async () => {
+    if (!draft?.title.trim()) return
+    setIsGeneratingSlug(true)
+    try {
+      const response = await rewriteBlockWithAi({
+        prompt: `Generate a clean SEO-friendly URL slug for this article title:\n\nTitle: ${draft.title.trim()}\n\nRules:\n- Think like a real user searching Google.\n- Keep the most important search keywords.\n- Remove filler words like "the," "a," "an," "in," "of," "to," and "for" unless they are needed.\n- Keep it short, readable, and specific.\n- Use lowercase only.\n- Use hyphens between words.\n- Do not keyword-stuff.\n- Do not add words that are not strongly related to the title.\n- Prefer search-intent wording over matching the title exactly.\n- Return only the slug, no explanation.\n\nExample:\nTitle: The Best Steakhouses in Las Vegas\nSlug: best-steakhouses-las-vegas`,
+        blockContent: draft.title.trim(),
+        modelName: resolveEditorAssistModelName(draft.editorModelName),
+        articleTitle: draft.title.trim(),
+      })
+      const slug = response.rewritten_content?.trim()
+      if (slug) {
+        setDraft((current) => current ? { ...current, payloadSlug: slug } : current)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate slug with AI.')
+    } finally {
+      setIsGeneratingSlug(false)
+    }
+  }, [draft, setDraft])
+
+  useEffect(() => {
+    const slug = draft?.payloadSlug?.trim()
+    const locationKey = draft?.location
+    if (!slug || !locationKey) return
+    const newUrl = buildArticleOgUrl(locationKey, 'maps', slug)
+    if (!newUrl) return
+    setDraft((current) => {
+      if (!current || current.seoSection.openGraph.url === newUrl) return current
+      return {
+        ...current,
+        seoSection: {
+          ...current.seoSection,
+          openGraph: { ...current.seoSection.openGraph, url: newUrl },
+        },
+      }
+    })
+  }, [draft?.payloadSlug, draft?.location, setDraft])
 
   const buildGenerationRequest = useCallback((params: {
     targetIds: string[]
@@ -757,6 +799,8 @@ export default function SingleTypeListicleBuilderPage() {
             updateDraft={actions.updateDraft}
             setTargetItemCount={actions.setTargetItemCount}
             onTitleAiGenerate={generateDraftTitleWithAi}
+            onGenerateSlugWithAi={handleGenerateSlugWithAi}
+            isGeneratingSlug={isGeneratingSlug}
           />
 
           {isStep1Locked ? (
