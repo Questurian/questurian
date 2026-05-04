@@ -17,56 +17,66 @@ function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
 }
 
 function getAuthorLabel(article: FeaturedArticleTeaser): string {
-  const authorName = article.author?.name
+  const name = article.author?.name
   const fullName = [article.author?.firstName, article.author?.lastName].filter(Boolean).join(' ')
-  return authorName || fullName || 'Questurian'
+  return name || fullName || 'Questurian'
 }
 
 function getArticleKey(article: FeaturedArticleTeaser, index: number): string {
   return [article.title, article.imageUrlSquare ?? article.imageUrl ?? index].join(':')
 }
 
-function useArticleImageStatus(imageUrl: string | null) {
+type ArticleRowProps = {
+  article: FeaturedArticleTeaser
+  isPriority: boolean
+}
+
+function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
+  const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const imageRef = useRef<HTMLImageElement | null>(null)
   const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
     imageUrl ? 'loading' : 'failed',
   )
-  const isImageLoaded = !imageUrl || imageStatus === 'loaded'
-  const isContentReady = !imageUrl || imageStatus !== 'loading'
 
   useEffect(() => {
-    const image = imageRef.current
     setImageStatus(imageUrl ? 'loading' : 'failed')
+    const image = imageRef.current
     if (!imageUrl || !image) return
     if (image.complete && image.naturalWidth > 0) {
       setImageStatus('loaded')
     }
   }, [imageUrl])
 
-  return { imageRef, isContentReady, isImageLoaded, setImageStatus }
-}
-
-type ArticleListRowProps = {
-  article: FeaturedArticleTeaser
-  isPriority: boolean
-}
-
-function ArticleListRow({ article, isPriority }: ArticleListRowProps): JSX.Element {
-  const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } =
-    useArticleImageStatus(imageUrl)
-
+  const isImageLoaded = imageStatus === 'loaded'
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? null
   const authorLabel = getAuthorLabel(article)
 
   return (
-    <article
-      className="flex gap-4 py-5 768:gap-6"
-      data-content-ready={isContentReady ? 'true' : 'false'}
-      data-image-loaded={isImageLoaded ? 'true' : 'false'}
-    >
-      <div className="relative h-[80px] w-[80px] shrink-0 overflow-hidden rounded-sm bg-[#d7dcde] 768:h-[96px] 768:w-[96px] 1024:h-[108px] 1024:w-[108px]">
+    <article className="flex items-start gap-4 py-6 768:gap-8 768:py-8 1024:py-10">
+      {/* ── Text ─────────────────────────────────────────── */}
+      <div className="min-w-0 flex-1">
+        <p className="font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase leading-none tracking-[0.12em] text-[#1a1a1a] 768:text-[0.67rem]">
+          {articleTypeLabel}
+        </p>
+
+        <h3 className="mt-2 font-editorial text-[1.25rem] font-semibold leading-[1.15] text-[#1a1a1a] 768:text-[1.45rem] 1024:text-[1.65rem]">
+          {article.title}
+        </h3>
+
+        {excerpt ? (
+          <p className="mt-2 font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] 768:text-[0.92rem] 1024:text-[0.95rem]">
+            {excerpt}
+          </p>
+        ) : null}
+
+        <p className="mt-3 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:text-[0.65rem]">
+          By {authorLabel}
+        </p>
+      </div>
+
+      {/* ── Image ────────────────────────────────────────── */}
+      <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden bg-[#d7dcde] 768:h-[150px] 768:w-[150px] 1024:h-[180px] 1024:w-[180px]">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -85,39 +95,6 @@ function ArticleListRow({ article, isPriority }: ArticleListRowProps): JSX.Eleme
           />
         ) : null}
       </div>
-
-      <div className="relative flex min-w-0 flex-1 flex-col justify-center">
-        <p className="font-[family-name:var(--font-dm-sans)] text-[0.65rem] font-semibold uppercase leading-3 tracking-[0.08em] text-[#1e3599] 768:text-[0.72rem] 768:tracking-[0.1em]">
-          {articleTypeLabel}
-        </p>
-
-        <h3 className="mt-1.5 font-editorial text-[1rem] font-semibold leading-[1.1] text-[#1a1a1a] 768:text-[1.1rem] 1024:text-[1.2rem]">
-          {article.title}
-        </h3>
-
-        {excerpt ? (
-          <p className="mt-1.5 overflow-hidden font-editorial text-[0.82rem] font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] 768:text-[0.88rem]">
-            {excerpt}
-          </p>
-        ) : null}
-
-        <p className="mt-2 font-[family-name:var(--font-dm-sans)] text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
-          {authorLabel}
-        </p>
-
-        <div
-          aria-hidden="true"
-          className={joinClassNames(
-            'absolute inset-0 flex flex-col justify-center transition-opacity duration-300',
-            isContentReady ? 'opacity-0 pointer-events-none' : 'opacity-100',
-          )}
-        >
-          <span className="city-skeleton-line h-2.5 w-20" />
-          <span className="city-skeleton-line mt-2 h-4 w-11/12" />
-          <span className="city-skeleton-line mt-1 h-4 w-4/5" />
-          <span className="city-skeleton-line mt-2 h-2.5 w-16" />
-        </div>
-      </div>
     </article>
   )
 }
@@ -132,14 +109,14 @@ export function ArticleListPreview({
 
   return (
     <section className="bg-[#f5f0e8]" aria-label="Article list">
-      <div className="mx-auto w-full max-w-[1400px] px-6 pt-8 pb-6 768:px-[30px]">
+      <div className="mx-auto w-full max-w-[1400px] px-5 pb-6 pt-8 768:px-[30px] 1024:px-10">
         {sectionHeading ? (
-          <div className="mb-2 pb-4">
-            <h2 className="font-editorial font-semibold leading-tight text-[#1a1a1a] text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
+          <div className="mb-4 pb-2">
+            <h2 className="font-editorial text-[1.4rem] font-semibold leading-tight text-[#1a1a1a] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
               {sectionHeading}
             </h2>
             {sectionSubheading ? (
-              <p className="mt-1 font-[family-name:var(--font-dm-sans)] text-[0.75rem] 768:text-[0.85rem] 1024:text-[0.9rem] text-[#3f3a35] leading-relaxed">
+              <p className="mt-1 font-[family-name:var(--font-dm-sans)] text-[0.75rem] leading-relaxed text-[#3f3a35] 768:text-[0.85rem]">
                 {sectionSubheading}
               </p>
             ) : null}
@@ -148,7 +125,7 @@ export function ArticleListPreview({
 
         <div className="divide-y divide-[#d9d3c9]">
           {block.items.map((article, index) => (
-            <ArticleListRow
+            <ArticleRow
               key={getArticleKey(article, index)}
               article={article}
               isPriority={index === 0}
