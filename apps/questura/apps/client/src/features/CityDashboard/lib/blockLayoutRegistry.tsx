@@ -7,6 +7,7 @@ import type {
   HotelGridBlock,
   TourGridBlock,
   LocationGridBlock,
+  NewsletterSignupBlock,
   HomepageBlockLayoutDefinition,
   HomepageBlockLayoutFallbackDefinition,
   HomepageBlockLayoutKey,
@@ -21,6 +22,7 @@ import { TourGridPreview } from '../components/blocks/tour-grid/TourGridPreview'
 import { LocationGridPreview } from '../components/blocks/location-grid/LocationGridPreview'
 import { QuestUrianMapsPreview } from '../components/blocks/questurian-maps/QuestUrianMapsPreview'
 import { ArticleListPreview } from '../components/blocks/article-list/ArticleListPreview'
+import { NewsletterSignupPreview } from '../components/blocks/newsletter-signup/NewsletterSignupPreview'
 
 function homepageBlockLayoutKey(blockType: string, totalSlots: number): HomepageBlockLayoutKey {
   return `${blockType}:${totalSlots}`
@@ -103,6 +105,10 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
   defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
     blockType: 'article-list',
     Component: ArticleListPreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<NewsletterSignupBlock>({
+    blockType: 'newsletter-signup',
+    Component: NewsletterSignupPreview,
   }),
 ]
 

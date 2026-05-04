@@ -166,11 +166,23 @@ export type LocationGridBlock = {
   selection: LocationGridSelection
 }
 
+export type NewsletterSignupBlock = {
+  id: string
+  blockType: 'newsletter-signup'
+  sectionHeading: string | null
+  sectionSubheading: string | null
+  selection?: {
+    items: unknown[]
+    totalSlots: number
+  }
+}
+
 export type CityHomepageBlock<TItem = unknown> =
   | CityHomepageArticleBlock
   | HotelGridBlock
   | TourGridBlock
   | LocationGridBlock
+  | NewsletterSignupBlock
   | CityHomepageLegacyBlock<TItem>
 
 export type FeaturedArticlesBlock = CityHomepageArticleBlock & {
