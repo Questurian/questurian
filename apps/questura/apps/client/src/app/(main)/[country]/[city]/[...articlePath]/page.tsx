@@ -1,24 +1,14 @@
+import { createElement } from 'react';
 import { notFound } from 'next/navigation';
+import { isStandardArticle } from '@/features/articles/lib/articleGuards';
+import {
+  articleLayoutKeyFromRouteType,
+  parseArticlePath,
+} from '@/features/articles/lib/articleRoute';
 import { fetchArticle } from '@/features/articles/lib/fetchArticle';
-import { ArticlePage } from '@/features/articles/ArticlePage';
-
-const KNOWN_TYPES = ['maps', 'itinerary', 'guide', 'food', 'neighborhoods'] as const;
-type ArticleType = (typeof KNOWN_TYPES)[number];
-
-function parseArticlePath(segments: string[]): {
-  type: ArticleType | null;
-  slug: string;
-} | null {
-  if (segments.length === 1) {
-    return { type: null, slug: segments[0] };
-  }
-
-  if (segments.length === 2 && KNOWN_TYPES.includes(segments[0] as ArticleType)) {
-    return { type: segments[0] as ArticleType, slug: segments[1] };
-  }
-
-  return null;
-}
+import { getArticleLayoutComponent } from '@/features/articles/layouts/articleLayoutRegistry';
+import { MapsArticleLayout } from '@/features/articles/layouts/MapsArticleLayout';
+import { isMapsListicleArticle } from '@/features/articles/types/mapsListicle';
 
 type Props = {
   params: Promise<{ country: string; city: string; articlePath: string[] }>;
@@ -34,6 +24,7 @@ export default async function ArticleRoutePage({ params }: Props) {
   }
 
   const { type, slug } = parsed;
+  const layoutKey = articleLayoutKeyFromRouteType(type);
 
   const article = await fetchArticle({ country, city, type, slug });
 
@@ -41,5 +32,17 @@ export default async function ArticleRoutePage({ params }: Props) {
     notFound();
   }
 
-  return <ArticlePage article={article} />;
+  if (layoutKey === 'maps') {
+    if (!isMapsListicleArticle(article)) {
+      notFound();
+    }
+    return <MapsArticleLayout article={article} />;
+  }
+
+  if (!isStandardArticle(article)) {
+    notFound();
+  }
+
+  const Layout = getArticleLayoutComponent(layoutKey);
+  return createElement(Layout, { article });
 }

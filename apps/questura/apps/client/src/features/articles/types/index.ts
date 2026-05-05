@@ -78,3 +78,24 @@ export type Article = {
   contentBlocks: ContentBlock[]
   seoSection?: SeoSection
 }
+
+export {
+  isMapsListicleArticle,
+  type ListicleItemRow,
+  type MapsListicleArticle,
+} from './mapsListicle'
+
+export type MapsItem = {
+  id: string
+  blockType: 'data-dining' | 'data-accommodations' | 'data-attractions' | 'data-nightlife'
+  blurb: string
+  [key: string]: unknown
+}
+
+export type MapsArticle = Omit<Article, 'contentBlocks' | 'headerSection'> & {
+  items: MapsItem[]
+  header: {
+    intro: string
+    featuredImage?: MediaAsset
+  }
+}

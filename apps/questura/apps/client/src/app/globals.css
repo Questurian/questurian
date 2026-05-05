@@ -17,6 +17,8 @@ html {
   --ochre: #D4A574;
   --cream: #FAF7F2;
   --charcoal: #2C2C2C;
+  --maps-listicle-accent: #3B5BDB;
+  --maps-listicle-chip: #e4e0d8;
   
   /* Typography */
   --font-display: 'Playfair Display', Georgia, serif;
@@ -119,6 +121,70 @@ input:-webkit-autofill:active {
 
 .article-prose a {
   color: #C65D3B;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Maps listicle: tighter rhythm on very small phones; aligns with 380 breakpoint */
+.maps-listicle-intro > p:first-child,
+.maps-listicle-intro h2:first-child {
+  margin-top: 0;
+}
+
+.maps-listicle-intro p {
+  font-size: 14px;
+  line-height: 1.65;
+  margin-bottom: 0.85rem;
+}
+
+.maps-listicle-blurb > p:first-child {
+  margin-top: 0;
+}
+
+.maps-listicle-blurb p {
+  font-size: 14px;
+  line-height: 1.62;
+  margin-bottom: 0.72rem;
+}
+
+.maps-listicle-blurb p:last-child {
+  margin-bottom: 0;
+}
+
+.maps-listicle-blurb h2,
+.maps-listicle-blurb h3 {
+  font-size: 17px;
+  margin-top: 1.1rem;
+  margin-bottom: 0.4rem;
+}
+
+.maps-listicle-blurb h2:first-child,
+.maps-listicle-blurb h3:first-child {
+  margin-top: 0;
+}
+
+@media (min-width: 380px) {
+  .maps-listicle-intro p {
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  .maps-listicle-blurb p {
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 0.85rem;
+  }
+}
+
+/* Venue listicle body: sans like reference comp (teal links) */
+.maps-listicle-venue-blurb p,
+.maps-listicle-venue-blurb li {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.maps-listicle-venue-blurb a {
+  color: var(--maps-listicle-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

@@ -5,6 +5,22 @@ import { convertLexicalToHTMLAsync } from '@payloadcms/richtext-lexical/html-asy
 import type { SerializedEditorState } from 'lexical'
 import config from '@/payload.config'
 
+async function toLexicalHTML(data: unknown): Promise<string> {
+  return convertLexicalToHTMLAsync({
+    data: data as SerializedEditorState,
+    disableContainer: true,
+  })
+}
+
+async function serializeBlurbArray(blocks: Array<Record<string, unknown>>) {
+  await Promise.all(
+    blocks.map(async (block) => {
+      if (block.blurb) block.blurb = await toLexicalHTML(block.blurb)
+    }),
+  )
+}
+
+// Standard articles: contentBlocks[].content where blockType === 'text'
 async function serializeLexicalBlocks(article: Record<string, unknown>) {
   const blocks = article.contentBlocks as Array<Record<string, unknown>> | undefined
   if (!Array.isArray(blocks)) return
@@ -12,11 +28,40 @@ async function serializeLexicalBlocks(article: Record<string, unknown>) {
   await Promise.all(
     blocks.map(async (block) => {
       if (block.blockType === 'text' && block.content) {
-        block.content = await convertLexicalToHTMLAsync({
-          data: block.content as SerializedEditorState,
-          disableContainer: true,
-        })
+        block.content = await toLexicalHTML(block.content)
       }
+    }),
+  )
+}
+
+// Maps (single-type-listicles): header.intro + items[].blurb
+async function serializeListicleBlocks(article: Record<string, unknown>) {
+  const header = article.header as Record<string, unknown> | undefined
+  if (header?.intro) {
+    header.intro = await toLexicalHTML(header.intro)
+  }
+
+  const items = article.items as Array<Record<string, unknown>> | undefined
+  if (!Array.isArray(items)) return
+  await serializeBlurbArray(items)
+}
+
+// Itineraries: items[].blurb + itineraryDays[].items[].blurb + itineraryDays[].whereStaying[].blurb
+async function serializeItineraryBlocks(article: Record<string, unknown>) {
+  const items = article.items as Array<Record<string, unknown>> | undefined
+  if (Array.isArray(items)) await serializeBlurbArray(items)
+
+  const days = article.itineraryDays as Array<Record<string, unknown>> | undefined
+  if (!Array.isArray(days)) return
+
+  await Promise.all(
+    days.map(async (day) => {
+      const dayItems = day.items as Array<Record<string, unknown>> | undefined
+      const whereStaying = day.whereStaying as Array<Record<string, unknown>> | undefined
+      await Promise.all([
+        Array.isArray(dayItems) ? serializeBlurbArray(dayItems) : Promise.resolve(),
+        Array.isArray(whereStaying) ? serializeBlurbArray(whereStaying) : Promise.resolve(),
+      ])
     }),
   )
 }
@@ -90,7 +135,9 @@ export async function GET(
       return NextResponse.json({ message: 'Article not found.' }, { status: 404 })
     }
 
-    await serializeLexicalBlocks(article)
+    if (collection === 'articles') await serializeLexicalBlocks(article as Record<string, unknown>)
+    if (collection === 'single-type-listicles') await serializeListicleBlocks(article as Record<string, unknown>)
+    if (collection === 'listicle-itineraries') await serializeItineraryBlocks(article as Record<string, unknown>)
 
     return NextResponse.json(article)
   } catch (error) {

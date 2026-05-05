@@ -235,6 +235,27 @@ export const Dining: CollectionConfig = {
                   },
                 },
                 {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'menuUrl',
+                      type: 'text',
+                      admin: {
+                        description: 'Menu page URL (optional)',
+                        width: '50%',
+                      },
+                    },
+                    {
+                      name: 'reservationUrl',
+                      type: 'text',
+                      admin: {
+                        description: 'Reservation / booking URL (optional)',
+                        width: '50%',
+                      },
+                    },
+                  ],
+                },
+                {
                   name: 'email',
                   type: 'email',
                   admin: {

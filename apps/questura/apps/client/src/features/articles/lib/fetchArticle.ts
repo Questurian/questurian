@@ -1,5 +1,5 @@
 import { config } from '@/lib/config'
-import { Article } from '../types'
+import type { PublicFetchedArticle } from './articleGuards'
 
 type FetchArticleParams = {
   country: string
@@ -13,7 +13,7 @@ export async function fetchArticle({
   city,
   type,
   slug,
-}: FetchArticleParams): Promise<Article | null> {
+}: FetchArticleParams): Promise<PublicFetchedArticle | null> {
   const base = `${config.backendUrl}/api/public/articles`
   const url = type
     ? `${base}/${encodeURIComponent(country)}/${encodeURIComponent(city)}/${encodeURIComponent(type)}/${encodeURIComponent(slug)}`
@@ -26,5 +26,5 @@ export async function fetchArticle({
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Failed to fetch article: ${res.status}`)
 
-  return res.json() as Promise<Article>
+  return res.json() as Promise<PublicFetchedArticle>
 }
