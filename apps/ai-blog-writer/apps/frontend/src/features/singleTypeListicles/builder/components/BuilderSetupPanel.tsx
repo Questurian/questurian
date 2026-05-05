@@ -16,6 +16,7 @@ const TARGET_SIZE_PRESETS = [5, 10, 15, 20, 30, 40, 50]
 type BuilderSetupPanelProps = {
   draft: SingleTypeListicleDraft
   locations: LocationOption[]
+  isSynced?: boolean
   onContinue: () => void
   onUpdateSetup: () => void
   onSaveSetup: () => void
@@ -23,15 +24,16 @@ type BuilderSetupPanelProps = {
   updateDraft: (next: Partial<SingleTypeListicleDraft>) => void
   setTargetItemCount: (nextCount: number) => void
   onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
+  onSlugChange?: (slug: string) => void
   onGenerateSlugWithAi?: () => Promise<void>
   isGeneratingSlug?: boolean
 }
 
-function getAiTitleDisabledReason(draft: SingleTypeListicleDraft): string | undefined {
-  if (draft.step1_complete && !draft.in_update_mode) return 'Click "Update Setup" to edit title'
-  if (!draft.location && !draft.listicleType) return 'Set a location and data type in Step 1 first'
-  if (!draft.location) return 'Set a location in Step 1 first'
-  if (!draft.listicleType) return 'Set a data type in Step 1 first'
+function getAiTitleDisabledReason(draft: SingleTypeListicleDraft, isSynced: boolean): string | undefined {
+  if (!isSynced && draft.step1_complete && !draft.in_update_mode) return 'Setup is locked'
+  if (!draft.location && !draft.listicleType) return 'Set a location and data type first'
+  if (!draft.location) return 'Set a location first'
+  if (!draft.listicleType) return 'Set a data type first'
   if (!draft.title.trim()) return 'Write a title first, then AI can improve it'
   return undefined
 }
@@ -39,6 +41,7 @@ function getAiTitleDisabledReason(draft: SingleTypeListicleDraft): string | unde
 export function BuilderSetupPanel({
   draft,
   locations,
+  isSynced = false,
   onContinue,
   onUpdateSetup,
   onSaveSetup,
@@ -46,14 +49,15 @@ export function BuilderSetupPanel({
   updateDraft,
   setTargetItemCount,
   onTitleAiGenerate,
+  onSlugChange,
   onGenerateSlugWithAi,
   isGeneratingSlug,
 }: BuilderSetupPanelProps) {
-  const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
+  const aiTitleDisabledReason = getAiTitleDisabledReason(draft, isSynced)
   const isStep1Valid = validateStep1(draft).length === 0
   const isCoreSetupChosen = Boolean(draft.location.trim() && draft.listicleType)
   const hasLockedItemData = hasAnyWrittenItemData(draft.items)
-  const isSetupLocked = draft.step1_complete && !draft.in_update_mode
+  const isSetupLocked = !isSynced && draft.step1_complete && !draft.in_update_mode
   const isTargetCountLocked = isSetupLocked || hasLockedItemData
   const selectedTargetCount = draft.targetItemCount > 0 ? draft.targetItemCount : null
   const selectedPrimaryLocation = findLocationByKey(locations, draft.location)
@@ -64,30 +68,32 @@ export function BuilderSetupPanel({
     <section className="stl-panel stl-setup-panel">
       <div className="stl-panel-header">
         <h2>
-          <span className="stl-kicker">Step 1</span> Setup
+          {!isSynced ? <span className="stl-kicker">Step 1</span> : null} Setup
         </h2>
-        <div className="stl-inline-actions">
-          {!draft.step1_complete && isStep1Valid ? (
-            <button type="button" className="stl-btn" onClick={onContinue}>
-              Continue
-            </button>
-          ) : null}
-          {draft.step1_complete && !draft.in_update_mode ? (
-            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateSetup}>
-              Update Setup
-            </button>
-          ) : null}
-          {draft.in_update_mode ? (
-            <>
-              <button type="button" className="stl-btn" onClick={onSaveSetup}>
-                Save Setup
+        {!isSynced ? (
+          <div className="stl-inline-actions">
+            {!draft.step1_complete && isStep1Valid ? (
+              <button type="button" className="stl-btn" onClick={onContinue}>
+                Continue
               </button>
-              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelUpdateSetup}>
-                Cancel
+            ) : null}
+            {draft.step1_complete && !draft.in_update_mode ? (
+              <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateSetup}>
+                Update Setup
               </button>
-            </>
-          ) : null}
-        </div>
+            ) : null}
+            {draft.in_update_mode ? (
+              <>
+                <button type="button" className="stl-btn" onClick={onSaveSetup}>
+                  Save Setup
+                </button>
+                <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelUpdateSetup}>
+                  Cancel
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="stl-grid stl-setup-grid stl-setup-stack">
@@ -164,9 +170,9 @@ export function BuilderSetupPanel({
               value={draft.payloadSlug || ''}
               disabled={isSetupLocked}
               placeholder="e.g. best-steakhouses-las-vegas"
-              onChange={(event) => updateDraft({ payloadSlug: event.target.value })}
+              onChange={(event) => onSlugChange ? onSlugChange(event.target.value) : updateDraft({ payloadSlug: event.target.value })}
             />
-            {onGenerateSlugWithAi && !isSetupLocked ? (
+            {onGenerateSlugWithAi && (isSynced || !isSetupLocked) ? (
               <span className="stl-seo-ai-trigger-wrap">
                 <button
                   type="button"

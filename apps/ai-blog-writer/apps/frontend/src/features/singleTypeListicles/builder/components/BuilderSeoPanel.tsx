@@ -12,6 +12,7 @@ type BuilderSeoPanelProps = {
   isGeneratingSeoImage: boolean
   onUploadOgImageFile: (file: File) => Promise<void>
   isUploadingOgImage: boolean
+  onAutoFillOgUrl?: () => void
 }
 
 export function BuilderSeoPanel({
@@ -23,6 +24,7 @@ export function BuilderSeoPanel({
   isGeneratingSeoImage,
   onUploadOgImageFile,
   isUploadingOgImage,
+  onAutoFillOgUrl,
 }: BuilderSeoPanelProps) {
   return (
     <SeoEditorPanel
@@ -42,6 +44,7 @@ export function BuilderSeoPanel({
       isGeneratingSeoImage={isGeneratingSeoImage}
       onUploadOgImageFile={onUploadOgImageFile}
       isUploadingOgImage={isUploadingOgImage}
+      onAutoFillOgUrl={onAutoFillOgUrl}
     />
   )
 }

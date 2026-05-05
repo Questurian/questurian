@@ -196,6 +196,27 @@ export default function ListicleItineraryBuilderPage() {
 
   const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
 
+  const applySlugAndOgUrl = useCallback((slug: string) => {
+    const location = locations.find((l) => l.locationKey === draft?.location)
+    const newUrl = slug.trim() && location?.country
+      ? buildArticleOgUrl(location.country, location.city, 'itinerary', slug.trim())
+      : undefined
+    setDraft((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        payloadSlug: slug,
+        updatedAt: new Date().toISOString(),
+        ...(newUrl ? {
+          seoSection: {
+            ...current.seoSection,
+            openGraph: { ...current.seoSection.openGraph, url: newUrl },
+          },
+        } : {}),
+      }
+    })
+  }, [draft?.location, locations, setDraft])
+
   const handleGenerateSlugWithAi = useCallback(async () => {
     if (!draft?.title.trim()) return
     setIsGeneratingSlug(true)
@@ -207,33 +228,26 @@ export default function ListicleItineraryBuilderPage() {
         articleTitle: draft.title.trim(),
       })
       const slug = response.rewritten_content?.trim()
-      if (slug) {
-        setDraft((current) => current ? { ...current, payloadSlug: slug } : current)
-      }
+      if (slug) applySlugAndOgUrl(slug)
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to generate slug with AI.')
     } finally {
       setIsGeneratingSlug(false)
     }
-  }, [draft, onError, setDraft])
+  }, [draft, onError, applySlugAndOgUrl])
 
-  useEffect(() => {
-    const slug = draft?.payloadSlug?.trim()
-    const locationKey = draft?.location
-    if (!slug || !locationKey) return
-    const newUrl = buildArticleOgUrl(locationKey, 'itinerary', slug)
-    if (!newUrl) return
+  const handleAutoFillOgUrl = useCallback(() => {
+    if (!draft) return
+    const slug = draft.payloadSlug?.trim()
+    const location = locations.find((l) => l.locationKey === draft.location)
+    if (!slug || !location?.country) return
+    const url = buildArticleOgUrl(location.country, location.city, 'itinerary', slug)
+    if (!url) return
     setDraft((current) => {
-      if (!current || current.seoSection.openGraph.url === newUrl) return current
-      return {
-        ...current,
-        seoSection: {
-          ...current.seoSection,
-          openGraph: { ...current.seoSection.openGraph, url: newUrl },
-        },
-      }
+      if (!current) return current
+      return { ...current, seoSection: { ...current.seoSection, openGraph: { ...current.seoSection.openGraph, url } } }
     })
-  }, [draft?.payloadSlug, draft?.location, setDraft])
+  }, [draft, locations, setDraft])
 
   const applyGeneratedListicleContent = useCallback((response: Awaited<ReturnType<typeof generateListicleContentWithAi>>) => {
     setDraft((current) => {
@@ -575,7 +589,9 @@ export default function ListicleItineraryBuilderPage() {
   if (isLoading || !draft) {
     return (
       <div className="stl-page">
-        <p className="stl-placeholder">Loading builder...</p>
+        {!isLoading && error
+          ? <p className="stl-error">{error}</p>
+          : <p className="stl-placeholder">Loading builder...</p>}
       </div>
     )
   }
@@ -583,6 +599,7 @@ export default function ListicleItineraryBuilderPage() {
   const isStep1LockedView = draft.step1_complete && !draft.in_update_mode
   const isStep2LockedView = draft.step2_complete && !draft.step2_in_update_mode
   const isStep3LockedView = draft.step3_complete && !draft.step3_in_update_mode
+  const isSynced = Boolean(draft.payloadId)
 
   return (
     <div className="stl-page">
@@ -596,17 +613,19 @@ export default function ListicleItineraryBuilderPage() {
           <BuilderSetupPanel
             draft={draft}
             locations={locations}
+            isSynced={isSynced}
             onContinue={actions.handleContinue}
             onUpdateSetup={actions.handleUpdateSetup}
             onSaveSetup={actions.handleSaveSetup}
             onCancelUpdateSetup={actions.cancelUpdateSetup}
             updateDraft={actions.updateDraft}
             onTitleAiGenerate={generateDraftTitleWithAi}
+            onSlugChange={applySlugAndOgUrl}
             onGenerateSlugWithAi={handleGenerateSlugWithAi}
             isGeneratingSlug={isGeneratingSlug}
           />
 
-          {isStep1LockedView ? (
+          {(isStep1LockedView || isSynced) ? (
             <BuilderHeaderPanel
               draft={draft}
               token={token ?? null}
@@ -617,6 +636,7 @@ export default function ListicleItineraryBuilderPage() {
               onIntroAiRewrite={rewriteDraftBlockWithAi}
               isIntroAiGenerating={activeAiTargetId === getItineraryIntroTargetId(draft)}
               isLocked={isStep2LockedView}
+              isSynced={isSynced}
               onContinueStep2={actions.handleContinueStep2}
               onUpdateStep2={actions.handleUpdateStep2}
               onSaveStep2={actions.handleSaveStep2}
@@ -624,7 +644,7 @@ export default function ListicleItineraryBuilderPage() {
             />
           ) : null}
 
-          {isStep1LockedView && isStep2LockedView ? (
+          {(isStep1LockedView && isStep2LockedView) || isSynced ? (
             <>
               {draft.dayCount > 1 ? (
                 <div className="stl-day-tabs" role="tablist" aria-label="Itinerary days">
@@ -660,6 +680,7 @@ export default function ListicleItineraryBuilderPage() {
                 onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
                 activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
                 isLocked={isStep3LockedView}
+                isSynced={isSynced}
                 onContinueStep3={actions.handleContinueStep3}
                 onUpdateStep3={actions.handleUpdateStep3}
                 onSaveStep3={actions.handleSaveStep3}
@@ -668,7 +689,7 @@ export default function ListicleItineraryBuilderPage() {
             </>
           ) : null}
 
-          {isStep1LockedView && isStep2LockedView && isStep3LockedView ? (
+          {(isStep1LockedView && isStep2LockedView && isStep3LockedView) || isSynced ? (
             <BuilderSeoPanel
               draft={draft}
               setDraft={setDraft}
@@ -678,10 +699,11 @@ export default function ListicleItineraryBuilderPage() {
               isGeneratingSeoImage={isGeneratingSeoImage}
               onRegenerateStructuredData={regenerateStructuredDataFromTemplate}
               canRegenerateStructuredData={Boolean(canonicalStructuredData)}
+              onAutoFillOgUrl={handleAutoFillOgUrl}
             />
           ) : null}
 
-          {isStep1LockedView && isStep2LockedView && isStep3LockedView ? (
+          {(isStep1LockedView && isStep2LockedView && isStep3LockedView) || isSynced ? (
             <BuilderPublishPanel
               draft={draft}
               isSaving={isSaving}
@@ -699,7 +721,7 @@ export default function ListicleItineraryBuilderPage() {
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
           isAutoWritingEmptyFields={isAutoWritingEmptyFields}
-          canAutoWriteEmptyFields={Boolean(isStep1LockedView && isStep2LockedView && getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0)}
+          canAutoWriteEmptyFields={Boolean((isSynced || (isStep1LockedView && isStep2LockedView)) && getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0)}
           stepIssues={progress.stepIssues}
           onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}

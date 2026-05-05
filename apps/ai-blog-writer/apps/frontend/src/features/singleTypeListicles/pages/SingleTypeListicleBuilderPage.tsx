@@ -183,6 +183,7 @@ export default function SingleTypeListicleBuilderPage() {
   const isStep2Locked = Boolean(draft?.step2_complete && !draft?.step2_in_update_mode)
   const isStep3Locked = Boolean(draft?.step3_complete && !draft?.step3_in_update_mode)
   const isStep4Ready = isStep1Locked && isStep2Locked && isStep3Locked
+  const isSynced = Boolean(draft?.payloadId)
 
   useEffect(() => {
     if (!draft || !isStep4Ready) return
@@ -247,6 +248,27 @@ export default function SingleTypeListicleBuilderPage() {
 
   const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
 
+  const applySlugAndOgUrl = useCallback((slug: string) => {
+    const location = locations.find((l) => l.locationKey === draft?.location)
+    const newUrl = slug.trim() && location?.country
+      ? buildArticleOgUrl(location.country, location.city, 'maps', slug.trim())
+      : undefined
+    setDraft((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        payloadSlug: slug,
+        updatedAt: new Date().toISOString(),
+        ...(newUrl ? {
+          seoSection: {
+            ...current.seoSection,
+            openGraph: { ...current.seoSection.openGraph, url: newUrl },
+          },
+        } : {}),
+      }
+    })
+  }, [draft?.location, locations, setDraft])
+
   const handleGenerateSlugWithAi = useCallback(async () => {
     if (!draft?.title.trim()) return
     setIsGeneratingSlug(true)
@@ -258,33 +280,26 @@ export default function SingleTypeListicleBuilderPage() {
         articleTitle: draft.title.trim(),
       })
       const slug = response.rewritten_content?.trim()
-      if (slug) {
-        setDraft((current) => current ? { ...current, payloadSlug: slug } : current)
-      }
+      if (slug) applySlugAndOgUrl(slug)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate slug with AI.')
     } finally {
       setIsGeneratingSlug(false)
     }
-  }, [draft, setDraft])
+  }, [draft, applySlugAndOgUrl])
 
-  useEffect(() => {
-    const slug = draft?.payloadSlug?.trim()
-    const locationKey = draft?.location
-    if (!slug || !locationKey) return
-    const newUrl = buildArticleOgUrl(locationKey, 'maps', slug)
-    if (!newUrl) return
+  const handleAutoFillOgUrl = useCallback(() => {
+    if (!draft) return
+    const slug = draft.payloadSlug?.trim()
+    const location = locations.find((l) => l.locationKey === draft.location)
+    if (!slug || !location?.country) return
+    const url = buildArticleOgUrl(location.country, location.city, 'maps', slug)
+    if (!url) return
     setDraft((current) => {
-      if (!current || current.seoSection.openGraph.url === newUrl) return current
-      return {
-        ...current,
-        seoSection: {
-          ...current.seoSection,
-          openGraph: { ...current.seoSection.openGraph, url: newUrl },
-        },
-      }
+      if (!current) return current
+      return { ...current, seoSection: { ...current.seoSection, openGraph: { ...current.seoSection.openGraph, url } } }
     })
-  }, [draft?.payloadSlug, draft?.location, setDraft])
+  }, [draft, locations, setDraft])
 
   const buildGenerationRequest = useCallback((params: {
     targetIds: string[]
@@ -744,7 +759,9 @@ export default function SingleTypeListicleBuilderPage() {
   if (isLoading || !draft) {
     return (
       <div className="stl-page stl-single-type-page">
-        <p className="stl-placeholder">Loading builder...</p>
+        {!isLoading && error
+          ? <p className="stl-error">{error}</p>
+          : <p className="stl-placeholder">Loading builder...</p>}
       </div>
     )
   }
@@ -792,6 +809,7 @@ export default function SingleTypeListicleBuilderPage() {
           <BuilderSetupPanel
             draft={draft}
             locations={locations}
+            isSynced={isSynced}
             onContinue={actions.handleContinue}
             onUpdateSetup={actions.handleUpdateSetup}
             onSaveSetup={actions.handleSaveSetup}
@@ -799,11 +817,12 @@ export default function SingleTypeListicleBuilderPage() {
             updateDraft={actions.updateDraft}
             setTargetItemCount={actions.setTargetItemCount}
             onTitleAiGenerate={generateDraftTitleWithAi}
+            onSlugChange={applySlugAndOgUrl}
             onGenerateSlugWithAi={handleGenerateSlugWithAi}
             isGeneratingSlug={isGeneratingSlug}
           />
 
-          {isStep1Locked ? (
+          {(isStep1Locked || isSynced) ? (
             <BuilderHeaderPanel
               draft={draft}
               token={token}
@@ -816,6 +835,7 @@ export default function SingleTypeListicleBuilderPage() {
               introAiQueueCount={queuedIntroAiCount}
               introAiStatus={introAiStatus}
               isLocked={isStep2Locked}
+              isSynced={isSynced}
               onContinueStep2={actions.handleContinueStep2}
               onUpdateStep2={actions.handleUpdateStep2}
               onSaveStep2={actions.handleSaveStep2}
@@ -823,7 +843,7 @@ export default function SingleTypeListicleBuilderPage() {
             />
           ) : null}
 
-          {isStep1Locked && isStep2Locked ? (
+          {(isStep1Locked && isStep2Locked) || isSynced ? (
             <BuilderItemsPanel
               draft={draft}
               relatedItems={relatedItems}
@@ -836,6 +856,7 @@ export default function SingleTypeListicleBuilderPage() {
               activeAiItemId={runningAiItemId ?? null}
               queuedAiItemIds={queuedAiItemIds}
               isLocked={isStep3Locked}
+              isSynced={isSynced}
               onContinueStep3={actions.handleContinueStep3}
               onUpdateStep3={actions.handleUpdateStep3}
               onSaveStep3={actions.handleSaveStep3}
@@ -843,7 +864,7 @@ export default function SingleTypeListicleBuilderPage() {
             />
           ) : null}
 
-          {isStep1Locked && isStep2Locked && isStep3Locked ? (
+          {(isStep1Locked && isStep2Locked && isStep3Locked) || isSynced ? (
             <BuilderSeoPanel
               draft={draft}
               setDraft={setDraft}
@@ -853,6 +874,7 @@ export default function SingleTypeListicleBuilderPage() {
               isGeneratingSeoImage={isGeneratingSeoImage}
               onUploadOgImageFile={uploadOgImageFile}
               isUploadingOgImage={isUploadingOgImage}
+              onAutoFillOgUrl={handleAutoFillOgUrl}
             />
           ) : null}
         </main>
@@ -869,7 +891,7 @@ export default function SingleTypeListicleBuilderPage() {
           isAutoWritingEmptyFields={bulkVisualState === 'running'}
           autoWriteEmptyFieldsQueueCount={autoWriteEmptyFieldsQueueCount}
           autoWriteEmptyFieldsStatus={autoWriteEmptyFieldsStatus}
-          canAutoWriteEmptyFields={isStep1Locked && isStep2Locked && getSingleTypeAutoWriteTargetIds(draft, relatedItems).length > 0}
+          canAutoWriteEmptyFields={(isSynced || (isStep1Locked && isStep2Locked)) && getSingleTypeAutoWriteTargetIds(draft, relatedItems).length > 0}
           onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}
           onSyncToPayload={() => submit('draft')}

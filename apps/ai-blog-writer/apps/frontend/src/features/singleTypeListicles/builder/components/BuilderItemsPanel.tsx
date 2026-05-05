@@ -36,6 +36,7 @@ type BuilderItemsPanelProps = {
   activeAiItemId: string | null
   queuedAiItemIds: string[]
   isLocked: boolean
+  isSynced?: boolean
   onContinueStep3: () => void
   onUpdateStep3: () => void
   onSaveStep3: () => void
@@ -88,6 +89,7 @@ export function BuilderItemsPanel({
   activeAiItemId,
   queuedAiItemIds,
   isLocked,
+  isSynced = false,
   onContinueStep3,
   onUpdateStep3,
   onSaveStep3,
@@ -181,34 +183,36 @@ export function BuilderItemsPanel({
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
-          <span className="stl-kicker">Step 3</span>
+          {!isSynced ? <span className="stl-kicker">Step 3</span> : null}
           Items ({draft.items.length}/{draft.targetItemCount})
         </h2>
-        <div className="stl-inline-actions">
-          {!draft.step3_complete ? (
-            <button type="button" className="stl-btn" onClick={onContinueStep3}>
-              Continue
-            </button>
-          ) : null}
-          {draft.step3_complete && !draft.step3_in_update_mode ? (
-            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep3}>
-              Update Items
-            </button>
-          ) : null}
-          {draft.step3_in_update_mode ? (
-            <>
-              <button type="button" className="stl-btn" onClick={onSaveStep3}>
-                Save Items
+        {!isSynced ? (
+          <div className="stl-inline-actions">
+            {!draft.step3_complete ? (
+              <button type="button" className="stl-btn" onClick={onContinueStep3}>
+                Continue
               </button>
-              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep3Update}>
-                Cancel
+            ) : null}
+            {draft.step3_complete && !draft.step3_in_update_mode ? (
+              <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep3}>
+                Update Items
               </button>
-            </>
-          ) : null}
-        </div>
+            ) : null}
+            {draft.step3_in_update_mode ? (
+              <>
+                <button type="button" className="stl-btn" onClick={onSaveStep3}>
+                  Save Items
+                </button>
+                <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep3Update}>
+                  Cancel
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <fieldset className="stl-panel-fieldset" disabled={isLocked}>
+      <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
         {!isLoadingRelated && draft.listicleType && relatedItems.length === 0 ? (
           <p className="stl-placeholder">No published items found for selected location/type.</p>

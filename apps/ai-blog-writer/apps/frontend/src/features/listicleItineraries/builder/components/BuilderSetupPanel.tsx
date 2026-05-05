@@ -12,19 +12,21 @@ import {
 type BuilderSetupPanelProps = {
   draft: ListicleItineraryDraft
   locations: LocationOption[]
+  isSynced?: boolean
   onContinue: () => void
   onUpdateSetup: () => void
   onSaveSetup: () => void
   onCancelUpdateSetup: () => void
   updateDraft: (next: Partial<ListicleItineraryDraft>) => void
   onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
+  onSlugChange?: (slug: string) => void
   onGenerateSlugWithAi?: () => Promise<void>
   isGeneratingSlug?: boolean
 }
 
-function getAiTitleDisabledReason(draft: ListicleItineraryDraft): string | undefined {
-  if (draft.step1_complete && !draft.in_update_mode) return 'Click "Update Setup" to edit title'
-  if (!draft.location) return 'Set a location in Step 1 first'
+function getAiTitleDisabledReason(draft: ListicleItineraryDraft, isSynced: boolean): string | undefined {
+  if (!isSynced && draft.step1_complete && !draft.in_update_mode) return 'Setup is locked'
+  if (!draft.location) return 'Set a location first'
   if (!draft.title.trim()) return 'Write a title first, then AI can improve it'
   return undefined
 }
@@ -32,17 +34,19 @@ function getAiTitleDisabledReason(draft: ListicleItineraryDraft): string | undef
 export function BuilderSetupPanel({
   draft,
   locations,
+  isSynced = false,
   onContinue,
   onUpdateSetup,
   onSaveSetup,
   onCancelUpdateSetup,
   updateDraft,
   onTitleAiGenerate,
+  onSlugChange,
   onGenerateSlugWithAi,
   isGeneratingSlug,
 }: BuilderSetupPanelProps) {
-  const aiTitleDisabledReason = getAiTitleDisabledReason(draft)
-  const isSetupLocked = draft.step1_complete && !draft.in_update_mode
+  const aiTitleDisabledReason = getAiTitleDisabledReason(draft, isSynced)
+  const isSetupLocked = !isSynced && draft.step1_complete && !draft.in_update_mode
   const selectedPrimaryLocation = findLocationByKey(locations, draft.location)
   const neighborhoodOptions = getNeighborhoodOptionsForLocation(locations, draft.location)
   const showNeighborhoodPicker = isCityLocation(selectedPrimaryLocation)
@@ -51,30 +55,32 @@ export function BuilderSetupPanel({
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
-          <span className="stl-kicker">Step 1</span> Setup
+          {!isSynced ? <span className="stl-kicker">Step 1</span> : null} Setup
         </h2>
-        <div className="stl-inline-actions">
+        {!isSynced ? (
+          <div className="stl-inline-actions">
             {!draft.step1_complete ? (
               <button type="button" className="stl-btn" onClick={onContinue}>
                 Continue
               </button>
-          ) : null}
-          {draft.step1_complete && !draft.in_update_mode ? (
-            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateSetup}>
-              Update Setup
-            </button>
-          ) : null}
-          {draft.in_update_mode ? (
-            <>
-              <button type="button" className="stl-btn" onClick={onSaveSetup}>
-                Save Setup
+            ) : null}
+            {draft.step1_complete && !draft.in_update_mode ? (
+              <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateSetup}>
+                Update Setup
               </button>
-              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelUpdateSetup}>
-                Cancel
-              </button>
-            </>
-          ) : null}
-        </div>
+            ) : null}
+            {draft.in_update_mode ? (
+              <>
+                <button type="button" className="stl-btn" onClick={onSaveSetup}>
+                  Save Setup
+                </button>
+                <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelUpdateSetup}>
+                  Cancel
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="stl-grid stl-grid-2">
@@ -84,7 +90,7 @@ export function BuilderSetupPanel({
             <input
               className="stl-title-input"
               value={draft.title}
-              disabled={draft.step1_complete && !draft.in_update_mode}
+              disabled={isSetupLocked}
               onChange={(event) => updateDraft({ title: event.target.value })}
             />
             {onTitleAiGenerate ? (
@@ -104,7 +110,7 @@ export function BuilderSetupPanel({
           <span>Location *</span>
           <select
             value={draft.location}
-            disabled={draft.step1_complete && !draft.in_update_mode}
+            disabled={isSetupLocked}
             onChange={(event) => updateDraft({
               location: event.target.value,
               locationRef: null,
@@ -153,9 +159,9 @@ export function BuilderSetupPanel({
               value={draft.payloadSlug || ''}
               disabled={isSetupLocked}
               placeholder="e.g. best-steakhouses-las-vegas"
-              onChange={(event) => updateDraft({ payloadSlug: event.target.value })}
+              onChange={(event) => onSlugChange ? onSlugChange(event.target.value) : updateDraft({ payloadSlug: event.target.value })}
             />
-            {onGenerateSlugWithAi && !isSetupLocked ? (
+            {onGenerateSlugWithAi && (isSynced || !isSetupLocked) ? (
               <span className="stl-seo-ai-trigger-wrap">
                 <button
                   type="button"

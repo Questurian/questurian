@@ -63,6 +63,7 @@ type BuilderStopsPanelProps = {
   onStopBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
   activeAiItemId: string | null
   isLocked: boolean
+  isSynced?: boolean
   onContinueStep3: () => void
   onUpdateStep3: () => void
   onSaveStep3: () => void
@@ -313,6 +314,7 @@ export function BuilderStopsPanel({
   onStopBlurbAiRewrite,
   activeAiItemId,
   isLocked,
+  isSynced = false,
   onContinueStep3,
   onUpdateStep3,
   onSaveStep3,
@@ -496,7 +498,7 @@ export function BuilderStopsPanel({
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
-          <span className="stl-kicker">Step 3</span> Lodging & stops
+          {!isSynced ? <span className="stl-kicker">Step 3</span> : null} Lodging & stops
           <span className="stl-step3-header-counts">
             {' '}
             {draft.dayCount > 1 ? `Day ${activeDayIndex + 1} · ` : ''}
@@ -504,36 +506,40 @@ export function BuilderStopsPanel({
           </span>
         </h2>
         <div className="stl-inline-actions">
-          <button type="button" className="stl-btn" onClick={onAddWhereStaying} disabled={isLocked}>
+          <button type="button" className="stl-btn" onClick={onAddWhereStaying}>
             Add lodging
           </button>
-          <button type="button" className="stl-btn" onClick={onAddItem} disabled={isLocked}>
+          <button type="button" className="stl-btn" onClick={onAddItem}>
             Add stop
           </button>
-          {!draft.step3_complete ? (
-            <button type="button" className="stl-btn" onClick={onContinueStep3}>
-              Continue
-            </button>
-          ) : null}
-          {draft.step3_complete && !draft.step3_in_update_mode ? (
-            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep3}>
-              Update Stops
-            </button>
-          ) : null}
-          {draft.step3_in_update_mode ? (
+          {!isSynced ? (
             <>
-              <button type="button" className="stl-btn" onClick={onSaveStep3}>
-                Save Stops
-              </button>
-              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep3Update}>
-                Cancel
-              </button>
+              {!draft.step3_complete ? (
+                <button type="button" className="stl-btn" onClick={onContinueStep3}>
+                  Continue
+                </button>
+              ) : null}
+              {draft.step3_complete && !draft.step3_in_update_mode ? (
+                <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep3}>
+                  Update Stops
+                </button>
+              ) : null}
+              {draft.step3_in_update_mode ? (
+                <>
+                  <button type="button" className="stl-btn" onClick={onSaveStep3}>
+                    Save Stops
+                  </button>
+                  <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep3Update}>
+                    Cancel
+                  </button>
+                </>
+              ) : null}
             </>
           ) : null}
         </div>
       </div>
 
-      <fieldset className="stl-panel-fieldset" disabled={isLocked}>
+      <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
 
         <div className="stl-list">

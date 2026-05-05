@@ -46,6 +46,17 @@ export function BuilderSidebar({
   const isStep1Locked = draft.step1_complete && !draft.in_update_mode
   const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
   const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
+  const isSynced = Boolean(draft.payloadId)
+
+  const syncIssues: string[] = []
+  if (isSynced) {
+    if (!draft.payloadSlug?.trim()) syncIssues.push('Slug is required.')
+    if (!isStep1Locked) syncIssues.push('Setup has unsaved changes.')
+    if (!isStep2Locked) syncIssues.push('Header/image has unsaved changes.')
+    if (!isStep3Locked) syncIssues.push('Items have unsaved changes.')
+    if (!seoComplete) syncIssues.push('SEO title and meta description required.')
+  }
+
   const autoWriteEmptyFieldsButtonClassName = [
     'stl-btn',
     'stl-btn-secondary',
@@ -56,36 +67,49 @@ export function BuilderSidebar({
 
   return (
     <aside className="stl-builder-sidebar">
-      <section className="stl-summary-card">
-        <h3>Build Progress</h3>
-        <div className="stl-progress-track" aria-hidden="true">
-          <span className="stl-progress-bar" style={{ width: `${completionPercent}%` }} />
-        </div>
-        <p className="stl-summary-percent">{completionPercent}% ready</p>
-        <ul className="stl-summary-list">
-          <li className={isStep1Locked ? 'done' : ''}>
-            Setup: {isStep1Locked ? 'Locked' : draft.in_update_mode ? 'Editing' : isSetupReady ? 'Ready to continue' : 'Incomplete'}
-          </li>
-          <li className={isStep2Locked ? 'done' : ''}>
-            Step 2: {isStep2Locked ? 'Locked' : draft.step2_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
-          </li>
-          <li className={isStep3Locked ? 'done' : ''}>
-            Step 3: {isStep3Locked ? 'Locked' : draft.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
-          </li>
-          <li className={hasTargetCount ? 'done' : ''}>
-            Target match: {hasTargetCount
-              ? 'Met'
-              : !hasTargetSelected
-                ? 'Not set'
-                : targetDelta > 0
-                  ? `Need ${targetDelta} more`
-                  : 'Above target'}
-          </li>
-          <li className={seoComplete ? 'done' : ''}>
-            SEO core: {seoComplete ? 'Complete' : 'Missing SEO title or meta description'}
-          </li>
-        </ul>
-      </section>
+      {isSynced ? (
+        <section className="stl-summary-card">
+          <h3>Article Status</h3>
+          {syncIssues.length > 0 ? (
+            <ul className="stl-summary-list">
+              {syncIssues.map((issue) => <li key={issue}>{issue}</li>)}
+            </ul>
+          ) : (
+            <p className="stl-summary-note">All fields complete.</p>
+          )}
+        </section>
+      ) : (
+        <section className="stl-summary-card">
+          <h3>Build Progress</h3>
+          <div className="stl-progress-track" aria-hidden="true">
+            <span className="stl-progress-bar" style={{ width: `${completionPercent}%` }} />
+          </div>
+          <p className="stl-summary-percent">{completionPercent}% ready</p>
+          <ul className="stl-summary-list">
+            <li className={isStep1Locked ? 'done' : ''}>
+              Setup: {isStep1Locked ? 'Locked' : draft.in_update_mode ? 'Editing' : isSetupReady ? 'Ready to continue' : 'Incomplete'}
+            </li>
+            <li className={isStep2Locked ? 'done' : ''}>
+              Step 2: {isStep2Locked ? 'Locked' : draft.step2_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
+            </li>
+            <li className={isStep3Locked ? 'done' : ''}>
+              Step 3: {isStep3Locked ? 'Locked' : draft.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
+            </li>
+            <li className={hasTargetCount ? 'done' : ''}>
+              Target match: {hasTargetCount
+                ? 'Met'
+                : !hasTargetSelected
+                  ? 'Not set'
+                  : targetDelta > 0
+                    ? `Need ${targetDelta} more`
+                    : 'Above target'}
+            </li>
+            <li className={seoComplete ? 'done' : ''}>
+              SEO core: {seoComplete ? 'Complete' : 'Missing SEO title or meta description'}
+            </li>
+          </ul>
+        </section>
+      )}
 
       <section className="stl-summary-card stl-summary-card--quick-actions">
         <h3>Quick Actions</h3>

@@ -11,6 +11,7 @@ type BuilderSeoPanelProps = {
   isGeneratingSeoImage: boolean
   onRegenerateStructuredData: () => void
   canRegenerateStructuredData: boolean
+  onAutoFillOgUrl?: () => void
 }
 
 export function BuilderSeoPanel({
@@ -22,6 +23,7 @@ export function BuilderSeoPanel({
   isGeneratingSeoImage,
   onRegenerateStructuredData,
   canRegenerateStructuredData,
+  onAutoFillOgUrl,
 }: BuilderSeoPanelProps) {
   const updateSeo = (updater: (current: ListicleItineraryDraft['seoSection']) => ListicleItineraryDraft['seoSection']) => {
     setDraft((current) => {
@@ -187,6 +189,7 @@ export function BuilderSeoPanel({
             <div className="stl-seo-input-wrap">
               <input
                 className="stl-seo-input-with-ai"
+                placeholder="https://www.questurian.com/country/city/itinerary/slug"
                 value={draft.seoSection.openGraph.url}
                 onChange={(event) =>
                   updateSeo((current) => ({
@@ -198,7 +201,18 @@ export function BuilderSeoPanel({
                   }))
                 }
               />
-              <span className="stl-seo-ai-trigger-wrap">{renderAiButton('openGraphUrl')}</span>
+              <span className="stl-seo-ai-trigger-wrap">
+                {onAutoFillOgUrl ? (
+                  <button
+                    type="button"
+                    className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                    onClick={onAutoFillOgUrl}
+                    disabled={isSeoActionRunning}
+                  >
+                    Fill URL
+                  </button>
+                ) : renderAiButton('openGraphUrl')}
+              </span>
             </div>
           </label>
         </section>

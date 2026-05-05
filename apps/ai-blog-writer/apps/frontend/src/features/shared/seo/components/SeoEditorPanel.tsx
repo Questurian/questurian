@@ -25,6 +25,7 @@ type SeoEditorPanelProps = {
   isGeneratingSeoImage: boolean
   onUploadOgImageFile: (file: File) => Promise<void>
   isUploadingOgImage: boolean
+  onAutoFillOgUrl?: () => void
   stepLabel?: string
   title?: string
 }
@@ -38,6 +39,7 @@ export function SeoEditorPanel({
   isGeneratingSeoImage,
   onUploadOgImageFile,
   isUploadingOgImage,
+  onAutoFillOgUrl,
   stepLabel = 'Step 4',
   title = 'SEO & Metadata',
 }: SeoEditorPanelProps) {
@@ -246,7 +248,7 @@ export function SeoEditorPanel({
               <div className="stl-seo-input-wrap">
                 <input
                   className="stl-seo-input-with-ai"
-                  placeholder="fix-this-url-after-frontend-urls-are-set"
+                  placeholder="https://www.questurian.com/country/city/slug"
                   value={seoSection.openGraph.url}
                   onChange={(event) =>
                     updateSeo((current) => ({
@@ -258,11 +260,19 @@ export function SeoEditorPanel({
                     }))
                   }
                 />
-                <span className="stl-seo-ai-trigger-wrap">{renderAiButton('openGraphUrl')}</span>
+                <span className="stl-seo-ai-trigger-wrap">
+                  {onAutoFillOgUrl ? (
+                    <button
+                      type="button"
+                      className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                      onClick={onAutoFillOgUrl}
+                      disabled={isSeoActionRunning}
+                    >
+                      Fill URL
+                    </button>
+                  ) : renderAiButton('openGraphUrl')}
+                </span>
               </div>
-              <p className="stl-legacy-note">
-                Placeholder only. Leave this blank until the real frontend article URL exists.
-              </p>
             </label>
           </section>
 

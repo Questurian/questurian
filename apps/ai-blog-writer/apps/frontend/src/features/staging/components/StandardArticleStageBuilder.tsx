@@ -175,6 +175,7 @@ export function StandardArticleStageBuilder({
   const isStep1Locked = Boolean(stagedArticle?.step1_complete && !stagedArticle?.in_update_mode)
   const isStep2Locked = Boolean(stagedArticle?.step2_complete && !stagedArticle?.step2_in_update_mode)
   const isStep3Locked = Boolean(stagedArticle?.step3_complete && !stagedArticle?.step3_in_update_mode)
+  const isSynced = Boolean(stagedArticle?.publishedToPayload)
   const seoCoreComplete = isSeoCoreComplete(seoSection)
   const completionPercent = Math.round(([
     isStep1Locked,
@@ -185,15 +186,24 @@ export function StandardArticleStageBuilder({
 
   const syncIssues = useMemo(() => {
     const issues: string[] = []
-    if (!isStep1Locked) issues.push('Lock Step 1 before syncing to Payload.')
-    if (!stagedArticle?.payloadSlug?.trim()) issues.push('Slug is required before syncing to Payload.')
-    if (!isStep2Locked) issues.push('Lock Step 2 before syncing to Payload.')
-    if (!isStep3Locked) issues.push('Lock Step 3 before syncing to Payload.')
-    if (!seoCoreComplete) issues.push('Add SEO title and meta description before syncing to Payload.')
-    if (step3Issues.length > 0) issues.push(step3Issues[0])
-    if (seoIssues.length > 0) issues.push(seoIssues[0])
+    if (isSynced) {
+      if (step1Issues.length > 0) issues.push(step1Issues[0])
+      if (!stagedArticle?.payloadSlug?.trim()) issues.push('Slug is required before syncing to Payload.')
+      if (step2Issues.length > 0) issues.push(step2Issues[0])
+      if (step3Issues.length > 0) issues.push(step3Issues[0])
+      if (!seoCoreComplete) issues.push('Add SEO title and meta description before syncing to Payload.')
+      if (seoIssues.length > 0) issues.push(seoIssues[0])
+    } else {
+      if (!isStep1Locked) issues.push('Lock Step 1 before syncing to Payload.')
+      if (!stagedArticle?.payloadSlug?.trim()) issues.push('Slug is required before syncing to Payload.')
+      if (!isStep2Locked) issues.push('Lock Step 2 before syncing to Payload.')
+      if (!isStep3Locked) issues.push('Lock Step 3 before syncing to Payload.')
+      if (!seoCoreComplete) issues.push('Add SEO title and meta description before syncing to Payload.')
+      if (step3Issues.length > 0) issues.push(step3Issues[0])
+      if (seoIssues.length > 0) issues.push(seoIssues[0])
+    }
     return issues
-  }, [isStep1Locked, isStep2Locked, isStep3Locked, seoCoreComplete, seoIssues, stagedArticle?.payloadSlug, step3Issues])
+  }, [isSynced, isStep1Locked, isStep2Locked, isStep3Locked, seoCoreComplete, seoIssues, stagedArticle?.payloadSlug, step1Issues, step2Issues, step3Issues])
 
   const setStageArticle = useCallback((updates: Partial<NonNullable<typeof stagedArticle>>) => {
     sidebarProps?.onUpdateStagedArticle(updates)
@@ -283,20 +293,15 @@ export function StandardArticleStageBuilder({
     updateSeoSection,
   ])
 
-  const updateSeoSectionRef = useRef(updateSeoSection)
-  useEffect(() => { updateSeoSectionRef.current = updateSeoSection })
-
-  useEffect(() => {
+  const handleAutoFillOgUrl = useCallback(() => {
     const slug = stagedArticle?.payloadSlug?.trim()
-    const locationKey = selectedLocation?.locationKey
-    if (!slug || !locationKey) return
-    const newUrl = buildArticleOgUrl(locationKey, null, slug)
-    if (!newUrl) return
-    updateSeoSectionRef.current((current) => {
-      if (current.openGraph.url === newUrl) return current
-      return { ...current, openGraph: { ...current.openGraph, url: newUrl } }
-    })
-  }, [stagedArticle?.payloadSlug, selectedLocation?.locationKey])
+    const country = selectedLocation?.country
+    const city = selectedLocation?.city
+    if (!slug || !country) return
+    const url = buildArticleOgUrl(country, city, null, slug)
+    if (!url) return
+    updateSeoSection((current) => ({ ...current, openGraph: { ...current.openGraph, url } }))
+  }, [stagedArticle?.payloadSlug, selectedLocation, updateSeoSection])
 
   const handleContinueSetup = useCallback(() => {
     if (!stagedArticle || !sidebarProps) return
@@ -522,7 +527,7 @@ export function StandardArticleStageBuilder({
             <div className="sab-stage-hero-meta">
               {stagedArticle.originalType ? <span className="sab-stage-pill">{stagedArticle.originalType}</span> : null}
               {stagedArticle.payloadArticleId ? <span className="sab-stage-pill">Linked Payload #{stagedArticle.payloadArticleId}</span> : null}
-              <span className="sab-stage-pill">{completionPercent}% ready</span>
+              {!isSynced ? <span className="sab-stage-pill">{completionPercent}% ready</span> : null}
             </div>
           </div>
           <div className="stl-hero-actions">
@@ -540,29 +545,31 @@ export function StandardArticleStageBuilder({
 
             <section className="stl-panel sab-stage-panel">
               <div className="stl-panel-header">
-                <h2><span className="stl-kicker">Step 1</span> Setup</h2>
-                <div className="stl-inline-actions">
-                  {isStep1Locked ? (
-                    stagedArticle.in_update_mode ? (
-                      <>
-                        <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ in_update_mode: false })}>
-                          Cancel
+                <h2>{!isSynced ? <span className="stl-kicker">Step 1</span> : null} Setup</h2>
+                {!isSynced ? (
+                  <div className="stl-inline-actions">
+                    {isStep1Locked ? (
+                      stagedArticle.in_update_mode ? (
+                        <>
+                          <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ in_update_mode: false })}>
+                            Cancel
+                          </button>
+                          <button type="button" className="stl-btn" onClick={handleContinueSetup}>
+                            Save Setup
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ in_update_mode: true })}>
+                          Update Setup
                         </button>
-                        <button type="button" className="stl-btn" onClick={handleContinueSetup}>
-                          Save Setup
-                        </button>
-                      </>
+                      )
                     ) : (
-                      <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ in_update_mode: true })}>
-                        Update Setup
+                      <button type="button" className="stl-btn" onClick={handleContinueSetup}>
+                        Continue to Step 2
                       </button>
-                    )
-                  ) : (
-                    <button type="button" className="stl-btn" onClick={handleContinueSetup}>
-                      Continue to Step 2
-                    </button>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
               <div className="sab-stage-field-grid">
@@ -656,11 +663,14 @@ export function StandardArticleStageBuilder({
                     <input
                       className="stl-seo-input-with-ai"
                       value={stagedArticle.payloadSlug || ''}
-                      onChange={(event) => sidebarProps.onUpdateStagedArticle({ payloadSlug: event.target.value })}
+                      onChange={(event) => {
+                        const slug = event.target.value
+                        sidebarProps.onUpdateStagedArticle({ payloadSlug: slug })
+                      }}
                       placeholder="e.g. best-steakhouses-las-vegas"
-                      disabled={isStep1Locked}
+                      disabled={!isSynced && isStep1Locked}
                     />
-                    {!isStep1Locked ? (
+                    {(isSynced || !isStep1Locked) ? (
                       <span className="stl-seo-ai-trigger-wrap">
                         <button
                           type="button"
@@ -676,42 +686,44 @@ export function StandardArticleStageBuilder({
                 </label>
               </div>
 
-              {isStep1Locked ? (
+              {isStep1Locked && !isSynced ? (
                 <p className="sab-stage-summary">
                   Locked with title, primary location, optional shared neighborhoods, and AI model. Updating setup will unlock later steps.
                 </p>
               ) : null}
             </section>
 
-            {isStep1Locked ? (
+            {(isStep1Locked || isSynced) ? (
               <section className="stl-panel sab-stage-panel">
                 <div className="stl-panel-header">
-                  <h2><span className="stl-kicker">Step 2</span> Featured Image</h2>
-                  <div className="stl-inline-actions">
-                    {isStep2Locked ? (
-                      stagedArticle.step2_in_update_mode ? (
-                        <>
-                          <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step2_in_update_mode: false })}>
-                            Cancel
+                  <h2>{!isSynced ? <span className="stl-kicker">Step 2</span> : null} Featured Image</h2>
+                  {!isSynced ? (
+                    <div className="stl-inline-actions">
+                      {isStep2Locked ? (
+                        stagedArticle.step2_in_update_mode ? (
+                          <>
+                            <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step2_in_update_mode: false })}>
+                              Cancel
+                            </button>
+                            <button type="button" className="stl-btn" onClick={handleContinueFeaturedImage}>
+                              Save Featured Image
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step2_in_update_mode: true })}>
+                            Update Featured Image
                           </button>
-                          <button type="button" className="stl-btn" onClick={handleContinueFeaturedImage}>
-                            Save Featured Image
-                          </button>
-                        </>
+                        )
                       ) : (
-                        <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step2_in_update_mode: true })}>
-                          Update Featured Image
+                        <button type="button" className="stl-btn" onClick={handleContinueFeaturedImage}>
+                          Continue to Step 3
                         </button>
-                      )
-                    ) : (
-                      <button type="button" className="stl-btn" onClick={handleContinueFeaturedImage}>
-                        Continue to Step 3
-                      </button>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
 
-                <fieldset className="stl-panel-fieldset" disabled={isStep2Locked}>
+                <fieldset className="stl-panel-fieldset" disabled={!isSynced && isStep2Locked}>
                   <div className="stl-field">
                     <span>Featured Image</span>
                     {!featuredImageId ? (
@@ -750,10 +762,10 @@ export function StandardArticleStageBuilder({
               </section>
             ) : null}
 
-            {isStep1Locked && isStep2Locked ? (
+            {(isStep1Locked && isStep2Locked) || isSynced ? (
               <section className="stl-panel sab-stage-panel sab-stage-panel-content">
                 <div className="stl-panel-header">
-                  <h2><span className="stl-kicker">Step 3</span> Content Blocks</h2>
+                  <h2>{!isSynced ? <span className="stl-kicker">Step 3</span> : null} Content Blocks</h2>
                   <div className="stl-inline-actions">
                     <button type="button" className="stl-btn stl-btn-secondary" onClick={layout.onResetToOriginalBlocks}>
                       Reset to Original
@@ -761,26 +773,28 @@ export function StandardArticleStageBuilder({
                     <button type="button" className="stl-btn stl-btn-secondary" onClick={handleOpenDeepExpand}>
                       Deep Expand
                     </button>
-                    {isStep3Locked ? (
-                      stagedArticle.step3_in_update_mode ? (
-                        <>
-                          <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step3_in_update_mode: false })}>
-                            Cancel
+                    {!isSynced ? (
+                      isStep3Locked ? (
+                        stagedArticle.step3_in_update_mode ? (
+                          <>
+                            <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step3_in_update_mode: false })}>
+                              Cancel
+                            </button>
+                            <button type="button" className="stl-btn" onClick={handleContinueContent}>
+                              Save Step 3
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step3_in_update_mode: true })}>
+                            Update Step 3
                           </button>
-                          <button type="button" className="stl-btn" onClick={handleContinueContent}>
-                            Save Step 3
-                          </button>
-                        </>
+                        )
                       ) : (
-                        <button type="button" className="stl-btn stl-btn-secondary" onClick={() => setStageArticle({ step3_in_update_mode: true })}>
-                          Update Step 3
+                        <button type="button" className="stl-btn" onClick={handleContinueContent}>
+                          Continue to Step 4
                         </button>
                       )
-                    ) : (
-                      <button type="button" className="stl-btn" onClick={handleContinueContent}>
-                        Continue to Step 4
-                      </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -790,7 +804,7 @@ export function StandardArticleStageBuilder({
               </section>
             ) : null}
 
-            {isStep1Locked && isStep2Locked && isStep3Locked ? (
+            {(isStep1Locked && isStep2Locked && isStep3Locked) || isSynced ? (
               <SeoEditorPanel
                 seoSection={seoSection}
                 setSeoSection={updateSeoSection}
@@ -800,33 +814,47 @@ export function StandardArticleStageBuilder({
                 isGeneratingSeoImage={isGeneratingSeoImage}
                 onUploadOgImageFile={handleUploadOgImageFile}
                 isUploadingOgImage={isUploadingOgImage}
+                onAutoFillOgUrl={handleAutoFillOgUrl}
                 title="SEO & Sync"
               />
             ) : null}
           </main>
 
           <aside className="stl-builder-sidebar">
-            <section className="stl-summary-card">
-              <h3>Build Progress</h3>
-              <div className="stl-progress-track" aria-hidden="true">
-                <span className="stl-progress-bar" style={{ width: `${completionPercent}%` }} />
-              </div>
-              <p className="stl-summary-percent">{completionPercent}% ready</p>
-              <ul className="stl-summary-list">
-                <li className={isStep1Locked ? 'done' : ''}>
-                  Setup: {isStep1Locked ? 'Locked' : stagedArticle.in_update_mode ? 'Editing' : 'Incomplete'}
-                </li>
-                <li className={isStep2Locked ? 'done' : ''}>
-                  Featured image: {isStep2Locked ? 'Locked' : stagedArticle.step2_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
-                </li>
-                <li className={isStep3Locked ? 'done' : ''}>
-                  Content blocks: {isStep3Locked ? 'Locked' : stagedArticle.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
-                </li>
-                <li className={seoCoreComplete ? 'done' : ''}>
-                  SEO core: {seoCoreComplete ? 'Complete' : 'Missing SEO title or meta description'}
-                </li>
-              </ul>
-            </section>
+            {isSynced ? (
+              <section className="stl-summary-card">
+                <h3>Article Status</h3>
+                {syncIssues.length > 0 ? (
+                  <ul className="stl-summary-list">
+                    {syncIssues.map((issue) => <li key={issue}>{issue}</li>)}
+                  </ul>
+                ) : (
+                  <p className="stl-summary-note">All fields complete.</p>
+                )}
+              </section>
+            ) : (
+              <section className="stl-summary-card">
+                <h3>Build Progress</h3>
+                <div className="stl-progress-track" aria-hidden="true">
+                  <span className="stl-progress-bar" style={{ width: `${completionPercent}%` }} />
+                </div>
+                <p className="stl-summary-percent">{completionPercent}% ready</p>
+                <ul className="stl-summary-list">
+                  <li className={isStep1Locked ? 'done' : ''}>
+                    Setup: {isStep1Locked ? 'Locked' : stagedArticle.in_update_mode ? 'Editing' : 'Incomplete'}
+                  </li>
+                  <li className={isStep2Locked ? 'done' : ''}>
+                    Featured image: {isStep2Locked ? 'Locked' : stagedArticle.step2_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
+                  </li>
+                  <li className={isStep3Locked ? 'done' : ''}>
+                    Content blocks: {isStep3Locked ? 'Locked' : stagedArticle.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
+                  </li>
+                  <li className={seoCoreComplete ? 'done' : ''}>
+                    SEO core: {seoCoreComplete ? 'Complete' : 'Missing SEO title or meta description'}
+                  </li>
+                </ul>
+              </section>
+            )}
 
             <section className="stl-summary-card stl-summary-card--quick-actions">
               <h3>Sync</h3>

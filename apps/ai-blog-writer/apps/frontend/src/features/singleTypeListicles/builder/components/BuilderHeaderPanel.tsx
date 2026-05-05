@@ -26,6 +26,7 @@ type BuilderHeaderPanelProps = {
   introAiQueueCount: number
   introAiStatus: string | null
   isLocked: boolean
+  isSynced?: boolean
   onContinueStep2: () => void
   onUpdateStep2: () => void
   onSaveStep2: () => void
@@ -44,6 +45,7 @@ export function BuilderHeaderPanel({
   introAiQueueCount,
   introAiStatus,
   isLocked,
+  isSynced = false,
   onContinueStep2,
   onUpdateStep2,
   onSaveStep2,
@@ -134,33 +136,35 @@ export function BuilderHeaderPanel({
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
-          <span className="stl-kicker">Step 2</span> Header
+          {!isSynced ? <span className="stl-kicker">Step 2</span> : null} Header
         </h2>
-        <div className="stl-inline-actions">
-          {!draft.step2_complete ? (
-            <button type="button" className="stl-btn" onClick={onContinueStep2}>
-              Continue
-            </button>
-          ) : null}
-          {draft.step2_complete && !draft.step2_in_update_mode ? (
-            <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep2}>
-              Update Header
-            </button>
-          ) : null}
-          {draft.step2_in_update_mode ? (
-            <>
-              <button type="button" className="stl-btn" onClick={onSaveStep2}>
-                Save Header
+        {!isSynced ? (
+          <div className="stl-inline-actions">
+            {!draft.step2_complete ? (
+              <button type="button" className="stl-btn" onClick={onContinueStep2}>
+                Continue
               </button>
-              <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep2Update}>
-                Cancel
+            ) : null}
+            {draft.step2_complete && !draft.step2_in_update_mode ? (
+              <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep2}>
+                Update Header
               </button>
-            </>
-          ) : null}
-        </div>
+            ) : null}
+            {draft.step2_in_update_mode ? (
+              <>
+                <button type="button" className="stl-btn" onClick={onSaveStep2}>
+                  Save Header
+                </button>
+                <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep2Update}>
+                  Cancel
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <fieldset className="stl-panel-fieldset" disabled={isLocked}>
+      <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         <div className="stl-field">
           <span>Featured Image</span>
           {!featuredImageId ? (

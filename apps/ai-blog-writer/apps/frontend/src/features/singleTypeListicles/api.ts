@@ -63,8 +63,7 @@ export async function fetchListicles(token: string): Promise<PayloadListResponse
 }
 
 export async function fetchListicleById(id: number, token: string): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles/${id}`, token)
-  return response.doc
+  return payloadRequest<PayloadListicleDoc>(`/api/single-type-listicles/${id}`, token)
 }
 
 export async function createListicle(body: Record<string, unknown>, token: string): Promise<PayloadListicleDoc> {

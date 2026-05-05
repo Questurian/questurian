@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation';
+import { fetchArticle } from '@/features/articles/lib/fetchArticle';
+import { ArticlePage } from '@/features/articles/ArticlePage';
 
 const KNOWN_TYPES = ['maps', 'itinerary', 'guide', 'food', 'neighborhoods'] as const;
 type ArticleType = (typeof KNOWN_TYPES)[number];
@@ -22,7 +24,7 @@ type Props = {
   params: Promise<{ country: string; city: string; articlePath: string[] }>;
 };
 
-export default async function ArticlePage({ params }: Props) {
+export default async function ArticleRoutePage({ params }: Props) {
   const { country, city, articlePath } = await params;
 
   const parsed = parseArticlePath(articlePath);
@@ -33,20 +35,11 @@ export default async function ArticlePage({ params }: Props) {
 
   const { type, slug } = parsed;
 
-  const url = type
-    ? `/${country}/${city}/${type}/${slug}`
-    : `/${country}/${city}/${slug}`;
+  const article = await fetchArticle({ country, city, type, slug });
 
-  console.log('[ArticlePage] params:', { country, city, type, slug, url });
+  if (!article) {
+    notFound();
+  }
 
-  // TODO: fetch article data here when ready
-  // const article = await fetchArticle({ country, city, type, slug });
-
-  return (
-    <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
-      <h1>Article Route Ready</h1>
-      <pre>{JSON.stringify({ country, city, type, slug, url }, null, 2)}</pre>
-      <p>Fetch will go here — check console for params.</p>
-    </div>
-  );
+  return <ArticlePage article={article} />;
 }

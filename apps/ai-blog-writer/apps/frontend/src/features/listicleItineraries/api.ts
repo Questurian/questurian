@@ -108,8 +108,7 @@ export async function fetchItineraries(token: string): Promise<PayloadListRespon
 }
 
 export async function fetchItineraryById(id: number, token: string): Promise<PayloadItineraryDoc> {
-  const response = await payloadRequest<{ doc: PayloadItineraryDoc }>(`/api/listicle-itineraries/${id}`, token)
-  return response.doc
+  return payloadRequest<PayloadItineraryDoc>(`/api/listicle-itineraries/${id}`, token)
 }
 
 export async function createItinerary(body: Record<string, unknown>, token: string): Promise<PayloadItineraryDoc> {

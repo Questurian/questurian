@@ -1,19 +1,23 @@
 export type ArticleUrlType = 'maps' | 'itinerary' | null
 
 export function buildArticleOgUrl(
-  locationKey: string,
+  country: string,
+  city: string | null | undefined,
   type: ArticleUrlType,
   slug: string,
 ): string {
-  if (!slug.trim() || !locationKey.trim()) return ''
+  const c = country.trim().toLowerCase()
+  const s = slug.trim()
+  if (!c || !s) return ''
 
-  const parts = locationKey.toLowerCase().split('|').filter(Boolean)
-  if (parts.length < 2) return ''
-
-  const [country, city] = parts
   const base = (import.meta.env.VITE_FRONTEND_URL ?? '').replace(/\/$/, '')
+  const cityPart = city?.trim().toLowerCase()
 
-  return type
-    ? `${base}/${country}/${city}/${type}/${slug.trim()}`
-    : `${base}/${country}/${city}/${slug.trim()}`
+  if (cityPart) {
+    return type
+      ? `${base}/${c}/${cityPart}/${type}/${s}`
+      : `${base}/${c}/${cityPart}/${s}`
+  }
+
+  return type ? `${base}/${c}/${type}/${s}` : `${base}/${c}/${s}`
 }
