@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useState } from 'react'
 import { X } from 'lucide-react'
 import type { ListicleHoursRow } from '@/features/articles/lib/listicleVenueFormatters'
 
-const linkClass = 'break-words text-left font-medium text-[var(--maps-listicle-accent)]'
+const linkClass = 'break-words text-left font-medium text-[12px] 480:text-[13px] sm:text-[14px] text-[var(--maps-listicle-accent)]'
 
 type ListicleHoursModalTriggerProps = {
   venueTitle: string

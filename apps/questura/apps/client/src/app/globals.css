@@ -177,6 +177,57 @@ input:-webkit-autofill:active {
   }
 }
 
+@media (min-width: 640px) {
+  .maps-listicle-intro p {
+    font-size: 16px;
+    line-height: 1.75;
+    margin-bottom: 1.1rem;
+  }
+
+  .maps-listicle-intro h2 {
+    font-size: 24px;
+    margin-top: 2.25rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .maps-listicle-blurb p {
+    font-size: 15px;
+    line-height: 1.72;
+    margin-bottom: 0.9rem;
+  }
+
+  .maps-listicle-blurb h2,
+  .maps-listicle-blurb h3 {
+    font-size: 18px;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .maps-listicle-intro p {
+    font-size: 17px;
+    line-height: 1.78;
+    margin-bottom: 1.2rem;
+  }
+
+  .maps-listicle-intro h2 {
+    font-size: 26px;
+  }
+
+  .maps-listicle-blurb p {
+    font-size: 16px;
+    line-height: 1.75;
+    margin-bottom: 1rem;
+  }
+
+  .maps-listicle-blurb h2,
+  .maps-listicle-blurb h3 {
+    font-size: 19px;
+    margin-top: 1.4rem;
+  }
+}
+
 /* Venue listicle body: sans like reference comp (teal links) */
 .maps-listicle-venue-blurb p,
 .maps-listicle-venue-blurb li {

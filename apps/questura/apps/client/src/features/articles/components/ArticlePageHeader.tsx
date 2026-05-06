@@ -1,13 +1,6 @@
-import { Share2, Bookmark } from 'lucide-react'
+import { Share2, Bookmark, Info } from 'lucide-react'
 import type { JSX } from 'react'
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
+import type { ArticleAuthor } from '@/features/articles/types'
 
 function GoogleG(): JSX.Element {
   return (
@@ -22,62 +15,97 @@ function GoogleG(): JSX.Element {
 
 type ArticlePageHeaderProps = {
   title: string
-  description?: string
-  publishedAt: string
+  author?: ArticleAuthor | null
+}
+
+function AuthorBlock({ author }: { author: ArticleAuthor }): JSX.Element {
+  const displayName = author.publicProfile.displayName
+  const imageUrl = author.publicProfile.avatar ?? undefined
+  const initials = displayName
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
+
+  return (
+    <div className="flex items-center gap-2.5 480:gap-3">
+      <div className="relative shrink-0 h-8 w-8 rounded-full bg-foreground overflow-hidden 480:h-9 480:w-9">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrl} alt={displayName} className="h-full w-full object-cover" />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-background 480:text-[11px]">
+            {initials}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-col gap-[3px]">
+        <span className="text-foreground text-[12px] font-semibold leading-none 480:text-[13px] sm:text-[14px]">
+          {displayName}
+        </span>
+        <span className="text-foreground/50 text-[11px] leading-none 480:text-[12px]">
+          Editorial Team
+        </span>
+      </div>
+    </div>
+  )
 }
 
 export function ArticlePageHeader({
   title,
-  description,
-  publishedAt,
+  author,
 }: ArticlePageHeaderProps): JSX.Element {
   return (
-    <div className="px-3 pt-7 pb-5 max-[379px]:px-3 380:px-4 380:pt-8">
-      <h1 className="font-display text-foreground text-[22px] leading-[1.2] mb-2.5 max-[379px]:tracking-tight 380:text-[26px] 380:leading-[1.22] 380:mb-3">
+    <div className="px-3 pt-7 pb-0 max-[379px]:px-3 380:px-4 380:pt-8 480:px-5 480:pt-9 550:px-6 550:pt-10 sm:px-8 sm:pt-12 768:px-10 768:pt-14">
+      <h1 className="font-display font-bold text-foreground text-[26px] leading-[1.18] mb-4 max-[379px]:tracking-tight 380:text-[30px] 380:leading-[1.2] 380:mb-5 480:text-[34px] 550:text-[37px] 550:mb-5 sm:text-[40px] sm:leading-[1.15] sm:mb-6 768:text-[44px] 768:leading-[1.12] 768:mb-7">
         {title}
       </h1>
 
-      {description ? (
-        <p className="font-[family-name:var(--font-dm-sans)] text-foreground text-[12px] leading-[1.5] mb-2.5 380:text-[13px] 380:leading-[1.55] 380:mb-3">
-          {description}
-        </p>
-      ) : null}
+      <div className="flex items-center justify-between gap-3 py-3 480:py-3.5 sm:py-4">
+        {author ? (
+          <AuthorBlock author={author} />
+        ) : (
+          <div />
+        )}
 
-      <p className="text-foreground/40 text-[11px] mb-4 380:text-[12px] 380:mb-5">
-        Updated <time dateTime={publishedAt}>{formatDate(publishedAt)}</time>
-      </p>
+        <div className="flex items-center gap-2.5 shrink-0 480:gap-3">
+          <div className="flex items-center gap-3.5 shrink-0 480:gap-4">
+            <button
+              type="button"
+              className="text-foreground/50 active:text-foreground transition-colors"
+              aria-label="Share"
+            >
+              <Share2 size={18} strokeWidth={1.75} />
+            </button>
 
-      <hr className="border-foreground/10 mb-1" />
+            <button
+              type="button"
+              className="text-foreground/50 active:text-foreground transition-colors"
+              aria-label="Save"
+            >
+              <Bookmark size={18} strokeWidth={1.75} />
+            </button>
+          </div>
 
-      <div className="flex items-center justify-between gap-3 py-3">
-        <div className="flex items-center gap-5 shrink-0">
           <button
             type="button"
-            className="text-foreground/50 active:text-foreground transition-colors"
-            aria-label="Share"
+            className="inline-flex items-center justify-center gap-2 shrink-0 border border-foreground/20 rounded-lg px-2.5 py-1.5 380:px-3 380:py-2 480:px-3.5 sm:px-4 sm:py-2 text-[11px] 380:text-[12px] 480:text-[13px] font-medium text-foreground/80 bg-background active:bg-foreground/5 transition-colors"
           >
-            <Share2 size={18} strokeWidth={1.75} />
+            <GoogleG />
+            Add Us On Google
           </button>
 
           <button
             type="button"
-            className="text-foreground/50 active:text-foreground transition-colors"
-            aria-label="Save"
+            className="text-foreground/40 active:text-foreground transition-colors"
+            aria-label="About this article"
           >
-            <Bookmark size={18} strokeWidth={1.75} />
+            <Info size={18} strokeWidth={1.75} />
           </button>
         </div>
-
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-2.5 shrink-0 border border-foreground/20 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[12px] sm:text-[13px] font-medium text-foreground/80 bg-background active:bg-foreground/5 transition-colors"
-        >
-          <GoogleG />
-          Add Us On Google
-        </button>
       </div>
 
-      <hr className="border-foreground/10 mb-4" />
+      <hr className="border-foreground/10" />
     </div>
   )
 }

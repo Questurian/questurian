@@ -91,8 +91,6 @@ export function ArticlePage({ article }: { article: Article }) {
 
       <ArticlePageHeader
         title={title}
-        description={description}
-        publishedAt={publishedAt}
       />
 
       {/* ── Featured image ───────────────────────────────────────── */}
