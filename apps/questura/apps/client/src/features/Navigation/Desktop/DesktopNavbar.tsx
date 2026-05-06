@@ -11,7 +11,11 @@ import {
 } from "../shared/components";
 import { useDesktopNavbarState } from "./hooks/use-desktop-navbar-state";
 
-export default function DesktopNavbar() {
+interface DesktopNavbarProps {
+  isScrolled?: boolean;
+}
+
+export default function DesktopNavbar({ isScrolled = false }: DesktopNavbarProps) {
   const {
     loading,
     isAuthenticated,
@@ -24,7 +28,11 @@ export default function DesktopNavbar() {
 
   return (
     <div className="w-full overflow-hidden border-b border-black/10">
-      <div className="w-full bg-[#ece9e3] px-4 py-5 1024:py-6">
+      <div
+        className={`w-full bg-[#ece9e3] px-4 transition-[padding] duration-300 ease-in-out ${
+          isScrolled ? "py-2" : "py-5 1024:py-6"
+        }`}
+      >
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="justify-self-start">
             <MenuIcon iconClassName="!text-black h-6 w-6" />
@@ -33,7 +41,7 @@ export default function DesktopNavbar() {
             href={hasCityContext ? `/${countrySlug}/${citySlug}` : "/"}
             className="cursor-pointer justify-self-center"
           >
-            <Logo />
+            <Logo compact={isScrolled} />
           </Link>
           <div className="flex items-center justify-self-end gap-4">
             {loading ? (

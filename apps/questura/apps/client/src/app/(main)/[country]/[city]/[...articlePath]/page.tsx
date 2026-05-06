@@ -6,6 +6,7 @@ import {
   parseArticlePath,
 } from '@/features/articles/lib/articleRoute';
 import { fetchArticle } from '@/features/articles/lib/fetchArticle';
+import { fetchMapsArticlesList } from '@/features/articles/lib/fetchMapsArticlesList';
 import { getArticleLayoutComponent } from '@/features/articles/layouts/articleLayoutRegistry';
 import { MapsArticleLayout } from '@/features/articles/layouts/MapsArticleLayout';
 import { isMapsListicleArticle } from '@/features/articles/types/mapsListicle';
@@ -26,17 +27,29 @@ export default async function ArticleRoutePage({ params }: Props) {
   const { type, slug } = parsed;
   const layoutKey = articleLayoutKeyFromRouteType(type);
 
+  if (layoutKey === 'maps') {
+    const [article, relatedArticles] = await Promise.all([
+      fetchArticle({ country, city, type, slug }),
+      fetchMapsArticlesList(country, city),
+    ]);
+
+    if (!article) notFound();
+    if (!isMapsListicleArticle(article)) notFound();
+
+    return (
+      <MapsArticleLayout
+        article={article}
+        relatedArticles={relatedArticles}
+        country={country}
+        city={city}
+      />
+    );
+  }
+
   const article = await fetchArticle({ country, city, type, slug });
 
   if (!article) {
     notFound();
-  }
-
-  if (layoutKey === 'maps') {
-    if (!isMapsListicleArticle(article)) {
-      notFound();
-    }
-    return <MapsArticleLayout article={article} />;
   }
 
   if (!isStandardArticle(article)) {

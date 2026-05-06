@@ -1,12 +1,28 @@
+'use client'
+
 import type { JSX } from 'react'
 import { MapsListicleArticlePage } from '@/features/articles/MapsListicleArticlePage'
 import type { MapsListicleArticle } from '@/features/articles/types/mapsListicle'
+import { MapPanel } from '@/features/articles/components/MapPanel'
+import { MoreMapsRow } from '@/features/articles/components/MoreMapsRow'
+import type { MapsArticleTeaser } from '@/features/articles/lib/fetchMapsArticlesList'
+import { useDevStore } from '@/lib/stores/devStore'
+
+interface MapsArticleLayoutProps {
+  article: MapsListicleArticle
+  relatedArticles: MapsArticleTeaser[]
+  country: string
+  city: string
+}
 
 export function MapsArticleLayout({
   article,
-}: {
-  article: MapsListicleArticle
-}): JSX.Element {
+  relatedArticles,
+  country,
+  city,
+}: MapsArticleLayoutProps): JSX.Element {
+  const { mapsEnabled } = useDevStore()
+
   return (
     <>
       <link rel="preconnect" href="https://www.instagram.com" />
@@ -23,7 +39,19 @@ export function MapsArticleLayout({
         <div className="1024:flex-1 1024:min-w-0 1024:border-r 1024:border-foreground/10">
           <MapsListicleArticlePage article={article} />
         </div>
-        <div className="hidden 1024:block 1024:flex-1" aria-hidden="true" />
+        {mapsEnabled && (
+          <div className="hidden 1024:flex 1024:flex-col 1024:flex-1 1024:sticky 1024:top-0 1024:h-screen 1024:self-start">
+            <div className="flex-1 min-h-0">
+              <MapPanel />
+            </div>
+            <MoreMapsRow
+              articles={relatedArticles}
+              country={country}
+              city={city}
+              currentSlug={article.slug}
+            />
+          </div>
+        )}
       </div>
     </>
   )

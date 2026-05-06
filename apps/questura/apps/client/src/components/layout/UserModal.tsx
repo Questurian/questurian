@@ -13,7 +13,7 @@ interface UserModalProps {
 export default function UserModal({ isOpen, onClose }: UserModalProps) {
   const { data: user } = useUserQuery();
   const logoutMutation = useLogoutMutation();
-  const { membershipOverride, toggleMembershipOverride } = useDevStore();
+  const { membershipOverride, toggleMembershipOverride, mapsEnabled, toggleMapsEnabled } = useDevStore();
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -116,18 +116,32 @@ export default function UserModal({ isOpen, onClose }: UserModalProps) {
                 Go to Account
               </Link>
               {process.env.NODE_ENV === 'development' && (
-                <button
-                  onClick={toggleMembershipOverride}
-                  className={`
-                    px-4 py-1.5 rounded text-xs font-mono font-semibold border transition-colors
-                    ${membershipOverride
-                      ? 'bg-green-500 border-green-400 text-white'
-                      : 'bg-transparent border-gray-500 text-gray-400 hover:border-gray-300 hover:text-gray-200'
-                    }
-                  `}
-                >
-                  DEV: member {membershipOverride ? 'ON' : 'OFF'}
-                </button>
+                <>
+                  <button
+                    onClick={toggleMembershipOverride}
+                    className={`
+                      px-4 py-1.5 rounded text-xs font-mono font-semibold border transition-colors
+                      ${membershipOverride
+                        ? 'bg-green-500 border-green-400 text-white'
+                        : 'bg-transparent border-gray-500 text-gray-400 hover:border-gray-300 hover:text-gray-200'
+                      }
+                    `}
+                  >
+                    DEV: member {membershipOverride ? 'ON' : 'OFF'}
+                  </button>
+                  <button
+                    onClick={toggleMapsEnabled}
+                    className={`
+                      px-4 py-1.5 rounded text-xs font-mono font-semibold border transition-colors
+                      ${mapsEnabled
+                        ? 'bg-blue-600 border-blue-500 text-white'
+                        : 'bg-transparent border-gray-500 text-gray-400 hover:border-gray-300 hover:text-gray-200'
+                      }
+                    `}
+                  >
+                    DEV: maps {mapsEnabled ? 'ON' : 'OFF'}
+                  </button>
+                </>
               )}
               <button
                 onClick={handleLogout}

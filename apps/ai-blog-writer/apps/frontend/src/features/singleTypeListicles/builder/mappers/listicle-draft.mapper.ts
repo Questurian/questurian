@@ -5,6 +5,7 @@ import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } f
 import { buildPayloadListicleMetadataPatch } from '../services/payload-listicle-metadata.service'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
+import { lexicalRichTextToMarkdown } from '../utils/lexical-json.utils'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
@@ -16,7 +17,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
     selectedPhotos: getRelationshipIds(item.selectedPhotos),
     selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
-    blurbMarkdown: '',
+    blurbMarkdown: item.blurb ? lexicalRichTextToMarkdown(item.blurb) : '',
     blurbLexical: item.blurb,
     blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
   }))
@@ -49,7 +50,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     step3_complete: Boolean(doc.step3_complete) || hasStep3Content,
     step3_in_update_mode: Boolean(doc.step3_in_update_mode),
     header: {
-      introMarkdown: '',
+      introMarkdown: doc.header?.intro ? lexicalRichTextToMarkdown(doc.header.intro) : '',
       introLexical: doc.header?.intro,
       introJsonText: doc.header?.intro ? JSON.stringify(doc.header.intro, null, 2) : '',
       featuredImage: getRelationshipId(doc.header?.featuredImage),

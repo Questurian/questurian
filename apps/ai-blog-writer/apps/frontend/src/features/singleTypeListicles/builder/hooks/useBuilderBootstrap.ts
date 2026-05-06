@@ -76,19 +76,27 @@ export function useBuilderBootstrap({
 
         const payloadId = payloadIdParam ? Number(payloadIdParam) : null
         if (payloadId && Number.isFinite(payloadId)) {
+          const doc = await fetchListicleById(payloadId, authToken)
+          if (cancelled) return
           const localDraft = findDraftByPayloadId(payloadId)
+          const payloadDraft = payloadDocToDraft(doc, localDraft?.draftId)
+
+          // Payload stores blurbs/intro as Lexical JSON; restore the editable markdown
+          // from the local draft so editors are not blank on reload.
           if (localDraft) {
-            const normalizedLocalDraft = normalizeDraftModelName(localDraft)
-            setDraft(normalizedLocalDraft)
-            if (normalizedLocalDraft !== localDraft) {
-              saveDraft(normalizedLocalDraft)
+            if (localDraft.header.introMarkdown) {
+              payloadDraft.header.introMarkdown = localDraft.header.introMarkdown
             }
-          } else {
-            const doc = await fetchListicleById(payloadId, authToken)
-            if (cancelled) return
-            const normalizedPayloadDraft = normalizeDraftModelName(payloadDocToDraft(doc))
-            setDraft(normalizedPayloadDraft)
+            payloadDraft.items = payloadDraft.items.map((item) => {
+              const localItem = localDraft.items.find((li) => li.item === item.item)
+              return localItem?.blurbMarkdown
+                ? { ...item, blurbMarkdown: localItem.blurbMarkdown }
+                : item
+            })
           }
+
+          const normalizedPayloadDraft = normalizeDraftModelName(payloadDraft)
+          setDraft(normalizedPayloadDraft)
           return
         }
 

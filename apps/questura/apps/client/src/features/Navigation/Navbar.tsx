@@ -5,24 +5,26 @@ import MobileNavbar from "./Mobile/MobileNavbar";
 import { useEffect, useState } from "react";
 
 export default function Navbar() {
-  // Prevent hydration mismatch by only showing auth state after mount
   const [hasMounted, setHasMounted] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
   useEffect(() => {
     setHasMounted(true);
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Don't render any auth-dependent UI until mounted on client
-  // This prevents hydration mismatches between server and client
   if (!hasMounted) {
     return (
-      <nav className="h-[55px] w-full animate-pulse bg-[#ece9e3] 1024:h-24" />
+      <nav className="sticky top-0 z-40 h-[55px] w-full animate-pulse bg-[#ece9e3] 1024:h-24" />
     );
   }
 
   return (
-    <nav>
+    <nav className="sticky top-0 z-40">
       <div className="hidden 1024:block">
-        <DesktopNavbar />
+        <DesktopNavbar isScrolled={isScrolled} />
       </div>
       <div className="h-[55px] 1024:hidden">
         <MobileNavbar />
