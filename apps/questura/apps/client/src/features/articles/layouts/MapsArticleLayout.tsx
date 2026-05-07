@@ -35,12 +35,19 @@ export function MapsArticleLayout({
       <div
         data-article-layout="maps"
         className="1024:flex 1024:min-h-screen 1024:max-w-[1600px] 1024:mx-auto"
+        style={{ marginTop: "calc((1 - var(--navbar-collapse, 0)) * 20px)" }}
       >
         <div className="1024:flex-1 1024:min-w-0 1024:border-r 1024:border-foreground/10">
           <MapsListicleArticlePage article={article} />
         </div>
         {mapsEnabled && (
-          <div className="hidden 1024:flex 1024:flex-col 1024:flex-1 1024:sticky 1024:top-0 1024:h-screen 1024:self-start">
+          <div
+            className="hidden 1024:flex 1024:flex-col 1024:flex-1 1024:sticky 1024:self-start"
+            style={{
+              top: "var(--navbar-height, 6rem)",
+              height: "calc(100vh - var(--navbar-height, 6rem))",
+            }}
+          >
             <div className="flex-1 min-h-0">
               <MapPanel />
             </div>

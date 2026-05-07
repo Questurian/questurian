@@ -56,7 +56,7 @@ export function ArticlePageHeader({
   author,
 }: ArticlePageHeaderProps): JSX.Element {
   return (
-    <div className="px-3 pt-7 pb-0 max-[379px]:px-3 380:px-4 380:pt-8 480:px-5 480:pt-9 550:px-6 550:pt-10 sm:px-8 sm:pt-12 768:px-10 768:pt-14">
+    <div className="px-3 pt-5 pb-0 max-[379px]:px-3 380:px-4 380:pt-6 480:px-5 480:pt-7 550:px-6 550:pt-8 sm:px-8 sm:pt-9 768:px-10 768:pt-10">
       <h1 className="font-display font-bold text-foreground text-[26px] leading-[1.18] mb-4 max-[379px]:tracking-tight 380:text-[30px] 380:leading-[1.2] 380:mb-5 480:text-[34px] 550:text-[37px] 550:mb-5 sm:text-[40px] sm:leading-[1.15] sm:mb-6 768:text-[44px] 768:leading-[1.12] 768:mb-7">
         {title}
       </h1>

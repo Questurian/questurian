@@ -20,7 +20,7 @@ export function MoreMapsRow({ articles, country, city, currentSlug }: MoreMapsRo
   const cityLabel = capitalize(city)
 
   return (
-    <div className="shrink-0 border-t border-black/10 bg-white px-4 pt-3 pb-4">
+    <div className="shrink-0 border-t border-black/10 bg-white px-4 pt-3 pb-16">
       {/* Header row */}
       <div className="mb-3 flex items-center justify-between">
         <span className="font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-bold uppercase tracking-[0.12em] text-[#3B5BDB]">

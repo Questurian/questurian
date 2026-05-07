@@ -129,7 +129,7 @@ export function MapsListicleArticlePage({
   const items = article.items ?? []
 
   return (
-    <article className="min-h-screen bg-background sm:max-w-[600px] sm:mx-auto 1024:max-w-none 1024:mx-0">
+    <article className="min-h-screen bg-background sm:max-w-[600px] sm:mx-auto 1024:max-w-none 1024:mx-0 1024:border-t 1024:border-foreground/10">
       <ArticlePageHeader
         title={article.title}
         author={article.author}

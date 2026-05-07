@@ -11,11 +11,7 @@ import {
 } from "../shared/components";
 import { useDesktopNavbarState } from "./hooks/use-desktop-navbar-state";
 
-interface DesktopNavbarProps {
-  isScrolled?: boolean;
-}
-
-export default function DesktopNavbar({ isScrolled = false }: DesktopNavbarProps) {
+export default function DesktopNavbar() {
   const {
     loading,
     isAuthenticated,
@@ -27,11 +23,15 @@ export default function DesktopNavbar({ isScrolled = false }: DesktopNavbarProps
   } = useDesktopNavbarState();
 
   return (
-    <div className="w-full overflow-hidden border-b border-black/10">
+    <div className="w-full border-b border-black/10">
       <div
-        className={`w-full bg-[#ece9e3] px-4 transition-[padding] duration-300 ease-in-out ${
-          isScrolled ? "py-2" : "py-5 1024:py-6"
-        }`}
+        className="w-full bg-[#ece9e3] px-4"
+        style={{
+          // Padding interpolates from 24px (full) → 8px (compact) as
+          // --navbar-collapse goes 0 → 1, driven by the scroll listener in Navbar.tsx.
+          paddingTop: "calc(24px - var(--navbar-collapse, 0) * 16px)",
+          paddingBottom: "calc(24px - var(--navbar-collapse, 0) * 16px)",
+        }}
       >
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="justify-self-start">
@@ -41,7 +41,7 @@ export default function DesktopNavbar({ isScrolled = false }: DesktopNavbarProps
             href={hasCityContext ? `/${countrySlug}/${citySlug}` : "/"}
             className="cursor-pointer justify-self-center"
           >
-            <Logo compact={isScrolled} />
+            <Logo />
           </Link>
           <div className="flex items-center justify-self-end gap-4">
             {loading ? (

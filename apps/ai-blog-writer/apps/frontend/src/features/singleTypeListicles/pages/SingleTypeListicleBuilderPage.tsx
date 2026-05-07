@@ -69,6 +69,8 @@ export default function SingleTypeListicleBuilderPage() {
 
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
+  const [hasLocalChanges, setHasLocalChanges] = useState(false)
+  const bootstrapDoneRef = useRef(false)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [isUploadingOgImage, setIsUploadingOgImage] = useState(false)
@@ -95,6 +97,20 @@ export default function SingleTypeListicleBuilderPage() {
   })
 
   useBuilderAutosave(draft)
+
+  const isSynced = Boolean(draft?.payloadId)
+
+  // Mark dirty whenever the draft changes after the initial bootstrap load.
+  // Resets after a successful sync (handled in onSyncResult below).
+  useEffect(() => {
+    if (isLoading || !draft) return
+    if (!bootstrapDoneRef.current) {
+      bootstrapDoneRef.current = true
+      return
+    }
+    if (draft.payloadId) setHasLocalChanges(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft])
 
   const { relatedItems, isLoadingRelated } = useRelatedItems({ token, draft, locations, onError })
   const draftRef = useRef(draft)
@@ -167,6 +183,11 @@ export default function SingleTypeListicleBuilderPage() {
     setResult,
   })
 
+  const onSyncResult = useCallback((message: string) => {
+    setResult(message)
+    if (message) setHasLocalChanges(false)
+  }, [])
+
   const { isSaving, submit } = useListicleSubmit({
     token,
     draft,
@@ -175,7 +196,7 @@ export default function SingleTypeListicleBuilderPage() {
     setDraft,
     setSearchParams,
     onError,
-    onResult: setResult,
+    onResult: onSyncResult,
   })
 
   const progress = useBuilderProgress(draft)
@@ -183,7 +204,6 @@ export default function SingleTypeListicleBuilderPage() {
   const isStep2Locked = Boolean(draft?.step2_complete && !draft?.step2_in_update_mode)
   const isStep3Locked = Boolean(draft?.step3_complete && !draft?.step3_in_update_mode)
   const isStep4Ready = isStep1Locked && isStep2Locked && isStep3Locked
-  const isSynced = Boolean(draft?.payloadId)
 
   useEffect(() => {
     if (!draft || !isStep4Ready) return
@@ -805,6 +825,23 @@ export default function SingleTypeListicleBuilderPage() {
         <main className="stl-builder-main">
           {error ? <p className="stl-error">{error}</p> : null}
           {result ? <p className="stl-success">{result}</p> : null}
+
+          {isSynced && hasLocalChanges ? (
+            <div className="stl-out-of-sync-banner" role="status">
+              <span className="stl-out-of-sync-banner__dot" aria-hidden="true" />
+              <span className="stl-out-of-sync-banner__text">
+                Out of sync — you have local changes. Sync to Payload to apply them to the live article.
+              </span>
+              <button
+                type="button"
+                className="stl-btn stl-out-of-sync-banner__btn"
+                onClick={() => void submit('draft')}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Syncing...' : 'Save & Sync'}
+              </button>
+            </div>
+          ) : null}
 
           <BuilderSetupPanel
             draft={draft}
