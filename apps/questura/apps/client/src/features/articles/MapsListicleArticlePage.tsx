@@ -125,6 +125,7 @@ export function MapsListicleArticlePage({
   const featuredImage = article.header?.featuredImage
   const introRaw = article.header?.intro
   const introHtml = typeof introRaw === 'string' ? introRaw : null
+  const description = article.seoSection?.metaDescription
 
   const items = article.items ?? []
 
@@ -132,6 +133,14 @@ export function MapsListicleArticlePage({
     <article className="min-h-screen bg-background sm:max-w-[600px] sm:mx-auto 1024:max-w-none 1024:mx-0 1024:border-t 1024:border-foreground/10">
       <ArticlePageHeader
         title={article.title}
+        description={description}
+        featuredImage={
+          featuredImage?.url
+            ? { url: featuredImage.url, alt: featuredImage.alt_text }
+            : null
+        }
+        publishedAt={article.publishedAt}
+        updatedAt={article.updatedAt}
         author={article.author}
       />
 
@@ -141,21 +150,6 @@ export function MapsListicleArticlePage({
             className="article-prose maps-listicle-intro max-w-none"
             dangerouslySetInnerHTML={{ __html: introHtml }}
           />
-        </div>
-      ) : null}
-
-      {featuredImage?.url ? (
-        <div className="px-0 480:px-4 480:pb-1 sm:px-0 sm:pb-2">
-          <div className="aspect-[5/4] w-full overflow-hidden 380:aspect-[4/3] 480:rounded-sm sm:aspect-[3/2] sm:rounded">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={featuredImage.url}
-              alt={featuredImage.alt_text ?? ''}
-              className="h-full w-full object-cover"
-              fetchPriority="high"
-              decoding="async"
-            />
-          </div>
         </div>
       ) : null}
 

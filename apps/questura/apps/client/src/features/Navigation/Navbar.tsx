@@ -28,9 +28,17 @@ export default function Navbar() {
     // Continuous lerp loop — runs every frame regardless of scroll events.
     const tick = () => {
       currentVal += (targetVal - currentVal) * LERP;
+      if (targetVal === 1 && currentVal > 0.995) currentVal = 1;
+      if (targetVal === 0 && currentVal < 0.005) currentVal = 0;
+
+      const borderAlpha = currentVal === 0 || currentVal === 1 ? 0.1 : 0;
       document.documentElement.style.setProperty(
         "--navbar-collapse",
         String(currentVal)
+      );
+      document.documentElement.style.setProperty(
+        "--navbar-border-alpha",
+        String(borderAlpha)
       );
       rafId = requestAnimationFrame(tick);
     };

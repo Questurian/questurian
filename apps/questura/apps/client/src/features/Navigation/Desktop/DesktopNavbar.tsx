@@ -23,7 +23,12 @@ export default function DesktopNavbar() {
   } = useDesktopNavbarState();
 
   return (
-    <div className="w-full border-b border-black/10">
+    <div
+      className="w-full border-b"
+      style={{
+        borderBottomColor: "rgba(0, 0, 0, var(--navbar-border-alpha, 0.1))",
+      }}
+    >
       <div
         className="w-full bg-[#ece9e3] px-4"
         style={{

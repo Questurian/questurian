@@ -5,8 +5,6 @@ import { renderInkDashboard } from "./cli/dashboard";
 import projects from "./routes/projects";
 import health from "./routes/health";
 import commands from "./routes/commands";
-import leads from "./routes/leads";
-
 const app = new Hono();
 
 // Note: logger disabled to avoid interfering with Ink CLI output
@@ -20,7 +18,6 @@ app.get("/", (c) => {
       projects: "/projects",
       health: "/health",
       commands: "/commands",
-      leads: "/leads",
     },
   });
 });
@@ -28,7 +25,6 @@ app.get("/", (c) => {
 app.route("/projects", projects);
 app.route("/health", health);
 app.route("/commands", commands);
-app.route("/leads", leads);
 
 const port = process.env.PORT || 4500;
 

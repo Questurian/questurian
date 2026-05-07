@@ -15,10 +15,20 @@ function GoogleG(): JSX.Element {
 
 type ArticlePageHeaderProps = {
   title: string
+  description?: string | null
+  featuredImage?: { url: string; alt?: string } | null
+  publishedAt?: string
+  updatedAt?: string
   author?: ArticleAuthor | null
 }
 
-function AuthorBlock({ author }: { author: ArticleAuthor }): JSX.Element {
+function AuthorBlock({
+  author,
+  dateLabel,
+}: {
+  author: ArticleAuthor
+  dateLabel?: string | null
+}): JSX.Element {
   const displayName = author.publicProfile.displayName
   const imageUrl = author.publicProfile.avatar ?? undefined
   const initials = displayName
@@ -28,7 +38,7 @@ function AuthorBlock({ author }: { author: ArticleAuthor }): JSX.Element {
     .join('')
 
   return (
-    <div className="flex items-center gap-2.5 480:gap-3">
+    <div className="flex min-w-0 items-center gap-2.5 480:gap-3">
       <div className="relative shrink-0 h-8 w-8 rounded-full bg-foreground overflow-hidden 480:h-9 480:w-9">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -39,73 +49,166 @@ function AuthorBlock({ author }: { author: ArticleAuthor }): JSX.Element {
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-[3px]">
-        <span className="text-foreground text-[12px] font-semibold leading-none 480:text-[13px] sm:text-[14px]">
+      <div className="flex min-w-0 flex-col gap-[3px] text-left">
+        <span className="truncate text-foreground text-[12px] font-semibold leading-none 480:text-[13px] sm:text-[14px]">
           {displayName}
         </span>
-        <span className="text-foreground/50 text-[11px] leading-none 480:text-[12px]">
+        <span className="truncate text-foreground/55 text-[11px] leading-none 480:text-[12px]">
           Editorial Team
+          {dateLabel ? (
+            <span className="hidden 480:inline">
+              {' '}
+              <span aria-hidden className="text-foreground/30">·</span>{' '}
+              {dateLabel}
+            </span>
+          ) : null}
         </span>
       </div>
     </div>
   )
 }
 
+function WavyDivider(): JSX.Element {
+  return (
+    <div
+      aria-hidden="true"
+      className="mx-auto flex w-full max-w-[44ch] items-center gap-3 text-[var(--maps-listicle-accent)]"
+    >
+      <span className="h-px flex-1 bg-current" />
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        aria-hidden="true"
+        className="shrink-0 fill-current"
+      >
+        <path
+          d="M5 1 L9 5 L5 9 L1 5 Z"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeLinejoin="round"
+          fill="currentColor"
+        />
+      </svg>
+      <span className="h-px flex-1 bg-current" />
+    </div>
+  )
+}
+
+function formatHeaderDate(iso: string | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(d)
+}
+
 export function ArticlePageHeader({
   title,
+  description,
+  featuredImage,
+  publishedAt,
+  updatedAt,
   author,
 }: ArticlePageHeaderProps): JSX.Element {
+  const dateLabel = (() => {
+    const updated = formatHeaderDate(updatedAt)
+    if (updated) return `Updated ${updated}`
+    const published = formatHeaderDate(publishedAt)
+    if (published) return `Published ${published}`
+    return null
+  })()
+
   return (
     <div className="px-3 pt-5 pb-0 max-[379px]:px-3 380:px-4 380:pt-6 480:px-5 480:pt-7 550:px-6 550:pt-8 sm:px-8 sm:pt-9 768:px-10 768:pt-10">
-      <h1 className="font-display font-bold text-foreground text-[26px] leading-[1.18] mb-4 max-[379px]:tracking-tight 380:text-[30px] 380:leading-[1.2] 380:mb-5 480:text-[34px] 550:text-[37px] 550:mb-5 sm:text-[40px] sm:leading-[1.15] sm:mb-6 768:text-[44px] 768:leading-[1.12] 768:mb-7">
-        {title}
-      </h1>
+      <section
+        aria-labelledby="article-magazine-title"
+        className="overflow-hidden border border-foreground/15 bg-background px-4 pt-7 pb-7 380:px-6 380:pt-9 380:pb-8 480:px-7 480:pt-10 480:pb-9 sm:px-10 sm:pt-12 sm:pb-10 768:px-12 768:pt-14 768:pb-11 1024:p-0"
+      >
+        <div className="text-center">
+          {featuredImage?.url ? (
+            <div className="mx-auto mb-5 sm:mb-6">
+              <div className="relative mx-auto h-20 w-20 overflow-hidden rounded-full ring-1 ring-foreground/10 380:h-24 380:w-24 480:h-28 480:w-28 sm:h-32 sm:w-32 768:h-36 768:w-36">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={featuredImage.url}
+                  alt={featuredImage.alt ?? ''}
+                  className="h-full w-full object-cover"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          ) : null}
 
-      <div className="flex items-center justify-between gap-3 py-3 480:py-3.5 sm:py-4">
-        {author ? (
-          <AuthorBlock author={author} />
-        ) : (
-          <div />
-        )}
-
-        <div className="flex items-center gap-2.5 shrink-0 480:gap-3">
-          <div className="flex items-center gap-3.5 shrink-0 480:gap-4">
-            <button
-              type="button"
-              className="text-foreground/50 active:text-foreground transition-colors"
-              aria-label="Share"
-            >
-              <Share2 size={18} strokeWidth={1.75} />
-            </button>
-
-            <button
-              type="button"
-              className="text-foreground/50 active:text-foreground transition-colors"
-              aria-label="Save"
-            >
-              <Bookmark size={18} strokeWidth={1.75} />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 shrink-0 border border-foreground/20 rounded-lg px-2.5 py-1.5 380:px-3 380:py-2 480:px-3.5 sm:px-4 sm:py-2 text-[11px] 380:text-[12px] 480:text-[13px] font-medium text-foreground/80 bg-background active:bg-foreground/5 transition-colors"
+          <h1
+            id="article-magazine-title"
+            className="font-display font-bold text-foreground text-[26px] leading-[1.18] mb-3 max-[379px]:tracking-tight 380:text-[30px] 380:leading-[1.18] 380:mb-4 480:text-[34px] 550:text-[37px] sm:text-[40px] sm:leading-[1.12] sm:mb-5 768:text-[44px] 768:leading-[1.1]"
           >
-            <GoogleG />
-            Add Us On Google
-          </button>
+            {title}
+          </h1>
 
-          <button
-            type="button"
-            className="text-foreground/40 active:text-foreground transition-colors"
-            aria-label="About this article"
-          >
-            <Info size={18} strokeWidth={1.75} />
-          </button>
+          {description ? (
+            <p className="mx-auto mb-5 max-w-[44ch] font-display text-[14px] leading-[1.4] text-foreground/85 380:text-[15px] 480:text-[16px] sm:mb-6 sm:text-[18px] 768:text-[19px]">
+              {description}
+            </p>
+          ) : null}
+
+          <WavyDivider />
         </div>
-      </div>
 
-      <hr className="border-foreground/10" />
+        {(author || dateLabel) ? (
+          <div className="mt-7 flex items-center justify-between gap-3 border-t border-foreground/10 pt-5 380:mt-8 380:pt-6 480:mt-9 480:pt-6 sm:mt-10 sm:pt-7 768:mt-11 768:pt-8">
+            {author ? (
+              <AuthorBlock author={author} dateLabel={dateLabel} />
+            ) : (
+              <span className="text-foreground/60 text-[12px] 480:text-[13px]">
+                {dateLabel}
+              </span>
+            )}
+
+            <div className="flex shrink-0 items-center gap-2.5 480:gap-3">
+              <div className="flex shrink-0 items-center gap-3.5 480:gap-4">
+                <button
+                  type="button"
+                  className="text-foreground/50 transition-colors active:text-foreground"
+                  aria-label="Share"
+                >
+                  <Share2 size={18} strokeWidth={1.75} />
+                </button>
+
+                <button
+                  type="button"
+                  className="text-foreground/50 transition-colors active:text-foreground"
+                  aria-label="Save"
+                >
+                  <Bookmark size={18} strokeWidth={1.75} />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-2.5 py-1.5 text-[11px] font-medium text-foreground/80 transition-colors active:bg-foreground/5 380:px-3 380:py-2 380:text-[12px] 480:px-3.5 480:text-[13px] sm:px-4 sm:py-2"
+              >
+                <GoogleG />
+                Add Us On Google
+              </button>
+
+              <button
+                type="button"
+                className="text-foreground/40 transition-colors active:text-foreground"
+                aria-label="About this article"
+              >
+                <Info size={18} strokeWidth={1.75} />
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
     </div>
   )
 }

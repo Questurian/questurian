@@ -117,50 +117,6 @@ export const PROJECTS: ProjectConfig[] = [
     },
   },
   {
-    name: "Questurian Leads",
-    description: "Multi-source lead aggregation (RSS, Instagram, Reddit, Telegram)",
-    path: "apps/questurian-leads",
-    client: {
-      url: "http://localhost:3004",
-      port: 3004,
-      type: "vite",
-      description: "React + Vite frontend for lead management and content approval",
-    },
-    server: {
-      url: "http://localhost:4004",
-      healthPath: "/health",
-      port: 4004,
-      type: "python",
-      description: "FastAPI backend with feedparser, scrapy, playwright",
-    },
-    commands: {
-      dev: {
-        cmd: "cd apps/questurian-leads/apps/api && pnpm run dev",
-        description: "Start API server with uvicorn on port 4004",
-      },
-      devClean: {
-        cmd: "cd apps/questurian-leads/apps/api && pnpm run dev:clean",
-        description: "Kill port 4004, pip install in venv, start server",
-      },
-      "client:dev": {
-        cmd: "cd apps/questurian-leads/apps/client && pnpm run dev",
-        description: "Start Vite dev server on port 5173",
-      },
-      "client:devClean": {
-        cmd: "cd apps/questurian-leads/apps/client && pnpm run dev:clean",
-        description: "Kill port 5173, install deps, start Vite",
-      },
-      "docker:start": {
-        cmd: "cd apps/questurian-leads && docker compose up -d libretranslate",
-        description: "Start LibreTranslate container on port 5001",
-      },
-      "docker:stop": {
-        cmd: "cd apps/questurian-leads && docker compose stop libretranslate",
-        description: "Stop LibreTranslate container",
-      },
-    },
-  },
-  {
     name: "Dashboard",
     description: "CLI dashboard for monitoring all Questurian services",
     path: "apps/dashboard",
