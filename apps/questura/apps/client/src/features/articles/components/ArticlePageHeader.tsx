@@ -24,47 +24,39 @@ type ArticlePageHeaderProps = {
 
 function AuthorBlock({
   author,
-  dateLabel,
+  publishedLine,
 }: {
   author: ArticleAuthor
-  dateLabel?: string | null
+  publishedLine?: string | null
 }): JSX.Element {
   const displayName = author.publicProfile.displayName
-  const imageUrl = author.publicProfile.avatar ?? undefined
-  const initials = displayName
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
 
   return (
-    <div className="flex min-w-0 items-center gap-2.5 480:gap-3">
-      <div className="relative shrink-0 h-8 w-8 rounded-full bg-foreground overflow-hidden 480:h-9 480:w-9">
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={displayName} className="h-full w-full object-cover" />
-        ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-background 480:text-[11px]">
-            {initials}
-          </span>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-col gap-[3px] text-left">
-        <span className="truncate text-foreground text-[12px] font-semibold leading-none 480:text-[13px] sm:text-[14px]">
-          {displayName}
-        </span>
+    <div className="flex min-w-0 flex-col gap-[3px] text-left">
+      <span className="truncate text-foreground text-[12px] font-semibold leading-none 480:text-[13px] sm:text-[14px]">
+        By {displayName}
+      </span>
+      {publishedLine ? (
         <span className="truncate text-foreground/55 text-[11px] leading-none 480:text-[12px]">
-          Editorial Team
-          {dateLabel ? (
-            <span className="hidden 480:inline">
-              {' '}
-              <span aria-hidden className="text-foreground/30">·</span>{' '}
-              {dateLabel}
-            </span>
-          ) : null}
+          {publishedLine}
         </span>
-      </div>
+      ) : null}
     </div>
+  )
+}
+
+function DoubleRuleRail(): JSX.Element {
+  return (
+    <div className="box-border min-h-[3px] flex-1 border-x-0 border-b-0 border-t-[3px] border-double border-t-foreground" />
+  )
+}
+
+function DoubleRuleDiamond(): JSX.Element {
+  return (
+    <div
+      className="box-border size-[14px] shrink-0 rotate-45 border-[3px] border-double border-foreground bg-background"
+      aria-hidden
+    />
   )
 }
 
@@ -72,25 +64,11 @@ function WavyDivider(): JSX.Element {
   return (
     <div
       aria-hidden="true"
-      className="mx-auto flex w-full max-w-[44ch] items-center gap-3 text-[var(--maps-listicle-accent)]"
+      className="mx-auto flex w-full max-w-[44ch] items-center gap-1 text-foreground"
     >
-      <span className="h-px flex-1 bg-current" />
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 10 10"
-        aria-hidden="true"
-        className="shrink-0 fill-current"
-      >
-        <path
-          d="M5 1 L9 5 L5 9 L1 5 Z"
-          stroke="currentColor"
-          strokeWidth="1.25"
-          strokeLinejoin="round"
-          fill="currentColor"
-        />
-      </svg>
-      <span className="h-px flex-1 bg-current" />
+      <DoubleRuleRail />
+      <DoubleRuleDiamond />
+      <DoubleRuleRail />
     </div>
   )
 }
@@ -115,81 +93,78 @@ export function ArticlePageHeader({
   updatedAt,
   author,
 }: ArticlePageHeaderProps): JSX.Element {
-  const dateLabel = (() => {
-    const updated = formatHeaderDate(updatedAt)
-    if (updated) return `Updated ${updated}`
-    const published = formatHeaderDate(publishedAt)
-    if (published) return `Published ${published}`
-    return null
+  const publishedLine = (() => {
+    const formatted = formatHeaderDate(publishedAt ?? updatedAt)
+    return formatted ? `Published ${formatted}` : null
   })()
 
   return (
-    <div className="px-3 pt-5 pb-0 max-[379px]:px-3 380:px-4 380:pt-6 480:px-5 480:pt-7 550:px-6 550:pt-8 sm:px-8 sm:pt-9 768:px-10 768:pt-10">
-      <section
-        aria-labelledby="article-magazine-title"
-        className="overflow-hidden border border-foreground/15 bg-background px-4 pt-7 pb-7 380:px-6 380:pt-9 380:pb-8 480:px-7 480:pt-10 480:pb-9 sm:px-10 sm:pt-12 sm:pb-10 768:px-12 768:pt-14 768:pb-11 1024:p-0"
-      >
-        <div className="text-center">
-          {featuredImage?.url ? (
-            <div className="mx-auto mb-5 sm:mb-6">
-              <div className="relative mx-auto h-20 w-20 overflow-hidden rounded-full ring-1 ring-foreground/10 380:h-24 380:w-24 480:h-28 480:w-28 sm:h-32 sm:w-32 768:h-36 768:w-36">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={featuredImage.url}
-                  alt={featuredImage.alt ?? ''}
-                  className="h-full w-full object-cover"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-              </div>
+    <section
+      aria-labelledby="article-magazine-title"
+      className="overflow-hidden rounded-none border-[3px] border-double border-foreground bg-background mx-3 px-4 pt-7 pb-7 380:mx-4 380:px-6 380:pt-9 380:pb-8 480:mx-5 480:px-7 480:pt-10 480:pb-9 550:mx-6 sm:mx-8 sm:px-10 sm:pt-12 sm:pb-10 768:mx-10 768:px-12 768:pt-14 768:pb-11 1024:mx-0 1024:p-0"
+    >
+      <div className="text-center">
+        {featuredImage?.url ? (
+          <div className="mx-auto mb-5 sm:mb-6">
+            <div className="relative mx-auto h-20 w-20 overflow-hidden rounded-full ring-1 ring-foreground/10 380:h-24 380:w-24 480:h-28 480:w-28 sm:h-32 sm:w-32 768:h-36 768:w-36">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={featuredImage.url}
+                alt={featuredImage.alt ?? ''}
+                className="h-full w-full object-cover"
+                fetchPriority="high"
+                decoding="async"
+              />
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          <h1
-            id="article-magazine-title"
-            className="font-display font-bold text-foreground text-[26px] leading-[1.18] mb-3 max-[379px]:tracking-tight 380:text-[30px] 380:leading-[1.18] 380:mb-4 480:text-[34px] 550:text-[37px] sm:text-[40px] sm:leading-[1.12] sm:mb-5 768:text-[44px] 768:leading-[1.1]"
-          >
-            {title}
-          </h1>
+        <h1
+          id="article-magazine-title"
+          className="font-display font-bold text-foreground text-[26px] leading-[1.18] mb-3 max-[379px]:tracking-tight 380:text-[30px] 380:leading-[1.18] 380:mb-4 480:text-[34px] 550:text-[37px] sm:text-[40px] sm:leading-[1.12] sm:mb-5 768:text-[44px] 768:leading-[1.1]"
+        >
+          {title}
+        </h1>
 
-          {description ? (
-            <p className="mx-auto mb-5 max-w-[44ch] font-display text-[14px] leading-[1.4] text-foreground/85 380:text-[15px] 480:text-[16px] sm:mb-6 sm:text-[18px] 768:text-[19px]">
-              {description}
-            </p>
-          ) : null}
+        {description ? (
+          <p className="mx-auto mb-5 max-w-[44ch] font-display text-[14px] leading-[1.4] text-foreground/85 380:text-[15px] 480:text-[16px] sm:mb-6 sm:text-[18px] 768:text-[19px]">
+            {description}
+          </p>
+        ) : null}
 
-          <WavyDivider />
-        </div>
+        <WavyDivider />
+      </div>
 
-        {(author || dateLabel) ? (
-          <div className="mt-7 flex items-center justify-between gap-3 border-t border-foreground/10 pt-5 380:mt-8 380:pt-6 480:mt-9 480:pt-6 sm:mt-10 sm:pt-7 768:mt-11 768:pt-8">
-            {author ? (
-              <AuthorBlock author={author} dateLabel={dateLabel} />
-            ) : (
-              <span className="text-foreground/60 text-[12px] 480:text-[13px]">
-                {dateLabel}
-              </span>
-            )}
+      {(author || publishedLine) ? (
+        <div className="mt-2 flex flex-col gap-4 380:mt-3 380:gap-5 480:mt-4 sm:mt-5 768:mt-6">
+          {author ? (
+            <AuthorBlock author={author} publishedLine={publishedLine} />
+          ) : (
+            <span className="text-foreground/60 text-[12px] 480:text-[13px]">
+              {publishedLine}
+            </span>
+          )}
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex shrink-0 items-center gap-3.5 480:gap-4">
+              <button
+                type="button"
+                className="text-foreground/50 transition-colors active:text-foreground"
+                aria-label="Share"
+              >
+                <Share2 size={18} strokeWidth={1.75} />
+              </button>
+
+              <button
+                type="button"
+                className="text-foreground/50 transition-colors active:text-foreground"
+                aria-label="Save"
+              >
+                <Bookmark size={18} strokeWidth={1.75} />
+              </button>
+            </div>
 
             <div className="flex shrink-0 items-center gap-2.5 480:gap-3">
-              <div className="flex shrink-0 items-center gap-3.5 480:gap-4">
-                <button
-                  type="button"
-                  className="text-foreground/50 transition-colors active:text-foreground"
-                  aria-label="Share"
-                >
-                  <Share2 size={18} strokeWidth={1.75} />
-                </button>
-
-                <button
-                  type="button"
-                  className="text-foreground/50 transition-colors active:text-foreground"
-                  aria-label="Save"
-                >
-                  <Bookmark size={18} strokeWidth={1.75} />
-                </button>
-              </div>
-
               <button
                 type="button"
                 className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-2.5 py-1.5 text-[11px] font-medium text-foreground/80 transition-colors active:bg-foreground/5 380:px-3 380:py-2 380:text-[12px] 480:px-3.5 480:text-[13px] sm:px-4 sm:py-2"
@@ -207,8 +182,8 @@ export function ArticlePageHeader({
               </button>
             </div>
           </div>
-        ) : null}
-      </section>
-    </div>
+        </div>
+      ) : null}
+    </section>
   )
 }
