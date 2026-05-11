@@ -134,18 +134,10 @@ export function useBuilderBootstrap({
 
         const payloadId = payloadIdParam ? Number(payloadIdParam) : null
         if (payloadId && Number.isFinite(payloadId)) {
+          const doc = await fetchItineraryById(payloadId, authToken)
+          if (cancelled) return
           const localDraft = findDraftByPayloadId(payloadId)
-          if (localDraft) {
-            const normalizedLocalDraft = normalizeDraftModelName(localDraft)
-            nextDraft = normalizedLocalDraft
-            if (normalizedLocalDraft !== localDraft) {
-              saveDraft(normalizedLocalDraft)
-            }
-          } else {
-            const doc = await fetchItineraryById(payloadId, authToken)
-            if (cancelled) return
-            nextDraft = normalizeDraftModelName(payloadDocToDraft(doc))
-          }
+          nextDraft = normalizeDraftModelName(payloadDocToDraft(doc, localDraft?.draftId))
         } else if (draftIdParam) {
           const byDraftId = findDraftByDraftId(draftIdParam)
           if (byDraftId) {

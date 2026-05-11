@@ -14,6 +14,7 @@ import {
 import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
 import { getRelationshipId } from '../utils/field-normalizers.utils'
 import { getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
+import { lexicalRichTextToMarkdown } from '../utils/lexical-json.utils'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
@@ -93,7 +94,7 @@ function mapPayloadBlockRowToItem(item: PayloadBlockRow, index: number): Itinera
     keyLocations: normalizePayloadKeyLocations(item.keyLocations, itemId),
     image: getRelationshipId(item.image),
     instagramPost: getRelationshipId(item.instagramPost),
-    blurbMarkdown: '',
+    blurbMarkdown: item.blurb ? lexicalRichTextToMarkdown(item.blurb) : '',
     blurbLexical: item.blurb,
     blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
   }
@@ -185,7 +186,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     step3_complete: Boolean(doc.step3_complete) || hasStep3Content,
     step3_in_update_mode: Boolean(doc.step3_in_update_mode),
     header: {
-      introMarkdown: '',
+      introMarkdown: doc.header?.intro ? lexicalRichTextToMarkdown(doc.header.intro) : '',
       introLexical: doc.header?.intro,
       introJsonText: doc.header?.intro ? JSON.stringify(doc.header.intro, null, 2) : '',
       featuredImage: getRelationshipId(doc.header?.featuredImage),

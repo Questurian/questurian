@@ -79,6 +79,8 @@ export interface Location {
   ianaTimeId?: string | null;
   phoneNumber?: string | null;
   website?: string | null;
+  menuUrl?: string | null;
+  reservationUrl?: string | null;
   email?: string | null;
   hoursJson?: string | null;
   neighborhoodDescription?: string | null;
@@ -177,6 +179,8 @@ export interface CreateMapsRequest {
   placeId?: string;
   phoneNumber?: string;
   website?: string;
+  menuUrl?: string;
+  reservationUrl?: string;
   idealFor?: string[];
   type?: string;
   tripadvisorUrl?: string;
@@ -235,6 +239,8 @@ export interface LocationResponse {
   placeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  menuUrl: string | null;
+  reservationUrl: string | null;
   payload_location_ref: string | null;
   selectedPayloadMediaSetIds: string[] | null;
   tourIds: number[] | null;

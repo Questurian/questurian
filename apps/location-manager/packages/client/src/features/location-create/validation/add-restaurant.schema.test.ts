@@ -16,6 +16,8 @@ const validBaseForm = {
   type: "fine-dining",
   idealFor: ["Date Nights"],
   tripadvisorUrl: "",
+  menuUrl: "",
+  reservationUrl: "",
   googleUrl: "https://www.google.com/maps/place/test",
   placeId: "ChIJ123",
   latitude: "-12.0464",
@@ -46,11 +48,23 @@ describe("add restaurant schema", () => {
     const result = addRestaurantSchema.safeParse({
       ...validBaseForm,
       tripadvisorUrl: "not-a-url",
+      menuUrl: "not-a-url",
+      reservationUrl: "not-a-url",
       latitude: "500",
       longitude: "-500",
     });
 
     expect(result.success).toBe(false);
+  });
+
+  test("accepts valid optional menu and reservation URLs", () => {
+    const result = addRestaurantSchema.safeParse({
+      ...validBaseForm,
+      menuUrl: "https://example.com/menu",
+      reservationUrl: "https://example.com/reserve",
+    });
+
+    expect(result.success).toBe(true);
   });
 });
 

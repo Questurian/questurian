@@ -474,6 +474,8 @@ function mapDiningPayload(
     ...(operationHours ? { operationHours } : {}),
     ...(location.idealFor ? { idealFor: location.idealFor } : {}),
     ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),
+    ...(location.menuUrl ? { menuUrl: location.menuUrl } : {}),
+    ...(location.reservationUrl ? { reservationUrl: location.reservationUrl } : {}),
   };
 }
 

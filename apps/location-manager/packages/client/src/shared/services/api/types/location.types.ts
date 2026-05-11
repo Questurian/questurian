@@ -80,6 +80,8 @@ export interface Location {
   ianaTimeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  menuUrl: string | null;
+  reservationUrl: string | null;
   reviewsEnabled: boolean;
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
@@ -130,6 +132,8 @@ export interface LocationResponse {
   placeId: string | null;
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
+  menuUrl: string | null;
+  reservationUrl: string | null;
   payload_location_ref: string | null;
   selectedPayloadMediaSetIds: string[] | null;
   tourIds: number[] | null;

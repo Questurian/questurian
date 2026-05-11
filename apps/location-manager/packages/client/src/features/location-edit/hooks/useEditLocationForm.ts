@@ -51,6 +51,8 @@ export function useEditLocationForm() {
       placeId: "",
       phoneNumber: "",
       website: "",
+      menuUrl: "",
+      reservationUrl: "",
       email: "",
       neighborhoodDescription: "",
       operationHours: "",
@@ -79,6 +81,8 @@ export function useEditLocationForm() {
         placeId: location.placeId || "",
         phoneNumber: location.contact.phoneNumber || "",
         website: location.contact.website || "",
+        menuUrl: location.menuUrl || "",
+        reservationUrl: location.reservationUrl || "",
         email: location.contact.email || "",
         neighborhoodDescription: location.neighborhoodDescription || "",
         operationHours: location.operationHours

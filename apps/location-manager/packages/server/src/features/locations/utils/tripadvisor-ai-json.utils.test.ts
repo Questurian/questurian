@@ -36,6 +36,8 @@ function buildLocationResponse(overrides: Partial<LocationResponse> = {}): Locat
     placeId: "place_123",
     tripadvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g123",
     tripadvisorLocationId: "123",
+    menuUrl: null,
+    reservationUrl: null,
     payload_location_ref: null,
     selectedPayloadMediaSetIds: null,
     tourIds: null,

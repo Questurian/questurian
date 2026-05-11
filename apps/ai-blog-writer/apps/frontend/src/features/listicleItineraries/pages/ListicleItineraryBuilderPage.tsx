@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
@@ -69,6 +69,9 @@ export default function ListicleItineraryBuilderPage() {
   const [activeAiTargetId, setActiveAiTargetId] = useState<string | null>(null)
   const [isAutoWritingEmptyFields, setIsAutoWritingEmptyFields] = useState(false)
   const [activeDayIndex, setActiveDayIndex] = useState(0)
+  const [hasLocalChanges, setHasLocalChanges] = useState(false)
+  const bootstrapDoneRef = useRef(false)
+  const ignoreDirtyUntilRef = useRef(0)
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -98,6 +101,21 @@ export default function ListicleItineraryBuilderPage() {
 
   useBuilderAutosave({ draft })
 
+  const isSynced = Boolean(draft?.payloadId)
+
+  useEffect(() => {
+    if (isLoading || !draft) return
+    if (!bootstrapDoneRef.current) {
+      bootstrapDoneRef.current = true
+      return
+    }
+    if (Date.now() < ignoreDirtyUntilRef.current) {
+      return
+    }
+    if (draft.payloadId) setHasLocalChanges(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft])
+
   const { isLoadingRelated, relatedByBlockType } = useRelatedItems({
     token,
     location: draft?.location,
@@ -117,6 +135,14 @@ export default function ListicleItineraryBuilderPage() {
     setResult,
   })
 
+  const onSyncResult = useCallback((message: string | null) => {
+    setResult(message)
+    if (message) {
+      ignoreDirtyUntilRef.current = Date.now() + 1500
+      setHasLocalChanges(false)
+    }
+  }, [])
+
   const { isSaving, submit } = useItinerarySubmit({
     token,
     draft,
@@ -127,7 +153,7 @@ export default function ListicleItineraryBuilderPage() {
     instagramPosts,
     setSearchParams,
     onError,
-    setResult,
+    setResult: onSyncResult,
   })
 
   const progress = useBuilderProgress({ draft })
@@ -150,6 +176,7 @@ export default function ListicleItineraryBuilderPage() {
 
   useEffect(() => {
     if (!draft || !isStep4Ready || !canonicalStructuredData) return
+    if (isSynced && !hasLocalChanges) return
 
     setDraft((current) => {
       if (!current) return current
@@ -166,7 +193,7 @@ export default function ListicleItineraryBuilderPage() {
         },
       }
     })
-  }, [canonicalStructuredData, draft, isStep4Ready, setDraft])
+  }, [canonicalStructuredData, draft, hasLocalChanges, isStep4Ready, isSynced, setDraft])
 
   const saveLocalDraft = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -599,7 +626,8 @@ export default function ListicleItineraryBuilderPage() {
   const isStep1LockedView = draft.step1_complete && !draft.in_update_mode
   const isStep2LockedView = draft.step2_complete && !draft.step2_in_update_mode
   const isStep3LockedView = draft.step3_complete && !draft.step3_in_update_mode
-  const isSynced = Boolean(draft.payloadId)
+  const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
+  const syncTargetStatus = isPublishedPayload ? 'published' : 'draft'
 
   return (
     <div className="stl-page">
@@ -609,6 +637,32 @@ export default function ListicleItineraryBuilderPage() {
         <main className="stl-builder-main">
           {error ? <p className="stl-error">{error}</p> : null}
           {result ? <p className="stl-success">{result}</p> : null}
+
+          {isPublishedPayload ? (
+            <div className="stl-published-banner" role="status">
+              <span className="stl-status stl-status-published">Published</span>
+              <span>
+                This Payload document is published. Future syncs from this builder will update the live published itinerary.
+              </span>
+            </div>
+          ) : null}
+
+          {isSynced && hasLocalChanges ? (
+            <div className="stl-out-of-sync-banner" role="status">
+              <span className="stl-out-of-sync-banner__dot" aria-hidden="true" />
+              <span className="stl-out-of-sync-banner__text">
+                Out of sync — you have local changes. Sync to Payload to apply them to the {isPublishedPayload ? 'live published' : 'Payload'} itinerary.
+              </span>
+              <button
+                type="button"
+                className="stl-btn stl-out-of-sync-banner__btn"
+                onClick={() => void submit(syncTargetStatus)}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Syncing...' : isPublishedPayload ? 'Update Published' : 'Save & Sync'}
+              </button>
+            </div>
+          ) : null}
 
           <BuilderSetupPanel
             draft={draft}
@@ -708,7 +762,7 @@ export default function ListicleItineraryBuilderPage() {
               draft={draft}
               isSaving={isSaving}
               onSaveLocalDraft={saveLocalDraft}
-              onSyncToPayload={() => submit('draft')}
+              onSyncToPayload={() => submit(syncTargetStatus)}
             />
           ) : null}
         </main>
@@ -725,7 +779,7 @@ export default function ListicleItineraryBuilderPage() {
           stepIssues={progress.stepIssues}
           onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}
-          onSyncToPayload={() => submit('draft')}
+          onSyncToPayload={() => submit(syncTargetStatus)}
         />
       </div>
     </div>

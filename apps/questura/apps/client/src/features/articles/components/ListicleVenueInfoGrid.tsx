@@ -3,7 +3,6 @@ import {
   Calendar,
   Clock,
   Globe,
-  MapPin,
   Phone,
   UtensilsCrossed,
 } from 'lucide-react'
@@ -15,9 +14,8 @@ import {
 import { ListicleHoursModalTrigger } from '@/features/articles/components/ListicleHoursModalTrigger'
 import type { ListicleVenue } from '@/features/articles/types/mapsListicle'
 
-const accentClass = 'text-[var(--maps-listicle-accent)] shrink-0 size-[17px] 480:size-[18px] sm:size-[19px]'
-const linkClass = 'break-words font-medium text-[12px] 480:text-[13px] sm:text-[14px] text-[var(--maps-listicle-accent)]'
-const labelClass = 'text-[12px] 480:text-[13px] sm:text-[14px] leading-snug text-[var(--maps-listicle-accent)]'
+const accentClass = 'maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]'
+const linkClass = 'maps-listicle-info-label break-words font-light text-[12px] leading-tight text-foreground/72 hover:text-foreground focus-visible:text-foreground focus-visible:outline-none 480:text-[13px] sm:text-[14px]'
 
 type GridCell = {
   key: string
@@ -34,34 +32,16 @@ function normalizeWebsiteUrl(url: string): string {
 }
 
 export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.Element | null {
-  const addressRaw = typeof item.address === 'string' ? item.address.trim() : ''
   const phoneDisplay = formatListiclePhone(item.countryCode, item.phoneNumber)
   const hoursRows = parseListicleOperationHoursRows(item.operationHours)
   const websiteRaw = typeof item.website === 'string' ? item.website.trim() : ''
   const menuRaw = typeof item.menuUrl === 'string' ? item.menuUrl.trim() : ''
   const reserveRaw = typeof item.reservationUrl === 'string' ? item.reservationUrl.trim() : ''
+  const websiteHref = websiteRaw ? normalizeWebsiteUrl(websiteRaw) : ''
+  const menuHref = menuRaw ? normalizeWebsiteUrl(menuRaw) : ''
+  const reserveHref = reserveRaw ? normalizeWebsiteUrl(reserveRaw) : ''
 
   const cells: GridCell[] = []
-
-  if (addressRaw) {
-    const isMap = isHttpUrl(addressRaw)
-    cells.push({
-      key: 'address',
-      icon: <MapPin className={accentClass} strokeWidth={1.75} aria-hidden />,
-      node: isMap ? (
-        <a
-          href={addressRaw}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={linkClass}
-        >
-          Directions
-        </a>
-      ) : (
-        <span className={labelClass}>{addressRaw}</span>
-      ),
-    })
-  }
 
   if (phoneDisplay) {
     const tel = phoneDisplay.replace(/[^\d+]/g, '')
@@ -87,13 +67,12 @@ export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.El
   }
 
   if (websiteRaw) {
-    const href = normalizeWebsiteUrl(websiteRaw)
     cells.push({
       key: 'website',
       icon: <Globe className={accentClass} strokeWidth={1.75} aria-hidden />,
       node: (
         <a
-          href={href}
+          href={websiteHref}
           target="_blank"
           rel="noopener noreferrer"
           className={linkClass}
@@ -105,7 +84,6 @@ export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.El
   }
 
   if (menuRaw) {
-    const href = normalizeWebsiteUrl(menuRaw)
     cells.push({
       key: 'menu',
       icon: (
@@ -113,7 +91,7 @@ export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.El
       ),
       node: (
         <a
-          href={href}
+          href={menuHref}
           target="_blank"
           rel="noopener noreferrer"
           className={linkClass}
@@ -124,47 +102,45 @@ export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.El
     })
   }
 
-  if (reserveRaw) {
-    const href = normalizeWebsiteUrl(reserveRaw)
-    cells.push({
-      key: 'reserve',
-      icon: (
-        <Calendar className={accentClass} strokeWidth={1.75} aria-hidden />
-      ),
-      node: (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={linkClass}
-        >
-          Reserve a table
-        </a>
-      ),
-    })
-  }
-
-  if (cells.length === 0) {
+  if (cells.length === 0 && !reserveHref) {
     return null
   }
 
   const lastSolo = cells.length % 2 === 1
 
   return (
-    <div className="mt-3 overflow-hidden rounded-sm border border-foreground/12 bg-foreground/[0.07] sm:mt-4 sm:rounded">
-      <div className="grid grid-cols-2 gap-px bg-foreground/12">
-        {cells.map((c, i) => (
-          <div
-            key={c.key}
-            className={`flex gap-2.5 bg-background px-3 py-2.5 380:px-3.5 380:py-3 480:px-4 480:py-3.5 480:gap-3 sm:px-5 sm:py-4 sm:gap-3.5 768:px-6 768:py-5 ${
-              lastSolo && i === cells.length - 1 ? 'col-span-2' : ''
-            }`}
-          >
-            <span className="mt-0.5">{c.icon}</span>
-            <div className="min-w-0 flex-1">{c.node}</div>
+    <div className="mt-3 space-y-3 sm:mt-4 sm:space-y-4">
+      {cells.length > 0 ? (
+        <div className="overflow-hidden rounded-sm border border-foreground/12 bg-foreground/[0.07] sm:rounded">
+          <div className="grid grid-cols-2 gap-px bg-foreground/12">
+            {cells.map((c, i) => (
+              <div
+                key={c.key}
+                className={`maps-listicle-utility-cell group flex items-center gap-2.5 px-3 py-2.5 380:px-3.5 480:gap-3 480:px-4 480:py-3 sm:px-4 sm:py-3.5 768:px-5 768:py-3.5 ${
+                  lastSolo && i === cells.length - 1 ? 'col-span-2' : ''
+                }`}
+              >
+                <span>{c.icon}</span>
+                <div className="min-w-0 flex-1">{c.node}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ) : null}
+
+      {reserveHref ? (
+        <div className="maps-listicle-reserve-card">
+          <a
+            href={reserveHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="maps-listicle-reserve-button"
+          >
+            <Calendar className="size-[16px] shrink-0 480:size-[17px] sm:size-[18px]" strokeWidth={1.8} aria-hidden />
+            <span>Reserve a table</span>
+          </a>
+        </div>
+      ) : null}
     </div>
   )
 }

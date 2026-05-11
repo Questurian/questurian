@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import type { CollectionSlug } from 'payload'
 import { convertLexicalToHTMLAsync } from '@payloadcms/richtext-lexical/html-async'
-import type { SerializedEditorState } from 'lexical'
 import config from '@/payload.config'
+import { fetchRelatedMapsArticles } from '@/features/articles/public/relatedMapsArticles'
 
 async function toLexicalHTML(data: unknown): Promise<string> {
   return convertLexicalToHTMLAsync({
-    data: data as SerializedEditorState,
+    data: data as Parameters<typeof convertLexicalToHTMLAsync>[0]['data'],
     disableContainer: true,
   })
 }
@@ -46,8 +46,13 @@ async function serializeListicleBlocks(article: Record<string, unknown>) {
   await serializeBlurbArray(items)
 }
 
-// Itineraries: items[].blurb + itineraryDays[].items[].blurb + itineraryDays[].whereStaying[].blurb
+// Itineraries: header.intro + items[].blurb + itineraryDays[].items[].blurb + itineraryDays[].whereStaying[].blurb
 async function serializeItineraryBlocks(article: Record<string, unknown>) {
+  const header = article.header as Record<string, unknown> | undefined
+  if (header?.intro) {
+    header.intro = await toLexicalHTML(header.intro)
+  }
+
   const items = article.items as Array<Record<string, unknown>> | undefined
   if (Array.isArray(items)) await serializeBlurbArray(items)
 
@@ -75,6 +80,9 @@ const TYPE_TO_COLLECTION: Record<string, CollectionSlug> = {
   itinerary: 'listicle-itineraries',
 }
 
+const STANDARD_ARTICLE_TYPES = new Set(['guide', 'food', 'neighborhoods'])
+const COUNTRY_SCOPE_SEGMENT = '_country'
+
 type ParsedPath =
   | { collection: 'articles'; slug: string }
   | { collection: CollectionSlug; slug: string }
@@ -87,21 +95,43 @@ function parsePath(segments: string[]): ParsedPath {
 
   if (segments.length === 2) {
     const collection = TYPE_TO_COLLECTION[segments[0]]
-    if (!collection) return null
+    if (!collection && !STANDARD_ARTICLE_TYPES.has(segments[0])) return null
+    if (!collection) return { collection: 'articles', slug: segments[1] }
     return { collection, slug: segments[1] }
   }
 
   return null
 }
 
+function articleMatchesLocationScope(locationKey: string, country: string, city: string): boolean {
+  if (city === COUNTRY_SCOPE_SEGMENT) {
+    return locationKey === country
+  }
+
+  const cityLocationKey = `${country}|${city}`
+  return locationKey === cityLocationKey || locationKey.startsWith(`${cityLocationKey}|`)
+}
+
 // GET /api/public/articles/[country]/[city]/[slug]
 // GET /api/public/articles/[country]/[city]/[type]/[slug]
+// GET /api/public/articles/[country]/[city]/maps?currentSlug=[slug]
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ country: string; city: string; articlePath: string[] }> },
 ) {
   try {
     const { country, city, articlePath } = await params
+
+    if (articlePath.length === 1 && articlePath[0] === 'maps') {
+      const payload = await getPayload({ config })
+      const relatedArticles = await fetchRelatedMapsArticles(payload, {
+        country,
+        city: city === COUNTRY_SCOPE_SEGMENT ? null : city,
+        currentSlug: req.nextUrl.searchParams.get('currentSlug'),
+      })
+
+      return NextResponse.json(relatedArticles)
+    }
 
     const parsed = parsePath(articlePath)
     if (!parsed) {
@@ -128,16 +158,16 @@ export async function GET(
       return NextResponse.json({ message: 'Article not found.' }, { status: 404 })
     }
 
-    const article = result.docs[0]
+    const article = result.docs[0] as unknown as Record<string, unknown>
     const locationKey = typeof article.location === 'string' ? article.location : ''
 
-    if (!locationKey.startsWith(`${country}|${city}`)) {
+    if (!articleMatchesLocationScope(locationKey, country, city)) {
       return NextResponse.json({ message: 'Article not found.' }, { status: 404 })
     }
 
-    if (collection === 'articles') await serializeLexicalBlocks(article as Record<string, unknown>)
-    if (collection === 'single-type-listicles') await serializeListicleBlocks(article as Record<string, unknown>)
-    if (collection === 'listicle-itineraries') await serializeItineraryBlocks(article as Record<string, unknown>)
+    if (collection === 'articles') await serializeLexicalBlocks(article)
+    if (collection === 'single-type-listicles') await serializeListicleBlocks(article)
+    if (collection === 'listicle-itineraries') await serializeItineraryBlocks(article)
 
     return NextResponse.json(article)
   } catch (error) {

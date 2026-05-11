@@ -9,9 +9,96 @@ export function isHttpUrl(value: string): boolean {
   }
 }
 
+function normalizeComparableText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function normalizeAddressText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function stripVenueNamePrefix(address: string, venueTitle?: string): string {
+  const normalizedAddress = normalizeAddressText(address)
+  const normalizedTitle = normalizeAddressText(venueTitle ?? '')
+  if (!normalizedAddress || !normalizedTitle) {
+    return normalizedAddress
+  }
+
+  const parts = normalizedAddress
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length < 2) {
+    return normalizedAddress
+  }
+
+  const firstPart = normalizeComparableText(parts[0] ?? '')
+  const title = normalizeComparableText(normalizedTitle)
+  if (!firstPart || !title) {
+    return normalizedAddress
+  }
+
+  if (
+    firstPart === title ||
+    firstPart.startsWith(title) ||
+    title.startsWith(firstPart)
+  ) {
+    return parts.slice(1).join(', ')
+  }
+
+  return normalizedAddress
+}
+
+export function formatListicleAddressLabel(
+  address?: string,
+  venueTitle?: string,
+): string | null {
+  const raw = address?.trim()
+  if (!raw) {
+    return null
+  }
+
+  if (!isHttpUrl(raw)) {
+    return normalizeAddressText(raw)
+  }
+
+  try {
+    const url = new URL(raw)
+    const candidate =
+      url.searchParams.get('query') ??
+      url.searchParams.get('q') ??
+      url.searchParams.get('destination') ??
+      url.searchParams.get('daddr')
+
+    if (candidate) {
+      return stripVenueNamePrefix(candidate, venueTitle)
+    }
+
+    if (url.pathname.includes('/maps/place/')) {
+      const placeSegment = url.pathname.split('/maps/place/')[1]?.split('/')[0]
+      if (placeSegment) {
+        return stripVenueNamePrefix(
+          decodeURIComponent(placeSegment.replace(/\+/g, ' ')),
+          venueTitle,
+        )
+      }
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
 export function formatListiclePhone(
-  countryCode?: string,
-  phoneNumber?: string,
+  countryCode?: string | null,
+  phoneNumber?: string | null,
 ): string | null {
   const num = phoneNumber?.trim()
   if (!num) {

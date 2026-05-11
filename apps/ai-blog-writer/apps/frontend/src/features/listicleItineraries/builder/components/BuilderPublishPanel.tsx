@@ -9,18 +9,32 @@ type BuilderPublishPanelProps = {
 }
 
 export function BuilderPublishPanel({ draft, isSaving, onSaveLocalDraft, onSyncToPayload }: BuilderPublishPanelProps) {
+  const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
+  const statusLabel = isPublishedPayload ? 'Published (live Payload document)' : 'Draft (editor review)'
+  const syncLabel = isPublishedPayload ? 'Update Published Payload' : 'Sync to Payload'
+
   return (
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
           <span className="stl-kicker">Step 5</span> Sync
         </h2>
+        <span className={`stl-status stl-status-${isPublishedPayload ? 'published' : 'draft'}`}>
+          {isPublishedPayload ? 'Published' : 'Draft'}
+        </span>
       </div>
+
+      {isPublishedPayload ? (
+        <div className="stl-publish-notice" role="status">
+          <strong>Published document</strong>
+          <span>Any sync from this point updates the live Payload version.</span>
+        </div>
+      ) : null}
 
       <div className="stl-grid stl-grid-2">
         <label className="stl-field">
           <span>Status</span>
-          <input value="Draft (editor review)" disabled readOnly />
+          <input value={statusLabel} disabled readOnly />
         </label>
 
         <label className="stl-field">
@@ -35,7 +49,7 @@ export function BuilderPublishPanel({ draft, isSaving, onSaveLocalDraft, onSyncT
         </button>
         <button type="button" className="stl-btn stl-btn-success payload-action-btn" onClick={() => void onSyncToPayload()} disabled={isSaving}>
           <img src={payloadLogoUrl} alt="" aria-hidden="true" className="payload-action-btn-icon" />
-          {isSaving ? 'Syncing...' : 'Sync to Payload'}
+          {isSaving ? 'Syncing...' : syncLabel}
         </button>
       </div>
     </section>

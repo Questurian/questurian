@@ -466,6 +466,8 @@ export class MapsService {
       ...(!existingLocation.ianaTimeId && incomingEntry.ianaTimeId && { ianaTimeId: incomingEntry.ianaTimeId }),
       ...(!existingLocation.phoneNumber && incomingEntry.phoneNumber && { phoneNumber: incomingEntry.phoneNumber }),
       ...(!existingLocation.website && incomingEntry.website && { website: incomingEntry.website }),
+      ...(!existingLocation.menuUrl && incomingEntry.menuUrl && { menuUrl: incomingEntry.menuUrl }),
+      ...(!existingLocation.reservationUrl && incomingEntry.reservationUrl && { reservationUrl: incomingEntry.reservationUrl }),
       ...(!existingLocation.email && incomingEntry.email && { email: incomingEntry.email }),
       ...(!existingLocation.neighborhoodDescription && incomingEntry.neighborhoodDescription && { neighborhoodDescription: incomingEntry.neighborhoodDescription }),
       ...(!existingLocation.placeId && incomingEntry.placeId && { placeId: incomingEntry.placeId }),
@@ -686,6 +688,12 @@ export class MapsService {
     if (payload.website !== undefined) {
       entry.website = payload.website;
     }
+    if (payload.menuUrl !== undefined) {
+      entry.menuUrl = payload.menuUrl;
+    }
+    if (payload.reservationUrl !== undefined) {
+      entry.reservationUrl = payload.reservationUrl;
+    }
     const tripadvisorFields = this.resolveTripadvisorFields(payload.tripadvisorUrl);
     Object.assign(entry, tripadvisorFields);
     if (payload.email) {
@@ -870,6 +878,8 @@ export class MapsService {
       ...(updates.ianaTimeId !== undefined && { ianaTimeId: updates.ianaTimeId }),
       ...(updates.phoneNumber !== undefined && { phoneNumber: updates.phoneNumber }),
       ...(updates.website !== undefined && { website: updates.website }),
+      ...(updates.menuUrl !== undefined && { menuUrl: updates.menuUrl }),
+      ...(updates.reservationUrl !== undefined && { reservationUrl: updates.reservationUrl }),
       ...(updates.email !== undefined && { email: updates.email }),
       ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
       ...(selectedPayloadMediaSetIdsJson !== undefined && { selectedPayloadMediaSetIdsJson }),

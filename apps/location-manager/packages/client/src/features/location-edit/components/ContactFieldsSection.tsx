@@ -3,12 +3,14 @@ import { FormInput, FormSelect } from "@client/shared/components/forms";
 import { SelectItem } from "@client/components/ui";
 import type { EditLocationFormData } from "../validation/edit-location.schema";
 import { TIMEZONE_OPTIONS } from "../constants/edit-location.constants";
+import type { LocationCategory } from "@shared/types/location-category";
 
 interface ContactFieldsSectionProps {
   form: UseFormReturn<EditLocationFormData>;
+  category: LocationCategory;
 }
 
-export function ContactFieldsSection({ form }: ContactFieldsSectionProps) {
+export function ContactFieldsSection({ form, category }: ContactFieldsSectionProps) {
   return (
     <div className="space-y-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -41,6 +43,24 @@ export function ContactFieldsSection({ form }: ContactFieldsSectionProps) {
         control={form.control}
         placeholder="Website URL (optional)"
       />
+
+      {category === "dining" && (
+        <>
+          <FormInput
+            name="menuUrl"
+            label="Menu URL"
+            control={form.control}
+            placeholder="Menu URL (optional)"
+          />
+
+          <FormInput
+            name="reservationUrl"
+            label="Reservation URL"
+            control={form.control}
+            placeholder="Reservation URL (optional)"
+          />
+        </>
+      )}
 
       <FormInput
         name="email"

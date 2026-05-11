@@ -85,7 +85,7 @@ export function EditLocation() {
             category={location.category}
           />
           <TaxonomyFieldsSection form={form} />
-          <ContactFieldsSection form={form} />
+          <ContactFieldsSection form={form} category={location.category} />
           <DetailsFieldsSection
             form={form}
             operationHoursModalOpen={operationHoursModalOpen}

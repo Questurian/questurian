@@ -47,6 +47,20 @@ export const addRestaurantSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((value) => (value === "" ? undefined : value)),
+  menuUrl: z
+    .string()
+    .trim()
+    .url("Menu URL must be a valid URL")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
+  reservationUrl: z
+    .string()
+    .trim()
+    .url("Reservation URL must be a valid URL")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
   googleUrl: z
     .string()
     .trim()

@@ -6,6 +6,7 @@ import {
   CityHomepagePayloadDebugLogger,
   fetchCityHomepage,
 } from '@/features/CityDashboard';
+import { renderStandardArticleRoute } from '@/features/articles/routes/renderStandardArticleRoute'
 
 const PRIMARY_COUNTRY = 'peru';
 const PRIMARY_CITY = 'lima';
@@ -36,7 +37,7 @@ export default async function CityPage({ params }: Props) {
   const { country, city } = await params;
 
   if (country !== PRIMARY_COUNTRY || city !== PRIMARY_CITY) {
-    notFound();
+    return renderStandardArticleRoute({ country, slug: city })
   }
 
   const data = await fetchCityHomepage(country, city);

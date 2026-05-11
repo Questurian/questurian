@@ -38,6 +38,8 @@ export function BuilderSidebar({
   const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
   const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
   const isSynced = Boolean(draft.payloadId)
+  const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
+  const syncLabel = isPublishedPayload ? 'Update Published Payload' : 'Sync to Payload'
 
   const syncIssues: string[] = []
   if (isSynced) {
@@ -52,7 +54,15 @@ export function BuilderSidebar({
     <aside className="stl-builder-sidebar">
       {isSynced ? (
         <section className="stl-summary-card">
-          <h3>Article Status</h3>
+          <div className="stl-summary-heading-row">
+            <h3>Article Status</h3>
+            <span className={`stl-status stl-status-${isPublishedPayload ? 'published' : 'draft'}`}>
+              {isPublishedPayload ? 'Published' : 'Draft'}
+            </span>
+          </div>
+          {isPublishedPayload ? (
+            <p className="stl-summary-live-note">Syncing changes updates the live Payload document.</p>
+          ) : null}
           {syncIssues.length > 0 ? (
             <ul className="stl-summary-list">
               {syncIssues.map((issue) => <li key={issue}>{issue}</li>)}
@@ -111,7 +121,7 @@ export function BuilderSidebar({
           </button>
           <button type="button" className="stl-btn stl-btn-success payload-action-btn" onClick={() => void onSyncToPayload()} disabled={isSaving}>
             <img src={payloadLogoUrl} alt="" aria-hidden="true" className="payload-action-btn-icon" />
-            {isSaving ? 'Syncing...' : 'Sync to Payload'}
+            {isSaving ? 'Syncing...' : syncLabel}
           </button>
         </div>
         {stepIssues.length > 0 ? (

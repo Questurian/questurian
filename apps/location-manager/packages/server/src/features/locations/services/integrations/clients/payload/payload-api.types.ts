@@ -302,6 +302,8 @@ export interface PayloadEntryData {
   countryCode?: string;
   phoneNumber?: string;
   website?: string;
+  menuUrl?: string;
+  reservationUrl?: string;
   email?: string;
   operationHours?: {
     hours: Array<{

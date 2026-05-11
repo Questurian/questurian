@@ -29,6 +29,8 @@ interface CreatedLocation {
   phoneNumber?: string;
   website?: string;
   tripadvisorUrl?: string | null;
+  menuUrl?: string | null;
+  reservationUrl?: string | null;
   placeId?: string | null;
 }
 
@@ -40,6 +42,8 @@ const RESTAURANT_FORM_DEFAULT_VALUES: AddRestaurantFormData = {
   type: "",
   idealFor: [],
   tripadvisorUrl: "",
+  menuUrl: "",
+  reservationUrl: "",
   googleUrl: "",
   placeId: "",
   latitude: "",
@@ -343,6 +347,8 @@ export function useAddRestaurantFlow() {
         type: data.type || undefined,
         idealFor: data.idealFor,
         tripadvisorUrl: data.tripadvisorUrl || undefined,
+        menuUrl: data.menuUrl || undefined,
+        reservationUrl: data.reservationUrl || undefined,
         url: data.googleUrl || undefined,
         placeId: data.placeId || undefined,
         lat: Number.isFinite(lat) ? lat : undefined,
@@ -364,6 +370,8 @@ export function useAddRestaurantFlow() {
             phoneNumber: response.contact?.phoneNumber || undefined,
             website: response.contact?.website || undefined,
             tripadvisorUrl: response.tripadvisorUrl,
+            menuUrl: response.menuUrl,
+            reservationUrl: response.reservationUrl,
             placeId: response.placeId,
           });
           confirmForm.setValue("title", response.title || response.source.name);

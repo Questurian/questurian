@@ -53,6 +53,7 @@ const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> = {
 function buildDraft(): ListicleItineraryDraft {
   const draft = createEmptyDraft()
   draft.title = 'Cusco Tour Plan'
+  draft.payloadSlug = 'cusco-tour-plan'
   draft.location = 'peru|cusco'
   draft.locationRef = 1
   draft.step1_complete = true

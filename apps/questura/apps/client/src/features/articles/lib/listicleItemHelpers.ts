@@ -1,4 +1,5 @@
 import type { ListicleItemRow } from '@/features/articles/types/mapsListicle'
+import { isListicleVenue } from '@/features/articles/types/mapsListicle'
 
 /** Hero image for a listicle row from editor-selected photos (public API depth). */
 export function listicleItemHeroFromRow(
@@ -23,12 +24,12 @@ export function listicleItemHeroFromRow(
   }
 
   const alt =
-    typeof p.alt_text === 'string' ? p.alt_text : row.item.title ?? ''
+    typeof p.alt_text === 'string' ? p.alt_text : isListicleVenue(row.item) ? row.item.title : ''
 
   return { url, alt }
 }
 
-export function priceLevelLabel(priceLevel?: string): string | null {
+export function priceLevelLabel(priceLevel?: string | null): string | null {
   if (!priceLevel) {
     return null
   }
@@ -39,7 +40,7 @@ export function priceLevelLabel(priceLevel?: string): string | null {
   return '$'.repeat(Math.min(n, 4))
 }
 
-export function formatVenueKind(type: string): string {
+export function formatVenueKind(type?: string | null): string {
   if (!type) {
     return 'Spot'
   }

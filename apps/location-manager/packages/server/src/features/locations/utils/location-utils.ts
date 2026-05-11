@@ -300,6 +300,8 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     placeId: location.placeId || null,
     tripadvisorUrl: location.tripadvisorUrl || null,
     tripadvisorLocationId: location.tripadvisorLocationId || null,
+    menuUrl: location.menuUrl || null,
+    reservationUrl: location.reservationUrl || null,
     payload_location_ref: location.payload_location_ref || null,
     selectedPayloadMediaSetIds: parseSelectedPayloadMediaSetIds(
       location.selectedPayloadMediaSetIdsJson || null

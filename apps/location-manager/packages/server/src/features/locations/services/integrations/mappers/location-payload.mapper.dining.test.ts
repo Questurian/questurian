@@ -25,6 +25,8 @@ describe("mapLocationToPayloadFormat dining", () => {
       tripadvisorMealTypes: ["Dinner"],
       tripadvisorCuisines: ["Colombian"],
       tripadvisorFeatures: ["Reservations"],
+      menuUrl: "https://dining.example.com/menu",
+      reservationUrl: "https://dining.example.com/reserve",
       priceLevel: "$$",
       contact: {
         countryCode: "CO",
@@ -56,6 +58,8 @@ describe("mapLocationToPayloadFormat dining", () => {
 
     expect(payload).toHaveProperty("cuisines");
     expect(payload).toHaveProperty("idealFor");
+    expect(payload).toHaveProperty("menuUrl", "https://dining.example.com/menu");
+    expect(payload).toHaveProperty("reservationUrl", "https://dining.example.com/reserve");
     expect(payload).toHaveProperty("operationHours");
     expect(payload.operationHours).toEqual({
       hours: [{ day: "Monday", hours: "9-5" }],
@@ -72,5 +76,56 @@ describe("mapLocationToPayloadFormat dining", () => {
     expect(payload).not.toHaveProperty("mealTypes");
     expect(payload).not.toHaveProperty("countryCodeIso");
     expect(payload).not.toHaveProperty("sourceName");
+  });
+
+  test("omits menu and reservation urls when not present", () => {
+    const location = {
+      id: 2,
+      title: "Dining Test",
+      category: "dining",
+      type: "restaurant",
+      payload_location_ref: "123",
+      idealFor: ["date-night"],
+      nightlifeDetails: null,
+      accommodationsDetails: null,
+      attractionsDetails: null,
+      keyLocationsDetails: null,
+      operationHours: null,
+      tripadvisorMealTypes: null,
+      tripadvisorCuisines: null,
+      tripadvisorFeatures: null,
+      menuUrl: null,
+      reservationUrl: null,
+      priceLevel: null,
+      contact: {
+        countryCode: null,
+        phoneNumber: null,
+        website: null,
+        email: null,
+        contactAddress: null,
+        url: "",
+      },
+      coordinates: { lat: null, lng: null },
+      source: { name: "Dining Source", address: "Source Address 123" },
+      instagram_embeds: [],
+      uploads: [],
+      slug: null,
+      reviewsFetchedAt: null,
+      reviewsCount: null,
+      reviewsGoogleCount: null,
+      reviewsTripadvisorCount: null,
+      reviewsEnabled: false,
+      created_at: "2026-01-01 00:00:00",
+      updated_at: "2026-01-01 00:00:00",
+    } as unknown as LocationResponse;
+
+    const payload = mapLocationToPayloadFormat(
+      location,
+      { galleryImageIds: [], instagramPostIds: [] },
+      "123"
+    );
+
+    expect(payload).not.toHaveProperty("menuUrl");
+    expect(payload).not.toHaveProperty("reservationUrl");
   });
 });

@@ -80,10 +80,20 @@ export type Article = {
 }
 
 export {
+  isListicleVenue,
   isMapsListicleArticle,
   type ListicleItemRow,
   type MapsListicleArticle,
 } from './mapsListicle'
+
+export {
+  isListicleItineraryArticle,
+  type ItineraryDay,
+  type ItineraryStopBlock,
+  type ItineraryTourAgencyBlock,
+  type ItineraryVenueBlock,
+  type ListicleItineraryArticle,
+} from './itineraryListicle'
 
 export type MapsItem = {
   id: string

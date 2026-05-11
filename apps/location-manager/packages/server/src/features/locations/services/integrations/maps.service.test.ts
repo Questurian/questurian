@@ -282,6 +282,44 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
     expect(setAttractionToursMock).toHaveBeenCalledWith(101, [1, 2]);
   });
 
+  test("persists dining menu and reservation urls on create", async () => {
+    createFromMapsMock.mockResolvedValue({
+      name: "Dining Test",
+      title: null,
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "dining",
+      type: "restaurant",
+    });
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.addMapsLocation(
+      {
+        name: "Dining Test",
+        address: "123 Main St, Lima",
+        category: "dining",
+        idealFor: ["Date Nights"],
+        menuUrl: "https://example.com/menu",
+        reservationUrl: "https://example.com/reserve",
+      },
+      "dining"
+    );
+
+    expect(saveLocationOrThrowMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        menuUrl: "https://example.com/menu",
+        reservationUrl: "https://example.com/reserve",
+      })
+    );
+  });
+
   test("updates attraction tour links without other field changes", async () => {
     const currentLocation = {
       id: 90,
@@ -309,5 +347,42 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
 
     expect(updateLocationByIdMock).not.toHaveBeenCalled();
     expect(setAttractionToursMock).toHaveBeenCalledWith(90, [3, 4]);
+  });
+
+  test("persists dining menu and reservation urls on update", async () => {
+    const currentLocation = {
+      id: 91,
+      name: "Dining Test",
+      title: "Dining Test",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "dining",
+      type: "restaurant",
+    };
+
+    getLocationByIdForUpdateMock
+      .mockImplementationOnce(() => currentLocation)
+      .mockImplementationOnce(() => currentLocation);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(91, {
+      menuUrl: "https://example.com/menu",
+      reservationUrl: "https://example.com/reserve",
+    } as any);
+
+    expect(updateLocationByIdMock).toHaveBeenCalledWith(
+      91,
+      expect.objectContaining({
+        menuUrl: "https://example.com/menu",
+        reservationUrl: "https://example.com/reserve",
+      })
+    );
   });
 });

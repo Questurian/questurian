@@ -14,17 +14,17 @@ export type ListicleSelectedPhoto = {
 export type ListicleVenue = {
   id: number
   title: string
-  type: string
-  priceLevel?: string
-  cuisines?: string[]
-  idealFor?: string[]
+  type?: string | null
+  priceLevel?: string | null
+  cuisines?: string[] | unknown
+  idealFor?: string[] | unknown
   gallery?: unknown[]
-  address?: string
-  countryCode?: string
-  phoneNumber?: string
-  website?: string
-  menuUrl?: string
-  reservationUrl?: string
+  address?: string | null
+  countryCode?: string | null
+  phoneNumber?: string | null
+  website?: string | null
+  menuUrl?: string | null
+  reservationUrl?: string | null
   /** Payload JSON: `{ hours: [{ day, hours }] }` */
   operationHours?: unknown
 }
@@ -39,6 +39,7 @@ export type ListicleItemRow = {
   id: string
   blurb?: string
   item: ListicleVenue
+  blockType?: string
   mediaMode?: string
   selectedPhotos?: ListicleSelectedPhoto[]
   /** Populated instagram-post when API `depth` includes relationship (e.g. 2). */
@@ -77,5 +78,13 @@ export function isMapsListicleArticle(
     doc !== null &&
     'articleType' in doc &&
     (doc as MapsListicleArticle).articleType === 'single-type-listicle'
+  )
+}
+
+export function isListicleVenue(value: unknown): value is ListicleVenue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as ListicleVenue).title === 'string'
   )
 }

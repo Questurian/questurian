@@ -58,7 +58,10 @@ export function AddRestaurantStagedForm({
     hasValue(form.watch("latitude")) &&
     hasValue(form.watch("longitude"));
   const classificationComplete = (form.watch("idealFor")?.length ?? 0) > 0;
-  const optionalComplete = !form.formState.errors.tripadvisorUrl;
+  const optionalComplete =
+    !form.formState.errors.tripadvisorUrl &&
+    !form.formState.errors.menuUrl &&
+    !form.formState.errors.reservationUrl;
 
   const flowSections: Array<{
     key: RestaurantFormSection;
@@ -390,6 +393,33 @@ export function AddRestaurantStagedForm({
                       {form.formState.errors.tripadvisorUrl.message}
                     </p>
                   )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Menu URL</Label>
+                    <Input
+                      placeholder="https://example.com/menu"
+                      {...form.register("menuUrl")}
+                    />
+                    {form.formState.errors.menuUrl && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.menuUrl.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Reservation URL</Label>
+                    <Input
+                      placeholder="https://example.com/reservations"
+                      {...form.register("reservationUrl")}
+                    />
+                    {form.formState.errors.reservationUrl && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.reservationUrl.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex justify-between border-t border-border/70 pt-4">

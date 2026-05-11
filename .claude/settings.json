@@ -1,0 +1,30 @@
+  {
+    "includeCoAuthoredBy": false,
+    "permissions": {
+      "allow": [
+        "Bash(mkdir:*)",
+        "Bash(npm install:*)",
+        "Bash(tree:*)",
+        "Bash(npm run lint:*)",
+        "Bash(kill:*)",
+        "Bash(npm run build:*)",
+        "Bash(git add:*)",
+        "Bash(git commit:*)",
+        "Bash(git push:*)",
+        "Bash(pnpm add:*)",
+        "Bash(npm run dev:*)",
+        "Bash(cat:*)",
+        "Bash(ls:*)",
+        "Bash(git check-ignore:*)",
+        "Bash(done)",
+        "Bash(npx next lint:*)",
+        "Bash(lsof:*)",
+        "Bash(xargs kill:*)",
+        "Bash(npx next build:*)",
+        "Bash(find:*)",
+        "Bash(npx tsc:*)",
+        "Bash(node node_modules/next/dist/bin/next lint)",
+        "Bash(/bin/bash *)"
+      ]
+    }
+  }

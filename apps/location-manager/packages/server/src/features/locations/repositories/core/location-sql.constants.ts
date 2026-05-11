@@ -26,6 +26,8 @@ export const LOCATION_SELECT_COLUMNS = `
   COALESCE(d.tripadvisor_meal_types, n.tripadvisor_meal_types, a.tripadvisor_meal_types, at.tripadvisor_meal_types, kl.tripadvisor_meal_types) as tripadvisorMealTypesJson,
   COALESCE(d.tripadvisor_cuisines, n.tripadvisor_cuisines, a.tripadvisor_cuisines, at.tripadvisor_cuisines, kl.tripadvisor_cuisines) as tripadvisorCuisinesJson,
   COALESCE(d.tripadvisor_features, n.tripadvisor_features, a.tripadvisor_features, at.tripadvisor_features, kl.tripadvisor_features) as tripadvisorFeaturesJson,
+  COALESCE(d.menu_url, n.menu_url, a.menu_url, at.menu_url, kl.menu_url) as menuUrl,
+  COALESCE(d.reservation_url, n.reservation_url, a.reservation_url, at.reservation_url, kl.reservation_url) as reservationUrl,
   COALESCE(d.price_level, n.price_level, a.price_level, at.price_level, kl.price_level) as priceLevel,
   e.slug,
   e.place_id as placeId,

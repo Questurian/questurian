@@ -36,7 +36,7 @@ type UseItinerarySubmitParams = {
   instagramPosts: InstagramPostOption[]
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
-  setResult: Dispatch<SetStateAction<string | null>>
+  setResult: (message: string | null) => void
 }
 
 type UseItinerarySubmitResult = {
@@ -337,10 +337,10 @@ export function useItinerarySubmit({
           blurbMarkdown: blurbsById.get(row.id) ?? row.blurbMarkdown,
         })),
       }))
-      setDraft(nextDraft)
-      saveDraft(nextDraft)
 
       setResult(targetStatus === 'published' ? `Published itinerary #${doc.id}` : `Saved draft itinerary #${doc.id}`)
+      setDraft(nextDraft)
+      saveDraft(nextDraft)
 
       setSearchParams(
         (prev) => {

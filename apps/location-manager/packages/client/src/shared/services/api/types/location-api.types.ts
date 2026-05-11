@@ -16,6 +16,8 @@ export interface CreateMapsRequest {
   ianaTimeId?: string;
   phoneNumber?: string;
   website?: string;
+  menuUrl?: string;
+  reservationUrl?: string;
   email?: string;
   placeId?: string;
   tripadvisorUrl?: string;
@@ -123,6 +125,8 @@ export interface UpdateMapsRequest {
   ianaTimeId?: string | null;
   phoneNumber?: string;
   website?: string;
+  menuUrl?: string | null;
+  reservationUrl?: string | null;
   tripadvisorUrl?: string;
   selectedPayloadMediaSetIds?: string[] | null;
   idealFor?: string[];

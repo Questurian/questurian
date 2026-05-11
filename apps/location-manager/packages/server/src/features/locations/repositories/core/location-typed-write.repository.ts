@@ -22,6 +22,8 @@ export function upsertTypedRow(
       tripadvisor_meal_types,
       tripadvisor_cuisines,
       tripadvisor_features,
+      menu_url,
+      reservation_url,
       price_level
     )
     VALUES (
@@ -36,6 +38,8 @@ export function upsertTypedRow(
       $tripadvisor_meal_types,
       $tripadvisor_cuisines,
       $tripadvisor_features,
+      $menu_url,
+      $reservation_url,
       $price_level
     )
     ON CONFLICT(entity_id) DO UPDATE SET
@@ -49,6 +53,8 @@ export function upsertTypedRow(
       tripadvisor_meal_types = excluded.tripadvisor_meal_types,
       tripadvisor_cuisines = excluded.tripadvisor_cuisines,
       tripadvisor_features = excluded.tripadvisor_features,
+      menu_url = excluded.menu_url,
+      reservation_url = excluded.reservation_url,
       price_level = excluded.price_level
   `).run({
     $entity_id: entityId,
@@ -62,6 +68,8 @@ export function upsertTypedRow(
     $tripadvisor_meal_types: params.tripadvisorMealTypesJson ?? null,
     $tripadvisor_cuisines: params.tripadvisorCuisinesJson ?? null,
     $tripadvisor_features: params.tripadvisorFeaturesJson ?? null,
+    $menu_url: params.menuUrl ?? null,
+    $reservation_url: params.reservationUrl ?? null,
     $price_level: params.priceLevel ?? null,
   });
 }
@@ -117,6 +125,14 @@ export function buildTypedUpdatePlan(id: number, updates: Partial<Location>): Up
   if (updates.tripadvisorFeaturesJson !== undefined) {
     setClause.push("tripadvisor_features = $tripadvisor_features");
     params.$tripadvisor_features = updates.tripadvisorFeaturesJson;
+  }
+  if (updates.menuUrl !== undefined) {
+    setClause.push("menu_url = $menu_url");
+    params.$menu_url = updates.menuUrl;
+  }
+  if (updates.reservationUrl !== undefined) {
+    setClause.push("reservation_url = $reservation_url");
+    params.$reservation_url = updates.reservationUrl;
   }
   if (updates.priceLevel !== undefined) {
     setClause.push("price_level = $price_level");

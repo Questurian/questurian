@@ -14,6 +14,8 @@ export type TypedLocationParams = {
   tripadvisorMealTypesJson?: string | null;
   tripadvisorCuisinesJson?: string | null;
   tripadvisorFeaturesJson?: string | null;
+  menuUrl?: string | null;
+  reservationUrl?: string | null;
   priceLevel?: string | null;
 };
 
@@ -34,6 +36,8 @@ export function toTypedLocationParams(location: Location): TypedLocationParams {
     tripadvisorMealTypesJson: location.tripadvisorMealTypesJson || null,
     tripadvisorCuisinesJson: location.tripadvisorCuisinesJson || null,
     tripadvisorFeaturesJson: location.tripadvisorFeaturesJson || null,
+    menuUrl: location.menuUrl || null,
+    reservationUrl: location.reservationUrl || null,
     priceLevel: location.priceLevel || null,
   };
 }

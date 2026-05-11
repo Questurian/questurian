@@ -30,6 +30,10 @@ export function useUpdateLocation() {
           refetchType: "all",
         }),
         queryClient.invalidateQueries({
+          queryKey: ["payload-sync-status"],
+          refetchType: "all",
+        }),
+        queryClient.invalidateQueries({
           queryKey: ["location-detail", category, id],
           refetchType: "all",
         }),
