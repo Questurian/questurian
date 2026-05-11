@@ -17,6 +17,7 @@ vi.mock('@/features/auth/lib/auth-middleware', () => ({
 
 import { GET as getCandidates } from '@/app/api/homepage-featured-content/candidates/route'
 import { PUT as putHomepageFeaturedContent } from '@/app/api/homepage-featured-content/route'
+import { GET as getPublicCountryCities } from '@/app/api/public/countries/[country]/cities/route'
 import {
   DELETE as deleteMainHomepageBlock,
   PATCH as reorderMainHomepageBlocks,
@@ -93,6 +94,123 @@ describe('homepage featured content routes', () => {
 
     expect(response.status).toBe(200)
     expect(data).toEqual({ pageBlocks: [] })
+  })
+
+  it('returns enabled public city homepages for a country hub', async () => {
+    const payload = {
+      find: vi.fn()
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [{ id: 1, locationKey: 'peru', level: 'country', countryName: 'Peru' }],
+        })
+        .mockResolvedValueOnce({
+          totalDocs: 2,
+          docs: [
+            {
+              id: 10,
+              locationKey: 'peru|lima',
+              level: 'city',
+              parentKey: 'peru',
+              city: 'lima',
+              cityName: 'Lima',
+            },
+            {
+              id: 11,
+              locationKey: 'peru|cusco',
+              level: 'city',
+              parentKey: 'peru',
+              city: 'cusco',
+              cityName: 'Cusco',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [{ id: 30, isEnabled: true, location: 10 }],
+        }),
+    }
+    vi.mocked(getPayload).mockResolvedValue(payload as never)
+
+    const response = await getPublicCountryCities(
+      new Request('http://localhost:4000/api/public/countries/peru/cities') as never,
+      { params: Promise.resolve({ country: 'peru' }) },
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data).toEqual({
+      country: { slug: 'peru', name: 'Peru' },
+      cities: [{ slug: 'lima', name: 'Lima', href: '/peru/lima' }],
+    })
+    expect(payload.find).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        collection: 'location-homepages',
+        where: {
+          and: [
+            { isEnabled: { equals: true } },
+            { location: { in: [10, 11] } },
+          ],
+        },
+      }),
+    )
+  })
+
+  it('404s country city listing for an unknown country', async () => {
+    const payload = {
+      find: vi.fn().mockResolvedValueOnce({
+        totalDocs: 0,
+        docs: [],
+      }),
+    }
+    vi.mocked(getPayload).mockResolvedValue(payload as never)
+
+    const response = await getPublicCountryCities(
+      new Request('http://localhost:4000/api/public/countries/atlantis/cities') as never,
+      { params: Promise.resolve({ country: 'atlantis' }) },
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.message).toBe('Country not found.')
+    expect(payload.find).toHaveBeenCalledTimes(1)
+  })
+
+  it('404s country city listing when no city homepage is enabled', async () => {
+    const payload = {
+      find: vi.fn()
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [{ id: 1, locationKey: 'peru', level: 'country', countryName: 'Peru' }],
+        })
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [
+            {
+              id: 10,
+              locationKey: 'peru|lima',
+              level: 'city',
+              parentKey: 'peru',
+              city: 'lima',
+              cityName: 'Lima',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          totalDocs: 0,
+          docs: [],
+        }),
+    }
+    vi.mocked(getPayload).mockResolvedValue(payload as never)
+
+    const response = await getPublicCountryCities(
+      new Request('http://localhost:4000/api/public/countries/peru/cities') as never,
+      { params: Promise.resolve({ country: 'peru' }) },
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.message).toBe('No enabled city homepages found.')
   })
 
   it('returns lean data for main homepage block reorder without hydrating pageBlocks', async () => {

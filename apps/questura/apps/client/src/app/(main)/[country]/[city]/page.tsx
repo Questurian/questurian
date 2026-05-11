@@ -6,22 +6,26 @@ import {
   CityHomepagePayloadDebugLogger,
   fetchCityHomepage,
 } from '@/features/CityDashboard';
-import { renderStandardArticleRoute } from '@/features/articles/routes/renderStandardArticleRoute'
-
-const PRIMARY_COUNTRY = 'peru';
-const PRIMARY_CITY = 'lima';
 
 type Props = { params: Promise<{ country: string; city: string }> };
+
+function formatRouteLabel(value: string): string {
+  return value
+    .split('-')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country, city } = await params;
 
-  if (country !== PRIMARY_COUNTRY || city !== PRIMARY_CITY) {
-    return {};
-  }
+  const data = await fetchCityHomepage(country, city);
 
-  const cityLabel = 'Lima';
-  const countryLabel = 'Peru';
+  if (!data) return {};
+
+  const cityLabel = formatRouteLabel(city);
+  const countryLabel = formatRouteLabel(country);
 
   return {
     title: `${cityLabel}, ${countryLabel} — Questurian`,
@@ -35,10 +39,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CityPage({ params }: Props) {
   const { country, city } = await params;
-
-  if (country !== PRIMARY_COUNTRY || city !== PRIMARY_CITY) {
-    return renderStandardArticleRoute({ country, slug: city })
-  }
 
   const data = await fetchCityHomepage(country, city);
 

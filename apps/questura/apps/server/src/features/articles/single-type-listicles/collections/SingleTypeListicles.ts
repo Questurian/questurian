@@ -12,6 +12,7 @@ import {
   requiresPhotos,
 } from '../blocks/utils/itemMedia'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
+import { languageField } from '@/shared/i18n/languageField'
 import {
   getArticleLocationScope,
   isLocationWithinArticleScope,
@@ -298,6 +299,7 @@ export const SingleTypeListicles: CollectionConfig = {
     seo,
 
     status,
+    languageField,
     author,
     publishedAt,
     articleType,

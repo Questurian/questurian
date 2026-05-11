@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Roboto, DM_Sans, Cormorant_Garamond } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import LoginModalRenderer from "../components/layout/LoginModalRenderer";
 import PasswordResetModalRenderer from "../components/layout/PasswordResetModalRenderer";
@@ -21,13 +23,16 @@ export const metadata: Metadata = {
   description: "Manage your account, subscriptions, and payments securely with Google OAuth and Stripe integration",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" style={{ colorScheme: 'light' }}>
+    <html lang={locale} style={{ colorScheme: 'light' }}>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet" />
@@ -45,13 +50,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} ${dmSans.variable} ${editorialSerif.variable} antialiased`}
       >
         <div className="flex min-h-screen min-w-[280px] flex-col overflow-x-clip">
-          <QueryProvider>
-            {children}
-            <LoginModalRenderer />
-            <PasswordResetModalRenderer />
-            <UserModalRenderer />
-            <MenuModalRenderer />
-          </QueryProvider>
+          <NextIntlClientProvider locale={locale} messages={messages}>
+            <QueryProvider>
+              {children}
+              <LoginModalRenderer />
+              <PasswordResetModalRenderer />
+              <UserModalRenderer />
+              <MenuModalRenderer />
+            </QueryProvider>
+          </NextIntlClientProvider>
         </div>
       </body>
     </html>

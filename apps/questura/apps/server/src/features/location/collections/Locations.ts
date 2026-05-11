@@ -8,6 +8,10 @@ import type { CollectionAfterReadHook, CollectionConfig, Payload } from 'payload
 import { locationIdentitySelect } from '@/shared/location/constants'
 import { findLocationReferences } from '@/shared/location/server/references'
 import {
+  validateCountrySlugAgainstReserved,
+  validateSlugAgainstReserved,
+} from '@/shared/lib/reservedSlugs'
+import {
   LOCATION_GUIDE_CONTRACT,
   type LocationLevel,
 } from '@/shared/lib/locationGuideContract'
@@ -495,6 +499,8 @@ export const Locations: CollectionConfig = {
       name: 'country',
       type: 'text',
       required: true,
+      validate: ((value: unknown) =>
+        validateCountrySlugAgainstReserved(value)) as never,
       admin: {
         description: 'Normalized key segment (e.g., "colombia").',
       },
@@ -503,6 +509,11 @@ export const Locations: CollectionConfig = {
       name: 'city',
       type: 'text',
       required: false,
+      validate: ((value: unknown, options: { data?: Record<string, unknown> }) => {
+        const level = (options?.data as { level?: string } | undefined)?.level
+        if (level !== 'city' && level !== 'neighborhood') return true
+        return validateSlugAgainstReserved(value)
+      }) as never,
       admin: {
         condition: (data) => data?.level === 'city' || data?.level === 'neighborhood',
         description: 'Normalized key segment (e.g., "bogota").',

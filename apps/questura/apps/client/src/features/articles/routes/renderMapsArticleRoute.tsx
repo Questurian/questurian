@@ -3,21 +3,22 @@ import { fetchArticle } from '@/features/articles/lib/fetchArticle'
 import { fetchRelatedMapsArticles } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { MapsArticleLayout } from '@/features/articles/layouts/MapsArticleLayout'
 import { isMapsListicleArticle } from '@/features/articles/types/mapsListicle'
+import type { ArticleScope } from '@/features/articles/lib/articleScope'
 
 type RenderMapsArticleRouteParams = {
-  country: string
-  city?: string | null
+  scope: Extract<ArticleScope, { kind: 'city' }>
   slug: string
+  lang?: string
 }
 
 export async function renderMapsArticleRoute({
-  country,
-  city,
+  scope,
   slug,
+  lang,
 }: RenderMapsArticleRouteParams) {
   const [article, relatedArticles] = await Promise.all([
-    fetchArticle({ country, city, type: 'maps', slug }),
-    fetchRelatedMapsArticles(country, city, slug),
+    fetchArticle({ scope, type: 'maps', slug, lang }),
+    fetchRelatedMapsArticles(scope.country, scope.city, slug),
   ])
 
   if (!article || !isMapsListicleArticle(article)) {
@@ -28,8 +29,8 @@ export async function renderMapsArticleRoute({
     <MapsArticleLayout
       article={article}
       relatedArticles={relatedArticles}
-      country={country}
-      city={city}
+      country={scope.country}
+      city={scope.city}
     />
   )
 }

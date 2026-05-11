@@ -1,10 +1,13 @@
 import { Field } from 'payload'
+import { validateSlugAgainstReserved } from '@/shared/lib/reservedSlugs'
 
 export const slug: Field = {
   name: 'slug',
   type: 'text',
   unique: true,
   index: true,
+  required: true,
+  validate: (value) => validateSlugAgainstReserved(value),
   admin: {
     description: 'URL-friendly slug (e.g. medellin-digital-nomad-guide-2026)',
   },

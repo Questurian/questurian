@@ -2,22 +2,20 @@ import { notFound } from 'next/navigation'
 import { ArticlePage } from '@/features/articles/ArticlePage'
 import { isStandardArticle } from '@/features/articles/lib/articleGuards'
 import { fetchArticle } from '@/features/articles/lib/fetchArticle'
-import type { StandardArticleRouteType } from './articleRouteTypes'
+import type { ArticleScope } from '@/features/articles/lib/articleScope'
 
 type RenderStandardArticleRouteParams = {
-  country: string
-  city?: string | null
+  scope: ArticleScope
   slug: string
-  type?: StandardArticleRouteType
+  lang?: string
 }
 
 export async function renderStandardArticleRoute({
-  country,
-  city,
+  scope,
   slug,
-  type,
+  lang,
 }: RenderStandardArticleRouteParams) {
-  const article = await fetchArticle({ country, city, slug, type })
+  const article = await fetchArticle({ scope, type: 'articles', slug, lang })
 
   if (!article || !isStandardArticle(article)) {
     notFound()

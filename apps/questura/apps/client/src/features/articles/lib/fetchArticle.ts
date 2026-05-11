@@ -1,29 +1,33 @@
 import { config } from '@/lib/config'
+import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
 import type { PublicFetchedArticle } from './articleGuards'
+import type { ArticleScope, ArticleTypeKey } from './articleScope'
 
 type FetchArticleParams = {
-  country: string
-  city?: string | null
+  scope: ArticleScope
+  type?: ArticleTypeKey
   slug: string
-  type?: string | null
+  lang?: string
 }
 
-const COUNTRY_SCOPE_SEGMENT = '_country'
-
 export async function fetchArticle({
-  country,
-  city,
-  type,
+  scope,
+  type = 'articles',
   slug,
+  lang = DEFAULT_LOCALE,
 }: FetchArticleParams): Promise<PublicFetchedArticle | null> {
-  const base = `${config.backendUrl}/api/public/articles`
-  const locationSegment = city ?? COUNTRY_SCOPE_SEGMENT
-  const url = type
-    ? `${base}/${encodeURIComponent(country)}/${encodeURIComponent(locationSegment)}/${encodeURIComponent(type)}/${encodeURIComponent(slug)}`
-    : `${base}/${encodeURIComponent(country)}/${encodeURIComponent(locationSegment)}/${encodeURIComponent(slug)}`
+  const params = new URLSearchParams()
+  params.set('scope', scope.kind)
+  if (scope.kind === 'country') params.set('country', scope.country)
+  if (scope.kind === 'city') {
+    params.set('country', scope.country)
+    params.set('city', scope.city)
+  }
+  params.set('type', type)
+  params.set('slug', slug)
+  params.set('lang', lang)
 
-  console.log('[fetchArticle]', url)
-
+  const url = `${config.backendUrl}/api/public/articles/by-id?${params.toString()}`
   const res = await fetch(url, { cache: 'no-store' })
 
   if (res.status === 404) return null

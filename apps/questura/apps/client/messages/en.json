@@ -1,0 +1,22 @@
+{
+  "common": {
+    "viewAll": "View all",
+    "page": "Page",
+    "next": "Next",
+    "previous": "Previous"
+  },
+  "articleIndex": {
+    "articles": {
+      "title": "Articles",
+      "empty": "No articles published yet."
+    },
+    "maps": {
+      "title": "Maps",
+      "empty": "No maps published yet."
+    },
+    "itineraries": {
+      "title": "Itineraries",
+      "empty": "No itineraries published yet."
+    }
+  }
+}

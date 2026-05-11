@@ -12,18 +12,21 @@ export type RelatedMapsArticleTeaser = {
 
 export async function fetchRelatedMapsArticles(
   country: string,
-  city: string | null | undefined,
+  city: string | null,
   currentSlug: string,
 ): Promise<RelatedMapsArticleTeaser[]> {
-  const params = new URLSearchParams({ currentSlug })
-  const locationSegment = city ?? '_country'
-  const url = `${config.backendUrl}/api/public/articles/${encodeURIComponent(country)}/${encodeURIComponent(locationSegment)}/maps?${params.toString()}`
+  const params = new URLSearchParams()
+  params.set('country', country)
+  if (city) params.set('city', city)
+  if (currentSlug) params.set('currentSlug', currentSlug)
+
+  const url = `${config.backendUrl}/api/public/articles/related?${params.toString()}`
 
   try {
     const res = await fetch(url, { cache: 'no-store' })
     if (!res.ok) return []
     const data = await res.json()
-    return Array.isArray(data) ? data : (data?.docs ?? data?.articles ?? [])
+    return Array.isArray(data) ? data : []
   } catch {
     return []
   }

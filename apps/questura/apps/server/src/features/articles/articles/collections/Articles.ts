@@ -9,6 +9,7 @@ import {
   validateSharedNeighborhoodSelection,
 } from '@/shared/location/server/articleLocationScope'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
+import { languageField } from '@/shared/i18n/languageField'
 import {
   step1Complete,
   inUpdateMode,
@@ -121,6 +122,7 @@ export const Articles: CollectionConfig = {
 
     // Sidebar / Meta fields
     status,
+    languageField,
     author,
     publishedAt,
     category,
