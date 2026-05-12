@@ -8,7 +8,8 @@ export const category: Field = {
   hasMany: false,
   admin: {
     position: 'sidebar',
-    description: 'Main category for this article (required for new articles)',
+    description:
+      'Main category for this article (required for new published city-scope articles). Changing this on a published article will change its public URL — a permanent redirect from the old URL is created automatically.',
   },
 }
 

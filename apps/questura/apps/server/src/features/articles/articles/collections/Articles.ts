@@ -10,6 +10,7 @@ import {
 } from '@/shared/location/server/articleLocationScope'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
+import { handleCanonicalPathChange } from '../lib/handleCanonicalPathChange'
 import {
   step1Complete,
   inUpdateMode,
@@ -25,6 +26,7 @@ import {
   status,
   author,
   publishedAt,
+  canonicalPath,
   category,
   tags,
 } from './fields'
@@ -125,12 +127,13 @@ export const Articles: CollectionConfig = {
     languageField,
     author,
     publishedAt,
+    canonicalPath,
     category,
     tags,
   ],
   hooks: {
     beforeChange: [
-      async ({ data, req, operation }) => {
+      async ({ data, req, operation, originalDoc }) => {
         // Set author on creation
         if (operation === 'create' && req.user?.id) {
           data.author = req.user.id
@@ -140,6 +143,12 @@ export const Articles: CollectionConfig = {
         if (data?.status === 'published' && !data?.publishedAt) {
           data.publishedAt = new Date().toISOString()
         }
+
+        await handleCanonicalPathChange({
+          data: data as Record<string, unknown>,
+          originalDoc: originalDoc as Record<string, unknown> | undefined,
+          req,
+        })
 
         return data
       },
@@ -169,6 +178,22 @@ export const Articles: CollectionConfig = {
              // but the UI relies on the flag.
              // For safety, if the user tries to save an incomplete article via API without the flag, throw error.
              throw new Error('Please complete the initial setup: title and location')
+          }
+        }
+
+        // Category is required for every published article whose location is
+        // at least country-scope. Neighborhood (3-segment) URLs are flattened
+        // to city scope by buildCanonicalPath, so they also need a category.
+        if (
+          (operation === 'create' || operation === 'update') &&
+          data?.status === 'published' &&
+          typeof data?.location === 'string'
+        ) {
+          const parts = data.location.split('|').filter(Boolean)
+          if (parts.length >= 1 && !data?.category) {
+            throw new Error(
+              'Published articles must have a category — it determines the public URL.',
+            )
           }
         }
         return data

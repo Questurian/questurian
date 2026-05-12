@@ -11,6 +11,7 @@ import {
   validateCountrySlugAgainstReserved,
   validateSlugAgainstReserved,
 } from '@/shared/lib/reservedSlugs'
+import { validateLocationSlugAgainstCategories } from '@/shared/lib/categoryLocationCollision'
 import {
   LOCATION_GUIDE_CONTRACT,
   type LocationLevel,
@@ -499,8 +500,14 @@ export const Locations: CollectionConfig = {
       name: 'country',
       type: 'text',
       required: true,
-      validate: ((value: unknown) =>
-        validateCountrySlugAgainstReserved(value)) as never,
+      validate: (async (
+        value: unknown,
+        options: { req?: { payload: Payload } },
+      ) => {
+        const reserved = validateCountrySlugAgainstReserved(value)
+        if (reserved !== true) return reserved
+        return validateLocationSlugAgainstCategories(value, options?.req)
+      }) as never,
       admin: {
         description: 'Normalized key segment (e.g., "colombia").',
       },
@@ -509,10 +516,18 @@ export const Locations: CollectionConfig = {
       name: 'city',
       type: 'text',
       required: false,
-      validate: ((value: unknown, options: { data?: Record<string, unknown> }) => {
+      validate: (async (
+        value: unknown,
+        options: {
+          data?: Record<string, unknown>
+          req?: { payload: Payload }
+        },
+      ) => {
         const level = (options?.data as { level?: string } | undefined)?.level
         if (level !== 'city' && level !== 'neighborhood') return true
-        return validateSlugAgainstReserved(value)
+        const reserved = validateSlugAgainstReserved(value)
+        if (reserved !== true) return reserved
+        return validateLocationSlugAgainstCategories(value, options?.req)
       }) as never,
       admin: {
         condition: (data) => data?.level === 'city' || data?.level === 'neighborhood',

@@ -1,0 +1,1 @@
+export { ArticleRedirects } from './ArticleRedirects'

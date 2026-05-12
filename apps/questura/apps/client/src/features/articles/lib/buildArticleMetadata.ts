@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { fetchArticle } from './fetchArticle'
+import { fetchArticleByCanonicalPath } from './fetchArticleByCanonicalPath'
 import type { ArticleScope, ArticleTypeKey } from './articleScope'
 import { articleHrefForScope } from './articleScope'
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@/lib/i18n/locales'
@@ -30,11 +31,58 @@ export async function buildArticleMetadata({
   slug,
   lang = DEFAULT_LOCALE,
 }: BuildParams): Promise<Metadata> {
-  const article = (await fetchArticle({ scope, type, slug, lang })) as ArticleLikeDoc | null
+  const article = (await fetchArticle({ scope, type, slug, lang })) as
+    | (ArticleLikeDoc & { canonicalPath?: string | null })
+    | null
   if (!article) return {}
 
   const base = PUBLIC_BASE_URL.replace(/\/+$/, '')
-  const path = articleHrefForScope(scope, type, slug)
+  const path =
+    typeof article.canonicalPath === 'string' && article.canonicalPath.length > 0
+      ? article.canonicalPath
+      : articleHrefForScope(scope, type, slug)
+  const canonical = `${base}${path}`
+
+  const title = article.seoSection?.metaTitle ?? article.title ?? ''
+  const description = article.seoSection?.metaDescription ?? undefined
+  const image =
+    article.seoSection?.openGraph?.imageUrl ?? article.header?.featuredImage?.url ?? null
+
+  const languages: Record<string, string> = {}
+  for (const locale of SUPPORTED_LOCALES) {
+    languages[locale] = canonical
+  }
+  languages['x-default'] = canonical
+
+  return {
+    title: title || undefined,
+    description,
+    alternates: {
+      canonical,
+      languages,
+    },
+    openGraph: {
+      title: title || undefined,
+      description,
+      url: canonical,
+      ...(image ? { images: [{ url: image }] } : {}),
+    },
+  }
+}
+
+type BuildByPathParams = {
+  path: string
+  lang?: string
+}
+
+export async function buildArticleMetadataByPath({
+  path,
+  lang = DEFAULT_LOCALE,
+}: BuildByPathParams): Promise<Metadata> {
+  const article = (await fetchArticleByCanonicalPath({ path, lang })) as ArticleLikeDoc | null
+  if (!article) return {}
+
+  const base = PUBLIC_BASE_URL.replace(/\/+$/, '')
   const canonical = `${base}${path}`
 
   const title = article.seoSection?.metaTitle ?? article.title ?? ''

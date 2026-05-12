@@ -23,3 +23,10 @@ export function guardArticleSlug(value: string): void {
     notFound()
   }
 }
+
+export function guardCategorySegment(value: string): void {
+  const normalized = value.toLowerCase()
+  if (ARTICLE_TYPE_SEGMENTS.has(normalized) || RESERVED_SLUGS.has(normalized)) {
+    notFound()
+  }
+}

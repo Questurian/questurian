@@ -4,6 +4,8 @@
  */
 
 import { CollectionConfig } from 'payload'
+import { validateSlugAgainstReserved, RESERVED_SLUGS } from '@/shared/lib/reservedSlugs'
+import { validateCategorySlugAgainstLocations } from '@/shared/lib/categoryLocationCollision'
 
 export const Categories: CollectionConfig = {
   slug: 'article-categories',
@@ -44,6 +46,12 @@ export const Categories: CollectionConfig = {
       type: 'text',
       unique: true,
       index: true,
+      validate: (async (value: unknown, options: { req?: { payload: import('payload').Payload }; id?: number | string }) => {
+        if (typeof value !== 'string' || !value) return true
+        const reserved = validateSlugAgainstReserved(value)
+        if (reserved !== true) return reserved
+        return validateCategorySlugAgainstLocations(value, options?.req, options?.id ?? null)
+      }) as never,
       admin: {
         readOnly: true,
         position: 'sidebar',
@@ -101,11 +109,17 @@ export const Categories: CollectionConfig = {
 
         // Auto-generate slug from name
         if (data?.name && (!data?.slug || operation === 'create')) {
-          data.slug = data.name
+          const generated = data.name
             .toLowerCase()
             .trim()
             .replace(/\s+/g, '-')
             .replace(/[^\w-]/g, '')
+          if (RESERVED_SLUGS.has(generated)) {
+            throw new Error(
+              `Category name "${data.name}" produces reserved slug "${generated}". Choose a different name.`,
+            )
+          }
+          data.slug = generated
         }
 
         return data

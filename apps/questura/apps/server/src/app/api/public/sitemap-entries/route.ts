@@ -148,7 +148,12 @@ export async function GET(req: Request) {
       if (!slug) return
       const location = typeof doc.location === 'string' ? doc.location : ''
       const scope = parseScopeFromLocationKey(location)
-      const href = articleHref(scope, type, slug)
+      const canonical = typeof doc.canonicalPath === 'string' ? doc.canonicalPath : null
+      // Standard articles only render via canonicalPath under the new URL
+      // system. Anything without one (neighborhood scope, missing category)
+      // has no public URL — exclude from sitemap. Maps and itineraries still
+      // use the legacy scope-based URL builder.
+      const href = type === 'articles' ? canonical : canonical ?? articleHref(scope, type, slug)
       if (!href) return
       contentEntries.push({
         url: href,

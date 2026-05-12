@@ -141,13 +141,18 @@ export async function GET(req: NextRequest) {
         return { kind: 'city', country: parts[0], city: parts[1] }
       })()
 
+      // Prefer the stored canonicalPath for city-scope standard articles so
+      // index links go straight to the category-based URL.
+      const canonical = typeof doc.canonicalPath === 'string' ? doc.canonicalPath : null
+      const href = canonical ?? articleHrefForScope(itemScope, type, slug)
+
       return {
         id,
         title: pickTitle(doc),
         slug,
         excerpt: pickExcerpt(doc),
         publishedAt: typeof doc.publishedAt === 'string' ? doc.publishedAt : null,
-        href: articleHrefForScope(itemScope, type, slug),
+        href,
         thumbnail: pickThumbnail(doc),
       }
     })
