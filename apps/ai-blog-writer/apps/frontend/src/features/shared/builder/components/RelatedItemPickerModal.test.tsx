@@ -3,19 +3,18 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RelatedItemPickerModal } from './RelatedItemPickerModal'
-import type { RelatedItemOption } from '../../types'
+import type { RelatedItemMediaSource } from '../types'
 
 afterEach(() => {
   cleanup()
 })
 
-function buildRelatedItem(overrides: Partial<RelatedItemOption> = {}): RelatedItemOption {
+function buildRelatedItem(overrides: Partial<RelatedItemMediaSource> = {}): RelatedItemMediaSource {
   return {
     id: 7,
     title: '',
     location: '',
     status: 'published',
-    idealFor: [],
     gallery: [],
     instagramGallery: [],
     ...overrides,

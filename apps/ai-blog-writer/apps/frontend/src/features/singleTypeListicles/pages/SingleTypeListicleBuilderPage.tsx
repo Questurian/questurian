@@ -7,12 +7,12 @@ import {
   uploadSocialImage as requestUploadSocialImage,
 } from '../../images'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
-import { BuilderHero } from '../builder/components/BuilderHero'
+import { BuilderHero } from '../../shared/builder/components/BuilderHero'
 import { BuilderItemsPanel } from '../builder/components/BuilderItemsPanel'
 import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
-import { useBuilderAutosave } from '../builder/hooks/useBuilderAutosave'
+import { useBuilderAutosave } from '../../shared/builder/hooks/useBuilderAutosave'
 import { useBuilderBootstrap } from '../builder/hooks/useBuilderBootstrap'
 import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
@@ -96,7 +96,7 @@ export default function SingleTypeListicleBuilderPage() {
     onError,
   })
 
-  useBuilderAutosave(draft)
+  useBuilderAutosave(draft, saveDraft)
 
   const isSynced = Boolean(draft?.payloadId)
 
@@ -819,7 +819,14 @@ export default function SingleTypeListicleBuilderPage() {
 
   return (
     <div className="stl-page stl-single-type-page">
-      <BuilderHero draft={draft} onDiscardLocalDraft={actions.handleDiscardLocalDraft} />
+      <BuilderHero
+        eyebrow="Single Type Listicle Builder"
+        newTitle="New Listicle"
+        payloadId={draft.payloadId}
+        lede="Field-by-field and block-by-block editor for Payload `single-type-listicles`."
+        backHref="/single-type-listicles"
+        onDiscardLocalDraft={actions.handleDiscardLocalDraft}
+      />
 
       <div className="stl-builder-layout">
         <main className="stl-builder-main">

@@ -1,4 +1,5 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
+import { createDraftStorage } from '../shared/builder/storage/createDraftStorage'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import {
   createEmptyDaySlice,
@@ -242,52 +243,16 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
   }
 }
 
-export function listDrafts(): ListicleItineraryDraft[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .map((draft, index) => normalizeStoredDraft(draft, index))
-      .filter((draft): draft is ListicleItineraryDraft => Boolean(draft))
-  } catch {
-    return []
-  }
-}
+const storage = createDraftStorage<ListicleItineraryDraft>({
+  storageKey: STORAGE_KEY,
+  normalizeStoredDraft,
+})
 
-export function saveDraft(draft: ListicleItineraryDraft): void {
-  const all = listDrafts()
-  const index = all.findIndex((item) => item.draftId === draft.draftId)
-  const next = {
-    ...draft,
-    updatedAt: new Date().toISOString(),
-  }
-
-  if (index >= 0) {
-    all[index] = next
-  } else {
-    all.push(next)
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
-}
-
-export function removeDraft(draftId: string): void {
-  const all = listDrafts()
-  const next = all.filter((item) => item.draftId !== draftId)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-}
-
-export function findDraftByPayloadId(payloadId: number): ListicleItineraryDraft | null {
-  const all = listDrafts()
-  return all.find((item) => item.payloadId === payloadId) || null
-}
-
-export function findDraftByDraftId(draftId: string): ListicleItineraryDraft | null {
-  const all = listDrafts()
-  return all.find((item) => item.draftId === draftId) || null
-}
+export const listDrafts = storage.listDrafts
+export const saveDraft = storage.saveDraft
+export const removeDraft = storage.removeDraft
+export const findDraftByPayloadId = storage.findDraftByPayloadId
+export const findDraftByDraftId = storage.findDraftByDraftId
 
 export function createEmptyDraft(): ListicleItineraryDraft {
   return {

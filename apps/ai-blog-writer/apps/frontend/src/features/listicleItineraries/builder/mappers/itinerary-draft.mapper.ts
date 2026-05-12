@@ -13,8 +13,8 @@ import {
 } from '../../types'
 import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
 import { getRelationshipId } from '../utils/field-normalizers.utils'
-import { getRelationshipIds, isMediaMode } from '../utils/item-media.utils'
-import { lexicalRichTextToMarkdown } from '../utils/lexical-json.utils'
+import { getRelationshipIds, isMediaMode } from '../../../shared/builder/utils/item-media.utils'
+import { lexicalRichTextToMarkdown } from '../../../shared/builder/utils/lexical-json.utils'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 

@@ -1,3 +1,13 @@
+import { stripIdsDeep } from './strip-ids-deep.utils'
+
+/**
+ * Lexical JSON (and Payload round-trips) embed `id` on many nodes. Postgres row ids
+ * for rich text must be unique; strip every `id` key in the tree before API submit.
+ */
+export function stripLexicalEditorStateId<T>(value: T): T {
+  return stripIdsDeep(value) as T
+}
+
 export function readLexicalFromJsonText(value: string, fieldLabel: string): Record<string, unknown> {
   const trimmed = value.trim()
   if (!trimmed) return {}
@@ -48,51 +58,47 @@ function lexicalNodeToMarkdown(node: LexicalNode, listDepth = 0, listCounters: n
   if (type === 'linebreak') return '\n'
 
   if (type === 'link') {
-    const url = (node as LexicalNode & { url?: string }).url || ''
-    const inner = children.map((c) => lexicalNodeToMarkdown(c, listDepth, listCounters)).join('')
-    return url ? `[${inner}](${url})` : inner
+    const inner = children.map((child) => lexicalNodeToMarkdown(child, listDepth, listCounters)).join('')
+    return node.url ? `[${inner}](${node.url})` : inner
   }
 
   if (type === 'paragraph') {
-    const inner = children.map((c) => lexicalNodeToMarkdown(c, listDepth, listCounters)).join('')
-    return inner
+    return children.map((child) => lexicalNodeToMarkdown(child, listDepth, listCounters)).join('')
   }
 
   if (type === 'heading') {
     const level = tag ? parseInt(tag.replace('h', ''), 10) : 2
-    const inner = children.map((c) => lexicalNodeToMarkdown(c, listDepth, listCounters)).join('')
+    const inner = children.map((child) => lexicalNodeToMarkdown(child, listDepth, listCounters)).join('')
     return `${'#'.repeat(level)} ${inner}`
   }
 
   if (type === 'quote') {
-    const inner = children.map((c) => lexicalNodeToMarkdown(c, listDepth, listCounters)).join('')
+    const inner = children.map((child) => lexicalNodeToMarkdown(child, listDepth, listCounters)).join('')
     return inner.split('\n').map((line) => `> ${line}`).join('\n')
   }
 
   if (type === 'code') {
-    const inner = children.map((c) => lexicalNodeToMarkdown(c, listDepth, listCounters)).join('')
+    const inner = children.map((child) => lexicalNodeToMarkdown(child, listDepth, listCounters)).join('')
     return `\`\`\`\n${inner}\n\`\`\``
   }
 
   if (type === 'list') {
-    const counters = [...listCounters, listType === 'number' ? (value ?? 1) - 1 : 0]
-    const items = children.map((child) => lexicalNodeToMarkdown(child, listDepth + 1, counters))
-    return items.join('\n')
+    const counters = [...listCounters, listType === 'number' ? (value ?? 1) - 1 : Number.NaN]
+    return children.map((child) => lexicalNodeToMarkdown(child, listDepth + 1, counters)).join('\n')
   }
 
   if (type === 'listitem') {
     const indent = '  '.repeat(Math.max(listDepth - 1, 0))
-    const parentList = listCounters[listCounters.length - 1]
-    const isOrdered = typeof parentList === 'number'
-    const bullet = isOrdered ? `${parentList + 1}.` : '-'
-    if (isOrdered) listCounters[listCounters.length - 1]++
-    const inner = children.map((c) => lexicalNodeToMarkdown(c, listDepth, listCounters)).join('')
+    const counterIndex = listCounters.length - 1
+    const parentCounter = listCounters[counterIndex]
+    const isOrdered = Number.isFinite(parentCounter)
+    const bullet = isOrdered ? `${parentCounter + 1}.` : '-'
+    if (isOrdered) listCounters[counterIndex] = parentCounter + 1
+    const inner = children.map((child) => lexicalNodeToMarkdown(child, listDepth, listCounters)).join('')
     return `${indent}${bullet} ${inner}`
   }
 
-  // root or unknown — recurse into children, join paragraphs with double newline
-  const parts = children.map((c) => lexicalNodeToMarkdown(c, listDepth, listCounters))
-  return parts.join('\n\n')
+  return children.map((child) => lexicalNodeToMarkdown(child, listDepth, listCounters)).join('\n\n')
 }
 
 export function lexicalRichTextToMarkdown(lexical: Record<string, unknown> | null | undefined): string {

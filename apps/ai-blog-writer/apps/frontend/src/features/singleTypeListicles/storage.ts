@@ -1,4 +1,5 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
+import { createDraftStorage } from '../shared/builder/storage/createDraftStorage'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { SingleTypeListicleDraft } from './types'
 import { normalizeLocationIds } from '../locationScope/scope'
@@ -8,17 +9,6 @@ const STORAGE_KEY = 'single_type_listicles_staged_v4_exact_neighborhoods'
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 )
-
-function parseDraftArray(storageKey: string): unknown[] {
-  try {
-    const raw = localStorage.getItem(storageKey)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
 
 function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicleDraft | null {
   if (!isRecord(value)) return null
@@ -70,44 +60,16 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
   }
 }
 
-export function listDrafts(): SingleTypeListicleDraft[] {
-  return parseDraftArray(STORAGE_KEY)
-    .map((draft, index) => normalizeStoredDraft(draft, index))
-    .filter((draft): draft is SingleTypeListicleDraft => Boolean(draft))
-}
+const storage = createDraftStorage<SingleTypeListicleDraft>({
+  storageKey: STORAGE_KEY,
+  normalizeStoredDraft,
+})
 
-export function saveDraft(draft: SingleTypeListicleDraft): void {
-  const all = listDrafts()
-  const index = all.findIndex((item) => item.draftId === draft.draftId)
-  const next = {
-    ...draft,
-    updatedAt: new Date().toISOString(),
-  }
-
-  if (index >= 0) {
-    all[index] = next
-  } else {
-    all.push(next)
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
-}
-
-export function removeDraft(draftId: string): void {
-  const all = listDrafts()
-  const next = all.filter((item) => item.draftId !== draftId)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-}
-
-export function findDraftByPayloadId(payloadId: number): SingleTypeListicleDraft | null {
-  const all = listDrafts()
-  return all.find((item) => item.payloadId === payloadId) || null
-}
-
-export function findDraftByDraftId(draftId: string): SingleTypeListicleDraft | null {
-  const all = listDrafts()
-  return all.find((item) => item.draftId === draftId) || null
-}
+export const listDrafts = storage.listDrafts
+export const saveDraft = storage.saveDraft
+export const removeDraft = storage.removeDraft
+export const findDraftByPayloadId = storage.findDraftByPayloadId
+export const findDraftByDraftId = storage.findDraftByDraftId
 
 export function createEmptyDraft(): SingleTypeListicleDraft {
   return {

@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { useEffect, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
+import { useBuilderBootstrap as useSharedBuilderBootstrap } from '../../../shared/builder/hooks/useBuilderBootstrap'
 import { fetchInstagramPosts, fetchItineraryById, fetchLocations, fetchMediaAssets } from '../../api'
 import { createEmptyDraft, findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../../storage'
 import { normalizeSeoSection } from '../services/seo-section.service'
@@ -21,6 +21,12 @@ type UseBuilderBootstrapParams = {
   draftIdParam: string | null
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
+}
+
+type AuxData = {
+  locations: LocationOption[]
+  mediaAssets: MediaAssetOption[]
+  instagramPosts: InstagramPostOption[]
 }
 
 type UseBuilderBootstrapResult = {
@@ -104,113 +110,63 @@ export function useBuilderBootstrap({
   setSearchParams,
   onError,
 }: UseBuilderBootstrapParams): UseBuilderBootstrapResult {
-  const [draft, setDraft] = useState<ListicleItineraryDraft | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [locations, setLocations] = useState<LocationOption[]>([])
-  const [mediaAssets, setMediaAssets] = useState<MediaAssetOption[]>([])
-  const [instagramPosts, setInstagramPosts] = useState<InstagramPostOption[]>([])
+  const { draft, setDraft, isLoading, auxData } = useSharedBuilderBootstrap<
+    ListicleItineraryDraft,
+    Awaited<ReturnType<typeof fetchItineraryById>>,
+    AuxData
+  >({
+    token,
+    payloadIdParam,
+    draftIdParam,
+    setSearchParams,
+    onError,
+    storage: {
+      findDraftByPayloadId,
+      findDraftByDraftId,
+      createEmptyDraft,
+      saveDraft,
+    },
+    loadAuxData: async (authToken) => {
+      const [locationDocs, mediaDocs, instagramDocs] = await Promise.all([
+        fetchLocations(authToken),
+        fetchMediaAssets(authToken),
+        fetchInstagramPosts(authToken),
+      ])
+      return { locations: locationDocs, mediaAssets: mediaDocs, instagramPosts: instagramDocs }
+    },
+    fetchPayloadDoc: fetchItineraryById,
+    payloadDocToDraft,
+    normalizeDraft: normalizeDraftModelName,
+    enrichAuxData: async (nextDraft, authToken, aux) => {
+      const missingMediaIds = collectMissingMediaAssetIds(nextDraft, aux.mediaAssets)
+      const missingInstagramIds = collectMissingInstagramPostIds(nextDraft, aux.instagramPosts)
 
-  useEffect(() => {
-    if (!token) return
-    const authToken = token
+      const [missingMediaDocs, missingInstagramDocs] = await Promise.all([
+        Promise.all(missingMediaIds.map(async (id) => {
+          const docs = await fetchMediaAssets(authToken, { id })
+          return docs[0] || null
+        })),
+        Promise.all(missingInstagramIds.map(async (id) => {
+          const docs = await fetchInstagramPosts(authToken, { id })
+          return docs[0] || null
+        })),
+      ])
 
-    let cancelled = false
-
-    async function load() {
-      setIsLoading(true)
-      onError('')
-
-      try {
-        const [locationDocs, mediaDocs, instagramDocs] = await Promise.all([
-          fetchLocations(authToken),
-          fetchMediaAssets(authToken),
-          fetchInstagramPosts(authToken),
-        ])
-
-        if (cancelled) return
-        setLocations(locationDocs)
-
-        let nextDraft: ListicleItineraryDraft
-
-        const payloadId = payloadIdParam ? Number(payloadIdParam) : null
-        if (payloadId && Number.isFinite(payloadId)) {
-          const doc = await fetchItineraryById(payloadId, authToken)
-          if (cancelled) return
-          const localDraft = findDraftByPayloadId(payloadId)
-          nextDraft = normalizeDraftModelName(payloadDocToDraft(doc, localDraft?.draftId))
-        } else if (draftIdParam) {
-          const byDraftId = findDraftByDraftId(draftIdParam)
-          if (byDraftId) {
-            const normalizedDraftById = normalizeDraftModelName(byDraftId)
-            nextDraft = normalizedDraftById
-            if (normalizedDraftById !== byDraftId) {
-              saveDraft(normalizedDraftById)
-            }
-          } else {
-            nextDraft = createEmptyDraft()
-            saveDraft(nextDraft)
-            setSearchParams(
-              (prev) => {
-                const next = new URLSearchParams(prev)
-                next.set('draftId', nextDraft.draftId)
-                return next
-              },
-              { replace: true },
-            )
-          }
-        } else {
-          nextDraft = createEmptyDraft()
-          saveDraft(nextDraft)
-          setSearchParams(
-            (prev) => {
-              const next = new URLSearchParams(prev)
-              next.set('draftId', nextDraft.draftId)
-              return next
-            },
-            { replace: true },
-          )
-        }
-
-        const missingMediaIds = collectMissingMediaAssetIds(nextDraft, mediaDocs)
-        const missingInstagramIds = collectMissingInstagramPostIds(nextDraft, instagramDocs)
-
-        const [missingMediaDocs, missingInstagramDocs] = await Promise.all([
-          Promise.all(missingMediaIds.map(async (id) => {
-            const docs = await fetchMediaAssets(authToken, { id })
-            return docs[0] || null
-          })),
-          Promise.all(missingInstagramIds.map(async (id) => {
-            const docs = await fetchInstagramPosts(authToken, { id })
-            return docs[0] || null
-          })),
-        ])
-
-        if (cancelled) return
-
-        setMediaAssets(appendUniqueById(mediaDocs, missingMediaDocs.filter((doc): doc is MediaAssetOption => Boolean(doc))))
-        setInstagramPosts(appendUniqueById(instagramDocs, missingInstagramDocs.filter((doc): doc is InstagramPostOption => Boolean(doc))))
-        setDraft(nextDraft)
-      } catch (err) {
-        if (cancelled) return
-        onError(err instanceof Error ? err.message : 'Failed to initialize builder')
-      } finally {
-        if (!cancelled) setIsLoading(false)
+      return {
+        locations: aux.locations,
+        mediaAssets: appendUniqueById(aux.mediaAssets, missingMediaDocs.filter((doc): doc is MediaAssetOption => Boolean(doc))),
+        instagramPosts: appendUniqueById(aux.instagramPosts, missingInstagramDocs.filter((doc): doc is InstagramPostOption => Boolean(doc))),
       }
-    }
-
-    void load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [token, payloadIdParam, draftIdParam, setSearchParams, onError])
+    },
+    initialAuxData: { locations: [], mediaAssets: [], instagramPosts: [] },
+  })
 
   return {
     draft,
     setDraft,
     isLoading,
-    locations,
-    mediaAssets,
-    instagramPosts,
+    locations: auxData.locations,
+    mediaAssets: auxData.mediaAssets,
+    instagramPosts: auxData.instagramPosts,
   }
 }

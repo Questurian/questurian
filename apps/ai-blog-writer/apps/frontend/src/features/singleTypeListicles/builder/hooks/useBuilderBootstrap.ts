@@ -1,10 +1,10 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { useEffect, useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
+import { useBuilderBootstrap as useSharedBuilderBootstrap } from '../../../shared/builder/hooks/useBuilderBootstrap'
 import { fetchListicleById, fetchLocations, fetchMediaAssets } from '../../api'
-import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import { createEmptyDraft, findDraftByDraftId, findDraftByPayloadId, saveDraft } from '../../storage'
+import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import type { LocationOption, MediaAssetOption, SingleTypeListicleDraft } from '../../types'
 import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
@@ -15,6 +15,11 @@ type UseBuilderBootstrapParams = {
   draftIdParam: string | null
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
+}
+
+type AuxData = {
+  locations: LocationOption[]
+  mediaAssets: MediaAssetOption[]
 }
 
 type UseBuilderBootstrapResult = {
@@ -42,6 +47,25 @@ function normalizeDraftModelName(draft: SingleTypeListicleDraft): SingleTypeList
   }
 }
 
+function mergeLocalIntoPayloadDraft(
+  payloadDraft: SingleTypeListicleDraft,
+  localDraft: SingleTypeListicleDraft,
+): SingleTypeListicleDraft {
+  const next = { ...payloadDraft }
+  // Payload stores blurbs/intro as Lexical JSON; restore the editable markdown
+  // from the local draft so editors are not blank on reload.
+  if (localDraft.header.introMarkdown) {
+    next.header = { ...payloadDraft.header, introMarkdown: localDraft.header.introMarkdown }
+  }
+  next.items = payloadDraft.items.map((item) => {
+    const localItem = localDraft.items.find((li) => li.item === item.item)
+    return localItem?.blurbMarkdown
+      ? { ...item, blurbMarkdown: localItem.blurbMarkdown }
+      : item
+  })
+  return next
+}
+
 export function useBuilderBootstrap({
   token,
   payloadIdParam,
@@ -49,101 +73,45 @@ export function useBuilderBootstrap({
   setSearchParams,
   onError,
 }: UseBuilderBootstrapParams): UseBuilderBootstrapResult {
-  const [draft, setDraft] = useState<SingleTypeListicleDraft | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [locations, setLocations] = useState<LocationOption[]>([])
-  const [mediaAssets, setMediaAssets] = useState<MediaAssetOption[]>([])
-
-  useEffect(() => {
-    if (!token) return
-    const authToken = token
-
-    let cancelled = false
-
-    async function load() {
-      setIsLoading(true)
-      onError('')
-
-      try {
-        const [locationDocs, mediaDocs] = await Promise.all([
-          fetchLocations(authToken),
-          fetchMediaAssets(authToken),
-        ])
-
-        if (cancelled) return
-        setLocations(locationDocs)
-        setMediaAssets(mediaDocs)
-
-        const payloadId = payloadIdParam ? Number(payloadIdParam) : null
-        if (payloadId && Number.isFinite(payloadId)) {
-          const doc = await fetchListicleById(payloadId, authToken)
-          if (cancelled) return
-          const localDraft = findDraftByPayloadId(payloadId)
-          const payloadDraft = payloadDocToDraft(doc, localDraft?.draftId)
-
-          // Payload stores blurbs/intro as Lexical JSON; restore the editable markdown
-          // from the local draft so editors are not blank on reload.
-          if (localDraft) {
-            if (localDraft.header.introMarkdown) {
-              payloadDraft.header.introMarkdown = localDraft.header.introMarkdown
-            }
-            payloadDraft.items = payloadDraft.items.map((item) => {
-              const localItem = localDraft.items.find((li) => li.item === item.item)
-              return localItem?.blurbMarkdown
-                ? { ...item, blurbMarkdown: localItem.blurbMarkdown }
-                : item
-            })
-          }
-
-          const normalizedPayloadDraft = normalizeDraftModelName(payloadDraft)
-          setDraft(normalizedPayloadDraft)
-          return
-        }
-
-        if (draftIdParam) {
-          const byDraftId = findDraftByDraftId(draftIdParam)
-          if (byDraftId) {
-            const normalizedDraftById = normalizeDraftModelName(byDraftId)
-            setDraft(normalizedDraftById)
-            if (normalizedDraftById !== byDraftId) {
-              saveDraft(normalizedDraftById)
-            }
-            return
-          }
-        }
-
+  const { draft, setDraft, isLoading, auxData } = useSharedBuilderBootstrap<
+    SingleTypeListicleDraft,
+    Awaited<ReturnType<typeof fetchListicleById>>,
+    AuxData
+  >({
+    token,
+    payloadIdParam,
+    draftIdParam,
+    setSearchParams,
+    onError,
+    storage: {
+      findDraftByPayloadId,
+      findDraftByDraftId,
+      createEmptyDraft: () => {
         const fresh = createEmptyDraft()
         fresh.seoSection = createEmptySeoSection()
-        saveDraft(fresh)
-        setDraft(fresh)
-        setSearchParams(
-          (prev) => {
-            const next = new URLSearchParams(prev)
-            next.set('draftId', fresh.draftId)
-            return next
-          },
-          { replace: true },
-        )
-      } catch (err) {
-        if (cancelled) return
-        onError(err instanceof Error ? err.message : 'Failed to initialize builder')
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-
-    void load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [token, payloadIdParam, draftIdParam, setSearchParams, onError])
+        return fresh
+      },
+      saveDraft,
+    },
+    loadAuxData: async (authToken) => {
+      const [locationDocs, mediaDocs] = await Promise.all([
+        fetchLocations(authToken),
+        fetchMediaAssets(authToken),
+      ])
+      return { locations: locationDocs, mediaAssets: mediaDocs }
+    },
+    fetchPayloadDoc: fetchListicleById,
+    payloadDocToDraft,
+    mergeLocalIntoPayloadDraft,
+    normalizeDraft: normalizeDraftModelName,
+    initialAuxData: { locations: [], mediaAssets: [] },
+  })
 
   return {
     draft,
     setDraft,
     isLoading,
-    locations,
-    mediaAssets,
+    locations: auxData.locations,
+    mediaAssets: auxData.mediaAssets,
   }
 }

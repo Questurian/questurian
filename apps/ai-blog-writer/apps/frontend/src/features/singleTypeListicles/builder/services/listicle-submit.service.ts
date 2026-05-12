@@ -8,8 +8,8 @@ import {
   buildSingleTypeListicleStructuredDataTemplate,
   serializeStructuredDataTemplate,
 } from './structured-data-template.service'
-import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
-import { readLexicalFromJsonText } from '../utils/lexical-json.utils'
+import { requiresInstagram, requiresPhotos } from '../../../shared/builder/utils/item-media.utils'
+import { readLexicalFromJsonText } from '../../../shared/builder/utils/lexical-json.utils'
 import { validateSubmit } from '../validators/submit.validators'
 
 export type SubmitListicleParams = {

@@ -1,5 +1,22 @@
 import type { EditorAssistModelName } from '../staging/api'
 import type { LocationLevel } from '../locationScope/types'
+import type {
+  GalleryImageObject,
+  GalleryMediaAsset,
+  InstagramPostOption,
+  InstagramPreviewAsset,
+  MediaAssetOption,
+  MediaMode,
+} from '../shared/builder/types'
+
+export type {
+  GalleryImageObject,
+  GalleryMediaAsset,
+  InstagramPostOption,
+  InstagramPreviewAsset,
+  MediaAssetOption,
+  MediaMode,
+} from '../shared/builder/types'
 
 export type ItineraryBlockType =
   | 'itinerary-dining'
@@ -70,8 +87,6 @@ export function resizeItineraryDays(draft: ListicleItineraryDraft, nextCount: nu
     days: nextDays,
   }
 }
-
-export type MediaMode = 'photos' | 'instagram' | 'both'
 
 export type RelatedItemCollection =
   | 'dining'
@@ -377,56 +392,6 @@ export type LocationOption = {
   neighborhood?: string | null
   level?: LocationLevel
   parentKey?: string | null
-}
-
-export type MediaAssetOption = {
-  id: number
-  filename: string
-  alt?: string
-  alt_text?: string
-  altText?: string
-  mediaSet?: number | string | { id?: number | string } | null
-  url?: string
-  variant?: string
-}
-
-export type GalleryMediaAsset = {
-  id: number
-  filename?: string | null
-  url?: string | null
-  alt_text?: string | null
-}
-
-export type GalleryImageObject = {
-  id: number
-  title?: string | null
-  alt_text?: string | null
-  variants?: {
-    thumbnail?: number | GalleryMediaAsset | null
-    square?: number | GalleryMediaAsset | null
-    wide?: number | GalleryMediaAsset | null
-    portrait?: number | GalleryMediaAsset | null
-    editorial?: number | GalleryMediaAsset | null
-  } | null
-}
-
-export type InstagramPreviewAsset = {
-  id: number
-  filename?: string | null
-  url?: string | null
-  alt_text?: string | null
-}
-
-export type InstagramPostOption = {
-  id: number
-  title: string
-  status?: string | null
-  embedCode?: string | null
-  permalink?: string | null
-  url?: string | null
-  instagramUrl?: string | null
-  shortcode?: string | null
-  previewImage?: number | InstagramPreviewAsset | null
 }
 
 export type RelatedItemOption = {

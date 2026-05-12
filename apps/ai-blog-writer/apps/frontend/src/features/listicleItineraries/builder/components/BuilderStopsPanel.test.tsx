@@ -31,15 +31,15 @@ vi.mock('../../../staging/features/markdown-editor', () => ({
   ),
 }))
 
-vi.mock('./InstagramPickerModal', () => ({
+vi.mock('../../../shared/builder/components/InstagramPickerModal', () => ({
   InstagramPickerModal: () => null,
 }))
 
-vi.mock('./PhotoPickerModal', () => ({
+vi.mock('../../../shared/builder/components/PhotoPickerModal', () => ({
   PhotoPickerModal: () => null,
 }))
 
-vi.mock('./RelatedItemPickerModal', () => ({
+vi.mock('../../../shared/builder/components/RelatedItemPickerModal', () => ({
   RelatedItemPickerModal: () => null,
 }))
 

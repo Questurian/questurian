@@ -1,13 +1,15 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import {
   areLocationIdSelectionsEqual,
-  findLocationByKey,
   normalizeLocationIds,
   normalizeLocationKey,
 } from '../../../locationScope/scope'
-import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
+import {
+  useBuilderStepActions,
+  useSelectedLocationRefId,
+} from '../../../shared/builder/hooks/useBuilderStepActions'
 import { createEmptySeoSection } from '../services/seo-section.service'
 import { createEmptyDraft, removeDraft } from '../../storage'
 import type {
@@ -102,23 +104,7 @@ export function useBuilderDraftActions({
     || hasSeoContent(current)
   )
 
-  const selectedLocationRefId = useMemo(() => {
-    const fallbackLocationRef = (
-      typeof draft?.locationRef === 'number'
-      && Number.isFinite(draft.locationRef)
-      && draft.locationRef > 0
-    )
-      ? draft.locationRef
-      : null
-
-    const locationKey = draft?.location?.trim() || ''
-    if (!locationKey) {
-      return fallbackLocationRef
-    }
-
-    const selected = findLocationByKey(locations, locationKey)
-    return selected?.id || fallbackLocationRef
-  }, [draft?.location, draft?.locationRef, locations])
+  const selectedLocationRefId = useSelectedLocationRefId(draft, locations)
 
   function updateDraft(next: Partial<SingleTypeListicleDraft>) {
     setDraft((current) => {
@@ -158,21 +144,22 @@ export function useBuilderDraftActions({
     })
   }
 
+  const stepActions = useBuilderStepActions<SingleTypeListicleDraft>({
+    draft,
+    updateDraft: (next) => updateDraft(next as Partial<SingleTypeListicleDraft>),
+    selectedLocationRefId,
+    validateStep1,
+    validateStep2,
+    validateStep3: (d) => validateStep3(d, relatedItems),
+    onError,
+  })
+
   function setTargetItemCount(nextCount: number) {
     setDraft((current) => {
       if (!current) return current
-
-      if (!isValidTargetItemCount(nextCount)) {
-        return current
-      }
-
-      if (!current.listicleType) {
-        return current
-      }
-
-      if (hasAnyWrittenItemData(current.items) && nextCount !== current.targetItemCount) {
-        return current
-      }
+      if (!isValidTargetItemCount(nextCount)) return current
+      if (!current.listicleType) return current
+      if (hasAnyWrittenItemData(current.items) && nextCount !== current.targetItemCount) return current
 
       const nextItems = resizeItemsToTargetCount(current.items, nextCount, current.listicleType)
       return {
@@ -188,10 +175,7 @@ export function useBuilderDraftActions({
       if (!current) return current
       return {
         ...current,
-        header: {
-          ...current.header,
-          ...next,
-        },
+        header: { ...current.header, ...next },
       }
     })
   }
@@ -228,31 +212,8 @@ export function useBuilderDraftActions({
       if (target < 0 || target >= items.length) return current
       const [item] = items.splice(index, 1)
       items.splice(target, 0, item)
-      return {
-        ...current,
-        items,
-      }
+      return { ...current, items }
     })
-  }
-
-  function handleContinue() {
-    if (!draft) return
-    const issues = validateStep1(draft)
-    if (issues.length > 0) {
-      onError(issues.join('. '))
-      return
-    }
-
-    updateDraft({
-      step1_complete: true,
-      in_update_mode: false,
-      locationRef: selectedLocationRefId,
-      step2_complete: false,
-      step2_in_update_mode: false,
-      step3_complete: false,
-      step3_in_update_mode: false,
-    })
-    onError('')
   }
 
   function handleUpdateSetup() {
@@ -367,103 +328,6 @@ export function useBuilderDraftActions({
     onError('')
   }
 
-  function handleContinueStep2() {
-    if (!draft) return
-
-    const issues = validateStep2(draft)
-    if (issues.length > 0) {
-      onError(issues.join('. '))
-      return
-    }
-
-    updateDraft({
-      step2_complete: true,
-      step2_in_update_mode: false,
-      step3_complete: false,
-      step3_in_update_mode: false,
-    })
-    onError('')
-  }
-
-  function handleUpdateStep2() {
-    if (!draft) return
-    updateDraft({ step2_in_update_mode: true })
-    onError('')
-  }
-
-  function handleSaveStep2() {
-    if (!draft) return
-
-    const issues = validateStep2(draft)
-    if (issues.length > 0) {
-      onError(issues.join('. '))
-      return
-    }
-
-    updateDraft({
-      step2_complete: true,
-      step2_in_update_mode: false,
-      step3_complete: false,
-      step3_in_update_mode: false,
-    })
-    onError('')
-  }
-
-  function cancelUpdateStep2() {
-    if (!draft) return
-    updateDraft({ step2_in_update_mode: false })
-    onError('')
-  }
-
-  function handleContinueStep3() {
-    if (!draft) return
-
-    const issues = validateStep3(draft, relatedItems)
-    if (issues.length > 0) {
-      onError(issues.join('. '))
-      return
-    }
-
-    updateDraft({
-      step3_complete: true,
-      step3_in_update_mode: false,
-    })
-    onError('')
-  }
-
-  function handleUpdateStep3() {
-    if (!draft) return
-    updateDraft({ step3_in_update_mode: true })
-    onError('')
-  }
-
-  function handleSaveStep3() {
-    if (!draft) return
-
-    const issues = validateStep3(draft, relatedItems)
-    if (issues.length > 0) {
-      onError(issues.join('. '))
-      return
-    }
-
-    updateDraft({
-      step3_complete: true,
-      step3_in_update_mode: false,
-    })
-    onError('')
-  }
-
-  function cancelUpdateStep3() {
-    if (!draft) return
-    updateDraft({ step3_in_update_mode: false })
-    onError('')
-  }
-
-  function setEditorModelName(modelName: string) {
-    const normalizedModelName = resolveEditorAssistModelName(modelName)
-    updateDraft({ editorModelName: normalizedModelName })
-  }
-
   function handleDiscardLocalDraft() {
     if (!draft) return
     removeDraft(draft.draftId)
@@ -485,19 +349,19 @@ export function useBuilderDraftActions({
     updateItem,
     removeItem,
     moveItem,
-    handleContinue,
+    handleContinue: stepActions.handleContinue,
     handleUpdateSetup,
     handleSaveSetup,
     cancelUpdateSetup,
-    handleContinueStep2,
-    handleUpdateStep2,
-    handleSaveStep2,
-    cancelUpdateStep2,
-    handleContinueStep3,
-    handleUpdateStep3,
-    handleSaveStep3,
-    cancelUpdateStep3,
-    setEditorModelName,
+    handleContinueStep2: stepActions.handleContinueStep2,
+    handleUpdateStep2: stepActions.handleUpdateStep2,
+    handleSaveStep2: stepActions.handleSaveStep2,
+    cancelUpdateStep2: stepActions.cancelUpdateStep2,
+    handleContinueStep3: stepActions.handleContinueStep3,
+    handleUpdateStep3: stepActions.handleUpdateStep3,
+    handleSaveStep3: stepActions.handleSaveStep3,
+    cancelUpdateStep3: stepActions.cancelUpdateStep3,
+    setEditorModelName: stepActions.setEditorModelName,
     handleDiscardLocalDraft,
   }
 }

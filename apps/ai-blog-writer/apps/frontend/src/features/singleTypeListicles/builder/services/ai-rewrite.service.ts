@@ -8,7 +8,7 @@ import {
   getRelatedPhotoObjects,
   resolveImageUrl,
   resolveInstagramPermalink,
-} from '../utils/item-media.utils'
+} from '../../../shared/builder/utils/item-media.utils'
 
 const LISTICLE_BLOCK_LABELS: Record<ListicleItemBlock['blockType'], string> = {
   'data-dining': 'Dining',

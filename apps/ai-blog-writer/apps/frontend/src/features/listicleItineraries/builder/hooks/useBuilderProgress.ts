@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useBuilderProgress as useSharedBuilderProgress } from '../../../shared/builder/hooks/useBuilderProgress'
 import type { ListicleItineraryDraft } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { isSeoCoreComplete } from '../validators/step.validators'
@@ -14,43 +14,8 @@ type UseBuilderProgressResult = {
 }
 
 export function useBuilderProgress({ draft }: UseBuilderProgressParams): UseBuilderProgressResult {
-  return useMemo(() => {
-    if (!draft) {
-      return {
-        stepIssues: [],
-        isSetupReady: false,
-        completionPercent: 8,
-      }
-    }
-
-    const stepIssues = validateStep1(draft)
-    const isSetupReady = stepIssues.length === 0
-    const seoCoreComplete = isSeoCoreComplete(draft)
-    const isStep1Locked = draft.step1_complete && !draft.in_update_mode
-    const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
-    const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
-
-    const completionPercent = Math.max(
-      8,
-      Math.min(
-        100,
-        Math.round(
-          ([
-            isStep1Locked ? 1 : 0,
-            isStep2Locked ? 1 : 0,
-            isStep3Locked ? 1 : 0,
-            seoCoreComplete ? 1 : 0,
-          ].reduce((sum, value) => sum + value, 0) /
-            4) *
-            100,
-        ),
-      ),
-    )
-
-    return {
-      stepIssues,
-      isSetupReady,
-      completionPercent,
-    }
-  }, [draft])
+  return useSharedBuilderProgress<ListicleItineraryDraft>(draft, {
+    validateStep1,
+    isSeoCoreComplete,
+  })
 }

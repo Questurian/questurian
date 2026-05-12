@@ -1,6 +1,7 @@
 import type { ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
 import { AiTitleInput } from '../../../staging/features/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
+import { BuilderStepHeader } from '../../../shared/builder/components/BuilderStepHeader'
 import { LISTICLE_TYPE_OPTIONS } from '../constants/builder-options.constants'
 import {
   findLocationByKey,
@@ -66,35 +67,20 @@ export function BuilderSetupPanel({
 
   return (
     <section className="stl-panel stl-setup-panel">
-      <div className="stl-panel-header">
-        <h2>
-          {!isSynced ? <span className="stl-kicker">Step 1</span> : null} Setup
-        </h2>
-        {!isSynced ? (
-          <div className="stl-inline-actions">
-            {!draft.step1_complete && isStep1Valid ? (
-              <button type="button" className="stl-btn" onClick={onContinue}>
-                Continue
-              </button>
-            ) : null}
-            {draft.step1_complete && !draft.in_update_mode ? (
-              <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateSetup}>
-                Update Setup
-              </button>
-            ) : null}
-            {draft.in_update_mode ? (
-              <>
-                <button type="button" className="stl-btn" onClick={onSaveSetup}>
-                  Save Setup
-                </button>
-                <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelUpdateSetup}>
-                  Cancel
-                </button>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      <BuilderStepHeader
+        stepLabel="Step 1"
+        title="Setup"
+        isSynced={isSynced}
+        isStepComplete={draft.step1_complete}
+        isInUpdateMode={draft.in_update_mode}
+        canContinue={isStep1Valid}
+        onContinue={onContinue}
+        onUpdate={onUpdateSetup}
+        onSave={onSaveSetup}
+        onCancelUpdate={onCancelUpdateSetup}
+        updateLabel="Update Setup"
+        saveLabel="Save Setup"
+      />
 
       <div className="stl-grid stl-setup-grid stl-setup-stack">
         <label className="stl-field">

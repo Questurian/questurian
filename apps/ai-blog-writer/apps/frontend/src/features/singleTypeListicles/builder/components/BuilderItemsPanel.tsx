@@ -11,10 +11,10 @@ import {
   resolveInstagramEmbedUrl,
   resolveImageUrl,
   resolveInstagramPreviewUrl,
-} from '../utils/item-media.utils'
-import { InstagramPickerModal } from './InstagramPickerModal'
-import { PhotoPickerModal } from './PhotoPickerModal'
-import { RelatedItemPickerModal } from './RelatedItemPickerModal'
+} from '../../../shared/builder/utils/item-media.utils'
+import { InstagramPickerModal } from '../../../shared/builder/components/InstagramPickerModal'
+import { PhotoPickerModal } from '../../../shared/builder/components/PhotoPickerModal'
+import { RelatedItemPickerModal } from '../../../shared/builder/components/RelatedItemPickerModal'
 import { AiJobButtonContent } from './AiJobButtonContent'
 
 type AiRewriteInput = {

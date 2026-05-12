@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { GalleryImageObject } from '../../types'
+import type { GalleryImageObject } from '../types'
 import { resolveImageUrl } from '../utils/item-media.utils'
 
 const MAX_PHOTOS = 6
@@ -19,7 +19,7 @@ export function PhotoPickerModal({ isOpen, photoObjects, selectedPhotoIds, onCon
     if (isOpen) {
       setLocalSelection([...selectedPhotoIds])
     }
-  }, [isOpen, selectedPhotoIds])
+  }, [isOpen]) // intentionally omitting selectedPhotoIds — reset only on open
 
   useEffect(() => {
     if (!isOpen) return

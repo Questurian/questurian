@@ -4,13 +4,18 @@ import type {
   InstagramPostOption,
   MediaAssetOption,
   MediaMode,
-  RelatedItemOption,
-} from '../../types'
+  RelatedItemMediaSource,
+} from '../types'
 
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
 
+/** Variant keys to try in order of preference when resolving a display URL from a MediaSet */
 const PREFERRED_VARIANTS = ['thumbnail', 'square', 'editorial', 'wide', 'portrait'] as const
 
+/**
+ * Resolves a displayable image URL from either a GalleryImageObject (MediaSet from depth=2)
+ * or a MediaAssetOption. For MediaSets, walks the variants in preference order.
+ */
 export function resolveImageUrl(asset: GalleryImageObject | MediaAssetOption): string | undefined {
   if ('variants' in asset && asset.variants) {
     for (const key of PREFERRED_VARIANTS) {
@@ -30,7 +35,7 @@ export function resolveImageUrl(asset: GalleryImageObject | MediaAssetOption): s
   return undefined
 }
 
-export function getRelatedPhotoObjects(item: RelatedItemOption | null | undefined): GalleryImageObject[] {
+export function getRelatedPhotoObjects(item: RelatedItemMediaSource | null | undefined): GalleryImageObject[] {
   if (!item?.gallery?.length) return []
 
   const seen = new Set<number>()
@@ -93,17 +98,17 @@ export function requiresInstagram(mode: MediaMode): boolean {
   return mode === 'instagram' || mode === 'both'
 }
 
-export function getRelatedPhotoIds(item: RelatedItemOption | null | undefined): number[] {
+export function getRelatedPhotoIds(item: RelatedItemMediaSource | null | undefined): number[] {
   if (!item?.gallery?.length) return []
   return getRelationshipIds(item.gallery.map((entry) => entry?.image))
 }
 
-export function getRelatedInstagramPostIds(item: RelatedItemOption | null | undefined): number[] {
+export function getRelatedInstagramPostIds(item: RelatedItemMediaSource | null | undefined): number[] {
   if (!item?.instagramGallery?.length) return []
   return getRelationshipIds(item.instagramGallery.map((entry) => entry?.post))
 }
 
-export function getRelatedInstagramPostObjects(item: RelatedItemOption | null | undefined): InstagramPostOption[] {
+export function getRelatedInstagramPostObjects(item: RelatedItemMediaSource | null | undefined): InstagramPostOption[] {
   if (!item?.instagramGallery?.length) return []
 
   const seen = new Set<number>()

@@ -1,17 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
-import type { RelatedItemOption } from '../../types'
+import { getRelatedItemDisplayLabel } from '../../related-items/normalizeRelatedItems'
+import type { RelatedItemMediaSource } from '../types'
 import { getRelatedPhotoObjects, resolveImageUrl } from '../utils/item-media.utils'
 
-type Props = {
+type Props<TItem extends RelatedItemMediaSource> = {
   isOpen: boolean
-  items: RelatedItemOption[]
+  items: TItem[]
   selectedItemId: number | null
   onSelect: (id: number | null) => void
   onClose: () => void
 }
 
-export function RelatedItemPickerModal({ isOpen, items, selectedItemId, onSelect, onClose }: Props) {
+export function RelatedItemPickerModal<TItem extends RelatedItemMediaSource>({
+  isOpen,
+  items,
+  selectedItemId,
+  onSelect,
+  onClose,
+}: Props<TItem>) {
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 

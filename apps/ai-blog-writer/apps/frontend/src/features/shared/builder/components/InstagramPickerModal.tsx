@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { InstagramPostOption } from '../../types'
+import type { InstagramPostOption } from '../types'
 import { resolveInstagramPreviewUrl } from '../utils/item-media.utils'
 
 type Props = {
@@ -66,7 +66,6 @@ export function InstagramPickerModal({ isOpen, posts, selectedPostId, onSelect, 
         </div>
 
         <div className="stl-picker-grid stl-picker-grid--items">
-          {/* None card */}
           <button
             type="button"
             className={`stl-picker-card stl-picker-card--unset${selectedPostId === null ? ' stl-picker-card--selected' : ''}`}

@@ -23,9 +23,11 @@ type SeoEditorPanelProps = {
   isGeneratingSeoTarget: SeoAiTarget | null
   onGenerateSeoImageFromFeatured: () => Promise<void>
   isGeneratingSeoImage: boolean
-  onUploadOgImageFile: (file: File) => Promise<void>
-  isUploadingOgImage: boolean
+  onUploadOgImageFile?: (file: File) => Promise<void>
+  isUploadingOgImage?: boolean
   onAutoFillOgUrl?: () => void
+  onRegenerateStructuredData?: () => void
+  canRegenerateStructuredData?: boolean
   stepLabel?: string
   title?: string
 }
@@ -38,14 +40,19 @@ export function SeoEditorPanel({
   onGenerateSeoImageFromFeatured,
   isGeneratingSeoImage,
   onUploadOgImageFile,
-  isUploadingOgImage,
+  isUploadingOgImage = false,
   onAutoFillOgUrl,
+  onRegenerateStructuredData,
+  canRegenerateStructuredData = false,
   stepLabel = 'Step 4',
   title = 'SEO & Metadata',
 }: SeoEditorPanelProps) {
   const [isOgUploadModalOpen, setIsOgUploadModalOpen] = useState(false)
   const ogImagePreviewUrl = resolveSocialPreviewUrl(seoSection.openGraph.imageUrl)
   const twitterImagePreviewUrl = resolveSocialPreviewUrl(seoSection.twitterCard.imageUrl)
+
+  const supportsOgUpload = Boolean(onUploadOgImageFile)
+  const usesRegenerateStructuredData = Boolean(onRegenerateStructuredData)
 
   const updateSeo = (updater: (current: SeoSection) => SeoSection) => {
     setSeoSection((current) => updater(current))
@@ -196,14 +203,16 @@ export function SeoEditorPanel({
                 />
                 <span className="stl-seo-ai-trigger-wrap">
                   <span className="stl-seo-image-actions">
-                    <button
-                      type="button"
-                      className="stl-btn stl-btn-secondary stl-seo-ai-btn"
-                      onClick={openOgUploadModal}
-                      disabled={isSeoActionRunning}
-                    >
-                      {isUploadingOgImage ? 'Uploading...' : 'Upload 1200x630'}
-                    </button>
+                    {supportsOgUpload ? (
+                      <button
+                        type="button"
+                        className="stl-btn stl-btn-secondary stl-seo-ai-btn"
+                        onClick={openOgUploadModal}
+                        disabled={isSeoActionRunning}
+                      >
+                        {isUploadingOgImage ? 'Uploading...' : 'Upload 1200x630'}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="stl-btn stl-btn-secondary stl-seo-ai-btn"
@@ -395,20 +404,37 @@ export function SeoEditorPanel({
             <div className="stl-seo-group-header">
               <div className="stl-seo-group-copy">
                 <h3>Structured Data</h3>
-                <p>JSON-LD for article schema markup.</p>
+                <p>
+                  {usesRegenerateStructuredData
+                    ? 'Auto-formatted JSON-LD generated from your content.'
+                    : 'JSON-LD for article schema markup.'}
+                </p>
               </div>
-              {!seoSection.openGraph.url.trim() ? (
+              {usesRegenerateStructuredData ? (
+                <div className="stl-inline-actions">
+                  <button
+                    type="button"
+                    className="stl-btn stl-btn-secondary"
+                    onClick={onRegenerateStructuredData}
+                    disabled={!canRegenerateStructuredData}
+                  >
+                    Regenerate from Template
+                  </button>
+                </div>
+              ) : !seoSection.openGraph.url.trim() ? (
                 <p className="stl-legacy-note">Set `og:url` before finalizing structured data.</p>
               ) : renderAiButton('structuredData', 'AI Refine')}
             </div>
 
             <label className="stl-field">
-              <span>JSON-LD</span>
+              <span>{usesRegenerateStructuredData ? 'Structured Data (JSON-LD)' : 'JSON-LD'}</span>
               <div className="stl-seo-input-wrap stl-seo-input-wrap-textarea">
                 <textarea
                   className="stl-seo-input-with-ai"
-                  rows={12}
+                  rows={usesRegenerateStructuredData ? 6 : 12}
+                  placeholder={usesRegenerateStructuredData ? '{"@context":"https://schema.org","@type":"Article"}' : undefined}
                   value={seoSection.structuredData}
+                  readOnly={usesRegenerateStructuredData}
                   onChange={(event) =>
                     updateSeo((current) => ({
                       ...current,
@@ -416,9 +442,14 @@ export function SeoEditorPanel({
                     }))
                   }
                 />
-                <span className="stl-seo-ai-trigger-wrap">{renderAiButton('structuredData')}</span>
+                {usesRegenerateStructuredData ? null : (
+                  <span className="stl-seo-ai-trigger-wrap">{renderAiButton('structuredData')}</span>
+                )}
               </div>
             </label>
+            {usesRegenerateStructuredData ? (
+              <p className="stl-placeholder">Read-only to prevent format errors. Use regenerate after content changes.</p>
+            ) : null}
           </section>
 
           <section className="stl-seo-group">
@@ -479,12 +510,14 @@ export function SeoEditorPanel({
         </div>
       </section>
 
-      <OgImageCropUploadModal
-        isOpen={isOgUploadModalOpen}
-        isUploading={isUploadingOgImage}
-        onUploadCroppedFile={onUploadOgImageFile}
-        onClose={() => setIsOgUploadModalOpen(false)}
-      />
+      {onUploadOgImageFile ? (
+        <OgImageCropUploadModal
+          isOpen={isOgUploadModalOpen}
+          isUploading={isUploadingOgImage}
+          onUploadCroppedFile={onUploadOgImageFile}
+          onClose={() => setIsOgUploadModalOpen(false)}
+        />
+      ) : null}
     </>
   )
 }

@@ -31,11 +31,11 @@ import {
   resolveInstagramEmbedUrl,
   resolveInstagramPreviewUrl,
   resolveImageUrl,
-} from '../utils/item-media.utils'
+} from '../../../shared/builder/utils/item-media.utils'
 import { ExistingStopPickerModal, type ExistingStopPickerOption } from './ExistingStopPickerModal'
-import { InstagramPickerModal } from './InstagramPickerModal'
-import { PhotoPickerModal } from './PhotoPickerModal'
-import { RelatedItemPickerModal } from './RelatedItemPickerModal'
+import { InstagramPickerModal } from '../../../shared/builder/components/InstagramPickerModal'
+import { PhotoPickerModal } from '../../../shared/builder/components/PhotoPickerModal'
+import { RelatedItemPickerModal } from '../../../shared/builder/components/RelatedItemPickerModal'
 
 type AiRewriteInput = {
   blockId: string

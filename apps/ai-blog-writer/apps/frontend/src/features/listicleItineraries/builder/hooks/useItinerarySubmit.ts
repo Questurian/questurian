@@ -20,9 +20,9 @@ import {
   buildListicleItineraryStructuredDataTemplate,
   serializeStructuredDataTemplate,
 } from '../services/structured-data-template.service'
-import { requiresInstagram, requiresPhotos } from '../utils/item-media.utils'
+import { requiresInstagram, requiresPhotos } from '../../../shared/builder/utils/item-media.utils'
 import { stripNestedRowIdsFromItineraryDays } from '../utils/itinerary-payload-sanitize'
-import { readLexicalFromJsonText, stripLexicalEditorStateId } from '../utils/lexical-json.utils'
+import { readLexicalFromJsonText, stripLexicalEditorStateId } from '../../../shared/builder/utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
 

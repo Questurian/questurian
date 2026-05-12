@@ -4,13 +4,13 @@ import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../../providers/useAuth'
 import { generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured } from '../../images'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
-import { BuilderHero } from '../builder/components/BuilderHero'
+import { BuilderHero } from '../../shared/builder/components/BuilderHero'
 import { BuilderPublishPanel } from '../builder/components/BuilderPublishPanel'
 import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
 import { BuilderStopsPanel } from '../builder/components/BuilderStopsPanel'
-import { useBuilderAutosave } from '../builder/hooks/useBuilderAutosave'
+import { useBuilderAutosave } from '../../shared/builder/hooks/useBuilderAutosave'
 import { useBuilderBootstrap } from '../builder/hooks/useBuilderBootstrap'
 import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
@@ -99,7 +99,7 @@ export default function ListicleItineraryBuilderPage() {
     }
   }, [draft, activeDayIndex])
 
-  useBuilderAutosave({ draft })
+  useBuilderAutosave(draft, saveDraft)
 
   const isSynced = Boolean(draft?.payloadId)
 
@@ -631,7 +631,14 @@ export default function ListicleItineraryBuilderPage() {
 
   return (
     <div className="stl-page">
-      <BuilderHero payloadId={draft.payloadId} onDiscardLocalDraft={actions.handleDiscardLocalDraft} />
+      <BuilderHero
+        eyebrow="Listicle Itinerary Builder"
+        newTitle="New Itinerary"
+        payloadId={draft.payloadId}
+        lede="Field-by-field and block-by-block editor for Payload `listicle-itineraries`."
+        backHref="/listicle-itineraries"
+        onDiscardLocalDraft={actions.handleDiscardLocalDraft}
+      />
 
       <div className="stl-builder-layout">
         <main className="stl-builder-main">

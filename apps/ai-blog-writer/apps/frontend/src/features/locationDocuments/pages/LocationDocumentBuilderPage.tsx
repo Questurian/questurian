@@ -28,6 +28,7 @@ import {
   validateDraft
 } from '../schema'
 import { findDraftByDraftId, findDraftByPayloadId, removeDraft, saveDraft } from '../storage'
+import { useBuilderAutosave } from '../../shared/builder/hooks/useBuilderAutosave'
 import type {
   ArrayFieldDefinition,
   LocationDocumentDraft,
@@ -282,14 +283,7 @@ export default function LocationDocumentBuilderPage() {
     }
   }, [token])
 
-  useEffect(() => {
-    if (!draft) return
-    const timer = window.setTimeout(() => {
-      saveDraft(draft)
-    }, 1200)
-
-    return () => window.clearTimeout(timer)
-  }, [draft])
+  useBuilderAutosave(draft, saveDraft, 1200)
 
   useEffect(() => {
     if (!draft) return
