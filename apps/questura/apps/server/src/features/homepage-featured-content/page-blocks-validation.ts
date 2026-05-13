@@ -8,13 +8,13 @@ import {
   validateHotelGridItems,
 } from './hotel-grid-service'
 import { normalizeArticleGridFourLayout } from './article-grid-four-layout'
-import { normalizeLocationGridMediaAspect } from './location-grid-media-aspect'
+import { normalizeLocationGridMediaAspect } from './location-grid/media-aspect'
 import {
   buildLocationGridGlobalData,
   normalizeLocationGridInput,
   validateLocationGridItems,
-  type LocationGridScope,
-} from './location-grid-service'
+} from './location-grid/service'
+import type { LocationGridScope } from './location-grid/types'
 import {
   buildHomepageFeaturedGlobalData,
   normalizeHomepageFeaturedInput,

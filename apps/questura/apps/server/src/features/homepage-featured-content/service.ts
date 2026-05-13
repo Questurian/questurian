@@ -13,6 +13,7 @@ import {
   type HomepageFeaturedItemRef,
   type HomepageFeaturedSelection,
 } from './types'
+import type { PayloadFindWhere } from './payload.types'
 
 const HOMEPAGE_FEATURED_COLLECTION_LABELS: Record<HomepageFeaturedCollection, string> = {
   articles: 'Standard Article',
@@ -40,8 +41,6 @@ type ParsedHomepageFeaturedSlot = {
   ref: HomepageFeaturedItemRef | null
   reason: HomepageFeaturedInvalidReason | null
 }
-
-type PayloadFindWhere = NonNullable<Parameters<Payload['find']>[0]['where']>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null

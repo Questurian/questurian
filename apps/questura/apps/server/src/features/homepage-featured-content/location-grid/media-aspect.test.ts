@@ -4,7 +4,7 @@ import {
   normalizeLocationGridMediaAspect,
   parseLocationGridMediaAspectBodyField,
   publicLocationGridMediaAspect,
-} from './location-grid-media-aspect'
+} from './media-aspect'
 
 describe('location-grid-media-aspect', () => {
   it('normalizes unknown values to rectangle', () => {

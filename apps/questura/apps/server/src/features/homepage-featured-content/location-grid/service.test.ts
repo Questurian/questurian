@@ -4,7 +4,7 @@ import {
   getLocationGridSelectionFromItems,
   searchLocationGridCandidates,
   validateLocationGridItems,
-} from './location-grid-service'
+} from './service'
 
 const CITY_HOMEPAGE_LOCATION_GRID_SCOPE = {
   childLevel: 'neighborhood' as const,

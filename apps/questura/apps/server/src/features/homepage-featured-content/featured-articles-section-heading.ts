@@ -1,6 +1,6 @@
 import { homepageBlockSupportsSectionHeading } from './homepage-block-section-heading'
 import { publicArticleGridFourLayout } from './article-grid-four-layout'
-import { publicLocationGridMediaAspect } from './location-grid-media-aspect'
+import { publicLocationGridMediaAspect } from './location-grid/media-aspect'
 
 export const HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX = 120
 

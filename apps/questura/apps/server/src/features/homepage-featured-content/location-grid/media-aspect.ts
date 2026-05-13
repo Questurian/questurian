@@ -1,27 +1,24 @@
-export const LOCATION_GRID_MEDIA_ASPECT_VALUES = ['rectangle', 'square', 'portrait'] as const
+import type { LocationGridMediaAspect, LocationGridMediaAspectParseResult } from './types'
 
-export type LocationGridMediaAspect = (typeof LOCATION_GRID_MEDIA_ASPECT_VALUES)[number]
+export const LOCATION_GRID_MEDIA_ASPECT_VALUES = ['rectangle', 'square', 'portrait'] as const
 
 export function normalizeLocationGridMediaAspect(raw: unknown): LocationGridMediaAspect {
   if (raw === 'square' || raw === 'portrait' || raw === 'rectangle') return raw
   return 'rectangle'
 }
 
-export function publicLocationGridMediaAspect(block: { mediaAspect?: unknown }): LocationGridMediaAspect {
+export function publicLocationGridMediaAspect(block: {
+  mediaAspect?: unknown
+}): LocationGridMediaAspect {
   return normalizeLocationGridMediaAspect(block.mediaAspect)
 }
-
-type MediaAspectParseResult =
-  | { ok: true; omit: true }
-  | { ok: true; omit: false; value: LocationGridMediaAspect }
-  | { ok: false; message: string }
 
 /**
  * Reads `mediaAspect` from JSON body. `omit` when key absent.
  */
 export function parseLocationGridMediaAspectBodyField(
   body: Record<string, unknown>,
-): MediaAspectParseResult {
+): LocationGridMediaAspectParseResult {
   if (!Object.prototype.hasOwnProperty.call(body, 'mediaAspect')) {
     return { ok: true, omit: true }
   }

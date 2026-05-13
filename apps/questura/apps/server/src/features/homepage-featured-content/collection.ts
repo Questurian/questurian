@@ -7,7 +7,7 @@ import { FeaturedArticleCarouselBlock } from './blocks/featured-article-carousel
 import { FeaturedArticlesBlock } from './blocks/featured-articles'
 import { HotelGridBlock } from './blocks/hotel-grid'
 import { TourGridBlock } from './blocks/tour-grid'
-import { LocationGridBlock } from './blocks/location-grid'
+import { LocationGridBlock } from './location-grid/block'
 import { QuesturianMapsBlock } from './blocks/questurian-maps'
 import { WhereToEatDrinkBlock } from './blocks/where-to-eat-drink'
 import { ThingsToDoAttractionsBlock } from './blocks/things-to-do-attractions'
@@ -15,7 +15,7 @@ import { ThingsToDoListiclesBlock } from './blocks/things-to-do-listicles'
 import { NewsletterSignupBlock } from './blocks/newsletter-signup'
 import {
   resolveLocationGridScopeFromLocation,
-} from './location-grid-service'
+} from './location-grid/service'
 import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
 
 const HOMEPAGE_BLOCK_TYPES = [

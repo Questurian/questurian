@@ -64,6 +64,8 @@ describe('formatPublicLocationHomepageDoc', () => {
         {
           blockType,
           totalSlots: 7,
+          sectionHeading: 'Editors picks',
+          sectionSubheading: null,
           items: [
             {
               title: 'Best Lima Cafes',

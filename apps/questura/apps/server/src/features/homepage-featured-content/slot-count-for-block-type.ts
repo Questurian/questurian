@@ -1,4 +1,4 @@
-import { LOCATION_GRID_MAX_SLOTS, LOCATION_GRID_MIN_SLOTS } from './location-grid-service'
+import { LOCATION_GRID_MAX_SLOTS, LOCATION_GRID_MIN_SLOTS } from './location-grid/service'
 import {
   HOMEPAGE_FEATURED_CONTENT_SLOTS,
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,

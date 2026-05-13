@@ -3,74 +3,25 @@ import type { Payload } from 'payload'
 import { getMediaSetPreviewAsset } from '@/features/media/lib/media-set-preview'
 import { locationIdentitySelect } from '@/shared/location/constants'
 
+import type {
+  LocationDocLike,
+  LocationGridCandidate,
+  LocationGridCandidatesResponse,
+  LocationGridInvalidItem,
+  LocationGridInvalidReason,
+  LocationGridItemRef,
+  LocationGridScope,
+  LocationGridScopeLocationInput,
+  LocationGridSearchOptions,
+  LocationGridSelection,
+  LocationGridSelectionOptions,
+  LocationGridValidationOptions,
+  ParsedLocationGridSlot,
+  PayloadFindWhere,
+} from './types'
+
 export const LOCATION_GRID_MIN_SLOTS = 4
 export const LOCATION_GRID_MAX_SLOTS = 8
-
-export type LocationGridLevel = 'city' | 'neighborhood'
-
-export type LocationGridScope = {
-  childLevel: LocationGridLevel
-  parentKey?: string | null
-}
-
-export type LocationGridItemRef = {
-  id: number
-}
-
-export type LocationGridCandidate = LocationGridItemRef & {
-  slot?: number
-  level: LocationGridLevel
-  locationKey: string | null
-  parentKey: string | null
-  countryName: string | null
-  cityName: string | null
-  neighborhoodName: string | null
-  title: string
-  subtitle: string | null
-  updatedAt: string | null
-  /** Resolved from guide.media.coverImage (media-set) when present */
-  coverImageUrl: string | null
-  coverImageAlt: string | null
-}
-
-export type LocationGridInvalidReason =
-  | 'invalid_reference'
-  | 'not_found'
-  | 'invalid_scope'
-
-export type LocationGridInvalidItem = {
-  slot: number
-  id?: number
-  title?: string | null
-  reason: LocationGridInvalidReason
-}
-
-export type LocationGridSelection = {
-  items: LocationGridCandidate[]
-  invalidItems: LocationGridInvalidItem[]
-  isComplete: boolean
-  totalSlots: number
-}
-
-export type LocationGridCandidatesResponse = {
-  docs: LocationGridCandidate[]
-  totalDocs: number
-  totalPages: number
-  page: number
-  limit: number
-}
-
-type LocationDocLike = {
-  id?: unknown
-  level?: unknown
-  locationKey?: unknown
-  parentKey?: unknown
-  countryName?: unknown
-  cityName?: unknown
-  neighborhoodName?: unknown
-  updatedAt?: unknown
-  guide?: unknown
-}
 
 /** Select identity + cover image relationship (populated at depth ≥ 2). */
 const locationGridSelect = {
@@ -122,14 +73,6 @@ function extractCoverImageFields(doc: LocationDocLike): {
 
   return { coverImageUrl: null, coverImageAlt: null }
 }
-
-type ParsedLocationGridSlot = {
-  slot: number
-  ref: LocationGridItemRef | null
-  reason: LocationGridInvalidReason | null
-}
-
-type PayloadFindWhere = NonNullable<Parameters<Payload['find']>[0]['where']>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -193,20 +136,17 @@ function normalizeLocationGridCandidate(doc: LocationDocLike): LocationGridCandi
     level: doc.level === 'neighborhood' ? 'neighborhood' : 'city',
     locationKey:
       typeof doc.locationKey === 'string' && doc.locationKey.trim() ? doc.locationKey : null,
-    parentKey:
-      typeof doc.parentKey === 'string' && doc.parentKey.trim() ? doc.parentKey : null,
+    parentKey: typeof doc.parentKey === 'string' && doc.parentKey.trim() ? doc.parentKey : null,
     countryName:
       typeof doc.countryName === 'string' && doc.countryName.trim() ? doc.countryName : null,
-    cityName:
-      typeof doc.cityName === 'string' && doc.cityName.trim() ? doc.cityName : null,
+    cityName: typeof doc.cityName === 'string' && doc.cityName.trim() ? doc.cityName : null,
     neighborhoodName:
       typeof doc.neighborhoodName === 'string' && doc.neighborhoodName.trim()
         ? doc.neighborhoodName
         : null,
     title: getLocationGridTitle(doc),
     subtitle: getLocationGridSubtitle(doc),
-    updatedAt:
-      typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
+    updatedAt: typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
     coverImageUrl: cover.coverImageUrl,
     coverImageAlt: cover.coverImageAlt,
   }
@@ -227,10 +167,7 @@ function isLocationWithinScope(
 }
 
 export function resolveLocationGridScopeFromLocation(
-  location: {
-    level?: unknown
-    locationKey?: unknown
-  } | null | undefined,
+  location: LocationGridScopeLocationInput | null | undefined,
 ): LocationGridScope | null {
   if (!location || location.level !== 'city') {
     return null
@@ -351,22 +288,19 @@ async function validateLocationGridDoc(
 export async function validateLocationGridItems(
   payload: Payload,
   refs: LocationGridItemRef[],
-  options: {
-    slotCount?: number
-    scope: LocationGridScope | null
-  },
+  options: LocationGridValidationOptions,
 ): Promise<LocationGridItemRef[]> {
   const slotCount = options.slotCount ?? LOCATION_GRID_MIN_SLOTS
   const scope = options.scope
 
   if (!scope) {
-    throw new Error(
-      'Location Grid blocks are only available on city homepages.',
-    )
+    throw new Error('Location Grid blocks are only available on city homepages.')
   }
 
   if (refs.length !== slotCount) {
-    throw new Error(`This block requires exactly ${slotCount} location${slotCount === 1 ? '' : 's'}.`)
+    throw new Error(
+      `This block requires exactly ${slotCount} location${slotCount === 1 ? '' : 's'}.`,
+    )
   }
 
   const keys = new Set<string>()
@@ -387,10 +321,7 @@ export async function validateLocationGridItems(
 export async function getLocationGridSelectionFromItems(
   payload: Payload,
   rawItems: unknown,
-  options: {
-    totalSlots?: number
-    scope: LocationGridScope | null
-  },
+  options: LocationGridSelectionOptions,
 ): Promise<LocationGridSelection> {
   const totalSlots = options.totalSlots ?? LOCATION_GRID_MIN_SLOTS
   const parsedSlots = parseLocationGridSlots(rawItems)
@@ -437,28 +368,19 @@ export async function getLocationGridSelectionFromItems(
     items,
     invalidItems,
     isComplete:
-      items.length === totalSlots
-      && invalidItems.length === 0
-      && parsedSlots.length === totalSlots,
+      items.length === totalSlots && invalidItems.length === 0 && parsedSlots.length === totalSlots,
     totalSlots,
   }
 }
 
 export async function searchLocationGridCandidates(
   payload: Payload,
-  options: {
-    query?: string
-    page?: number
-    limit?: number
-    scope: LocationGridScope | null
-  },
+  options: LocationGridSearchOptions,
 ): Promise<LocationGridCandidatesResponse> {
   const scope = options.scope
 
   if (!scope) {
-    throw new Error(
-      'Location Grid blocks are only available on city homepages.',
-    )
+    throw new Error('Location Grid blocks are only available on city homepages.')
   }
 
   const query = options.query?.trim() || ''
@@ -512,9 +434,7 @@ export async function searchLocationGridCandidates(
     })
   }
 
-  const where: PayloadFindWhere = whereClauses.length > 1
-    ? { and: whereClauses }
-    : whereClauses[0]
+  const where: PayloadFindWhere = whereClauses.length > 1 ? { and: whereClauses } : whereClauses[0]
 
   const response = await payload.find({
     collection: 'locations',

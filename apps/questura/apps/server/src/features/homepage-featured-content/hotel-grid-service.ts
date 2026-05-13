@@ -13,6 +13,7 @@ import {
   type HomepageHotelItemRef,
   type HomepageHotelSelection,
 } from './types'
+import type { PayloadFindWhere } from './payload.types'
 
 type AccommodationDocLike = {
   id?: unknown
@@ -31,8 +32,6 @@ type ParsedHotelSlot = {
   ref: HomepageHotelItemRef | null
   reason: HomepageHotelInvalidReason | null
 }
-
-type PayloadFindWhere = NonNullable<Parameters<Payload['find']>[0]['where']>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
