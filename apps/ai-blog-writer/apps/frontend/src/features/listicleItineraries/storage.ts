@@ -250,10 +250,15 @@ const storage = createDraftStorage<ListicleItineraryDraft>({
 })
 
 export const listDrafts = storage.listDrafts
-export const saveDraft = storage.saveDraft
 export const removeDraft = storage.removeDraft
 export const findDraftByPayloadId = storage.findDraftByPayloadId
 export const findDraftByDraftId = storage.findDraftByDraftId
+
+export function saveDraft(draft: ListicleItineraryDraft): void {
+  const persistableDraft = { ...draft }
+  delete persistableDraft.payloadSyncBaseline
+  storage.saveDraft(persistableDraft)
+}
 
 export function createEmptyDraft(): ListicleItineraryDraft {
   return {

@@ -40,7 +40,9 @@ import {
   serializeStructuredDataTemplate,
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
-import { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
+import { fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
 import { findItineraryItemById, type ListicleItineraryDraft } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
@@ -68,9 +70,11 @@ export default function ListicleItineraryBuilderPage() {
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [activeAiTargetId, setActiveAiTargetId] = useState<string | null>(null)
   const [isAutoWritingEmptyFields, setIsAutoWritingEmptyFields] = useState(false)
+  const [isRevertingToPayload, setIsRevertingToPayload] = useState(false)
   const [activeDayIndex, setActiveDayIndex] = useState(0)
   const [hasLocalChanges, setHasLocalChanges] = useState(false)
-  const bootstrapDoneRef = useRef(false)
+  const syncedBaselineRef = useRef<string | null>(null)
+  const bootstrappedDraftKeyRef = useRef<string | null>(null)
   const ignoreDirtyUntilRef = useRef(0)
 
   const onError = useCallback((message: string) => {
@@ -109,20 +113,61 @@ export default function ListicleItineraryBuilderPage() {
   useBuilderAutosave(draft, saveAutosaveDraft)
 
   const isSynced = Boolean(draft?.payloadId)
+  const draftSyncSignature = useMemo(
+    () => (draft ? buildItineraryDraftSyncSignature(draft) : null),
+    [draft],
+  )
+  const routeKey = `${payloadIdParam ?? ''}:${draftIdParam ?? ''}`
 
   useEffect(() => {
-    if (isLoading || !draft) return
-    if (!bootstrapDoneRef.current) {
-      bootstrapDoneRef.current = true
-      setHasLocalChanges(Boolean(draft.hasLocalChanges))
+    syncedBaselineRef.current = null
+    bootstrappedDraftKeyRef.current = null
+    ignoreDirtyUntilRef.current = 0
+    setHasLocalChanges(false)
+  }, [routeKey])
+
+  useEffect(() => {
+    if (isLoading || !draft || !draftSyncSignature) return
+
+    if (!draft.payloadId) {
+      syncedBaselineRef.current = draftSyncSignature
+      bootstrappedDraftKeyRef.current = `local:${draft.draftId}`
+      setHasLocalChanges(false)
       return
     }
+
+    const draftKey = `${routeKey}:${draft.draftId}:${draft.payloadId}`
+    if (bootstrappedDraftKeyRef.current !== draftKey) {
+      bootstrappedDraftKeyRef.current = draftKey
+      syncedBaselineRef.current = draft.payloadSyncBaseline || draftSyncSignature
+    }
+
     if (Date.now() < ignoreDirtyUntilRef.current) {
+      syncedBaselineRef.current = draftSyncSignature
+      setHasLocalChanges(false)
+      if (draft.hasLocalChanges) {
+        setDraft((current) => (
+          current && current.draftId === draft.draftId
+            ? { ...current, hasLocalChanges: false, payloadSyncBaseline: draftSyncSignature }
+            : current
+        ))
+      }
       return
     }
-    if (draft.payloadId) setHasLocalChanges(true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft])
+
+    const baseline = syncedBaselineRef.current || draftSyncSignature
+    const nextHasLocalChanges = baseline !== draftSyncSignature
+      || (!draft.payloadSyncBaseline && Boolean(draft.hasLocalChanges))
+    setHasLocalChanges(nextHasLocalChanges)
+
+    if (nextHasLocalChanges !== Boolean(draft.hasLocalChanges)) {
+      setDraft((current) => (
+        current && current.draftId === draft.draftId
+          ? { ...current, hasLocalChanges: nextHasLocalChanges }
+          : current
+      ))
+    }
+  }, [draft, draftSyncSignature, isLoading, routeKey, setDraft])
 
   const { isLoadingRelated, relatedByBlockType } = useRelatedItems({
     token,
@@ -215,6 +260,43 @@ export default function ListicleItineraryBuilderPage() {
     setError(null)
     setResult('Saved local draft in this browser only (not synced to Payload).')
   }, [draft])
+
+  const revertToPayloadVersion = useCallback(async (): Promise<void> => {
+    if (!draft?.payloadId) return
+    if (!token) {
+      onError('You must be logged in to reload from Payload.')
+      return
+    }
+
+    const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
+    const confirmed = window.confirm(
+      isPublishedPayload
+        ? 'Discard local staged changes and reload the current published Payload version? Payload will not be changed.'
+        : 'Discard local staged changes and reload the current Payload draft? Payload will not be changed.',
+    )
+    if (!confirmed) return
+
+    onError('')
+    setResult(null)
+    setIsRevertingToPayload(true)
+
+    try {
+      const doc = await fetchItineraryById(draft.payloadId, token)
+      const nextDraft = payloadDocToDraft(doc, draft.draftId)
+      nextDraft.editorModelName = draft.editorModelName
+      nextDraft.hasLocalChanges = false
+
+      ignoreDirtyUntilRef.current = Date.now() + 1500
+      setHasLocalChanges(false)
+      setDraft(nextDraft)
+      saveDraft(nextDraft)
+      setResult(isPublishedPayload ? 'Reverted to last published Payload version.' : 'Reverted to current Payload draft.')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to reload from Payload.')
+    } finally {
+      setIsRevertingToPayload(false)
+    }
+  }, [draft, onError, setDraft, token])
 
   const generateDraftTitleWithAi = useCallback(async ({ prompt }: { prompt: string }): Promise<string> => {
     if (!draft) {
@@ -786,11 +868,13 @@ export default function ListicleItineraryBuilderPage() {
           editorModelName={draft.editorModelName}
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
+          isRevertingToPayload={isRevertingToPayload}
           isAutoWritingEmptyFields={isAutoWritingEmptyFields}
           canAutoWriteEmptyFields={Boolean((isSynced || (isStep1LockedView && isStep2LockedView)) && getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0)}
           stepIssues={progress.stepIssues}
           onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}
+          onRevertToPayload={revertToPayloadVersion}
           onSyncToPayload={() => submit(syncTargetStatus)}
         />
       </div>

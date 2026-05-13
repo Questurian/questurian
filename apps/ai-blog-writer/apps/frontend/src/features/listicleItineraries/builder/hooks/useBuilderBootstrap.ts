@@ -14,6 +14,7 @@ import {
   type MediaAssetOption,
 } from '../../types'
 import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
+import { buildItineraryDraftSyncSignature } from '../utils/itinerary-draft-sync-signature'
 
 type UseBuilderBootstrapParams = {
   token?: string | null
@@ -103,13 +104,21 @@ function normalizeDraftModelName(draft: ListicleItineraryDraft): ListicleItinera
   }
 }
 
-function mergeLocalIntoPayloadDraft(
+export function mergeLocalIntoPayloadDraft(
   payloadDraft: ListicleItineraryDraft,
   localDraft: ListicleItineraryDraft,
 ): ListicleItineraryDraft {
-  if (!localDraft.hasLocalChanges) return payloadDraft
+  const payloadSyncBaseline = buildItineraryDraftSyncSignature(payloadDraft)
 
-  return {
+  if (!localDraft.hasLocalChanges) {
+    return {
+      ...payloadDraft,
+      editorModelName: localDraft.editorModelName,
+      payloadSyncBaseline,
+    }
+  }
+
+  const merged = {
     ...localDraft,
     payloadId: payloadDraft.payloadId,
     payloadStatus: payloadDraft.payloadStatus,
@@ -118,6 +127,22 @@ function mergeLocalIntoPayloadDraft(
     payloadAuthorName: payloadDraft.payloadAuthorName,
     status: payloadDraft.status,
     articleType: payloadDraft.articleType,
+    payloadSyncBaseline,
+  }
+
+  if (buildItineraryDraftSyncSignature(merged) === payloadSyncBaseline) {
+    return {
+      ...payloadDraft,
+      draftId: localDraft.draftId,
+      editorModelName: localDraft.editorModelName,
+      hasLocalChanges: false,
+      payloadSyncBaseline,
+    }
+  }
+
+  return {
+    ...merged,
+    hasLocalChanges: true,
   }
 }
 

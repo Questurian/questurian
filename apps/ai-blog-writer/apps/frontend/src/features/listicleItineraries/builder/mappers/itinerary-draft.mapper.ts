@@ -15,6 +15,7 @@ import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerar
 import { getRelationshipId } from '../utils/field-normalizers.utils'
 import { getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
 import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
+import { buildItineraryDraftSyncSignature } from '../utils/itinerary-draft-sync-signature'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
@@ -168,7 +169,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
   const hasStep3Content = days.some((d) => d.whereStaying.length > 0 || d.items.length > 0)
   const normalizedSeoSection = normalizeSeoSection(doc.seoSection || createEmptySeoSection())
 
-  return {
+  const draft: ListicleItineraryDraft = {
     draftId: existingDraftId || `lit_payload_${doc.id}`,
     ...buildPayloadItineraryMetadataPatch({
       doc,
@@ -198,5 +199,10 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     status: doc.status || 'draft',
     articleType: 'listicle-itinerary',
     updatedAt: doc.updatedAt || new Date().toISOString(),
+  }
+
+  return {
+    ...draft,
+    payloadSyncBaseline: buildItineraryDraftSyncSignature(draft),
   }
 }

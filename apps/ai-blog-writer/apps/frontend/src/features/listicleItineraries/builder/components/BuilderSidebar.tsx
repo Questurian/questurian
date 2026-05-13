@@ -10,12 +10,14 @@ type BuilderSidebarProps = {
   editorModelName: EditorAssistModelName
   onEditorModelChange: (modelName: string) => void
   isSaving: boolean
+  isRevertingToPayload: boolean
   isAutoWritingEmptyFields: boolean
   canAutoWriteEmptyFields: boolean
   stepIssues: string[]
   onAutoWriteEmptyFields: () => Promise<void>
   onSaveLocalDraft: () => Promise<void>
   onSyncToPayload: () => Promise<void>
+  onRevertToPayload: () => Promise<void>
 }
 
 export function BuilderSidebar({
@@ -25,13 +27,17 @@ export function BuilderSidebar({
   editorModelName,
   onEditorModelChange,
   isSaving,
+  isRevertingToPayload,
   isAutoWritingEmptyFields,
   canAutoWriteEmptyFields,
   stepIssues,
   onAutoWriteEmptyFields,
   onSaveLocalDraft,
   onSyncToPayload,
+  onRevertToPayload,
 }: BuilderSidebarProps) {
+  const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
+
   return (
     <SharedBuilderSidebar
       draft={draft}
@@ -49,13 +55,16 @@ export function BuilderSidebar({
           type="button"
           className="stl-btn stl-btn-secondary"
           onClick={() => void onAutoWriteEmptyFields()}
-          disabled={isSaving || isAutoWritingEmptyFields || !canAutoWriteEmptyFields}
+          disabled={isSaving || isRevertingToPayload || isAutoWritingEmptyFields || !canAutoWriteEmptyFields}
         >
           {isAutoWritingEmptyFields ? 'Writing Empty Fields...' : 'Auto Write Empty Fields'}
         </button>
       )}
       saveLocalDraftLabel="Save Local Draft (Browser)"
+      revertToPayloadLabel={isPublishedPayload ? 'Revert to Last Published' : 'Revert to Payload Draft'}
       onSaveLocalDraft={onSaveLocalDraft}
+      onRevertToPayload={onRevertToPayload}
+      isRevertingToPayload={isRevertingToPayload}
       onSyncToPayload={onSyncToPayload}
     />
   )

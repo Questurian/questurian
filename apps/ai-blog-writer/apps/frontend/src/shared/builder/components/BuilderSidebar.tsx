@@ -42,9 +42,12 @@ export type BuilderSidebarProps = {
 
   saveLocalDraftLabel?: string
   syncLabel?: string
+  revertToPayloadLabel?: string
 
   onSaveLocalDraft: () => Promise<void>
   onSyncToPayload: () => Promise<void>
+  onRevertToPayload?: () => Promise<void>
+  isRevertingToPayload?: boolean
 }
 
 export function BuilderSidebar({
@@ -63,8 +66,11 @@ export function BuilderSidebar({
   autoWriteStatusNote,
   saveLocalDraftLabel = 'Save Local Draft',
   syncLabel,
+  revertToPayloadLabel = 'Revert to Payload Version',
   onSaveLocalDraft,
   onSyncToPayload,
+  onRevertToPayload,
+  isRevertingToPayload = false,
 }: BuilderSidebarProps) {
   const isStep1Locked = draft.step1_complete && !draft.in_update_mode
   const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
@@ -73,6 +79,7 @@ export function BuilderSidebar({
   const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
   const resolvedSyncLabel = syncLabel
     ?? (showPublishedBadge && isPublishedPayload ? 'Update Published Payload' : 'Sync to Payload')
+  const payloadActionBusy = isSaving || isRevertingToPayload
 
   const syncIssues: string[] = []
   if (isSynced) {
@@ -159,10 +166,20 @@ export function BuilderSidebar({
               {autoWriteStatusNote}
             </p>
           ) : null}
-          <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={isSaving}>
+          <button type="button" className="stl-btn" onClick={() => void onSaveLocalDraft()} disabled={payloadActionBusy}>
             {saveLocalDraftLabel}
           </button>
-          <button type="button" className="stl-btn stl-btn-success payload-action-btn" onClick={() => void onSyncToPayload()} disabled={isSaving}>
+          {isSynced && onRevertToPayload ? (
+            <button
+              type="button"
+              className="stl-btn stl-btn-secondary"
+              onClick={() => void onRevertToPayload()}
+              disabled={payloadActionBusy}
+            >
+              {isRevertingToPayload ? 'Reverting...' : revertToPayloadLabel}
+            </button>
+          ) : null}
+          <button type="button" className="stl-btn stl-btn-success payload-action-btn" onClick={() => void onSyncToPayload()} disabled={payloadActionBusy}>
             <img src={payloadLogoUrl} alt="" aria-hidden="true" className="payload-action-btn-icon" />
             {isSaving ? 'Syncing...' : resolvedSyncLabel}
           </button>

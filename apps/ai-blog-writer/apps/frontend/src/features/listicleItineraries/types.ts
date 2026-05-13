@@ -174,6 +174,7 @@ export type ListicleItineraryDraft = {
   payloadPublishedAt?: string
   payloadUpdatedAt?: string
   payloadAuthorName?: string
+  payloadSyncBaseline?: string
   hasLocalChanges?: boolean
   editorModelName: EditorAssistModelName
   title: string
