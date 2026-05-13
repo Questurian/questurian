@@ -28,7 +28,7 @@ export {
   fetchArticleTypeGuidelinesById,
   fetchArticleTypes,
 } from './api/article-types.api'
-export { fetchArticles } from './api/articles.api'
+export { deleteArticle, fetchArticles } from './api/articles.api'
 export {
   fetchResult,
   getPrompt2BlogDebug,

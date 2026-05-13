@@ -174,6 +174,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
       doc,
       fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
     }),
+    hasLocalChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: doc.title || '',
     location: doc.location || '',

@@ -325,6 +325,7 @@ export function useItinerarySubmit({
 
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
       nextDraft.editorModelName = draft.editorModelName
+      nextDraft.hasLocalChanges = false
       nextDraft.header.introMarkdown = submitDraft.header.introMarkdown
       nextDraft.days = nextDraft.days.map((day) => ({
         ...day,

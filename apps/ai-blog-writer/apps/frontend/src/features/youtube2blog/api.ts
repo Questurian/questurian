@@ -157,6 +157,9 @@ export type SavedArticle = {
   updated_at: string
   markdown: string
   markdown_length: number
+  synced_to_payload?: boolean
+  payload_article_id?: number | null
+  synced_at?: string | null
 }
 
 export async function fetchArticles(): Promise<SavedArticle[]> {
@@ -167,6 +170,16 @@ export async function fetchArticles(): Promise<SavedArticle[]> {
   }
 
   return response.json()
+}
+
+export async function deleteArticle(runId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'Failed to delete article'))
+  }
 }
 
 export async function fetchArticleTypes(): Promise<ArticleType[]> {

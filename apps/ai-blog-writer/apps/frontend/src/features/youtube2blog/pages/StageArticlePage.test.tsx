@@ -24,8 +24,9 @@ describe('YouTube2Blog StageArticlePage', () => {
       featureLabel: 'YouTube2Blog',
       heroDescription: 'Step through setup, featured image selection, article content blocks, and SEO before saving drafts or publishing to Payload.',
       syncBehavior: 'draft-sync',
+      backToStageLabel: 'Back to Articles',
       routes: {
-        stagePath: '/youtube2blog/stage',
+        stagePath: '/youtube2blog/articles',
         stageArticlePath: '/youtube2blog/stage-article',
         articlesPath: '/youtube2blog/articles',
       },

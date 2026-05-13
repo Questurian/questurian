@@ -1,14 +1,10 @@
 import { Link } from 'react-router-dom'
 
-import { getStagedArticlesCount } from '../utils/staged-articles.utils'
-
 type HeroHeaderProps = {
   activeBadge: string
 }
 
 export function HeroHeader({ activeBadge }: HeroHeaderProps) {
-  const stagedCount = getStagedArticlesCount()
-
   return (
     <header className="hero">
       <div>
@@ -32,9 +28,6 @@ export function HeroHeader({ activeBadge }: HeroHeaderProps) {
         </Link>
         <Link to="/youtube2blog/article-types" className="nav-link">
           Article Types
-        </Link>
-        <Link to="/youtube2blog/stage" className="nav-link">
-          Staged ({stagedCount})
         </Link>
       </div>
     </header>

@@ -74,26 +74,36 @@ export default function ListicleItinerariesPage() {
   }, [token])
 
   const rows = useMemo(() => {
+    const localChangesByPayloadId = new Map(
+      localDrafts
+        .filter((draft) => draft.payloadId && draft.hasLocalChanges)
+        .map((draft) => [draft.payloadId, draft.draftId]),
+    )
+
     return itineraries.map((doc) => ({
       id: doc.id,
       title: doc.title || 'Untitled',
       location: doc.location || '-',
       status: doc.status || 'draft',
       updatedAt: formatDate(doc.updatedAt),
+      localDraftId: localChangesByPayloadId.get(doc.id),
     }))
-  }, [itineraries])
+  }, [itineraries, localDrafts])
 
   const localRows = useMemo(() => {
+    const payloadIds = new Set(itineraries.map((doc) => doc.id))
+
     return [...localDrafts]
+      .filter((draft) => !draft.payloadId || !payloadIds.has(draft.payloadId))
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .map((draft) => ({
         draftId: draft.draftId,
-        payloadId: draft.payloadId,
         title: draft.title || 'Untitled',
         location: draft.location || '-',
+        source: draft.payloadId ? `Payload #${draft.payloadId}` : 'Local only',
         updatedAt: formatDate(draft.updatedAt),
       }))
-  }, [localDrafts])
+  }, [itineraries, localDrafts])
 
   const discardLocalDraft = (draftId: string) => {
     const confirmed = window.confirm('Discard this local draft? This cannot be undone.')
@@ -102,26 +112,16 @@ export default function ListicleItinerariesPage() {
     setLocalDrafts(listDrafts())
   }
 
-  return (
-    <div className="stl-page">
-      <header className="stl-hero">
-        <div>
-          <p className="stl-eyebrow">Questurian Studio</p>
-          <h1>Listicle Itineraries</h1>
-          <p className="stl-lede">
-            Build and maintain Payload listicle-itinerary articles with AI-assisted block editing.
-          </p>
-        </div>
-        <div className="stl-hero-actions">
-          <Link className="stl-btn stl-btn-secondary" to="/">
-            Back Home
-          </Link>
-          <Link className="stl-btn" to="/listicle-itineraries/builder">
-            New Itinerary
-          </Link>
-        </div>
-      </header>
-
+  const pageContent = isLoading ? (
+    <section className="stl-panel">
+      <p className="stl-placeholder">Loading itineraries...</p>
+    </section>
+  ) : error ? (
+    <section className="stl-panel">
+      <p className="stl-error">{error}</p>
+    </section>
+  ) : (
+    <>
       <section className="stl-panel">
         <div className="stl-panel-header">
           <h2>Local Drafts ({localRows.length})</h2>
@@ -149,7 +149,7 @@ export default function ListicleItinerariesPage() {
                   <tr key={row.draftId}>
                     <td>{row.title}</td>
                     <td>{row.location}</td>
-                    <td>{row.payloadId ? `Payload #${row.payloadId}` : 'Local only'}</td>
+                    <td>{row.source}</td>
                     <td>{row.updatedAt}</td>
                     <td>
                       <div className="stl-table-actions">
@@ -181,49 +181,78 @@ export default function ListicleItinerariesPage() {
           <h2>Payload Documents ({rows.length})</h2>
         </div>
 
-        {isLoading ? <p className="stl-placeholder">Loading itineraries...</p> : null}
-        {error ? <p className="stl-error">{error}</p> : null}
-
-        {!isLoading && !error ? (
-          rows.length === 0 ? (
-            <div className="stl-empty">
-              <p>No listicle-itineraries found.</p>
-              <p>Create one to start building this format in the app.</p>
-            </div>
-          ) : (
-            <div className="stl-table-wrap">
-              <table className="stl-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Updated</th>
-                    <th></th>
+        {rows.length === 0 ? (
+          <div className="stl-empty">
+            <p>No listicle-itineraries found.</p>
+            <p>Create one to start building this format in the app.</p>
+          </div>
+        ) : (
+          <div className="stl-table-wrap">
+            <table className="stl-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.title}</td>
+                    <td>{row.location}</td>
+                    <td>
+                      <span className={`stl-status stl-status-${row.status}`}>{row.status}</span>
+                      {row.localDraftId ? (
+                        <span className="stl-status stl-status-draft">Local edits</span>
+                      ) : null}
+                    </td>
+                    <td>{row.updatedAt}</td>
+                    <td>
+                      <Link
+                        className="stl-link"
+                        to={
+                          row.localDraftId
+                            ? `/listicle-itineraries/builder?draftId=${encodeURIComponent(row.localDraftId)}`
+                            : `/listicle-itineraries/builder?id=${row.id}`
+                        }
+                      >
+                        Edit
+                      </Link>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.title}</td>
-                      <td>{row.location}</td>
-                      <td>
-                        <span className={`stl-status stl-status-${row.status}`}>{row.status}</span>
-                      </td>
-                      <td>{row.updatedAt}</td>
-                      <td>
-                        <Link className="stl-link" to={`/listicle-itineraries/builder?id=${row.id}`}>
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : null}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
+    </>
+  )
+
+  return (
+    <div className="stl-page">
+      <header className="stl-hero">
+        <div>
+          <p className="stl-eyebrow">Questurian Studio</p>
+          <h1>Listicle Itineraries</h1>
+          <p className="stl-lede">
+            Build and maintain Payload listicle-itinerary articles with AI-assisted block editing.
+          </p>
+        </div>
+        <div className="stl-hero-actions">
+          <Link className="stl-btn stl-btn-secondary" to="/">
+            Back Home
+          </Link>
+          <Link className="stl-btn" to="/listicle-itineraries/builder">
+            New Itinerary
+          </Link>
+        </div>
+      </header>
+
+      {pageContent}
     </div>
   )
 }

@@ -52,6 +52,7 @@ type StandardArticleStageBuilderProps = {
   heroEyebrow?: string
   heroDescription: string
   syncBehavior?: 'finalize' | 'draft-sync'
+  backToStageLabel?: string
 }
 
 function validateSetupStep(title: string, locationId?: number): string[] {
@@ -89,6 +90,7 @@ export function StandardArticleStageBuilder({
   heroEyebrow = `${featureLabel} Article Builder`,
   heroDescription,
   syncBehavior = 'draft-sync',
+  backToStageLabel = 'Back to Stage List',
 }: StandardArticleStageBuilderProps) {
   const { token, user } = useAuth()
   const [localError, setLocalError] = useState<string | null>(null)
@@ -531,7 +533,7 @@ export function StandardArticleStageBuilder({
             </div>
           </div>
           <div className="stl-hero-actions">
-            <Link to={layout.stagePath} className="stl-btn stl-btn-secondary">Back to Stage List</Link>
+            <Link to={layout.stagePath} className="stl-btn stl-btn-secondary">{backToStageLabel}</Link>
             <button type="button" className="stl-btn stl-btn-danger" onClick={layout.onDelete}>
               Delete Staged Article
             </button>

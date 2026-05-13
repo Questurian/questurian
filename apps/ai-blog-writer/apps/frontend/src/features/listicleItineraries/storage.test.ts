@@ -52,6 +52,16 @@ describe('listicleItineraries storage', () => {
     expect(listDrafts()[0]?.sharedNeighborhoods).toEqual([7, 6])
   })
 
+  it('round-trips the local changes marker for Payload-linked drafts', () => {
+    const draft = createEmptyDraft()
+    draft.payloadId = 123
+    draft.hasLocalChanges = true
+
+    saveDraft(draft)
+
+    expect(listDrafts()[0]?.hasLocalChanges).toBe(true)
+  })
+
   it('round-trips manual tour-agency instagram and key-location rows', () => {
     const draft = createEmptyDraft()
     draft.days = [{

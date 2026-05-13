@@ -27,7 +27,7 @@ export default function StageArticlePage() {
     <StandardArticleStageBuilder
       storageKey="prompt2blog_staged_articles_v2"
       routes={{
-        stagePath: '/prompt2blog/stage',
+        stagePath: '/prompt2blog/articles',
         stageArticlePath: '/prompt2blog/stage-article',
         articlesPath: '/prompt2blog/articles',
       }}
@@ -50,6 +50,7 @@ export default function StageArticlePage() {
       featureLabel="Prompt2Blog"
       heroDescription="Step through setup, featured image selection, article content blocks, and SEO before saving drafts or publishing to Payload."
       syncBehavior="draft-sync"
+      backToStageLabel="Back to Articles"
     />
   )
 }

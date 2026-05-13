@@ -103,6 +103,24 @@ function normalizeDraftModelName(draft: ListicleItineraryDraft): ListicleItinera
   }
 }
 
+function mergeLocalIntoPayloadDraft(
+  payloadDraft: ListicleItineraryDraft,
+  localDraft: ListicleItineraryDraft,
+): ListicleItineraryDraft {
+  if (!localDraft.hasLocalChanges) return payloadDraft
+
+  return {
+    ...localDraft,
+    payloadId: payloadDraft.payloadId,
+    payloadStatus: payloadDraft.payloadStatus,
+    payloadPublishedAt: payloadDraft.payloadPublishedAt,
+    payloadUpdatedAt: payloadDraft.payloadUpdatedAt,
+    payloadAuthorName: payloadDraft.payloadAuthorName,
+    status: payloadDraft.status,
+    articleType: payloadDraft.articleType,
+  }
+}
+
 export function useBuilderBootstrap({
   token,
   payloadIdParam,
@@ -136,6 +154,7 @@ export function useBuilderBootstrap({
     },
     fetchPayloadDoc: fetchItineraryById,
     payloadDocToDraft,
+    mergeLocalIntoPayloadDraft,
     normalizeDraft: normalizeDraftModelName,
     enrichAuxData: async (nextDraft, authToken, aux) => {
       const missingMediaIds = collectMissingMediaAssetIds(nextDraft, aux.mediaAssets)

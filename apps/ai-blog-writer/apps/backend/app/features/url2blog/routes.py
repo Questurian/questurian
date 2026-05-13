@@ -21,6 +21,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, model_validator
 
 from app.core import (
+    cleanup_run,
     get_all_runs,
     read_output,
     read_stage_result,
@@ -1309,6 +1310,22 @@ async def debug_run(run_id: str) -> JSONResponse:
 async def get_articles() -> JSONResponse:
     """Get all completed URL2Blog articles."""
     return JSONResponse(get_all_completed_articles())
+
+
+@router.delete("/articles/{run_id}")
+async def delete_article(run_id: str) -> JSONResponse:
+    """Delete a URL2Blog run and all of its stored data."""
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    cleanup_run(run_id)
+    return JSONResponse(
+        {
+            "message": "Article deleted",
+            "run_id": run_id,
+        }
+    )
 
 
 @router.post("/articles/{run_id}/sync")

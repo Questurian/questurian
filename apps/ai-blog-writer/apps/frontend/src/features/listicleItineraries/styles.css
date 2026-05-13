@@ -818,6 +818,10 @@
   font-weight: 600;
 }
 
+.stl-status + .stl-status {
+  margin-left: 0.35rem;
+}
+
 .stl-status-draft {
   background: #eef2f7;
   color: #4a5567;

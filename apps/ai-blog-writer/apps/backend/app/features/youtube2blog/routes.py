@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from uuid import uuid4
 
 from shared import RawVideoRecord
-from app.core import read_stage_result, read_status, read_output, clear_all_runs
+from app.core import read_stage_result, read_status, read_output, cleanup_run, clear_all_runs
 
 from .orchestrator import initialize_run, process_run
 from .stages.stage_deep_expand import detect_listicle, run_deep_expand
@@ -300,6 +300,20 @@ async def get_articles() -> JSONResponse:
     """Get all completed YouTube2Blog articles."""
     articles = get_all_completed_articles()
     return JSONResponse(articles)
+
+
+@router.delete("/articles/{run_id}")
+async def delete_article(run_id: str) -> JSONResponse:
+    """Delete a YouTube2Blog run and all of its stored data."""
+    status = read_status(run_id)
+    if not status or status.get("feature") != "youtube2blog":
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    cleanup_run(run_id)
+    return JSONResponse({
+        "message": "Article deleted",
+        "run_id": run_id,
+    })
 
 
 # Sync Status Endpoints

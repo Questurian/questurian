@@ -1,6 +1,6 @@
-@import '../../listicleItineraries/styles.css';
+@import '../listicleItineraries/styles.css';
 
-.y2b-saved-layout {
+.p2b-saved-layout {
   display: grid;
   gap: 1rem;
 }
@@ -13,4 +13,9 @@
 .stl-status-local {
   background: #eef2ff;
   color: #3730a3;
+}
+
+.p2b-status-note {
+  color: #475569;
+  font-size: 0.85rem;
 }

@@ -1031,16 +1031,6 @@ export default function Prompt2BlogPage() {
         <div className="p2b-badge-row">
           <Link to="/" className="p2b-nav-link">&larr; Home</Link>
           <Link to="/prompt2blog/articles" className="p2b-nav-link">Saved Articles</Link>
-          <Link to="/prompt2blog/stage" className="p2b-nav-link">
-            Staged ({(() => {
-              try {
-                const stored = localStorage.getItem('prompt2blog_staged_articles_v2')
-                return stored ? JSON.parse(stored).length : 0
-              } catch {
-                return 0
-              }
-            })()})
-          </Link>
         </div>
       </header>
 

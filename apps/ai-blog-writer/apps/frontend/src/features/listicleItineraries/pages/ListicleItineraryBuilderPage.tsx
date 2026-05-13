@@ -41,7 +41,7 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
 import { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
-import { findItineraryItemById } from '../types'
+import { findItineraryItemById, type ListicleItineraryDraft } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
 
@@ -99,7 +99,14 @@ export default function ListicleItineraryBuilderPage() {
     }
   }, [draft, activeDayIndex])
 
-  useBuilderAutosave(draft, saveDraft)
+  const saveAutosaveDraft = useCallback((nextDraft: ListicleItineraryDraft) => {
+    saveDraft({
+      ...nextDraft,
+      hasLocalChanges,
+    })
+  }, [hasLocalChanges])
+
+  useBuilderAutosave(draft, saveAutosaveDraft)
 
   const isSynced = Boolean(draft?.payloadId)
 
@@ -107,6 +114,7 @@ export default function ListicleItineraryBuilderPage() {
     if (isLoading || !draft) return
     if (!bootstrapDoneRef.current) {
       bootstrapDoneRef.current = true
+      setHasLocalChanges(Boolean(draft.hasLocalChanges))
       return
     }
     if (Date.now() < ignoreDirtyUntilRef.current) {
@@ -197,7 +205,13 @@ export default function ListicleItineraryBuilderPage() {
 
   const saveLocalDraft = useCallback(async (): Promise<void> => {
     if (!draft) return
-    saveDraft(draft)
+    saveDraft({
+      ...draft,
+      hasLocalChanges: Boolean(draft.payloadId) || draft.hasLocalChanges,
+    })
+    if (draft.payloadId) {
+      setHasLocalChanges(true)
+    }
     setError(null)
     setResult('Saved local draft in this browser only (not synced to Payload).')
   }, [draft])

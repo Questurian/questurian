@@ -421,6 +421,15 @@ export async function fetchArticles(): Promise<Url2BlogSavedArticle[]> {
   return response.json()
 }
 
+export async function deleteArticle(runId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'Failed to delete URL2Blog article'))
+  }
+}
+
 export async function markArticleSynced(
   runId: string,
   payloadArticleId: number

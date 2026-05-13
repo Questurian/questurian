@@ -27,7 +27,7 @@ export default function StageArticlePage() {
     <StandardArticleStageBuilder
       storageKey="url2blog_staged_articles_v2"
       routes={{
-        stagePath: '/url2blog/stage',
+        stagePath: '/url2blog/articles',
         stageArticlePath: '/url2blog/stage-article',
         articlesPath: '/url2blog/articles',
       }}
@@ -50,6 +50,7 @@ export default function StageArticlePage() {
       featureLabel="URL2Blog"
       heroDescription="Step through setup, featured image selection, article content blocks, and SEO before saving drafts or publishing to Payload."
       syncBehavior="draft-sync"
+      backToStageLabel="Back to Articles"
     />
   )
 }

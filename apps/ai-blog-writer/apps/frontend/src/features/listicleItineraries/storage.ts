@@ -160,6 +160,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
     payloadPublishedAt: typeof value.payloadPublishedAt === 'string' && value.payloadPublishedAt.trim() ? value.payloadPublishedAt : undefined,
     payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim() ? value.payloadUpdatedAt : undefined,
     payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim() ? value.payloadAuthorName : undefined,
+    hasLocalChanges: Boolean(value.hasLocalChanges),
     editorModelName: typeof value.editorModelName === 'string'
       ? value.editorModelName as ListicleItineraryDraft['editorModelName']
       : DEFAULT_EDITOR_ASSIST_MODEL,
@@ -262,6 +263,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     payloadPublishedAt: undefined,
     payloadUpdatedAt: undefined,
     payloadAuthorName: undefined,
+    hasLocalChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     title: '',
     location: '',

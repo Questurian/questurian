@@ -2,6 +2,10 @@ import type { MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useStageList } from '../hooks/useStageList'
 import type { StagedArticle } from '../types'
+import {
+  getStagedArticleMissingFields,
+  getStagedArticleStatusBadge,
+} from '../utils/staged-article-status'
 import '../../youtube2blog/styles/stage.css'
 
 type StageListPageProps = {
@@ -12,39 +16,8 @@ type StageListPageProps = {
 }
 
 function renderStatusBadge(article: StagedArticle, showEditorialBlocking: boolean) {
-  if (article.payloadStatus === 'published') {
-    return <span className="stage-list-badge published">✓ Published</span>
-  }
-
-  if (article.payloadArticleId || article.publishedToPayload) {
-    return <span className="stage-list-badge ready">Linked Draft</span>
-  }
-
-  if (showEditorialBlocking && article.editorialBlocks?.length) {
-    return <span className="stage-list-badge partial">Editorial Blocked</span>
-  }
-
-  if (article.lexicalConverted && article.locationId && article.featuredImageId) {
-    return <span className="stage-list-badge ready">Ready to Publish</span>
-  }
-
-  if (article.lexicalConverted) {
-    return <span className="stage-list-badge partial">Lexical Ready</span>
-  }
-
-  return <span className="stage-list-badge draft">Draft</span>
-}
-
-function getMissingFields(article: StagedArticle, showEditorialBlocking: boolean): string[] {
-  const missing: string[] = []
-
-  if (!article.locationId) missing.push('location')
-  if (!article.featuredImageId) missing.push('featured image')
-  if (showEditorialBlocking && article.editorialBlocks?.length) {
-    missing.push('editorial block handling')
-  }
-
-  return missing
+  const badge = getStagedArticleStatusBadge(article, { showEditorialBlocking })
+  return <span className={`stage-list-badge ${badge.className}`}>{badge.label}</span>
 }
 
 export default function StageListPage({
@@ -122,7 +95,7 @@ export default function StageListPage({
       ) : (
         <div className="stage-list">
           {stagedArticles.map((article) => {
-            const missing = getMissingFields(article, showEditorialBlocking)
+            const missing = getStagedArticleMissingFields(article, { showEditorialBlocking })
 
             return (
               <Link
