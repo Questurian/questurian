@@ -9,12 +9,9 @@
  * ```
  * admin: {
  *   condition: visibilityRules.subscriptionStatus(data),
- *   readOnly: !editabilityRules.subscriptionStatus(req)
  * }
  * ```
  */
-
-export type UserRole = 'admin' | 'editor' | 'user'
 
 /**
  * Visibility rules control whether a field appears on screen
@@ -163,77 +160,6 @@ export const visibilityRules = {
   publicProfileExpertise: (data?: Record<string, any>) => visibilityRules.publicProfileTab(data),
   publicProfileSocialLinks: (data?: Record<string, any>) => visibilityRules.publicProfileTab(data),
 } as const
-
-/**
- * Editability rules control whether a field can be modified
- * Used alongside readOnly flags to lock fields for certain roles
- */
-export const editabilityRules = {
-  // Role field - only admins can change
-  role: (userRole?: UserRole) => userRole === 'admin',
-
-  // Emails & names - everyone can edit their own
-  email: (userRole?: UserRole) => userRole !== undefined,
-  firstName: (userRole?: UserRole) => userRole !== undefined,
-  lastName: (userRole?: UserRole) => userRole !== undefined,
-
-  // Auth fields - read-only for everyone (system-managed)
-  authProvider: () => false,
-  hasLocalPassword: () => false,
-  hasGoogleOAuth: () => false,
-  oauthId: () => false,
-  passwordSetAt: () => false,
-  googleLinkedAt: () => false,
-  tokenVersion: () => false,
-
-  // Membership fields - mostly read-only, webhooks manage these
-  subscriptionStatus: () => false, // Webhooks only
-  subscriptionRenewsAt: () => false,
-  membershipExpiration: (userRole?: UserRole) => userRole === 'admin', // Admins can override
-  cancelAtPeriodEnd: () => false,
-  stripeCustomerId: () => false,
-  stripeSubscriptionId: () => false,
-  affiliateReferralId: () => false,
-  affiliateReferredAt: () => false,
-
-  // System timestamps - read-only
-  createdAt: () => false,
-  updatedAt: () => false,
-
-  // Computed fields - read-only
-  membershipStatusSummary: () => false,
-  membershipStatusOverview: () => false,
-
-  // Public profile - editors can edit, admins can edit others
-  publicProfileAvatar: (userRole?: UserRole) => userRole !== undefined,
-  publicProfileIsPublic: (userRole?: UserRole) => userRole !== undefined,
-  publicProfileDisplayName: (userRole?: UserRole) => userRole !== undefined,
-  publicProfileBio: (userRole?: UserRole) => userRole !== undefined,
-  publicProfileExpertise: (userRole?: UserRole) => userRole !== undefined,
-  publicProfileSocialLinks: (userRole?: UserRole) => userRole !== undefined,
-} as const
-
-/**
- * Helper function to get visibility and editability for a field and role
- * Returns { visible: boolean, editable: boolean, readOnly: boolean }
- */
-export function getFieldAccess(
-  fieldName: keyof typeof visibilityRules,
-  data?: Record<string, any>,
-  userRole?: UserRole
-): { visible: boolean; editable: boolean; readOnly: boolean } {
-  const visibilityFn = visibilityRules[fieldName] as (data?: any) => boolean
-  const editabilityFn = editabilityRules[fieldName as keyof typeof editabilityRules] as (role?: UserRole) => boolean
-
-  const visible = visibilityFn ? visibilityFn(data) : true
-  const editable = visible && (editabilityFn ? editabilityFn(userRole) : false)
-
-  return {
-    visible,
-    editable,
-    readOnly: visible && !editable,
-  }
-}
 
 /**
  * Summary: What each role sees

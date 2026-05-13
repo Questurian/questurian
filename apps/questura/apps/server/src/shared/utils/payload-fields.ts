@@ -1,6 +1,6 @@
 import type { Field } from 'payload'
 
-export type SelectOption = {
+type SelectOption = {
   label: string
   value: string
 }
@@ -21,7 +21,7 @@ const getNestedFields = (field: Field): Field[] => {
   return []
 }
 
-export const findFieldByName = (fields: Field[], fieldName: string): Field | undefined => {
+const findFieldByName = (fields: Field[], fieldName: string): Field | undefined => {
   const directMatch = fields.find((field) => 'name' in field && field.name === fieldName)
   if (directMatch) {
     return directMatch
@@ -38,7 +38,7 @@ export const findFieldByName = (fields: Field[], fieldName: string): Field | und
     .find((field): field is Field => Boolean(field))
 }
 
-export const normalizeSelectOptions = (options: unknown): SelectOption[] => {
+const normalizeSelectOptions = (options: unknown): SelectOption[] => {
   if (!Array.isArray(options)) {
     return []
   }

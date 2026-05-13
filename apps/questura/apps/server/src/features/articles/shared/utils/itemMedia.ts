@@ -19,13 +19,13 @@ export type ItemMediaSourceCollection =
   | 'nightlife'
   | 'key-locations'
 
-export const mediaModeOptions = [
+type MediaMode = 'photos' | 'instagram' | 'both'
+
+const mediaModeOptions: Array<{ label: string; value: MediaMode }> = [
   { label: 'Photos', value: 'photos' },
   { label: 'Instagram', value: 'instagram' },
   { label: 'Photos + Instagram', value: 'both' },
-] as const
-
-export type MediaMode = (typeof mediaModeOptions)[number]['value']
+]
 
 type ItemMediaFieldOptions = {
   mediaModeDbName?: string
@@ -110,7 +110,7 @@ export const normalizeRelationshipIds = (value: unknown): Array<string | number>
 
 export const relationshipIdToKey = (id: string | number): string => String(id)
 
-export const blockSlugToSourceCollection: Record<ItemMediaBlockSlug, ItemMediaSourceCollection> = {
+const blockSlugToSourceCollection: Record<ItemMediaBlockSlug, ItemMediaSourceCollection> = {
   'data-dining': 'dining',
   'data-accommodations': 'accommodations',
   'data-attractions': 'attractions',
@@ -133,7 +133,7 @@ export const getSourceCollectionForBlockType = (
   return blockSlugToSourceCollection[blockType as ItemMediaBlockSlug] ?? null
 }
 
-export const isMediaMode = (value: unknown): value is MediaMode =>
+const isMediaMode = (value: unknown): value is MediaMode =>
   value === 'photos' || value === 'instagram' || value === 'both'
 
 export const getMediaMode = (value: unknown): MediaMode | null => {
@@ -265,10 +265,10 @@ const getMediaModeFromSiblingData = (siblingData: unknown): MediaMode | null => 
   return getMediaMode(siblingData.mediaMode)
 }
 
-export const createSelectedPhotosFilterOptions = (sourceCollection: ItemMediaSourceCollection) =>
+const createSelectedPhotosFilterOptions = (sourceCollection: ItemMediaSourceCollection) =>
   createSourceMediaFilterOptions(sourceCollection, 'photos')
 
-export const createSelectedInstagramFilterOptions = (
+const createSelectedInstagramFilterOptions = (
   sourceCollection: ItemMediaSourceCollection,
 ) => createSourceMediaFilterOptions(sourceCollection, 'instagram')
 

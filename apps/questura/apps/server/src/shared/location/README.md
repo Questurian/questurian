@@ -58,11 +58,6 @@ The format supports partial selections (country-only or country+city), but typic
 - Detects "Done" button clicks (expanded → collapsed transition)
 - Returns: `{ isExpanded, setIsExpanded, doneWasClicked }`
 
-**useDetectChange.ts**
-- Utility hook for detecting value changes from user interaction
-- Distinguishes between initial render and subsequent changes
-- Used internally by `usePickerExpanded`
-
 ### Utilities
 
 **utils/index.ts**
@@ -105,8 +100,6 @@ User submits form → Location saved to database
 ### Registering in a Collection
 
 ```typescript
-import { LocationPickerField } from '@/shared/location'
-
 const fields: Field[] = [
   {
     name: 'location',
@@ -114,7 +107,7 @@ const fields: Field[] = [
     required: true,
     admin: {
       components: {
-        Field: LocationPickerField,
+        Field: 'src/shared/location/LocationPickerField.tsx',
       },
     },
   },
@@ -221,7 +214,7 @@ In the form:
 
 ## Styling
 
-All styles are centralized in `styles/index.ts`:
+Styles are centralized in `styles/location.module.css`:
 - Uses Payload theme variables (`var(--theme-*)`)
 - Responsive to expansion state
 - Accessible form inputs
@@ -232,9 +225,8 @@ All styles are centralized in `styles/index.ts`:
 src/shared/location/
 ├── README.md                          # This file
 ├── LocationPickerField.tsx            # Main component
-├── index.ts                           # Public exports
 ├── types/index.ts                     # TypeScript interfaces
-├── styles/index.ts                    # Centralized CSS-in-JS
+├── styles/location.module.css         # Component styles
 ├── utils/index.ts                     # Formatting & filtering utilities
 ├── components/
 │   ├── LocationDisplayBox.tsx
@@ -246,7 +238,6 @@ src/shared/location/
     ├── useLocationData.ts             # Data fetching
     ├── useLocationSelection.ts        # Cascading dropdown state
     ├── usePickerExpanded.ts           # UI expansion state
-    ├── useDetectChange.ts             # Change detection utility
     └── index.ts
 ```
 

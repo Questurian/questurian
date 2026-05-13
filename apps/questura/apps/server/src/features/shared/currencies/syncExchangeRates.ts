@@ -19,7 +19,7 @@ type ExchangeRateApiOpenResponse = {
   rates?: unknown
 }
 
-export type LatestUsdRateSnapshot = {
+type LatestUsdRateSnapshot = {
   unitsPerUsd: number
   provider: typeof EXCHANGE_RATE_API_OPEN_PROVIDER
   sourceUpdatedAt: string
@@ -27,7 +27,7 @@ export type LatestUsdRateSnapshot = {
   fetchedAt: string
 }
 
-export type CurrencyExchangeRateSyncResult = {
+type CurrencyExchangeRateSyncResult = {
   provider: typeof EXCHANGE_RATE_API_OPEN_PROVIDER
   baseCurrency: typeof USD_CURRENCY_CODE
   sourceUpdatedAt: string

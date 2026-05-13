@@ -11,7 +11,7 @@
  * 2. On edit load → useLocationSelection parses saved value into selections
  * 3. User interacts → Dropdowns update through useLocationSelection
  * 4. User clicks Done → usePickerExpanded detects completion
- * 5. useLocationFormSync pushes to Payload form field
+ * 5. Form sync effects push to Payload form fields
  * 6. Component re-renders with updated value
  */
 
@@ -30,7 +30,7 @@ const getSiblingFieldPath = (path: string, sibling: string) => {
   return parts.join('.')
 }
 
-export const LocationPickerField = (props: LocationPickerFieldProps) => {
+const LocationPickerField = (props: LocationPickerFieldProps) => {
   const { path } = props
 
   // ==================== Form Fields ====================

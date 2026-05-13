@@ -2,7 +2,7 @@ import type { LocationLevel } from './locationGuideContract'
 
 type PlainObject = Record<string, unknown>
 
-export type LocationGuideValue = PlainObject | unknown[] | string | number | boolean | null | undefined
+type LocationGuideValue = PlainObject | unknown[] | string | number | boolean | null | undefined
 
 export type LocationGuideRecord = {
   media?: PlainObject | null

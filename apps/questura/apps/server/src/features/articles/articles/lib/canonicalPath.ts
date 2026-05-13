@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-export type CanonicalPathInputs = {
+type CanonicalPathInputs = {
   location: string | null | undefined
   categorySlug: string | null | undefined
   slug: string | null | undefined

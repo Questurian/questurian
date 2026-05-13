@@ -12,13 +12,13 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET or PAYLOAD_SECRET environment variable required')
 }
 
-export interface AuthResult {
+interface AuthResult {
   user: User | null
   error: string | null
   status: number
 }
 
-export interface AuthMiddlewareOptions {
+interface AuthMiddlewareOptions {
   requireAuth?: boolean
   allowedRoles?: string[]
   requireEmailVerification?: boolean

@@ -3,7 +3,7 @@ import { locationIdentitySelect } from '../constants'
 import type { LocationOption } from '../types'
 import { getLocationScope, normalizeLocationKey, parseLocationKey } from './locationScope'
 
-export type ArticleLocationScope = {
+type ArticleLocationScope = {
   exactNeighborhoods: boolean
   keys: string[]
   refs: Array<string | number>
@@ -17,7 +17,7 @@ type SharedNeighborhoodValidationInput = {
 const hasOwn = (value: Record<string, unknown>, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key)
 
-export const extractRelationshipIds = (value: unknown): Array<string | number> => {
+const extractRelationshipIds = (value: unknown): Array<string | number> => {
   const rawValues = Array.isArray(value) ? value : value ? [value] : []
   const seen = new Set<string>()
 
@@ -70,7 +70,7 @@ const findLocationsByIds = async (
     .filter((doc): doc is LocationOption => Boolean(doc))
 }
 
-export const isCityLocationKey = (locationKey: unknown): locationKey is string =>
+const isCityLocationKey = (locationKey: unknown): locationKey is string =>
   typeof locationKey === 'string' && parseLocationKey(locationKey).length === 2
 
 export const validateSharedNeighborhoodSelection = async (

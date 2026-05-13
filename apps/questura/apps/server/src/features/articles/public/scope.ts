@@ -22,14 +22,6 @@ export function isArticleScopeKind(value: unknown): value is ArticleScope['kind'
   return value === 'global' || value === 'country' || value === 'city'
 }
 
-export function buildScopeWhereExact(scope: ArticleScope): Where | null {
-  if (scope.kind === 'global') return null
-  if (scope.kind === 'country') {
-    return { location: { equals: scope.country } }
-  }
-  return { location: { equals: `${scope.country}|${scope.city}` } }
-}
-
 export function buildScopeWhereCascade(scope: ArticleScope): Where | null {
   if (scope.kind === 'global') return null
   const base = scope.kind === 'country' ? scope.country : `${scope.country}|${scope.city}`

@@ -5,9 +5,9 @@ import {
   normalizeLocationKey,
 } from '@/shared/location/server/locationScope'
 
-export type RelatedMapsArticleRouteType = 'maps' | 'itinerary'
+type RelatedMapsArticleRouteType = 'maps' | 'itinerary'
 
-export type RelatedMapsArticleTeaser = {
+type RelatedMapsArticleTeaser = {
   id: string | number
   title: string
   slug: string

@@ -47,7 +47,7 @@ import {
   validateWhereToEatDrinkItems,
 } from './where-to-eat-drink-service'
 
-export function isCuratedHomepageBlockType(
+function isCuratedHomepageBlockType(
   value: unknown,
 ): value is
   | 'featured-article'

@@ -14,5 +14,4 @@ const SingleTypeListicleBlocksFieldComponent = (props: SingleTypeListicleBlocksF
   )
 }
 
-export const SingleTypeListicleBlocksField = SingleTypeListicleBlocksFieldComponent
 export default SingleTypeListicleBlocksFieldComponent

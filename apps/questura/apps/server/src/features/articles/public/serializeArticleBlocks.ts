@@ -15,7 +15,7 @@ async function serializeBlurbArray(blocks: Array<Record<string, unknown>>) {
   )
 }
 
-export async function serializeStandardArticleBlocks(article: Record<string, unknown>) {
+async function serializeStandardArticleBlocks(article: Record<string, unknown>) {
   const blocks = article.contentBlocks as Array<Record<string, unknown>> | undefined
   if (!Array.isArray(blocks)) return
 
@@ -28,7 +28,7 @@ export async function serializeStandardArticleBlocks(article: Record<string, unk
   )
 }
 
-export async function serializeMapsListicleBlocks(article: Record<string, unknown>) {
+async function serializeMapsListicleBlocks(article: Record<string, unknown>) {
   const header = article.header as Record<string, unknown> | undefined
   if (header?.intro) {
     header.intro = await toLexicalHTML(header.intro)
@@ -39,7 +39,7 @@ export async function serializeMapsListicleBlocks(article: Record<string, unknow
   await serializeBlurbArray(items)
 }
 
-export async function serializeItineraryBlocks(article: Record<string, unknown>) {
+async function serializeItineraryBlocks(article: Record<string, unknown>) {
   const header = article.header as Record<string, unknown> | undefined
   if (header?.intro) {
     header.intro = await toLexicalHTML(header.intro)

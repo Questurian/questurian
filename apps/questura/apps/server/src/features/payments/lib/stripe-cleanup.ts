@@ -1,6 +1,6 @@
 import { stripe } from './stripe'
 
-export interface StripeCleanupResult {
+interface StripeCleanupResult {
   success: boolean
   subscriptionsCancelled: number
   customerDeleted: boolean

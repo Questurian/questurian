@@ -1,8 +1,8 @@
 import type { Field } from 'payload'
 
-export const SUPPORTED_LANGS = ['en'] as const
+const SUPPORTED_LANGS = ['en'] as const
 
-export type SupportedLang = (typeof SUPPORTED_LANGS)[number]
+type SupportedLang = (typeof SUPPORTED_LANGS)[number]
 
 export const DEFAULT_LANG: SupportedLang = 'en'
 

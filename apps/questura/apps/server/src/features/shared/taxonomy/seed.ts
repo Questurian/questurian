@@ -1,6 +1,6 @@
 import { Payload } from 'payload'
 
-export const seedCategories = async (payload: Payload) => {
+const seedCategories = async (payload: Payload) => {
   const categories = [
     'News',
     'Crime',
@@ -38,7 +38,7 @@ export const seedCategories = async (payload: Payload) => {
   }
 }
 
-export const seedTags = async (payload: Payload) => {
+const seedTags = async (payload: Payload) => {
   const tags = [
     'solo-travel',
     'family-friendly',
@@ -88,7 +88,7 @@ export const seedTags = async (payload: Payload) => {
   }
 }
 
-export const seedImageTags = async (payload: Payload) => {
+const seedImageTags = async (payload: Payload) => {
   const imageTags = [
     'sunset',
     'sunrise',

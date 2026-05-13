@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server'
 // Determine environment
 const isProduction = process.env.NODE_ENV === 'production'
 
-export const COOKIE_CONFIG = {
+const COOKIE_CONFIG = {
   name: 'payload-token',
   maxAge: 7 * 24 * 60 * 60, // 7 days in seconds (matches JWT expiration)
   httpOnly: true,
@@ -43,20 +43,6 @@ export function setAuthCookie(response: NextResponse, token: string): void {
     secure: COOKIE_CONFIG.secure,
     sameSite: COOKIE_CONFIG.sameSite,
     maxAge: COOKIE_CONFIG.maxAge,
-    path: COOKIE_CONFIG.path,
-  })
-}
-
-/**
- * Clears the authentication cookie from a NextResponse
- * @param response - The NextResponse object to clear the cookie from
- */
-export function clearAuthCookie(response: NextResponse): void {
-  response.cookies.set(COOKIE_CONFIG.name, '', {
-    httpOnly: COOKIE_CONFIG.httpOnly,
-    secure: COOKIE_CONFIG.secure,
-    sameSite: COOKIE_CONFIG.sameSite,
-    maxAge: 0, // Expire immediately
     path: COOKIE_CONFIG.path,
   })
 }

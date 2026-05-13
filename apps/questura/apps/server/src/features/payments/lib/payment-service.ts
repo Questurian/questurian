@@ -5,7 +5,7 @@ import { sendSubscriptionCancelledEmail, sendSubscriptionReactivatedEmail } from
 import { convertStripeTimestamp, getSubscriptionProductName } from './payment-helpers'
 import type { StripeSubscriptionExpanded } from '../types'
 
-export interface UserSubscriptionUpdate {
+interface UserSubscriptionUpdate {
   stripeSubscriptionId?: string
   subscriptionStatus?: 'none' | 'active' | 'cancelled' | 'past_due'
   membershipExpiration?: string | null
@@ -362,4 +362,3 @@ export function mapStripeStatusToInternal(stripeStatus: string): 'active' | 'can
       return 'past_due'
   }
 }
-

@@ -83,5 +83,3 @@ export const PerfectForPickerField = (props: PerfectForPickerFieldProps) => {
     </div>
   )
 }
-
-export default PerfectForPickerField
