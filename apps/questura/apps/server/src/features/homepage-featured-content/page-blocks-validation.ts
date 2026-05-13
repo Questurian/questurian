@@ -77,7 +77,7 @@ function isCuratedHomepageBlockType(
 
 /**
  * Mutates block `items` in place for curated blocks (same as Payload beforeValidate).
- * @param locationGridScope — MAIN scope for main homepage; city/neighborhood scope for location homepages
+ * @param locationGridScope — child-location scope for location homepages
  */
 export async function normalizePageBlocksArrayInPlace(
   req: PayloadRequest,
@@ -113,7 +113,7 @@ export async function normalizePageBlocksArrayInPlace(
 
     if (blockRecord.blockType === 'location-grid' && !locationGridScope) {
       throw new Error(
-        'Location Grid blocks are only available on the main homepage and city homepages.',
+        'Location Grid blocks are only available on city homepages.',
       )
     }
 

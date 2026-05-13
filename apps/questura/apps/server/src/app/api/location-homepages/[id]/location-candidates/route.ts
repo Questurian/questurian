@@ -64,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!scope) {
       return NextResponse.json(
         {
-          message: 'Location Grid blocks are only available on the main homepage and city homepages.',
+          message: 'Location Grid blocks are only available on city homepages.',
         },
         { status: 400, headers },
       )

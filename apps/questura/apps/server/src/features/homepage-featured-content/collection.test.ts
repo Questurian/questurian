@@ -160,7 +160,7 @@ describe('LocationHomepages collection validation', () => {
         ],
       }),
     ).rejects.toThrow(
-      'Location Grid blocks are only available on the main homepage and city homepages.',
+      'Location Grid blocks are only available on city homepages.',
     )
   })
 })

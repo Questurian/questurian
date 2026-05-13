@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   getLocationGridSelectionFromItems,
-  MAIN_LOCATION_GRID_SCOPE,
   searchLocationGridCandidates,
   validateLocationGridItems,
 } from './location-grid-service'
+
+const CITY_HOMEPAGE_LOCATION_GRID_SCOPE = {
+  childLevel: 'neighborhood' as const,
+  parentKey: 'usa|austin',
+}
 
 function createPayloadMock() {
   return {
@@ -23,33 +27,33 @@ describe('location grid service', () => {
     const payload = createPayloadMock()
     payload.findByID.mockImplementation(async ({ id }: { id: number }) => ({
       id,
-      level: id === 4 ? 'neighborhood' : 'city',
-      locationKey: id === 4 ? 'usa|austin|south-congress' : `usa|city-${id}`,
-      parentKey: id === 4 ? 'usa|austin' : 'usa',
+      level: id === 4 ? 'city' : 'neighborhood',
+      locationKey: id === 4 ? 'usa|dallas' : `usa|austin|neighborhood-${id}`,
+      parentKey: id === 4 ? 'usa' : 'usa|austin',
       countryName: 'United States',
       cityName: id === 4 ? 'Austin' : `City ${id}`,
-      neighborhoodName: id === 4 ? 'South Congress' : null,
+      neighborhoodName: id === 4 ? null : `Neighborhood ${id}`,
     }))
 
     await expect(
       validateLocationGridItems(
         payload as never,
         [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }],
-        { slotCount: 4, scope: MAIN_LOCATION_GRID_SCOPE },
+        { slotCount: 4, scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE },
       ),
-    ).rejects.toThrow('not an eligible city')
+    ).rejects.toThrow('not an eligible neighborhood')
   })
 
   it('marks saved locations invalid when they no longer match the homepage scope', async () => {
     const payload = createPayloadMock()
     payload.findByID.mockImplementation(async ({ id }: { id: number }) => ({
       id,
-      level: id === 2 ? 'neighborhood' : 'city',
-      locationKey: id === 2 ? 'usa|austin|south-congress' : 'usa|new-york',
-      parentKey: id === 2 ? 'usa|austin' : 'usa',
+      level: id === 2 ? 'city' : 'neighborhood',
+      locationKey: id === 2 ? 'usa|new-york' : `usa|austin|neighborhood-${id}`,
+      parentKey: id === 2 ? 'usa' : 'usa|austin',
       countryName: 'United States',
-      cityName: id === 2 ? 'Austin' : 'New York',
-      neighborhoodName: id === 2 ? 'South Congress' : null,
+      cityName: id === 2 ? 'New York' : 'Austin',
+      neighborhoodName: id === 2 ? null : `Neighborhood ${id}`,
     }))
 
     const selection = await getLocationGridSelectionFromItems(
@@ -57,7 +61,7 @@ describe('location grid service', () => {
       [1, 2, 3, 4],
       {
         totalSlots: 4,
-        scope: MAIN_LOCATION_GRID_SCOPE,
+        scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE,
       },
     )
 
@@ -163,12 +167,12 @@ describe('location grid service', () => {
       docs: [
         {
           id: 1,
-          level: 'city',
-          locationKey: 'usa|austin',
-          parentKey: 'usa',
+          level: 'neighborhood',
+          locationKey: 'usa|austin|downtown',
+          parentKey: 'usa|austin',
           countryName: 'United States',
           cityName: 'Austin',
-          neighborhoodName: null,
+          neighborhoodName: 'Downtown',
           updatedAt: '2026-04-09T10:00:00.000Z',
           guide: {
             media: {
@@ -193,7 +197,7 @@ describe('location grid service', () => {
       query: '',
       page: 1,
       limit: 20,
-      scope: MAIN_LOCATION_GRID_SCOPE,
+      scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE,
     })
 
     expect(response.docs[0]?.coverImageUrl).toBe('https://cdn.example.com/austin-thumb.jpg')

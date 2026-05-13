@@ -4,7 +4,6 @@ import { APP_CONFIG } from '@/shared/config'
 
 import {
   HOMEPAGE_FEATURED_CONTENT_COLLECTIONS,
-  HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
   HOMEPAGE_FEATURED_CONTENT_SLOTS,
   type HomepageFeaturedCandidate,
   type HomepageFeaturedCandidatesResponse,
@@ -437,23 +436,6 @@ export function getNewsletterSignupPlaceholderSelection(options?: {
     isComplete: true,
     totalSlots: 0,
   }
-}
-
-export async function getHomepageFeaturedSelection(
-  payload: Payload,
-  options: {
-    allowDrafts?: boolean
-  } = {},
-): Promise<HomepageFeaturedSelection> {
-  const globalDoc = await payload.findGlobal({
-    slug: HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG,
-    depth: 0,
-    overrideAccess: true,
-  }) as {
-    items?: unknown
-  }
-
-  return getHomepageFeaturedSelectionFromItems(payload, globalDoc.items, options)
 }
 
 export async function searchHomepageFeaturedCandidates(

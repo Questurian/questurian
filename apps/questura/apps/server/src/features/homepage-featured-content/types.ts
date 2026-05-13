@@ -1,5 +1,3 @@
-export const HOMEPAGE_FEATURED_CONTENT_GLOBAL_SLUG = 'homepage-featured-content'
-
 export const HOMEPAGE_FEATURED_CONTENT_SLOTS = 10
 /** Spotlight block: exactly one curated article/listicle. */
 export const HOMEPAGE_FEATURED_ARTICLE_SLOT_COUNT = 1

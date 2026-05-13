@@ -1,4 +1,3 @@
-export { HomepageFeaturedContent } from './global'
 export { LocationHomepages } from './collection'
 export { FeaturedArticleBlock } from './blocks/featured-article'
 export { FeaturedArticlesBlock } from './blocks/featured-articles'

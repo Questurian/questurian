@@ -180,7 +180,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json(
         {
           message:
-            'Location Grid blocks are only available on the main homepage and city homepages.',
+            'Location Grid blocks are only available on city homepages.',
         },
         { status: 400, headers },
       )

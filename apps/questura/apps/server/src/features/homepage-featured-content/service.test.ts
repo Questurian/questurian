@@ -9,14 +9,13 @@ vi.mock('@/shared/config', () => ({
 }))
 
 import {
-  getHomepageFeaturedSelection,
+  getHomepageFeaturedSelectionFromItems,
   searchHomepageFeaturedCandidates,
   validateHomepageFeaturedItems,
 } from './service'
 
 function createPayloadMock() {
   return {
-    findGlobal: vi.fn(),
     findByID: vi.fn(),
     find: vi.fn(),
   }
@@ -50,12 +49,6 @@ describe('homepage featured content service', () => {
 
   it('hides draft items from the read selection when drafts are disabled', async () => {
     const payload = createPayloadMock()
-    payload.findGlobal.mockResolvedValue({
-      items: [
-        { relationTo: 'articles', value: 1 },
-        { relationTo: 'single-type-listicles', value: 2 },
-      ],
-    })
     payload.findByID.mockImplementation(async ({ collection, id }: { collection: string; id: number }) => ({
       id,
       title: `${collection} ${id}`,
@@ -65,7 +58,14 @@ describe('homepage featured content service', () => {
       publishedAt: '2026-04-01T10:00:00.000Z',
     }))
 
-    const selection = await getHomepageFeaturedSelection(payload as never, { allowDrafts: false })
+    const selection = await getHomepageFeaturedSelectionFromItems(
+      payload as never,
+      [
+        { relationTo: 'articles', value: 1 },
+        { relationTo: 'single-type-listicles', value: 2 },
+      ],
+      { allowDrafts: false },
+    )
 
     expect(selection.items).toHaveLength(1)
     expect(selection.items[0]).toMatchObject({
@@ -156,9 +156,6 @@ describe('homepage featured content service', () => {
 
   it('resolves imageUrlSquare from media set square variant on selection', async () => {
     const payload = createPayloadMock()
-    payload.findGlobal.mockResolvedValue({
-      items: [{ relationTo: 'articles', value: 1 }],
-    })
     payload.findByID.mockResolvedValue({
       id: 1,
       title: 'Article',
@@ -182,7 +179,11 @@ describe('homepage featured content service', () => {
       },
     })
 
-    const selection = await getHomepageFeaturedSelection(payload as never, { allowDrafts: true })
+    const selection = await getHomepageFeaturedSelectionFromItems(
+      payload as never,
+      [{ relationTo: 'articles', value: 1 }],
+      { allowDrafts: true },
+    )
 
     expect(payload.findByID).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -197,9 +198,6 @@ describe('homepage featured content service', () => {
 
   it('includes article preview metadata on selection items', async () => {
     const payload = createPayloadMock()
-    payload.findGlobal.mockResolvedValue({
-      items: [{ relationTo: 'articles', value: 1 }],
-    })
     payload.findByID.mockResolvedValue({
       id: 1,
       title: 'Article',
@@ -225,7 +223,11 @@ describe('homepage featured content service', () => {
       },
     })
 
-    const selection = await getHomepageFeaturedSelection(payload as never, { allowDrafts: true })
+    const selection = await getHomepageFeaturedSelectionFromItems(
+      payload as never,
+      [{ relationTo: 'articles', value: 1 }],
+      { allowDrafts: true },
+    )
 
     expect(selection.items[0]).toMatchObject({
       metaDescription: 'Useful Lima preview copy.',
@@ -247,9 +249,6 @@ describe('homepage featured content service', () => {
 
   it('reads metaDescription from top-level seoSection on listicles', async () => {
     const payload = createPayloadMock()
-    payload.findGlobal.mockResolvedValue({
-      items: [{ relationTo: 'single-type-listicles', value: 12 }],
-    })
     payload.findByID.mockResolvedValue({
       id: 12,
       title: 'Best Seafood Restaurants Near Miraflores',
@@ -260,7 +259,11 @@ describe('homepage featured content service', () => {
       },
     })
 
-    const selection = await getHomepageFeaturedSelection(payload as never, { allowDrafts: true })
+    const selection = await getHomepageFeaturedSelectionFromItems(
+      payload as never,
+      [{ relationTo: 'single-type-listicles', value: 12 }],
+      { allowDrafts: true },
+    )
 
     expect(selection.items[0]).toMatchObject({
       relationTo: 'single-type-listicles',

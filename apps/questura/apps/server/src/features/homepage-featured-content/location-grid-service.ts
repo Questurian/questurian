@@ -13,10 +13,6 @@ export type LocationGridScope = {
   parentKey?: string | null
 }
 
-export const MAIN_LOCATION_GRID_SCOPE: LocationGridScope = {
-  childLevel: 'city',
-}
-
 export type LocationGridItemRef = {
   id: number
 }
@@ -365,7 +361,7 @@ export async function validateLocationGridItems(
 
   if (!scope) {
     throw new Error(
-      'Location Grid blocks are only available on the main homepage and city homepages.',
+      'Location Grid blocks are only available on city homepages.',
     )
   }
 
@@ -461,7 +457,7 @@ export async function searchLocationGridCandidates(
 
   if (!scope) {
     throw new Error(
-      'Location Grid blocks are only available on the main homepage and city homepages.',
+      'Location Grid blocks are only available on city homepages.',
     )
   }
 
