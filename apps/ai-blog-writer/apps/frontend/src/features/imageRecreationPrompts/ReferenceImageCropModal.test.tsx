@@ -18,8 +18,8 @@ const imageUtils = vi.hoisted(() => ({
   })),
 }))
 
-vi.mock('../images', async () => {
-  const actual = await vi.importActual<typeof import('../images')>('../images')
+vi.mock('../../shared/images', async () => {
+  const actual = await vi.importActual<typeof import('../../shared/images')>('../../shared/images')
 
   return {
     ...actual,

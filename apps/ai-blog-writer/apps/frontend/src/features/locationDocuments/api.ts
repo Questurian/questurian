@@ -1,5 +1,5 @@
-import { API_BASE_URL, PAYLOAD_API_URL } from '../staging/api/client/config'
-import { parseErrorResponse } from '../staging/api/client/error-parser'
+import { API_BASE_URL, PAYLOAD_API_URL } from '../../shared/api/client/config'
+import { parseErrorResponse } from '../../shared/api/client/error-parser'
 import type {
   CurrencyOption,
   LocationAiFillDocumentRequest,

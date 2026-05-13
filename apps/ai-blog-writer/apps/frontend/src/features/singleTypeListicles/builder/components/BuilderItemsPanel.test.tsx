@@ -9,7 +9,7 @@ afterEach(() => {
   cleanup()
 })
 
-vi.mock('../../../staging/features/markdown-editor', () => ({
+vi.mock('../../../../shared/markdown-editor', () => ({
   MarkdownBlockEditor: ({
     blockId,
     value,

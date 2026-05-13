@@ -3,7 +3,7 @@ import {
   VARIANT_SPECS,
   type ImageVariantType,
   type VariantSpec,
-} from '../images'
+} from '../../shared/images'
 
 export type ReferenceCropPresetId = 'original' | ImageVariantType
 

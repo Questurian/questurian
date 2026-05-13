@@ -1,5 +1,5 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
-import type { UploadImageResponse } from '../../../../../features/images'
+import type { UploadImageResponse } from '../../../../../shared/images'
 import type { Location, MediaAsset, PexelsPhoto, UnsplashPhoto } from '../../../api'
 import type { StagedArticle } from '../../../types'
 import { isStagedArticleEditingLocked } from '../../../utils/staged-article-sync'

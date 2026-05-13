@@ -1,9 +1,9 @@
-import type { SeoSection } from '../../../../shared/seo/types'
+import type { SeoSection } from '../../../../../shared/seo/types'
 import {
   getSchemaPublisherConfig,
   type SchemaPublisherConfig,
-} from '../../../../shared/seo/services/schema-publisher-config.service'
-import { getSeoAiTargetLabel, type SeoAiTarget } from '../../../../shared/seo/services/seo-ai.service'
+} from '../../../../../shared/seo/services/schema-publisher-config.service'
+import { getSeoAiTargetLabel, type SeoAiTarget } from '../../../../../shared/seo/services/seo-ai.service'
 import type { StagedArticle } from '../../../types'
 
 const STRUCTURED_DATA_DESCRIPTION_MAX_LENGTH = 220

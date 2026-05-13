@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resolveEditorAssistModelName } from '../../staging/api'
-import { useAuth } from '../../../providers/useAuth'
+import { useAuth } from '../../auth'
 import {
   generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured,
   uploadSocialImage as requestUploadSocialImage,
-} from '../../images'
+} from '../../../shared/images'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
-import { BuilderHero } from '../../shared/builder/components/BuilderHero'
+import { BuilderHero } from '../../../shared/builder/components/BuilderHero'
 import { BuilderItemsPanel } from '../builder/components/BuilderItemsPanel'
 import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
-import { useBuilderAutosave } from '../../shared/builder/hooks/useBuilderAutosave'
+import { useBuilderAutosave } from '../../../shared/builder/hooks/useBuilderAutosave'
 import { useBuilderBootstrap } from '../builder/hooks/useBuilderBootstrap'
 import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
 import { useListicleSubmit } from '../builder/hooks/useListicleSubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
-import { useSerialTaskQueue } from '../../shared/hooks/useSerialTaskQueue'
+import { useSerialTaskQueue } from '../../../shared/hooks/useSerialTaskQueue'
 import {
   applySingleTypeListicleGeneratedContent,
   buildSingleTypeGenerateListicleContentRequest,
@@ -46,7 +46,7 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { saveDraft } from '../storage'
-import { buildArticleOgUrl } from '../../shared/seo/utils/buildArticleOgUrl'
+import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
 
 type AiRewriteInput = {

@@ -1,4 +1,4 @@
-import { BuilderHeaderPanel as SharedBuilderHeaderPanel } from '../../../shared/builder/components/BuilderHeaderPanel'
+import { BuilderHeaderPanel as SharedBuilderHeaderPanel } from '../../../../shared/builder/components/BuilderHeaderPanel'
 import type { MediaAssetOption, SingleTypeListicleDraft } from '../../types'
 import { AiJobButtonContent } from './AiJobButtonContent'
 

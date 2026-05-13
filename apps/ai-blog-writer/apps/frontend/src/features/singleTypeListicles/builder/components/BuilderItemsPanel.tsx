@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
-import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
+import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/normalizeRelatedItems'
+import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { getBlockTypeForListicleType } from '../../api'
 import type { ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import {
@@ -11,10 +11,10 @@ import {
   resolveInstagramEmbedUrl,
   resolveImageUrl,
   resolveInstagramPreviewUrl,
-} from '../../../shared/builder/utils/item-media.utils'
-import { InstagramPickerModal } from '../../../shared/builder/components/InstagramPickerModal'
-import { PhotoPickerModal } from '../../../shared/builder/components/PhotoPickerModal'
-import { RelatedItemPickerModal } from '../../../shared/builder/components/RelatedItemPickerModal'
+} from '../../../../shared/builder/utils/item-media.utils'
+import { InstagramPickerModal } from '../../../../shared/builder/components/InstagramPickerModal'
+import { PhotoPickerModal } from '../../../../shared/builder/components/PhotoPickerModal'
+import { RelatedItemPickerModal } from '../../../../shared/builder/components/RelatedItemPickerModal'
 import { AiJobButtonContent } from './AiJobButtonContent'
 
 type AiRewriteInput = {

@@ -1,7 +1,7 @@
 import type { Location, MediaAsset } from '../../api'
 import type { StagedArticle } from '../../types'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
-import { useAuth } from '../../../../providers/useAuth'
+import { useAuth } from '../../../auth'
 import { EDITOR_MODEL_OPTIONS, resolveEditorModelName } from '../../features/editorial-stage-article/constants'
 import { getMediaAssetAltText } from '../../features/editorial-stage-article/media-utils'
 import {

@@ -1,4 +1,4 @@
-import { findLocationByKey } from '../../../locationScope/scope'
+import { findLocationByKey } from '../../../../shared/locationScope/scope'
 import type {
   GenerateListicleContentRequest,
   GenerateListicleContentResponse,

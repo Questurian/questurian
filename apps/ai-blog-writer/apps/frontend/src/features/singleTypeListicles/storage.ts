@@ -1,8 +1,8 @@
-import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
-import { createDraftStorage } from '../shared/builder/storage/createDraftStorage'
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../shared/api/ai/models'
+import { createDraftStorage } from '../../shared/builder/storage/createDraftStorage'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { SingleTypeListicleDraft } from './types'
-import { normalizeLocationIds } from '../locationScope/scope'
+import { normalizeLocationIds } from '../../shared/locationScope/scope'
 
 const STORAGE_KEY = 'single_type_listicles_staged_v4_exact_neighborhoods'
 

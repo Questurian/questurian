@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { generateFluxEditedImage } from '../images'
-import { useAuth } from '../../providers/useAuth'
+import { generateFluxEditedImage } from '../../shared/images'
+import { useAuth } from '../auth'
 import {
   ReferenceImageCropModal,
   type ReferenceCropSelection

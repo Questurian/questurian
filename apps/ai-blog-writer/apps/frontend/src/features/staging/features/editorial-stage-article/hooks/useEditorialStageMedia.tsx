@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
-import { type UploadImageResponse } from '../../../../../features/images'
+import { type UploadImageResponse } from '../../../../../shared/images'
 import {
   type UploadProgress,
   uploadImageVariants,
-} from '../../../../../features/images/api/imagesApi'
-import type { ImageVariantType } from '../../../../../features/images/utils/imageProcessing'
+} from '../../../../../shared/images/api/imagesApi'
+import type { ImageVariantType } from '../../../../../shared/images/utils/imageProcessing'
 import type {
   ExternalImageProvider,
   Location,

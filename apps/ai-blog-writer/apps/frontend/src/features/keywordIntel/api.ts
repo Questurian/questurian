@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../staging/api/client/config'
+import { API_BASE_URL } from '../../shared/api/client/config'
 
 export type KeywordIntelMarketProfile =
   | 'us_planners_en'

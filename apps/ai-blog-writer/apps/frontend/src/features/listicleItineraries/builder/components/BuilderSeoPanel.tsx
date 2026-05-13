@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { SeoEditorPanel } from '../../../shared/seo/components/SeoEditorPanel'
+import { SeoEditorPanel } from '../../../../shared/seo/components/SeoEditorPanel'
 import type { ListicleItineraryDraft } from '../../types'
 import type { SeoAiTarget } from '../services/seo-ai.service'
 

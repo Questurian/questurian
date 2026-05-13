@@ -1,4 +1,4 @@
-import type { EditorAssistModelName } from './models'
+import type { EditorAssistModelName } from '../../../../shared/api/ai/models'
 
 export type RewriteBlockWithAiResponse = {
   rewritten_content: string

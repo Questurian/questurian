@@ -8,7 +8,7 @@ import {
 } from 'react'
 import { ExternalImageCropEditor } from '../../../components/editorial-stage/ExternalImageCropEditor'
 import type { StagedArticle } from '../../../types'
-import { createEmptySeoSection } from '../../../../shared/seo/services/seo-section.service'
+import { createEmptySeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import {
   createInitialEditorialStageUiState,
   editorialStageUiReducer,

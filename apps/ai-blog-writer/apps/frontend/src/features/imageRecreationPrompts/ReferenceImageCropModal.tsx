@@ -4,8 +4,8 @@ import {
   calculateDefaultCrop,
   createCroppedImage,
   loadImage,
-} from '../images'
-import type { ImageVariantType } from '../images'
+} from '../../shared/images'
+import type { ImageVariantType } from '../../shared/images'
 import {
   REFERENCE_CROP_PRESET_OPTIONS,
   getReferenceCropPreset,

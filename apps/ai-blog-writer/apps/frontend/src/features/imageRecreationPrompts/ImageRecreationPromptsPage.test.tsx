@@ -24,7 +24,14 @@ vi.mock('./ReferenceImageCropModal', () => ({
     onConfirm,
     onUseOriginal,
     sourceFile
-  }: any) => {
+  }: {
+    initialPresetId?: string
+    isOpen: boolean
+    onClose: () => void
+    onConfirm: (input: { presetId: string; file: File; crop: null }) => void
+    onUseOriginal: () => void
+    sourceFile?: File | null
+  }) => {
     if (!isOpen) return null
 
     return (
@@ -73,7 +80,7 @@ const mockAuthState = vi.hoisted(() => ({
   logout: vi.fn()
 }))
 
-vi.mock('../../providers/useAuth', () => ({
+vi.mock('../auth', () => ({
   useAuth: () => mockAuthState
 }))
 

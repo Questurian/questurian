@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
-import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
-import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../staging/api/payload/payload.api'
-import { MarkdownBlockEditor } from '../../../staging/features/markdown-editor'
+import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/normalizeRelatedItems'
+import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../../shared/api/payload/payload.api'
+import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { BLOCK_TYPE_OPTIONS, BLOCK_TYPE_OPTIONS_STOPS } from '../constants/builder-options.constants'
 import type {
   InstagramPostOption,
@@ -31,11 +31,11 @@ import {
   resolveInstagramEmbedUrl,
   resolveInstagramPreviewUrl,
   resolveImageUrl,
-} from '../../../shared/builder/utils/item-media.utils'
+} from '../../../../shared/builder/utils/item-media.utils'
 import { ExistingStopPickerModal, type ExistingStopPickerOption } from './ExistingStopPickerModal'
-import { InstagramPickerModal } from '../../../shared/builder/components/InstagramPickerModal'
-import { PhotoPickerModal } from '../../../shared/builder/components/PhotoPickerModal'
-import { RelatedItemPickerModal } from '../../../shared/builder/components/RelatedItemPickerModal'
+import { InstagramPickerModal } from '../../../../shared/builder/components/InstagramPickerModal'
+import { PhotoPickerModal } from '../../../../shared/builder/components/PhotoPickerModal'
+import { RelatedItemPickerModal } from '../../../../shared/builder/components/RelatedItemPickerModal'
 
 type AiRewriteInput = {
   blockId: string

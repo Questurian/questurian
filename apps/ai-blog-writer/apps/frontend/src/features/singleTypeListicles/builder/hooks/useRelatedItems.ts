@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchRelatedItems } from '../../api'
-import { getArticleLocationScope } from '../../../locationScope/scope'
+import { getArticleLocationScope } from '../../../../shared/locationScope/scope'
 import type { LocationOption, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 
 type UseRelatedItemsParams = {

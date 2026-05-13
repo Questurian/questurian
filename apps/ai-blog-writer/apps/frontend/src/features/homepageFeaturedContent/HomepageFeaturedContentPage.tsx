@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import './homepageFeaturedContent.css'
 
-import { useAuth } from '../../providers/useAuth'
+import { useAuth } from '../auth'
 import {
   createLocationHomepage,
   deleteLocationHomepage,

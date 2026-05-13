@@ -2,7 +2,7 @@ import type { FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ArticleType } from '@shared/types'
-import { Y2B_MODEL_OPTIONS, type Y2BModelName } from '../../staging/api/ai/models'
+import { Y2B_MODEL_OPTIONS, type Y2BModelName } from '../../../shared/api/ai/models'
 
 type UploadPanelProps = {
   youtubeUrl: string

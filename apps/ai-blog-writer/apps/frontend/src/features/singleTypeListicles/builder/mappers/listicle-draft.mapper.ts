@@ -1,11 +1,11 @@
-import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
-import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../../shared/api/ai/models'
+import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
 import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
 import { buildPayloadListicleMetadataPatch } from '../services/payload-listicle-metadata.service'
-import { getRelationshipId, getRelationshipIds, isMediaMode } from '../../../shared/builder/utils/item-media.utils'
+import { getRelationshipId, getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
-import { lexicalRichTextToMarkdown } from '../../../shared/builder/utils/lexical-json.utils'
+import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 

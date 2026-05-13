@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../providers/useAuth'
+import { useAuth } from '../../auth'
 import {
   generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured,
   uploadSocialImage as requestUploadSocialImage,
-} from '../../images'
-import { SeoEditorPanel } from '../../shared/seo/components/SeoEditorPanel'
-import { getSchemaPublisherConfig } from '../../shared/seo/services/schema-publisher-config.service'
-import { buildArticleOgUrl } from '../../shared/seo/utils/buildArticleOgUrl'
+} from '../../../shared/images'
+import { SeoEditorPanel } from '../../../shared/seo/components/SeoEditorPanel'
+import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
+import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import {
   applySeoAiPatch,
   buildSeoAiSeed,
   parseSeoAiPatch,
   type SeoAiTarget,
-} from '../../shared/seo/services/seo-ai.service'
-import { createEmptySeoSection } from '../../shared/seo/services/seo-section.service'
+} from '../../../shared/seo/services/seo-ai.service'
+import { createEmptySeoSection } from '../../../shared/seo/services/seo-section.service'
 import { resolveEditorAssistModelName } from '../api'
 import type { EditorialStageArticleApi, EditorialStageRoutes } from '../features/editorial-stage-article/types'
 import { useEditorialStageArticleScreenViewModel } from '../features/editorial-stage-article/hooks/useEditorialStageArticleScreenViewModel'

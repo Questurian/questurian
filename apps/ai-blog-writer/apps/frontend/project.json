@@ -18,7 +18,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint \"apps/frontend/src/**/*.{ts,tsx}\""
+        "command": "node apps/frontend/scripts/check-boundaries.cjs && eslint \"apps/frontend/src/**/*.{ts,tsx}\""
       }
     },
     "test": {

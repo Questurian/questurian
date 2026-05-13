@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { EDITOR_ASSIST_MODEL_OPTIONS } from '../../../staging/api'
-import type { EditorAssistModelName } from '../../../staging/api'
-import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
+import { EDITOR_ASSIST_MODEL_OPTIONS, type EditorAssistModelName } from '../../api/ai/models'
+import payloadLogoUrl from '../../../assets/payload-logo.svg?url'
 
 type DraftLike = {
   payloadId?: number

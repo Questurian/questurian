@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../providers/useAuth';
+import { useAuth } from '../useAuth';
 
-export default function Login() {
+export default function LoginPage() {
   const { isAuthenticated, isRestoringSession, login, isConnected, connectionError } = useAuth();
   const location = useLocation();
   const [email, setEmail] = useState('');

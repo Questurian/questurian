@@ -1,5 +1,5 @@
 import { API_BASE_URL, FEATURE_PREFIX } from '../constants/prompt2blog.constants'
-import { parseError } from '../utils/parse-error'
+import { parseError } from '../../../shared/api/errors/parse-error'
 import type {
   ArticleTypeGuidelines,
   ArticleTypeOption,

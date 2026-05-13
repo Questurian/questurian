@@ -1,14 +1,14 @@
 import { resizeItineraryDays, type ListicleItineraryDraft, type LocationOption } from '../../types'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
-import { AiTitleInput } from '../../../staging/features/markdown-editor'
-import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
-import { BuilderStepHeader } from '../../../shared/builder/components/BuilderStepHeader'
+import { AiTitleInput } from '../../../../shared/markdown-editor'
+import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
+import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
 import {
   findLocationByKey,
   formatLocationLabel,
   getNeighborhoodOptionsForLocation,
   isCityLocation,
-} from '../../../locationScope/scope'
+} from '../../../../shared/locationScope/scope'
 
 type BuilderSetupPanelProps = {
   draft: ListicleItineraryDraft

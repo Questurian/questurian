@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../providers/useAuth'
+import { useAuth } from '../../auth'
 import { fetchLocations } from '../../listicleItineraries/api'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../../listicleItineraries/builder/constants/builder-options.constants'
 import type { LocationOption } from '../../listicleItineraries/types'
@@ -9,7 +9,7 @@ import {
   getLocationLevel,
   normalizeLocationKey,
   parseLocationKey,
-} from '../../locationScope/scope'
+} from '../../../shared/locationScope/scope'
 import '../itineraries-pipeline.css'
 import '../../listicleItineraries/styles.css'
 import '../../prompt2blog/styles.css'

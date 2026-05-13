@@ -11,7 +11,7 @@ import {
   isMediaMode,
   requiresInstagram,
   requiresPhotos,
-} from '../../../shared/builder/utils/item-media.utils'
+} from '../../../../shared/builder/utils/item-media.utils'
 
 function validateItemMediaRows(
   rows: ItineraryItemBlock[],

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -35,7 +35,6 @@ export function ArticleExpansionModal({
   onProceed,
 }: ArticleExpansionModalProps) {
   const [items, setItems] = useState<string[]>([])
-  const addInputRef = useRef<HTMLInputElement>(null)
 
   // Populate item list when we enter the personalizing phase
   useEffect(() => {

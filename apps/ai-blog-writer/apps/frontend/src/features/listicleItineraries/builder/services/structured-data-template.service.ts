@@ -14,7 +14,7 @@ import {
 import {
   resolveImageUrl,
   resolveInstagramPermalink,
-} from '../../../shared/builder/utils/item-media.utils'
+} from '../../../../shared/builder/utils/item-media.utils'
 import {
   getItinerarySchemaPublisherConfig,
   type ItinerarySchemaPublisherConfig,
@@ -41,9 +41,9 @@ import {
   toFiniteNumber,
   toSchemaDate,
   toStructuredDescription,
-} from '../../../shared/builder/services/structured-data-template-core.service'
+} from '../../../../shared/builder/services/structured-data-template-core.service'
 
-export { serializeStructuredDataTemplate } from '../../../shared/builder/services/structured-data-template-core.service'
+export { serializeStructuredDataTemplate } from '../../../../shared/builder/services/structured-data-template-core.service'
 
 const isLatitude = (value: number | undefined): value is number => (
   typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90

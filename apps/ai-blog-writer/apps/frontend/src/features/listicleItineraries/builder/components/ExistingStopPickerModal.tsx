@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getRelatedItemDisplayLabel } from '../../../shared/related-items/normalizeRelatedItems'
+import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/normalizeRelatedItems'
 import type { RelatedItemCollection, RelatedItemOption } from '../../types'
-import { getRelatedPhotoObjects, resolveImageUrl } from '../../../shared/builder/utils/item-media.utils'
+import { getRelatedPhotoObjects, resolveImageUrl } from '../../../../shared/builder/utils/item-media.utils'
 
 export type ExistingStopPickerOption = {
   selectionKey: string

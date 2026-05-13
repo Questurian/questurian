@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../providers/useAuth'
+import { useAuth } from '../../auth'
 import { fetchListicles } from '../api'
 import { listDrafts, removeDraft } from '../storage'
 import type { PayloadListicleDoc } from '../types'

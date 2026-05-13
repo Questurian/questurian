@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import Masonry from 'react-masonry-css'
-import { ImageUpload, type UploadImageResponse } from '../../../../features/images'
+import { ImageUpload, type UploadImageResponse } from '../../../../shared/images'
 import type {
   ExternalImageProvider,
   Location,

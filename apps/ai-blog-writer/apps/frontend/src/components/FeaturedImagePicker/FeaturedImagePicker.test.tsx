@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FeaturedImagePicker } from './FeaturedImagePicker'
-import type { MediaAsset, MediaSet } from '../../features/staging/api/payload/payload.types'
+import type { MediaAsset, MediaSet } from '../../shared/api/payload/payload.types'
 
 const fetchMediaAssetsMock = vi.fn()
 const fetchMediaSetsMock = vi.fn()
@@ -15,7 +15,7 @@ const pickerMocks = vi.hoisted(() => ({
   ),
 }))
 
-vi.mock('../../features/images', () => ({
+vi.mock('../../shared/images', () => ({
   ImageUpload: (props: Record<string, unknown>) => {
     pickerMocks.imageUploadProps.push(props)
     return (
@@ -40,7 +40,7 @@ vi.mock('../../features/images', () => ({
   uploadImageVariants: vi.fn(),
 }))
 
-vi.mock('../../features/staging/api/client/config', () => ({
+vi.mock('../../shared/api/client/config', () => ({
   PAYLOAD_API_URL: 'http://localhost:4000',
 }))
 
@@ -50,7 +50,7 @@ vi.mock('../../features/staging/api/external-images/external-images.api', () => 
   searchUnsplashImages: vi.fn(),
 }))
 
-vi.mock('../../features/staging/api/payload/payload.api', () => ({
+vi.mock('../../shared/api/payload/payload.api', () => ({
   fetchMediaAssets: (...args: unknown[]) => fetchMediaAssetsMock(...args),
   fetchMediaSets: (...args: unknown[]) => fetchMediaSetsMock(...args),
 }))

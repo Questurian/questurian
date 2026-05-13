@@ -1,6 +1,6 @@
 /// <reference types="vitest/importMeta" />
 
-import { parseError } from '../prompt2blog/utils/parse-error'
+import { parseError } from '../../shared/api/errors/parse-error'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003'
 const FEATURE_PREFIX = '/review2blog'

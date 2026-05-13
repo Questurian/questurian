@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, MouseEvent } from 'react'
 import Cropper, { type Area, type Point } from 'react-easy-crop'
-import { createCroppedImage } from '../../../images'
+import { createCroppedImage } from '../../images'
 import {
   OG_SOCIAL_IMAGE_HEIGHT,
   OG_SOCIAL_IMAGE_WIDTH,

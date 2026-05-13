@@ -1,6 +1,6 @@
 import type { StagedArticle } from '../../../types'
 import { resolveEditorModelName } from '../constants'
-import { createEmptySeoSection, normalizeSeoSection } from '../../../../shared/seo/services/seo-section.service'
+import { createEmptySeoSection, normalizeSeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import { normalizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (

@@ -1,1 +1,1 @@
-export { OgImageCropUploadModal } from '../../../shared/seo/components/OgImageCropUploadModal'
+export { OgImageCropUploadModal } from '../../../../shared/seo/components/OgImageCropUploadModal'

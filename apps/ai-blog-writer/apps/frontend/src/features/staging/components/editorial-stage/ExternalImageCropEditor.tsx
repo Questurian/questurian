@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { MultiVariantCropper } from '../../../../features/images/components/MultiVariantCropper'
-import type { UploadProgress } from '../../../../features/images/api/imagesApi'
-import type { ImageVariantType } from '../../../../features/images/utils/imageProcessing'
+import { MultiVariantCropper } from '../../../../shared/images/components/MultiVariantCropper'
+import type { UploadProgress } from '../../../../shared/images/api/imagesApi'
+import type { ImageVariantType } from '../../../../shared/images/utils/imageProcessing'
 import { EXTERNAL_PROVIDER_LABEL } from '../../features/editorial-stage-article/constants'
 import type { ExternalImageCropContext, ExternalImageCropDraft } from '../../features/editorial-stage-article/types'
 

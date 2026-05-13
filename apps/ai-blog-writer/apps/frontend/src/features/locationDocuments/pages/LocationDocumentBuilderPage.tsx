@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import payloadLogoUrl from '../../../assets/payload-logo.svg?url'
 import { EDITOR_ASSIST_MODEL_OPTIONS } from '../../staging/api'
-import { useAuth } from '../../../providers/useAuth'
+import { useAuth } from '../../auth'
 import {
   fetchCurrencyOptions,
   fetchLocationById,
@@ -28,7 +28,7 @@ import {
   validateDraft
 } from '../schema'
 import { findDraftByDraftId, findDraftByPayloadId, removeDraft, saveDraft } from '../storage'
-import { useBuilderAutosave } from '../../shared/builder/hooks/useBuilderAutosave'
+import { useBuilderAutosave } from '../../../shared/builder/hooks/useBuilderAutosave'
 import type {
   ArrayFieldDefinition,
   LocationDocumentDraft,

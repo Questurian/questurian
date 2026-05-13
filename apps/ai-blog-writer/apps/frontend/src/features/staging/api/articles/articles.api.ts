@@ -1,5 +1,5 @@
-import { API_BASE_URL, PAYLOAD_API_URL } from '../client/config'
-import { parseErrorResponse } from '../client/error-parser'
+import { API_BASE_URL, PAYLOAD_API_URL } from '../../../../shared/api/client/config'
+import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type { CreateArticlePayload, PayloadArticleDoc } from './articles.types'
 
 export async function createArticle(

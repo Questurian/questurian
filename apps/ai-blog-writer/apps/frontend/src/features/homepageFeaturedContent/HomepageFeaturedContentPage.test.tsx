@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import HomepageFeaturedContentPage from './HomepageFeaturedContentPage'
-import { AuthContext, type AuthContextValue } from '../../providers/auth-context'
+import { AuthContext, type AuthContextValue } from '../auth'
 
 function createAuthValue(role: string): AuthContextValue {
   return {

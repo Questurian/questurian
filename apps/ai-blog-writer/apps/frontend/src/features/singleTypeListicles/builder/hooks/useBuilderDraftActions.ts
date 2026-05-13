@@ -5,11 +5,11 @@ import {
   areLocationIdSelectionsEqual,
   normalizeLocationIds,
   normalizeLocationKey,
-} from '../../../locationScope/scope'
+} from '../../../../shared/locationScope/scope'
 import {
   useBuilderStepActions,
   useSelectedLocationRefId,
-} from '../../../shared/builder/hooks/useBuilderStepActions'
+} from '../../../../shared/builder/hooks/useBuilderStepActions'
 import { createEmptySeoSection } from '../services/seo-section.service'
 import { createEmptyDraft, removeDraft } from '../../storage'
 import type {

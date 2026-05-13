@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import RequireAuth from '../components/RequireAuth';
+import RequireAuth from './RequireAuth';
 import { AuthProvider } from './AuthProvider';
 
 function toBase64Url(value: string): string {
@@ -79,7 +79,8 @@ describe('AuthProvider', () => {
     expect(screen.queryByText('login page')).not.toBeInTheDocument();
     expect(screen.queryByText('protected page')).not.toBeInTheDocument();
 
-    resolveRestore?.(
+    const completeRestore = resolveRestore as ((response: Response) => void) | null;
+    completeRestore?.(
       jsonResponse({
         token,
         user: {

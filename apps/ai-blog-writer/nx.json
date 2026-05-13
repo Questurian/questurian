@@ -7,7 +7,7 @@
   "plugins": ["@nxlv/python"],
   "targetDefaults": {
     "lint": {
-      "inputs": ["default", "{workspaceRoot}/.eslintrc.cjs", "{workspaceRoot}/.prettierrc"]
+      "inputs": ["default", "{workspaceRoot}/.eslintrc.cjs", "{workspaceRoot}/.prettierrc", "{workspaceRoot}/apps/frontend/scripts/check-boundaries.cjs"]
     },
     "test": {
       "inputs": ["default"]

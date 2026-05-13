@@ -1,4 +1,4 @@
-export { stripIdsDeep } from '../../../shared/builder/utils/strip-ids-deep.utils'
+export { stripIdsDeep } from '../../../../shared/builder/utils/strip-ids-deep.utils'
 
 export function stripNestedRowIdsFromItineraryDays(itineraryDays: unknown): void {
   if (!Array.isArray(itineraryDays)) return

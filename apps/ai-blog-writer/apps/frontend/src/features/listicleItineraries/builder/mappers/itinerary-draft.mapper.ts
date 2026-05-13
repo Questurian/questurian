@@ -1,5 +1,5 @@
-import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../staging/api/ai/models'
-import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../../shared/api/ai/models'
+import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
 import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import {
   isRelatedItemCollection,
@@ -13,8 +13,8 @@ import {
 } from '../../types'
 import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerary-metadata.service'
 import { getRelationshipId } from '../utils/field-normalizers.utils'
-import { getRelationshipIds, isMediaMode } from '../../../shared/builder/utils/item-media.utils'
-import { lexicalRichTextToMarkdown } from '../../../shared/builder/utils/lexical-json.utils'
+import { getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
+import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 

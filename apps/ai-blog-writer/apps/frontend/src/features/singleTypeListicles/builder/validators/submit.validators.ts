@@ -6,7 +6,7 @@ import {
   isMediaMode,
   requiresInstagram,
   requiresPhotos,
-} from '../../../shared/builder/utils/item-media.utils'
+} from '../../../../shared/builder/utils/item-media.utils'
 import { validateSingleTypeListicleStructuredDataShape } from '../services/structured-data-template.service'
 import { validateStep1 } from './setup.validators'
 

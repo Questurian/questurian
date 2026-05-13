@@ -1,14 +1,14 @@
 import type { ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
-import { AiTitleInput } from '../../../staging/features/markdown-editor'
-import type { AiTitleGenerateInput } from '../../../staging/features/markdown-editor'
-import { BuilderStepHeader } from '../../../shared/builder/components/BuilderStepHeader'
+import { AiTitleInput } from '../../../../shared/markdown-editor'
+import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
+import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
 import { LISTICLE_TYPE_OPTIONS } from '../constants/builder-options.constants'
 import {
   findLocationByKey,
   formatLocationLabel,
   getNeighborhoodOptionsForLocation,
   isCityLocation,
-} from '../../../locationScope/scope'
+} from '../../../../shared/locationScope/scope'
 import { hasAnyWrittenItemData } from '../utils/item-target-count.utils'
 import { validateStep1 } from '../validators/setup.validators'
 

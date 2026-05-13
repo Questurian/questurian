@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import LandingPage from './LandingPage'
-import { AuthContext, type AuthContextValue } from './providers/auth-context'
+import DashboardPage from './DashboardPage'
+import { AuthContext, type AuthContextValue } from '../../auth'
 
 const PRIMARY_CARD_TITLES = [
   'YouTube → Articles',
@@ -45,13 +45,13 @@ function renderPage(role = 'admin') {
   return render(
     <AuthContext.Provider value={createAuthValue(role)}>
       <MemoryRouter>
-        <LandingPage />
+        <DashboardPage />
       </MemoryRouter>
     </AuthContext.Provider>,
   )
 }
 
-describe('LandingPage', () => {
+describe('DashboardPage', () => {
   it('renders the primary sections in order and keeps occasional tools collapsed by default', () => {
     renderPage()
 

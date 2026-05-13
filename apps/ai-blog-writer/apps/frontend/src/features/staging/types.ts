@@ -1,4 +1,4 @@
-import type { SeoSection } from '../shared/seo/types'
+import type { SeoSection } from '../../shared/seo/types'
 
 export type ContentBlock = {
   id: string

@@ -10,7 +10,7 @@ vi.mock('../../../../components/FeaturedImagePicker', () => ({
   FeaturedImagePicker: () => null,
 }))
 
-vi.mock('../../../staging/features/markdown-editor', () => ({
+vi.mock('../../../../shared/markdown-editor', () => ({
   MarkdownBlockEditor: ({
     value,
     onChange,
@@ -31,15 +31,15 @@ vi.mock('../../../staging/features/markdown-editor', () => ({
   ),
 }))
 
-vi.mock('../../../shared/builder/components/InstagramPickerModal', () => ({
+vi.mock('../../../../shared/builder/components/InstagramPickerModal', () => ({
   InstagramPickerModal: () => null,
 }))
 
-vi.mock('../../../shared/builder/components/PhotoPickerModal', () => ({
+vi.mock('../../../../shared/builder/components/PhotoPickerModal', () => ({
   PhotoPickerModal: () => null,
 }))
 
-vi.mock('../../../shared/builder/components/RelatedItemPickerModal', () => ({
+vi.mock('../../../../shared/builder/components/RelatedItemPickerModal', () => ({
   RelatedItemPickerModal: () => null,
 }))
 

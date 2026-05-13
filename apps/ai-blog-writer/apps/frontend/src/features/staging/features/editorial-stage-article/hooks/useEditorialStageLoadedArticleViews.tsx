@@ -31,7 +31,7 @@ import type {
   ExternalImageCropDraft,
   ImageSourceOption,
 } from '../types'
-import type { UploadImageResponse } from '../../../../../features/images'
+import type { UploadImageResponse } from '../../../../../shared/images'
 import type { PexelsPhoto, UnsplashPhoto } from '../../../api'
 import type { EditorialPublishAnalysis } from '../editorial-markdown.service'
 

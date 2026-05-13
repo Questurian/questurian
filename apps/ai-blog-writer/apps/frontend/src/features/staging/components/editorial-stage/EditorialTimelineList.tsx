@@ -6,7 +6,7 @@ import type { EditorialPublishValidation } from '../../features/editorial-stage-
 import type { BlockImageModalMode, OpenBlockImageModalOptions, SupportedEditorialComponent } from '../../features/editorial-stage-article/types'
 import type { TimelineItem } from '../../features/editorial-stage-article/workflow.service'
 import { getMediaAssetAltText } from '../../features/editorial-stage-article/media-utils'
-import { MarkdownBlockEditor } from '../../features/markdown-editor'
+import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { isStagedArticleEditingLocked } from '../../utils/staged-article-sync'
 import { BlockActionZone } from './BlockActionZone'
 import { renderEditorialBlockCard } from './renderEditorialBlockCard'

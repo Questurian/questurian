@@ -107,7 +107,6 @@ export function ArticlePickerModal({
               placeholder="Search title or slug…"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
             />
             {!hideCollectionSelect ? (

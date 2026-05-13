@@ -1,7 +1,7 @@
 import { useContext, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AuthContext } from './providers/auth-context'
-import './css/landing.css'
+import { AuthContext } from '../../auth'
+import '../../../css/landing.css'
 
 type LandingSectionId =
   | 'article-generation'
@@ -556,7 +556,7 @@ function LandingSection({
   )
 }
 
-export default function LandingPage() {
+export default function DashboardPage() {
   const auth = useContext(AuthContext)
   const [isOccasionalOpen, setIsOccasionalOpen] = useState(false)
   const currentRole = auth?.user?.role || null

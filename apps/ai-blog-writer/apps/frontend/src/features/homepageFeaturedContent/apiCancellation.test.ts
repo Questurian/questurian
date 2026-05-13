@@ -3,11 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchMainHomepage } from './api'
 import { fetchLocationHomepage } from './locationHomepagesApi'
 
-vi.mock('../staging/api/client/config', () => ({
+vi.mock('../../shared/api/client/config', () => ({
   PAYLOAD_API_URL: 'http://payload.test',
 }))
 
-vi.mock('../staging/api/client/error-parser', () => ({
+vi.mock('../../shared/api/client/error-parser', () => ({
   parseErrorResponse: vi.fn(),
 }))
 

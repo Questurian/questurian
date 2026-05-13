@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { MediaAsset } from '../../../api'
 import type { StagedArticle } from '../../../types'
-import { createEmptySeoSection } from '../../../../shared/seo/services/seo-section.service'
+import { createEmptySeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import { useEditorialStageMedia } from './useEditorialStageMedia'
 
 function buildMediaAsset(id: number): MediaAsset {

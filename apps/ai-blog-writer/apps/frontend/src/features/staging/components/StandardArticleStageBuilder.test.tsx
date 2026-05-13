@@ -4,13 +4,13 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { StandardArticleStageBuilder } from './StandardArticleStageBuilder'
 import type { StagedArticle } from '../types'
-import type { SeoSection } from '../../shared/seo/types'
+import type { SeoSection } from '../../../shared/seo/types'
 
 type MockViewModel = ReturnType<typeof buildViewModel>
 
 let mockedViewModel: MockViewModel
 
-vi.mock('../../../providers/useAuth', () => ({
+vi.mock('../../auth', () => ({
   useAuth: () => ({
     token: 'test-token',
     user: { role: 'admin' },
@@ -21,7 +21,7 @@ vi.mock('../features/editorial-stage-article/hooks/useEditorialStageArticleScree
   useEditorialStageArticleScreenViewModel: () => mockedViewModel,
 }))
 
-vi.mock('../../shared/seo/components/SeoEditorPanel', () => ({
+vi.mock('../../../shared/seo/components/SeoEditorPanel', () => ({
   SeoEditorPanel: ({ title }: { title: string }) => (
     <section>
       <h2>{title}</h2>

@@ -1,5 +1,5 @@
 import { createListicle, getBlockTypeForListicleType, markdownToLexical, updateListicle } from '../../api'
-import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
+import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
 import { buildSeoPayload } from './seo-section.service'
 import type { PayloadListicleDoc, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
@@ -8,8 +8,8 @@ import {
   buildSingleTypeListicleStructuredDataTemplate,
   serializeStructuredDataTemplate,
 } from './structured-data-template.service'
-import { requiresInstagram, requiresPhotos } from '../../../shared/builder/utils/item-media.utils'
-import { readLexicalFromJsonText } from '../../../shared/builder/utils/lexical-json.utils'
+import { requiresInstagram, requiresPhotos } from '../../../../shared/builder/utils/item-media.utils'
+import { readLexicalFromJsonText } from '../../../../shared/builder/utils/lexical-json.utils'
 import { validateSubmit } from '../validators/submit.validators'
 
 export type SubmitListicleParams = {

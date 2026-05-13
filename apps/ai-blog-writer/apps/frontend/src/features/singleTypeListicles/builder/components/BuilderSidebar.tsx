@@ -1,4 +1,4 @@
-import { BuilderSidebar as SharedBuilderSidebar } from '../../../shared/builder/components/BuilderSidebar'
+import { BuilderSidebar as SharedBuilderSidebar } from '../../../../shared/builder/components/BuilderSidebar'
 import type { EditorAssistModelName } from '../../../staging/api'
 import type { SingleTypeListicleDraft } from '../../types'
 import { isSeoCoreComplete } from '../validators/submit.validators'

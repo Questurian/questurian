@@ -1,13 +1,10 @@
 import type { EditorAssistModelName } from '../staging/api'
-import type { LocationLevel } from '../locationScope/types'
+import type { LocationLevel } from '../../shared/locationScope/types'
 import type {
   GalleryImageObject,
-  GalleryMediaAsset,
   InstagramPostOption,
-  InstagramPreviewAsset,
-  MediaAssetOption,
   MediaMode,
-} from '../shared/builder/types'
+} from '../../shared/builder/types'
 
 export type {
   GalleryImageObject,
@@ -16,7 +13,7 @@ export type {
   InstagramPreviewAsset,
   MediaAssetOption,
   MediaMode,
-} from '../shared/builder/types'
+} from '../../shared/builder/types'
 
 export type ItineraryBlockType =
   | 'itinerary-dining'

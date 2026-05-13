@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { useAuth } from '../../providers/useAuth'
+import { useAuth } from '../auth'
 import './homepageFeaturedContent.css'
 import {
   addMainHomepageBlock,

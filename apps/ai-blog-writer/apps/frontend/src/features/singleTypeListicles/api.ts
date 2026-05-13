@@ -1,7 +1,7 @@
 import { convertMarkdownToLexical, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
-import { appendScopedLocationWhere, getArticleLocationScope } from '../locationScope/scope'
-import { normalizeRelatedItems } from '../shared/related-items/normalizeRelatedItems'
-import type { LocationScope } from '../locationScope/types'
+import { appendScopedLocationWhere, getArticleLocationScope } from '../../shared/locationScope/scope'
+import { normalizeRelatedItems } from '../../shared/related-items/normalizeRelatedItems'
+import type { LocationScope } from '../../shared/locationScope/types'
 import type {
   ListicleType,
   LocationOption,

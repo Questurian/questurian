@@ -1,5 +1,5 @@
-import { DEFAULT_EDITOR_ASSIST_MODEL } from '../staging/api/ai/models'
-import { createDraftStorage } from '../shared/builder/storage/createDraftStorage'
+import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../shared/api/ai/models'
+import { createDraftStorage } from '../../shared/builder/storage/createDraftStorage'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import {
   createEmptyDaySlice,
@@ -11,7 +11,7 @@ import {
   type TourAgencyKeyLocationRow,
   type TourAgencyStartingPoint,
 } from './types'
-import { normalizeLocationIds } from '../locationScope/scope'
+import { normalizeLocationIds } from '../../shared/locationScope/scope'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
 

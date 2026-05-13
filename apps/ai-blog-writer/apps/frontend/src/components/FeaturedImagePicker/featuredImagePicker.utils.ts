@@ -1,4 +1,4 @@
-import type { MediaAsset, MediaSet, MediaSetVariantAsset } from '../../features/staging/api/payload/payload.types'
+import type { MediaAsset, MediaSet, MediaSetVariantAsset } from '../../shared/api/payload/payload.types'
 
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
 const PREFERRED_MEDIA_SET_VARIANTS = ['thumbnail', 'square', 'editorial', 'wide', 'portrait', 'hero', 'open_graph'] as const

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getArticleLocationScope } from '../../../locationScope/scope'
+import { getArticleLocationScope } from '../../../../shared/locationScope/scope'
 import { fetchRelatedItems } from '../../api'
 import type { ItineraryBlockType, LocationOption, RelatedItemOption } from '../../types'
 import { BLOCK_TYPE_OPTIONS, EMPTY_RELATED_BY_BLOCK_TYPE } from '../constants/builder-options.constants'

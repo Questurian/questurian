@@ -1,4 +1,4 @@
-import { CONVERTER_URL } from '../client/config'
+import { CONVERTER_URL } from '../../../../shared/api/client/config'
 import type { LexicalConvertResponse } from './converter.types'
 
 export async function convertMarkdownToLexical(markdown: string): Promise<LexicalConvertResponse> {

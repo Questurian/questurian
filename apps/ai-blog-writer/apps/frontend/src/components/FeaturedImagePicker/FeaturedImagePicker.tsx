@@ -6,8 +6,8 @@ import {
   type ImageVariantType,
   type UploadImageResponse,
   type UploadProgress,
-} from '../../features/images'
-import { PAYLOAD_API_URL } from '../../features/staging/api/client/config'
+} from '../../shared/images'
+import { PAYLOAD_API_URL } from '../../shared/api/client/config'
 import {
   fetchExternalImageSource,
   searchPexelsImages,
@@ -19,8 +19,8 @@ import type {
   PexelsPhoto,
   UnsplashPhoto,
 } from '../../features/staging/api/external-images/external-images.types'
-import { fetchMediaAssets, fetchMediaSets } from '../../features/staging/api/payload/payload.api'
-import type { MediaAsset, MediaSet } from '../../features/staging/api/payload/payload.types'
+import { fetchMediaAssets, fetchMediaSets } from '../../shared/api/payload/payload.api'
+import type { MediaAsset, MediaSet } from '../../shared/api/payload/payload.types'
 import {
   buildExternalAltText,
   buildExternalImportRef,

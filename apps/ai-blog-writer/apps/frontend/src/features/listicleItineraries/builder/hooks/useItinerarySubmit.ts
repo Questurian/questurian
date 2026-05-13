@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
-import { getSchemaPublisherConfig } from '../../../shared/seo/services/schema-publisher-config.service'
+import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
 import { createItinerary, markdownToLexical, updateItinerary } from '../../api'
 import { saveDraft } from '../../storage'
 import {
@@ -20,9 +20,9 @@ import {
   buildListicleItineraryStructuredDataTemplate,
   serializeStructuredDataTemplate,
 } from '../services/structured-data-template.service'
-import { requiresInstagram, requiresPhotos } from '../../../shared/builder/utils/item-media.utils'
+import { requiresInstagram, requiresPhotos } from '../../../../shared/builder/utils/item-media.utils'
 import { stripNestedRowIdsFromItineraryDays } from '../utils/itinerary-payload-sanitize'
-import { readLexicalFromJsonText, stripLexicalEditorStateId } from '../../../shared/builder/utils/lexical-json.utils'
+import { readLexicalFromJsonText, stripLexicalEditorStateId } from '../../../../shared/builder/utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
 

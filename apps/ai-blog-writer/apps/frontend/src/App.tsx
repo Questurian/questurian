@@ -1,10 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './providers/AuthProvider'
-import RequireAuth from './components/RequireAuth'
-import Layout from './components/Layout'
-import Login from './pages/Login'
-import LandingPage from './LandingPage'
+import { AuthProvider, LoginPage, RequireAuth } from './features/auth'
+import { DashboardPage } from './features/dashboard'
+import Layout from './app/layout'
 import {
   YouTube2BlogPage,
   ArticlesPage,
@@ -64,12 +62,12 @@ export default function App() {
         >
           <Routes>
             {/* Public Login Route */}
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<LoginPage />} />
             
             {/* Protected Routes */}
             <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
               {/* Landing */}
-              <Route index element={<LandingPage />} />
+              <Route index element={<DashboardPage />} />
 
               {/* YouTube2Blog Feature */}
               <Route path="youtube2blog" element={<YouTube2BlogPage />} />

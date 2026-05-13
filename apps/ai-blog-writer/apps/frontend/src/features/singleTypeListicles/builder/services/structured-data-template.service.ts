@@ -7,7 +7,7 @@ import type {
 import {
   getSchemaPublisherConfig,
   type SchemaPublisherConfig,
-} from '../../../shared/seo/services/schema-publisher-config.service'
+} from '../../../../shared/seo/services/schema-publisher-config.service'
 import {
   asArray,
   compactValue,
@@ -30,9 +30,9 @@ import {
   toFiniteNumber,
   toSchemaDate,
   toStructuredDescription,
-} from '../../../shared/builder/services/structured-data-template-core.service'
+} from '../../../../shared/builder/services/structured-data-template-core.service'
 
-export { serializeStructuredDataTemplate } from '../../../shared/builder/services/structured-data-template-core.service'
+export { serializeStructuredDataTemplate } from '../../../../shared/builder/services/structured-data-template-core.service'
 
 export const LISTICLE_ITEM_SCHEMA_TYPE: Record<ListicleType, string> = {
   dining: 'Restaurant',

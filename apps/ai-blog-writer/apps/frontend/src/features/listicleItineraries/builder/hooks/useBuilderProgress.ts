@@ -1,4 +1,4 @@
-import { useBuilderProgress as useSharedBuilderProgress } from '../../../shared/builder/hooks/useBuilderProgress'
+import { useBuilderProgress as useSharedBuilderProgress } from '../../../../shared/builder/hooks/useBuilderProgress'
 import type { ListicleItineraryDraft } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { isSeoCoreComplete } from '../validators/step.validators'

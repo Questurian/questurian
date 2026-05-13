@@ -1,4 +1,4 @@
-import type { UploadImageResponse } from '../../../images'
+import type { UploadImageResponse } from '../../../../shared/images'
 import type {
   ExternalImageProvider,
   MediaAsset,

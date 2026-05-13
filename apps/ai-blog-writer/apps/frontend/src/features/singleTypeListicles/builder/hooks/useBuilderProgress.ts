@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useBuilderProgress as useSharedBuilderProgress } from '../../../shared/builder/hooks/useBuilderProgress'
+import { useBuilderProgress as useSharedBuilderProgress } from '../../../../shared/builder/hooks/useBuilderProgress'
 import type { SingleTypeListicleDraft } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { isSeoCoreComplete } from '../validators/submit.validators'

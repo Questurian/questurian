@@ -1,7 +1,7 @@
 import { convertMarkdownToLexical, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
-import { appendScopedLocationWhere, getArticleLocationScope } from '../locationScope/scope'
-import { normalizeRelatedItems } from '../shared/related-items/normalizeRelatedItems'
-import type { LocationScope } from '../locationScope/types'
+import { appendScopedLocationWhere, getArticleLocationScope } from '../../shared/locationScope/scope'
+import { normalizeRelatedItems } from '../../shared/related-items/normalizeRelatedItems'
+import type { LocationScope } from '../../shared/locationScope/types'
 import type {
   InstagramPostOption,
   ItineraryBlockType,
@@ -112,7 +112,7 @@ export async function fetchItineraryById(id: number, token: string): Promise<Pay
 }
 
 export async function createItinerary(body: Record<string, unknown>, token: string): Promise<PayloadItineraryDoc> {
-  const { id: _omitId, ...safeBody } = body
+  const safeBody = Object.fromEntries(Object.entries(body).filter(([key]) => key !== 'id'))
   const response = await payloadRequest<{ doc: PayloadItineraryDoc }>(`/api/listicle-itineraries`, token, {
     method: 'POST',
     body: JSON.stringify(safeBody),

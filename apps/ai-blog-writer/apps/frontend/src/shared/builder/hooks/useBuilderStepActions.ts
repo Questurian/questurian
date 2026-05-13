@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { findLocationByKey } from '../../../locationScope/scope'
-import { resolveEditorAssistModelName } from '../../../staging/api/ai/models'
+import { findLocationByKey } from '../../locationScope/scope'
+import { resolveEditorAssistModelName } from '../../api/ai/models'
 
 type StepFlags = {
   step1_complete: boolean

@@ -4,7 +4,7 @@ import {
   getSeoAiTargetLabel,
   parseSeoAiPatch,
   type SeoAiTarget,
-} from '../../../shared/seo/services/seo-ai.service'
+} from '../../../../shared/seo/services/seo-ai.service'
 
 const STRUCTURED_DATA_DESCRIPTION_MAX_LENGTH = 220
 

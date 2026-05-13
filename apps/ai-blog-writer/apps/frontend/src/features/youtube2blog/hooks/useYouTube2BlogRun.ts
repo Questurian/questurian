@@ -10,7 +10,7 @@ import {
 } from '../api'
 import type { ResultTab } from '../types/youtube2blog.types'
 import type { StatusResponse, UploadResponse } from '@shared/types'
-import { DEFAULT_Y2B_MODEL, type Y2BModelName } from '../../staging/api/ai/models'
+import { DEFAULT_Y2B_MODEL, type Y2BModelName } from '../../../shared/api/ai/models'
 
 type RunInputType = 'url' | null
 

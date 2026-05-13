@@ -7,7 +7,7 @@ import {
   type ImageVariantType,
   type UploadImageResponse,
   type UploadProgress,
-} from '../../images'
+} from '../../../shared/images'
 import {
   fetchExternalImageSource,
   searchPexelsImages,
