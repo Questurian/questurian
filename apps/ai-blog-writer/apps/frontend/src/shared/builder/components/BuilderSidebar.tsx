@@ -96,7 +96,12 @@ export function BuilderSidebar({
                 </span>
               </div>
               {isPublishedPayload ? (
-                <p className="stl-summary-live-note">Syncing changes updates the live Payload document.</p>
+                <div className="stl-published-banner" role="status">
+                  <span className="stl-status stl-status-published">Published</span>
+                  <span>
+                    This Payload document is published. Future syncs from this builder will update the live published itinerary.
+                  </span>
+                </div>
               ) : null}
             </>
           ) : (

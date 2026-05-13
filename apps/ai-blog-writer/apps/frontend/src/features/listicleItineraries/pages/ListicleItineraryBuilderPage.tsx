@@ -659,15 +659,6 @@ export default function ListicleItineraryBuilderPage() {
           {error ? <p className="stl-error">{error}</p> : null}
           {result ? <p className="stl-success">{result}</p> : null}
 
-          {isPublishedPayload ? (
-            <div className="stl-published-banner" role="status">
-              <span className="stl-status stl-status-published">Published</span>
-              <span>
-                This Payload document is published. Future syncs from this builder will update the live published itinerary.
-              </span>
-            </div>
-          ) : null}
-
           {isSynced && hasLocalChanges ? (
             <div className="stl-out-of-sync-banner" role="status">
               <span className="stl-out-of-sync-banner__dot" aria-hidden="true" />
