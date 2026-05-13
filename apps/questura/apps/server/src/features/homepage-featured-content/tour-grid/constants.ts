@@ -1,0 +1,2 @@
+export { HOMEPAGE_FEATURED_CONTENT_SLOTS } from '../types'
+export { HOMEPAGE_TOUR_GRID_MAX_SLOTS, HOMEPAGE_TOUR_GRID_MIN_SLOTS } from '../types'

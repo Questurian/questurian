@@ -6,9 +6,9 @@ import {
   buildHotelGridGlobalData,
   normalizeHotelGridInput,
   validateHotelGridItems,
-} from './hotel-grid-service'
-import { normalizeArticleGridFourLayout } from './article-grid-four-layout'
-import { normalizeLocationGridMediaAspect } from './location-grid/media-aspect'
+} from './hotel-grid/service'
+import { normalizeArticleGridFourLayout } from './article-grid/service'
+import { normalizeLocationGridMediaAspect } from './location-grid/lib/media-aspect'
 import {
   buildLocationGridGlobalData,
   normalizeLocationGridInput,
@@ -24,28 +24,28 @@ import {
   buildThingsToDoAttractionsGlobalData,
   normalizeThingsToDoAttractionsInput,
   validateThingsToDoAttractionsItems,
-} from './things-to-do-attractions-service'
+} from './things-to-do-attractions/service'
 import {
   buildTourGridGlobalData,
   normalizeTourGridInput,
   validateTourGridItems,
-} from './tour-grid-service'
+} from './tour-grid/service'
 import {
   buildThingsToDoListiclesGlobalData,
   normalizeThingsToDoListiclesInput,
   validateThingsToDoListiclesItems,
-} from './things-to-do-listicles-service'
+} from './things-to-do-listicles/service'
 import {
   buildQuesturianMapsGlobalData,
   normalizeQuesturianMapsInput,
   validateQuesturianMapsItems,
-} from './questurian-maps-service'
+} from './questurian-maps/service'
 import { resolveStoredSlotCountForBlockType } from './slot-count-for-block-type'
 import {
   buildWhereToEatDrinkGlobalData,
   normalizeWhereToEatDrinkInput,
   validateWhereToEatDrinkItems,
-} from './where-to-eat-drink-service'
+} from './where-to-eat-drink/service'
 
 function isCuratedHomepageBlockType(
   value: unknown,
