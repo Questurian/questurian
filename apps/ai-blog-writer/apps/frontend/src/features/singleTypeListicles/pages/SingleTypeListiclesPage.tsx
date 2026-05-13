@@ -120,26 +120,16 @@ export default function SingleTypeListiclesPage() {
     setLocalDrafts(listDrafts())
   }
 
-  return (
-    <div className="stl-page stl-single-type-page">
-      <header className="stl-hero">
-        <div>
-          <p className="stl-eyebrow">Questurian Studio</p>
-          <h1>Single Type Listicles</h1>
-          <p className="stl-lede">
-            Build and maintain Payload single-type-listicle articles with AI-assisted block editing.
-          </p>
-        </div>
-        <div className="stl-hero-actions">
-          <Link className="stl-btn stl-btn-secondary" to="/">
-            Back Home
-          </Link>
-          <Link className="stl-btn" to="/single-type-listicles/builder">
-            New Listicle
-          </Link>
-        </div>
-      </header>
-
+  const pageContent = isLoading ? (
+    <section className="stl-panel">
+      <p className="stl-placeholder">Loading listicles...</p>
+    </section>
+  ) : hasBlockingError ? (
+    <section className="stl-panel">
+      <p className="stl-error">{error}</p>
+    </section>
+  ) : (
+    <>
       <section className="stl-panel">
         <div className="stl-panel-header">
           <h2>Local Drafts ({localRows.length})</h2>
@@ -203,56 +193,74 @@ export default function SingleTypeListiclesPage() {
           <h2>Payload Documents ({rows.length})</h2>
         </div>
 
-        {isLoading ? <p className="stl-placeholder">Loading listicles...</p> : null}
-        {hasBlockingError ? <p className="stl-error">{error}</p> : null}
-
-        {!isLoading && !hasBlockingError ? (
-          rows.length === 0 ? (
-            <div className="stl-empty">
-              <p>No single-type-listicles found.</p>
-              <p>Create one to start building this format in the app.</p>
-            </div>
-          ) : (
-            <div className="stl-table-wrap">
-              <table className="stl-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Location</th>
-                    <th>Type</th>
-                    <th>Target</th>
-                    <th>Status</th>
-                    <th>Updated</th>
-                    <th></th>
+        {rows.length === 0 ? (
+          <div className="stl-empty">
+            <p>No single-type-listicles found.</p>
+            <p>Create one to start building this format in the app.</p>
+          </div>
+        ) : (
+          <div className="stl-table-wrap">
+            <table className="stl-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Location</th>
+                  <th>Type</th>
+                  <th>Target</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.title}</td>
+                    <td>{row.location}</td>
+                    <td>{row.type}</td>
+                    <td>{row.target}</td>
+                    <td>
+                      <span className={`stl-status stl-status-${row.status}`}>{row.status}</span>
+                    </td>
+                    <td>{row.updatedAt}</td>
+                    <td>
+                      <Link
+                        className="stl-link"
+                        to={`/single-type-listicles/builder?id=${row.id}`}
+                      >
+                        Edit
+                      </Link>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.title}</td>
-                      <td>{row.location}</td>
-                      <td>{row.type}</td>
-                      <td>{row.target}</td>
-                      <td>
-                        <span className={`stl-status stl-status-${row.status}`}>{row.status}</span>
-                      </td>
-                      <td>{row.updatedAt}</td>
-                      <td>
-                        <Link
-                          className="stl-link"
-                          to={`/single-type-listicles/builder?id=${row.id}`}
-                        >
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : null}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
+    </>
+  )
+
+  return (
+    <div className="stl-page stl-single-type-page">
+      <header className="stl-hero">
+        <div>
+          <p className="stl-eyebrow">Questurian Studio</p>
+          <h1>Single Type Listicles</h1>
+          <p className="stl-lede">
+            Build and maintain Payload single-type-listicle articles with AI-assisted block editing.
+          </p>
+        </div>
+        <div className="stl-hero-actions">
+          <Link className="stl-btn stl-btn-secondary" to="/">
+            Back Home
+          </Link>
+          <Link className="stl-btn" to="/single-type-listicles/builder">
+            New Listicle
+          </Link>
+        </div>
+      </header>
+      {pageContent}
     </div>
   )
 }

@@ -201,6 +201,225 @@ export default function ArticlesPage() {
     deleteGeneratedArticleMutation.mutate(generatedDeleteTarget.run_id)
   }
 
+  const pageContent = articlesQuery.isLoading ? (
+    <section className="stl-panel">
+      <p className="stl-placeholder">Loading payload documents...</p>
+    </section>
+  ) : articlesQuery.isError ? (
+    <section className="stl-panel">
+      <p className="stl-error">Failed to load payload documents. Is backend running?</p>
+    </section>
+  ) : (
+    <main className="p2b-saved-layout">
+      <section className="stl-panel">
+        <div className="stl-panel-header">
+          <h2>Local Drafts ({localDraftRows.length})</h2>
+        </div>
+        <div className="panel-body">
+          {localDraftRows.length === 0 ? (
+            <div className="stl-empty">
+              <p>No local drafts saved.</p>
+              <p>Use "Create Local Draft" to start editing before sync.</p>
+            </div>
+          ) : (
+            <div className="stl-table-wrap">
+              <table className="stl-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Source</th>
+                    <th>Updated</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localDraftRows.map((draft) => {
+                    const source = draft.payloadArticleId ? `Payload #${draft.payloadArticleId}` : `Run ${shortRunId(draft.runId)}`
+
+                    return (
+                      <tr key={draft.id}>
+                        <td>{draft.title || 'Untitled'}</td>
+                        <td><span className="stl-status stl-status-local">Local Draft</span></td>
+                        <td>{source}</td>
+                        <td>{formatDate(draft.updatedAt)}</td>
+                        <td>
+                          <div className="stl-table-actions">
+                            <Link
+                              className="stl-link"
+                              to={`/prompt2blog/stage-article?stagedId=${encodeURIComponent(draft.id)}`}
+                            >
+                              Resume
+                            </Link>
+                            <button
+                              type="button"
+                              className="stl-btn stl-btn-danger stl-btn-xs"
+                              onClick={() => discardLocalDraft(draft.id)}
+                            >
+                              Discard
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="stl-panel">
+        <div className="stl-panel-header">
+          <h2>Payload Documents ({payloadRows.length})</h2>
+        </div>
+        <div className="panel-body">
+          {payloadRows.length === 0 ? (
+            <div className="stl-empty">
+              <p>No synced payload documents yet.</p>
+              <p>Create a local draft from Generated, then sync to Payload.</p>
+            </div>
+          ) : (
+            <div className="stl-table-wrap">
+              <table className="stl-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payloadRows.map((article) => {
+                    const status = resolveGeneratedArticleStatus({
+                      article,
+                      payloadStatusByArticleId,
+                    })
+                    const meta = statusMeta(status)
+                    const localDraft = findLocalDraftForGeneratedArticle(localDrafts, article)
+
+                    return (
+                      <tr key={article.run_id}>
+                        <td>{article.title || 'Untitled Article'}</td>
+                        <td>{article.article_type || '-'}</td>
+                        <td>
+                          <span className={`stl-status stl-status-${meta.className}`}>{meta.label}</span>
+                          {localDraft ? <span className="stl-status stl-status-local">Local Edits</span> : null}
+                        </td>
+                        <td>{formatDate(article.updated_at)}</td>
+                        <td>
+                          <div className="stl-table-actions">
+                            {localDraft ? (
+                              <Link
+                                to={`/prompt2blog/stage-article?stagedId=${encodeURIComponent(localDraft.id)}`}
+                                className="stl-link"
+                              >
+                                Resume
+                              </Link>
+                            ) : (
+                              <span className="p2b-status-note">Synced to Payload</span>
+                            )}
+                            {article.payload_article_id ? (
+                              <Link
+                                to={buildStageUrl(article)}
+                                className="stl-link"
+                              >
+                                Open Editor
+                              </Link>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {payloadStatusesQuery.isFetching ? <p className="stl-placeholder">Refreshing Payload statuses...</p> : null}
+          {!token && payloadArticleIds.length > 0 ? (
+            <p className="stl-placeholder">Payload status lookup unavailable without auth token.</p>
+          ) : null}
+          {token && unresolvedSyncedStatusCount > 0 ? (
+            <p className="stl-placeholder">Some synced statuses could not refresh. Showing last known status or Draft.</p>
+          ) : null}
+          {localPayloadIds.size > 0 ? (
+            <p className="stl-placeholder">Rows with unsynced browser changes are marked "Local Edits".</p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="stl-panel">
+        <div className="stl-panel-header">
+          <h2>Generated ({generatedRows.length})</h2>
+        </div>
+        <div className="panel-body">
+          {generatedRows.length === 0 ? (
+            <div className="stl-empty">
+              <p>No generated-only runs.</p>
+              <p>Every generated run here already has a synced Payload document.</p>
+            </div>
+          ) : (
+            <div className="stl-table-wrap">
+              <table className="stl-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Updated</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {generatedRows.map((article) => {
+                    const localDraft = findLocalDraftForGeneratedArticle(localDrafts, article)
+
+                    return (
+                      <tr key={article.run_id}>
+                        <td>{article.title || 'Untitled Article'}</td>
+                        <td>{article.article_type || '-'}</td>
+                        <td>{formatDate(article.updated_at)}</td>
+                        <td>
+                          <div className="stl-table-actions">
+                            {localDraft ? (
+                              <Link
+                                to={`/prompt2blog/stage-article?stagedId=${encodeURIComponent(localDraft.id)}`}
+                                className="stl-link"
+                              >
+                                Resume
+                              </Link>
+                            ) : (
+                              <Link
+                                to={buildStageUrl(article)}
+                                className="stl-link"
+                              >
+                                Create Local Draft
+                              </Link>
+                            )}
+                            <button
+                              type="button"
+                              className="stl-btn stl-btn-danger stl-btn-xs"
+                              onClick={() => openGeneratedDeleteModal(article)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+  )
+
   return (
     <div className="stl-page">
       <header className="stl-hero">
@@ -215,223 +434,7 @@ export default function ArticlesPage() {
           <Link to="/prompt2blog" className="stl-btn stl-btn-secondary">Back to Pipeline</Link>
         </div>
       </header>
-
-      <main className="p2b-saved-layout">
-        <section className="stl-panel">
-          <div className="stl-panel-header">
-            <h2>Local Drafts ({localDraftRows.length})</h2>
-          </div>
-          <div className="panel-body">
-            {localDraftRows.length === 0 ? (
-              <div className="stl-empty">
-                <p>No local drafts saved.</p>
-                <p>Use "Create Local Draft" to start editing before sync.</p>
-              </div>
-            ) : (
-              <div className="stl-table-wrap">
-                <table className="stl-table">
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Status</th>
-                      <th>Source</th>
-                      <th>Updated</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {localDraftRows.map((draft) => {
-                      const source = draft.payloadArticleId ? `Payload #${draft.payloadArticleId}` : `Run ${shortRunId(draft.runId)}`
-
-                      return (
-                        <tr key={draft.id}>
-                          <td>{draft.title || 'Untitled'}</td>
-                          <td><span className="stl-status stl-status-local">Local Draft</span></td>
-                          <td>{source}</td>
-                          <td>{formatDate(draft.updatedAt)}</td>
-                          <td>
-                            <div className="stl-table-actions">
-                              <Link
-                                className="stl-link"
-                                to={`/prompt2blog/stage-article?stagedId=${encodeURIComponent(draft.id)}`}
-                              >
-                                Resume
-                              </Link>
-                              <button
-                                type="button"
-                                className="stl-btn stl-btn-danger stl-btn-xs"
-                                onClick={() => discardLocalDraft(draft.id)}
-                              >
-                                Discard
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="stl-panel">
-          <div className="stl-panel-header">
-            <h2>Payload Documents ({payloadRows.length})</h2>
-          </div>
-          <div className="panel-body">
-            {articlesQuery.isLoading ? (
-              <p className="stl-placeholder">Loading payload documents...</p>
-            ) : articlesQuery.isError ? (
-              <p className="stl-error">Failed to load payload documents. Is backend running?</p>
-            ) : payloadRows.length === 0 ? (
-              <div className="stl-empty">
-                <p>No synced payload documents yet.</p>
-                <p>Create a local draft from Generated, then sync to Payload.</p>
-              </div>
-            ) : (
-              <div className="stl-table-wrap">
-                <table className="stl-table">
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payloadRows.map((article) => {
-                      const status = resolveGeneratedArticleStatus({
-                        article,
-                        payloadStatusByArticleId,
-                      })
-                      const meta = statusMeta(status)
-                      const localDraft = findLocalDraftForGeneratedArticle(localDrafts, article)
-
-                      return (
-                        <tr key={article.run_id}>
-                          <td>{article.title || 'Untitled Article'}</td>
-                          <td>{article.article_type || '-'}</td>
-                          <td>
-                            <span className={`stl-status stl-status-${meta.className}`}>{meta.label}</span>
-                            {localDraft ? <span className="stl-status stl-status-local">Local Edits</span> : null}
-                          </td>
-                          <td>{formatDate(article.updated_at)}</td>
-                          <td>
-                            <div className="stl-table-actions">
-                              {localDraft ? (
-                                <Link
-                                  to={`/prompt2blog/stage-article?stagedId=${encodeURIComponent(localDraft.id)}`}
-                                  className="stl-link"
-                                >
-                                  Resume
-                                </Link>
-                              ) : (
-                                <span className="p2b-status-note">Synced to Payload</span>
-                              )}
-                              {article.payload_article_id ? (
-                                <Link
-                                  to={buildStageUrl(article)}
-                                  className="stl-link"
-                                >
-                                  Open Editor
-                                </Link>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {payloadStatusesQuery.isFetching ? <p className="stl-placeholder">Refreshing Payload statuses...</p> : null}
-            {!token && payloadArticleIds.length > 0 ? (
-              <p className="stl-placeholder">Payload status lookup unavailable without auth token.</p>
-            ) : null}
-            {token && unresolvedSyncedStatusCount > 0 ? (
-              <p className="stl-placeholder">Some synced statuses could not refresh. Showing last known status or Draft.</p>
-            ) : null}
-            {localPayloadIds.size > 0 ? (
-              <p className="stl-placeholder">Rows with unsynced browser changes are marked "Local Edits".</p>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="stl-panel">
-          <div className="stl-panel-header">
-            <h2>Generated ({generatedRows.length})</h2>
-          </div>
-          <div className="panel-body">
-            {articlesQuery.isLoading ? (
-              <p className="stl-placeholder">Loading articles...</p>
-            ) : articlesQuery.isError ? (
-              <p className="stl-error">Failed to load articles. Is backend running?</p>
-            ) : generatedRows.length === 0 ? (
-              <div className="stl-empty">
-                <p>No generated-only runs.</p>
-                <p>Every generated run here already has a synced Payload document.</p>
-              </div>
-            ) : (
-              <div className="stl-table-wrap">
-                <table className="stl-table">
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Type</th>
-                      <th>Updated</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generatedRows.map((article) => {
-                      const localDraft = findLocalDraftForGeneratedArticle(localDrafts, article)
-
-                      return (
-                        <tr key={article.run_id}>
-                          <td>{article.title || 'Untitled Article'}</td>
-                          <td>{article.article_type || '-'}</td>
-                          <td>{formatDate(article.updated_at)}</td>
-                          <td>
-                            <div className="stl-table-actions">
-                              {localDraft ? (
-                                <Link
-                                  to={`/prompt2blog/stage-article?stagedId=${encodeURIComponent(localDraft.id)}`}
-                                  className="stl-link"
-                                >
-                                  Resume
-                                </Link>
-                              ) : (
-                                <Link
-                                  to={buildStageUrl(article)}
-                                  className="stl-link"
-                                >
-                                  Create Local Draft
-                                </Link>
-                              )}
-                              <button
-                                type="button"
-                                className="stl-btn stl-btn-danger stl-btn-xs"
-                                onClick={() => openGeneratedDeleteModal(article)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
+      {pageContent}
       {generatedDeleteTarget ? (
         <div className="stl-modal-overlay" role="presentation" onClick={closeGeneratedDeleteModal}>
           <div
