@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { syncCurrencyUsdRates } from '@/features/shared/currencies/syncExchangeRates'
+import { syncCurrencyUsdRates } from '@/features/shared/currencies/exchange-rates'
 
 function extractProvidedSecret(req: NextRequest): string {
   const bearerToken = req.headers.get('authorization')

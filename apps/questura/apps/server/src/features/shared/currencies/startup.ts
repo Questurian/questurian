@@ -2,8 +2,8 @@ import type { Payload } from 'payload'
 
 import type { LoggerLike } from '@/types'
 
+import { syncCurrencyUsdRates } from './exchange-rates'
 import { seedCurrencies } from './seed'
-import { syncCurrencyUsdRates } from './syncExchangeRates'
 
 const CURRENCY_STARTUP_TASK_KEY = '__questuraCurrencyStartupTask'
 

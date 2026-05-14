@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
+
 import {
   buildExchangeRateApiOpenLatestUrl,
   parseExchangeRateApiOpenResponse,
   syncCurrencyUsdRates,
-} from '@/features/shared/currencies/syncExchangeRates'
+} from '.'
 
 describe('currency exchange-rate sync', () => {
   it('builds the ExchangeRate-API open USD latest URL', () => {

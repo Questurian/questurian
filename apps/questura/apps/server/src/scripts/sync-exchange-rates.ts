@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { getPayload } from 'payload'
 import config from '../payload.config'
-import { syncCurrencyUsdRates } from '../features/shared/currencies/syncExchangeRates'
+import { syncCurrencyUsdRates } from '../features/shared/currencies/exchange-rates'
 
 const run = async () => {
   const payload = await getPayload({ config: await config })

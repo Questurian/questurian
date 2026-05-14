@@ -2,7 +2,7 @@ import 'dotenv/config'
 import { getPayload } from 'payload'
 import config from '../payload.config'
 import { seedCurrencies } from '../features/shared/currencies/seed'
-import { syncCurrencyUsdRates } from '../features/shared/currencies/syncExchangeRates'
+import { syncCurrencyUsdRates } from '../features/shared/currencies/exchange-rates'
 
 async function countCurrencies(payload: Awaited<ReturnType<typeof getPayload>>): Promise<number> {
   const result = await payload.find({
