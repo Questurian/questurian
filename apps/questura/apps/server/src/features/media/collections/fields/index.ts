@@ -1,0 +1,1 @@
+export { mediaAssetFields } from './mediaAssetFields'
