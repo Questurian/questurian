@@ -1,5 +1,5 @@
 import { Access, FieldAccess } from 'payload'
-import { getAuthenticatedUser } from '../types'
+import { getAuthenticatedUser } from '../lib/get-authenticated-user'
 
 export const isAdmin: Access = ({ req }) => {
   const user = getAuthenticatedUser(req)

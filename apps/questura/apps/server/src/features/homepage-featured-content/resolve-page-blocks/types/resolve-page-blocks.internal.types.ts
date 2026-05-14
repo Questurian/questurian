@@ -1,3 +1,15 @@
+export type ApiCuratedBlock = {
+  id: string
+  blockType: string
+  sectionHeading?: string | null
+  sectionSubheading?: string | null
+  slot3Layout?: unknown
+  slot4Layout?: unknown
+  slot5Layout?: unknown
+  mediaAspect?: unknown
+  articleGridFourLayout?: unknown
+}
+
 export type PublicPreviewPerson = {
   id: number | null
   name: string | null

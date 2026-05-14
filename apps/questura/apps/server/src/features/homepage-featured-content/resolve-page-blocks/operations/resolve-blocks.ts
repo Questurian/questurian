@@ -1,4 +1,4 @@
-import type { getPayload } from 'payload'
+import type { PayloadInstance } from '@/types'
 
 import type { RawBlock } from '../types'
 
@@ -17,8 +17,6 @@ import { getTourGridSelectionFromItems } from '../../tour-grid/service'
 import { getWhereToEatDrinkSelectionFromItems } from '../../where-to-eat-drink/service'
 import { isCuratedBlockType } from '../lib/guards'
 import { resolveLocationGridScope } from './resolve-scope'
-
-type PayloadInstance = Awaited<ReturnType<typeof getPayload>>
 
 export async function resolvePageBlocks(
   payload: PayloadInstance,

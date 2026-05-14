@@ -5,26 +5,11 @@ import {
   normalizeLocationKey,
 } from '@/shared/location/server/locationScope'
 
-type RelatedMapsArticleRouteType = 'maps' | 'itinerary'
-
-type RelatedMapsArticleTeaser = {
-  id: string | number
-  title: string
-  slug: string
-  routeType: RelatedMapsArticleRouteType
-  header?: {
-    featuredImage?: {
-      url: string
-      alt_text?: string
-    } | null
-  } | null
-}
-
-type FetchRelatedMapsArticlesParams = {
-  country: string
-  city?: string | null
-  currentSlug?: string | null
-}
+import type {
+  FetchRelatedMapsArticlesParams,
+  RelatedMapsArticleRouteType,
+  RelatedMapsArticleTeaser,
+} from './types'
 
 const MAP_ARTICLE_LIMIT = 12
 

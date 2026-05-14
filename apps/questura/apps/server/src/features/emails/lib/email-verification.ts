@@ -1,11 +1,6 @@
 import type { Payload } from 'payload'
 
-interface EmailVerificationParams {
-  email: string
-  firstName: string
-  lastName: string
-  code: string
-}
+import type { EmailVerificationParams } from '../types'
 
 export async function sendEmailVerificationEmail(
   payload: Payload,

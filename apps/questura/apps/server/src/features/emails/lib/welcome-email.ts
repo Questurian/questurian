@@ -1,11 +1,7 @@
 import type { Payload } from 'payload'
 import { APP_URLS } from '@/shared/config'
 
-interface WelcomeEmailParams {
-  email: string
-  firstName: string
-  lastName: string
-}
+import type { WelcomeEmailParams } from '../types'
 
 export async function sendWelcomeEmail(
   payload: Payload,

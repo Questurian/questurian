@@ -1,12 +1,7 @@
 import type { Payload } from 'payload'
 import { APP_URLS } from '@/shared/config'
 
-interface GoogleAccountLinkedParams {
-  email: string
-  firstName: string
-  lastName: string
-  googleEmail: string
-}
+import type { GoogleAccountLinkedParams } from '../types'
 
 export async function sendGoogleAccountLinkedEmail(
   payload: Payload,

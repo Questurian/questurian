@@ -1,44 +1,16 @@
 import type { Payload } from 'payload'
 
+import type {
+  ActiveCurrencyDoc,
+  CurrencyExchangeRateSyncResult,
+  ExchangeRateApiOpenResponse,
+  FetchLike,
+  LatestUsdRateSnapshot,
+} from './types'
+
 const EXCHANGE_RATE_API_OPEN_URL = 'https://open.er-api.com/v6/latest/USD'
 const EXCHANGE_RATE_API_OPEN_PROVIDER = 'exchange-rate-api-open' as const
 const USD_CURRENCY_CODE = 'USD'
-
-type ActiveCurrencyDoc = {
-  id: number
-  code?: string | null
-}
-
-type ExchangeRateApiOpenResponse = {
-  result?: unknown
-  base_code?: unknown
-  time_last_update_utc?: unknown
-  time_next_update_utc?: unknown
-  conversion_rates?: unknown
-  base?: unknown
-  rates?: unknown
-}
-
-type LatestUsdRateSnapshot = {
-  unitsPerUsd: number
-  provider: typeof EXCHANGE_RATE_API_OPEN_PROVIDER
-  sourceUpdatedAt: string
-  nextUpdateAt: string
-  fetchedAt: string
-}
-
-type CurrencyExchangeRateSyncResult = {
-  provider: typeof EXCHANGE_RATE_API_OPEN_PROVIDER
-  baseCurrency: typeof USD_CURRENCY_CODE
-  sourceUpdatedAt: string
-  nextUpdateAt: string
-  fetchedAt: string
-  updatedCount: number
-  updatedCodes: string[]
-  skippedCodes: string[]
-}
-
-type FetchLike = typeof fetch
 
 function normalizeCurrencyCode(value: unknown): string {
   return typeof value === 'string' ? value.trim().toUpperCase() : ''

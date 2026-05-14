@@ -5,6 +5,7 @@ export type {
   RawBlock,
 } from './resolve-page-blocks.types'
 export type {
+  ApiCuratedBlock,
   PublicArticleItem,
   PublicPreviewCategory,
   PublicPreviewPerson,

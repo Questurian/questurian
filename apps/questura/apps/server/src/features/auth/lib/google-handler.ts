@@ -3,14 +3,7 @@ import { sendWelcomeEmail, sendGoogleAccountLinkedEmail } from '@/emails'
 import { generateSecurePassword } from '@/shared/utils/utils'
 import { APP_CONFIG, APP_CONFIG_WITH_GOOGLE } from '@/shared/config'
 
-interface GoogleUserInfo {
-  id: string
-  email: string
-  verified_email: boolean
-  given_name: string
-  family_name: string
-  picture: string
-}
+import type { GoogleUserInfo } from '../types'
 
 export const exchangeCodeForToken = async (code: string): Promise<string> => {
   const response = await fetch('https://oauth2.googleapis.com/token', {

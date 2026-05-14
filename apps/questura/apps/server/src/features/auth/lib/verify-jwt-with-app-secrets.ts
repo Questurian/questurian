@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import type { JwtPayload } from '../types/jwt'
+import type { JwtPayload } from '../types'
 
 function uniqueNonEmptyStrings(values: (string | undefined)[]): string[] {
   const out: string[] = []

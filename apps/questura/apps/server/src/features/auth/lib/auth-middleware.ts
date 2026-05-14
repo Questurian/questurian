@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import jwt from 'jsonwebtoken'
-import type { JwtPayload } from '../types/jwt'
+import type { AuthMiddlewareOptions, AuthResult, JwtPayload } from '../types'
 import type { User } from '@/payload-types'
 import { APP_CONFIG } from '@/shared/config'
 import { tryVerifyJwtWithAppSecrets } from './verify-jwt-with-app-secrets'
@@ -10,18 +10,6 @@ import { tryVerifyJwtWithAppSecrets } from './verify-jwt-with-app-secrets'
 const JWT_SECRET = APP_CONFIG.JWT_SECRET
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET or PAYLOAD_SECRET environment variable required')
-}
-
-interface AuthResult {
-  user: User | null
-  error: string | null
-  status: number
-}
-
-interface AuthMiddlewareOptions {
-  requireAuth?: boolean
-  allowedRoles?: string[]
-  requireEmailVerification?: boolean
 }
 
 /**

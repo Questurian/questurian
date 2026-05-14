@@ -1,10 +1,6 @@
 import type { Payload } from 'payload'
-import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createInfoBox, EMAIL_PARAGRAPH_STYLE, type BaseEmailData, type EmailResult } from './email-utils'
-
-interface SubscriptionReactivatedEmailData extends BaseEmailData {
-  subscriptionType?: string
-  renewsAt?: Date
-}
+import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
+import type { EmailResult, SubscriptionReactivatedEmailData } from '../types'
 
 export async function sendSubscriptionReactivatedEmail(
   payload: Payload,

@@ -7,24 +7,17 @@ import {
   getCorsHeaders,
   handleCorsOptions,
 } from '@/features/auth/lib/auth-middleware'
-import { searchHotelGridCandidates } from '@/features/homepage-featured-content'
-
-type LocationHomepageDoc = {
-  location?: {
-    id?: number
-    locationKey?: string | null
-  } | number | null
-}
+import {
+  type LocationHomepageDoc,
+  searchHotelGridCandidates,
+} from '@/features/homepage-featured-content'
+import { getErrorMessage } from '@/shared/utils/api-response'
 
 function parsePositiveInt(value: string | null): number | undefined {
   if (!value) return undefined
   const parsed = Number(value)
   if (!Number.isFinite(parsed) || parsed <= 0) return undefined
   return Math.trunc(parsed)
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -1,11 +1,5 @@
 import { stripe } from './stripe'
-
-interface StripeCleanupResult {
-  success: boolean
-  subscriptionsCancelled: number
-  customerDeleted: boolean
-  errors: string[]
-}
+import type { StripeCleanupResult } from '../types'
 
 /**
  * Safely clean up all Stripe data for a user in development environment

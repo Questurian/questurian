@@ -8,17 +8,11 @@ import {
   handleCorsOptions,
 } from '@/features/auth/lib/auth-middleware'
 import {
+  type LocationHomepageDoc,
   resolveLocationGridScopeFromLocation,
   searchLocationGridCandidates,
 } from '@/features/homepage-featured-content'
-
-type LocationHomepageDoc = {
-  location?: {
-    id?: number
-    level?: string
-    locationKey?: string | null
-  } | number | null
-}
+import { getErrorMessage } from '@/shared/utils/api-response'
 
 function parsePositiveInt(value: string | null): number | undefined {
   if (!value) return undefined
@@ -29,10 +23,6 @@ function parsePositiveInt(value: string | null): number | undefined {
   }
 
   return Math.trunc(parsed)
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

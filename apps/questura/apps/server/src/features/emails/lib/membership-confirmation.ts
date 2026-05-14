@@ -1,11 +1,6 @@
 import type { Payload } from 'payload'
-import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE, type BaseEmailData, type EmailResult } from './email-utils'
-
-interface MembershipConfirmationEmailData extends BaseEmailData {
-  subscriptionType?: string
-  membershipExpiresAt?: Date
-  isRecurring?: boolean
-}
+import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
+import type { EmailResult, MembershipConfirmationEmailData } from '../types'
 
 export async function sendMembershipConfirmationEmail(
   payload: Payload,

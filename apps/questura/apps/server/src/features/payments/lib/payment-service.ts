@@ -3,15 +3,7 @@ import config from '@/payload.config'
 import { stripe } from './stripe'
 import { sendSubscriptionCancelledEmail, sendSubscriptionReactivatedEmail } from '@/emails'
 import { convertStripeTimestamp, getSubscriptionProductName } from './payment-helpers'
-import type { StripeSubscriptionExpanded } from '../types'
-
-interface UserSubscriptionUpdate {
-  stripeSubscriptionId?: string
-  subscriptionStatus?: 'none' | 'active' | 'cancelled' | 'past_due'
-  membershipExpiration?: string | null
-  subscriptionRenewsAt?: string | null
-  cancelAtPeriodEnd?: boolean
-}
+import type { StripeSubscriptionExpanded, UserSubscriptionUpdate } from '../types'
 
 /**
  * Updates a user's subscription information based on their Stripe customer ID

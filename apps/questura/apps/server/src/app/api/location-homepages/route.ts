@@ -7,26 +7,8 @@ import {
   getCorsHeaders,
   handleCorsOptions,
 } from '@/features/auth/lib/auth-middleware'
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback
-}
-
-type LocationDoc = {
-  id: number
-  locationKey?: string
-  level?: string
-  countryName?: string
-  cityName?: string | null
-  neighborhoodName?: string | null
-}
-
-type LocationHomepageDoc = {
-  id: number
-  isEnabled?: boolean
-  updatedAt?: string
-  location?: LocationDoc | number | null
-}
+import type { LocationHomepageDoc } from '@/features/homepage-featured-content'
+import { getErrorMessage } from '@/shared/utils/api-response'
 
 function formatListItem(doc: LocationHomepageDoc) {
   const location = typeof doc.location === 'object' && doc.location !== null

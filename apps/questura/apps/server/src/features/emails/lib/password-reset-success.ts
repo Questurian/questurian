@@ -1,7 +1,6 @@
 import type { Payload } from 'payload'
-import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE, type BaseEmailData, type EmailResult } from './email-utils'
-
-type PasswordResetSuccessEmailData = BaseEmailData
+import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
+import type { EmailResult, PasswordResetSuccessEmailData } from '../types'
 
 export async function sendPasswordResetSuccessEmail(
   payload: Payload,

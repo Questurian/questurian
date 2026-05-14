@@ -1,12 +1,6 @@
 import type { Payload } from 'payload'
-import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE, type BaseEmailData, type EmailResult } from './email-utils'
-
-interface EmailChangedNotificationData extends BaseEmailData {
-  oldEmail: string
-  newEmail: string
-  wasGoogleUnlinked?: boolean
-  wasStripeUpdated?: boolean
-}
+import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
+import type { EmailChangedNotificationData, EmailResult } from '../types'
 
 export async function sendEmailChangedNotificationEmail(
   payload: Payload,

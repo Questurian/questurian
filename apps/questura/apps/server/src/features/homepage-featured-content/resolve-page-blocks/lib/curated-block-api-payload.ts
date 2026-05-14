@@ -6,23 +6,13 @@ import {
 } from '../../featured-articles/lib/slot-layouts'
 import { publicLocationGridMediaAspect } from '../../location-grid/lib/media-aspect'
 
+import type { ApiCuratedBlock } from '../types'
+
 import {
   homepageBlockSupportsSectionHeading,
   publicFeaturedArticlesSectionHeading,
   publicFeaturedArticlesSectionSubheading,
 } from './section-heading'
-
-type ApiCuratedBlock = {
-  id: string
-  blockType: string
-  sectionHeading?: string | null
-  sectionSubheading?: string | null
-  slot3Layout?: unknown
-  slot4Layout?: unknown
-  slot5Layout?: unknown
-  mediaAspect?: unknown
-  articleGridFourLayout?: unknown
-}
 
 export function curatedBlockApiPayload(block: ApiCuratedBlock, selection: unknown) {
   if (homepageBlockSupportsSectionHeading(block.blockType)) {

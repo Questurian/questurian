@@ -21,49 +21,17 @@ import {
   extractResolvedCurrencyId,
   hasMeaningfulLocationGuideValue,
   resolveLocationGuideForHierarchy,
-  type LocationGuideRecord,
-  type ResolvedCurrencyMeta,
 } from '@/shared/lib/locationGuideResolution'
+import type { LocationGuideRecord, ResolvedCurrencyMeta } from '@/shared/types'
+import type {
+  CurrencyMetaDoc,
+  LocationInput,
+  LocationReadDoc,
+} from '../types'
 import { buildGuideField } from './guideFields'
-
-type LocationInput = {
-  level?: LocationLevel
-  country?: string | null
-  city?: string | null
-  neighborhood?: string | null
-  countryName?: string | null
-  cityName?: string | null
-  neighborhoodName?: string | null
-  parentKey?: string | null
-}
-
-type LocationReadDoc = {
-  id?: string | number
-  level?: LocationLevel
-  locationKey?: string | null
-  parentKey?: string | null
-  guide?: LocationGuideRecord | null
-}
 
 const LOCATION_GUIDE_RESOLVE_CONTEXT_KEY = 'skipLocationGuideResolve'
 const LOCATION_GUIDE_CURRENCY_META_CACHE_KEY = 'locationGuideCurrencyMetaCache'
-
-type CurrencyMetaDoc = {
-  id: number
-  code?: string | null
-  name?: string | null
-  symbol?: string | null
-  displaySymbol?: string | null
-  defaultLocale?: string | null
-  decimalPlaces?: number | null
-  latestUsdRate?: {
-    unitsPerUsd?: number | null
-    provider?: string | null
-    sourceUpdatedAt?: string | null
-    nextUpdateAt?: string | null
-    fetchedAt?: string | null
-  } | null
-}
 
 const levelOptions = [
   { label: 'Country', value: 'country' },

@@ -20,10 +20,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useField, useFormFields } from '@payloadcms/ui'
 
-interface ValidationError {
-  field: string
-  message: string
-}
+import type { ValidationError } from '@/features/articles/shared/types'
 
 /**
  * Configuration object returned by the hook

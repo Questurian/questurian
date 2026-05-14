@@ -1,5 +1,5 @@
 import type { FieldAccess } from 'payload'
-import { getAuthenticatedUser } from '../../types'
+import { getAuthenticatedUser } from '../../lib/get-authenticated-user'
 
 /**
  * Only admins can set or modify the role field

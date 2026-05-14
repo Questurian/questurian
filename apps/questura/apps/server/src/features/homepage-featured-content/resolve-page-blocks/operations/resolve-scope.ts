@@ -1,10 +1,8 @@
-import type { getPayload } from 'payload'
+import type { PayloadInstance } from '@/types'
 
 import type { LocationHomepageDoc } from '../types'
 
 import { resolveLocationGridScopeFromLocation } from '../../location-grid/service'
-
-type PayloadInstance = Awaited<ReturnType<typeof getPayload>>
 
 export async function resolveLocationGridScope(
   payload: PayloadInstance,

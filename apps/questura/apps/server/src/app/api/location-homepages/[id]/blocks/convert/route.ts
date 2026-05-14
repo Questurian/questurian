@@ -33,34 +33,14 @@ import {
   HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
   LOCATION_GRID_MAX_SLOTS,
   LOCATION_GRID_MIN_SLOTS,
+  type LocationHomepageDoc,
+  type RawBlock,
   isValidRequestedSlotCount,
   normalizeSlotCountForBlockType,
   resolveLocationGridScopeFromLocation,
   resolveStoredSlotCountForBlockType,
 } from '@/features/homepage-featured-content'
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback
-}
-
-function wantsLeanResponse(req: NextRequest): boolean {
-  return new URL(req.url).searchParams.get('response') === 'lean'
-}
-
-type RawBlock = {
-  id: string
-  blockType: string
-  slotCount?: number
-  sectionHeading?: string | null
-  items?: unknown
-}
-
-type LocationHomepageDoc = {
-  id: number
-  isEnabled?: boolean
-  location?: unknown
-  pageBlocks?: RawBlock[]
-}
+import { getErrorMessage, wantsLeanResponse } from '@/shared/utils/api-response'
 
 const SUPPORTED_BLOCK_TYPES = [
   'featured-article',

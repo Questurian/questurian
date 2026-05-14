@@ -2,7 +2,9 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-export type LocationLevel = 'country' | 'city' | 'neighborhood'
+import type { LocationLevel } from '@/shared/types'
+
+export type { LocationLevel } from '@/shared/types'
 
 type ContractSection = {
   label: string

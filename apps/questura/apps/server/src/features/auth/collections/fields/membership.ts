@@ -1,6 +1,6 @@
 import type { Field } from 'payload'
 import { isAdminFieldLevel } from '../access/fieldLevel'
-import { getAuthenticatedUser } from '../../types'
+import { getAuthenticatedUser } from '../../lib/get-authenticated-user'
 import { visibilityRules } from './fieldVisibility'
 
 export const membershipFields: Field[] = [

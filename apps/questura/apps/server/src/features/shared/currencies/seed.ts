@@ -1,23 +1,6 @@
 import type { Payload } from 'payload'
 
-type CurrencySeedRecord = {
-  code: string
-  name: string
-  symbol: string
-  displaySymbol: string
-  defaultLocale: string
-  decimalPlaces: number
-  regions: Array<
-    'north-america'
-    | 'central-america'
-    | 'south-america'
-    | 'europe'
-    | 'caribbean'
-    | 'global'
-  >
-  usedIn: string[]
-  notes?: string
-}
+import type { CurrencySeedRecord } from './types'
 
 const CURRENCY_SEED_DATA: CurrencySeedRecord[] = [
   {

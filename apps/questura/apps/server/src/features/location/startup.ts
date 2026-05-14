@@ -1,10 +1,8 @@
 import type { Payload } from 'payload'
-import { seedLocations } from './seed'
 
-type LoggerLike = {
-  info: (message: string, data?: Record<string, unknown>) => void
-  warn: (message: string, data?: Record<string, unknown>) => void
-}
+import type { LoggerLike } from '@/types'
+
+import { seedLocations } from './seed'
 
 const LOCATION_STARTUP_TASK_KEY = '__questuraLocationStartupTask'
 

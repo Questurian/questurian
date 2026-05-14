@@ -1,21 +1,6 @@
 import type { Payload } from 'payload'
 
-/**
- * Base interface for all email data
- */
-export interface BaseEmailData {
-  email: string
-  firstName?: string
-  lastName?: string
-}
-
-/**
- * Result returned from email sending functions
- */
-export interface EmailResult {
-  success: boolean
-  error?: string
-}
+import type { EmailResult } from '../types'
 
 /**
  * Builds a personalized greeting from first/last name
