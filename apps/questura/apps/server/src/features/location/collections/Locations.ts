@@ -4,7 +4,7 @@
  * Managed by admins via the API or admin UI.
  */
 
-import type { CollectionAfterReadHook, CollectionConfig, Payload } from 'payload'
+import type { CollectionConfig, Payload } from 'payload'
 import { locationIdentitySelect } from '@/shared/location/constants'
 import { findLocationReferences } from '@/shared/location/server/references'
 import {
@@ -12,46 +12,13 @@ import {
   validateSlugAgainstReserved,
 } from '@/shared/lib/reservedSlugs'
 import { validateLocationSlugAgainstCategories } from '@/shared/lib/categoryLocationCollision'
-import {
-  LOCATION_GUIDE_CONTRACT,
-  type LocationLevel,
-} from '@/shared/lib/locationGuideContract'
-import {
-  attachResolvedCurrencyMeta,
-  extractResolvedCurrencyId,
-  hasMeaningfulLocationGuideValue,
-  resolveLocationGuideForHierarchy,
-} from '@/shared/lib/locationGuideResolution'
-import type { LocationGuideRecord, ResolvedCurrencyMeta } from '@/shared/types'
-import type {
-  CurrencyMetaDoc,
-  LocationInput,
-  LocationReadDoc,
-} from '../types'
-import { buildGuideField } from './guideFields'
-
-const LOCATION_GUIDE_RESOLVE_CONTEXT_KEY = 'skipLocationGuideResolve'
-const LOCATION_GUIDE_CURRENCY_META_CACHE_KEY = 'locationGuideCurrencyMetaCache'
+import type { LocationInput, LocationLevel } from '../types'
 
 const levelOptions = [
   { label: 'Country', value: 'country' },
   { label: 'City', value: 'city' },
   { label: 'Neighborhood', value: 'neighborhood' },
 ]
-
-const countryGuideSectionKeys = new Set(
-  LOCATION_GUIDE_CONTRACT.sectionPathsByLevel.country
-    .filter((path) => path.startsWith('guide.'))
-    .map((path) => path.replace(/^guide\./, ''))
-    .filter((key) => key !== 'media'),
-)
-
-const localGuideSectionKeys = new Set(
-  LOCATION_GUIDE_CONTRACT.sectionPathsByLevel.city
-    .filter((path) => path.startsWith('guide.'))
-    .map((path) => path.replace(/^guide\./, ''))
-    .filter((key) => key !== 'media'),
-)
 
 const isLocationLevel = (value: unknown): value is LocationLevel =>
   value === 'country' || value === 'city' || value === 'neighborhood'
@@ -84,68 +51,6 @@ const formatFallbackName = (value: string): string => {
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
-}
-
-const stripHighlightNeighborhoodReferences = (value: unknown): void => {
-  if (!value || typeof value !== 'object') return
-
-  const highlights = (value as { highlights?: unknown }).highlights
-  if (!Array.isArray(highlights)) return
-
-  for (const highlight of highlights) {
-    if (highlight && typeof highlight === 'object' && 'relatedNeighborhoods' in highlight) {
-      delete (highlight as Record<string, unknown>).relatedNeighborhoods
-    }
-  }
-}
-
-const stripNeighborhoodGuideRelationships = (guide: unknown): void => {
-  if (!guide || typeof guide !== 'object') return
-
-  const guideRecord = guide as Record<string, unknown>
-  stripHighlightNeighborhoodReferences(guideRecord.explore)
-  stripHighlightNeighborhoodReferences(guideRecord.stay)
-  stripHighlightNeighborhoodReferences(guideRecord.move)
-}
-
-const stripNeighborhoodGuideFields = (guide: unknown): void => {
-  if (!guide || typeof guide !== 'object') return
-
-  const guideRecord = guide as Record<string, unknown>
-  const core = guideRecord.core
-  if (core && typeof core === 'object') {
-    delete (core as Record<string, unknown>).timezone
-    delete (core as Record<string, unknown>).healthSafety
-    delete (core as Record<string, unknown>).moneyHandling
-    delete (core as Record<string, unknown>).weather
-  }
-
-  const explore = guideRecord.explore
-  if (explore && typeof explore === 'object') {
-    delete (explore as Record<string, unknown>).touristVisaStatus
-    delete (explore as Record<string, unknown>).touristVisaNotes
-    delete (explore as Record<string, unknown>).exchangeRateInfo
-    delete (explore as Record<string, unknown>).costOfLivingSummary
-  }
-
-  const stay = guideRecord.stay
-  if (stay && typeof stay === 'object') {
-    delete (stay as Record<string, unknown>).touristVisaDuration
-    delete (stay as Record<string, unknown>).touristVisaExtensionNotes
-    delete (stay as Record<string, unknown>).timezoneOverlapNote
-  }
-
-  const move = guideRecord.move
-  if (move && typeof move === 'object') {
-    delete (move as Record<string, unknown>).residencyVisa
-    delete (move as Record<string, unknown>).residencyNotes
-    delete (move as Record<string, unknown>).processingTime
-    delete (move as Record<string, unknown>).incomeRequirements
-    delete (move as Record<string, unknown>).safestDistricts
-    delete (move as Record<string, unknown>).workPermits
-  }
-
-  stripNeighborhoodGuideRelationships(guide)
 }
 
 const parseLocationKey = (locationKey: string) => {
@@ -228,105 +133,6 @@ const findLocationByKey = async (payload: Payload, locationKey: string) => {
   return result.docs?.[0] ?? null
 }
 
-const buildGuideResolveContext = (context?: Record<string, unknown>) => ({
-  ...(context ?? {}),
-  [LOCATION_GUIDE_RESOLVE_CONTEXT_KEY]: true,
-})
-
-const findLocationGuideByKey = async (
-  payload: Payload,
-  locationKey: string,
-  context?: Record<string, unknown>,
-): Promise<LocationReadDoc | null> => {
-  const result = await payload.find({
-    collection: 'locations',
-    where: {
-      locationKey: {
-        equals: locationKey,
-      },
-    },
-    limit: 1,
-    depth: 0,
-    overrideAccess: true,
-    context: buildGuideResolveContext(context),
-  } as any)
-
-  return (result.docs?.[0] as LocationReadDoc | undefined) ?? null
-}
-
-const findCurrencyMetaById = async (
-  payload: Payload,
-  currencyId: number,
-  context?: Record<string, unknown>,
-): Promise<ResolvedCurrencyMeta | null> => {
-  const currencyMetaCache = (
-    context?.[LOCATION_GUIDE_CURRENCY_META_CACHE_KEY] as Map<number, ResolvedCurrencyMeta | null> | undefined
-  ) ?? new Map<number, ResolvedCurrencyMeta | null>()
-
-  if (context && !context[LOCATION_GUIDE_CURRENCY_META_CACHE_KEY]) {
-    context[LOCATION_GUIDE_CURRENCY_META_CACHE_KEY] = currencyMetaCache
-  }
-
-  if (currencyMetaCache.has(currencyId)) {
-    return currencyMetaCache.get(currencyId) ?? null
-  }
-
-  const currencyDoc = await payload.findByID({
-    collection: 'currencies',
-    id: currencyId,
-    depth: 0,
-    overrideAccess: true,
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      symbol: true,
-      displaySymbol: true,
-      defaultLocale: true,
-      decimalPlaces: true,
-      latestUsdRate: true,
-    },
-  } as any).catch(() => null)
-
-  const doc = currencyDoc as CurrencyMetaDoc | null
-  if (!doc || typeof doc.id !== 'number' || !doc.code || !doc.name) {
-    currencyMetaCache.set(currencyId, null)
-    return null
-  }
-
-  const resolvedMeta: ResolvedCurrencyMeta = {
-    id: doc.id,
-    code: doc.code,
-    name: doc.name,
-    symbol: doc.symbol ?? '',
-    displaySymbol: doc.displaySymbol ?? doc.symbol ?? doc.code,
-    defaultLocale: doc.defaultLocale ?? 'en-US',
-    decimalPlaces: typeof doc.decimalPlaces === 'number' ? doc.decimalPlaces : 2,
-    latestUsdRate: doc.latestUsdRate && typeof doc.latestUsdRate === 'object'
-      ? {
-          unitsPerUsd: typeof doc.latestUsdRate.unitsPerUsd === 'number'
-            ? doc.latestUsdRate.unitsPerUsd
-            : null,
-          provider: typeof doc.latestUsdRate.provider === 'string'
-            ? doc.latestUsdRate.provider
-            : null,
-          sourceUpdatedAt: typeof doc.latestUsdRate.sourceUpdatedAt === 'string'
-            ? doc.latestUsdRate.sourceUpdatedAt
-            : null,
-          nextUpdateAt: typeof doc.latestUsdRate.nextUpdateAt === 'string'
-            ? doc.latestUsdRate.nextUpdateAt
-            : null,
-          fetchedAt: typeof doc.latestUsdRate.fetchedAt === 'string'
-            ? doc.latestUsdRate.fetchedAt
-            : null,
-        }
-      : null,
-  }
-
-  currencyMetaCache.set(currencyId, resolvedMeta)
-  return resolvedMeta
-}
-
 const createLocationIfMissing = async (
   payload: Payload,
   locationKey: string,
@@ -372,66 +178,6 @@ const ensureParentLocations = async (payload: Payload, data: LocationInput) => {
       cityName: data.cityName ?? null,
     })
   }
-}
-
-const resolveLocationReadGuide = async (
-  payload: Payload,
-  doc: LocationReadDoc,
-  context?: Record<string, unknown>,
-): Promise<Record<string, unknown>> => {
-  if (!doc.level || !doc.locationKey) return {}
-
-  if (doc.level === 'country') {
-    return resolveLocationGuideForHierarchy({
-      level: 'country',
-      ownGuide: doc.guide,
-    })
-  }
-
-  const keyParts = parseLocationKey(doc.locationKey)
-  const countryDoc = await findLocationGuideByKey(payload, keyParts.country, context)
-
-  if (doc.level === 'city') {
-    return resolveLocationGuideForHierarchy({
-      level: 'city',
-      ownGuide: doc.guide,
-      countryGuide: countryDoc?.guide,
-    })
-  }
-
-  const cityKey = `${keyParts.country}|${keyParts.city}`
-  const cityDoc = await findLocationGuideByKey(payload, cityKey, context)
-
-  return resolveLocationGuideForHierarchy({
-    level: 'neighborhood',
-    ownGuide: doc.guide,
-    countryGuide: countryDoc?.guide,
-    cityGuide: cityDoc?.guide,
-  })
-}
-
-const afterReadResolveGuideHook: CollectionAfterReadHook = async ({ doc, req }) => {
-  if (!doc || !req) return doc
-
-  const context = (req.context as Record<string, unknown> | undefined) ?? {}
-  if (context[LOCATION_GUIDE_RESOLVE_CONTEXT_KEY] === true) return doc
-  if (!('guide' in doc)) return doc
-
-  const locationDoc = doc as LocationReadDoc & Record<string, unknown>
-  if (!isLocationLevel(locationDoc.level)) return doc
-
-  const resolvedGuide = await resolveLocationReadGuide(req.payload, locationDoc, context)
-  const resolvedCurrencyId = extractResolvedCurrencyId(resolvedGuide)
-  const resolvedCurrencyMeta = resolvedCurrencyId === null
-    ? null
-    : await findCurrencyMetaById(req.payload, resolvedCurrencyId, context)
-  const enrichedGuide = attachResolvedCurrencyMeta(resolvedGuide, resolvedCurrencyMeta)
-
-  if (hasMeaningfulLocationGuideValue(enrichedGuide)) {
-    locationDoc.resolvedGuide = enrichedGuide
-  }
-
-  return locationDoc
 }
 
 export const Locations: CollectionConfig = {
@@ -555,17 +301,13 @@ export const Locations: CollectionConfig = {
         description: 'Display name for UI (e.g., "Santa Teresita").',
       },
     },
-    buildGuideField(),
     {
-      name: 'resolvedGuide',
-      label: 'Resolved Guide',
-      type: 'json',
-      virtual: true,
+      name: 'coverImage',
+      type: 'relationship',
+      relationTo: 'media-sets',
+      index: true,
       admin: {
-        hidden: true,
-        readOnly: true,
-        description:
-          'Computed read-only guide surface used by frontend consumers after country/city/neighborhood resolution.',
+        description: 'Primary image for location cards and homepage grids.',
       },
     },
   ],
@@ -688,33 +430,6 @@ export const Locations: CollectionConfig = {
         data.cityName = level === 'country' ? null : cityName
         data.neighborhoodName = level === 'neighborhood' ? neighborhoodName : null
 
-        const guide = (data.guide ?? originalDoc?.guide) as
-          | (LocationGuideRecord & Record<string, unknown>)
-          | undefined
-
-        if (level === 'neighborhood' && data.guide) {
-          stripNeighborhoodGuideFields(data.guide)
-        }
-
-        if (guide) {
-          const hasLocalGuideData = [...localGuideSectionKeys].some((sectionKey) =>
-            hasMeaningfulLocationGuideValue(guide[sectionKey]),
-          )
-
-          if (level === 'country' && hasLocalGuideData) {
-            throw new Error('country locations cannot store core, explore, stay, or move guide data')
-          }
-
-          for (const sectionKey of Object.keys(guide)) {
-            if (sectionKey === 'media') continue
-            if (level === 'country' && countryGuideSectionKeys.has(sectionKey)) continue
-            if (level !== 'country' && localGuideSectionKeys.has(sectionKey)) continue
-            if (!hasMeaningfulLocationGuideValue(guide[sectionKey])) continue
-
-            throw new Error(`guide.${sectionKey} is not valid for ${level} locations`)
-          }
-        }
-
         return data
       },
     ],
@@ -737,7 +452,6 @@ export const Locations: CollectionConfig = {
         return data
       },
     ],
-    afterRead: [afterReadResolveGuideHook],
     beforeDelete: [
       async ({ req, id }) => {
         const location = id

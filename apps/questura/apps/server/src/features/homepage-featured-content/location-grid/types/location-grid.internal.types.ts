@@ -11,7 +11,7 @@ export type LocationDocLike = {
   cityName?: unknown
   neighborhoodName?: unknown
   updatedAt?: unknown
-  guide?: unknown
+  coverImage?: unknown
 }
 
 export type ParsedLocationGridSlot = {

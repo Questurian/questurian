@@ -7,9 +7,5 @@ export const LOCATION_GRID_MAX_SLOTS = 8
 export const locationGridSelect = {
   ...locationIdentitySelect,
   updatedAt: true,
-  guide: {
-    media: {
-      coverImage: true,
-    },
-  },
+  coverImage: true,
 } as const

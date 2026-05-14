@@ -20,7 +20,7 @@ export type LocationGridCandidate = LocationGridItemRef & {
   title: string
   subtitle: string | null
   updatedAt: string | null
-  /** Resolved from guide.media.coverImage (media-set) when present */
+  /** Resolved from coverImage (media-set) when present */
   coverImageUrl: string | null
   coverImageAlt: string | null
 }

@@ -25,17 +25,7 @@ function extractCoverImageFields(doc: LocationDocLike): {
   coverImageUrl: string | null
   coverImageAlt: string | null
 } {
-  const guide = doc.guide
-  if (!guide || typeof guide !== 'object') {
-    return { coverImageUrl: null, coverImageAlt: null }
-  }
-
-  const media = (guide as { media?: unknown }).media
-  if (!media || typeof media !== 'object') {
-    return { coverImageUrl: null, coverImageAlt: null }
-  }
-
-  const coverImage = (media as { coverImage?: unknown }).coverImage
+  const coverImage = doc.coverImage
   if (coverImage === null || coverImage === undefined) {
     return { coverImageUrl: null, coverImageAlt: null }
   }

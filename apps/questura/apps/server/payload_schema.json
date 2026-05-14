@@ -1242,6 +1242,11 @@
         {
           "type": "text",
           "name": "neighborhoodName"
+        },
+        {
+          "type": "relationship",
+          "name": "coverImage",
+          "relationTo": "media-sets"
         }
       ]
     },

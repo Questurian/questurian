@@ -732,13 +732,7 @@
 | `countryName` | `text` | Yes | - |
 | `cityName` | `text` | No | - |
 | `neighborhoodName` | `text` | No | - |
-| `guide` | `group` | No | Structured guide content container |
-| `guide.media` | `group` | No | Cover/map assets and map coordinates/bounds |
-| `guide.countryData` | `group` | No | Country-only legal, health, and money facts |
-| `guide.localShared` | `group` | No | City/neighborhood shared overview content |
-| `guide.explore` | `group` | No | Tourist-focused city/neighborhood content |
-| `guide.stay` | `group` | No | Nomad/extended-stay city/neighborhood content |
-| `guide.move` | `group` | No | Relocation-focused city/neighborhood content |
+| `coverImage` | `relationship` | No | Primary image for location cards and homepage grids. |
 
 #### Required Fields
 
@@ -748,11 +742,7 @@
 
 #### Relationship Fields
 
-- `guide.media.coverImage` → `media-sets`
-- `guide.localShared.usefulApps.apps.logo` → `media-sets`
-- `guide.explore.highlights.relatedNeighborhoods` → `locations`
-- `guide.stay.highlights.relatedNeighborhoods` → `locations`
-- `guide.move.highlights.relatedNeighborhoods` → `locations`
+- `coverImage` → `media-sets`
 
 #### Block Definitions
 

@@ -1,5 +1,4 @@
 export type {
-  CurrencyMetaDoc,
   LocationInput,
-  LocationReadDoc,
+  LocationLevel,
 } from './location.types'
