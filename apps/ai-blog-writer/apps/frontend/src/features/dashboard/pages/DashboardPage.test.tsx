@@ -11,7 +11,7 @@ const PRIMARY_CARD_TITLES = [
   'Single Type Listicles',
   'Listicle Itineraries',
   'Itineraries Pipeline',
-  'Location Documents',
+  'Location Images',
   'Homepage Featured Content',
 ]
 

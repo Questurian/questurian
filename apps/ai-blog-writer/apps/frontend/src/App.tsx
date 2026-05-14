@@ -104,7 +104,7 @@ export default function App() {
               {/* Itineraries Pipeline */}
               <Route path="itineraries-pipeline" element={<ItinerariesPipelinePage />} />
 
-              {/* Location Documents */}
+              {/* Location Images */}
               <Route path="location-documents" element={<LocationDocumentsPage />} />
               <Route path="location-documents/builder" element={<LocationDocumentBuilderPage />} />
 

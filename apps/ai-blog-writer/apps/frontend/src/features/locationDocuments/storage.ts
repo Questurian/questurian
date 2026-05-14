@@ -19,7 +19,6 @@ function normalizeStoredDraft(value: unknown, index: number): LocationDocumentDr
     payloadId: typeof value.payloadId === 'number' && Number.isFinite(value.payloadId)
       ? value.payloadId
       : undefined,
-    aiSourceNotes: typeof value.aiSourceNotes === 'string' ? value.aiSourceNotes : '',
     updatedAt: typeof value.updatedAt === 'string' && value.updatedAt.trim()
       ? value.updatedAt
       : new Date().toISOString(),

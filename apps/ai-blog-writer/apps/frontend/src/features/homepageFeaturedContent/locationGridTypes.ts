@@ -21,7 +21,7 @@ export type HomepageLocationGridCandidate = HomepageLocationGridItemRef & {
   title: string
   subtitle: string | null
   updatedAt: string | null
-  /** From Location guide → Media → Cover Image (media-set), when set in Payload */
+  /** From the top-level Location coverImage media-set relationship, when set in Payload */
   coverImageUrl: string | null
   coverImageAlt: string | null
 }

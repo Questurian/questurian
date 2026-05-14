@@ -27,4 +27,29 @@ describe('location draft storage', () => {
     expect(drafts[0]?.draftId).toBe('draft-b')
     expect(drafts[0]?.cityName).toBe('Lima Updated')
   })
+
+  it('migrates legacy guide media from stored drafts and drops guide content', () => {
+    localStorage.setItem('location_documents_staged_v1', JSON.stringify([
+      {
+        draftId: 'legacy',
+        payloadId: 91,
+        level: 'city',
+        country: 'peru',
+        city: 'lima',
+        guide: {
+          media: {
+            coverImage: 44,
+          },
+          core: {
+            headline: 'Old guide copy',
+          },
+        },
+      },
+    ]))
+
+    const drafts = listDrafts()
+
+    expect(drafts[0]?.coverImage).toBe(44)
+    expect('guide' in (drafts[0] || {})).toBe(false)
+  })
 })

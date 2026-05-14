@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
-  clampRelationshipSelections,
-  formatCurrencyRateTimestamp,
-  formatCurrencyUsdRatePreview,
-  getNeighborhoodPickerOptions,
+  formatMediaSetLabel,
   groupLocationIndexRowsByCountry,
+  resolveMediaSetPreviewUrl,
   sortLocationIndexRows,
-  toggleLimitedRelationshipSelection,
 } from './utils'
-import type { CurrencyOption, LocationIndexRow, LocationOption } from './types'
+import type { LocationIndexRow, MediaSetOption } from './types'
 
 function buildRow(overrides: Partial<LocationIndexRow>): LocationIndexRow {
   return {
@@ -26,7 +23,7 @@ function buildRow(overrides: Partial<LocationIndexRow>): LocationIndexRow {
   }
 }
 
-describe('sortLocationIndexRows', () => {
+describe('location image utilities', () => {
   it('orders location rows by country, city, neighborhood, then level hierarchy', () => {
     const rows: LocationIndexRow[] = [
       buildRow({
@@ -169,119 +166,21 @@ describe('sortLocationIndexRows', () => {
     ])
   })
 
-  it('scopes neighborhood picker options to the current city when keys are present', () => {
-    const options: LocationOption[] = [
-      {
-        id: 10,
-        level: 'neighborhood',
-        country: 'peru',
-        city: 'lima',
-        neighborhood: 'barranco',
-        countryName: 'Peru',
-        cityName: 'Lima',
-        neighborhoodName: 'Barranco',
-        locationKey: 'peru|lima|barranco',
-      },
-      {
-        id: 11,
-        level: 'neighborhood',
-        country: 'peru',
-        city: 'lima',
-        neighborhood: 'miraflores',
-        countryName: 'Peru',
-        cityName: 'Lima',
-        neighborhoodName: 'Miraflores',
-        locationKey: 'peru|lima|miraflores',
-      },
-      {
-        id: 12,
-        level: 'neighborhood',
-        country: 'peru',
-        city: 'cusco',
-        neighborhood: 'centro-historico',
-        countryName: 'Peru',
-        cityName: 'Cusco',
-        neighborhoodName: 'Centro Historico',
-        locationKey: 'peru|cusco|centro-historico',
-      },
-    ]
-
-    const result = getNeighborhoodPickerOptions(options, {
-      country: 'peru',
-      city: 'lima',
-    })
-
-    expect(result.isScopedToCity).toBe(true)
-    expect(result.options.map((option) => option.locationKey)).toEqual([
-      'peru|lima|barranco',
-      'peru|lima|miraflores',
-    ])
-  })
-
-  it('falls back to all neighborhoods when the city keys are not filled yet', () => {
-    const options: LocationOption[] = [
-      {
-        id: 10,
-        level: 'neighborhood',
-        country: 'peru',
-        city: 'lima',
-        neighborhood: 'barranco',
-        countryName: 'Peru',
-        cityName: 'Lima',
-        neighborhoodName: 'Barranco',
-        locationKey: 'peru|lima|barranco',
-      },
-      {
-        id: 12,
-        level: 'neighborhood',
-        country: 'peru',
-        city: 'cusco',
-        neighborhood: 'centro-historico',
-        countryName: 'Peru',
-        cityName: 'Cusco',
-        neighborhoodName: 'Centro Historico',
-        locationKey: 'peru|cusco|centro-historico',
-      },
-    ]
-
-    const result = getNeighborhoodPickerOptions(options, {
-      country: 'peru',
-      city: '',
-    })
-
-    expect(result.isScopedToCity).toBe(false)
-    expect(result.options.map((option) => option.locationKey)).toEqual([
-      'peru|lima|barranco',
-      'peru|cusco|centro-historico',
-    ])
-  })
-
-  it('caps relationship selections at four items while still allowing removals', () => {
-    const capped = clampRelationshipSelections([1, 2, 2, 3, 4, 5], 4)
-    expect(capped).toEqual([1, 2, 3, 4])
-
-    expect(toggleLimitedRelationshipSelection([1, 2, 3, 4], 5, 4)).toEqual([1, 2, 3, 4])
-    expect(toggleLimitedRelationshipSelection([1, 2, 3, 4], 4, 4)).toEqual([1, 2, 3])
-    expect(toggleLimitedRelationshipSelection([1, 2, 3], 4, 4)).toEqual([1, 2, 3, 4])
-  })
-
-  it('formats stored USD rate previews from the selected currency option', () => {
-    const option: CurrencyOption = {
-      id: 14,
-      code: 'PEN',
-      name: 'Peruvian Sol',
-      defaultLocale: 'es-PE',
-      decimalPlaces: 2,
-      latestUsdRate: {
-        unitsPerUsd: 3.72,
-        provider: 'exchange-rate-api-open',
-        sourceUpdatedAt: '2026-03-09T00:00:01.000Z',
-        nextUpdateAt: '2026-03-10T00:00:01.000Z',
-        fetchedAt: '2026-03-09T12:00:00.000Z',
+  it('formats media set labels and preview URLs', () => {
+    const option: MediaSetOption = {
+      id: 91,
+      title: 'Barranco Coast',
+      location: 'Lima',
+      alt_text: 'Cliffs above the Pacific',
+      variants: {
+        thumbnail: {
+          id: 12,
+          filename: 'barranco.jpg',
+        },
       },
     }
 
-    expect(formatCurrencyUsdRatePreview(option)).toBe('1 USD ≈ 3.72 PEN')
-    expect(formatCurrencyRateTimestamp(option.latestUsdRate?.fetchedAt)).toContain('2026')
+    expect(formatMediaSetLabel(option)).toBe('Barranco Coast · Lima · Cliffs above the Pacific')
+    expect(resolveMediaSetPreviewUrl(option)).toBe('http://localhost:4000/api/media-assets/file/barranco.jpg')
   })
 })

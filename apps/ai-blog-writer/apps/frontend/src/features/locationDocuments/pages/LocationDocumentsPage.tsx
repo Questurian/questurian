@@ -184,9 +184,9 @@ export default function LocationDocumentsPage() {
       <header className="ldb-hero">
         <div>
           <p className="ldb-eyebrow">Questurian Studio</p>
-          <h1>Location Documents</h1>
+          <h1>Location Images</h1>
           <p className="ldb-lede">
-            Review and update existing Payload `locations` documents with local change tracking and AI-assisted editing.
+            Review existing Payload locations and update their single top-level cover image.
           </p>
         </div>
         <div className="ldb-hero-actions">
@@ -216,7 +216,7 @@ export default function LocationDocumentsPage() {
             <div>
               <h2>Unsupported Local Records ({localOnlyDrafts.length})</h2>
               <p>
-                This editor now works only against existing Payload locations. Older local-only records are hidden from the main workflow because they can create conflicts.
+                This editor now works only against existing Payload locations. Older local-only records are hidden from the image workflow because they can create conflicts.
               </p>
             </div>
             <button type="button" className="ldb-btn ldb-btn-secondary" onClick={discardUnsupportedLocalRecords}>
@@ -231,7 +231,7 @@ export default function LocationDocumentsPage() {
           <div>
             <h2>Payload Locations ({filteredPayloadRows.length})</h2>
             <p>
-              Browse the live `locations` collection by country first, then open or resume the local edits tied to each document.
+              Browse the live locations collection by country first, then open or resume cover image edits tied to each document.
               {!isLoading && !error && filteredPayloadRows.length > 0
                 ? ` ${formatCount(payloadCountryGroups.length, 'country')}, ${formatCount(payloadCountryStats.cityDocs, 'city')}, ${formatCount(payloadCountryStats.neighborhoodDocs, 'neighborhood')}.`
                 : ''}
@@ -245,8 +245,8 @@ export default function LocationDocumentsPage() {
         {!isLoading && !error ? (
           filteredPayloadRows.length === 0 ? (
             <div className="ldb-empty">
-              <p>No location documents matched the current filters.</p>
-              <p>Change the search or create a new location from the builder.</p>
+              <p>No locations matched the current filters.</p>
+              <p>Change the search or create a new location in Payload.</p>
             </div>
           ) : (
             <div className="ldb-country-groups">
@@ -301,7 +301,7 @@ export default function LocationDocumentsPage() {
                               ? `/location-documents/builder?draftId=${encodeURIComponent(linkedCountryDraft.draftId)}`
                               : `/location-documents/builder?id=${countryGroup.countryRow.id}`}
                           >
-                            {linkedCountryDraft ? 'Resume Edits' : 'Edit'}
+                            {linkedCountryDraft ? 'Resume Image Edit' : 'Edit Image'}
                           </Link>
                         </div>
                       </div>
@@ -364,7 +364,7 @@ export default function LocationDocumentsPage() {
                                           ? `/location-documents/builder?draftId=${encodeURIComponent(linkedDraft.draftId)}`
                                           : `/location-documents/builder?id=${row.id}`}
                                       >
-                                        {linkedDraft ? 'Resume Edits' : 'Edit'}
+                                        {linkedDraft ? 'Resume Image Edit' : 'Edit Image'}
                                       </Link>
                                     </div>
                                   </div>

@@ -247,13 +247,13 @@ const LANDING_CARDS: LandingCardConfig[] = [
   },
   {
     id: 'location-documents',
-    title: 'Location Documents',
-    description: 'Compose and sync full Payload location hierarchy documents with shared guide sections, mode-specific content, and AI assist.',
+    title: 'Location Images',
+    description: 'Set the single top-level cover image for existing Payload locations with local change tracking.',
     to: '/location-documents',
     section: 'structured-publishing',
     priority: 4,
     accentClass: 'landing-card--locations',
-    actionLabel: 'Open Builder',
+    actionLabel: 'Open Images',
     icon: (
       <>
         <path
