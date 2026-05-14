@@ -4,10 +4,10 @@ import {
   type RawBlock,
 } from '../../resolve-page-blocks/service'
 import {
-  getLocationHomepageBlocksPayload,
+  getLocationHomepagePayload,
   loadLocationHomepage,
   updateAndFormatLocationHomepageBlocks,
-} from '../lib/persistence'
+} from '../../location-homepages/lib/persistence'
 import type {
   FormattedLocationHomepage,
   LocationHomepageBlocksOperationResult,
@@ -24,7 +24,7 @@ export async function addLocationHomepageBlock(
     return { status: parsed.status, body: { message: parsed.message } }
   }
 
-  const payload = await getLocationHomepageBlocksPayload()
+  const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, 1)
 
   if (parsed.blockType === 'location-grid') {

@@ -1,11 +1,11 @@
 import type { RawBlock } from '../../resolve-page-blocks/service'
 
 import {
-  getLocationHomepageBlocksPayload,
+  getLocationHomepagePayload,
   loadLocationHomepage,
+  updateLocationHomepage,
   updateAndFormatLocationHomepageBlocks,
-  updateLocationHomepageBlocks,
-} from '../lib/persistence'
+} from '../../location-homepages/lib/persistence'
 import type {
   FormattedLocationHomepage,
   LocationHomepageBlocksOperationResult,
@@ -25,7 +25,7 @@ export async function deleteLocationHomepageBlock(
   }
 
   const depth = leanResponse ? 0 : 1
-  const payload = await getLocationHomepageBlocksPayload()
+  const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, depth)
   const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
   const updatedBlocks = existingBlocks.filter((block) => block.id !== blockId)
@@ -38,7 +38,7 @@ export async function deleteLocationHomepageBlock(
   }
 
   if (leanResponse) {
-    await updateLocationHomepageBlocks(payload, id, updatedBlocks, 0)
+    await updateLocationHomepage(payload, id, updatedBlocks, 0)
     return { status: 200, body: { deletedBlockId: blockId } }
   }
 

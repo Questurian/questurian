@@ -3,11 +3,11 @@ import { reorderBlocksByIds } from '@/shared/utils/reorder-blocks'
 import type { RawBlock } from '../../resolve-page-blocks/service'
 
 import {
-  getLocationHomepageBlocksPayload,
+  getLocationHomepagePayload,
   loadLocationHomepage,
+  updateLocationHomepage,
   updateAndFormatLocationHomepageBlocks,
-  updateLocationHomepageBlocks,
-} from '../lib/persistence'
+} from '../../location-homepages/lib/persistence'
 import type {
   FormattedLocationHomepage,
   LocationHomepageBlocksOperationResult,
@@ -21,7 +21,7 @@ export async function reorderLocationHomepageBlocks(
   leanResponse: boolean,
 ): Promise<LocationHomepageBlocksOperationResult<FormattedLocationHomepage | ReorderBlockBody>> {
   const depth = leanResponse ? 0 : 1
-  const payload = await getLocationHomepageBlocksPayload()
+  const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, depth)
   const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
   const orderedBlockIds = (body as { orderedBlockIds?: unknown } | null)?.orderedBlockIds
@@ -32,7 +32,7 @@ export async function reorderLocationHomepageBlocks(
   }
 
   if (leanResponse) {
-    await updateLocationHomepageBlocks(payload, id, reorderResult.reordered, 0)
+    await updateLocationHomepage(payload, id, reorderResult.reordered, 0)
     return {
       status: 200,
       body: { orderedBlockIds: reorderResult.reordered.map((block) => block.id) },

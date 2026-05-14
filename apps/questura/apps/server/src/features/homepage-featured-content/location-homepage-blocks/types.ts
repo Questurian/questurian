@@ -1,6 +1,4 @@
-import type { formatHomepageDoc } from '../resolve-page-blocks/service'
-
-export type FormattedLocationHomepage = ReturnType<typeof formatHomepageDoc>
+export type { FormattedLocationHomepage } from '../location-homepages/types'
 
 export type LocationHomepageBlocksOperationResult<TBody = unknown> = {
   status: number

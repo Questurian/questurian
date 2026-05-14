@@ -12,7 +12,7 @@ import {
 } from '../../resolve-page-blocks/service'
 import type { FormattedLocationHomepage } from '../types'
 
-export async function getLocationHomepageBlocksPayload(): Promise<PayloadInstance> {
+export async function getLocationHomepagePayload(): Promise<PayloadInstance> {
   return getPayload({ config })
 }
 
@@ -29,7 +29,7 @@ export async function loadLocationHomepage(
   })) as unknown as LocationHomepageDoc
 }
 
-export async function updateLocationHomepageBlocks(
+export async function updateLocationHomepage(
   payload: PayloadInstance,
   id: string,
   pageBlocks: unknown[],
@@ -42,6 +42,17 @@ export async function updateLocationHomepageBlocks(
     depth,
     overrideAccess: true,
   })) as unknown as LocationHomepageDoc
+}
+
+export async function deleteLocationHomepageDocument(
+  payload: PayloadInstance,
+  id: string,
+): Promise<void> {
+  await payload.delete({
+    collection: 'location-homepages',
+    id,
+    overrideAccess: true,
+  })
 }
 
 export async function formatLocationHomepageWithResolvedBlocks(
@@ -64,6 +75,6 @@ export async function updateAndFormatLocationHomepageBlocks(
   pageBlocks: unknown[],
   depth: 0 | 1,
 ): Promise<FormattedLocationHomepage> {
-  const updated = await updateLocationHomepageBlocks(payload, id, pageBlocks, depth)
+  const updated = await updateLocationHomepage(payload, id, pageBlocks, depth)
   return formatLocationHomepageWithResolvedBlocks(payload, updated)
 }
