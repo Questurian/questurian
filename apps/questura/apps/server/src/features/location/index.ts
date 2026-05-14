@@ -3,4 +3,4 @@
  * Exports location collection
  */
 
-export { Locations } from './collections/Locations'
+export { Locations } from './collections'
