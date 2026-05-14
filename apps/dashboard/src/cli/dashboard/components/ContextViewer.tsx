@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import fs from "node:fs";
-import { Box, Text, useInput, useStdout } from "ink";
+import { Box, Text, useInput } from "ink";
 
 import { CONTEXT_FILES, ContextFile } from "../config";
+import { useTerminalSize } from "../hooks";
 import { TitledBox } from "./TitledBox";
 
 interface ContextViewerProps {
@@ -24,22 +25,7 @@ function loadFile(file: ContextFile): { content: string; error?: string } {
 }
 
 export function ContextViewer({ onExit }: ContextViewerProps) {
-  const { stdout } = useStdout();
-  const [terminalWidth, setTerminalWidth] = useState(stdout?.columns ?? 80);
-  const [terminalHeight, setTerminalHeight] = useState(stdout?.rows ?? 24);
-
-  useEffect(() => {
-    if (!stdout) return;
-    const update = () => {
-      setTerminalWidth(stdout.columns ?? 80);
-      setTerminalHeight(stdout.rows ?? 24);
-    };
-    update();
-    stdout.on("resize", update);
-    return () => {
-      stdout.off("resize", update);
-    };
-  }, [stdout]);
+  const { rows: terminalHeight } = useTerminalSize();
 
   const [mode, setMode] = useState<Mode>("list");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -136,7 +122,7 @@ export function ContextViewer({ onExit }: ContextViewerProps) {
     const end = Math.min(CONTEXT_FILES.length, start + listViewport);
 
     return (
-      <Box flexDirection="column" width={terminalWidth} paddingX={1} paddingY={1}>
+      <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
         <TitledBox title="CONTEXT.md Browser" borderColor="cyan" paddingX={2} paddingY={1}>
           <Box flexDirection="column">
             <Box>
@@ -181,7 +167,7 @@ export function ContextViewer({ onExit }: ContextViewerProps) {
   const maxScroll = Math.max(0, lines.length - viewportHeight);
 
   return (
-    <Box flexDirection="column" width={terminalWidth} paddingX={1} paddingY={1}>
+    <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
       <TitledBox
         title={`${current?.label ?? ""} (${selectedIndex + 1}/${CONTEXT_FILES.length})`}
         borderColor="green"
