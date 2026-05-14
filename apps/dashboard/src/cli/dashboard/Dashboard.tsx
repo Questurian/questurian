@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { Box, Text, render, useStdout } from "ink";
+import { Box, Text, render, useInput, useStdout } from "ink";
 
 import { PROJECTS } from "./config";
 import { useHealthCheck } from "./hooks";
-import { TitledBox, WelcomeSection, InfoPanel, ProjectRow, PortsQuickRef } from "./components";
+import {
+  TitledBox,
+  WelcomeSection,
+  InfoPanel,
+  ProjectRow,
+  PortsQuickRef,
+  ContextViewer,
+} from "./components";
 import { ProjectStatus } from "./types";
 import { StatusDot } from "./components/StatusDot";
+
+type View = "home" | "context";
 
 const DEFAULT_STATUS: ProjectStatus = {
   client: "checking",
@@ -25,6 +34,17 @@ function Dashboard() {
     useHealthCheck(PROJECTS);
   const { stdout } = useStdout();
   const [terminalWidth, setTerminalWidth] = useState(stdout?.columns ?? 80);
+  const [view, setView] = useState<View>("home");
+
+  useInput((input) => {
+    if (view === "home" && (input === "c" || input === "C")) {
+      setView("context");
+    }
+  });
+
+  if (view === "context") {
+    return <ContextViewer onExit={() => setView("home")} />;
+  }
 
   useEffect(() => {
     if (!stdout) return;
@@ -70,6 +90,11 @@ function Dashboard() {
         </Box>
         <Box marginTop={1}>
           <Text dimColor>Resize for full view</Text>
+        </Box>
+        <Box>
+          <Text dimColor>Press </Text>
+          <Text color="cyan">c</Text>
+          <Text dimColor> for CONTEXT</Text>
         </Box>
       </Box>
     );
@@ -125,7 +150,8 @@ function Dashboard() {
         </Box>
 
         <Box marginTop={1} justifyContent="center">
-          <Text dimColor>Ctrl+C to exit</Text>
+          <Text color="cyan">c</Text>
+          <Text dimColor> CONTEXT · Ctrl+C exit</Text>
         </Box>
       </Box>
     );
@@ -169,7 +195,8 @@ function Dashboard() {
         </Box>
 
         <Box marginTop={1} justifyContent="center">
-          <Text dimColor>Ctrl+C to exit</Text>
+          <Text color="cyan">c</Text>
+          <Text dimColor> CONTEXT · Ctrl+C exit</Text>
         </Box>
       </Box>
     );
@@ -234,7 +261,8 @@ function Dashboard() {
         </Box>
 
         <Box marginTop={1} justifyContent="center">
-          <Text dimColor>Ctrl+C to exit</Text>
+          <Text color="cyan">c</Text>
+          <Text dimColor> CONTEXT browser · Ctrl+C to exit</Text>
         </Box>
       </Box>
     );
@@ -309,8 +337,9 @@ function Dashboard() {
       <Box marginTop={2} justifyContent="center" paddingY={1}>
         <Text dimColor>API: </Text>
         <Text color="cyan">http://localhost:3000</Text>
-        <Text dimColor> │ </Text>
-        <Text dimColor>Press </Text>
+        <Text dimColor> │ Press </Text>
+        <Text color="cyan">c</Text>
+        <Text dimColor> for CONTEXT browser │ </Text>
         <Text color="#3B82F6">Ctrl+C</Text>
         <Text dimColor> to exit</Text>
       </Box>
