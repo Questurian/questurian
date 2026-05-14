@@ -3,27 +3,25 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
-import {
-  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
-  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
-} from '../types'
+} from '../resolve-page-blocks/lib/section-heading'
+import { HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT } from '../types'
 
-export const ThingsToDoAttractionsBlock: Block = {
-  slug: 'things-to-do-attractions',
+export const QuesturianMapsBlock: Block = {
+  slug: 'questurian-maps',
   labels: {
-    singular: 'Things to Do — Places',
-    plural: 'Things to Do — Places Blocks',
+    singular: 'Questurian Maps',
+    plural: 'Questurian Maps Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
-      max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
+      min: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
+      max: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
+      defaultValue: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
       admin: {
-        description: 'How many attraction place cards this block contains.',
+        description: 'Always six single-type listicles in a 2×3 grid.',
       },
     },
     {
@@ -47,10 +45,10 @@ export const ThingsToDoAttractionsBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: 'attractions',
+      relationTo: ['single-type-listicles'] as const,
       hasMany: true,
       admin: {
-        description: 'Attraction records in display order.',
+        description: 'Single-type listicles in display order.',
       },
     },
   ],

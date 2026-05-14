@@ -3,25 +3,24 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
-import { HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT } from '../types'
+} from '../resolve-page-blocks/lib/section-heading'
+import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 
-export const QuesturianMapsBlock: Block = {
-  slug: 'questurian-maps',
+export const FeaturedArticleCarouselBlock: Block = {
+  slug: 'featured-article-carousel',
   labels: {
-    singular: 'Questurian Maps',
-    plural: 'Questurian Maps Blocks',
+    singular: 'Featured Article Carousel',
+    plural: 'Featured Article Carousel Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
-      max: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
-      defaultValue: HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT,
+      min: 2,
+      max: 10,
       admin: {
-        description: 'Always six single-type listicles in a 2×3 grid.',
+        description: 'How many articles this carousel contains (2–10).',
       },
     },
     {
@@ -45,10 +44,11 @@ export const QuesturianMapsBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: ['single-type-listicles'] as const,
+      relationTo: [...HOMEPAGE_FEATURED_CONTENT_COLLECTIONS],
       hasMany: true,
       admin: {
-        description: 'Single-type listicles in display order.',
+        description:
+          'Articles or listicles displayed in the carousel, in order. Must match the slot count above.',
       },
     },
   ],

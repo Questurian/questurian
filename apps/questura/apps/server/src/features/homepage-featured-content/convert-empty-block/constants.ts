@@ -2,11 +2,12 @@
  * Single list: block may use POST …/blocks/convert when `items` empty.
  *
  * When adding curated homepage block type:
- * 1. Add slug here (and `slot-count-for-block-type.ts` limits if new family).
+ * 1. Add slug here (and `slot-count` limits if new family).
  * 2. Mirror list in ai-blog-writer `pageBlocks.ts` → `CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES`
  *    (destination types) + `ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES` / editor props if new editor.
  *
- * Editor lists current block type plus this list so empty blocks can resize slots or change type (POST …/blocks/convert).
+ * Editor lists current block type plus this list so empty blocks can resize slots or change type
+ * (POST …/blocks/convert).
  */
 export const HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES = [
   'featured-articles',
@@ -24,9 +25,3 @@ export const HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES = [
 
 export type HomepageEmptyConvertSourceBlockType =
   (typeof HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES)[number]
-
-const EMPTY_CONVERT_SOURCE_SET = new Set<string>(HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES)
-
-export function isHomepageBlockConvertibleWhenEmpty(blockType: string): boolean {
-  return EMPTY_CONVERT_SOURCE_SET.has(blockType)
-}

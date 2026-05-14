@@ -3,27 +3,26 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
-import {
-  HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
-  HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
-} from '../types'
+} from '../resolve-page-blocks/lib/section-heading'
+import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 
-export const ThingsToDoListiclesBlock: Block = {
-  slug: 'things-to-do-listicles',
+export const FeaturedArticleBlock: Block = {
+  slug: 'featured-article',
   labels: {
-    singular: 'Things to Do — Listicles',
-    plural: 'Things to Do — Listicle Blocks',
+    singular: 'Featured Article',
+    plural: 'Featured Article Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
-      max: HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+      defaultValue: 1,
+      min: 1,
+      max: 1,
       admin: {
-        description: 'How many attraction listicles this block contains.',
+        readOnly: true,
+        description: 'Single spotlight slot (fixed).',
       },
     },
     {
@@ -47,10 +46,10 @@ export const ThingsToDoListiclesBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: ['single-type-listicles'] as const,
+      relationTo: [...HOMEPAGE_FEATURED_CONTENT_COLLECTIONS],
       hasMany: true,
       admin: {
-        description: 'Single-type listicles with data type Attractions only.',
+        description: 'One article or listicle to highlight in the hero layout.',
       },
     },
   ],

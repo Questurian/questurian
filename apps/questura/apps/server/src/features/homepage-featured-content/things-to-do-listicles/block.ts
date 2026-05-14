@@ -3,24 +3,27 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
-import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
+} from '../resolve-page-blocks/lib/section-heading'
+import {
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
+} from '../types'
 
-export const FeaturedArticleCarouselBlock: Block = {
-  slug: 'featured-article-carousel',
+export const ThingsToDoListiclesBlock: Block = {
+  slug: 'things-to-do-listicles',
   labels: {
-    singular: 'Featured Article Carousel',
-    plural: 'Featured Article Carousel Blocks',
+    singular: 'Things to Do — Listicles',
+    plural: 'Things to Do — Listicle Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: 2,
-      max: 10,
+      min: HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
+      max: HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
       admin: {
-        description: 'How many articles this carousel contains (2–10).',
+        description: 'How many attraction listicles this block contains.',
       },
     },
     {
@@ -44,11 +47,10 @@ export const FeaturedArticleCarouselBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: [...HOMEPAGE_FEATURED_CONTENT_COLLECTIONS],
+      relationTo: ['single-type-listicles'] as const,
       hasMany: true,
       admin: {
-        description:
-          'Articles or listicles displayed in the carousel, in order. Must match the slot count above.',
+        description: 'Single-type listicles with data type Attractions only.',
       },
     },
   ],

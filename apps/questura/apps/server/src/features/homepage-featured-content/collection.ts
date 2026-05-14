@@ -1,22 +1,22 @@
 import type { CollectionConfig } from 'payload'
 
-import { ArticleGridBlock } from './blocks/article-grid'
-import { ArticleListBlock } from './blocks/article-list'
-import { FeaturedArticleBlock } from './blocks/featured-article'
-import { FeaturedArticleCarouselBlock } from './blocks/featured-article-carousel'
-import { FeaturedArticlesBlock } from './blocks/featured-articles'
-import { HotelGridBlock } from './blocks/hotel-grid'
-import { TourGridBlock } from './blocks/tour-grid'
+import { ArticleGridBlock } from './article-grid/block'
+import { ArticleListBlock } from './article-list/block'
+import { FeaturedArticleBlock } from './featured-article/block'
+import { FeaturedArticleCarouselBlock } from './featured-article-carousel/block'
+import { FeaturedArticlesBlock } from './featured-articles/block'
+import { HotelGridBlock } from './hotel-grid/block'
+import { TourGridBlock } from './tour-grid/block'
 import { LocationGridBlock } from './location-grid/block'
-import { QuesturianMapsBlock } from './blocks/questurian-maps'
-import { WhereToEatDrinkBlock } from './blocks/where-to-eat-drink'
-import { ThingsToDoAttractionsBlock } from './blocks/things-to-do-attractions'
-import { ThingsToDoListiclesBlock } from './blocks/things-to-do-listicles'
-import { NewsletterSignupBlock } from './blocks/newsletter-signup'
+import { QuesturianMapsBlock } from './questurian-maps/block'
+import { WhereToEatDrinkBlock } from './where-to-eat-drink/block'
+import { ThingsToDoAttractionsBlock } from './things-to-do-attractions/block'
+import { ThingsToDoListiclesBlock } from './things-to-do-listicles/block'
+import { NewsletterSignupBlock } from './newsletter-signup/block'
 import {
   resolveLocationGridScopeFromLocation,
 } from './location-grid/service'
-import { normalizePageBlocksArrayInPlace } from './page-blocks-validation'
+import { normalizePageBlocksArrayInPlace } from './resolve-page-blocks/operations/normalize-page-blocks'
 
 const HOMEPAGE_BLOCK_TYPES = [
   FeaturedArticleBlock,

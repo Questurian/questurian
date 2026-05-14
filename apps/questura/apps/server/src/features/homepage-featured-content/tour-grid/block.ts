@@ -3,24 +3,27 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
-import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
+} from '../resolve-page-blocks/lib/section-heading'
+import {
+  HOMEPAGE_TOUR_GRID_MAX_SLOTS,
+  HOMEPAGE_TOUR_GRID_MIN_SLOTS,
+} from '../types'
 
-export const ArticleListBlock: Block = {
-  slug: 'article-list',
+export const TourGridBlock: Block = {
+  slug: 'tour-grid',
   labels: {
-    singular: 'Article List',
-    plural: 'Article List Blocks',
+    singular: 'Tour Grid',
+    plural: 'Tour Grid Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: 5,
-      max: 25,
+      min: HOMEPAGE_TOUR_GRID_MIN_SLOTS,
+      max: HOMEPAGE_TOUR_GRID_MAX_SLOTS,
       admin: {
-        description: 'How many article slots this block contains (5–25).',
+        description: 'How many tour cards this block contains.',
       },
     },
     {
@@ -29,7 +32,7 @@ export const ArticleListBlock: Block = {
       required: false,
       maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
       admin: {
-        description: 'Optional heading for this section on the public homepage.',
+        description: 'Optional headline shown above this block on the public homepage.',
       },
     },
     {
@@ -44,10 +47,10 @@ export const ArticleListBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: [...HOMEPAGE_FEATURED_CONTENT_COLLECTIONS],
+      relationTo: 'tours',
       hasMany: true,
       admin: {
-        description: 'Articles in display order. Must match the slot count above.',
+        description: 'Tours in display order.',
       },
     },
   ],

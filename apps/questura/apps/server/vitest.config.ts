@@ -15,7 +15,7 @@ export default defineConfig({
     environment: 'jsdom',
     reporters: 'dot',
     include: [
-      'src/shared/lib/*.test.ts',
+      'src/shared/**/*.test.ts',
       'src/features/**/*.test.ts',
     ],
   },

@@ -2,50 +2,50 @@ import type { PayloadRequest } from 'payload'
 
 import { APP_CONFIG } from '@/shared/config'
 
+import { normalizeArticleGridFourLayout } from '../../article-grid/service'
 import {
   buildHotelGridGlobalData,
   normalizeHotelGridInput,
   validateHotelGridItems,
-} from './hotel-grid/service'
-import { normalizeArticleGridFourLayout } from './article-grid/service'
-import { normalizeLocationGridMediaAspect } from './location-grid/lib/media-aspect'
+} from '../../hotel-grid/service'
+import { normalizeLocationGridMediaAspect } from '../../location-grid/lib/media-aspect'
 import {
   buildLocationGridGlobalData,
   normalizeLocationGridInput,
   validateLocationGridItems,
-} from './location-grid/service'
-import type { LocationGridScope } from './location-grid/types'
-import {
-  buildHomepageFeaturedGlobalData,
-  normalizeHomepageFeaturedInput,
-  validateHomepageFeaturedItems,
-} from './service'
-import {
-  buildThingsToDoAttractionsGlobalData,
-  normalizeThingsToDoAttractionsInput,
-  validateThingsToDoAttractionsItems,
-} from './things-to-do-attractions/service'
-import {
-  buildTourGridGlobalData,
-  normalizeTourGridInput,
-  validateTourGridItems,
-} from './tour-grid/service'
-import {
-  buildThingsToDoListiclesGlobalData,
-  normalizeThingsToDoListiclesInput,
-  validateThingsToDoListiclesItems,
-} from './things-to-do-listicles/service'
+} from '../../location-grid/service'
+import type { LocationGridScope } from '../../location-grid/types'
 import {
   buildQuesturianMapsGlobalData,
   normalizeQuesturianMapsInput,
   validateQuesturianMapsItems,
-} from './questurian-maps/service'
-import { resolveStoredSlotCountForBlockType } from './slot-count-for-block-type'
+} from '../../questurian-maps/service'
+import {
+  buildHomepageFeaturedGlobalData,
+  normalizeHomepageFeaturedInput,
+  validateHomepageFeaturedItems,
+} from '../../featured-articles/service'
+import { resolveStoredSlotCountForBlockType } from '../../slot-count/service'
+import {
+  buildThingsToDoAttractionsGlobalData,
+  normalizeThingsToDoAttractionsInput,
+  validateThingsToDoAttractionsItems,
+} from '../../things-to-do-attractions/service'
+import {
+  buildThingsToDoListiclesGlobalData,
+  normalizeThingsToDoListiclesInput,
+  validateThingsToDoListiclesItems,
+} from '../../things-to-do-listicles/service'
+import {
+  buildTourGridGlobalData,
+  normalizeTourGridInput,
+  validateTourGridItems,
+} from '../../tour-grid/service'
 import {
   buildWhereToEatDrinkGlobalData,
   normalizeWhereToEatDrinkInput,
   validateWhereToEatDrinkItems,
-} from './where-to-eat-drink/service'
+} from '../../where-to-eat-drink/service'
 
 function isCuratedHomepageBlockType(
   value: unknown,

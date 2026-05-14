@@ -3,27 +3,27 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
+} from '../resolve-page-blocks/lib/section-heading'
 import {
-  HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
-  HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
+  HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
 } from '../types'
 
-export const WhereToEatDrinkBlock: Block = {
-  slug: 'where-to-eat-drink',
+export const ThingsToDoAttractionsBlock: Block = {
+  slug: 'things-to-do-attractions',
   labels: {
-    singular: 'Where to Eat & Drink',
-    plural: 'Where to Eat & Drink Blocks',
+    singular: 'Things to Do — Places',
+    plural: 'Things to Do — Places Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
-      max: HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
+      min: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS,
+      max: HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS,
       admin: {
-        description: 'How many dining listicles this block contains.',
+        description: 'How many attraction place cards this block contains.',
       },
     },
     {
@@ -47,10 +47,10 @@ export const WhereToEatDrinkBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: ['single-type-listicles'] as const,
+      relationTo: 'attractions',
       hasMany: true,
       admin: {
-        description: 'Dining single-type listicles in display order.',
+        description: 'Attraction records in display order.',
       },
     },
   ],

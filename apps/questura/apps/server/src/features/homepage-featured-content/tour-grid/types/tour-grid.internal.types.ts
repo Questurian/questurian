@@ -1,6 +1,6 @@
 import type { HomepageTourInvalidReason, HomepageTourItemRef } from './tour-grid.types'
 
-export type { PayloadFindWhere } from '../../payload.types'
+export type { PayloadFindWhere } from '@/shared/utils/payload-types'
 
 export type TourDocLike = {
   id?: unknown

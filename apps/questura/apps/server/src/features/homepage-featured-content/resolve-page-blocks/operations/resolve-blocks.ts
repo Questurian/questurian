@@ -2,15 +2,15 @@ import type { getPayload } from 'payload'
 
 import type { RawBlock } from '../types'
 
-import { curatedBlockApiPayload } from '../../featured-articles-section-heading'
+import { curatedBlockApiPayload } from '../lib/curated-block-api-payload'
 import { getHotelGridSelectionFromItems } from '../../hotel-grid/service'
 import { getLocationGridSelectionFromItems } from '../../location-grid/service'
 import { getQuesturianMapsSelectionFromItems } from '../../questurian-maps/service'
 import {
   getHomepageFeaturedSelectionFromItems,
   getNewsletterSignupPlaceholderSelection,
-} from '../../service'
-import { resolveStoredSlotCountForBlockType } from '../../slot-count-for-block-type'
+} from '../../featured-articles/service'
+import { resolveStoredSlotCountForBlockType } from '../../slot-count/service'
 import { getThingsToDoAttractionsSelectionFromItems } from '../../things-to-do-attractions/service'
 import { getThingsToDoListiclesSelectionFromItems } from '../../things-to-do-listicles/service'
 import { getTourGridSelectionFromItems } from '../../tour-grid/service'

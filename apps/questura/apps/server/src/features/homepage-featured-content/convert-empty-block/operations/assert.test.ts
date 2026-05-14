@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertFeaturedArticlesBlockConvertible } from './convert-empty-featured-articles-block'
+import {
+  assertFeaturedArticlesBlockConvertible,
+  isHomepageBlockConvertibleWhenEmpty,
+} from './assert'
+
+describe('isHomepageBlockConvertibleWhenEmpty', () => {
+  it('allows known curated slugs', () => {
+    expect(isHomepageBlockConvertibleWhenEmpty('location-grid')).toBe(true)
+    expect(isHomepageBlockConvertibleWhenEmpty('hotel-grid')).toBe(true)
+  })
+
+  it('rejects unknown', () => {
+    expect(isHomepageBlockConvertibleWhenEmpty('not-a-block')).toBe(false)
+  })
+})
 
 describe('assertFeaturedArticlesBlockConvertible', () => {
   it('allows empty featured-articles', () => {

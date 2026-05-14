@@ -1,18 +1,4 @@
-export const HOMEPAGE_FEATURED_CONTENT_SLOTS = 10
-/** Spotlight block: exactly one curated article/listicle. */
-export const HOMEPAGE_FEATURED_ARTICLE_SLOT_COUNT = 1
-export const HOMEPAGE_HOTEL_GRID_MIN_SLOTS = 3
-export const HOMEPAGE_HOTEL_GRID_MAX_SLOTS = 12
-export const HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS = 3
-export const HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS = 12
-export const HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS = 3
-export const HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS = 12
-export const HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MIN_SLOTS = 3
-export const HOMEPAGE_THINGS_TO_DO_ATTRACTIONS_MAX_SLOTS = 12
-export const HOMEPAGE_TOUR_GRID_MIN_SLOTS = 3
-export const HOMEPAGE_TOUR_GRID_MAX_SLOTS = 12
-/** Questurian Maps: fixed six single-type listicle slots. */
-export const HOMEPAGE_QUESTURIAN_MAPS_SLOT_COUNT = 6
+export * from './constants'
 
 export {
   HOMEPAGE_FEATURED_CONTENT_COLLECTIONS,

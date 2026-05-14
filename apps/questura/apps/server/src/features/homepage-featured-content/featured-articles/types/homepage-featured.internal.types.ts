@@ -3,7 +3,7 @@ import type {
   HomepageFeaturedItemRef,
 } from './homepage-featured.types'
 
-export type { PayloadFindWhere } from '../../payload.types'
+export type { PayloadFindWhere } from '@/shared/utils/payload-types'
 
 export type PayloadDocLike = {
   id?: unknown

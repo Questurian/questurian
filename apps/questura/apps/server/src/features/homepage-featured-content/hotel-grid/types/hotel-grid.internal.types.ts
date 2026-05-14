@@ -1,6 +1,6 @@
 import type { HomepageHotelInvalidReason, HomepageHotelItemRef } from './hotel-grid.types'
 
-export type { PayloadFindWhere } from '../../payload.types'
+export type { PayloadFindWhere } from '@/shared/utils/payload-types'
 
 export type AccommodationDocLike = {
   id?: unknown

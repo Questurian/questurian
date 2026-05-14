@@ -3,27 +3,27 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
+} from '../resolve-page-blocks/lib/section-heading'
 import {
-  HOMEPAGE_TOUR_GRID_MAX_SLOTS,
-  HOMEPAGE_TOUR_GRID_MIN_SLOTS,
+  HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
+  HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
 } from '../types'
 
-export const TourGridBlock: Block = {
-  slug: 'tour-grid',
+export const WhereToEatDrinkBlock: Block = {
+  slug: 'where-to-eat-drink',
   labels: {
-    singular: 'Tour Grid',
-    plural: 'Tour Grid Blocks',
+    singular: 'Where to Eat & Drink',
+    plural: 'Where to Eat & Drink Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: HOMEPAGE_TOUR_GRID_MIN_SLOTS,
-      max: HOMEPAGE_TOUR_GRID_MAX_SLOTS,
+      min: HOMEPAGE_WHERE_TO_EAT_DRINK_MIN_SLOTS,
+      max: HOMEPAGE_WHERE_TO_EAT_DRINK_MAX_SLOTS,
       admin: {
-        description: 'How many tour cards this block contains.',
+        description: 'How many dining listicles this block contains.',
       },
     },
     {
@@ -47,10 +47,10 @@ export const TourGridBlock: Block = {
     {
       name: 'items',
       type: 'relationship',
-      relationTo: 'tours',
+      relationTo: ['single-type-listicles'] as const,
       hasMany: true,
       admin: {
-        description: 'Tours in display order.',
+        description: 'Dining single-type listicles in display order.',
       },
     },
   ],

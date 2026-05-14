@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { curatedBlockApiPayload } from './featured-articles-section-heading'
-import { homepageBlockSupportsSectionHeading } from './homepage-block-section-heading'
+import { curatedBlockApiPayload } from './curated-block-api-payload'
+import { homepageBlockSupportsSectionHeading } from './section-heading'
 
 describe('homepage block section headings', () => {
   it('allows tour-grid blocks to store section text', () => {

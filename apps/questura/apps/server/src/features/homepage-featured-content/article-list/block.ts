@@ -3,26 +3,24 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
+} from '../resolve-page-blocks/lib/section-heading'
 import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 
-export const FeaturedArticleBlock: Block = {
-  slug: 'featured-article',
+export const ArticleListBlock: Block = {
+  slug: 'article-list',
   labels: {
-    singular: 'Featured Article',
-    plural: 'Featured Article Blocks',
+    singular: 'Article List',
+    plural: 'Article List Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      defaultValue: 1,
-      min: 1,
-      max: 1,
+      min: 5,
+      max: 25,
       admin: {
-        readOnly: true,
-        description: 'Single spotlight slot (fixed).',
+        description: 'How many article slots this block contains (5–25).',
       },
     },
     {
@@ -31,7 +29,7 @@ export const FeaturedArticleBlock: Block = {
       required: false,
       maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
       admin: {
-        description: 'Optional headline shown above this block on the public homepage.',
+        description: 'Optional heading for this section on the public homepage.',
       },
     },
     {
@@ -49,7 +47,7 @@ export const FeaturedArticleBlock: Block = {
       relationTo: [...HOMEPAGE_FEATURED_CONTENT_COLLECTIONS],
       hasMany: true,
       admin: {
-        description: 'One article or listicle to highlight in the hero layout.',
+        description: 'Articles in display order. Must match the slot count above.',
       },
     },
   ],

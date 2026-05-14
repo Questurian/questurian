@@ -3,25 +3,27 @@ import type { Block } from 'payload'
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../featured-articles-section-heading'
+} from '../resolve-page-blocks/lib/section-heading'
+import {
+  HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
+  HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+} from '../types'
 
-export const NewsletterSignupBlock: Block = {
-  slug: 'newsletter-signup',
+export const HotelGridBlock: Block = {
+  slug: 'hotel-grid',
   labels: {
-    singular: 'Newsletter signup',
-    plural: 'Newsletter signup blocks',
+    singular: 'Hotel Grid',
+    plural: 'Hotel Grid Blocks',
   },
   fields: [
     {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: 0,
-      max: 0,
-      defaultValue: 0,
+      min: HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
+      max: HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
       admin: {
-        readOnly: true,
-        description: 'Placeholder block for homepage structure (no curated items).',
+        description: 'How many hotel cards this block contains.',
       },
     },
     {
@@ -40,6 +42,15 @@ export const NewsletterSignupBlock: Block = {
       maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
       admin: {
         description: 'Optional supporting line under the section heading.',
+      },
+    },
+    {
+      name: 'items',
+      type: 'relationship',
+      relationTo: 'accommodations',
+      hasMany: true,
+      admin: {
+        description: 'Hotels in display order.',
       },
     },
   ],

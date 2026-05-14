@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveStoredSlotCountForBlockType } from './slot-count-for-block-type'
+import { resolveStoredSlotCountForBlockType } from './resolve'
 
 describe('resolveStoredSlotCountForBlockType', () => {
   it('uses canonical counts for fixed-size types', () => {
