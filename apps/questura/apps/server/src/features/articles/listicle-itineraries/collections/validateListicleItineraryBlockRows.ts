@@ -1,15 +1,19 @@
 import type { PayloadRequest } from 'payload'
 import {
-  extractSourceItemMediaIds,
-  fetchListicleSourceItem,
   getMediaMode,
-  getSourceCollectionForBlockType,
+  requiresInstagram,
+  requiresPhotos,
+} from '../../shared/utils/itemMedia/mediaMode'
+import {
   normalizeRelationshipId,
   normalizeRelationshipIds,
   relationshipIdToKey,
-  requiresInstagram,
-  requiresPhotos,
-} from '../../shared/utils/itemMedia'
+} from '../../shared/utils/itemMedia/relationshipIds'
+import {
+  extractSourceItemMediaIds,
+  fetchListicleSourceItem,
+  getSourceCollectionForBlockType,
+} from '../../shared/utils/itemMedia/sourceItems'
 
 const tourAgencyPriceTiers = ['$', '$$', '$$$', '$$$$'] as const
 

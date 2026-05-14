@@ -1,16 +1,20 @@
 import type { CollectionBeforeChangeHook, CollectionConfig } from 'payload'
 import { getBlocksForType } from '../blocks'
 import {
-  extractSourceItemMediaIds,
-  fetchListicleSourceItem,
   getMediaMode,
-  getSourceCollectionForBlockType,
+  requiresInstagram,
+  requiresPhotos,
+} from '../../shared/utils/itemMedia/mediaMode'
+import {
   normalizeRelationshipId,
   normalizeRelationshipIds,
   relationshipIdToKey,
-  requiresInstagram,
-  requiresPhotos,
-} from '../blocks/utils/itemMedia'
+} from '../../shared/utils/itemMedia/relationshipIds'
+import {
+  extractSourceItemMediaIds,
+  fetchListicleSourceItem,
+  getSourceCollectionForBlockType,
+} from '../../shared/utils/itemMedia/sourceItems'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
 import {

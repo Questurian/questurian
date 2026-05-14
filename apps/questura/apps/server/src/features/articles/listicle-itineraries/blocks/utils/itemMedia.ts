@@ -1,7 +1,5 @@
-import {
-  createItemMediaFields,
-  type ItemMediaSourceCollection,
-} from '../../../shared/utils/itemMedia'
+import type { ItemMediaSourceCollection } from '../../../shared/types'
+import { createItemMediaFields } from '../../../shared/utils/itemMedia/fields'
 
 const itineraryMediaFieldOptions = {
   mediaModeEnumName: 'itm_media_mode',
