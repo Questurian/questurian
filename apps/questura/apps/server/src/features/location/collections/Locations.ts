@@ -8,6 +8,10 @@ import type { CollectionConfig } from 'payload'
 import { beforeValidateLocation } from '../hooks/beforeValidateLocation'
 import { ensureParentLocation } from '../hooks/ensureParentLocation'
 import { preventReferencedLocationDelete } from '../hooks/preventReferencedLocationDelete'
+import {
+  revalidateLocationAfterChange,
+  revalidateLocationAfterDelete,
+} from '@/features/public-revalidation/revalidate-client'
 import { locationFields } from './fields'
 
 export const Locations: CollectionConfig = {
@@ -34,6 +38,8 @@ export const Locations: CollectionConfig = {
   hooks: {
     beforeValidate: [beforeValidateLocation],
     beforeChange: [ensureParentLocation],
+    afterChange: [revalidateLocationAfterChange],
+    afterDelete: [revalidateLocationAfterDelete],
     beforeDelete: [preventReferencedLocationDelete],
   },
 }

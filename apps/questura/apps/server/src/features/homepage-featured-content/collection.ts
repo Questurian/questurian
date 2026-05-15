@@ -1,5 +1,9 @@
 import type { CollectionConfig } from 'payload'
 
+import {
+  revalidateLocationHomepageAfterChange,
+  revalidateLocationHomepageAfterDelete,
+} from '@/features/public-revalidation/revalidate-client'
 import { ArticleGridBlock } from './article-grid/block'
 import { ArticleListBlock } from './article-list/block'
 import { FeaturedArticleBlock } from './featured-article/block'
@@ -178,5 +182,7 @@ export const LocationHomepages: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [revalidateLocationHomepageAfterChange],
+    afterDelete: [revalidateLocationHomepageAfterDelete],
   },
 }

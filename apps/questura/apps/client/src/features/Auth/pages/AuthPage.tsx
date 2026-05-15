@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { SuspenseBoundary } from '@/components/shared/SuspenseBoundary';
 import { queryKeys } from '@/lib/react-query';
 import { isPopupWindow } from '@/features/Auth/lib/auth-utils';
 import { getSafeRedirectPath, parseSafeUserData } from '@/lib/validations';
@@ -190,7 +191,7 @@ function AuthPageContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={
+    <SuspenseBoundary fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -199,6 +200,6 @@ export default function AuthPage() {
       </div>
     }>
       <AuthPageContent />
-    </Suspense>
+    </SuspenseBoundary>
   );
 }

@@ -1,4 +1,8 @@
 import type { CollectionConfig } from 'payload'
+import {
+  revalidateArticleRedirectAfterChange,
+  revalidateArticleRedirectAfterDelete,
+} from '@/features/public-revalidation/revalidate-client'
 
 export const ArticleRedirects: CollectionConfig = {
   slug: 'article-redirects',
@@ -58,4 +62,8 @@ export const ArticleRedirects: CollectionConfig = {
       },
     },
   ],
+  hooks: {
+    afterChange: [revalidateArticleRedirectAfterChange],
+    afterDelete: [revalidateArticleRedirectAfterDelete],
+  },
 }

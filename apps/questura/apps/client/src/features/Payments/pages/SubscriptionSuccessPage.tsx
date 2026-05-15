@@ -2,7 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState } from 'react';
+import { SuspenseBoundary } from '@/components/shared/SuspenseBoundary';
 
 function SubscriptionSuccessContent() {
   const searchParams = useSearchParams() ?? new URLSearchParams();
@@ -74,12 +75,12 @@ function SubscriptionSuccessContent() {
 
 export default function SubscriptionSuccessPage() {
   return (
-    <Suspense fallback={
+    <SuspenseBoundary fallback={
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-lg">Loading...</div>
       </div>
     }>
       <SubscriptionSuccessContent />
-    </Suspense>
+    </SuspenseBoundary>
   );
 }

@@ -68,7 +68,6 @@ function TourCard({ item, isPriority, isLast }: { item: TourGridItem; isPriority
 
 export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBlock>): JSX.Element | null {
   const items = block.selection?.items ?? []
-  if (items.length === 0) return null
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -107,6 +106,8 @@ export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBloc
     container.addEventListener('scroll', handleScroll, { passive: true })
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
+
+  if (items.length === 0) return null
 
   return (
     // PAGE-WIDTH RULE: every block section on this page must constrain its content

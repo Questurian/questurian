@@ -79,7 +79,6 @@ function HotelCard({ item, isPriority, isLast }: { item: HotelGridItem; isPriori
 
 export function HotelGridPreview({ block }: HomepageBlockLayoutProps<HotelGridBlock>): JSX.Element | null {
   const items = block.selection?.items ?? []
-  if (items.length === 0) return null
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -118,6 +117,8 @@ export function HotelGridPreview({ block }: HomepageBlockLayoutProps<HotelGridBl
     container.addEventListener('scroll', handleScroll, { passive: true })
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
+
+  if (items.length === 0) return null
 
   return (
     // PAGE-WIDTH RULE: every block section on this page must constrain its content

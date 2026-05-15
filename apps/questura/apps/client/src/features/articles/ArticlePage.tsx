@@ -1,4 +1,5 @@
 import { ArticlePageHeader } from '@/features/articles/components/ArticlePageHeader'
+import { PublicImage } from '@/components/media/PublicImage'
 import { Article, ContentBlock, FaqBlock, ImageBlock, ImgPairBlock, TextBlock } from './types'
 
 function TextBlockRenderer({ block }: { block: TextBlock }) {
@@ -13,9 +14,12 @@ function TextBlockRenderer({ block }: { block: TextBlock }) {
 function ImageBlockRenderer({ block }: { block: ImageBlock }) {
   return (
     <figure className="-mx-4">
-      <img
+      <PublicImage
         src={block.image.url}
         alt={block.altText ?? block.image.alt_text ?? ''}
+        width={1200}
+        height={900}
+        sizes="100vw"
         className="w-full object-cover"
       />
       {block.caption && (
@@ -34,8 +38,22 @@ function ImgPairBlockRenderer({ block }: { block: ImgPairBlock }) {
   return (
     <figure className="-mx-4">
       <div className="flex gap-[2px]">
-        <img src={block.imageOne.url} alt={alt1} className="w-1/2 aspect-[3/4] object-cover" />
-        <img src={block.imageTwo.url} alt={alt2} className="w-1/2 aspect-[3/4] object-cover" />
+        <PublicImage
+          src={block.imageOne.url}
+          alt={alt1}
+          width={720}
+          height={960}
+          sizes="50vw"
+          className="w-1/2 aspect-[3/4] object-cover"
+        />
+        <PublicImage
+          src={block.imageTwo.url}
+          alt={alt2}
+          width={720}
+          height={960}
+          sizes="50vw"
+          className="w-1/2 aspect-[3/4] object-cover"
+        />
       </div>
       {block.caption && (
         <figcaption className="px-4 pt-2 text-[11px] text-foreground/50 italic">
@@ -97,10 +115,14 @@ export function ArticlePage({ article }: { article: Article }) {
       {featuredImage?.url && (
         <div className="px-0 sm:px-4">
           <div className="aspect-[4/3] w-full overflow-hidden">
-            <img
+            <PublicImage
               src={featuredImage.url}
               alt={featuredImage.alt_text ?? ''}
+              width={1200}
+              height={900}
+              sizes="100vw"
               className="w-full h-full object-cover"
+              priority
             />
           </div>
         </div>

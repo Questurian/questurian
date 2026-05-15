@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { MapPin } from 'lucide-react'
+import { PublicImage } from '@/components/media/PublicImage'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
 import {
@@ -48,13 +49,13 @@ export function ListicleVenueEntry({
         {hero ? (
           <div className="overflow-hidden rounded-sm bg-foreground/[0.04]">
             <div className="aspect-[16/10] w-full 380:aspect-[4/3] 480:aspect-[3/2] sm:aspect-[16/9]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <PublicImage
                 src={hero.url}
                 alt={hero.alt}
+                width={1200}
+                height={675}
+                sizes="(min-width: 768px) 700px, 100vw"
                 className="h-full w-full object-cover"
-                loading="lazy"
-                decoding="async"
               />
             </div>
           </div>

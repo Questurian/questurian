@@ -1,4 +1,5 @@
 import { config } from '@/lib/config'
+import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
 import type { PublicFetchedArticle } from './articleGuards'
 
@@ -16,7 +17,10 @@ export async function fetchArticleByCanonicalPath({
   params.set('lang', lang)
 
   const url = `${config.backendUrl}/api/public/articles/by-canonical-path?${params.toString()}`
-  const res = await fetch(url, { cache: 'no-store' })
+  const res = await fetch(
+    url,
+    publicFetchOptions([publicCacheTags.articlePath(path, lang), publicCacheTags.sitemap()]),
+  )
 
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Failed to fetch article: ${res.status}`)
@@ -30,7 +34,7 @@ export async function fetchRedirectByPath(path: string): Promise<RedirectLookupR
   const params = new URLSearchParams()
   params.set('path', path)
   const url = `${config.backendUrl}/api/public/redirects/by-path?${params.toString()}`
-  const res = await fetch(url, { cache: 'no-store' })
+  const res = await fetch(url, publicFetchOptions([publicCacheTags.articleRedirect(path)]))
 
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Failed to fetch redirect: ${res.status}`)

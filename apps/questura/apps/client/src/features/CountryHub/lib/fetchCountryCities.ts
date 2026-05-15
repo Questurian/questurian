@@ -1,4 +1,5 @@
 import { config } from '@/lib/config'
+import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
 
 export type CountryCity = {
   slug: string
@@ -18,7 +19,10 @@ export async function fetchCountryCities(
   country: string,
 ): Promise<CountryCitiesResponse | null> {
   const url = `${config.backendUrl}/api/public/countries/${encodeURIComponent(country)}/cities`
-  const res = await fetch(url, { cache: 'no-store' })
+  const res = await fetch(
+    url,
+    publicFetchOptions([publicCacheTags.countryCities(country), publicCacheTags.sitemap()]),
+  )
 
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Failed to fetch country cities: ${res.status}`)

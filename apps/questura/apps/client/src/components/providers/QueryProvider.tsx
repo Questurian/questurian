@@ -8,19 +8,24 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from '@/lib/react-query';
-import { ReactNode } from 'react';
+import type { JSX } from 'react';
 
 interface QueryProviderProps {
-  children: ReactNode;
+  children: unknown;
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
+  const TypedQueryClientProvider = QueryClientProvider as unknown as (props: {
+    client: typeof queryClient;
+    children: unknown;
+  }) => JSX.Element;
+
   return (
-    <QueryClientProvider client={queryClient}>
+    <TypedQueryClientProvider client={queryClient}>
       {children}
       {process.env.NODE_ENV === 'development' && (
         <ReactQueryDevtools initialIsOpen={false} position="bottom" />
       )}
-    </QueryClientProvider>
+    </TypedQueryClientProvider>
   );
 }

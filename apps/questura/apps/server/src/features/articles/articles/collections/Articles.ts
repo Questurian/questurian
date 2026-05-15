@@ -10,6 +10,7 @@ import {
 } from '@/shared/location/server/articleLocationScope'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
+import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
 import { handleCanonicalPathChange } from '../lib/handleCanonicalPathChange'
 import {
   step1Complete,
@@ -30,6 +31,8 @@ import {
   category,
   tags,
 } from './fields'
+
+const articleRevalidation = revalidateArticleCollection('articles')
 
 export const Articles: CollectionConfig = {
   slug: 'articles',
@@ -199,5 +202,7 @@ export const Articles: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [articleRevalidation.afterChange],
+    afterDelete: [articleRevalidation.afterDelete],
   },
 }

@@ -7,6 +7,7 @@ import {
 } from '@/shared/location/server/articleLocationScope'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
+import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
 import {
   step1Complete,
   inUpdateMode,
@@ -32,6 +33,8 @@ import {
   type ComputedItineraryBlock,
   validateListicleItineraryBlockRows,
 } from './validateListicleItineraryBlockRows'
+
+const articleRevalidation = revalidateArticleCollection('listicle-itineraries')
 
 const getValue = <T,>(data: Record<string, unknown> | undefined, key: string): T | undefined => {
   return data?.[key] as T | undefined
@@ -298,5 +301,7 @@ export const ListicleItineraries: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [articleRevalidation.afterChange],
+    afterDelete: [articleRevalidation.afterDelete],
   },
 }

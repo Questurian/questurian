@@ -2,6 +2,8 @@
  * Centralized type definitions for Payments feature
  */
 
+import type { JSX } from 'react';
+
 
 // ============================================================================
 // Membership Types
@@ -37,8 +39,8 @@ export interface UserWithMembership {
  */
 export interface MembershipGuardProps {
   user?: UserWithMembership | null;
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: JSX.Element | JSX.Element[] | null;
+  fallback?: JSX.Element | null;
 }
 
 /**

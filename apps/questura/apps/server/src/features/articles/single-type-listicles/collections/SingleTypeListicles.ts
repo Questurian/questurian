@@ -17,6 +17,7 @@ import {
 } from '../../shared/utils/itemMedia/sourceItems'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
+import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
 import {
   getArticleLocationScope,
   isLocationWithinArticleScope,
@@ -42,6 +43,8 @@ import {
   publishedAt,
   articleType,
 } from './fields'
+
+const articleRevalidation = revalidateArticleCollection('single-type-listicles')
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -476,5 +479,7 @@ export const SingleTypeListicles: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [articleRevalidation.afterChange],
+    afterDelete: [articleRevalidation.afterDelete],
   },
 }

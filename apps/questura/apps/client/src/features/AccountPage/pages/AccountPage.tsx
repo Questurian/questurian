@@ -10,7 +10,8 @@ import { PasswordSection } from "../components/Password/PasswordSection";
 import { ConnectedAccountsSection } from "../components/ConnectedAccounts/ConnectedAccountsSection";
 import { MembershipSection } from "../components/Membership/MembershipSection";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, Suspense } from "react";
+import { useEffect } from "react";
+import { SuspenseBoundary } from "@/components/shared/SuspenseBoundary";
 
 function AccountContent() {
   const router = useRouter();
@@ -107,8 +108,8 @@ function AccountContent() {
 
 export default function AccountPage() {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <SuspenseBoundary fallback={<LoadingSpinner />}>
       <AccountContent />
-    </Suspense>
+    </SuspenseBoundary>
   );
 }

@@ -1,4 +1,5 @@
 import { config } from '@/lib/config'
+import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
 
 export type RelatedMapsArticleTeaser = {
   id: number | string
@@ -23,7 +24,13 @@ export async function fetchRelatedMapsArticles(
   const url = `${config.backendUrl}/api/public/articles/related?${params.toString()}`
 
   try {
-    const res = await fetch(url, { cache: 'no-store' })
+    const res = await fetch(
+      url,
+      publicFetchOptions([
+        publicCacheTags.relatedMapsArticles(country, city, currentSlug),
+        publicCacheTags.relatedMapsScope(country, city),
+      ]),
+    )
     if (!res.ok) return []
     const data = await res.json()
     return Array.isArray(data) ? data : []

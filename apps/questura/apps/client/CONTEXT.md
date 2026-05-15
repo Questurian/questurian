@@ -35,6 +35,11 @@ The user-facing surface. Everything the end visitor sees flows through this app 
 
 A country / city / neighborhood page rendered from a Questura `Locations` row.
 
+### Public content page
+
+An SEO-indexed page rendered for anonymous visitors, such as a Location guide, article, listicle, map page, category page, or listing detail page.
+_Avoid_: account page, auth page, payment page, membership page.
+
 ### `LocationGuide`
 
 The resolved guide displayed on a Location page, with sections `media`, `core`, `explore`, `stay`, `move`. Comes from `resolveLocationGuideForHierarchy` server-side.

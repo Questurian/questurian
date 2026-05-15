@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { JSX } from 'react';
 import { EMAIL_CHANGE_STEP_COPY } from '../../constants/email-change.constants';
 import type { EmailChangeStep } from '../../types/email-change.types';
 
@@ -6,7 +6,7 @@ interface EmailChangeLayoutProps {
   step: EmailChangeStep;
   error: string | null;
   onBackToAccount: () => void;
-  children: ReactNode;
+  children: JSX.Element | null | Array<JSX.Element | null>;
 }
 
 export default function EmailChangeLayout({ step, error, onBackToAccount, children }: EmailChangeLayoutProps) {

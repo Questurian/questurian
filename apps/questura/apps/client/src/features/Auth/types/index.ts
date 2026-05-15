@@ -3,6 +3,8 @@
  * This is the SINGLE SOURCE OF TRUTH for all auth-related types
  */
 
+import type { JSX } from 'react';
+
 // Re-export auth-utils types
 export type { AuthFormData, AuthError } from '../lib/auth-utils';
 
@@ -33,7 +35,7 @@ export interface EnhancedAuthFormProps {
  * Props for AuthFormLayout component
  */
 export interface AuthFormLayoutProps {
-  children: React.ReactNode;
+  children: JSX.Element | JSX.Element[] | null;
   inModal?: boolean;
   title?: string;
   subtitle?: string;

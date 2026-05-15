@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from 'react';
+import { SuspenseBoundary } from '@/components/shared/SuspenseBoundary';
 import AccountLinkingHandler from '../components/google/AccountLinkingHandler';
 import LoadingSpinner from '../../../components/shared/ui/LoadingSpinner';
 
@@ -10,12 +10,12 @@ function LinkCallbackPageContent() {
 
 export default function LinkCallbackPage() {
   return (
-    <Suspense fallback={
+    <SuspenseBoundary fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <LoadingSpinner />
       </div>
     }>
       <LinkCallbackPageContent />
-    </Suspense>
+    </SuspenseBoundary>
   );
 }

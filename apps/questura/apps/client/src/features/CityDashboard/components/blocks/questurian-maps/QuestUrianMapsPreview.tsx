@@ -104,9 +104,10 @@ export function QuestUrianMapsPreview({
   block,
 }: HomepageBlockLayoutProps<CityHomepageArticleBlock>): JSX.Element | null {
   const items = block.items ?? []
-  if (items.length === 0) return null
 
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  if (items.length === 0) return null
 
   const row1 = items.slice(0, 3)
   const row2 = items.slice(3, 6)

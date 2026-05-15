@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, Suspense } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { SuspenseBoundary } from '@/components/shared/SuspenseBoundary'
 import { useProtectedRoute } from '@/lib/routing'
 import { useLoginModalStore } from '@/lib/stores/loginModalStore'
 import { useLocationStore } from '@/lib/stores/locationStore'
@@ -34,8 +35,8 @@ function CityDashboardContent({ citySlug, countrySlug }: CityDashboardProps) {
 
 export function CityDashboardPage({ citySlug, countrySlug }: CityDashboardProps) {
   return (
-    <Suspense fallback={null}>
+    <SuspenseBoundary fallback={null}>
       <CityDashboardContent citySlug={citySlug} countrySlug={countrySlug} />
-    </Suspense>
+    </SuspenseBoundary>
   )
 }

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next'
+import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
 import { config } from '@/lib/config'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
 
@@ -24,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let data: SitemapEntriesResponse | null = null
 
   try {
-    const res = await fetch(url, { cache: 'no-store' })
+    const res = await fetch(url, publicFetchOptions([publicCacheTags.sitemap()]))
     if (res.ok) data = (await res.json()) as SitemapEntriesResponse
   } catch {
     data = null

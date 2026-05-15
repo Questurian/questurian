@@ -3,13 +3,21 @@
  * Matches the design from Auth forms
  */
 
-import { useState, InputHTMLAttributes } from 'react';
+import { useState, type ChangeEvent } from 'react';
 
-interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface PasswordInputProps {
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   error?: string;
   label?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+  autoComplete?: string;
+  autoFocus?: boolean;
+  id?: string;
+  name?: string;
+  className?: string;
 }
 
 export default function PasswordInput({
@@ -25,7 +33,6 @@ export default function PasswordInput({
   id,
   name,
   className,
-  ...rest
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -56,7 +63,6 @@ export default function PasswordInput({
           onChange={onChange}
           disabled={disabled}
           autoFocus={autoFocus}
-          {...rest}
         />
         <button
           type="button"

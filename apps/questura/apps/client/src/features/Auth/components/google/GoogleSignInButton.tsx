@@ -1,10 +1,11 @@
 "use client";
 
 import { config } from '@/lib/config';
+import type { JSX } from 'react';
 
 interface GoogleSignInButtonProps {
   className?: string;
-  children?: React.ReactNode;
+  children?: string | JSX.Element;
   returnTo?: string; // Optional return URL after OAuth
 }
 

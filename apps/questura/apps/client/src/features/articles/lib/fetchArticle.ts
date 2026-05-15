@@ -1,4 +1,5 @@
 import { config } from '@/lib/config'
+import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
 import type { PublicFetchedArticle } from './articleGuards'
 import type { ArticleScope, ArticleTypeKey } from './articleScope'
@@ -28,7 +29,10 @@ export async function fetchArticle({
   params.set('lang', lang)
 
   const url = `${config.backendUrl}/api/public/articles/by-id?${params.toString()}`
-  const res = await fetch(url, { cache: 'no-store' })
+  const res = await fetch(
+    url,
+    publicFetchOptions([publicCacheTags.article(scope, type, slug, lang), publicCacheTags.sitemap()]),
+  )
 
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Failed to fetch article: ${res.status}`)

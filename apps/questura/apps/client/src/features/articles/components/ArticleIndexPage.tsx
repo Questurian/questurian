@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { PublicImage } from '@/components/media/PublicImage'
 import { fetchArticleIndex } from '@/features/articles/lib/fetchArticleIndex'
 import {
   hubHrefForScope,
@@ -68,12 +69,13 @@ export async function ArticleIndexPage({ scope, type, page, lang }: Props) {
               <Link href={item.href} className="block">
                 {item.thumbnail && (
                   <div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-lg bg-foreground/5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <PublicImage
                       src={item.thumbnail.url}
                       alt={item.thumbnail.alt ?? ''}
+                      width={600}
+                      height={450}
+                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                       className="h-full w-full object-cover transition group-hover:scale-105"
-                      loading="lazy"
                     />
                   </div>
                 )}

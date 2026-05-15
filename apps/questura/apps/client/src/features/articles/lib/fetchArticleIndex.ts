@@ -1,4 +1,5 @@
 import { config } from '@/lib/config'
+import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
 import type { ArticleScope, ArticleTypeKey } from './articleScope'
 
@@ -50,7 +51,14 @@ export async function fetchArticleIndex({
   params.set('lang', lang)
 
   const url = `${config.backendUrl}/api/public/articles/index?${params.toString()}`
-  const res = await fetch(url, { cache: 'no-store' })
+  const res = await fetch(
+    url,
+    publicFetchOptions([
+      publicCacheTags.articleIndex(scope, type, page, lang),
+      publicCacheTags.articleIndexScope(scope, type, lang),
+      publicCacheTags.sitemap(),
+    ]),
+  )
 
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Failed to fetch index: ${res.status}`)
