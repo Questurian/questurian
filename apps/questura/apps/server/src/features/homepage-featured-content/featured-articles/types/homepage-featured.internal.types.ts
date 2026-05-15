@@ -9,6 +9,7 @@ export type PayloadDocLike = {
   id?: unknown
   title?: unknown
   slug?: unknown
+  canonicalPath?: unknown
   status?: unknown
   updatedAt?: unknown
   publishedAt?: unknown

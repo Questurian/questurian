@@ -51,7 +51,7 @@ export const APP_CONFIG = {
   features: {
     enforcePasswordStrength: process.env.ENFORCE_PASSWORD_STRENGTH !== 'false',
     endorselyAffiliates: process.env.ENDORSELY_ENABLED === 'true',
-    homepageFeaturedAllowDrafts: process.env.HOMEPAGE_FEATURED_ALLOW_DRAFTS !== 'false',
+    homepageFeaturedAllowDrafts: process.env.HOMEPAGE_FEATURED_ALLOW_DRAFTS === 'true',
   },
 
   // Backend URL - localhost for Phase 1

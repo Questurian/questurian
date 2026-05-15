@@ -377,6 +377,36 @@ export const SingleTypeListicles: CollectionConfig = {
           )
         }
 
+        if (data?.status === 'published') {
+          const slug = typeof data?.slug === 'string' ? data.slug.trim() : ''
+          if (!slug) {
+            throw new Error('Published listicles must have a slug.')
+          }
+
+          const header = isRecord(data?.header) ? data.header : null
+          if (!header?.featuredImage && !header?.featuredMediaSet) {
+            throw new Error(
+              'Published listicles must have a featured image or media set (Header section).',
+            )
+          }
+
+          const seoSection = isRecord(data?.seoSection) ? data.seoSection : null
+          const metaDesc =
+            typeof seoSection?.metaDescription === 'string'
+              ? (seoSection.metaDescription as string).trim()
+              : ''
+          if (!metaDesc) {
+            throw new Error(
+              'Published listicles must have a meta description (SEO & Metadata tab).',
+            )
+          }
+          if (metaDesc.length < 50) {
+            throw new Error(
+              `Meta description is ${metaDesc.length} characters — at least 50 required for indexing.`,
+            )
+          }
+        }
+
         if (data?.items && Array.isArray(data.items)) {
           const parentLocation = data?.location
           const locationScope = await getArticleLocationScope(req.payload, {

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
 import type {
@@ -86,6 +87,8 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
   const authorLabel = getAuthorLabel(article)
   const smallMobileTitleClass = getSmallMobileTitleClass(article.title)
 
+  const articlePath = article.articlePath ?? null
+
   return (
     <section
       className="city-article-card city-four-hero-card"
@@ -127,7 +130,9 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
               smallMobileTitleClass,
             )}
           >
-            {article.title}
+            {articlePath ? (
+              <Link href={articlePath} className="hover:underline">{article.title}</Link>
+            ) : article.title}
           </h2>
 
           <p className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
@@ -168,6 +173,7 @@ function SideListArticleCard({ article, slotNumber }: SideListArticleCardProps):
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
   const authorLabel = getAuthorLabel(article)
+  const articlePath = article.articlePath ?? null
 
   return (
     <section
@@ -195,7 +201,11 @@ function SideListArticleCard({ article, slotNumber }: SideListArticleCardProps):
 
       <div className="city-four-side-copy">
         <p className="city-four-side-type">{articleTypeLabel}</p>
-        <h3 className="city-four-side-title">{article.title}</h3>
+        <h3 className="city-four-side-title">
+          {articlePath ? (
+            <Link href={articlePath} className="hover:underline">{article.title}</Link>
+          ) : article.title}
+        </h3>
         <p className="city-four-side-meta">{excerpt}</p>
         <p className="city-four-side-author">{authorLabel}</p>
       </div>

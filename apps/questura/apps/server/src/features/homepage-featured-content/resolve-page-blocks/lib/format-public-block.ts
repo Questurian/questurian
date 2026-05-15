@@ -3,7 +3,9 @@ import { formatPublicArticleItem } from './format-public-article'
 import { isRecord } from './guards'
 import { normalizeTotalSlots, stringOrNull } from './normalize'
 
-export function formatPublicHomepageBlock(block: unknown) {
+type LocationContext = { country: string; city: string }
+
+export function formatPublicHomepageBlock(block: unknown, location?: LocationContext) {
   if (!isRecord(block) || !PUBLIC_ARTICLE_BLOCK_TYPES.has(String(block.blockType))) {
     return block
   }
@@ -16,6 +18,6 @@ export function formatPublicHomepageBlock(block: unknown) {
     totalSlots: normalizeTotalSlots(selection?.totalSlots),
     sectionHeading: stringOrNull(block.sectionHeading),
     sectionSubheading: stringOrNull(block.sectionSubheading),
-    items: rawItems.map((item) => formatPublicArticleItem(item)),
+    items: rawItems.map((item) => formatPublicArticleItem(item, location)),
   }
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
 import type {
@@ -51,9 +52,10 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? null
   const authorLabel = getAuthorLabel(article)
+  const articlePath = article.articlePath ?? null
 
-  return (
-    <article className="flex items-start gap-4 py-6 768:gap-8 768:py-8 1024:py-10">
+  const inner = (
+    <>
       {/* ── Text ─────────────────────────────────────────── */}
       <div className="min-w-0 flex-1">
         <p className="font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase leading-none tracking-[0.12em] text-[#1a1a1a] 768:text-[0.67rem]">
@@ -95,7 +97,17 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
           />
         ) : null}
       </div>
-    </article>
+    </>
+  )
+
+  const rowClass = 'flex items-start gap-4 py-6 768:gap-8 768:py-8 1024:py-10'
+
+  return articlePath ? (
+    <Link href={articlePath} className={rowClass}>
+      {inner}
+    </Link>
+  ) : (
+    <article className={rowClass}>{inner}</article>
   )
 }
 

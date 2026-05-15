@@ -30,6 +30,7 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   slot?: number
   title: string
   slug: string | null
+  canonicalPath: string | null
   status: string | null
   updatedAt: string | null
   publishedAt: string | null

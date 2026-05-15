@@ -66,6 +66,7 @@ export type FeaturedArticleTeaser = {
   } | null
   imageUrl: string | null
   imageUrlSquare: string | null
+  articlePath: string | null
 }
 
 export type CityHomepageArticleBlock = {

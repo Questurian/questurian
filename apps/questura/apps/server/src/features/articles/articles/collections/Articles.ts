@@ -199,6 +199,30 @@ export const Articles: CollectionConfig = {
             )
           }
         }
+
+        if ((operation === 'create' || operation === 'update') && data?.status === 'published') {
+          const slug = typeof data?.slug === 'string' ? data.slug.trim() : ''
+          if (!slug) {
+            throw new Error('Published articles must have a slug.')
+          }
+
+          const seoSection = data?.seoSection as Record<string, unknown> | null | undefined
+          const metaDesc =
+            typeof seoSection?.metaDescription === 'string'
+              ? (seoSection.metaDescription as string).trim()
+              : ''
+          if (!metaDesc) {
+            throw new Error(
+              'Published articles must have a meta description (SEO & Metadata tab).',
+            )
+          }
+          if (metaDesc.length < 50) {
+            throw new Error(
+              `Meta description is ${metaDesc.length} characters — at least 50 required for indexing.`,
+            )
+          }
+        }
+
         return data
       },
     ],

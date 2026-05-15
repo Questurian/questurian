@@ -17,6 +17,7 @@
     "migrate:nightlife-contract-v2": "bun scripts/migrate-nightlife-contract-v2.ts",
     "clear:payload:except-users": "cross-env NODE_OPTIONS=--no-deprecation bun scripts/clear-payload-except-users.ts",
     "clear:attractions": "cross-env NODE_OPTIONS=--no-deprecation bun src/scripts/clear-attractions.ts",
+    "clear:homepage-blocks": "cross-env NODE_OPTIONS=--no-deprecation bun src/scripts/clear-homepage-blocks.ts",
     "bootstrap:currencies": "cross-env NODE_OPTIONS=--no-deprecation bun src/scripts/bootstrap-currencies.ts",
     "seed:currencies": "cross-env NODE_OPTIONS=--no-deprecation bun src/scripts/seed-currencies.ts",
     "seed:locations": "cross-env NODE_OPTIONS=--no-deprecation bun src/scripts/seed-locations.ts",

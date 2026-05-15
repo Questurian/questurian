@@ -64,7 +64,7 @@ export async function GET(
     const locationGridScope = await resolveLocationGridScope(payload, doc.location)
     const resolvedBlocks = await resolvePageBlocks(payload, doc.pageBlocks ?? [], locationGridScope)
 
-    return NextResponse.json(formatPublicLocationHomepageDoc(resolvedBlocks))
+    return NextResponse.json(formatPublicLocationHomepageDoc(resolvedBlocks, { country, city }))
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to load location homepage.') },

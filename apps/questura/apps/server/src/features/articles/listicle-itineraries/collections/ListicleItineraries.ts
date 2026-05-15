@@ -296,6 +296,36 @@ export const ListicleItineraries: CollectionConfig = {
               )
             }
           }
+
+          const slug = typeof getValue<string>(merged, 'slug') === 'string'
+            ? (getValue<string>(merged, 'slug') as string).trim()
+            : ''
+          if (!slug) {
+            throw new Error('Published itineraries must have a slug.')
+          }
+
+          const header = getValue<Record<string, unknown>>(merged, 'header')
+          if (!header?.featuredImage && !header?.featuredMediaSet) {
+            throw new Error(
+              'Published itineraries must have a featured image or media set (Header section).',
+            )
+          }
+
+          const seoSection = getValue<Record<string, unknown>>(merged, 'seoSection')
+          const metaDesc =
+            typeof seoSection?.metaDescription === 'string'
+              ? (seoSection.metaDescription as string).trim()
+              : ''
+          if (!metaDesc) {
+            throw new Error(
+              'Published itineraries must have a meta description (SEO & Metadata tab).',
+            )
+          }
+          if (metaDesc.length < 50) {
+            throw new Error(
+              `Meta description is ${metaDesc.length} characters — at least 50 required for indexing.`,
+            )
+          }
         }
 
         return data

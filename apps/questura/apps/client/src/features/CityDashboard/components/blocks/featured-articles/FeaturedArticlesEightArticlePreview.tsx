@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
 import type {
@@ -132,7 +133,9 @@ function FeaturedArticlePreviewCard({
           <h2
             className={`mt-2.5 max-w-2xl font-editorial font-semibold text-[#1a1a1a] 768:max-w-none 768:text-[2.1rem] 768:leading-[1] ${smallMobileTitleClass}`}
           >
-            {article.title}
+            {article.articlePath ? (
+              <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
+            ) : article.title}
           </h2>
 
           <p className="mt-3 max-w-xl overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] 768:max-w-none 768:text-[1.04rem] 768:leading-[1.5] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] 768:[-webkit-line-clamp:3]">
@@ -186,7 +189,11 @@ function CompactArticlePreviewCard({
       data-image-loaded={isImageLoaded ? 'true' : 'false'}
     >
       <div className="city-compact-article-copy">
-        <h2 className="city-compact-article-title">{article.title}</h2>
+        <h2 className="city-compact-article-title">
+          {article.articlePath ? (
+            <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
+          ) : article.title}
+        </h2>
         <p className="city-compact-article-meta">{excerpt}</p>
         <p className="city-compact-article-author">By {authorLabel}</p>
       </div>

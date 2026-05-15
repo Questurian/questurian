@@ -83,7 +83,30 @@ function formatPublicImage(value: unknown): PublicImage | null {
   }
 }
 
-export function formatPublicArticleItem(value: unknown): PublicArticleItem {
+type LocationContext = { country: string; city: string }
+
+function buildArticlePath(item: Record<string, unknown>, location?: LocationContext): string | null {
+  const relationTo = stringOrNull(item.relationTo)
+  const slug = stringOrNull(item.slug)
+
+  if (relationTo === 'articles') {
+    return stringOrNull(item.canonicalPath)
+  }
+
+  if (!slug || !location) return null
+
+  if (relationTo === 'single-type-listicles') {
+    return `/${location.country}/${location.city}/maps/${slug}`
+  }
+
+  if (relationTo === 'listicle-itineraries') {
+    return `/${location.country}/${location.city}/itineraries/${slug}`
+  }
+
+  return null
+}
+
+export function formatPublicArticleItem(value: unknown, location?: LocationContext): PublicArticleItem {
   const item = isRecord(value) ? value : {}
   const category = formatPublicCategory(item.category)
   const image = formatPublicImage(item.image)
@@ -99,5 +122,6 @@ export function formatPublicArticleItem(value: unknown): PublicArticleItem {
     imageUrlSquare: stringOrNull(item.imageUrlSquare) ?? imageSquare?.url ?? null,
     image,
     imageSquare,
+    articlePath: buildArticlePath(item, location),
   }
 }
