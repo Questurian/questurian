@@ -54,6 +54,11 @@ async function runBeforeValidate({
             if (relatedLocation) {
               return {
                 id,
+                coverImage: {
+                  variants: {
+                    thumbnail: { url: `https://cdn.example.com/loc-${id}-thumb.webp` },
+                  },
+                },
                 ...relatedLocation,
               }
             }

@@ -26,6 +26,12 @@ async function validateLocationGridDoc(
       `Location "${candidate.title}" is not an eligible ${getScopedLocationLabel(scope)} for this block.`,
     )
   }
+
+  if (!candidate.coverImageUrl) {
+    throw new Error(
+      `Location "${candidate.title}" is missing a cover image card variant. Add a media set with the required card variant before featuring it.`,
+    )
+  }
 }
 
 export async function validateLocationGridItems(

@@ -8,6 +8,20 @@ import type {
 
 import { normalizeHomepageFeaturedCandidate } from './candidate'
 
+export const homepageFeaturedSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  status: true,
+  updatedAt: true,
+  publishedAt: true,
+  headerSection: true,
+  header: true,
+  seoSection: true,
+  author: true,
+  category: true,
+} as const
+
 export async function findHomepageFeaturedDoc(
   payload: Payload,
   ref: HomepageFeaturedItemRef,
@@ -19,6 +33,7 @@ export async function findHomepageFeaturedDoc(
       // Populate featuredImage → mediaSet → variants.square for `imageUrlSquare`
       depth: 3,
       overrideAccess: true,
+      select: homepageFeaturedSelect,
     })
 
     return normalizeHomepageFeaturedCandidate(ref.relationTo, doc as PayloadDocLike)

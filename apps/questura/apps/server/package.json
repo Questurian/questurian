@@ -13,6 +13,7 @@
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "backfill:rankings": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/backfill-rankings-created-by.ts",
+    "migrate:media-sets": "bun scripts/finish-media-set-migration.ts",
     "migrate:nightlife-contract-v2": "bun scripts/migrate-nightlife-contract-v2.ts",
     "clear:payload:except-users": "cross-env NODE_OPTIONS=--no-deprecation bun scripts/clear-payload-except-users.ts",
     "clear:attractions": "cross-env NODE_OPTIONS=--no-deprecation bun src/scripts/clear-attractions.ts",

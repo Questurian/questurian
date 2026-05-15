@@ -1,3 +1,5 @@
+import type { PublicImage } from '@/features/media/lib/resolve-public-image'
+
 export type LocationGridLevel = 'city' | 'neighborhood'
 
 export type LocationGridScope = {
@@ -20,9 +22,15 @@ export type LocationGridCandidate = LocationGridItemRef & {
   title: string
   subtitle: string | null
   updatedAt: string | null
-  /** Resolved from coverImage (media-set) when present */
+  /**
+   * @deprecated Read `coverImage.url` instead. Kept for back-compat.
+   * Resolved from coverImage (media-set) when present.
+   */
   coverImageUrl: string | null
+  /** @deprecated Read `coverImage.alt` instead. Kept for back-compat. */
   coverImageAlt: string | null
+  /** Resolved card-placement cover image. */
+  coverImage: PublicImage | null
 }
 
 export type LocationGridInvalidReason = 'invalid_reference' | 'not_found' | 'invalid_scope'

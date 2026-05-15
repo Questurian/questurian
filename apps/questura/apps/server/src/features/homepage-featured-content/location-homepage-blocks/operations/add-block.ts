@@ -25,7 +25,7 @@ export async function addLocationHomepageBlock(
   }
 
   const payload = await getLocationHomepagePayload()
-  const doc = await loadLocationHomepage(payload, id, 1)
+  const doc = await loadLocationHomepage(payload, id, 0)
 
   if (parsed.blockType === 'location-grid') {
     const scope = await resolveLocationGridScope(payload, doc.location)
@@ -42,7 +42,7 @@ export async function addLocationHomepageBlock(
     payload,
     id,
     [...existingBlocks, parsed.block],
-    1,
+    0,
   )
 
   return { status: 201, body: formatted }

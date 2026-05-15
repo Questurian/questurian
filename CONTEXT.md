@@ -15,6 +15,7 @@ Monorepo-of-monorepos. Each `apps/<name>` is its own bounded context with its ow
 ## Cross-context translation
 
 - `location-guide-contract.json` — schema bridging **Location Manager → Questura**. Defines geo hierarchy (`country` → `city` → `neighborhood`), `aiFieldPaths` (fields AI Blog Writer fills), resolution precedence (neighborhood > city > country), array merge strategy (replace-on-non-empty).
+- **Media handoff:** Location Manager owns generation of MediaSet variant files before sync; Questura owns MediaSet validation, placement requirements, and public serving.
 - **No code-level imports between sub-monorepos.** Coupling is HTTP (Location Manager → Payload) + the contract above.
 
 ## Global tooling

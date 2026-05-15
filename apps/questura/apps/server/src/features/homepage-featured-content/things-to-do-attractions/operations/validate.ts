@@ -36,6 +36,11 @@ export async function validateThingsToDoAttractionsItems(
           `Attraction "${candidate.title}" must be published before it can be featured.`,
         )
       }
+      if (!candidate.imageUrl) {
+        throw new Error(
+          `Attraction "${candidate.title}" is missing a gallery card image. Add a media set with the required card variant before featuring it.`,
+        )
+      }
     }),
   )
 

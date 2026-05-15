@@ -22,7 +22,10 @@ Public-facing travel platform. Payload CMS backend + Next.js frontend. Serves mu
 | Currency | Code, symbol, USD exchange rate. |
 | Dining / Accommodations / Attractions / Nightlife / KeyLocations | Collections synced inbound from Location Manager. |
 | Tours | Bookable activities related to Locations. |
-| MediaAsset / MediaSet | Image asset + grouping collection. |
+| MediaSet | Canonical public image object that represents one visual subject across required crops and sizes. |
+| MediaAsset | Uploaded image file used as a specific MediaSet variant or internal one-off image. |
+| MediaPlacement | Public usage slot for a MediaSet, with its own minimum required variant set. |
+| MediaSetStatus | Admin-facing coarse state for whether a MediaSet has no variants, some variants, or enough variants to be generally usable. |
 | Articles / SingleTypeListicles / ListicleItineraries / ArticleRedirects | Editorial content collections. |
 | AffiliateProducts / InstagramPosts | Curated external content. |
 | LocationHomepages | Per-location homepage configuration. |
@@ -37,6 +40,12 @@ Public-facing travel platform. Payload CMS backend + Next.js frontend. Serves mu
 
 - External inbound: `/api/collections/*` populated by Location Manager. AI body content arrives as LexicalJSON from AI Blog Writer.
 - Contract: `/location-guide-contract.json` at meta-root — field paths, hierarchy resolution rules, AI-fillable fields.
+
+## Relationships
+
+- A **MediaSet** has one or more **MediaAsset** variants.
+- A **MediaPlacement** defines which **MediaAsset** variants a **MediaSet** must have before that placement can serve it.
+- **MediaSetStatus** does not decide public readiness; **MediaPlacement** does.
 
 ## Child contexts
 

@@ -1,4 +1,7 @@
-import { getMediaSetPreviewAsset } from '@/features/media/lib/media-set-preview'
+import {
+  resolveMediaSetForPlacement,
+  type PublicImage,
+} from '@/features/media/lib/resolve-public-image'
 
 import type { HomepageTourCandidate, TourDocLike } from '../types'
 
@@ -15,18 +18,10 @@ export function normalizeNumericId(value: unknown): number | null {
   return null
 }
 
-function extractImageUrl(doc: TourDocLike): string | null {
+function extractCardImage(doc: TourDocLike): PublicImage | null {
   if (!isRecord(doc.img)) return null
-  const fromMediaSet = getMediaSetPreviewAsset(
-    doc.img as Parameters<typeof getMediaSetPreviewAsset>[0],
-  )
-  if (fromMediaSet?.url && typeof fromMediaSet.url === 'string' && fromMediaSet.url) {
-    return fromMediaSet.url
-  }
-  const bunnyUrl = doc.img.bunny_original_url
-  if (typeof bunnyUrl === 'string' && bunnyUrl) return bunnyUrl
-  const url = doc.img.url
-  return typeof url === 'string' && url ? url : null
+  const resolved = resolveMediaSetForPlacement(doc.img, 'card')
+  return resolved.url ? resolved : null
 }
 
 function extractLocation(doc: TourDocLike): string | null {
@@ -39,6 +34,7 @@ function extractLocation(doc: TourDocLike): string | null {
 }
 
 export function normalizeTourCandidate(doc: TourDocLike): HomepageTourCandidate {
+  const image = extractCardImage(doc)
   return {
     id: normalizeNumericId(doc.id) ?? 0,
     title: typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim() : 'Untitled',
@@ -48,7 +44,8 @@ export function normalizeTourCandidate(doc: TourDocLike): HomepageTourCandidate 
     priceLevel: typeof doc.price === 'string' && doc.price.trim() ? doc.price.trim() : null,
     status: typeof doc.status === 'string' && doc.status.trim() ? doc.status : null,
     updatedAt: typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
-    imageUrl: extractImageUrl(doc),
+    imageUrl: image?.url ?? null,
+    image,
     location: extractLocation(doc),
   }
 }

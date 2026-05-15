@@ -87,7 +87,7 @@ export async function updateLocationHomepageBlockContent(
     )
   }
 
-  const updated = await updateLocationHomepage(payload, id, updatedBlocks, 1)
+  const updated = await updateLocationHomepage(payload, id, updatedBlocks, 0)
   const formatted = await formatLocationHomepageWithResolvedBlocks(payload, updated)
 
   return { status: 200, body: formatted }

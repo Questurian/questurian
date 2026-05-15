@@ -21,7 +21,10 @@ Payload 3 backend on Next.js. Serves all collections (locations, dining, attract
 | `Categories` | Country / city / neighborhood codes. |
 | `Currencies` | `code`, `symbol`, exchange rates. |
 | `Tours` | Bookable activities linked to Locations. |
-| `MediaAsset`, `MediaSet` | Image storage + grouping. |
+| `MediaSet` | Canonical public image object that represents one visual subject across required crops and sizes. |
+| `MediaAsset` | Uploaded image file used as a specific MediaSet variant or internal one-off image. |
+| `MediaPlacement` | Public usage slot for a MediaSet, with its own minimum required variant set. |
+| `MediaSetStatus` | Admin-facing coarse state for whether a MediaSet has no variants, some variants, or enough variants to be generally usable. |
 | `LocationHomepages` | Per-location homepage content. |
 | `Articles`, `SingleTypeListicles`, `ListicleItineraries`, `ArticleRedirects` | Editorial collections. |
 | `AffiliateProducts`, `InstagramPosts` | External / curated content. |
@@ -45,3 +48,9 @@ Payload 3 backend on Next.js. Serves all collections (locations, dining, attract
 - Exposes Payload GraphQL + REST to `apps/client`.
 - Receives sync writes from external Location Manager (`/api/collections/*`).
 - Schema bridge: `/location-guide-contract.json` at meta-root.
+
+## Relationships
+
+- A `MediaSet` has one or more `MediaAsset` variants.
+- A `MediaPlacement` defines which `MediaAsset` variants a `MediaSet` must have before that placement can serve it.
+- `MediaSetStatus` does not decide public readiness; `MediaPlacement` does.

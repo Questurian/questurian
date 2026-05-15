@@ -128,6 +128,10 @@ describe('homepage featured content service', () => {
       depth: 3,
       sort: '-updatedAt',
       overrideAccess: true,
+      select: expect.objectContaining({
+        headerSection: true,
+        header: true,
+      }),
       where: {
         and: [
           {
@@ -171,7 +175,7 @@ describe('homepage featured content service', () => {
           mediaSet: {
             variants: {
               square: {
-                bunny_original_url: 'https://cdn.example/sq.jpg',
+                url: 'https://cdn.example/sq.jpg',
               },
             },
           },
@@ -194,6 +198,99 @@ describe('homepage featured content service', () => {
     )
     expect(selection.items[0]?.imageUrl).toBe('https://cdn.example/og.jpg')
     expect(selection.items[0]?.imageUrlSquare).toBe('https://cdn.example/sq.jpg')
+  })
+
+  it('prefers featuredMediaSet over legacy featuredImage when both are set', async () => {
+    const payload = createPayloadMock()
+    payload.findByID.mockResolvedValue({
+      id: 1,
+      title: 'Article',
+      slug: 'article',
+      status: 'published',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      publishedAt: '2026-04-01T10:00:00.000Z',
+      headerSection: {
+        featuredMediaSet: {
+          variants: {
+            thumbnail: { url: 'https://cdn.example/preferred-card.webp' },
+            square: { url: 'https://cdn.example/preferred-sq.webp' },
+          },
+        },
+        featuredImage: {
+          url: 'https://cdn.example/legacy.jpg',
+        },
+      },
+    })
+
+    const selection = await getHomepageFeaturedSelectionFromItems(
+      payload as never,
+      [{ relationTo: 'articles', id: 1 }],
+      { allowDrafts: true },
+    )
+
+    expect(selection.items[0]?.imageUrl).toBe('https://cdn.example/preferred-card.webp')
+    expect(selection.items[0]?.imageUrlSquare).toBe('https://cdn.example/preferred-sq.webp')
+    expect(selection.items[0]?.image).toMatchObject({
+      url: 'https://cdn.example/preferred-card.webp',
+      variant: 'thumbnail',
+      status: 'ready',
+    })
+    expect(selection.items[0]?.imageSquare).toMatchObject({
+      url: 'https://cdn.example/preferred-sq.webp',
+      variant: 'square',
+      status: 'ready',
+    })
+  })
+
+  it('falls back to legacy featuredImage when featuredMediaSet is empty', async () => {
+    const payload = createPayloadMock()
+    payload.findByID.mockResolvedValue({
+      id: 1,
+      title: 'Article',
+      slug: 'article',
+      status: 'published',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      publishedAt: '2026-04-01T10:00:00.000Z',
+      headerSection: {
+        featuredMediaSet: { variants: {} },
+        featuredImage: { url: 'https://cdn.example/legacy.jpg' },
+      },
+    })
+
+    const selection = await getHomepageFeaturedSelectionFromItems(
+      payload as never,
+      [{ relationTo: 'articles', id: 1 }],
+      { allowDrafts: true },
+    )
+
+    expect(selection.items[0]?.imageUrl).toBe('https://cdn.example/legacy.jpg')
+  })
+
+  it('resolves listicle images from header when headerSection is absent', async () => {
+    const payload = createPayloadMock()
+    payload.findByID.mockResolvedValue({
+      id: 1,
+      title: 'Listicle',
+      slug: 'listicle',
+      status: 'published',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      publishedAt: '2026-04-01T10:00:00.000Z',
+      header: {
+        featuredMediaSet: {
+          variants: {
+            thumbnail: { url: 'https://cdn.example/listicle-thumb.webp' },
+          },
+        },
+      },
+    })
+
+    const selection = await getHomepageFeaturedSelectionFromItems(
+      payload as never,
+      [{ relationTo: 'single-type-listicles', id: 1 }],
+      { allowDrafts: true },
+    )
+
+    expect(selection.items[0]?.imageUrl).toBe('https://cdn.example/listicle-thumb.webp')
   })
 
   it('includes article preview metadata on selection items', async () => {

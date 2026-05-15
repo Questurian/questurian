@@ -23,7 +23,7 @@ describe("PayloadMediaSetsClient", () => {
               title: "Museum Hero",
               alt_text: "Front entrance of the museum",
               photographer_credit: "Questurian",
-              status: "complete",
+              status: "usable",
               location: "lima-peru",
               locationRef: 11,
               updatedAt: "2026-04-07T12:00:00.000Z",
@@ -62,7 +62,45 @@ describe("PayloadMediaSetsClient", () => {
     });
 
     expect(result.docs[0]?.id).toBe("42");
+    expect(result.docs[0]?.status).toBe("usable");
     expect(result.docs[0]?.locationRef).toBe("11");
     expect(result.docs[0]?.previewUrl).toBe("https://payload.example.com/media/museum-square.webp");
+  });
+
+  test("accepts legacy complete status during media-set status migration", async () => {
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          docs: [
+            {
+              id: 43,
+              title: "Legacy Museum Hero",
+              status: "complete",
+              variants: {},
+            },
+          ],
+          totalDocs: 1,
+          totalPages: 1,
+          page: 1,
+          limit: 20,
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }
+      )) as unknown as typeof fetch;
+
+    const client = new PayloadMediaSetsClient({
+      isConfigured: () => true,
+      ensureAuthenticated: async () => "test-token",
+      getApiUrl: () => "https://payload.example.com",
+    } as never);
+
+    const result = await client.searchMediaSets({
+      page: 1,
+      limit: 20,
+    });
+
+    expect(result.docs[0]?.status).toBe("complete");
   });
 });

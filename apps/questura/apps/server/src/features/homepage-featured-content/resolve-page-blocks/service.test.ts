@@ -37,6 +37,22 @@ describe('formatPublicLocationHomepageDoc', () => {
               collectionLabel: 'Standard Article',
               imageUrl: 'https://cdn.example/og.jpg',
               imageUrlSquare: 'https://cdn.example/square.jpg',
+              image: {
+                url: 'https://cdn.example/og.jpg',
+                alt: 'Lima cafes',
+                width: 600,
+                height: 400,
+                variant: 'thumbnail',
+                status: 'ready',
+              },
+              imageSquare: {
+                url: 'https://cdn.example/square.jpg',
+                alt: 'Lima cafes square',
+                width: 400,
+                height: 400,
+                variant: 'square',
+                status: 'ready',
+              },
               metaDescription: 'Fallback excerpt.',
               excerpt: 'Public excerpt.',
               author: {
@@ -84,6 +100,22 @@ describe('formatPublicLocationHomepageDoc', () => {
               },
               imageUrl: 'https://cdn.example/og.jpg',
               imageUrlSquare: 'https://cdn.example/square.jpg',
+              image: {
+                url: 'https://cdn.example/og.jpg',
+                alt: 'Lima cafes',
+                width: 600,
+                height: 400,
+                variant: 'thumbnail',
+                status: 'ready',
+              },
+              imageSquare: {
+                url: 'https://cdn.example/square.jpg',
+                alt: 'Lima cafes square',
+                width: 400,
+                height: 400,
+                variant: 'square',
+                status: 'ready',
+              },
             },
           ],
         },
@@ -121,6 +153,56 @@ describe('formatPublicLocationHomepageDoc', () => {
       items: [
         { articleType: 'Questurian Maps' },
         { articleType: 'Itinerary' },
+      ],
+    })
+  })
+
+  it('falls back to resolved PublicImage URLs when flat fields are absent', () => {
+    const response = formatPublicLocationHomepageDoc([
+      {
+        blockType: 'featured-articles',
+        selection: {
+          totalSlots: 1,
+          items: [
+            {
+              relationTo: 'articles',
+              title: 'Best Lima Cafes',
+              image: {
+                url: 'https://cdn.example/thumb.webp',
+                alt: 'Cafes',
+                width: 600,
+                height: 400,
+                variant: 'thumbnail',
+                status: 'ready',
+              },
+              imageSquare: {
+                url: 'https://cdn.example/square.webp',
+                alt: 'Cafes square',
+                width: 400,
+                height: 400,
+                variant: 'square',
+                status: 'ready',
+              },
+            },
+          ],
+        },
+      },
+    ] as never)
+
+    expect(response.pageBlocks[0]).toMatchObject({
+      items: [
+        {
+          imageUrl: 'https://cdn.example/thumb.webp',
+          imageUrlSquare: 'https://cdn.example/square.webp',
+          image: {
+            url: 'https://cdn.example/thumb.webp',
+            alt: 'Cafes',
+          },
+          imageSquare: {
+            url: 'https://cdn.example/square.webp',
+            alt: 'Cafes square',
+          },
+        },
       ],
     })
   })

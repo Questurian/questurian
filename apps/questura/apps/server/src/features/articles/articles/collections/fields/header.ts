@@ -9,12 +9,22 @@ export const headerSection: Field = {
   },
   fields: [
     {
+      name: 'featuredMediaSet',
+      type: 'relationship',
+      relationTo: 'media-sets',
+      admin: {
+        description:
+          'Preferred: media set whose variants drive public image rendering. When set, used in preference to featuredImage.',
+      },
+    },
+    {
       name: 'featuredImage',
       type: 'upload',
       relationTo: 'media-assets',
       required: true,
       admin: {
-        description: 'Hero image displayed at top of article',
+        description:
+          'Legacy hero image. Used as fallback when featuredMediaSet is not set. New articles should use featuredMediaSet.',
       },
     },
   ],

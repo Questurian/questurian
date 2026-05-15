@@ -36,7 +36,8 @@ export const mediaAssetFields: Field[] = [
     required: false,
     admin: {
       position: 'sidebar',
-      description: 'Link this asset to a media set (optional)',
+      description:
+        'Link this asset to an existing media set (optional). Leave blank and pick a variant below to auto-create one.',
     },
   },
   {
@@ -46,7 +47,8 @@ export const mediaAssetFields: Field[] = [
     required: false,
     admin: {
       position: 'sidebar',
-      description: 'Choose the variant type when linked to a media set',
+      description:
+        'Variant role this asset plays inside the media set. If no media set is selected, a new one is auto-created and linked.',
     },
   },
   {

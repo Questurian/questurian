@@ -6,6 +6,7 @@ export type {
 } from './resolve-page-blocks.types'
 export type {
   ApiCuratedBlock,
+  PublicImage,
   PublicArticleItem,
   PublicPreviewCategory,
   PublicPreviewPerson,

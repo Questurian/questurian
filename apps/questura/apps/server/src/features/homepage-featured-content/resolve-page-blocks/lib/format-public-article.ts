@@ -1,4 +1,5 @@
 import type {
+  PublicImage,
   PublicArticleItem,
   PublicPreviewCategory,
   PublicPreviewPerson,
@@ -66,9 +67,27 @@ export function formatPublicArticleType(
   return category?.name ?? stringOrNull(item.collectionLabel)
 }
 
+function formatPublicImage(value: unknown): PublicImage | null {
+  if (!isRecord(value)) return null
+
+  const url = stringOrNull(value.url)
+  if (!url) return null
+
+  return {
+    url,
+    alt: stringOrNull(value.alt) ?? '',
+    width: normalizeNumericId(value.width),
+    height: normalizeNumericId(value.height),
+    variant: stringOrNull(value.variant),
+    status: stringOrNull(value.status) ?? 'missing',
+  }
+}
+
 export function formatPublicArticleItem(value: unknown): PublicArticleItem {
   const item = isRecord(value) ? value : {}
   const category = formatPublicCategory(item.category)
+  const image = formatPublicImage(item.image)
+  const imageSquare = formatPublicImage(item.imageSquare)
 
   return {
     title: stringOrNull(item.title) ?? 'Untitled',
@@ -76,7 +95,9 @@ export function formatPublicArticleItem(value: unknown): PublicArticleItem {
     excerpt: stringOrNull(item.excerpt) ?? stringOrNull(item.metaDescription),
     author: formatPublicAuthor(item.author, item.authorLabel),
     category,
-    imageUrl: stringOrNull(item.imageUrl),
-    imageUrlSquare: stringOrNull(item.imageUrlSquare),
+    imageUrl: stringOrNull(item.imageUrl) ?? image?.url ?? null,
+    imageUrlSquare: stringOrNull(item.imageUrlSquare) ?? imageSquare?.url ?? null,
+    image,
+    imageSquare,
   }
 }

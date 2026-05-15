@@ -53,6 +53,12 @@ export async function GET(req: NextRequest) {
       limit: 500,
       sort: 'updatedAt',
       overrideAccess: true,
+      select: {
+        id: true,
+        isEnabled: true,
+        updatedAt: true,
+        location: true,
+      },
     })
 
     const items = (result.docs as LocationHomepageDoc[]).map(formatListItem)

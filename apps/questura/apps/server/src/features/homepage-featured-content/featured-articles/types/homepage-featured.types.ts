@@ -1,3 +1,5 @@
+import type { PublicImage } from '@/features/media/lib/resolve-public-image'
+
 export const HOMEPAGE_FEATURED_CONTENT_COLLECTIONS = [
   'articles',
   'single-type-listicles',
@@ -32,12 +34,18 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   updatedAt: string | null
   publishedAt: string | null
   collectionLabel: string
+  /** @deprecated Read `image.url` instead. Kept for back-compat. */
   imageUrl: string | null
   /**
+   * @deprecated Read `imageSquare.url` instead. Kept for back-compat.
    * Square (1:1) asset URL when featured image links to a media set with a square variant,
-   * or when the featured upload is the square variant. Null → UI may crop `imageUrl`.
+   * or when the featured upload is the square variant.
    */
   imageUrlSquare: string | null
+  /** Resolved card-placement image with url, alt, dimensions, variant, status. */
+  image: PublicImage | null
+  /** Resolved square-card placement image. Null when no square variant exists. */
+  imageSquare: PublicImage | null
   /** SEO meta description when present (articles, listicles, itineraries). */
   metaDescription: string | null
   /** Backward-compatible alias for `metaDescription`. */

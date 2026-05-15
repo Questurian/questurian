@@ -1,4 +1,7 @@
-import { getMediaSetPreviewAsset } from '@/features/media/lib/media-set-preview'
+import {
+  resolveMediaSetForPlacement,
+  type PublicImage,
+} from '@/features/media/lib/resolve-public-image'
 
 import type { LocationDocLike, LocationGridCandidate } from '../types'
 
@@ -21,34 +24,10 @@ export function normalizeNumericId(value: unknown): number | null {
   return null
 }
 
-function extractCoverImageFields(doc: LocationDocLike): {
-  coverImageUrl: string | null
-  coverImageAlt: string | null
-} {
-  const coverImage = doc.coverImage
-  if (coverImage === null || coverImage === undefined) {
-    return { coverImageUrl: null, coverImageAlt: null }
-  }
-
-  if (typeof coverImage === 'object') {
-    const setDoc = coverImage as { alt_text?: string; title?: string }
-    const asset = getMediaSetPreviewAsset(coverImage)
-    if (asset?.url && typeof asset.url === 'string') {
-      const altFromAsset = typeof asset.alt_text === 'string' ? asset.alt_text : null
-      const altFromSet =
-        typeof setDoc.alt_text === 'string'
-          ? setDoc.alt_text
-          : typeof setDoc.title === 'string'
-            ? setDoc.title
-            : null
-      return {
-        coverImageUrl: asset.url,
-        coverImageAlt: altFromAsset ?? altFromSet,
-      }
-    }
-  }
-
-  return { coverImageUrl: null, coverImageAlt: null }
+function extractCoverImage(doc: LocationDocLike): PublicImage | null {
+  if (!isRecord(doc.coverImage)) return null
+  const resolved = resolveMediaSetForPlacement(doc.coverImage, 'card')
+  return resolved.url ? resolved : null
 }
 
 function getLocationGridTitle(doc: LocationDocLike): string {
@@ -88,7 +67,7 @@ function getLocationGridSubtitle(doc: LocationDocLike): string | null {
 }
 
 export function normalizeLocationGridCandidate(doc: LocationDocLike): LocationGridCandidate {
-  const cover = extractCoverImageFields(doc)
+  const coverImage = extractCoverImage(doc)
   return {
     id: normalizeNumericId(doc.id) ?? 0,
     level: doc.level === 'neighborhood' ? 'neighborhood' : 'city',
@@ -105,7 +84,8 @@ export function normalizeLocationGridCandidate(doc: LocationDocLike): LocationGr
     title: getLocationGridTitle(doc),
     subtitle: getLocationGridSubtitle(doc),
     updatedAt: typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
-    coverImageUrl: cover.coverImageUrl,
-    coverImageAlt: cover.coverImageAlt,
+    coverImageUrl: coverImage?.url ?? null,
+    coverImageAlt: coverImage?.alt || null,
+    coverImage,
   }
 }

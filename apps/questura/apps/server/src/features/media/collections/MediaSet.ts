@@ -114,11 +114,21 @@ export const MediaSet: CollectionConfig = {
         const originalVariants =
           (originalDoc?.variants as Record<string, unknown> | undefined) ?? undefined
 
-        const isComplete = MEDIA_VARIANT_KEYS.every((key) =>
-          Boolean(getVariantValue(dataVariants, originalVariants, key))
+        const variantCount = MEDIA_VARIANT_KEYS.reduce(
+          (count, key) =>
+            getVariantValue(dataVariants, originalVariants, key) ? count + 1 : count,
+          0,
         )
+        const hasThumbnail = Boolean(getVariantValue(dataVariants, originalVariants, 'thumbnail'))
 
-        data.status = isComplete ? 'complete' : 'partial'
+        if (variantCount === 0) {
+          data.status = 'empty'
+        } else if (hasThumbnail) {
+          data.status = 'usable'
+        } else {
+          data.status = 'partial'
+        }
+
         return data
       },
     ],
@@ -171,14 +181,17 @@ export const MediaSet: CollectionConfig = {
       name: 'status',
       type: 'select',
       options: [
+        { label: 'Empty', value: 'empty' },
         { label: 'Partial', value: 'partial' },
-        { label: 'Complete', value: 'complete' },
+        { label: 'Usable', value: 'usable' },
+        { label: 'Complete (legacy)', value: 'complete' },
       ],
-      defaultValue: 'partial',
+      defaultValue: 'empty',
       admin: {
         readOnly: true,
         position: 'sidebar',
-        description: 'Auto-computed based on which variants are present',
+        description:
+          'Admin-only coarse state. Do not use to gate public rendering — public readiness is determined per placement.',
       },
     },
     {

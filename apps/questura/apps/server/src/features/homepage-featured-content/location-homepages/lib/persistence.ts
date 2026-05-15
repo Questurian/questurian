@@ -7,6 +7,7 @@ import {
   formatHomepageDoc,
   resolveLocationGridScope,
   resolvePageBlocks,
+  type LocationDoc,
   type LocationHomepageDoc,
   type RawBlock,
 } from '../../resolve-page-blocks/service'
@@ -60,13 +61,42 @@ export async function formatLocationHomepageWithResolvedBlocks(
   doc: LocationHomepageDoc,
 ): Promise<FormattedLocationHomepage> {
   const locationGridScope = await resolveLocationGridScope(payload, doc.location)
+  const location = await resolveLocationForFormat(payload, doc.location)
   const resolvedBlocks = await resolvePageBlocks(
     payload,
     (doc.pageBlocks ?? []) as RawBlock[],
     locationGridScope,
   )
 
-  return formatHomepageDoc(doc, resolvedBlocks)
+  return formatHomepageDoc({ ...doc, location }, resolvedBlocks)
+}
+
+async function resolveLocationForFormat(
+  payload: PayloadInstance,
+  rawLocation: LocationHomepageDoc['location'],
+): Promise<LocationDoc | null> {
+  if (typeof rawLocation === 'object' && rawLocation !== null) {
+    return rawLocation
+  }
+
+  if (!rawLocation) {
+    return null
+  }
+
+  return (await payload.findByID({
+    collection: 'locations',
+    id: rawLocation,
+    depth: 0,
+    overrideAccess: true,
+    select: {
+      id: true,
+      locationKey: true,
+      level: true,
+      countryName: true,
+      cityName: true,
+      neighborhoodName: true,
+    },
+  })) as LocationDoc
 }
 
 export async function updateAndFormatLocationHomepageBlocks(

@@ -20,7 +20,7 @@ export async function reorderLocationHomepageBlocks(
   body: unknown,
   leanResponse: boolean,
 ): Promise<LocationHomepageBlocksOperationResult<FormattedLocationHomepage | ReorderBlockBody>> {
-  const depth = leanResponse ? 0 : 1
+  const depth = 0
   const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, depth)
   const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
@@ -43,7 +43,7 @@ export async function reorderLocationHomepageBlocks(
     payload,
     id,
     reorderResult.reordered,
-    1,
+    0,
   )
   return { status: 200, body: formatted }
 }

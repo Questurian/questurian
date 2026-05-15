@@ -33,6 +33,11 @@ describe('location grid service', () => {
       countryName: 'United States',
       cityName: id === 4 ? 'Austin' : `City ${id}`,
       neighborhoodName: id === 4 ? null : `Neighborhood ${id}`,
+      coverImage: {
+        variants: {
+          thumbnail: { url: `https://cdn.example.com/loc-${id}-thumb.webp` },
+        },
+      },
     }))
 
     await expect(

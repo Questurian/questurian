@@ -55,6 +55,13 @@ describe('location homepage routes', () => {
 
     expect(response.status).toBe(200)
     expect(data).toEqual({ pageBlocks: [] })
+    expect(payload.find).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        collection: 'location-homepages',
+        depth: 0,
+      }),
+    )
   })
 
   it('returns enabled public city homepages for a country hub', async () => {

@@ -23,6 +23,15 @@ export type PublicPreviewCategory = {
   slug: string | null
 }
 
+export type PublicImage = {
+  url: string | null
+  alt: string
+  width: number | null
+  height: number | null
+  variant: string | null
+  status: string
+}
+
 export type PublicArticleItem = {
   title: string
   articleType: string | null
@@ -31,4 +40,6 @@ export type PublicArticleItem = {
   category: PublicPreviewCategory | null
   imageUrl: string | null
   imageUrlSquare: string | null
+  image: PublicImage | null
+  imageSquare: PublicImage | null
 }

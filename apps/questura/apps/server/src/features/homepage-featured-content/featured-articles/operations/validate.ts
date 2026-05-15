@@ -30,6 +30,12 @@ async function validateHomepageFeaturedDoc(
       `${doc.collectionLabel} "${doc.title}" must be published before it can be featured.`,
     )
   }
+
+  if (!doc.imageUrl) {
+    throw new Error(
+      `${doc.collectionLabel} "${doc.title}" is missing a featured image. Add a featured image (or media set with the required card variant) before featuring it.`,
+    )
+  }
 }
 
 export async function validateHomepageFeaturedItems(

@@ -15,6 +15,7 @@ import {
   sortHomepageFeaturedCandidates,
 } from '../lib/candidate'
 import { isHomepageFeaturedCollection } from '../lib/refs'
+import { homepageFeaturedSelect } from '../lib/repository'
 
 export async function searchHomepageFeaturedCandidates(
   payload: Payload,
@@ -73,6 +74,7 @@ export async function searchHomepageFeaturedCandidates(
         sort: '-updatedAt',
         where,
         overrideAccess: true,
+        select: homepageFeaturedSelect,
       })
 
       return {

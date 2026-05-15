@@ -1,4 +1,7 @@
-import { getMediaSetPreviewAsset } from '@/features/media/lib/media-set-preview'
+import {
+  resolveMediaSetForPlacement,
+  type PublicImage,
+} from '@/features/media/lib/resolve-public-image'
 
 import type { AccommodationDocLike, HomepageHotelCandidate } from '../types'
 
@@ -15,21 +18,14 @@ export function normalizeNumericId(value: unknown): number | null {
   return null
 }
 
-function extractImageUrl(doc: AccommodationDocLike): string | null {
+function extractCardImage(doc: AccommodationDocLike): PublicImage | null {
   if (!Array.isArray(doc.gallery) || doc.gallery.length === 0) return null
   const first = doc.gallery[0]
   if (!isRecord(first)) return null
   const image = first.image
   if (!isRecord(image)) return null
-  // Gallery `image` is a relationship to `media-sets` (variant URLs), not a flat media doc.
-  const fromMediaSet = getMediaSetPreviewAsset(image)
-  if (fromMediaSet?.url && typeof fromMediaSet.url === 'string' && fromMediaSet.url) {
-    return fromMediaSet.url
-  }
-  const bunnyUrl = image.bunny_original_url
-  if (typeof bunnyUrl === 'string' && bunnyUrl) return bunnyUrl
-  const url = image.url
-  return typeof url === 'string' && url ? url : null
+  const resolved = resolveMediaSetForPlacement(image, 'card')
+  return resolved.url ? resolved : null
 }
 
 function extractLocation(doc: AccommodationDocLike): string | null {
@@ -42,6 +38,7 @@ function extractLocation(doc: AccommodationDocLike): string | null {
 }
 
 export function normalizeHotelCandidate(doc: AccommodationDocLike): HomepageHotelCandidate {
+  const image = extractCardImage(doc)
   return {
     id: normalizeNumericId(doc.id) ?? 0,
     title: typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim() : 'Untitled',
@@ -51,7 +48,8 @@ export function normalizeHotelCandidate(doc: AccommodationDocLike): HomepageHote
       typeof doc.priceLevel === 'string' && doc.priceLevel.trim() ? doc.priceLevel : null,
     status: typeof doc.status === 'string' && doc.status.trim() ? doc.status : null,
     updatedAt: typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
-    imageUrl: extractImageUrl(doc),
+    imageUrl: image?.url ?? null,
+    image,
     location: extractLocation(doc),
   }
 }

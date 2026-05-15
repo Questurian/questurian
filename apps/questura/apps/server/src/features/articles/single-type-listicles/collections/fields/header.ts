@@ -17,11 +17,21 @@ export const headerSection: Field = {
       },
     },
     {
+      name: 'featuredMediaSet',
+      type: 'relationship',
+      relationTo: 'media-sets',
+      admin: {
+        description:
+          'Preferred: media set whose variants drive public image rendering. When set, used in preference to featuredImage.',
+      },
+    },
+    {
       name: 'featuredImage',
       type: 'upload',
       relationTo: 'media-assets',
       admin: {
-        description: 'Optional featured image for the listicle header',
+        description:
+          'Legacy featured image. Used as fallback when featuredMediaSet is not set. New listicles should use featuredMediaSet.',
       },
     },
   ],

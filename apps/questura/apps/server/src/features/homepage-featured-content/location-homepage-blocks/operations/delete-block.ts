@@ -24,7 +24,7 @@ export async function deleteLocationHomepageBlock(
     return { status: 400, body: { message: 'blockId (string) is required.' } }
   }
 
-  const depth = leanResponse ? 0 : 1
+  const depth = 0
   const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, depth)
   const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
@@ -42,6 +42,6 @@ export async function deleteLocationHomepageBlock(
     return { status: 200, body: { deletedBlockId: blockId } }
   }
 
-  const formatted = await updateAndFormatLocationHomepageBlocks(payload, id, updatedBlocks, 1)
+  const formatted = await updateAndFormatLocationHomepageBlocks(payload, id, updatedBlocks, 0)
   return { status: 200, body: formatted }
 }

@@ -210,7 +210,7 @@ export interface PayloadMediaSetResponse {
     id: string;
     title: string;
     alt_text: string;
-    status: "partial" | "complete";
+    status: "empty" | "partial" | "usable" | "complete";
     variants: Partial<Record<PayloadMediaVariantType, PayloadMediaSetVariant | null>>;
     externalRef?: string;
     location?: string;

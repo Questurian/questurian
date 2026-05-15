@@ -1,3 +1,10 @@
+import {
+  resolveLegacyAssetForPlacement,
+  resolveMediaSetForPlacement,
+  type MediaPlacement,
+  type PublicImage,
+} from '@/features/media/lib/resolve-public-image'
+
 import { HOMEPAGE_FEATURED_COLLECTION_LABELS } from '../constants'
 import type {
   HomepageFeaturedCandidate,
@@ -79,60 +86,41 @@ function extractCategoryPreview(doc: PayloadDocLike): HomepageFeaturedCandidate[
   }
 }
 
-function assetDisplayUrl(asset: Record<string, unknown>): string | null {
-  const bunnyUrl = asset.bunny_original_url
-  if (typeof bunnyUrl === 'string' && bunnyUrl) return bunnyUrl
-
-  const url = asset.url
-  return typeof url === 'string' && url ? url : null
-}
-
-function extractFeaturedImageUrl(doc: PayloadDocLike): string | null {
+function getFeaturedHeaderSection(doc: PayloadDocLike): Record<string, unknown> | null {
   // Articles use `headerSection`; listicles and itineraries use `header`
-  const section = isRecord(doc.headerSection)
-    ? doc.headerSection
-    : isRecord(doc.header)
-      ? doc.header
-      : null
-  if (!section) return null
-
-  const featuredImage = section.featuredImage
-  if (!isRecord(featuredImage)) return null
-
-  // Prefer bunny_original_url (1200x630 OG image), fall back to the plugin-set url
-  return assetDisplayUrl(featuredImage)
+  if (isRecord(doc.headerSection)) return doc.headerSection
+  if (isRecord(doc.header)) return doc.header
+  return null
 }
 
-/** Prefer media-set square variant or a featured upload that is the square variant. */
-function extractFeaturedSquareImageUrl(doc: PayloadDocLike): string | null {
-  const section = isRecord(doc.headerSection)
-    ? doc.headerSection
-    : isRecord(doc.header)
-      ? doc.header
-      : null
+function resolveFeaturedPlacement(
+  doc: PayloadDocLike,
+  placement: MediaPlacement,
+): PublicImage | null {
+  const section = getFeaturedHeaderSection(doc)
   if (!section) return null
 
-  const featuredImage = section.featuredImage
-  if (!isRecord(featuredImage)) return null
-
-  if (featuredImage.variant === 'square') {
-    const direct = assetDisplayUrl(featuredImage)
-    if (direct) return direct
+  const directMediaSet = isRecord(section.featuredMediaSet) ? section.featuredMediaSet : null
+  if (directMediaSet) {
+    const resolved = resolveMediaSetForPlacement(directMediaSet, placement, {
+      allowMigrationFallback: true,
+    })
+    if (resolved.url) return resolved
   }
 
-  const mediaSet = featuredImage.mediaSet
-  if (!isRecord(mediaSet)) return null
+  const featuredImage = isRecord(section.featuredImage) ? section.featuredImage : null
+  if (!featuredImage) return null
 
-  const variants = mediaSet.variants
-  if (!isRecord(variants)) return null
-
-  const square = variants.square
-  if (isRecord(square)) {
-    const u = assetDisplayUrl(square)
-    if (u) return u
+  const assetMediaSet = isRecord(featuredImage.mediaSet) ? featuredImage.mediaSet : null
+  if (assetMediaSet) {
+    const resolved = resolveMediaSetForPlacement(assetMediaSet, placement, {
+      allowMigrationFallback: true,
+    })
+    if (resolved.url) return resolved
   }
 
-  return null
+  const legacy = resolveLegacyAssetForPlacement(featuredImage, placement)
+  return legacy.url ? legacy : null
 }
 
 export function normalizeHomepageFeaturedCandidate(
@@ -141,6 +129,8 @@ export function normalizeHomepageFeaturedCandidate(
 ): HomepageFeaturedCandidate {
   const metaDescription = extractSeoExcerpt(doc)
   const author = extractAuthorPreview(doc)
+  const image = resolveFeaturedPlacement(doc, 'card')
+  const imageSquare = resolveFeaturedPlacement(doc, 'square-card')
 
   return {
     relationTo,
@@ -152,8 +142,10 @@ export function normalizeHomepageFeaturedCandidate(
     publishedAt:
       typeof doc.publishedAt === 'string' && doc.publishedAt.trim() ? doc.publishedAt : null,
     collectionLabel: getHomepageFeaturedCollectionLabel(relationTo),
-    imageUrl: extractFeaturedImageUrl(doc),
-    imageUrlSquare: extractFeaturedSquareImageUrl(doc),
+    imageUrl: image?.url ?? null,
+    imageUrlSquare: imageSquare?.url ?? null,
+    image,
+    imageSquare,
     metaDescription,
     excerpt: metaDescription,
     author,

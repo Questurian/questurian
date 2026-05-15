@@ -49,7 +49,7 @@ export async function GET(
         ],
       },
       limit: 1,
-      depth: 1,
+      depth: 0,
       overrideAccess: true,
     })
 

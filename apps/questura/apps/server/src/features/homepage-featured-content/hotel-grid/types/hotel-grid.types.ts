@@ -1,3 +1,5 @@
+import type { PublicImage } from '@/features/media/lib/resolve-public-image'
+
 export type HomepageHotelItemRef = {
   id: number
 }
@@ -10,7 +12,10 @@ export type HomepageHotelCandidate = HomepageHotelItemRef & {
   priceLevel: string | null
   status: string | null
   updatedAt: string | null
+  /** @deprecated Read `image.url` instead. Kept for back-compat. */
   imageUrl: string | null
+  /** Resolved card-placement image with url, alt, dimensions, variant, status. */
+  image: PublicImage | null
   location: string | null
 }
 
