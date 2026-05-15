@@ -32,9 +32,9 @@ export function filterAssetsWithMediaSet<T extends Pick<MediaAsset, 'mediaSet'>>
 }
 
 export function formatMediaSetLabel(option: Pick<MediaSet, 'title' | 'location' | 'alt_text'>): string {
-  const parts = [option.title, option.location, option.alt_text].filter(
-    (value): value is string => Boolean(value?.trim()),
-  )
+  const parts = [option.title, option.location, option.alt_text]
+    .map((v) => (typeof v === 'string' ? v : null))
+    .filter((value): value is string => Boolean(value?.trim()))
   return parts.join(' · ') || 'Untitled media set'
 }
 

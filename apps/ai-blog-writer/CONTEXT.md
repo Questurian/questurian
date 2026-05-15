@@ -48,6 +48,13 @@ Related terms: Pipeline Route.
 Do not confuse with: frontend "Feature Page" — that's the UI per feature.
 Code references: `apps/backend/app/features/`.
 
+### Media Library
+
+Definition: a standalone operator workspace inside the ABW frontend for managing Questura's Payload `MediaSet` and `MediaAsset` collections. Not tied to any pipeline run. Provides four tools: Browse (visual grid + inline field editing), Audit (find MediaSets missing required fields + bulk AI alt-text generation), Orphans (MediaAssets not linked to any MediaSet), and Upload (create new MediaSets via the existing `images` backend pipeline).
+Related terms: MediaSet, MediaAsset (both defined in Questura's context).
+Do not confuse with: Questura's Payload admin UI (that's the CMS admin panel); the old `batchUpload` feature (removed, superseded by Media Library).
+Code references: `apps/frontend/src/features/mediaLibrary/`.
+
 ### Pipeline Artifact
 
 Definition: the immutable record of a run. Bundles `PipelineMeta` + all stage outputs + final markdown path.

@@ -1930,3 +1930,50 @@ async def generate_alt_text_endpoint(
         )
 
     return JSONResponse({"success": True, "alt_text": alt_text})
+
+
+@router.post("/generate-alt-text-from-url")
+async def generate_alt_text_from_url_endpoint(
+    url: str = Form(..., description="Publicly accessible image URL"),
+    narrative_focus: str = Form(
+        default="",
+        description="Optional audience or narrative focus for alt-text emphasis",
+    ),
+) -> JSONResponse:
+    """Generate alt text for an existing image by fetching it from a URL."""
+    step = "generate_alt_text_from_url"
+
+    if not url.startswith(("http://", "https://")):
+        _raise_http_error(status_code=400, message="Invalid image URL", step=step)
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            content = resp.content
+            content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+    except httpx.HTTPStatusError as exc:
+        _raise_http_error(
+            status_code=502,
+            message=f"Failed to fetch image from URL: HTTP {exc.response.status_code}",
+            step=step,
+        )
+    except Exception as exc:
+        logger.exception("Failed to fetch image URL for alt text generation")
+        _raise_http_error(status_code=502, message="Failed to fetch image from URL", step=step, detail=str(exc))
+
+    try:
+        alt_text = await generate_alt_text(
+            image_bytes=content,
+            content_type=content_type,
+            narrative_focus=narrative_focus.strip() or None,
+        )
+    except TimeoutError:
+        _raise_http_error(status_code=504, message="Alt text generation timed out", step=step)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to generate alt text from URL")
+        _raise_http_error(status_code=500, message="Failed to generate alt text", step=step, detail=str(exc))
+
+    return JSONResponse({"success": True, "alt_text": alt_text})

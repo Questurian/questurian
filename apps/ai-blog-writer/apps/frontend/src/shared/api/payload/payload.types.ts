@@ -36,26 +36,46 @@ export type ArticleTag = {
   createdAt: string
 }
 
+export type MediaVariantKey =
+  | 'thumbnail'
+  | 'square'
+  | 'wide'
+  | 'portrait'
+  | 'hero'
+  | 'open_graph'
+  | 'editorial'
+
+export const ALL_VARIANT_KEYS: MediaVariantKey[] = [
+  'thumbnail',
+  'square',
+  'wide',
+  'portrait',
+  'hero',
+  'open_graph',
+  'editorial',
+]
+
 export type MediaAsset = {
   id: number
   filename: string
-  alt?: string
-  alt_text?: string
-  altText?: string
-  mediaSet?: number | string | { id?: number | string } | null
-  variant?:
-    | 'thumbnail'
-    | 'square'
-    | 'wide'
-    | 'portrait'
-    | 'hero'
-    | 'open_graph'
-    | 'editorial'
-  url?: string
-  mimeType?: string
-  filesize?: number
-  width?: number
-  height?: number
+  // canonical field names
+  alt_text?: string | null
+  photographer_credit?: string | null
+  location?: string | null
+  location_finalized?: boolean | null
+  tags?: Array<number | ArticleTag> | null
+  // legacy aliases some Payload contexts return
+  alt?: string | null
+  altText?: string | null
+  mediaSet?: number | string | { id?: number | string; title?: string | null } | null
+  variant?: MediaVariantKey | null
+  url?: string | null
+  mimeType?: string | null
+  filesize?: number | null
+  width?: number | null
+  height?: number | null
+  updatedAt?: string
+  createdAt?: string
 }
 
 export type MediaSetVariantAsset = {
@@ -63,14 +83,24 @@ export type MediaSetVariantAsset = {
   filename?: string | null
   url?: string | null
   alt_text?: string | null
+  width?: number | null
+  height?: number | null
 }
+
+export type MediaSetStatus = 'empty' | 'partial' | 'usable' | 'complete'
 
 export type MediaSet = {
   id: number
   title?: string | null
-  location?: string | null
   alt_text?: string | null
-  status?: string | null
+  photographer_credit?: string | null
+  // location can be a relationship (number|Location) or a legacy string key
+  location?: number | Location | string | null
+  location_finalized?: boolean | null
+  tags?: Array<number | ArticleTag> | null
+  status?: MediaSetStatus | string | null
+  externalRef?: string | null
+  source?: number | MediaSetVariantAsset | null
   variants?: {
     thumbnail?: number | MediaSetVariantAsset | null
     square?: number | MediaSetVariantAsset | null
@@ -80,4 +110,15 @@ export type MediaSet = {
     open_graph?: number | MediaSetVariantAsset | null
     editorial?: number | MediaSetVariantAsset | null
   } | null
+  updatedAt?: string
+  createdAt?: string
+}
+
+export type MediaSetPatch = {
+  title?: string | null
+  alt_text?: string | null
+  photographer_credit?: string | null
+  location?: number | null
+  location_finalized?: boolean | null
+  tags?: number[]
 }

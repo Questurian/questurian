@@ -403,7 +403,8 @@
   --card-accent-softer: rgba(38, 70, 83, 0.06);
 }
 
-.landing-card--batch-upload {
+.landing-card--batch-upload,
+.landing-card--media-library {
   --card-accent: #6d4fc2;
   --card-accent-soft: rgba(109, 79, 194, 0.14);
   --card-accent-softer: rgba(109, 79, 194, 0.06);

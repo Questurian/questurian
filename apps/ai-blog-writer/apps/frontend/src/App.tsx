@@ -44,7 +44,7 @@ import {
 } from './features/homepageFeaturedContent'
 import { KeywordIntelPage } from './features/keywordIntel'
 import { ImageRecreationPromptsPage } from './features/imageRecreationPrompts'
-import { BatchUploadPage } from './features/batchUpload'
+import { MediaLibraryPage } from './features/mediaLibrary'
 import BatchImageRecreationPage from './features/batchImageRecreation/BatchImageRecreationPage'
 import './styles.css'
 
@@ -119,8 +119,8 @@ export default function App() {
               {/* Image Recreation Prompts */}
               <Route path="image-recreation-prompts" element={<ImageRecreationPromptsPage />} />
 
-              {/* Batch Image Upload */}
-              <Route path="batch-upload" element={<BatchUploadPage />} />
+              {/* Media Library */}
+              <Route path="media-library" element={<MediaLibraryPage />} />
 
               {/* Batch Image Recreation */}
               <Route path="batch-image-recreation" element={<BatchImageRecreationPage />} />

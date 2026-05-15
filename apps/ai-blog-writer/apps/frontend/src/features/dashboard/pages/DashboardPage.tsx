@@ -442,14 +442,14 @@ const LANDING_CARDS: LandingCardConfig[] = [
     ),
   },
   {
-    id: 'batch-upload',
-    title: 'Batch Image Upload',
-    description: 'Upload multiple photos at once. AI generates alt text, crop 7 variants per image, add shared tags for searchability.',
-    to: '/batch-upload',
+    id: 'media-library',
+    title: 'Media Library',
+    description: 'Browse, audit, and edit Payload MediaSets. Find missing alt text, detect orphaned assets, bulk-generate AI alt text, and upload new images.',
+    to: '/media-library',
     section: 'media-tools',
     priority: 3,
-    accentClass: 'landing-card--batch-upload',
-    actionLabel: 'Open Tool',
+    accentClass: 'landing-card--media-library',
+    actionLabel: 'Open Library',
     icon: (
       <>
         <rect
@@ -485,8 +485,12 @@ const LANDING_CARDS: LandingCardConfig[] = [
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <path
-          d="M17.5 14v7M14 17.5h7"
+        <rect
+          x="14"
+          y="14"
+          width="7"
+          height="7"
+          rx="1"
           stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"

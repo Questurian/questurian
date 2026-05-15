@@ -368,6 +368,7 @@ export function FeaturedImagePicker({
     ? payloadMediaSets.filter((mediaSet) => {
         const q = payloadSearch.toLowerCase()
         return [mediaSet.title, mediaSet.location, mediaSet.alt_text]
+          .map((v) => (typeof v === 'string' ? v : null))
           .filter((value): value is string => Boolean(value?.trim()))
           .some((value) => value.toLowerCase().includes(q))
       })

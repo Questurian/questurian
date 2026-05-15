@@ -123,12 +123,12 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
         setFetchedFeaturedAsset({
           id: asset.id,
           filename: asset.filename,
-          url: asset.url,
-          alt: asset.alt,
-          alt_text: asset.alt_text,
-          altText: asset.altText,
+          url: asset.url ?? undefined,
+          alt: asset.alt ?? undefined,
+          alt_text: asset.alt_text ?? undefined,
+          altText: asset.altText ?? undefined,
           mediaSet: asset.mediaSet,
-          variant: asset.variant,
+          variant: asset.variant ?? undefined,
         })
       } catch {
         if (!cancelled) setFetchedFeaturedAsset(null)

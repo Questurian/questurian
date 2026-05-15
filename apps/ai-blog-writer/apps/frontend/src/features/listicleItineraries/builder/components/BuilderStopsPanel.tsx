@@ -406,12 +406,12 @@ export function BuilderStopsPanel({
         .map((asset) => ({
           id: asset.id,
           filename: asset.filename,
-          alt: asset.alt,
-          alt_text: asset.alt_text,
-          altText: asset.altText,
+          alt: asset.alt ?? undefined,
+          alt_text: asset.alt_text ?? undefined,
+          altText: asset.altText ?? undefined,
           mediaSet: asset.mediaSet,
-          url: asset.url,
-          variant: asset.variant,
+          url: asset.url ?? undefined,
+          variant: asset.variant ?? undefined,
         } satisfies MediaAssetOption))
       if (hydratedAssets.length < 1) return
 
