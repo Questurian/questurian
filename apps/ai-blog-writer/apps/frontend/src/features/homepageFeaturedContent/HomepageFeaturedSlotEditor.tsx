@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
+import HfToast from './HfToast'
 import type { UseHomepageFeaturedSlotsResult } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
 import { ArticlePickerModal } from './ArticlePickerModal'
@@ -90,6 +91,7 @@ export default function HomepageFeaturedSlotEditor({
     saveDisabled,
     invalidItemsBySlot,
     resultMessage,
+    saveNotification,
     searchValue,
     effectiveCollectionFilter,
     lockedCollectionFilter,
@@ -97,6 +99,7 @@ export default function HomepageFeaturedSlotEditor({
     handleCandidatePick,
     handleMove,
     handleRemove,
+    handleReorderAll,
     handleSave,
     setSearchValue,
     setCollectionFilter,
@@ -144,11 +147,7 @@ export default function HomepageFeaturedSlotEditor({
         </div>
       )}
 
-      {resultMessage && (
-        <div className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}>
-          {resultMessage}
-        </div>
-      )}
+      <HfToast notification={saveNotification} />
 
       {/* ── Controls row (full-page only unless suppressed) ───────────── */}
       {!(compact && suppressToolbar) ? (
@@ -212,6 +211,7 @@ export default function HomepageFeaturedSlotEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
         />
       ) : totalSlots === 8 ? (
         <FeaturedArticlesLayout8

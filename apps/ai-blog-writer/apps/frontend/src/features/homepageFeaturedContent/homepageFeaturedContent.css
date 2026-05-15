@@ -4615,3 +4615,201 @@
   background: rgba(220, 60, 60, 0.7);
   border-color: rgba(220, 60, 60, 0.9);
 }
+
+/* ── Top Toast ────────────────────────────────────────────────── */
+
+.hf-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-0.5rem);
+  z-index: 9000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem 0.45rem 0.7rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 20px rgba(30, 28, 24, 0.14);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.hf-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.hf-toast--success {
+  border-color: rgba(74, 124, 89, 0.3);
+  background: rgba(240, 249, 243, 0.97);
+  color: var(--success);
+}
+
+.hf-toast--error {
+  border-color: rgba(184, 68, 68, 0.3);
+  background: rgba(254, 242, 242, 0.97);
+  color: var(--error);
+}
+
+.hf-toast-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* ── Layout 7 drag handles ────────────────────────────────────── */
+
+.hf-l7-slot-wrap {
+  position: relative;
+}
+
+/* Source slot disappears completely — the DragOverlay is the only visual */
+.hf-l7-slot-wrap--dragging {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Drop target gets a subtle ring */
+.hf-l7-slot-wrap--over {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+.hf-l7-drag-handle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 3;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(30, 28, 24, 0.16);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink-light);
+  cursor: grab;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.12s, border-color 0.12s;
+  touch-action: none;
+  box-shadow: 0 1px 4px rgba(30, 28, 24, 0.08);
+}
+
+.hf-l7-slot-wrap:hover .hf-l7-drag-handle,
+.hf-l7-slot-wrap:focus-within .hf-l7-drag-handle {
+  opacity: 1;
+}
+
+.hf-l7-drag-handle:hover {
+  background: #fff;
+  border-color: rgba(30, 28, 24, 0.28);
+  color: var(--ink);
+}
+
+.hf-l7-drag-handle:active {
+  cursor: grabbing;
+  background: rgba(245, 243, 240, 1);
+}
+
+.hf-l7-drag-ghost {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem 0.5rem 0.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 32px rgba(30, 28, 24, 0.18);
+  max-width: 22rem;
+  cursor: grabbing;
+}
+
+.hf-l7-drag-ghost img {
+  width: 3rem;
+  height: 2rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.hf-l7-drag-ghost-placeholder {
+  width: 3rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  background: rgba(220, 218, 214, 0.5);
+  flex-shrink: 0;
+}
+
+.hf-l7-drag-ghost-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* ── L7 column padding refinement ────────────────────────────── */
+
+.hf-l7-col--left,
+.hf-l7-col--center,
+.hf-l7-col--right {
+  padding: var(--space-4);
+}
+
+.hf-l7-col--left {
+  gap: var(--space-4);
+}
+
+/* ── Block header polish ──────────────────────────────────────── */
+
+.hf-block-header {
+  padding: var(--space-3) var(--space-4);
+}
+
+.hf-block-label {
+  gap: var(--space-3);
+}
+
+/* ── Block settings modal refinement ─────────────────────────── */
+
+.hf-block-settings-modal {
+  width: min(480px, 95vw);
+}
+
+.hf-block-settings-modal-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: rgba(250, 248, 245, 0.7);
+  justify-content: space-between;
+}
+
+/* ── Slot controls row ────────────────────────────────────────── */
+
+.hf-slot-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: rgba(250, 248, 245, 0.6);
+}

@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useDeferredValue, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
 import type {
@@ -84,6 +84,12 @@ export type UseHomepageFeaturedSlotsOptions = {
   lockedCollectionFilter?: HomepageFeaturedCollection
 }
 
+export type SaveNotification = {
+  message: string
+  type: 'success' | 'error'
+  seq: number
+}
+
 export type UseHomepageFeaturedSlotsResult = {
   selectionQuery: ReturnType<typeof useQuery<HomepageFeaturedSelection>>
   candidatesQuery: ReturnType<typeof useQuery<HomepageFeaturedCandidatesResponse>>
@@ -99,6 +105,7 @@ export type UseHomepageFeaturedSlotsResult = {
   saveDisabled: boolean
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   resultMessage: string | null
+  saveNotification: SaveNotification | null
   searchValue: string
   collectionFilter: HomepageFeaturedCollection | 'all'
   /** Resolved filter sent to the candidates API (respects `lockedCollectionFilter`). */
@@ -108,6 +115,7 @@ export type UseHomepageFeaturedSlotsResult = {
   handleCandidatePick: (candidate: HomepageFeaturedCandidate) => void
   handleMove: (slotIndex: number, direction: -1 | 1) => void
   handleRemove: (slotIndex: number) => void
+  handleReorderAll: (newSlots: SlotValue[]) => void
   handleReset: () => void
   handleSave: () => void
   setSearchValue: (v: string) => void
@@ -140,6 +148,7 @@ export function useHomepageFeaturedSlots(
   const [savedInvalidItems, setSavedInvalidItems] = useState<HomepageFeaturedInvalidItem[]>([])
   const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
+  const [saveNotification, setSaveNotification] = useState<SaveNotification | null>(null)
 
   const selectionKeyJson = JSON.stringify(selectionQueryKey)
   const prevSelectionKeyJsonRef = useRef<string | null>(null)
@@ -203,11 +212,12 @@ export function useHomepageFeaturedSlots(
       setSavedInvalidItems(selection.invalidItems)
       setPickerSlotIndex(null)
       setResultMessage('Homepage featured content saved.')
+      setSaveNotification({ message: 'Saved', type: 'success', seq: Date.now() })
     },
     onError: (error: unknown) => {
-      setResultMessage(
-        error instanceof Error ? error.message : 'Failed to save homepage featured content.',
-      )
+      const msg = error instanceof Error ? error.message : 'Failed to save homepage featured content.'
+      setResultMessage(msg)
+      setSaveNotification({ message: 'Save failed', type: 'error', seq: Date.now() })
     },
   })
 
@@ -228,6 +238,16 @@ export function useHomepageFeaturedSlots(
   for (const item of savedInvalidItems) {
     invalidItemsBySlot.set(item.slot, item)
   }
+
+  const mutate = saveMutation.mutate
+
+  useEffect(() => {
+    if (saveDisabled) return
+    const timer = setTimeout(() => {
+      mutate(buildSaveItems(slots))
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [saveDisabled, draftSlots, mutate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function updateSlots(transform: (current: SlotValue[]) => SlotValue[]) {
     setDraftSlots((current) => {
@@ -270,6 +290,11 @@ export function useHomepageFeaturedSlots(
     })
   }
 
+  const handleReorderAll = useCallback((newSlots: SlotValue[]) => {
+    setDraftSlots(newSlots)
+    setResultMessage(null)
+  }, [])
+
   function handleReset() {
     setDraftSlots([...savedSlots])
     setPickerSlotIndex(null)
@@ -296,6 +321,7 @@ export function useHomepageFeaturedSlots(
     saveDisabled,
     invalidItemsBySlot,
     resultMessage,
+    saveNotification,
     searchValue,
     collectionFilter,
     effectiveCollectionFilter,
@@ -304,6 +330,7 @@ export function useHomepageFeaturedSlots(
     handleCandidatePick,
     handleMove,
     handleRemove,
+    handleReorderAll,
     handleReset,
     handleSave,
     setSearchValue,
