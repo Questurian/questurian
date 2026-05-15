@@ -220,6 +220,41 @@ export interface PayloadMediaSetResponse {
   };
 }
 
+/**
+ * Response shape for Questura's `POST /api/media-sets/from-source` endpoint
+ * (Questura ADR 0002). Single-call MediaSet creation: source upload, variant
+ * generation (focal-point biased), and assembly all happen server-side.
+ */
+export interface PayloadMediaSetFromSourceResponse {
+  mediaSetId: number;
+  sourceAssetId: number;
+  variantAssetIds: Partial<Record<PayloadMediaVariantType, number>>;
+}
+
+/**
+ * Optional per-variant pixel-rect override accepted by `from-source`. When
+ * present, the pipeline uses this rect from the source instead of computing
+ * one from the focal point. Coordinates are in source-image pixels.
+ */
+export interface PayloadVariantOverride {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface PayloadMediaSetFromSourceData {
+  title: string;
+  alt_text?: string;
+  photographer_credit?: string;
+  location?: string;
+  locationRef?: number;
+  externalRef?: string;
+  tags?: (string | number)[];
+  focal_point?: { x: number; y: number };
+  overrides?: Partial<Record<PayloadMediaVariantType, PayloadVariantOverride>>;
+}
+
 export interface PayloadMediaSetQueryResponse {
   docs: Array<{
     id: string;

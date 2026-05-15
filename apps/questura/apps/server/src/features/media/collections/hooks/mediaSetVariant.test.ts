@@ -27,106 +27,13 @@ function runHook(
   } as unknown as HookArgs)
 }
 
-describe('ensureMediaSetVariant auto-create', () => {
-  it('auto-creates a MediaSet when only a variant is provided', async () => {
-    const payload = createPayloadMock()
-    payload.create.mockResolvedValueOnce({ id: 42 })
-
-    const data: Record<string, unknown> = {
-      variant: 'thumbnail',
-      alt_text: 'Sunset over Lima',
-      filename: 'lima.webp',
-    }
-
-    const result = (await runHook(data, payload)) as Record<string, unknown>
-
-    expect(payload.create).toHaveBeenCalledTimes(1)
-    expect(payload.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collection: 'media-sets',
-        data: expect.objectContaining({
-          title: 'Sunset over Lima',
-          alt_text: 'Sunset over Lima',
-        }),
-      }),
-    )
-    expect(result['mediaSet']).toBe(42)
-    expect(result['variant']).toBe('thumbnail')
-  })
-
-  it('copies safe metadata onto auto-created MediaSet', async () => {
-    const payload = createPayloadMock()
-    payload.create.mockResolvedValueOnce({ id: 42 })
-
-    await runHook(
-      {
-        variant: 'thumbnail',
-        alt_text: 'Sunset over Lima',
-        photographer_credit: 'Questurian',
-        location: 'peru|lima',
-        locationRef: { id: 123 },
-        location_finalized: true,
-        tags: [7, 8],
-      },
-      payload,
-    )
-
-    expect(payload.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          alt_text: 'Sunset over Lima',
-          photographer_credit: 'Questurian',
-          location: 'peru|lima',
-          locationRef: 123,
-          location_finalized: true,
-          tags: [7, 8],
-        }),
-      }),
-    )
-  })
-
-  it('does not copy absent optional metadata onto auto-created MediaSet', async () => {
-    const payload = createPayloadMock()
-    payload.create.mockResolvedValueOnce({ id: 42 })
-
-    await runHook({ variant: 'thumbnail', filename: 'lima.webp' }, payload)
-
-    expect(payload.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: {
-          title: 'lima.webp',
-        },
-      }),
-    )
-  })
-
-  it('falls back to filename when alt_text is empty', async () => {
-    const payload = createPayloadMock()
-    payload.create.mockResolvedValueOnce({ id: 7 })
-
-    const data: Record<string, unknown> = {
-      variant: 'square',
-      filename: 'cusco.webp',
-    }
-
-    await runHook(data, payload)
-
-    expect(payload.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ title: 'cusco.webp' }),
-      }),
-    )
-  })
-
-  it('does not auto-create when mediaSet is already provided', async () => {
+describe('ensureMediaSetVariant', () => {
+  it('rejects a variant set without an existing mediaSet', async () => {
     const payload = createPayloadMock()
 
-    const data: Record<string, unknown> = {
-      mediaSet: 99,
-      variant: 'thumbnail',
-    }
-
-    await runHook(data, payload)
+    await expect(
+      runHook({ variant: 'thumbnail', alt_text: 'Sunset over Lima' }, payload),
+    ).rejects.toThrow(/mediaSet/i)
 
     expect(payload.create).not.toHaveBeenCalled()
   })
@@ -202,12 +109,25 @@ describe('ensureMediaSetVariant auto-create', () => {
     )
   })
 
-  it('rejects an unknown variant before attempting auto-create', async () => {
+  it('rejects an unknown variant before checking the mediaSet rule', async () => {
     const payload = createPayloadMock()
 
     await expect(runHook({ variant: 'not-a-variant' }, payload)).rejects.toThrow(
       'variant must be one of',
     )
+    expect(payload.create).not.toHaveBeenCalled()
+  })
+
+  it('allows a carve-out upload (no mediaSet, no variant)', async () => {
+    const payload = createPayloadMock()
+
+    const result = (await runHook(
+      { alt_text: 'Operator avatar', filename: 'avatar.webp' },
+      payload,
+    )) as Record<string, unknown>
+
+    expect(result['mediaSet']).toBeUndefined()
+    expect(result['variant']).toBeUndefined()
     expect(payload.create).not.toHaveBeenCalled()
   })
 })

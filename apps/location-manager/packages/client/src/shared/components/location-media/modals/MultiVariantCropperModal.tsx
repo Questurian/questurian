@@ -15,16 +15,19 @@ import {
   createMultiVariantImages,
   createRotatedSourceImage,
 } from "@client/shared/lib/image-processing";
-import type { CropState } from "@client/shared/types/location-media.types";
+import type {
+  CropState,
+  ImageVariantUploadFile,
+} from "@client/shared/types/location-media.types";
 
 interface MultiVariantCropperModalProps {
   file: File;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (sourceFile: File, variantFiles: { type: ImageVariantType; file: File }[]) => void;
+  onConfirm: (sourceFile: File, variantFiles: ImageVariantUploadFile[]) => void;
 }
 
-const variantSequence: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'social', 'editorial', 'portrait', 'hero'];
+const variantSequence: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'open_graph', 'editorial', 'portrait', 'hero'];
 const STRAIGHTEN_MIN = -20;
 const STRAIGHTEN_MAX = 20;
 const STRAIGHTEN_STEP = 0.1;
@@ -141,7 +144,7 @@ function createInitialCropStates(): Record<ImageVariantType, CropState> {
     thumbnail: { variantType: 'thumbnail', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     square: { variantType: 'square', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     wide: { variantType: 'wide', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
-    social: { variantType: 'social', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
+    open_graph: { variantType: 'open_graph', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     editorial: { variantType: 'editorial', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     portrait: { variantType: 'portrait', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },
     hero: { variantType: 'hero', crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null, completed: false },

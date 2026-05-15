@@ -3,6 +3,8 @@ import { normalizeDocResponse } from "./payload-http.client";
 import { PayloadAuthClient } from "./payload-auth.client";
 import type {
   PayloadMediaSetData,
+  PayloadMediaSetFromSourceData,
+  PayloadMediaSetFromSourceResponse,
   PayloadMediaSetListItem,
   PayloadMediaSetListResponse,
   PayloadMediaSetQueryResponse,
@@ -362,6 +364,71 @@ export class PayloadMediaSetsClient {
         ? null
         : result.prevPage ?? (hasPrevPage ? effectivePage - 1 : null),
     };
+  }
+
+  /**
+   * Single-call MediaSet creation via Questura's `from-source` pipeline
+   * (Questura ADR 0002). Sends the source image plus metadata as multipart;
+   * Questura runs Sharp, generates 7 variants from the source biased by
+   * `focal_point` (or per-variant `overrides`), uploads them all, and
+   * assembles the MediaSet. Returns the new MediaSet id and variant ids.
+   *
+   * Replaces the multi-step "create MediaSet, then upload each variant"
+   * flow that lives in `payload-media.client.uploadImage` + the legacy
+   * `media-upload.handler` loop.
+   */
+  async createMediaSetFromSource(
+    source: { buffer: Buffer; mimetype: string; filename: string },
+    data: PayloadMediaSetFromSourceData,
+  ): Promise<PayloadMediaSetFromSourceResponse> {
+    if (!this.authClient.isConfigured()) {
+      throw new ServiceUnavailableError("Payload CMS");
+    }
+
+    const token = await this.authClient.ensureAuthenticated();
+    const apiUrl = this.authClient.getApiUrl();
+
+    const formData = new FormData();
+    const blob = new Blob([source.buffer], { type: source.mimetype });
+    formData.append("source", blob, source.filename);
+    formData.append("data", JSON.stringify(data));
+
+    const url = `${apiUrl}/api/media-sets/from-source`;
+    console.log("[Payload] Create media-set from source", {
+      title: data.title,
+      externalRef: data.externalRef,
+      sourceFilename: source.filename,
+      sourceMime: source.mimetype,
+      hasOverrides: Boolean(data.overrides),
+      hasFocalPoint: Boolean(data.focal_point),
+    });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `JWT ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Payload] Media-set from-source failed", {
+        status: response.status,
+        errorText,
+      });
+      throw new Error(
+        `Payload media-set from-source failed: ${response.status} - ${errorText}`,
+      );
+    }
+
+    const result = (await response.json()) as PayloadMediaSetFromSourceResponse;
+
+    console.log(
+      `✓ Created media-set ${result.mediaSetId} via from-source (source asset ${result.sourceAssetId}, ${Object.keys(result.variantAssetIds).length} variants)`,
+    );
+
+    return result;
   }
 
   async findOrCreateMediaSet(data: PayloadMediaSetData): Promise<string> {

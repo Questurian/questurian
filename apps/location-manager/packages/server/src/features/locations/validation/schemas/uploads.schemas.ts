@@ -27,11 +27,12 @@ export type UpdateUploadPhotographerCreditBodyDto = z.infer<
   typeof updateUploadPhotographerCreditBodySchema
 >;
 
+// Aligned with Questura's MediaAsset.upload.mimeTypes per ADR 0002.
+// `image/gif` would pass LM validation and then 4xx at Payload sync.
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
-  "image/webp",
-  "image/gif"
+  "image/webp"
 ] as const;
 
 type AllowedMimeType = typeof ALLOWED_MIME_TYPES[number];

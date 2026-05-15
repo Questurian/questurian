@@ -37,7 +37,7 @@ export const mediaAssetFields: Field[] = [
     admin: {
       position: 'sidebar',
       description:
-        'Link this asset to an existing media set (optional). Leave blank and pick a variant below to auto-create one.',
+        'Link this asset to an existing media set. Leave blank for carve-out uploads (profile, inline body, external).',
     },
   },
   {
@@ -48,7 +48,7 @@ export const mediaAssetFields: Field[] = [
     admin: {
       position: 'sidebar',
       description:
-        'Variant role this asset plays inside the media set. If no media set is selected, a new one is auto-created and linked.',
+        'Variant role this asset plays inside the media set. Requires the media set above to already exist; new media sets are created via POST /api/media-sets/from-source.',
     },
   },
   {

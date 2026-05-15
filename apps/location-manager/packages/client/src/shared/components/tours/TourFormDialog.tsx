@@ -19,6 +19,7 @@ import type { PayloadMediaSetItem, Tour } from "@client/shared/services/api/type
 import { AltTextReviewModal } from "@client/shared/components/location-media/modals/AltTextReviewModal";
 import { MultiVariantCropperModal } from "@client/shared/components/location-media/modals/MultiVariantCropperModal";
 import type { ImageVariantType } from "@questurian/lm-shared";
+import type { ImageVariantUploadFile } from "@client/shared/types/location-media.types";
 import { useCountries } from "@client/shared/hooks/useCountries";
 import {
   buildLocationKey,
@@ -43,7 +44,7 @@ interface TourFormDialogProps {
 
 interface ProcessedTourImageSet {
   sourceFile: File;
-  variantFiles: { type: ImageVariantType; file: File }[];
+  variantFiles: ImageVariantUploadFile[];
   altText?: string;
 }
 
@@ -398,7 +399,7 @@ function TourImageUploadPanel({
 
   function handleCropConfirm(
     croppedSourceFile: File,
-    variantFiles: { type: ImageVariantType; file: File }[]
+    variantFiles: ImageVariantUploadFile[]
   ) {
     setProcessedImageSet((current) => ({
       sourceFile: croppedSourceFile,

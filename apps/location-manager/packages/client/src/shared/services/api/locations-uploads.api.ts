@@ -2,8 +2,28 @@ import { apiPostFormData, apiDelete, apiPatch, apiPost, unwrapEntry } from "./cl
 import { API_ENDPOINTS } from "./config";
 import { uploadWithProgress } from "./upload-with-progress";
 import type { UploadResponse } from "./types";
-import type { ImageVariantType } from "@questurian/lm-shared";
+import type { ImageVariantType, VariantCropRegion } from "@questurian/lm-shared";
 import type { Category } from "./types";
+
+type VariantUpload = {
+  type: ImageVariantType;
+  file: File;
+  cropRegion?: VariantCropRegion;
+};
+
+const buildCropRegionsPayload = (
+  variantFiles: VariantUpload[],
+): Partial<Record<ImageVariantType, VariantCropRegion>> | null => {
+  const payload: Partial<Record<ImageVariantType, VariantCropRegion>> = {};
+  let hasAny = false;
+  for (const { type, cropRegion } of variantFiles) {
+    if (cropRegion) {
+      payload[type] = cropRegion;
+      hasAny = true;
+    }
+  }
+  return hasAny ? payload : null;
+};
 
 export const locationsUploadsApi = {
   async uploadFiles(
@@ -34,7 +54,7 @@ export const locationsUploadsApi = {
     category: Category,
     locationId: number,
     sourceFile: File,
-    variantFiles: { type: ImageVariantType; file: File }[],
+    variantFiles: VariantUpload[],
     photographerCredit: string,
     onProgress?: (percent: number) => void,
     altText?: string
@@ -52,6 +72,11 @@ export const locationsUploadsApi = {
     variantFiles.forEach(({ type, file }) => {
       formData.append(`variant_0_${type}`, file);
     });
+
+    const cropRegions = buildCropRegionsPayload(variantFiles);
+    if (cropRegions) {
+      formData.append("cropRegions_0", JSON.stringify(cropRegions));
+    }
 
     return uploadWithProgress(
       API_ENDPOINTS.ADD_UPLOAD_IMAGESET(category, locationId),
@@ -84,7 +109,7 @@ export const locationsUploadsApi = {
   async replaceUploadVariants(
     uploadId: number,
     sourceFile: File,
-    variantFiles: { type: ImageVariantType; file: File }[],
+    variantFiles: VariantUpload[],
     onProgress?: (percent: number) => void,
     altText?: string
   ): Promise<UploadResponse["entry"]> {
@@ -99,6 +124,11 @@ export const locationsUploadsApi = {
     variantFiles.forEach(({ type, file }) => {
       formData.append(`variant_0_${type}`, file);
     });
+
+    const cropRegions = buildCropRegionsPayload(variantFiles);
+    if (cropRegions) {
+      formData.append("cropRegions_0", JSON.stringify(cropRegions));
+    }
 
     return uploadWithProgress(
       API_ENDPOINTS.REPLACE_UPLOAD_VARIANTS(uploadId),

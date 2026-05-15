@@ -96,49 +96,6 @@ const clearMediaSetVariant = async (
   })
 }
 
-const pickAutoMediaSetTitle = (data: Record<string, unknown>): string => {
-  const altText = typeof data['alt_text'] === 'string' ? data['alt_text'].trim() : ''
-  if (altText) return altText
-  const filename = typeof data['filename'] === 'string' ? data['filename'].trim() : ''
-  if (filename) return filename
-  return `Auto media set ${new Date().toISOString()}`
-}
-
-const autoCreateMediaSetForAsset = async (
-  payload: Payload,
-  req: PayloadRequest,
-  data: Record<string, unknown>,
-): Promise<string | number> => {
-  const altText = typeof data['alt_text'] === 'string' ? data['alt_text'].trim() : ''
-  const photographerCredit =
-    typeof data['photographer_credit'] === 'string' ? data['photographer_credit'].trim() : ''
-  const location = typeof data['location'] === 'string' ? data['location'].trim() : ''
-  const locationRef = extractRelationshipId(data['locationRef'])
-  const tags = Array.isArray(data['tags']) ? data['tags'] : null
-  const created = await payload.create({
-    collection: 'media-sets',
-    data: {
-      title: pickAutoMediaSetTitle(data),
-      ...(altText ? { alt_text: altText } : {}),
-      ...(photographerCredit ? { photographer_credit: photographerCredit } : {}),
-      ...(location ? { location } : {}),
-      ...(locationRef !== null ? { locationRef } : {}),
-      ...(typeof data['location_finalized'] === 'boolean'
-        ? { location_finalized: data['location_finalized'] }
-        : {}),
-      ...(tags ? { tags } : {}),
-    },
-    overrideAccess: true,
-    req,
-  })
-
-  const id = (created as { id?: string | number }).id
-  if (id === undefined || id === null) {
-    throw new Error('Failed to auto-create MediaSet for asset')
-  }
-  return id
-}
-
 export const ensureMediaSetVariant: CollectionBeforeChangeHook = async ({
   data,
   req,
@@ -173,7 +130,7 @@ export const ensureMediaSetVariant: CollectionBeforeChangeHook = async ({
   const variantValue = Object.prototype.hasOwnProperty.call(mutableData, 'variant')
     ? mutableData['variant']
     : original?.variant
-  let mediaSetId = extractRelationshipId(mediaSetValue)
+  const mediaSetId = extractRelationshipId(mediaSetValue)
   const variant = typeof variantValue === 'string' ? variantValue : null
 
   if (mediaSetId && !variant) {
@@ -184,8 +141,9 @@ export const ensureMediaSetVariant: CollectionBeforeChangeHook = async ({
     if (!isVariantKey(variant)) {
       throw new Error(`variant must be one of: ${MEDIA_VARIANT_KEYS.join(', ')}`)
     }
-    mediaSetId = await autoCreateMediaSetForAsset(req.payload, req, mutableData)
-    mutableData['mediaSet'] = mediaSetId
+    throw new Error(
+      'variant cannot be set without an existing mediaSet. Use POST /api/media-sets/from-source to create a new MediaSet from a source image.',
+    )
   }
 
   if (!mediaSetId || !variant) return data

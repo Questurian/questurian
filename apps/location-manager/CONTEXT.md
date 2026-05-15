@@ -1,45 +1,138 @@
-# Location Manager — Context
+# Context: Location Manager
+
+## Scope
+
+Internal admin platform. Operators use it to:
+
+- Create and edit canonical `Location` records (country / city / neighborhood).
+- Aggregate external reviews from Google and TripAdvisor.
+- Generate alt text and prose with Vertex AI.
+- Apply taxonomy corrections.
+- Process and prepare image variants.
+- Push enriched records into Payload at Questura.
+
+Owns the **enrichment workflow** and the **canonical Location store** for everything that hasn't reached production yet.
+
+## Out of Scope
+
+- Public rendering of locations / guides — Questura.
+- Generating article body content — AI Blog Writer.
+- Identity for end users (only operator login).
 
 ## Purpose
-Internal admin platform. Operators enrich Location records (dining, accommodations, attractions, nightlife, key locations), pull external reviews, generate alt text, and sync into Payload (Questura).
 
-## Tech stack
+Questura's Payload is the public source of truth, but populating it from scratch (with reviews, ratings, alt text, taxonomies) is slow and human-intensive. Location Manager exists so operators can stage and quality-check enrichment **before** it goes live. It also coordinates the Vertex AI alt-text microservice and the image variant pipeline.
+
+## Tech Stack
+
 - Bun + Hono + Zod (server)
 - React 19 + Vite + TanStack Query + Radix UI + Tailwind (client)
-- TypeScript shared types
+- TypeScript-only shared types
 - Python 3 + FastAPI + Vertex AI Gemini (alt-text microservice)
 - Turbo
 
-## Ubiquitous language
+## Glossary
 
-| Term | Definition |
-|------|------------|
-| Location | Core entity. Identified by key `country\|city\|neighborhood`. |
-| `LocationHierarchy` | Flat row holding the three geo parts; nested into country/city tree by `buildNestedHierarchy`. |
-| `LocationCategory` | `"dining" \| "accommodations" \| "attractions" \| "nightlife" \| "key_locations"`. |
-| `IdealForTag` | Category-specific taxonomy of who/what the location suits. Five variants: `Dining`, `Nightlife`, `Accommodations`, `Attractions`, `KeyLocations`. |
-| `ChecklistField` / `PayloadSyncChecklist` | Field-level completion tracking before Payload sync. |
-| `ReviewsChecklist` | Progress for Google + TripAdvisor fetch/merge. |
-| `JsonExportChecklist` | Export readiness gate. |
-| `Tour` | Bookable offering tied to a `locationKey`. |
-| `ImageSet` / `ImageVariant` | Multi-variant image bundle (thumbnail/preview/full). |
-| `InstagramEmbed` | Curated social post linked to a Location. |
-| `TaxonomyCorrection` / `CorrectionRule` | Operator-defined spelling normalization, keyed by `part_type` (country/city/neighborhood). |
-| `PayloadSyncState` | Per-collection record of last sync result + Payload doc id. |
+### Location
 
-## Boundary
+The core entity. One row per place at one `LocationLevel`. Identified by `country|city|neighborhood` key.
+Code references: `packages/server/src/features/locations`, `packages/shared/src/types/location.ts`.
 
-- **Owns:** Location CRUD, reviews aggregation, alt-text request orchestration, taxonomy corrections, image processing (Sharp), Payload sync state.
-- **Delegates:** alt-text inference → `python-alt-text`; rich content publishing → Payload (Questura); article body generation → AI Blog Writer (out of band).
+### `LocationHierarchy`
 
-## Shared contracts
+Flat row holding the three geo parts. Helpers: `parseLocationValue`, `buildNestedHierarchy`, `filterCitiesByCountry`, `filterNeighborhoodsByCity`, `getCountries`.
 
-- Internal: `@questurian/lm-shared` types consumed by client + server.
-- External: pushes into Payload collections at Questura (`/api/collections/{dining|accommodations|attractions|nightlife|key-locations}`). Output conforms to `/location-guide-contract.json` at meta-root.
+### `LocationCategory`
 
-## Child contexts
+`"dining" | "accommodations" | "attractions" | "nightlife" | "key_locations"`.
 
+### `IdealForTag`
+
+Category-specific taxonomy of who/what the location suits. Five variants: `DiningIdealForTag`, `NightlifeIdealForTag`, `AccommodationsIdealForTag`, `AttractionsIdealForTag`, `KeyLocationsIdealForTag`.
+Do not confuse with: Questura's `PerfectForTag` — the public-facing equivalent. The two must stay coordinated, but they live in different stores.
+
+### `ChecklistField` / `PayloadSyncChecklist`
+
+Field-level completion tracking before Payload sync. Each field tags `status` as `complete` / `missing` / `invalid`, with optional `recommended`.
+
+### `ReviewsChecklist`
+
+Progress for the Google + TripAdvisor fetch + merge pipeline.
+
+### `JsonExportChecklist`
+
+Export-readiness gate before pushing to Payload.
+
+### Tour
+
+A bookable offering tied to a `locationKey`. Has its own `PayloadSyncState` (`TourPayloadSyncState`).
+
+### `ImageSet` / `ImageVariant`
+
+A multi-variant image bundle (e.g. thumbnail / preview / full). LM generates variant files before Payload sync (per ADR `0001-mediaset-as-public-image-source` in Questura).
+
+### `InstagramEmbed`
+
+Curated social post linked to a Location.
+
+### `TaxonomyCorrection` / `CorrectionRule`
+
+Operator-defined spelling/normalization rules, keyed by `part_type` (`country` / `city` / `neighborhood`).
+
+### `PayloadSyncState`
+
+Per-collection record of last sync result + Payload doc id. Tracks drift between LM and Questura.
+
+## Relationships
+
+- A **Location** has one **LocationHierarchy** and zero or more **IdealForTag**s (scoped by category).
+- A **Location** has one **PayloadSyncState** per target collection (`dining`, `accommodations`, `attractions`, `nightlife`, `key-locations`).
+- A **Tour** belongs to one Location via `locationKey`; it has its own `TourPayloadSyncState`.
+- A **ReviewsChecklist** belongs to one Location; sources include Google Reviews, TripAdvisor Reviews, TripAdvisor Place Data.
+- A **CorrectionRule** applies to many `LocationHierarchy` rows.
+
+## Domain Rules
+
+- Two Locations may **not** share the same `country|city|neighborhood` key.
+- A Location cannot be synced to Payload while its `PayloadSyncChecklist` reports a required field as `missing`/`invalid`.
+- Image variant files are generated **on the LM side** before sync — Questura validates and serves, but does not produce variants (per the MediaSet ADR).
+- TaxonomyCorrections apply uniformly: an applied rule must update all matching rows, not only newly imported ones.
+- `IdealForTag` selections are category-bound; an `AccommodationsIdealForTag` may not appear on a `dining` Location.
+
+## Naming Conventions
+
+- Backend modules: `features/<domain>/{controllers,services,repositories,models,utils,validation,routes,types}`.
+- Frontend features: `features/location-{create,browse,edit}`, `features/admin`, `features/tours`, `features/health`.
+- Shared types: `packages/shared/src/types/<name>.ts`.
+- REST: kebab-case under feature root.
+
+## Decisions
+
+- **SQLite on the server** — single-operator workflow today; multi-user can come later.
+- **TypeScript shared types only**, not codegen, because client and server are both TS.
+- **Alt text is a separate Python service** to keep PyTorch / Vertex out of the Bun process and let the model warm-load.
+- **MediaSet ownership split**: LM generates variant files; Questura owns placement-readiness rules (see `apps/questura/docs/adr/0001-mediaset-as-public-image-source.md`).
+- → **Suggest ADR**: mirror the MediaSet decision on the LM side to document variant-generation responsibilities (which sizes, which formats, who owns the catalogue of placements).
+
+## AI Guidance
+
+- **Inspect first:** `packages/shared/src/types/*.ts` (the contract), then the relevant `features/<domain>` folder on server + client.
+- **Preserve verbatim:** `Location`, `LocationHierarchy`, `LocationCategory`, `IdealForTag`, `PayloadSyncChecklist`, `ReviewsChecklist`, `JsonExportChecklist`, `PayloadSyncState`, `Tour`, `ImageVariant`, `CorrectionRule`.
+- **Do not** rename `IdealForTag` to match Questura's `PerfectForTag` — they live in different stores and the difference is intentional today.
+- **Do not** introduce a code-level dependency on Questura. Coupling is HTTP (`/api/collections/*`) and `/location-guide-contract.json`.
+- **Do not** generate MediaSet variant catalogues unilaterally — coordinate with Questura's MediaPlacement rules.
+- Ask before changing the `country|city|neighborhood` key shape — it crosses the contract boundary.
+
+## Open Questions
+
+- `IdealForTag` (LM) vs `PerfectForTag` (Questura) — are these intentionally parallel, or should one rename to converge?
+- Where is the catalogue of required image variants documented end-to-end? Questura's ADR talks about MediaPlacements; LM has `ImageVariant` types but no placement awareness.
+- Should `Tour` have its own CONTEXT.md inside `packages/server`? It has its own PayloadSyncState shape and is the only non-Location entity here.
+- Taxonomy corrections feel like they could be a top-level admin module — currently it's split across services.
+
+## Child Contexts
+
+- [packages/server](./packages/server/CONTEXT.md) — Bun + Hono API + SQLite
 - [packages/client](./packages/client/CONTEXT.md) — React admin UI
-- [packages/server](./packages/server/CONTEXT.md) — Bun/Hono API + SQLite
-- [packages/shared](./packages/shared/CONTEXT.md) — TS types between client + server
-- [packages/python-alt-text](./packages/python-alt-text/CONTEXT.md) — Vertex AI microservice
+- [packages/shared](./packages/shared/CONTEXT.md) — TS types
+- [packages/python-alt-text](./packages/python-alt-text/CONTEXT.md) — Vertex AI alt-text microservice

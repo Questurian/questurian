@@ -1,5 +1,16 @@
 import type { Upload, ImageMetadata, ImageSetUpload } from "../../models/location";
-import type { ImageVariantType, ImageSet, ImageVariant } from "@questurian/lm-shared";
+import type {
+  ImageVariantType,
+  ImageSet,
+  ImageVariant,
+  VariantCropRegion,
+} from "@questurian/lm-shared";
+
+type VariantUpload = {
+  type: ImageVariantType;
+  file: File;
+  cropRegion?: VariantCropRegion;
+};
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { ImageStorageService } from "../storage/image-storage.service";
 import { AltTextApiClient } from "./clients/alt-text-api.client";
@@ -16,7 +27,7 @@ const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
   "thumbnail",
   "square",
   "wide",
-  "social",
+  "open_graph",
   "editorial",
   "portrait",
   "hero",
@@ -112,7 +123,7 @@ export class UploadsService {
   async addImageSetUpload(
     locationId: number,
     sourceFile: File,
-    variantFiles: { type: ImageVariantType; file: File }[],
+    variantFiles: VariantUpload[],
     photographerCredit: string,
     altText?: string | null
   ): Promise<ImageSetUpload> {
@@ -211,7 +222,7 @@ export class UploadsService {
     // 6. Save all variant files and extract metadata
     const variants: ImageVariant[] = [];
 
-    for (const { type, file } of variantFiles) {
+    for (const { type, file, cropRegion } of variantFiles) {
       const spec = VARIANT_SPECS_IMPORT[type];
       // Generate filename: {sanitized-location-name}_{variantType}.webp (always WebP)
       const sanitizedName = sanitizeLocationName(parentLocation.name);
@@ -236,6 +247,7 @@ export class UploadsService {
           path: relativePath,
           size: meta.size,
           format: meta.format,
+          ...(cropRegion ? { cropRegion } : {}),
         });
       } catch (error) {
         console.error(`Failed to save variant ${type}:`, error);
@@ -368,7 +380,7 @@ export class UploadsService {
   async replaceUploadVariants(
     uploadId: number,
     sourceFile: File,
-    variantFiles: { type: ImageVariantType; file: File }[],
+    variantFiles: VariantUpload[],
     altText?: string
   ): Promise<Upload> {
     if (!uploadId || Number.isNaN(uploadId)) {
@@ -419,13 +431,14 @@ export class UploadsService {
     const sourceMeta = await this.extractMetadataFromFile(sourcePath);
     const variants: ImageVariant[] = [];
 
-    const filesByType = new Map(variantFiles.map((item) => [item.type, item.file]));
+    const variantsByType = new Map(variantFiles.map((item) => [item.type, item]));
 
     for (const type of REQUIRED_VARIANT_TYPES) {
-      const file = filesByType.get(type);
-      if (!file) {
+      const variantUpload = variantsByType.get(type);
+      if (!variantUpload) {
         throw new BadRequestError(`Missing variant type: ${type}`);
       }
+      const { file, cropRegion } = variantUpload;
 
       const spec = VARIANT_SPECS_IMPORT[type];
       const variantFileName = `${sourceMetadata.locationName}_${type}.webp`;
@@ -445,6 +458,7 @@ export class UploadsService {
         path: relativePath,
         size: meta.size,
         format: meta.format,
+        ...(cropRegion ? { cropRegion } : {}),
       });
     }
 

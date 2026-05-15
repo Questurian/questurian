@@ -1,26 +1,67 @@
-# Questura / apps / client — Context
+# Context: Questura / apps / client
+
+## Scope
+
+Next.js public site. Renders:
+
+- Location guides at country, city, and neighborhood levels.
+- Attractions, dining, accommodations, nightlife listings.
+- Tours and bookings.
+- Multi-language pages.
+- Stripe checkout for paid content.
+
+## Out of Scope
+
+- Data ownership (server / Payload owns it).
+- CMS state.
+- Article body composition.
 
 ## Purpose
-Next.js public site. Renders location guides, attractions, bookings, multi-language pages, Stripe checkout.
 
-## Tech stack
-- Next.js 15 + React 19 + TypeScript
-- TanStack Query + Zustand
-- next-intl, Google Maps API, Stripe
-- Tailwind
+The user-facing surface. Everything the end visitor sees flows through this app — SSR pages, client-side interactions, payment, i18n.
 
-## Ubiquitous language
+## Tech Stack
 
-| Term | Definition |
-|------|------------|
-| Location | Country / city / neighborhood page. |
-| `LocationGuide` | Resolved guide with `media`, `core`, `explore`, `stay`, `move` sections. |
-| Attraction / Dining / Accommodation / Nightlife | Listing entities from Payload. |
-| Tour | Bookable activity. |
-| `PerfectForTag` | Tag used for filter + browse UI. |
-| Currency | Display + conversion. |
-| User | Authenticated visitor. Saved guides, profile. |
-| Payment | Stripe checkout flow. |
+- Next.js 15 (turbopack in dev) + React 19 + TypeScript.
+- TanStack Query + Zustand (client state).
+- next-intl (i18n).
+- `@googlemaps/js-api-loader` (Maps).
+- Stripe (checkout UI; flow orchestrated server-side).
+- Tailwind 4.
+
+## Glossary
+
+### Location
+
+A country / city / neighborhood page rendered from a Questura `Locations` row.
+
+### `LocationGuide`
+
+The resolved guide displayed on a Location page, with sections `media`, `core`, `explore`, `stay`, `move`. Comes from `resolveLocationGuideForHierarchy` server-side.
+
+### Attraction / Dining / Accommodation / Nightlife
+
+Listing entities pulled from the corresponding Payload collections.
+
+### Tour
+
+A bookable activity. Rendered with availability + price.
+
+### `PerfectForTag`
+
+Tag used for filter and browse UI. Scoped to a `LocationCategory` via `applicableTypes`.
+
+### Currency
+
+Display + conversion. The user's currency selection affects price formatting throughout.
+
+### User
+
+Authenticated visitor (Account page, saved guides, profile).
+
+### Payment
+
+Stripe checkout flow for paid content.
 
 ## Routes
 
@@ -28,14 +69,56 @@ Next.js public site. Renders location guides, attractions, bookings, multi-langu
 - `/[country]`
 - `/[country]/[city]`
 - `/[country]/[city]/[neighborhood]`
-- `/api/*`
+- `/api/*` — server endpoints exposed by the client app (not Payload's API).
 
-## Boundary
+## Features
 
-- **Owns:** UI rendering, client state (Zustand), i18n (next-intl), map UI, Stripe flow.
-- **Delegates:** all content + auth + payment ops → server.
+- `features/CityDashboard/` — dashboard surfaces for city visitors.
+- `features/CityDiscovery/` — discovery / browse views at city level.
+- `features/CountryHub/` — country-level hub.
+- `features/articles/` — article rendering.
+- `features/Navigation/` — header, menu.
+- `features/Auth/` — login / signup UI.
+- `features/AccountPage/` — user profile / saved guides.
+- `features/Payments/` — Stripe checkout UI.
 
-## Shared contracts
+## Relationships
 
-- Consumes Payload GraphQL + REST from `apps/server`.
-- Uses server-shared resolution utilities (`shared/lib/locationGuideResolution`) for SSR.
+- A **Location** page renders one **`LocationGuide`** plus listings filtered by location.
+- A listing card uses a **MediaSet** payload via the server-side media resolver — the client does not pick variants.
+- A **Tour** card renders price in the selected **Currency**.
+- A `PerfectForTag` filter narrows listings by `applicableTypes`.
+
+## Domain Rules
+
+- SSR uses `resolveLocationGuideForHierarchy` to ensure parent inheritance is applied before render.
+- Client code does not pick image variants — it consumes placement-ready payloads from the server.
+- Stripe checkout is initiated server-side; the client only renders Stripe's hosted UI or the Elements components.
+- i18n strings live under `messages/` and are loaded via `next-intl`. Inline strings are a regression.
+
+## Naming Conventions
+
+- Feature folder: PascalCase or camelCase as seen (`CityDashboard`, `articles`). Pre-existing inconsistency — keep matching its sibling.
+- Routes: file-system based, lower-case path segments.
+
+## Decisions
+
+- **TanStack Query for fetching, Zustand for ephemeral UI state.** Don't conflate them.
+- **next-intl** for i18n; locale resolution by URL prefix.
+- **Plain `img` for now**; `next/image` is deferred per the server-side ADR.
+- **App Router (`app/`)** is the active routing.
+
+## AI Guidance
+
+- **Inspect first:** the relevant `src/features/<feature>/` folder, then `src/app/<route>/`, then the server API call it depends on.
+- **Preserve verbatim:** `LocationGuide`, `PerfectForTag`, `Currency`, `Attraction`, `Dining`, `Accommodation`, `Nightlife`, `Tour`.
+- **Do not** read raw Payload data without resolution — go via the server endpoint that already calls `resolveLocationGuideForHierarchy`.
+- **Do not** pick image variants client-side.
+- **Do not** add inline UI strings — register them in `messages/`.
+- **Ask before** restructuring route segments — neighborhood URLs are SEO-load-bearing.
+
+## Open Questions
+
+- `staging` exists in some sibling repos as a holding area — does the Questura client need an equivalent for in-progress features?
+- The folder naming inconsistency (`CityDashboard` vs `articles`) — should we converge?
+- The boundary between `CityDashboard` and `CityDiscovery` isn't obvious from names; worth documenting.

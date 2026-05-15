@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { LocationResponse, Upload, ImageMetadata, InstagramEmbed } from "@client/shared/services/api/types";
 import { VARIANT_SPECS, type ImageVariant } from "@questurian/lm-shared";
+import type { ImageVariantUploadFile } from "@client/shared/types/location-media.types";
 import { Button } from "@client/components/ui";
 import { Input } from "@client/components/ui/input";
 import {
@@ -269,7 +270,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
 
   function handleManualCropConfirm(
     sourceFile: File,
-    variantFiles: { type: ImageVariant["type"]; file: File }[]
+    variantFiles: ImageVariantUploadFile[]
   ) {
     if (!manualCropState.uploadId) {
       return;

@@ -32,6 +32,9 @@ export type {
   PayloadMediaSetListItem,
   PayloadMediaSetListResponse,
   PayloadMediaSetSearchResponse,
+  PayloadMediaSetFromSourceData,
+  PayloadMediaSetFromSourceResponse,
+  PayloadVariantOverride,
   PayloadEntryData,
   PayloadTourData,
   PayloadTourResponse,
@@ -191,6 +194,13 @@ export class PayloadApiClient {
 
   async findOrCreateMediaSet(data: PayloadMediaSetData): Promise<string> {
     return await this.mediaSetsClient.findOrCreateMediaSet(data);
+  }
+
+  async createMediaSetFromSource(
+    source: { buffer: Buffer; mimetype: string; filename: string },
+    data: PayloadMediaSetFromSourceData,
+  ): Promise<PayloadMediaSetFromSourceResponse> {
+    return await this.mediaSetsClient.createMediaSetFromSource(source, data);
   }
 
   async findTourByTitle(title: string): Promise<string | null> {

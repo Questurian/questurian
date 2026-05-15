@@ -21,12 +21,12 @@ import { BadRequestError } from "@shared/errors/http-error";
 import { getFileExtension, sanitizeLocationName } from "../../utils/location-utils";
 
 const container = ServiceContainer.getInstance();
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
   "thumbnail",
   "square",
   "wide",
-  "social",
+  "open_graph",
   "editorial",
   "portrait",
   "hero",
@@ -48,7 +48,7 @@ function parseOptionalText(formData: FormData, key: string): string | null {
 function assertImageFile(file: File, label: string) {
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     throw new BadRequestError(
-      `${label} must be a JPEG, PNG, WebP, or GIF image.`
+      `${label} must be a JPEG, PNG, or WebP image.`
     );
   }
 }

@@ -4,7 +4,12 @@
 
 import type { ImageVariantType } from "@questurian/lm-shared";
 import { VARIANT_SPECS as VARIANT_SPECS_IMPORT } from "@questurian/lm-shared";
-import type { CropData, TargetDimensions, CropState } from "@client/shared/types/location-media.types";
+import type {
+  CropData,
+  TargetDimensions,
+  CropState,
+  ImageVariantUploadFile,
+} from "@client/shared/types/location-media.types";
 
 export type { CropData, TargetDimensions, CropState };
 
@@ -180,7 +185,7 @@ export async function createMultiVariantImages(
   cropStates: Record<ImageVariantType, CropState>,
   fileName: string,
   rotation = 0
-): Promise<{ type: ImageVariantType; file: File }[]> {
+): Promise<ImageVariantUploadFile[]> {
   // Process all variants in parallel for performance
   const variantPromises = Object.entries(cropStates).map(async ([type, state]) => {
     const variantType = type as ImageVariantType;
@@ -203,7 +208,16 @@ export async function createMultiVariantImages(
       rotation
     );
 
-    return { type: variantType, file: croppedFile };
+    return {
+      type: variantType,
+      file: croppedFile,
+      cropRegion: {
+        left: state.croppedAreaPixels.x,
+        top: state.croppedAreaPixels.y,
+        width: state.croppedAreaPixels.width,
+        height: state.croppedAreaPixels.height,
+      },
+    };
   });
 
   // Wait for all variants to be processed

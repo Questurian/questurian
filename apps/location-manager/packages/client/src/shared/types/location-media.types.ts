@@ -1,5 +1,5 @@
 import type { Area } from 'react-easy-crop';
-import type { ImageVariantType } from '@questurian/lm-shared';
+import type { ImageVariantType, VariantCropRegion } from '@questurian/lm-shared';
 
 export interface CropData {
   x: number;
@@ -24,6 +24,8 @@ export interface CropState {
 export interface ImageVariantUploadFile {
   type: ImageVariantType;
   file: File;
+  /** Source-image pixel rect used to produce this variant (from react-easy-crop). */
+  cropRegion?: VariantCropRegion;
 }
 
 export interface QueuedImageSetPayload {

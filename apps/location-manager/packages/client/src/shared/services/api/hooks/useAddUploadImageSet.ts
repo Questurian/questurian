@@ -4,7 +4,7 @@ import { locationsApi } from "../locations.api";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 import { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
 import type { Category, Upload } from "@client/shared/services/api/types";
-import type { ImageVariantType } from "@questurian/lm-shared";
+import type { ImageVariantUploadFile } from "@client/shared/types/location-media.types";
 
 interface UseAddUploadImageSetOptions {
   onSuccess?: (data: Upload) => void;
@@ -27,7 +27,7 @@ export function useAddUploadImageSet(
       altText,
     }: {
       sourceFile: File;
-      variantFiles: { type: ImageVariantType; file: File }[];
+      variantFiles: ImageVariantUploadFile[];
       photographerCredit: string;
       altText?: string;
     }) => {

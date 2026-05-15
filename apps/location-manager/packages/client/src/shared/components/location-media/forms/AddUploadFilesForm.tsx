@@ -208,7 +208,7 @@ export function AddUploadFilesForm({
 
   function handleCropConfirm(
     sourceFile: File,
-    variantFiles: { type: ImageVariantType; file: File }[]
+    variantFiles: ImageVariantUploadFile[]
   ) {
     if (cropModalState.fileIndex === null) return;
 

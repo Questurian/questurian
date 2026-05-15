@@ -1,16 +1,11 @@
 import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
 import type { ImageVariantType } from "@questurian/lm-shared";
 import { normalizeDocResponse } from "./payload-http.client";
-import type { PayloadMediaAssetResponse, PayloadMediaVariantType } from "./payload-api.types";
+import type { PayloadMediaAssetResponse } from "./payload-api.types";
 import { PayloadAuthClient } from "./payload-auth.client";
 
 export class PayloadMediaClient {
   constructor(private readonly authClient: PayloadAuthClient) {}
-
-  private toPayloadMediaVariant(variant: ImageVariantType): PayloadMediaVariantType {
-    if (variant === "social") return "open_graph";
-    return variant;
-  }
 
   async uploadImage(
     fileBuffer: Buffer,
@@ -66,7 +61,7 @@ export class PayloadMediaClient {
     }
 
     if (options.variant) {
-      payload.variant = this.toPayloadMediaVariant(options.variant);
+      payload.variant = options.variant;
       console.log("✅ [PAYLOAD CLIENT] Added variant to payload:", payload.variant);
     }
 

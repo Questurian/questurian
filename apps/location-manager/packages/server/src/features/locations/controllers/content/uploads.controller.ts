@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { ImageVariantType } from "@questurian/lm-shared";
+import type { ImageVariantType, VariantCropRegion } from "@questurian/lm-shared";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import { BadRequestError } from "@shared/errors/http-error";
@@ -14,12 +14,12 @@ import {
 
 const container = ServiceContainer.getInstance();
 
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
   "thumbnail",
   "square",
   "wide",
-  "social",
+  "open_graph",
   "editorial",
   "portrait",
   "hero",
@@ -37,6 +37,52 @@ function parseRequiredPhotographerCredit(formData: FormData): string {
   }
 
   return normalizedCredit;
+}
+
+function isVariantCropRegion(value: unknown): value is VariantCropRegion {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.left === "number" &&
+    typeof candidate.top === "number" &&
+    typeof candidate.width === "number" &&
+    typeof candidate.height === "number"
+  );
+}
+
+/**
+ * Parse the optional `cropRegions_0` sidecar JSON sent by the LM upload form.
+ * Format: `{ "<variantType>": { left, top, width, height }, ... }` (pixels in
+ * the source image). Persisted on each ImageVariant so the Questura
+ * `from-source` pipeline can reproduce the crops server-side per ADR 0002.
+ */
+function parseCropRegionsForUpload(
+  formData: FormData,
+): Partial<Record<ImageVariantType, VariantCropRegion>> {
+  const raw = formData.get("cropRegions_0");
+  if (typeof raw !== "string" || !raw.trim()) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new BadRequestError("cropRegions_0 must be valid JSON");
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new BadRequestError("cropRegions_0 must be an object keyed by variant type");
+  }
+  const result: Partial<Record<ImageVariantType, VariantCropRegion>> = {};
+  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (!REQUIRED_VARIANT_TYPES.includes(key as ImageVariantType)) {
+      throw new BadRequestError(`cropRegions_0 has unknown variant key: ${key}`);
+    }
+    if (!isVariantCropRegion(value)) {
+      throw new BadRequestError(
+        `cropRegions_0[${key}] must be { left, top, width, height } numbers`,
+      );
+    }
+    result[key as ImageVariantType] = value;
+  }
+  return result;
 }
 
 export async function postAddUpload(c: Context) {
@@ -110,7 +156,7 @@ export async function postAddUploadImageSet(c: Context) {
   // Validate source file
   if (!ALLOWED_MIME_TYPES.includes(sourceFile.type)) {
     throw new BadRequestError(
-      `Invalid source file type. Only JPEG, PNG, WebP, and GIF images are allowed.`
+      `Invalid source file type. Only JPEG, PNG, and WebP images are allowed.`
     );
   }
 
@@ -118,8 +164,14 @@ export async function postAddUploadImageSet(c: Context) {
     throw new BadRequestError(`Source file exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
   }
 
+  const cropRegions = parseCropRegionsForUpload(formData);
+
   // Parse variant files (expecting all configured variants)
-  const variantFiles: { type: ImageVariantType; file: File }[] = [];
+  const variantFiles: {
+    type: ImageVariantType;
+    file: File;
+    cropRegion?: VariantCropRegion;
+  }[] = [];
 
   let totalSize = sourceFile.size;
 
@@ -134,7 +186,7 @@ export async function postAddUploadImageSet(c: Context) {
     // Validate variant file
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       throw new BadRequestError(
-        `Invalid file type for variant "${type}". Only JPEG, PNG, WebP, and GIF images are allowed.`
+        `Invalid file type for variant "${type}". Only JPEG, PNG, and WebP images are allowed.`
       );
     }
 
@@ -143,7 +195,11 @@ export async function postAddUploadImageSet(c: Context) {
     }
 
     totalSize += file.size;
-    variantFiles.push({ type, file });
+    variantFiles.push({
+      type,
+      file,
+      ...(cropRegions[type] ? { cropRegion: cropRegions[type] } : {}),
+    });
   }
 
   // Validate total size (source + all variants)
@@ -204,7 +260,7 @@ export async function postReplaceUploadVariants(c: Context) {
 
   if (!ALLOWED_MIME_TYPES.includes(sourceFile.type)) {
     throw new BadRequestError(
-      `Invalid source file type. Only JPEG, PNG, WebP, and GIF images are allowed.`
+      `Invalid source file type. Only JPEG, PNG, and WebP images are allowed.`
     );
   }
 
@@ -212,7 +268,13 @@ export async function postReplaceUploadVariants(c: Context) {
     throw new BadRequestError(`Source file exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
   }
 
-  const variantFiles: { type: ImageVariantType; file: File }[] = [];
+  const cropRegions = parseCropRegionsForUpload(formData);
+
+  const variantFiles: {
+    type: ImageVariantType;
+    file: File;
+    cropRegion?: VariantCropRegion;
+  }[] = [];
   let totalSize = sourceFile.size;
 
   for (const type of REQUIRED_VARIANT_TYPES) {
@@ -225,7 +287,7 @@ export async function postReplaceUploadVariants(c: Context) {
 
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       throw new BadRequestError(
-        `Invalid file type for variant "${type}". Only JPEG, PNG, WebP, and GIF images are allowed.`
+        `Invalid file type for variant "${type}". Only JPEG, PNG, and WebP images are allowed.`
       );
     }
 
@@ -234,7 +296,11 @@ export async function postReplaceUploadVariants(c: Context) {
     }
 
     totalSize += file.size;
-    variantFiles.push({ type, file });
+    variantFiles.push({
+      type,
+      file,
+      ...(cropRegions[type] ? { cropRegion: cropRegions[type] } : {}),
+    });
   }
 
   if (totalSize > MAX_TOTAL_SIZE) {

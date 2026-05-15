@@ -1,9 +1,52 @@
 import type { LocationResponse } from "../../../models/location";
 import type { PayloadApiClient } from "../clients/payload-api.client";
+import type { PayloadVariantOverride } from "../clients/payload-api.client";
 import { ImageStorageService } from "../../storage/image-storage.service";
 import type { UploadedImagesResult } from "../types";
-import type { ImageVariantType } from "@questurian/lm-shared";
+import type { ImageVariant, ImageVariantType } from "@questurian/lm-shared";
+import { basename } from "node:path";
 import { sanitizeLocationName, getFileExtension } from "../../../utils/location-utils";
+
+const VARIANT_ORDER: ImageVariantType[] = [
+  'thumbnail',
+  'square',
+  'wide',
+  'open_graph',
+  'editorial',
+  'portrait',
+  'hero',
+];
+
+const SOURCE_MIME_TYPE_BY_EXT: Record<string, string> = {
+  webp: 'image/webp',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+};
+
+const inferSourceMimeType = (path: string): string => {
+  const extension = getFileExtension(path).toLowerCase();
+  return SOURCE_MIME_TYPE_BY_EXT[extension] ?? 'image/webp';
+};
+
+const buildVariantOverrides = (
+  variants: ImageVariant[],
+): Partial<Record<ImageVariantType, PayloadVariantOverride>> | null => {
+  const overrides: Partial<Record<ImageVariantType, PayloadVariantOverride>> = {};
+  for (const variant of variants) {
+    if (!variant.cropRegion) {
+      // Legacy ImageSet without crop regions — caller falls back to per-variant upload.
+      return null;
+    }
+    overrides[variant.type] = {
+      left: variant.cropRegion.left,
+      top: variant.cropRegion.top,
+      width: variant.cropRegion.width,
+      height: variant.cropRegion.height,
+    };
+  }
+  return overrides;
+};
 
 /**
  * Upload images and create Instagram posts for a location
@@ -123,30 +166,75 @@ export async function uploadLocationImages(
               );
             }
           } else {
-            // Media-set doesn't exist, create it
-            console.log(`📦 [MEDIA-SET] Creating new media-set`);
-            mediaSetId = await payloadClient.createMediaSet({
-              title: mediaSetTitle,
-              alt_text: altText,
-              externalRef: externalRef,
-              location: location.locationKey || undefined,
-              tags: [], // Add tags mapping if needed
-            });
-            shouldUploadVariants = true; // Upload variants for new media-set
+            // Media-set doesn't exist. Try the single-call from-source pipeline
+            // when every variant has a persisted cropRegion (Questura ADR 0002);
+            // fall back to the legacy create + per-variant upload flow otherwise.
+            const overrides = buildVariantOverrides(imageSet.variants);
+            const sourcePath = imageSet.sourceImage?.path;
+
+            if (overrides && sourcePath) {
+              try {
+                const sourceBuffer = await imageStorage.readImage(sourcePath);
+                const sourceFilename = basename(sourcePath);
+                const sourceMime = inferSourceMimeType(sourcePath);
+
+                console.log(
+                  `📦 [MEDIA-SET] Creating new media-set via from-source (${Object.keys(overrides).length} variant overrides)`,
+                );
+                const result = await payloadClient.createMediaSetFromSource(
+                  { buffer: sourceBuffer, mimetype: sourceMime, filename: sourceFilename },
+                  {
+                    title: mediaSetTitle,
+                    alt_text: altText,
+                    photographer_credit: photographerCredit,
+                    externalRef: externalRef,
+                    location: location.locationKey || undefined,
+                    ...(mediaLocationRef
+                      ? { locationRef: parseInt(mediaLocationRef, 10) }
+                      : {}),
+                    overrides,
+                  },
+                );
+
+                mediaSetId = String(result.mediaSetId);
+                shouldUploadVariants = false; // Pipeline already created the variants
+                console.log(
+                  `✅ [MEDIA-SET] from-source created media-set ${mediaSetId} with ${Object.keys(result.variantAssetIds).length} variants`,
+                );
+              } catch (error) {
+                console.warn(
+                  `⚠️  [MEDIA-SET] from-source pipeline failed; falling back to per-variant upload:`,
+                  error,
+                );
+                console.log(`📦 [MEDIA-SET] Creating new media-set (legacy per-variant flow)`);
+                mediaSetId = await payloadClient.createMediaSet({
+                  title: mediaSetTitle,
+                  alt_text: altText,
+                  externalRef: externalRef,
+                  location: location.locationKey || undefined,
+                  tags: [],
+                });
+                shouldUploadVariants = true;
+              }
+            } else {
+              // Legacy ImageSet (no cropRegions persisted) — keep the old flow.
+              console.log(`📦 [MEDIA-SET] Creating new media-set (legacy per-variant flow)`);
+              mediaSetId = await payloadClient.createMediaSet({
+                title: mediaSetTitle,
+                alt_text: altText,
+                externalRef: externalRef,
+                location: location.locationKey || undefined,
+                tags: [],
+              });
+              shouldUploadVariants = true;
+            }
           }
 
           console.log(`✅ [MEDIA-SET] Media-set ready: ${mediaSetId}`);
 
-          // ⭐ STEP 2: Upload variants for new media-sets and refreshed existing media-sets
-          const variantOrder: ImageVariantType[] = [
-            'thumbnail',
-            'square',
-            'wide',
-            'social',
-            'editorial',
-            'portrait',
-            'hero'
-          ];
+          // ⭐ STEP 2: Upload variants for refreshed existing media-sets and the
+          // legacy per-variant fallback path. New from-source uploads skip this.
+          const variantOrder = VARIANT_ORDER;
           let uploadedVariantsCount = 0;
 
           if (shouldUploadVariants) {
@@ -209,10 +297,12 @@ export async function uploadLocationImages(
               );
             } else if (shouldUploadVariants) {
               console.log(
-                `✅ [MEDIA-SET] Added new media-set ${mediaSetId} to gallery (${uploadedVariantsCount}/${variantOrder.length} variants uploaded)`
+                `✅ [MEDIA-SET] Added new media-set ${mediaSetId} to gallery (${uploadedVariantsCount}/${variantOrder.length} variants uploaded, legacy per-variant flow)`
               );
             } else {
-              console.log(`✅ [MEDIA-SET] Added existing media-set ${mediaSetId} to gallery (already synced)`);
+              console.log(
+                `✅ [MEDIA-SET] Added new media-set ${mediaSetId} to gallery (created via from-source pipeline)`,
+              );
             }
           }
         } catch (error) {

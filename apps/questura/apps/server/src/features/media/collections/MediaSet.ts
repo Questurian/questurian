@@ -50,7 +50,7 @@ export const MediaSet: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'location', 'createdAt', 'createdBy'],
+    defaultColumns: ['title', 'placement_readiness', 'status', 'location', 'createdAt', 'createdBy'],
     group: 'Media',
     description: 'Group related media variants into a single API object',
     hidden: ({ user }) => {
@@ -166,6 +166,60 @@ export const MediaSet: CollectionConfig = {
       fields: variantFields,
       admin: {
         description: 'Attach the variant assets that belong to this media set',
+      },
+    },
+    {
+      name: 'source',
+      type: 'relationship',
+      relationTo: 'media-assets',
+      admin: {
+        description:
+          'Uncropped original image. The pipeline regenerates variants from this source whenever the focal point changes or a new variant spec is added.',
+      },
+    },
+    {
+      name: 'focal_point',
+      type: 'group',
+      admin: {
+        description:
+          'Normalized (x, y) on the source image (0-1). The pipeline biases all generated crops toward this point.',
+      },
+      fields: [
+        {
+          name: 'x',
+          type: 'number',
+          required: true,
+          defaultValue: 0.5,
+          min: 0,
+          max: 1,
+        },
+        {
+          name: 'y',
+          type: 'number',
+          required: true,
+          defaultValue: 0.5,
+          min: 0,
+          max: 1,
+        },
+      ],
+    },
+    {
+      name: 'focal_point_picker',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: 'src/features/media/components/FocalPointPickerField.tsx#default',
+        },
+      },
+    },
+    {
+      name: 'placement_readiness',
+      type: 'ui',
+      label: 'Placement readiness',
+      admin: {
+        components: {
+          Cell: 'src/features/media/components/PlacementReadinessCell.tsx#default',
+        },
       },
     },
     {
