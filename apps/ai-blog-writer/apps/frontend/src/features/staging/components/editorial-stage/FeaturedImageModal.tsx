@@ -42,10 +42,6 @@ type FeaturedImageModalUploadProps = {
   featuredImageFileNamePrefix: string
   selectedLocation?: Location
   token?: string
-  imageAltText: string
-  imagePhotographerCredit: string
-  setImageAltText: (value: string) => void
-  setImagePhotographerCredit: (value: string) => void
   handleUploadComplete: (result: UploadImageResponse) => void
 }
 
@@ -118,10 +114,6 @@ export function FeaturedImageModal({
     featuredImageFileNamePrefix,
     selectedLocation,
     token,
-    imageAltText,
-    imagePhotographerCredit,
-    setImageAltText,
-    setImagePhotographerCredit,
     handleUploadComplete,
   } = upload
   const {
@@ -418,11 +410,7 @@ export function FeaturedImageModal({
                   fileNamePrefix={featuredImageFileNamePrefix}
                   locationRef={selectedLocation.id}
                   token={token || ''}
-                  altText={imageAltText}
-                  photographerCredit={imagePhotographerCredit}
-                  onUploadComplete={handleUploadComplete}
-                  onAltTextGenerated={(text) => setImageAltText(text)}
-                  onPhotographerCreditChange={(text) => setImagePhotographerCredit(text)}
+                  onComplete={handleUploadComplete}
                   onCancel={() => setFeaturedImageSource('payload')}
                 />
               ) : (

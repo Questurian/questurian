@@ -29,10 +29,6 @@ type BuildFeaturedModalViewInput = {
   featuredImageExternalRef: string
   featuredImageFileNamePrefix: string
   token?: string
-  imageAltText: string
-  imagePhotographerCredit: string
-  setImageAltText: Dispatch<SetStateAction<string>>
-  setImagePhotographerCredit: Dispatch<SetStateAction<string>>
   handleUploadComplete: (result: UploadImageResponse) => void
   externalImageCropDraft: ExternalImageCropDraft | null
   renderExternalCropEditor: (context: 'featured') => ReactNode
@@ -91,10 +87,6 @@ export function buildFeaturedModalView(input: BuildFeaturedModalViewInput): Feat
       featuredImageExternalRef: input.featuredImageExternalRef,
       featuredImageFileNamePrefix: input.featuredImageFileNamePrefix,
       token: input.token,
-      imageAltText: input.imageAltText,
-      imagePhotographerCredit: input.imagePhotographerCredit,
-      setImageAltText: input.setImageAltText,
-      setImagePhotographerCredit: input.setImagePhotographerCredit,
       handleUploadComplete: input.handleUploadComplete,
     },
     external: {

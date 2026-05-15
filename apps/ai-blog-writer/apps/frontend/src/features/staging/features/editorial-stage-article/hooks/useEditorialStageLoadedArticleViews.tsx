@@ -115,10 +115,6 @@ type UseEditorialStageLoadedArticleViewsParams = {
   setFeaturedImageSource: Dispatch<SetStateAction<ImageSourceOption>>
   imageSearch: string
   setImageSearch: Dispatch<SetStateAction<string>>
-  imageAltText: string
-  setImageAltText: Dispatch<SetStateAction<string>>
-  imagePhotographerCredit: string
-  setImagePhotographerCredit: Dispatch<SetStateAction<string>>
   unsplashFeaturedQuery: string
   setUnsplashFeaturedQuery: Dispatch<SetStateAction<string>>
   unsplashFeaturedResults: UnsplashPhoto[]
@@ -154,10 +150,6 @@ type UseEditorialStageLoadedArticleViewsParams = {
   setBlockImageSource: Dispatch<SetStateAction<ImageSourceOption>>
   blockImageSearch: string
   setBlockImageSearch: Dispatch<SetStateAction<string>>
-  blockImageAltText: string
-  setBlockImageAltText: Dispatch<SetStateAction<string>>
-  blockImagePhotographerCredit: string
-  setBlockImagePhotographerCredit: Dispatch<SetStateAction<string>>
   imgBlockAssets: MediaAsset[]
   isLoadingImgBlockAssets: boolean
   imgBlockAssetsError: string | null
@@ -369,10 +361,6 @@ export function useEditorialStageLoadedArticleViews(
     featuredImageExternalRef: params.featuredImageUploadExternalRef,
     featuredImageFileNamePrefix: params.featuredImageFileNamePrefix,
     token: params.token || undefined,
-    imageAltText: params.imageAltText,
-    imagePhotographerCredit: params.imagePhotographerCredit,
-    setImageAltText: params.setImageAltText,
-    setImagePhotographerCredit: params.setImagePhotographerCredit,
     handleUploadComplete: params.handleUploadComplete,
     externalImageCropDraft: params.externalImageCropDraft,
     renderExternalCropEditor: params.renderExternalCropEditor,
@@ -442,10 +430,6 @@ export function useEditorialStageLoadedArticleViews(
     blockImageExternalRef,
     blockImageFileNamePrefix,
     token: params.token || undefined,
-    blockImageAltText: params.blockImageAltText,
-    blockImagePhotographerCredit: params.blockImagePhotographerCredit,
-    setBlockImageAltText: params.setBlockImageAltText,
-    setBlockImagePhotographerCredit: params.setBlockImagePhotographerCredit,
     handleBlockImageUploadComplete: params.handleBlockImageUploadComplete,
     externalImageCropDraft: params.externalImageCropDraft,
     renderExternalCropEditor: params.renderExternalCropEditor,

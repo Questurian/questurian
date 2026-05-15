@@ -1,7 +1,7 @@
 // Image upload feature exports
 export { ImageUpload } from './components/ImageUpload';
 export { MultiVariantCropper } from './components/MultiVariantCropper';
-export type { ImageUploadProps, UploadMode, VariantUploadFile } from './types';
+export type { ImageUploadProps, VariantUploadFile } from './types';
 export {
   uploadImage,
   uploadImageVariants,

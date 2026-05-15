@@ -54,8 +54,6 @@ export function useEditorialStageFeaturedMedia({
   const [showImageModal, setShowImageModal] = useState(false)
   const [featuredImageSource, setFeaturedImageSource] = useState<ImageSourceOption>('payload')
   const [imageSearch, setImageSearch] = useState('')
-  const [imageAltText, setImageAltText] = useState('')
-  const [imagePhotographerCredit, setImagePhotographerCredit] = useState('')
   const [unsplashFeaturedQuery, setUnsplashFeaturedQuery] = useState('')
   const [unsplashFeaturedResults, setUnsplashFeaturedResults] = useState<UnsplashPhoto[]>([])
   const [isSearchingUnsplashFeatured, setIsSearchingUnsplashFeatured] = useState(false)
@@ -96,8 +94,6 @@ export function useEditorialStageFeaturedMedia({
     setUnsplashFeaturedError(null)
     setUnsplashFeaturedOrientation('')
     setUnsplashFeaturedPerPage(18)
-    setImageAltText('')
-    setImagePhotographerCredit('')
     resetExternalImportState()
   }, [resetExternalImportState, showImageModal])
 
@@ -163,10 +159,6 @@ export function useEditorialStageFeaturedMedia({
     setFeaturedImageSource,
     imageSearch,
     setImageSearch,
-    imageAltText,
-    setImageAltText,
-    imagePhotographerCredit,
-    setImagePhotographerCredit,
     unsplashFeaturedQuery,
     setUnsplashFeaturedQuery,
     unsplashFeaturedResults,

@@ -1,21 +1,19 @@
-import { useCallback, useRef, useState } from 'react'
-import type { DragEvent, ChangeEvent } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchLocations } from '../../../shared/api/payload/payload.api'
-import { generateAltText, uploadImage } from '../../../shared/images/api/imagesApi'
-import type { UploadProgress } from '../../../shared/images/api/imagesApi'
+import { MultiVariantCropper } from '../../../shared/images/components/MultiVariantCropper'
+import {
+  AltTextField,
+  DropZone,
+  PhotographerCreditField,
+  UploadProgressBar,
+} from '../../../shared/images/components/upload-primitives'
+import { useImageUploadFlow } from '../../../shared/images/hooks/useImageUploadFlow'
+import '../../../shared/images/components/upload-primitives/upload-primitives.css'
 
 type Props = { token: string }
 
-type UploadState =
-  | { status: 'idle' }
-  | { status: 'uploading'; progress: UploadProgress }
-  | { status: 'success'; mediaSetId: string }
-  | { status: 'error'; message: string }
-
-type AltState = { status: 'idle' | 'generating' | 'done' | 'error'; text: string }
-
-function sanitizeRef(filename: string): string {
+function buildExternalRef(filename: string): string {
   return filename
     .replace(/\.[^.]+$/, '')
     .replace(/[^a-zA-Z0-9_-]/g, '-')
@@ -23,14 +21,7 @@ function sanitizeRef(filename: string): string {
 }
 
 export function UploadTab({ token }: Props) {
-  const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
-  const [altState, setAltState] = useState<AltState>({ status: 'idle', text: '' })
-  const [credit, setCredit] = useState('')
-  const [locationRef, setLocationRef] = useState<number | ''>('')
-  const [uploadState, setUploadState] = useState<UploadState>({ status: 'idle' })
-  const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [locationRef, setLocationRef] = useState<number | null>(null)
 
   const { data: locationsData } = useQuery({
     queryKey: ['locations'],
@@ -39,154 +30,134 @@ export function UploadTab({ token }: Props) {
   })
   const locations = locationsData?.docs ?? []
 
-  const acceptFile = useCallback((f: File) => {
-    setFile(f)
-    setUploadState({ status: 'idle' })
-    setAltState({ status: 'idle', text: '' })
+  const externalRef = buildExternalRef(
+    typeof window !== 'undefined' ? `ml-upload-${Date.now()}` : 'ml-upload'
+  )
 
-    const objectUrl = URL.createObjectURL(f)
-    setPreview(objectUrl)
+  const {
+    stage,
+    isDragging,
+    selectedFile,
+    preview,
+    altText,
+    photographerCredit,
+    isGeneratingAlt,
+    progress,
+    preparedVariantFiles,
+    fileInputRef,
+    canContinueToCrop,
+    setStage,
+    setProgress,
+    setAltText,
+    setPhotographerCredit,
+    handleDrop,
+    handleDragOver,
+    handleDragLeave,
+    handleInputChange,
+    handleClear,
+    handleContinueToCrop,
+    handleCropConfirm,
+    handleRegenerateAltText,
+    retryUploadPrepared,
+    openFilePicker,
+  } = useImageUploadFlow({
+    externalRef,
+    locationRef: locationRef ?? 0,
+    token,
+    onComplete: () => {
+      setLocationRef(null)
+    },
+  })
 
-    setAltState({ status: 'generating', text: '' })
-    generateAltText(f)
-      .then((text) => setAltState({ status: 'done', text }))
-      .catch(() => setAltState({ status: 'error', text: '' }))
-  }, [])
+  const canProceed = canContinueToCrop && locationRef !== null
 
-  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (f) acceptFile(f)
+  if (stage === 'crop' && selectedFile) {
+    return (
+      <div className="ml-upload">
+        <MultiVariantCropper
+          file={selectedFile}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setStage('metadata')}
+        />
+      </div>
+    )
   }
 
-  const onDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setDragOver(false)
-    const f = e.dataTransfer.files?.[0]
-    if (f) acceptFile(f)
+  if (stage === 'uploading') {
+    return (
+      <div className="ml-upload">
+        <div className="ml-upload-progress-wrap">
+          <UploadProgressBar progress={progress} />
+        </div>
+      </div>
+    )
   }
 
-  const handleUpload = async () => {
-    if (!file || !locationRef) return
-
-    const externalRef = sanitizeRef(file.name)
-    const altText = altState.text.trim()
-    if (!altText) return
-
-    setUploadState({ status: 'uploading', progress: { status: 'uploading', progress: 0, message: 'Starting…' } })
-
-    try {
-      const result = await uploadImage(
-        file,
-        externalRef,
-        altText,
-        Number(locationRef),
-        token,
-        credit.trim(),
-        (progress) => setUploadState({ status: 'uploading', progress }),
-      )
-      setUploadState({ status: 'success', mediaSetId: result.mediaSetId ?? '' })
-      setFile(null)
-      setPreview(null)
-      setCredit('')
-      setLocationRef('')
-      setAltState({ status: 'idle', text: '' })
-    } catch (err) {
-      setUploadState({ status: 'error', message: String(err) })
-    }
+  if (progress.status === 'error') {
+    return (
+      <div className="ml-upload">
+        <UploadProgressBar
+          progress={progress}
+          canRetry={Boolean(preparedVariantFiles)}
+          canBackToCrop={Boolean(selectedFile)}
+          onRetry={retryUploadPrepared}
+          onBackToCrop={() => {
+            setProgress({ status: 'idle', progress: 0, message: '' })
+            setStage('crop')
+          }}
+          onStartOver={handleClear}
+        />
+      </div>
+    )
   }
 
-  const canUpload =
-    !!file &&
-    altState.text.trim() &&
-    !!locationRef &&
-    uploadState.status !== 'uploading'
-
-  return (
-    <div className="ml-upload">
-      {uploadState.status === 'success' && (
+  if (progress.status === 'success') {
+    return (
+      <div className="ml-upload">
         <div className="ml-upload-success">
-          ✅ MediaSet created successfully.{' '}
-          <button type="button" className="ml-link-btn" onClick={() => setUploadState({ status: 'idle' })}>
+          MediaSet created successfully.{' '}
+          <button type="button" className="ml-link-btn" onClick={handleClear}>
             Upload another
           </button>
         </div>
-      )}
+      </div>
+    )
+  }
 
-      {!file ? (
-        <div
-          className={`ml-dropzone ${dragOver ? 'drag-over' : ''}`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          onClick={() => fileInputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-        >
-          <span className="ml-dropzone-icon">📷</span>
-          <p>Drop an image here or click to browse</p>
-          <p className="ml-dropzone-hint">JPEG, PNG, WebP — max 25 MB</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={onFileChange}
-            className="ml-file-input-hidden"
-          />
-        </div>
-      ) : (
+  if (stage === 'metadata' && selectedFile) {
+    return (
+      <div className="ml-upload">
         <div className="ml-upload-form">
           <div className="ml-upload-preview-col">
             {preview && (
               <img className="ml-upload-preview" src={preview} alt="Preview" />
             )}
-            <p className="ml-upload-filename">{file.name}</p>
-            <button
-              type="button"
-              className="ml-link-btn"
-              onClick={() => {
-                setFile(null)
-                setPreview(null)
-                setAltState({ status: 'idle', text: '' })
-                setUploadState({ status: 'idle' })
-              }}
-            >
+            <p className="ml-upload-filename">{selectedFile.name}</p>
+            <button type="button" className="ml-link-btn" onClick={handleClear}>
               Choose a different file
             </button>
           </div>
 
           <div className="ml-upload-fields-col">
-            <label className="ml-field-label">
-              Alt text
-              {altState.status === 'generating' && (
-                <span className="ml-generating"> ✨ Generating…</span>
-              )}
-              <textarea
-                className="ml-field-input ml-field-textarea"
-                value={altState.text}
-                onChange={(e) => setAltState((s) => ({ ...s, text: e.target.value }))}
-                rows={3}
-                placeholder="Describe the image…"
-              />
-            </label>
+            <AltTextField
+              value={altText}
+              isGenerating={isGeneratingAlt}
+              onChange={setAltText}
+              onRegenerate={handleRegenerateAltText}
+            />
 
-            <label className="ml-field-label">
-              Photographer credit
-              <input
-                className="ml-field-input"
-                type="text"
-                value={credit}
-                onChange={(e) => setCredit(e.target.value)}
-                placeholder="Photographer name or source"
-              />
-            </label>
+            <PhotographerCreditField
+              value={photographerCredit}
+              showError={!photographerCredit.trim() && !isGeneratingAlt}
+              onChange={setPhotographerCredit}
+            />
 
             <label className="ml-field-label">
               Location <span className="ml-required">*</span>
               <select
                 className="ml-field-input"
-                value={locationRef}
-                onChange={(e) => setLocationRef(e.target.value ? Number(e.target.value) : '')}
+                value={locationRef ?? ''}
+                onChange={(e) => setLocationRef(e.target.value ? Number(e.target.value) : null)}
               >
                 <option value="">— select a location —</option>
                 {locations.map((l) => (
@@ -201,31 +172,31 @@ export function UploadTab({ token }: Props) {
               </select>
             </label>
 
-            {uploadState.status === 'uploading' && (
-              <div className="ml-upload-progress">
-                <div
-                  className="ml-upload-progress-bar"
-                  style={{ width: `${uploadState.progress.progress}%` }}
-                />
-                <span>{uploadState.progress.message}</span>
-              </div>
-            )}
-
-            {uploadState.status === 'error' && (
-              <div className="ml-field-error">{uploadState.message}</div>
-            )}
-
             <button
               type="button"
               className="ml-save-btn"
-              onClick={handleUpload}
-              disabled={!canUpload}
+              onClick={handleContinueToCrop}
+              disabled={!canProceed}
             >
-              {uploadState.status === 'uploading' ? 'Uploading…' : 'Upload & create MediaSet'}
+              Continue to crop
             </button>
           </div>
         </div>
-      )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="ml-upload">
+      <DropZone
+        isDragging={isDragging}
+        fileInputRef={fileInputRef}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onInputChange={handleInputChange}
+        onOpenPicker={openFilePicker}
+      />
     </div>
   )
 }

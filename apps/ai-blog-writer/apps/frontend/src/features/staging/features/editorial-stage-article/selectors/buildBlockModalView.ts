@@ -50,10 +50,6 @@ type BuildBlockModalViewInput = {
   blockImageExternalRef: string
   blockImageFileNamePrefix?: string
   token?: string
-  blockImageAltText: string
-  blockImagePhotographerCredit: string
-  setBlockImageAltText: Dispatch<SetStateAction<string>>
-  setBlockImagePhotographerCredit: Dispatch<SetStateAction<string>>
   handleBlockImageUploadComplete: (result: UploadImageResponse) => void
 
   externalImageCropDraft: ExternalImageCropDraft | null
@@ -139,10 +135,6 @@ export function buildBlockModalView(input: BuildBlockModalViewInput): BlockModal
       blockImageExternalRef: input.blockImageExternalRef,
       blockImageFileNamePrefix: input.blockImageFileNamePrefix,
       token: input.token,
-      blockImageAltText: input.blockImageAltText,
-      blockImagePhotographerCredit: input.blockImagePhotographerCredit,
-      setBlockImageAltText: input.setBlockImageAltText,
-      setBlockImagePhotographerCredit: input.setBlockImagePhotographerCredit,
       handleBlockImageUploadComplete: input.handleBlockImageUploadComplete,
     },
     external: {

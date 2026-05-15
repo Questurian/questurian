@@ -77,8 +77,6 @@ export function useEditorialStageBlockMedia({
   const [blockImageModal, setBlockImageModal] = useState<BlockImageModalState | null>(null)
   const [blockImageSource, setBlockImageSource] = useState<ImageSourceOption>('payload')
   const [blockImageSearch, setBlockImageSearch] = useState('')
-  const [blockImageAltText, setBlockImageAltText] = useState('')
-  const [blockImagePhotographerCredit, setBlockImagePhotographerCredit] = useState('')
   const [imgBlockAssets, setImgBlockAssets] = useState<MediaAsset[]>([])
   const [isLoadingImgBlockAssets, setIsLoadingImgBlockAssets] = useState(false)
   const [imgBlockAssetsError, setImgBlockAssetsError] = useState<string | null>(null)
@@ -450,10 +448,6 @@ export function useEditorialStageBlockMedia({
     setBlockImageSource,
     blockImageSearch,
     setBlockImageSearch,
-    blockImageAltText,
-    setBlockImageAltText,
-    blockImagePhotographerCredit,
-    setBlockImagePhotographerCredit,
     imgBlockAssets,
     isLoadingImgBlockAssets,
     imgBlockAssetsError,

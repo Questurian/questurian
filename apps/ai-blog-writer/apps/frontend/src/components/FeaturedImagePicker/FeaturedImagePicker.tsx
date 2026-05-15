@@ -155,10 +155,6 @@ export function FeaturedImagePicker({
   const [payloadError, setPayloadError] = useState<string | null>(null)
   const [fetchedSelectedAsset, setFetchedSelectedAsset] = useState<MediaAsset | null>(null)
 
-  // Upload tab
-  const [uploadAltText, setUploadAltText] = useState('')
-  const [uploadPhotographerCredit, setUploadPhotographerCredit] = useState('')
-
   // Unsplash tab
   const [unsplashQuery, setUnsplashQuery] = useState('')
   const [unsplashOrientation, setUnsplashOrientation] = useState<PexelsOrientation | ''>('')
@@ -848,11 +844,7 @@ export function FeaturedImagePicker({
                   fileNamePrefix={uploadIdentity.fileNamePrefix}
                   locationRef={locationRef}
                   token={token}
-                  altText={uploadAltText}
-                  photographerCredit={uploadPhotographerCredit}
-                  onUploadComplete={handleUploadComplete}
-                  onAltTextGenerated={setUploadAltText}
-                  onPhotographerCreditChange={setUploadPhotographerCredit}
+                  onComplete={handleUploadComplete}
                   onCancel={() => handleTabChange('payload')}
                 />
               )}

@@ -39,7 +39,7 @@ describe('useEditorialStageFeaturedMedia', () => {
 
     act(() => {
       vi.setSystemTime(new Date('2026-03-17T12:00:02.000Z'))
-      result.current.setImageAltText('Fresh upload alt text')
+      result.current.setImageSearch('some search query')
     })
 
     expect(result.current.featuredImageUploadExternalRef).toBe(firstOpenRef)

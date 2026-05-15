@@ -96,8 +96,6 @@ function CoverImagePickerModal({
   const [isBootstrappingPayload, setIsBootstrappingPayload] = useState(false)
   const [payloadSearch, setPayloadSearch] = useState('')
   const [payloadError, setPayloadError] = useState<string | null>(null)
-  const [uploadAltText, setUploadAltText] = useState('')
-  const [uploadPhotographerCredit, setUploadPhotographerCredit] = useState('')
   const [uploadExternalRef, setUploadExternalRef] = useState(() => buildUploadExternalRef(locationRef))
   const [unsplashQuery, setUnsplashQuery] = useState('')
   const [unsplashOrientation, setUnsplashOrientation] = useState<PexelsOrientation | ''>('')
@@ -573,11 +571,7 @@ function CoverImagePickerModal({
                   fileNamePrefix="location-cover"
                   locationRef={locationRef}
                   token={token}
-                  altText={uploadAltText}
-                  photographerCredit={uploadPhotographerCredit}
-                  onUploadComplete={handleUploadComplete}
-                  onAltTextGenerated={setUploadAltText}
-                  onPhotographerCreditChange={setUploadPhotographerCredit}
+                  onComplete={handleUploadComplete}
                   onCancel={() => handleTabChange('payload')}
                 />
               )}

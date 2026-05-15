@@ -58,6 +58,18 @@ Definition: UI choice rendered in a selector. Has `id`, `name`, `definition`.
 
 Definition: generic UI option for tone, length, brand voice, creativity level, etc.
 
+### Upload Flow
+
+Definition: the shared multi-stage process for adding images across all upload surfaces. Stages: select → metadata → crop → uploading → done. Implemented by `useImageUploadFlow`. Two variant modes: `'full'` (7-variant MediaSet via MultiVariantCropper) and `'og'` (single open_graph variant, fixed 1200×630 crop).
+
+### DropZone
+
+Definition: the shared file-selection primitive. Handles drag-and-drop and click-to-browse. Entry point for every Upload Flow. Rendered from `src/shared/images/components/upload-primitives/`.
+
+### Upload Primitive
+
+Definition: a shared UI atom used by every upload surface — `DropZone`, `AltTextField`, `PhotographerCreditField`, `UploadProgressBar`. All use the `iu-*` CSS namespace. No upload surface re-implements these; visual consistency is structural.
+
 ### `PipelineStartRequest`
 
 Definition: payload sent to backend to start a run.
@@ -100,6 +112,7 @@ Definition: LLM model selector for the editor-assist tools (e.g. `gemini-2.5-fla
 - **Polling, not WebSockets.** Simpler ops, acceptable latency.
 - **Lexical editor on the frontend** matches Payload's editor so the synced content round-trips faithfully.
 - **TanStack Query owns server-state shape**; component state stays local.
+- **Unified Upload Flow** — all image upload surfaces share `useImageUploadFlow` (uncontrolled) and Upload Primitives. See `docs/adr/0002-unified-image-upload-flow.md`.
 - → **Suggest ADR**: the Sync signature scheme isn't documented. If we add multi-user editing, this becomes contentious.
 
 ## AI Guidance

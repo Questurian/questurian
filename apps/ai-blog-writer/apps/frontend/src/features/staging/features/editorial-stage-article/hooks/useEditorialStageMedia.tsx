@@ -357,8 +357,6 @@ export function useEditorialStageMedia({
 
     featured.setFeaturedImageSource('payload')
     featured.setShowImageModal(false)
-    featured.setImageAltText('')
-    featured.setImagePhotographerCredit('')
   }, [featured, refreshMediaAssets, updateStagedArticle])
 
   const handleBlockImageUploadComplete = useCallback((result: UploadImageResponse) => {
@@ -373,7 +371,7 @@ export function useEditorialStageMedia({
       const addedBlockId = addImageAfterBlock(
         block.blockImageModal.blockId,
         blockAssetId,
-        block.blockImageAltText,
+        undefined,
         block.blockImageModal.replaceExistingBlock === true
       )
       if (!addedBlockId) {
@@ -390,8 +388,6 @@ export function useEditorialStageMedia({
     void refreshMediaAssets()
 
     block.closeBlockImageModal()
-    block.setBlockImageAltText('')
-    block.setBlockImagePhotographerCredit('')
   }, [
     addImageAfterBlock,
     block,

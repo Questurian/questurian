@@ -1,0 +1,270 @@
+/* ── Drop Zone ───────────────────────────────────────────────────────────── */
+.iu-drop-zone {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  text-align: center;
+  color: #6b7280;
+  user-select: none;
+}
+
+.iu-drop-zone:hover,
+.iu-drop-zone--dragging {
+  border-color: #4f46e5;
+  background: #f5f3ff;
+  color: #4338ca;
+}
+
+.iu-drop-zone__icon {
+  width: 40px;
+  height: 40px;
+  color: #9ca3af;
+  transition: color 0.15s;
+}
+
+.iu-drop-zone:hover .iu-drop-zone__icon,
+.iu-drop-zone--dragging .iu-drop-zone__icon {
+  color: #6366f1;
+}
+
+.iu-drop-zone__title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.iu-drop-zone__hint {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.iu-drop-zone--dragging .iu-drop-zone__hint {
+  color: #6366f1;
+}
+
+.iu-file-input {
+  display: none;
+}
+
+/* ── Alt Text Field ──────────────────────────────────────────────────────── */
+.iu-alt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.iu-alt-field__label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.iu-alt-field__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.iu-alt-field__generating {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #6366f1;
+  font-weight: 400;
+}
+
+.iu-alt-field__spinner {
+  width: 12px;
+  height: 12px;
+  animation: iu-spin 0.8s linear infinite;
+}
+
+@keyframes iu-spin {
+  to { transform: rotate(360deg); }
+}
+
+.iu-alt-field__textarea {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: #fff;
+  color: #111827;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.iu-alt-field__textarea:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.iu-alt-field__textarea:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.iu-alt-field__regen {
+  align-self: flex-start;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: #6366f1;
+  background: none;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.iu-alt-field__regen:hover:not(:disabled) {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+.iu-alt-field__regen:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Photographer Credit Field ───────────────────────────────────────────── */
+.iu-credit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.iu-credit-field__label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.iu-credit-field__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.iu-credit-field__required {
+  font-size: 0.8125rem;
+  color: #ef4444;
+}
+
+.iu-credit-field__input {
+  padding: 0.4rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: #fff;
+  color: #111827;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.iu-credit-field__input:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.iu-credit-field__error {
+  font-size: 0.75rem;
+  color: #ef4444;
+}
+
+/* ── Upload Progress Bar ─────────────────────────────────────────────────── */
+.iu-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.iu-progress__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.iu-progress__track {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.iu-progress__fill {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.iu-progress__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+}
+
+.iu-progress__error-icon {
+  width: 16px;
+  height: 16px;
+  color: #ef4444;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.iu-progress__error-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.iu-progress__error-message {
+  font-size: 0.875rem;
+  color: #ef4444;
+  margin: 0;
+}
+
+.iu-progress__error-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.iu-progress__error-action {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.iu-progress__error-action--primary {
+  color: #4f46e5;
+}
+
+.iu-progress__error-action:hover {
+  color: #111827;
+}

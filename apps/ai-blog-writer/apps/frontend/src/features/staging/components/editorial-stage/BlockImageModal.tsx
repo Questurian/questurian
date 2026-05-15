@@ -71,10 +71,6 @@ type BlockImageModalUploadProps = {
   blockImageExternalRef: string
   blockImageFileNamePrefix?: string
   token?: string
-  blockImageAltText: string
-  blockImagePhotographerCredit: string
-  setBlockImageAltText: Dispatch<SetStateAction<string>>
-  setBlockImagePhotographerCredit: Dispatch<SetStateAction<string>>
   handleBlockImageUploadComplete: (result: UploadImageResponse) => void
 }
 
@@ -178,10 +174,6 @@ export function BlockImageModal({
     blockImageExternalRef,
     blockImageFileNamePrefix,
     token,
-    blockImageAltText,
-    blockImagePhotographerCredit,
-    setBlockImageAltText,
-    setBlockImagePhotographerCredit,
     handleBlockImageUploadComplete,
   } = upload
   const {
@@ -588,11 +580,7 @@ export function BlockImageModal({
                     fileNamePrefix={blockImageFileNamePrefix}
                     locationRef={selectedLocation.id}
                     token={token || ''}
-                    altText={blockImageAltText}
-                    photographerCredit={blockImagePhotographerCredit}
-                    onUploadComplete={handleBlockImageUploadComplete}
-                    onAltTextGenerated={(text) => setBlockImageAltText(text)}
-                    onPhotographerCreditChange={(text) => setBlockImagePhotographerCredit(text)}
+                    onComplete={handleBlockImageUploadComplete}
                     onCancel={() => setBlockImageSource('payload')}
                   />
                 ) : (
