@@ -27,6 +27,13 @@ export interface TranslateMergeStats {
   errors: number;
 }
 
+export type MergedReviewsUnusableReason = "too_few_reviews";
+
+export interface MergedReviewsUsability {
+  unusable: boolean;
+  unusableReason: MergedReviewsUnusableReason | null;
+}
+
 export interface TranslateMergeRejectsReport {
   filename: string;
   totalRejected: number;
@@ -44,6 +51,7 @@ export interface TranslateMergeResult {
   message: string;
   filename: string;
   stats: TranslateMergeStats;
+  usability: MergedReviewsUsability;
   rejectsReport: TranslateMergeRejectsReport | null;
 }
 
@@ -66,6 +74,7 @@ export interface MergedReviewsFile {
   locationId: number;
   mergedAt: string;
   stats: TranslateMergeStats;
+  usability: MergedReviewsUsability;
   reviews: UnifiedReview[];
 }
 
@@ -94,14 +103,6 @@ export interface MinimalReview {
   date: string;
 }
 
-export interface Review2BlogExportReview {
-  reviewId: string;
-  source: ReviewSource;
-  date: string;
-  rating: number;
-  text: string;
-}
-
 export interface ReviewFileReference {
   filename: string;
   filepath: string;
@@ -116,6 +117,7 @@ export interface MergedReviewsReportPayload {
   locationId: number;
   mergedAt: string;
   stats: TranslateMergeStats;
+  usability: MergedReviewsUsability;
   rejectsReport: TranslateMergeRejectsSummary | null;
 }
 
@@ -124,4 +126,5 @@ export interface MergedReviewsStatusPayload {
   filename: string | null;
   mergedAt: string | null;
   stats: TranslateMergeStats | null;
+  usability: MergedReviewsUsability | null;
 }

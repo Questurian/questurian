@@ -75,6 +75,7 @@ export async function getMergedReviewsReportPayload(
     locationId: mergedData.locationId,
     mergedAt: mergedData.mergedAt,
     stats: mergedData.stats,
+    usability: mergedData.usability ?? { unusable: false, unusableReason: null },
     rejectsReport: rejectsSummary,
   };
 }
@@ -106,6 +107,7 @@ export async function getMergedReviewsStatusPayload(
       filename: null,
       mergedAt: null,
       stats: null,
+      usability: null,
     };
   }
 
@@ -116,6 +118,7 @@ export async function getMergedReviewsStatusPayload(
       filename: null,
       mergedAt: null,
       stats: null,
+      usability: null,
     };
   }
 
@@ -125,5 +128,6 @@ export async function getMergedReviewsStatusPayload(
     filename: mergedFile.filename,
     mergedAt: mergedData.mergedAt,
     stats: mergedData.stats,
+    usability: mergedData.usability ?? { unusable: false, unusableReason: null },
   };
 }

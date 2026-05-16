@@ -20,11 +20,15 @@ export type TranslateReviewsResult = {
   stats: Pick<TranslationRunStats, "needsTranslation" | "alreadyEnglish" | "translated" | "errors">;
 };
 
-export type FilterReviewsResult = {
-  filteredReviews: UnifiedReview[];
+export type PrefilterReviewsResult = {
+  kept: UnifiedReview[];
   filteredOutShort: number;
   filteredOutOld: number;
   filteredOutInvalidDate: number;
+};
+
+export type FilterReviewsResult = {
+  filteredReviews: UnifiedReview[];
   finalGoogleCount: number;
   finalTripAdvisorCount: number;
   finalTranslatedCount: number;

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { errorResponse, successResponse } from "@shared/types/api-response";
-import type { AccommodationsFieldSuggestionDto } from "../../validation/schemas/maps.schemas";
+import type { FieldSuggestionDto } from "../../validation/schemas/maps.schemas";
 
 const container = ServiceContainer.getInstance();
 const AI_TIMEOUT_MS = 60000;
@@ -9,7 +9,7 @@ const AI_TIMEOUT_MS = 60000;
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
-      reject(new Error(`Accommodations field suggestion timed out after ${timeoutMs}ms.`));
+      reject(new Error(`Field suggestion timed out after ${timeoutMs}ms.`));
     }, timeoutMs);
 
     promise.then(
@@ -25,8 +25,8 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-export async function postAccommodationsFieldSuggestion(c: Context) {
-  const dto = c.get("validatedBody") as AccommodationsFieldSuggestionDto;
+export async function postFieldSuggestion(c: Context) {
+  const dto = c.get("validatedBody") as FieldSuggestionDto;
 
   try {
     const suggestion = await withTimeout(
@@ -36,11 +36,11 @@ export async function postAccommodationsFieldSuggestion(c: Context) {
     return c.json(successResponse(suggestion));
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to generate accommodations field suggestion";
+      error instanceof Error ? error.message : "Failed to generate field suggestion";
 
-    console.error("[AccommodationsFieldSuggestions] Failed", {
+    console.error("[FieldSuggestions] Failed", {
+      category: dto.category,
+      locationId: dto.locationId,
       fieldKey: dto.fieldKey,
       error: message,
     });

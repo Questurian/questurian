@@ -61,14 +61,30 @@ export async function loadSourceReviews(
       return 0;
     });
 
+    // Read all files in parallel; dedupe is order-dependent so it stays sequential below.
+    const loadedFiles = await Promise.all(
+      sortedFiles.map(async (file) => {
+        try {
+          const data = await readJsonFile<unknown>(file);
+          return { file, data, error: null as Error | null };
+        } catch (error) {
+          return { file, data: null, error: error as Error };
+        }
+      })
+    );
+
     const reviewSourceFile = new Map<string, string>();
     let totalTripAdvisorLoaded = 0;
 
-    for (const file of sortedFiles) {
+    for (const { file, data, error: loadError } of loadedFiles) {
       const filename = path.basename(file);
 
+      if (loadError) {
+        console.error(`[Translate & Merge] Error loading TripAdvisor reviews from ${file}:`, loadError);
+        continue;
+      }
+
       try {
-        const data = await readJsonFile<unknown>(file);
         const tripadvisorReviews = parseTripAdvisorReviews(data);
         totalTripAdvisorLoaded += tripadvisorReviews.length;
 
@@ -131,7 +147,7 @@ export async function loadSourceReviews(
           `[Translate & Merge] Loaded ${tripadvisorReviews.length} reviews from ${filename} (${newUnique} new unique, ${tripadvisorReviews.length - newUnique} duplicates)`
         );
       } catch (error) {
-        console.error(`[Translate & Merge] Error loading TripAdvisor reviews from ${file}:`, error);
+        console.error(`[Translate & Merge] Error parsing TripAdvisor reviews from ${file}:`, error);
       }
     }
 

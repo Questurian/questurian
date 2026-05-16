@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ACCOMMODATIONS_SUGGESTION_FIELD_KEYS } from "@shared/types/accommodations-options";
+import { LOCATION_CATEGORIES } from "@shared/types/location-category";
 import type { LocationCategory } from "@shared/types/location-category";
 import { getIdealForTags, isValidIdealForTag } from "@shared/types/location-ideal-for";
 
@@ -165,7 +166,9 @@ const accommodationsOptionSchema = z.object({
   description: z.string().trim().optional().default(""),
 });
 
-export const accommodationsFieldSuggestionSchema = z.object({
+export const fieldSuggestionSchema = z.object({
+  category: z.enum(LOCATION_CATEGORIES),
+  locationId: z.number().int().positive().optional(),
   fieldKey: z.enum(ACCOMMODATIONS_SUGGESTION_FIELD_KEYS),
   formValues: z.record(z.any()).refine((values) => {
     const name = typeof values.name === "string" ? values.name.trim() : "";
@@ -283,5 +286,5 @@ export const patchMapsSchema = z.object({
 
 export type CreateMapsDto = z.infer<typeof createMapsSchema>;
 export type GooglePrefillDto = z.infer<typeof googlePrefillSchema>;
-export type AccommodationsFieldSuggestionDto = z.infer<typeof accommodationsFieldSuggestionSchema>;
+export type FieldSuggestionDto = z.infer<typeof fieldSuggestionSchema>;
 export type PatchMapsDto = z.infer<typeof patchMapsSchema>;

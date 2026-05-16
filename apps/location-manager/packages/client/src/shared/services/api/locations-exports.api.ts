@@ -25,8 +25,4 @@ export const locationsExportsApi = {
   getLocationExportDownloadUrl(category: Category, id: number): string {
     return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_LOCATION_EXPORT(category, id)}`;
   },
-
-  getAiJsonDownloadUrl(category: Category, id: number): string {
-    return `${API_BASE_URL}${API_ENDPOINTS.DOWNLOAD_AI_JSON(category, id)}`;
-  },
 };

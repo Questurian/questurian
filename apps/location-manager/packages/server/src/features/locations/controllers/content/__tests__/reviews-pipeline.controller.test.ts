@@ -38,6 +38,7 @@ describe("reviews pipeline inclusion", () => {
               tripadvisorReviews: includeTripadvisor ? 7 : 0,
               ...baseMergeStats,
             },
+            usability: { unusable: false, unusableReason: null },
             rejectsReport: null,
           };
         },
@@ -80,6 +81,7 @@ describe("reviews pipeline inclusion", () => {
               tripadvisorReviews: includeTripadvisor ? 7 : 0,
               ...baseMergeStats,
             },
+            usability: { unusable: false, unusableReason: null },
             rejectsReport: null,
           };
         },
@@ -126,6 +128,7 @@ describe("reviews pipeline inclusion", () => {
               tripadvisorReviews: includeTripadvisor ? 6 : 0,
               ...baseMergeStats,
             },
+            usability: { unusable: false, unusableReason: null },
             rejectsReport: null,
           };
         },

@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
   GET_LOCATION_BY_ID: (category: Category, id: number) => `/api/${category}/${id}`,
   CREATE_LOCATION: (category: Category) => `/api/${category}`,
   GOOGLE_PREFILL: (category: Category) => `/api/${category}/google-prefill`,
-  ACCOMMODATIONS_FIELD_SUGGESTIONS: "/api/accommodations/field-suggestions",
+  FIELD_SUGGESTIONS: "/api/field-suggestions",
   UPDATE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   DELETE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   REFETCH_PLACE_ID: (category: Category, id: number) => `/api/${category}/${id}/refetch-place-id`,
@@ -94,7 +94,6 @@ export const API_ENDPOINTS = {
 
   // Location Export (location + TripAdvisor place, no reviews)
   DOWNLOAD_LOCATION_EXPORT: (category: Category, id: number) => `/api/${category}/${id}/export`,
-  DOWNLOAD_AI_JSON: (category: Category, id: number) => `/api/${category}/${id}/ai-json/download`,
 
   // Merged Reviews (translate & merge)
   TRANSLATE_MERGE_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/translate-merge`,

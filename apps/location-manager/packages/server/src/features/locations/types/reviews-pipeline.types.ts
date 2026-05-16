@@ -1,4 +1,4 @@
-import type { ReviewSource } from "./translate-merge-reviews.types";
+import type { MergedReviewsUsability, ReviewSource } from "./translate-merge-reviews.types";
 
 export interface FetchReviewsPipelineDto {
   sources?: ReviewSource[];
@@ -40,6 +40,7 @@ export interface MergedReviewsResult {
     alreadyEnglish: number;
     errors: number;
   };
+  usability: MergedReviewsUsability;
   rejectsReport: {
     filename: string;
     totalRejected: number;

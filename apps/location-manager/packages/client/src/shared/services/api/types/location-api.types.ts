@@ -85,6 +85,8 @@ export type AccommodationsFieldSuggestionFieldKey =
   | "walkability";
 
 export interface AccommodationsFieldSuggestionRequest {
+  category: Category;
+  locationId?: number;
   fieldKey: AccommodationsFieldSuggestionFieldKey;
   formValues: Record<string, unknown>;
   apiContext?: Record<string, unknown>;
@@ -108,6 +110,7 @@ export interface AccommodationsFieldSuggestionResponse {
     snippet?: string;
   }>;
   source: "existing-data" | "ai";
+  reviewsUsed: boolean;
   error?: string;
 }
 

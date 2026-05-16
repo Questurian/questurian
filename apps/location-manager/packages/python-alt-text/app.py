@@ -84,13 +84,24 @@ class AccommodationsOption(BaseModel):
     description: str | None = None
 
 
-class AccommodationsFieldSuggestionRequest(BaseModel):
+class ReviewSample(BaseModel):
+    text: str
+    rating: float | int | None = None
+    date: str | None = None
+
+
+SUPPORTED_FIELD_SUGGESTION_CATEGORIES = {"accommodations"}
+
+
+class FieldSuggestionRequest(BaseModel):
+    category: str
     field_key: str
     field_label: str
     kind: str
     allowed_options: list[AccommodationsOption]
     form_values: dict
     api_context: dict | None = None
+    reviews: list[ReviewSample] | None = None
 
 
 def ensure_vertex_initialized() -> None:
@@ -161,9 +172,7 @@ def build_neighborhood_description_prompt(
     )
 
 
-def build_accommodations_field_suggestion_prompt(
-    request: AccommodationsFieldSuggestionRequest,
-) -> str:
+def build_field_suggestion_prompt(request: FieldSuggestionRequest) -> str:
     allowed_options = [
         {
             "value": option.value,
@@ -172,6 +181,20 @@ def build_accommodations_field_suggestion_prompt(
         }
         for option in request.allowed_options
     ]
+
+    reviews_present = bool(request.reviews)
+    review_payload = (
+        [
+            {
+                "text": review.text,
+                "rating": review.rating,
+                "date": review.date,
+            }
+            for review in (request.reviews or [])
+        ]
+        if reviews_present
+        else []
+    )
 
     context = {
         "field": {
@@ -182,11 +205,24 @@ def build_accommodations_field_suggestion_prompt(
         "allowed_options": allowed_options,
         "current_form_values": request.form_values,
         "google_foursquare_prefill": request.api_context or {},
+        "guest_reviews": review_payload,
     }
 
+    if reviews_present:
+        evidence_priority = (
+            "Use guest reviews as the primary evidence. Real first-person reports describe vibe, "
+            "perfect_for, amenities actually used, and the on-the-ground walkability.\n"
+            "Use Google/Foursquare prefill as a tiebreak when reviews are ambiguous or silent.\n"
+            "Only fall back to Google Search grounding if reviews and prefill are both silent.\n"
+        )
+    else:
+        evidence_priority = (
+            "Use Google/Foursquare prefill evidence first. If that is insufficient, use Google Search grounding.\n"
+        )
+
     return (
-        "You suggest one missing accommodations form option for a location-management database.\n"
-        "Use Google/Foursquare prefill evidence first. If that is insufficient, use Google Search grounding.\n"
+        f"You suggest one missing {request.category} form option for a location-management database.\n"
+        f"{evidence_priority}"
         "Return only JSON. Do not return markdown.\n"
         "The suggestion must use exact option value strings from allowed_options only.\n"
         "For kind=single, suggestion must be one string or null.\n"
@@ -299,16 +335,19 @@ def generate_grounded_json_from_prompt(
         return parse_json_object(generate_text_from_prompt(prompt, model_name))
 
 
-def generate_accommodations_field_suggestion(
-    request: AccommodationsFieldSuggestionRequest,
-) -> dict:
+def generate_field_suggestion(request: FieldSuggestionRequest) -> dict:
+    if request.category not in SUPPORTED_FIELD_SUGGESTION_CATEGORIES:
+        raise ValueError(
+            f"category '{request.category}' is not implemented yet. "
+            f"Supported: {sorted(SUPPORTED_FIELD_SUGGESTION_CATEGORIES)}"
+        )
     if request.kind not in {"single", "multi"}:
         raise ValueError("kind must be single or multi.")
     if not request.allowed_options:
         raise ValueError("allowed_options cannot be empty.")
 
     return generate_grounded_json_from_prompt(
-        build_accommodations_field_suggestion_prompt(request),
+        build_field_suggestion_prompt(request),
         ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
     )
 
@@ -337,7 +376,7 @@ async def test_endpoint():
         "provider": "vertex-gemini",
         "model": ALT_TEXT_MODEL,
         "neighborhood_description_model": NEIGHBORHOOD_DESCRIPTION_MODEL,
-        "accommodations_field_suggestion_model": ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
+        "field_suggestion_model": ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
     }
 
 
@@ -389,15 +428,18 @@ async def neighborhood_description(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@app.post("/accommodations-field-suggestion")
-async def accommodations_field_suggestion(
-    request: AccommodationsFieldSuggestionRequest,
-):
-    try:
-        result = await asyncio.to_thread(
-            generate_accommodations_field_suggestion,
-            request,
+@app.post("/field-suggestion")
+async def field_suggestion(request: FieldSuggestionRequest):
+    if request.category not in SUPPORTED_FIELD_SUGGESTION_CATEGORIES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"category '{request.category}' is not implemented yet. "
+                f"Supported: {sorted(SUPPORTED_FIELD_SUGGESTION_CATEGORIES)}"
+            ),
         )
+    try:
+        result = await asyncio.to_thread(generate_field_suggestion, request)
         return {
             "suggestion": result.get("suggestion"),
             "confidence": result.get("confidence", 0),
@@ -407,7 +449,7 @@ async def accommodations_field_suggestion(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception("Vertex accommodations field suggestion failed")
+        logger.exception("Vertex field suggestion failed (category=%s)", request.category)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

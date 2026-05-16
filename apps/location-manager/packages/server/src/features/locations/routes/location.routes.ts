@@ -2,7 +2,7 @@ import { app } from "@server/shared/http/server";
 import { validateBody, validateParams, validateQuery } from "@server/shared/core/middleware/validation.middleware";
 import { errorResponse } from "@shared/types/api-response";
 import {
-  accommodationsFieldSuggestionSchema,
+  fieldSuggestionSchema,
   createMapsSchema,
   googlePrefillSchema,
   patchMapsSchema,
@@ -37,7 +37,7 @@ import {
   refetchPlaceId,
   getTours, getTour, postTour, patchTour, postTourMediaSet,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
-  postAddMaps, patchMapsById, postGooglePrefill, postAccommodationsFieldSuggestion,
+  postAddMaps, patchMapsById, postGooglePrefill, postFieldSuggestion,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
   // Content
@@ -46,7 +46,7 @@ import {
   serveImage,
   fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
   fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
-  fetchTripAdvisorPlace, downloadTripAdvisorPlace, getTripAdvisorPlaceStatus, downloadLocationExport, downloadAiJson,
+  fetchTripAdvisorPlace, downloadTripAdvisorPlace, getTripAdvisorPlaceStatus, downloadLocationExport,
   translateAndMergeReviews, downloadMergedReviews, getMergedReviewsStatus, getMergedReviewsReport, downloadRejectsReport,
 
   // Admin
@@ -152,7 +152,6 @@ for (const category of CATEGORY_ROUTES) {
 
   // Export (location + TripAdvisor place data)
   app.get(`/api/${category}/:id/export`, routeCategory, validateParams(deleteLocationIdSchema), downloadLocationExport);
-  app.get(`/api/${category}/:id/ai-json/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadAiJson);
 
   // Merged Reviews (translate & merge)
   app.post(`/api/${category}/:id/reviews/translate-merge`, routeCategory, validateParams(deleteLocationIdSchema), translateAndMergeReviews);
@@ -164,9 +163,9 @@ for (const category of CATEGORY_ROUTES) {
 
 app.post("/api/generate-alt-text", postGenerateAltText);
 app.post(
-  "/api/accommodations/field-suggestions",
-  validateBody(accommodationsFieldSuggestionSchema),
-  postAccommodationsFieldSuggestion
+  "/api/field-suggestions",
+  validateBody(fieldSuggestionSchema),
+  postFieldSuggestion
 );
 app.delete(
   "/api/uploads/:id",

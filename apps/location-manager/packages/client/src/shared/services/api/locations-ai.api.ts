@@ -17,11 +17,11 @@ export const locationsAiApi = {
     );
   },
 
-  async suggestAccommodationsField(
+  async suggestField(
     request: AccommodationsFieldSuggestionRequest
   ): Promise<AccommodationsFieldSuggestionResponse> {
     return apiPost<AccommodationsFieldSuggestionResponse>(
-      API_ENDPOINTS.ACCOMMODATIONS_FIELD_SUGGESTIONS,
+      API_ENDPOINTS.FIELD_SUGGESTIONS,
       request
     );
   },

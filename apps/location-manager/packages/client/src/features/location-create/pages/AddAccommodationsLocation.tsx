@@ -1080,7 +1080,8 @@ export function AddAccommodationsLocation() {
     setPendingFields((prev) => new Set(prev).add(fieldKey));
 
     try {
-      const response = await locationsApi.suggestAccommodationsField({
+      const response = await locationsApi.suggestField({
+        category: "accommodations",
         fieldKey,
         formValues: form.getValues() as unknown as Record<string, unknown>,
         apiContext: {
@@ -1107,6 +1108,7 @@ export function AddAccommodationsLocation() {
           kind: field.kind,
           confidence: 0,
           source: "ai",
+          reviewsUsed: false,
           reason: "",
           sources: [],
           error: getErrorMessage(err),

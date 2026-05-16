@@ -16,7 +16,14 @@ export interface NeighborhoodDescriptionGenerationInput {
   address?: string | null;
 }
 
-export interface AccommodationsFieldSuggestionAiRequest {
+export interface FieldSuggestionAiReviewSample {
+  text: string;
+  rating: number | null;
+  date: string | null;
+}
+
+export interface FieldSuggestionAiRequest {
+  category: string;
   field_key: string;
   field_label: string;
   kind: "single" | "multi";
@@ -27,9 +34,10 @@ export interface AccommodationsFieldSuggestionAiRequest {
   }>;
   form_values: Record<string, unknown>;
   api_context: Record<string, unknown>;
+  reviews?: FieldSuggestionAiReviewSample[];
 }
 
-export interface AccommodationsFieldSuggestionAiResponse {
+export interface FieldSuggestionAiResponse {
   suggestion: string | string[] | null;
   confidence: number;
   reason: string;
@@ -39,6 +47,11 @@ export interface AccommodationsFieldSuggestionAiResponse {
     snippet?: string;
   }>;
 }
+
+// Back-compat aliases — the old names are still referenced by accommodations-field-suggestion.service.ts.
+// These will be removed once that service is renamed.
+export type AccommodationsFieldSuggestionAiRequest = FieldSuggestionAiRequest;
+export type AccommodationsFieldSuggestionAiResponse = FieldSuggestionAiResponse;
 
 export class AltTextApiClient {
   private baseUrl: string;
@@ -114,12 +127,12 @@ export class AltTextApiClient {
   }
 
   /**
-   * Suggest one accommodations option field from grounded Gemini research.
+   * Suggest one option field via the generalized /field-suggestion endpoint.
+   * Pass `reviews` only when the location has usable merged reviews; the prompt
+   * branch depends on their presence.
    */
-  async suggestAccommodationsField(
-    input: AccommodationsFieldSuggestionAiRequest
-  ): Promise<AccommodationsFieldSuggestionAiResponse> {
-    const response = await fetch(`${this.baseUrl}/accommodations-field-suggestion`, {
+  async suggestField(input: FieldSuggestionAiRequest): Promise<FieldSuggestionAiResponse> {
+    const response = await fetch(`${this.baseUrl}/field-suggestion`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -130,11 +143,9 @@ export class AltTextApiClient {
     if (!response.ok) {
       const errorDetail = (await response.text().catch(() => "")).trim();
       const errorMessage = errorDetail || response.statusText;
-      throw new Error(
-        `Accommodations field suggestion failed (${response.status}): ${errorMessage}`
-      );
+      throw new Error(`Field suggestion failed (${response.status}): ${errorMessage}`);
     }
 
-    return response.json() as Promise<AccommodationsFieldSuggestionAiResponse>;
+    return response.json() as Promise<FieldSuggestionAiResponse>;
   }
 }

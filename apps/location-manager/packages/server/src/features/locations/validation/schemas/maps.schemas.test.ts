@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-  accommodationsFieldSuggestionSchema,
+  fieldSuggestionSchema,
   createMapsSchema,
   googlePrefillSchema,
   patchMapsSchema,
@@ -232,9 +232,10 @@ describe("google prefill schema", () => {
   });
 });
 
-describe("accommodations field suggestion schema", () => {
+describe("field suggestion schema", () => {
   test("accepts valid suggestion request with Step 1 context", () => {
-    const result = accommodationsFieldSuggestionSchema.safeParse({
+    const result = fieldSuggestionSchema.safeParse({
+      category: "accommodations",
       fieldKey: "wifi",
       formValues: {
         name: "Example Hotel",
@@ -245,12 +246,40 @@ describe("accommodations field suggestion schema", () => {
     expect(result.success).toBe(true);
   });
 
+  test("accepts optional locationId for edit flow", () => {
+    const result = fieldSuggestionSchema.safeParse({
+      category: "accommodations",
+      locationId: 100,
+      fieldKey: "vibe",
+      formValues: {
+        name: "Example Hotel",
+        address: "123 Main St",
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   test("rejects missing Step 1 context", () => {
-    const result = accommodationsFieldSuggestionSchema.safeParse({
+    const result = fieldSuggestionSchema.safeParse({
+      category: "accommodations",
       fieldKey: "wifi",
       formValues: {
         name: "Example Hotel",
         address: "",
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects unknown category", () => {
+    const result = fieldSuggestionSchema.safeParse({
+      category: "bogus",
+      fieldKey: "wifi",
+      formValues: {
+        name: "Example Hotel",
+        address: "123 Main St",
       },
     });
 

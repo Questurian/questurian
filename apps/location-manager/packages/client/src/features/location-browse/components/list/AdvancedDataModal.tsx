@@ -88,7 +88,6 @@ export function AdvancedDataModal({
     enabled: isOpen && Boolean(locationDetail?.id) && hasCategory,
   });
   const downloadTripAdvisorPlace = useDownloadTripAdvisorPlace();
-  const canDownloadAiJson = Boolean(mergedReviewsStatusQuery.data?.hasMergedReviews);
 
   const refetchPlaceIdMutation = useRefetchPlaceId({
     category: category as Category,
@@ -421,25 +420,6 @@ export function AdvancedDataModal({
                   title="Download location data with TripAdvisor place info (no reviews)"
                 >
                   Export Location
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 px-3 text-sm"
-                  onClick={() =>
-                    window.open(
-                      locationsApi.getAiJsonDownloadUrl(locationDetail.category, locationDetail.id),
-                      "_blank"
-                    )
-                  }
-                  disabled={!canDownloadAiJson || !hasCategory}
-                  title={
-                    canDownloadAiJson
-                      ? "Download review2blog export JSON (category facts + normalized reviews)"
-                      : "Requires merged reviews"
-                  }
-                >
-                  AI-JSON
                 </Button>
               </div>
             </section>

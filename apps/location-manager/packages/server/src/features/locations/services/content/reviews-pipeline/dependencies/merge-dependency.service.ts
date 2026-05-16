@@ -16,6 +16,7 @@ export function createPipelineMergeDependency(): PipelineMergeDependency {
       return {
         filename: merged.filename,
         stats: merged.stats,
+        usability: merged.usability,
         rejectsReport: merged.rejectsReport,
       };
     },

@@ -4,14 +4,16 @@ import {
   saveMergedReviewsFile,
   saveRejectsReportFile,
 } from "../../../repositories/content/translate-merge-reviews.repository";
+import { MIN_USABLE_REVIEW_COUNT } from "../../../constants/translate-merge-reviews.constants";
 import type {
+  MergedReviewsUsability,
   RejectsReportFile,
   TranslateMergeOptions,
   TranslateMergeRejectsReport,
   TranslateMergeResult,
 } from "../../../types/translate-merge-reviews.types";
 import { TranslateMergeError } from "./errors";
-import { dedupeAndFilterReviews } from "./filtering.service";
+import { prefilterByLengthAndDate, sortAndCount } from "./filtering.service";
 import { buildRejectsSummary, countRejectedByAction } from "./helpers.utils";
 import {
   getMergedReviewsDownloadPayload,
@@ -24,6 +26,13 @@ import { translateReviews } from "./translation.service";
 
 const config = EnvConfig.getInstance();
 const translationClient = new TranslationApiClient(config);
+
+function evaluateUsability(count: number): MergedReviewsUsability {
+  if (count < MIN_USABLE_REVIEW_COUNT) {
+    return { unusable: true, unusableReason: "too_few_reviews" };
+  }
+  return { unusable: false, unusableReason: null };
+}
 
 export async function runTranslateAndMergeReviews(
   locationId: number,
@@ -53,40 +62,58 @@ export async function runTranslateAndMergeReviews(
   }
 
   console.log("[Translate & Merge] ----------------------------------------");
-  console.log(`[Translate & Merge] Total reviews before translation: ${allReviews.length}`);
+  console.log(`[Translate & Merge] Total reviews before pre-filter: ${allReviews.length}`);
   console.log(`[Translate & Merge]   - Google: ${stats.googleReviews}`);
   console.log(`[Translate & Merge]   - TripAdvisor (unique): ${stats.tripadvisorReviews}`);
 
-  const translationStep = await translateReviews(allReviews, translationClient, config.LEADS_API_URL);
-  stats.needsTranslation = translationStep.stats.needsTranslation;
-  stats.alreadyEnglish = translationStep.stats.alreadyEnglish;
-  stats.translated = translationStep.stats.translated;
-  stats.errors = translationStep.stats.errors;
-
-  const filtered = dedupeAndFilterReviews(translationStep.mergedReviews);
-
+  const prefiltered = prefilterByLengthAndDate(allReviews);
   console.log(
-    `[Translate & Merge] Final counts - Google: ${filtered.finalGoogleCount}, TripAdvisor: ${filtered.finalTripAdvisorCount}, Total: ${filtered.filteredReviews.length}`
+    `[Translate & Merge] Pre-filter (raw text): kept ${prefiltered.kept.length}/${allReviews.length} (short: ${prefiltered.filteredOutShort}, old: ${prefiltered.filteredOutOld}, invalid date: ${prefiltered.filteredOutInvalidDate})`
   );
 
+  const translationStep = await translateReviews(
+    locationId,
+    prefiltered.kept,
+    translationClient,
+    config.LEADS_API_URL
+  );
+  stats.translated = translationStep.stats.translated;
+  stats.alreadyEnglish = translationStep.stats.alreadyEnglish;
+  stats.errors = translationStep.stats.errors;
+
+  const finalized = sortAndCount(translationStep.mergedReviews);
+
+  console.log(
+    `[Translate & Merge] Final counts - Google: ${finalized.finalGoogleCount}, TripAdvisor: ${finalized.finalTripAdvisorCount}, Total: ${finalized.filteredReviews.length}`
+  );
+
+  const usability = evaluateUsability(finalized.filteredReviews.length);
+  if (usability.unusable) {
+    console.warn(
+      `[Translate & Merge] Merged reviews flagged unusable: ${finalized.filteredReviews.length} < MIN_USABLE_REVIEW_COUNT (${MIN_USABLE_REVIEW_COUNT}). Reason: ${usability.unusableReason}`
+    );
+  }
+
   const timestamp = Date.now();
+  const outputStats = {
+    totalReviews: finalized.filteredReviews.length,
+    googleReviews: finalized.finalGoogleCount,
+    tripadvisorReviews: finalized.finalTripAdvisorCount,
+    translated: finalized.finalTranslatedCount,
+    alreadyEnglish: finalized.finalAlreadyEnglishCount,
+    errors: stats.errors,
+  };
   const outputData = {
     locationId,
     mergedAt: new Date().toISOString(),
-    stats: {
-      totalReviews: filtered.filteredReviews.length,
-      googleReviews: filtered.finalGoogleCount,
-      tripadvisorReviews: filtered.finalTripAdvisorCount,
-      translated: filtered.finalTranslatedCount,
-      alreadyEnglish: filtered.finalAlreadyEnglishCount,
-      errors: stats.errors,
-    },
-    reviews: filtered.filteredReviews,
+    stats: outputStats,
+    usability,
+    reviews: finalized.filteredReviews,
   };
 
   const mergedFile = await saveMergedReviewsFile(locationId, timestamp, outputData);
   console.log(
-    `[Translate & Merge] Saved ${filtered.filteredReviews.length} merged reviews to ${mergedFile.filename}`
+    `[Translate & Merge] Saved ${finalized.filteredReviews.length} merged reviews to ${mergedFile.filename}`
   );
 
   let rejectsSummary: TranslateMergeRejectsReport | null = null;
@@ -121,9 +148,12 @@ export async function runTranslateAndMergeReviews(
   }
 
   return {
-    message: `Successfully merged ${filtered.filteredReviews.length} reviews`,
+    message: usability.unusable
+      ? `Merged ${finalized.filteredReviews.length} reviews — below usable threshold (${MIN_USABLE_REVIEW_COUNT}); consumers should fall back to pure-AI mode`
+      : `Successfully merged ${finalized.filteredReviews.length} reviews`,
     filename: mergedFile.filename,
-    stats: outputData.stats,
+    stats: outputStats,
+    usability,
     rejectsReport: rejectsSummary,
   };
 }

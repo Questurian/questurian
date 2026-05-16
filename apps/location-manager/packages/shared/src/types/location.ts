@@ -149,62 +149,6 @@ export interface ReviewsChecklist {
 }
 
 // ============================================================================
-// JSON EXPORT CHECKLIST
-// ============================================================================
-
-export type ExportFieldType = 'string' | 'number' | 'date' | 'object' | 'array' | 'boolean';
-
-export interface ExportField {
-  name: string;
-  type: ExportFieldType;
-  value?: any;
-  valueCount?: number;
-  included: boolean;
-  required: boolean;
-  status: 'complete' | 'missing' | 'partial';
-  source?: 'location' | 'google_reviews' | 'tripadvisor' | 'merged_reviews';
-}
-
-export interface ExportSection {
-  name: string;
-  completionPercent: number;
-  fields: ExportField[];
-}
-
-export interface SingleExportChecklist {
-  completionPercent: number;
-  canExport: boolean;
-  fileSize: string;
-  sections: ExportSection[];
-  actions: {
-    download: boolean;
-    preview: boolean;
-  };
-}
-
-export interface JsonExportChecklist {
-  locationExport: SingleExportChecklist;
-  aiJsonExport: SingleExportChecklist & {
-    qualityScore: number;
-  };
-  comparison: {
-    fieldsOnlyInLocationExport: string[];
-    fieldsOnlyInAiJson: string[];
-    fieldsInBoth: string[];
-  };
-}
-
-// ============================================================================
-// COMBINED PIPELINE STATUS
-// ============================================================================
-
-export interface CombinedPipelineStatus {
-  payload_sync: PayloadSyncChecklist;
-  reviews: ReviewsChecklist;
-  json_export: JsonExportChecklist;
-}
-
-// ============================================================================
 // API RESPONSE TYPES
 // ============================================================================
 

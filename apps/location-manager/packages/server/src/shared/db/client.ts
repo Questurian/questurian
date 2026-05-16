@@ -4,6 +4,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "url";
 import { splitLocationsToEntities } from "./migrations/split-locations-to-entities";
 import { clearInvalidNightlifeIdealFor } from "./migrations/clear-invalid-nightlife-ideal-for";
+import { addTranslationsCacheTable } from "./migrations/add-translations-cache";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -61,6 +62,8 @@ export function initDb() {
 
   // Strict schema path only: entities + category-isolated tables + entity-referenced content tables.
   splitLocationsToEntities(database);
+
+  addTranslationsCacheTable(database);
 
   const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
   if (nightlifeIdealForCleanup.cleared > 0) {

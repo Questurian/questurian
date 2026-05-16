@@ -93,8 +93,6 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
       tripAdvisorPlaceStatusQuery.data?.hasPlaceData,
     ]
   );
-  const canDownloadAiJson = hasMergedReviews;
-
   const sources = useMemo<FetchReviewsPipelineRequest["sources"]>(() => {
     if (!reviewsEnabled) {
       return [];
@@ -237,27 +235,6 @@ export function LocationReviewsSection({ locationDetail }: LocationReviewsSectio
             >
               <Download className="h-3.5 w-3.5 mr-1" />
               Download
-            </Button>
-          )}
-          {!isReviewsDisabled && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                window.open(
-                  locationsApi.getAiJsonDownloadUrl(locationDetail.category, locationDetail.id),
-                  "_blank"
-                );
-              }}
-              disabled={fetchReviewsPipelineMutation.isPending || !canDownloadAiJson}
-              title={
-                canDownloadAiJson
-                  ? "Download review2blog export JSON (category facts + normalized reviews)"
-                  : "Requires merged reviews"
-              }
-            >
-              AI-JSON
             </Button>
           )}
         </div>

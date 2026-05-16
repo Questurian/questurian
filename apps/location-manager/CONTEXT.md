@@ -61,17 +61,12 @@ Progress for the Google + TripAdvisor fetch + merge pipeline.
 
 ### Merged Reviews
 
-Location-scoped file of Google and TripAdvisor reviews after translation, deduplication, length filtering, date filtering, and sorting.
+Location-scoped file of Google and TripAdvisor reviews after deduplication, length filtering, date filtering, translation, and sorting (filters run on raw source text before translation to avoid paying for reviews that will be discarded). The file carries an `unusable: true` flag with a `reason` when the clean review count falls below `MIN_USABLE_REVIEW_COUNT` (currently 5); consumers must inspect this flag and fall back to pure-AI mode when set. Merged Reviews are the canonical review dataset — there is no separate extracted artifact today.
 Do not confuse with: public article text or Questura's production collection fields.
 
-### AI JSON Export
+### Translation Cache
 
-Category-specific JSON payload combining Location facts with Merged Reviews for downstream AI use.
-Code references: `packages/server/src/features/locations/types/tripadvisor-place.types.ts`, `packages/server/src/features/locations/utils/tripadvisor-ai-json.utils.ts`.
-
-### `JsonExportChecklist`
-
-Export-readiness gate before pushing to Payload.
+SQLite table keyed by `(source, review_id)` storing translated text + title + detected source language plus a `translator_version` tag. The translation step looks up cache hits scoped to the current `translator_version` and only calls the translation API for misses. Invalidation is by **version bump only** — a given source text translates to the same target text, so bumping the version when the model/prompt changes is the sole invalidation path. No TTL. Required because re-running the merge pipeline (e.g., when a new TripAdvisor language file lands) used to re-translate every non-English review from scratch.
 
 ### Tour
 
@@ -99,14 +94,17 @@ Per-collection record of last sync result + Payload doc id. Tracks drift between
 - A **Location** has one **PayloadSyncState** per target collection (`dining`, `accommodations`, `attractions`, `nightlife`, `key-locations`).
 - A **Tour** belongs to one Location via `locationKey`; it has its own `TourPayloadSyncState`.
 - A **ReviewsChecklist** belongs to one Location; sources include Google Reviews, TripAdvisor Reviews, TripAdvisor Place Data.
-- **Merged Reviews** belong to one Location and feed the **AI JSON Export**.
+- **Merged Reviews** belong to one Location and feed AI field suggestions (via `python-alt-text`). When `unusable: true`, callers omit reviews and fall back to pure-AI/grounded-search mode.
+- **Translation Cache** rows belong to one Location; rows persist across merge runs.
 - A **CorrectionRule** applies to many `LocationHierarchy` rows.
 
 ## Domain Rules
 
 - Two Locations may **not** share the same `country|city|neighborhood` key.
 - A Location cannot be synced to Payload while its `PayloadSyncChecklist` reports a required field as `missing`/`invalid`.
-- Merged Reviews keep only reviews with at least 150 characters and a valid review date on or after 2023-01-01.
+- Merged Reviews keep only reviews with at least 150 characters and a valid review date on or after 2023-01-01. **Both filters are applied to the raw source text before translation** — translating a review only to discard it later is forbidden waste.
+- Merged Reviews are flagged `unusable: true` when the post-filter clean count is below `MIN_USABLE_REVIEW_COUNT` (5). Consumers must check this flag; review-grounded AI calls require it to be `false`.
+- The translation step must consult the SQLite translation cache before calling the translation API; cache hits are reused verbatim.
 - Image variant files are generated **on the LM side** before sync — Questura validates and serves, but does not produce variants (per the MediaSet ADR).
 - TaxonomyCorrections apply uniformly: an applied rule must update all matching rows, not only newly imported ones.
 - `IdealForTag` selections are category-bound; an `AccommodationsIdealForTag` may not appear on a `dining` Location.
@@ -124,12 +122,15 @@ Per-collection record of last sync result + Payload doc id. Tracks drift between
 - **TypeScript shared types only**, not codegen, because client and server are both TS.
 - **Alt text is a separate Python service** to keep PyTorch / Vertex out of the Bun process and let the model warm-load.
 - **MediaSet ownership split**: LM generates variant files; Questura owns placement-readiness rules (see `apps/questura/docs/adr/0001-mediaset-as-public-image-source.md`).
+- **Review enrichment is LM-owned, not exported.** AI Blog Writer's `review2blog` pipeline (the only historic consumer of the AI JSON Export) was removed; reviews now feed `python-alt-text` field suggestions on the LM side directly. There is no longer a downstream review pipeline.
+- **Translations are cached in SQLite**, not embedded only in merged-reviews files, so re-runs are idempotent in API cost.
 - → **Suggest ADR**: mirror the MediaSet decision on the LM side to document variant-generation responsibilities (which sizes, which formats, who owns the catalogue of placements).
+- → **Suggest ADR**: document the review pipeline rewrite — filter-before-translate ordering, SQLite translation cache, `MIN_USABLE_REVIEW_COUNT` gate, and the death of AI JSON Export. All three ADR criteria are met: hard to reverse (cache rows become load-bearing), surprising without context (future reader will ask "why a separate translations table when merged files contain translations?"), and a real trade-off (SQLite vs JSON cache vs no cache).
 
 ## AI Guidance
 
 - **Inspect first:** `packages/shared/src/types/*.ts` (the contract), then the relevant `features/<domain>` folder on server + client.
-- **Preserve verbatim:** `Location`, `LocationHierarchy`, `LocationCategory`, `IdealForTag`, `PayloadSyncChecklist`, `ReviewsChecklist`, `JsonExportChecklist`, `PayloadSyncState`, `Tour`, `ImageVariant`, `CorrectionRule`.
+- **Preserve verbatim:** `Location`, `LocationHierarchy`, `LocationCategory`, `IdealForTag`, `PayloadSyncChecklist`, `ReviewsChecklist`, `PayloadSyncState`, `Tour`, `ImageVariant`, `CorrectionRule`, `Translation Cache`.
 - **Do not** rename `IdealForTag` to match Questura's `PerfectForTag` — they live in different stores and the difference is intentional today.
 - **Do not** introduce a code-level dependency on Questura. Coupling is HTTP (`/api/collections/*`) and `/location-guide-contract.json`.
 - **Do not** generate MediaSet variant catalogues unilaterally — coordinate with Questura's MediaPlacement rules.
@@ -141,6 +142,8 @@ Per-collection record of last sync result + Payload doc id. Tracks drift between
 - Where is the catalogue of required image variants documented end-to-end? Questura's ADR talks about MediaPlacements; LM has `ImageVariant` types but no placement awareness.
 - Should `Tour` have its own CONTEXT.md inside `packages/server`? It has its own PayloadSyncState shape and is the only non-Location entity here.
 - Taxonomy corrections feel like they could be a top-level admin module — currently it's split across services.
+- (Implemented 2026-05-16) Auto-fill endpoint generalized: `/field-suggestion` accepting `category` + optional `locationId` + optional `reviews?`. LM server fetches latest merged reviews when `locationId` is set, checks `unusable` flag, passes top-20 (`REVIEW_SAMPLE_FOR_AI`) to the Python service when usable. Accommodations branch implemented; other categories return 400 until rollout. Per-field "Suggest" button live on both Create (`AddAccommodationsLocation.tsx`) and Edit (`EditAccommodationsLocation.tsx`) forms.
+- (Resolved 2026-05-16) Translation cache invalidation is version-bump only via a `translator_version` column. No TTL, no manual purge.
 
 ## Child Contexts
 

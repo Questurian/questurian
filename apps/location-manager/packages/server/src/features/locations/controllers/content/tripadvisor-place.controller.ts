@@ -2,7 +2,6 @@ import type { Context } from "hono";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 import {
   fetchTripAdvisorPlaceData,
-  getAiJsonDownloadPayload,
   getLocationExportDownloadPayload,
   getTripAdvisorPlaceDownloadPayload,
   getTripAdvisorPlaceStatusPayload,
@@ -98,26 +97,6 @@ export async function downloadLocationExport(c: Context) {
     return c.body(payload.content);
   } catch (error) {
     const httpError = resolveHttpError(error, TRIPADVISOR_PLACE_MESSAGES.exportFailure);
-    return c.json(errorResponse(httpError.message), httpError.status);
-  }
-}
-
-/**
- * GET /api/{category}/:id/ai-json/download
- * Download category-specific review2blog export JSON
- */
-export async function downloadAiJson(c: Context) {
-  const parsed = parseLocationIdOrError(c);
-  if (!parsed.ok) {
-    return parsed.response;
-  }
-
-  try {
-    const payload = await getAiJsonDownloadPayload(parsed.locationId);
-    applyJsonDownloadHeaders(c, payload.filename);
-    return c.body(payload.content);
-  } catch (error) {
-    const httpError = resolveHttpError(error, TRIPADVISOR_PLACE_MESSAGES.aiJsonFailure);
     return c.json(errorResponse(httpError.message), httpError.status);
   }
 }

@@ -1,9 +1,15 @@
+import { REVIEW_SAMPLE_FOR_AI } from "../../constants/translate-merge-reviews.constants";
 import type {
   MergedReviewsFile,
+  MergedReviewsUsability,
   MinimalReview,
-  Review2BlogExportReview,
 } from "../../types/translate-merge-reviews.types";
 import { getLatestMergedReviewsFile, readJsonFile } from "./translate-merge-reviews.repository";
+
+export interface MergedReviewsAiSample {
+  reviews: MinimalReview[];
+  usability: MergedReviewsUsability;
+}
 
 async function readLatestMergedReviews(locationId: number): Promise<MergedReviewsFile | null> {
   const latestFile = await getLatestMergedReviewsFile(locationId);
@@ -12,20 +18,6 @@ async function readLatestMergedReviews(locationId: number): Promise<MergedReview
   }
 
   return readJsonFile<MergedReviewsFile>(latestFile.filepath);
-}
-
-function formatReviewExportDate(value: string | null): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  const dateMatch = trimmed.match(/^\d{4}-\d{2}-\d{2}/);
-  return dateMatch ? dateMatch[0]! : trimmed;
 }
 
 export async function getLatestMinimalMergedReviews(locationId: number): Promise<MinimalReview[] | null> {
@@ -47,25 +39,27 @@ export async function getLatestMinimalMergedReviews(locationId: number): Promise
     }));
 }
 
-export async function getLatestReview2BlogReviews(
+export async function getLatestMergedReviewsAiSample(
   locationId: number
-): Promise<Review2BlogExportReview[] | null> {
+): Promise<MergedReviewsAiSample | null> {
   const data = await readLatestMergedReviews(locationId);
   if (!data) {
     return null;
   }
 
-  if (!Array.isArray(data.reviews)) {
-    return [];
-  }
+  const usability = data.usability ?? { unusable: false, unusableReason: null };
+  const reviews = Array.isArray(data.reviews)
+    ? data.reviews
+        .filter(
+          (review) => typeof review.review_text === "string" && review.review_text.trim().length > 0
+        )
+        .slice(0, REVIEW_SAMPLE_FOR_AI)
+        .map((review) => ({
+          text: review.review_text ?? "",
+          rating: review.rating ?? 0,
+          date: review.review_datetime_utc ?? "",
+        }))
+    : [];
 
-  return data.reviews
-    .filter((review) => typeof review.review_text === "string" && review.review_text.trim().length > 0)
-    .map((review) => ({
-      reviewId: review.id,
-      source: review.source,
-      date: formatReviewExportDate(review.review_datetime_utc),
-      rating: review.rating ?? 0,
-      text: review.review_text ?? "",
-    }));
+  return { reviews, usability };
 }
