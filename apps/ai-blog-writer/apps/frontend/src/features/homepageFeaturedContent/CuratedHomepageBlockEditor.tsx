@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-
 import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
 import HomepageFeaturedSlotEditor from './HomepageFeaturedSlotEditor'
@@ -19,7 +18,7 @@ import {
   type FeaturedArticlesSlot4Layout,
   type FeaturedArticlesSlot5Layout,
 } from './pageBlocks'
-import { useHomepageFeaturedSlots, type CandidateParams } from './useHomepageFeaturedSlots'
+import { useHomepageFeaturedSlots, type CandidateParams, type UseHomepageFeaturedSlotsResult } from './useHomepageFeaturedSlots'
 import type {
   HomepageFeaturedCandidatesResponse,
   HomepageFeaturedItemRef,
@@ -93,6 +92,10 @@ type Props = {
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
   deleteError: string | null
+  /** Keys used in other blocks on the same page (all collections). Used to enforce page-level article exclusion. */
+  externalUsedKeys?: Set<string>
+  /** Called when this block's draft slot keys change so the parent can track page-level usage. */
+  onSlotsChange?: (blockId: string, keys: Set<string>) => void
 }
 
 export default function CuratedHomepageBlockEditor({
@@ -114,6 +117,8 @@ export default function CuratedHomepageBlockEditor({
   onDeleteBlock,
   isDeletingBlock,
   deleteError,
+  externalUsedKeys,
+  onSlotsChange,
 }: Props) {
   const savedSectionHeading = block.sectionHeading ?? ''
   const savedSectionSubheading = block.sectionSubheading ?? ''
@@ -217,6 +222,30 @@ export default function CuratedHomepageBlockEditor({
     savedInvalidItems,
     hasUnsavedChanges,
   } = slotEditorState
+
+  // Report this block's internal slot keys to the parent for page-level exclusion tracking.
+  useEffect(() => {
+    onSlotsChange?.(block.id, slotEditorState.usedKeys)
+    return () => { onSlotsChange?.(block.id, new Set()) }
+  }, [block.id, slotEditorState.usedKeys, onSlotsChange])
+
+  // Merge external keys so the picker greys out articles used elsewhere on the page.
+  const mergedUsedKeys = useMemo<UseHomepageFeaturedSlotsResult['usedKeys']>(() =>
+    externalUsedKeys && externalUsedKeys.size > 0
+      ? new Set([...slotEditorState.usedKeys, ...externalUsedKeys])
+      : slotEditorState.usedKeys,
+  [slotEditorState.usedKeys, externalUsedKeys])
+
+  // Block save when this block contains an article already placed in another block.
+  const hasCrossBlockDuplicate =
+    externalUsedKeys != null &&
+    externalUsedKeys.size > 0 &&
+    slots.some((s) => s != null && externalUsedKeys.has(`${s.relationTo}:${s.id}`))
+
+  const effectiveSlotEditorState: UseHomepageFeaturedSlotsResult =
+    hasCrossBlockDuplicate || mergedUsedKeys !== slotEditorState.usedKeys
+      ? { ...slotEditorState, usedKeys: mergedUsedKeys, saveDisabled: saveDisabled || hasCrossBlockDuplicate }
+      : slotEditorState
 
   const totalSlots = block.selection.totalSlots
   const slotsFilled = slots.filter(Boolean).length
@@ -586,7 +615,7 @@ export default function CuratedHomepageBlockEditor({
         <HomepageFeaturedSlotEditor
           pageTitle=""
           pageSubtitle={blockConfig.description}
-          slotEditorState={slotEditorState}
+          slotEditorState={effectiveSlotEditorState}
           compact
           suppressToolbar
           variant={block.blockType}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -69,6 +69,19 @@ export default function MainHomepagePage() {
 
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
+  const [pageBlockSlotKeys, setPageBlockSlotKeys] = useState<Map<string, Set<string>>>(() => new Map())
+
+  const handleSlotsChange = useCallback((blockId: string, keys: Set<string>) => {
+    setPageBlockSlotKeys((prev) => {
+      const next = new Map(prev)
+      if (keys.size === 0) {
+        next.delete(blockId)
+      } else {
+        next.set(blockId, keys)
+      }
+      return next
+    })
+  }, [])
 
   const addBlockMutation = useMutation({
     mutationFn: ({
@@ -262,6 +275,14 @@ export default function MainHomepagePage() {
           onReorder={(orderedIds) => reorderBlocksMutation.mutate(orderedIds)}
         >
           {(block: PageBlockResponse, idx: number) => {
+            const externalUsedKeys = (() => {
+              const combined = new Set<string>()
+              for (const [id, keys] of pageBlockSlotKeys) {
+                if (id !== block.id) for (const k of keys) combined.add(k)
+              }
+              return combined
+            })()
+
             if (isArticleCuratedHomepageBlock(block)) {
               return (
                 <CuratedHomepageBlockEditor
@@ -347,6 +368,8 @@ export default function MainHomepagePage() {
                   onConvertEmptyFeaturedArticlesBlock={async (currentToken, blockType, slotCount) => {
                     await handleConvertBlock(block, currentToken, blockType, slotCount)
                   }}
+                  externalUsedKeys={externalUsedKeys}
+                  onSlotsChange={handleSlotsChange}
                 />
               )
             }
