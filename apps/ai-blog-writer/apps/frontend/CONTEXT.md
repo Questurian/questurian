@@ -117,6 +117,12 @@ Definition: drag reorder behavior where dropping one curated slot on another exc
 Related terms: Featured Articles, Article Grid, Curated slot.
 Do not confuse with: insert-and-shift list reordering.
 
+### Slot replacement
+
+Definition: picker behavior where a user chooses a different item for the same curated slot.
+Related terms: Curated slot, Slot swap.
+Do not confuse with: Slot swap, which exchanges two existing slot contents.
+
 ## Relationships
 
 - A **Feature Page** owns at most one active **Run** at a time (current poll).
@@ -124,6 +130,7 @@ Do not confuse with: insert-and-shift list reordering.
 - A **Draft** points to zero or one **Payload entity**; Sync writes through.
 - A `PipelineStatusResponse.state = "completed"` is the trigger for hydrating a Draft from the run output.
 - **Featured Articles** has 3–9 **Curated slots**; a **Slot swap** preserves the number of slots and exchanges exactly two slot contents.
+- **Slot replacement** preserves the slot position and changes only the item assigned to that **Curated slot**.
 - **Article Grid** has either 4 or 8 **Curated slots** and uses the same **Slot swap** behavior as Featured Articles.
 
 ## Domain Rules
@@ -132,6 +139,8 @@ Do not confuse with: insert-and-shift list reordering.
 - Drafts are not auto-synced. A user action triggers Sync.
 - `hasUnsyncedPayloadChanges` is computed from a signature, not by deep equality, to keep CPU bounded on large documents.
 - Frontend types **mirror** backend Pydantic shapes; do not import Python.
+- Homepage curated blocks preserve their configured slot count; empty curated slots are draft-only and are not persisted.
+- Clicking a filled curated slot starts **Slot replacement** for every curated homepage block type.
 
 ## Naming Conventions
 

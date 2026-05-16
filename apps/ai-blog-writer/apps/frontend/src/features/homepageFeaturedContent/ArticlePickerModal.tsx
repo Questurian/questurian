@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import type {
   HomepageFeaturedCandidate,
   HomepageFeaturedCandidatesResponse,
-  HomepageFeaturedCollection,
+  HomepageFeaturedCollection
 } from './types'
 import type { useQuery } from '@tanstack/react-query'
 
@@ -14,7 +14,7 @@ function formatDate(value: string | null): string {
   return new Date(timestamp).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
+    year: 'numeric'
   })
 }
 
@@ -36,7 +36,9 @@ function ImgPlaceholder() {
 
 type Props = {
   slotIndex: number
-  candidatesQuery: ReturnType<typeof useQuery<HomepageFeaturedCandidatesResponse>>
+  candidatesQuery: ReturnType<
+    typeof useQuery<HomepageFeaturedCandidatesResponse>
+  >
   searchValue: string
   collectionFilter: HomepageFeaturedCollection | 'all'
   candidatePage: number
@@ -64,7 +66,7 @@ export function ArticlePickerModal({
   setSearchValue,
   setCollectionFilter,
   setCandidatePage,
-  hideCollectionSelect = false,
+  hideCollectionSelect = false
 }: Props) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -74,7 +76,10 @@ export function ArticlePickerModal({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
-  const candidateError = candidatesQuery.error instanceof Error ? candidatesQuery.error.message : null
+  const candidateError =
+    candidatesQuery.error instanceof Error
+      ? candidatesQuery.error.message
+      : null
   const totalPages = candidatesQuery.data?.totalPages ?? 1
 
   return (
@@ -90,14 +95,6 @@ export function ArticlePickerModal({
         <div className="hf-modal-top">
           <div className="hf-modal-title-row">
             <h2>Slot {slotIndex + 1} — Pick an article</h2>
-            <button
-              type="button"
-              className="hf-modal-close"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              ×
-            </button>
           </div>
 
           <div className="hf-modal-search">
@@ -112,7 +109,9 @@ export function ArticlePickerModal({
             {!hideCollectionSelect ? (
               <select
                 value={collectionFilter}
-                onChange={(e) => setCollectionFilter(e.target.value as typeof collectionFilter)}
+                onChange={(e) =>
+                  setCollectionFilter(e.target.value as typeof collectionFilter)
+                }
                 style={{ marginLeft: 'auto', flexShrink: 0 }}
               >
                 <option value="all">All types</option>
@@ -154,13 +153,33 @@ export function ArticlePickerModal({
                   </div>
 
                   <div>
-                    <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.3 }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        lineHeight: 1.3
+                      }}
+                    >
                       {candidate.title}
                     </p>
-                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                      <span className="hf-level-tag">{candidate.collectionLabel}</span>
-                      <span className="hf-level-tag">{candidate.status ?? 'unknown'}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.4rem',
+                        marginTop: '0.3rem',
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <span className="hf-level-tag">
+                        {candidate.collectionLabel}
+                      </span>
+                      <span className="hf-level-tag">
+                        {candidate.status ?? 'unknown'}
+                      </span>
+                      <span
+                        style={{ fontSize: '0.75rem', color: 'var(--muted)' }}
+                      >
                         {formatDate(candidate.updatedAt)}
                       </span>
                     </div>
@@ -168,12 +187,23 @@ export function ArticlePickerModal({
 
                   <button
                     type="button"
-                    className="hf-btn-primary"
+                    className={
+                      isCurrentSlot ? 'hf-btn-ghost' : 'hf-btn-primary'
+                    }
                     onClick={() => onPick(candidate)}
-                    disabled={isUsedElsewhere}
-                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.9rem', minHeight: '2rem', flexShrink: 0 }}
+                    disabled={isCurrentSlot || isUsedElsewhere}
+                    style={{
+                      fontSize: '0.82rem',
+                      padding: '0.4rem 0.9rem',
+                      minHeight: '2rem',
+                      flexShrink: 0
+                    }}
                   >
-                    {isCurrentSlot ? 'Keep' : isUsedElsewhere ? 'In use' : 'Pick'}
+                    {isCurrentSlot
+                      ? 'Current'
+                      : isUsedElsewhere
+                        ? 'In use'
+                        : 'Pick'}
                   </button>
                 </div>
               )
@@ -200,7 +230,9 @@ export function ArticlePickerModal({
             <button
               type="button"
               className="hf-btn-ghost"
-              onClick={() => setCandidatePage((p) => Math.min(totalPages, p + 1))}
+              onClick={() =>
+                setCandidatePage((p) => Math.min(totalPages, p + 1))
+              }
               disabled={candidatePage >= totalPages}
             >
               Next →

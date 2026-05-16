@@ -101,7 +101,6 @@ export default function HomepageFeaturedSlotEditor({
     lockedCollectionFilter,
     candidatePage,
     handleCandidatePick,
-    handleRemove,
     handleReorderAll,
     handleSave,
     setSearchValue,
@@ -147,8 +146,8 @@ export default function HomepageFeaturedSlotEditor({
       {savedInvalidItems.length > 0 && (
         <div className="hf-banner warning">
           {savedInvalidItems.length === 1
-            ? 'One saved slot is no longer eligible. Swap it before saving again.'
-            : `${savedInvalidItems.length} saved slots are no longer eligible. Swap them before saving.`}
+            ? 'One saved slot is no longer eligible. Replace it before saving again.'
+            : `${savedInvalidItems.length} saved slots are no longer eligible. Replace them before saving.`}
         </div>
       )}
 
@@ -180,7 +179,6 @@ export default function HomepageFeaturedSlotEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onRemove={handleRemove}
           onReorder={handleReorderAll}
         />
       ) : variant === 'featured-article' ? (
@@ -188,14 +186,12 @@ export default function HomepageFeaturedSlotEditor({
           item={slots[0] ?? null}
           invalidItem={invalidItemsBySlot.get(1)}
           onPick={() => setPickerSlotIndex(0)}
-          onRemove={() => handleRemove(0)}
         />
       ) : variant === 'featured-article-carousel' ? (
         <FeaturedArticleCarouselLayout
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onRemove={handleRemove}
           onReorder={handleReorderAll}
         />
       ) : variant === 'article-grid' ? (
@@ -204,7 +200,6 @@ export default function HomepageFeaturedSlotEditor({
           articleGridFourLayout={articleGridFourLayout}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onRemove={handleRemove}
           onReorder={handleReorderAll}
         />
       ) : totalSlots === 9 ? (
@@ -233,7 +228,6 @@ export default function HomepageFeaturedSlotEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onRemove={handleRemove}
           onReorder={handleReorderAll}
           layout={featuredArticlesSlot5Layout}
         />
@@ -320,7 +314,11 @@ export default function HomepageFeaturedSlotEditor({
                   key={`slot-${slotIndex + 1}`}
                   slotIndex={slotIndex}
                 >
-                  <article className="hf-slot-card">
+                  <button
+                    type="button"
+                    className="hf-slot-card hf-curated-slot-replace"
+                    onClick={() => setPickerSlotIndex(slotIndex)}
+                  >
                     <div className="hf-slot-card-thumb">
                       {item.imageUrl ? (
                         <img src={item.imageUrl} alt="" loading="lazy" />
@@ -346,31 +344,8 @@ export default function HomepageFeaturedSlotEditor({
                         </span>
                       </div>
                       <p className="hf-slot-card-title">{item.title}</p>
-
-                      <div className="hf-slot-card-actions">
-                        <button
-                          type="button"
-                          className="hf-btn-ghost"
-                          onClick={() => setPickerSlotIndex(slotIndex)}
-                          style={{
-                            fontSize: '0.78rem',
-                            padding: '0.25rem 0.6rem',
-                            minHeight: '1.8rem'
-                          }}
-                        >
-                          Swap
-                        </button>
-                        <button
-                          type="button"
-                          className="hf-btn-icon danger"
-                          title="Remove"
-                          onClick={() => handleRemove(slotIndex)}
-                        >
-                          ×
-                        </button>
-                      </div>
                     </div>
-                  </article>
+                  </button>
                 </CuratedSlotSwapWrap>
               )
             })}

@@ -33,7 +33,6 @@ type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
-  onRemove: (slotIndex: number) => void
   onReorder: (newSlots: SlotValue[]) => void
 }
 
@@ -41,7 +40,6 @@ export default function FeaturedArticleCarouselLayout({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onRemove,
   onReorder
 }: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -83,31 +81,21 @@ export default function FeaturedArticleCarouselLayout({
               </button>
             ) : (
               <>
-                <h2 className="hf-fa-spotlight-title">{item.title}</h2>
-                {item.excerpt?.trim() ? (
-                  <p className="hf-fa-spotlight-dek">{item.excerpt.trim()}</p>
-                ) : null}
-                {item.authorLabel?.trim() ? (
-                  <p className="hf-fa-spotlight-byline">
-                    BY {item.authorLabel.trim().toUpperCase()}
-                  </p>
-                ) : null}
-                <div className="hf-fa-spotlight-actions">
-                  <button
-                    type="button"
-                    className="hf-fa-spotlight-btn"
-                    onClick={() => onSlotClick(safeIndex)}
-                  >
-                    Swap article
-                  </button>
-                  <button
-                    type="button"
-                    className="hf-fa-spotlight-btn ghost"
-                    onClick={() => onRemove(safeIndex)}
-                  >
-                    Clear
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="hf-fa-spotlight-copy-button"
+                  onClick={() => onSlotClick(safeIndex)}
+                >
+                  <h2 className="hf-fa-spotlight-title">{item.title}</h2>
+                  {item.excerpt?.trim() ? (
+                    <p className="hf-fa-spotlight-dek">{item.excerpt.trim()}</p>
+                  ) : null}
+                  {item.authorLabel?.trim() ? (
+                    <p className="hf-fa-spotlight-byline">
+                      BY {item.authorLabel.trim().toUpperCase()}
+                    </p>
+                  ) : null}
+                </button>
               </>
             )}
 
@@ -136,13 +124,18 @@ export default function FeaturedArticleCarouselLayout({
           </div>
 
           {/* ── Image / right side ── */}
-          <div className="hf-fa-spotlight-media" aria-hidden={!item?.imageUrl}>
+          <button
+            type="button"
+            className="hf-fa-spotlight-media hf-curated-slot-replace"
+            aria-label={`Replace slot ${safeIndex + 1}`}
+            onClick={() => onSlotClick(safeIndex)}
+          >
             {item?.imageUrl ? (
               <img src={item.imageUrl} alt="" loading="lazy" />
             ) : (
               <ImgPlaceholder />
             )}
-          </div>
+          </button>
         </div>
 
         {/* ── Slot indicator dots ── */}

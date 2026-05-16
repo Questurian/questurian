@@ -4,7 +4,7 @@ import type { useQuery } from '@tanstack/react-query'
 import type {
   HomepageLocationGridCandidate,
   HomepageLocationGridCandidatesResponse,
-  HomepageLocationGridLevel,
+  HomepageLocationGridLevel
 } from './locationGridTypes'
 
 function formatDate(value: string | null): string {
@@ -14,14 +14,16 @@ function formatDate(value: string | null): string {
   return new Date(timestamp).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
+    year: 'numeric'
   })
 }
 
 type Props = {
   slotIndex: number
   childLevel: HomepageLocationGridLevel
-  candidatesQuery: ReturnType<typeof useQuery<HomepageLocationGridCandidatesResponse>>
+  candidatesQuery: ReturnType<
+    typeof useQuery<HomepageLocationGridCandidatesResponse>
+  >
   searchValue: string
   candidatePage: number
   usedIds: Set<number>
@@ -43,7 +45,7 @@ export function LocationGridPickerModal({
   onPick,
   onClose,
   setSearchValue,
-  setCandidatePage,
+  setCandidatePage
 }: Props) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -55,7 +57,9 @@ export function LocationGridPickerModal({
   }, [onClose])
 
   const candidateError =
-    candidatesQuery.error instanceof Error ? candidatesQuery.error.message : null
+    candidatesQuery.error instanceof Error
+      ? candidatesQuery.error.message
+      : null
   const totalPages = candidatesQuery.data?.totalPages ?? 1
   const label = childLevel === 'city' ? 'city' : 'neighborhood'
 
@@ -70,15 +74,9 @@ export function LocationGridPickerModal({
       >
         <div className="hf-modal-top">
           <div className="hf-modal-title-row">
-            <h2>Slot {slotIndex + 1} — Pick a {label}</h2>
-            <button
-              type="button"
-              className="hf-modal-close"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              ×
-            </button>
+            <h2>
+              Slot {slotIndex + 1} — Pick a {label}
+            </h2>
           </div>
 
           <div className="hf-modal-search">
@@ -101,7 +99,8 @@ export function LocationGridPickerModal({
           ) : candidatesQuery.data && candidatesQuery.data.docs.length > 0 ? (
             candidatesQuery.data.docs.map((candidate) => {
               const isCurrentSlot = candidate.id === currentSlotId
-              const isUsedElsewhere = usedIds.has(candidate.id) && !isCurrentSlot
+              const isUsedElsewhere =
+                usedIds.has(candidate.id) && !isCurrentSlot
 
               return (
                 <div
@@ -119,11 +118,15 @@ export function LocationGridPickerModal({
                     ) : null}
                   </div>
                   <div className="hf-location-picker-body">
-                    <p className="hf-location-picker-title">{candidate.title}</p>
+                    <p className="hf-location-picker-title">
+                      {candidate.title}
+                    </p>
                     <div className="hf-location-picker-meta">
                       <span className="hf-level-tag">{candidate.level}</span>
                       {candidate.subtitle && (
-                        <span className="hf-location-picker-subtitle">{candidate.subtitle}</span>
+                        <span className="hf-location-picker-subtitle">
+                          {candidate.subtitle}
+                        </span>
                       )}
                       <span className="hf-location-picker-key">
                         {candidate.locationKey ?? 'No location key'}
@@ -136,18 +139,31 @@ export function LocationGridPickerModal({
 
                   <button
                     type="button"
-                    className="hf-btn-primary"
+                    className={
+                      isCurrentSlot ? 'hf-btn-ghost' : 'hf-btn-primary'
+                    }
                     onClick={() => onPick(candidate)}
-                    disabled={isUsedElsewhere}
-                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.9rem', minHeight: '2rem', flexShrink: 0 }}
+                    disabled={isCurrentSlot || isUsedElsewhere}
+                    style={{
+                      fontSize: '0.82rem',
+                      padding: '0.4rem 0.9rem',
+                      minHeight: '2rem',
+                      flexShrink: 0
+                    }}
                   >
-                    {isCurrentSlot ? 'Keep' : isUsedElsewhere ? 'In use' : 'Pick'}
+                    {isCurrentSlot
+                      ? 'Current'
+                      : isUsedElsewhere
+                        ? 'In use'
+                        : 'Pick'}
                   </button>
                 </div>
               )
             })
           ) : (
-            <p className="hf-modal-empty">No eligible locations matched your search.</p>
+            <p className="hf-modal-empty">
+              No eligible locations matched your search.
+            </p>
           )}
         </div>
 
@@ -167,7 +183,9 @@ export function LocationGridPickerModal({
             <button
               type="button"
               className="hf-btn-ghost"
-              onClick={() => setCandidatePage((page) => Math.min(totalPages, page + 1))}
+              onClick={() =>
+                setCandidatePage((page) => Math.min(totalPages, page + 1))
+              }
               disabled={candidatePage >= totalPages}
             >
               Next →

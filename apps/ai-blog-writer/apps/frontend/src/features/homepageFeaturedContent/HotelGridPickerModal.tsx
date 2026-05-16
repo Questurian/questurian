@@ -3,7 +3,7 @@ import type { useQuery } from '@tanstack/react-query'
 
 import type {
   HomepageHotelGridCandidate,
-  HomepageHotelGridCandidatesResponse,
+  HomepageHotelGridCandidatesResponse
 } from './hotelGridTypes'
 
 function formatDate(value: string | null): string {
@@ -13,7 +13,7 @@ function formatDate(value: string | null): string {
   return new Date(timestamp).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
+    year: 'numeric'
   })
 }
 
@@ -28,10 +28,12 @@ export function HotelGridPickerModal({
   onClose,
   setSearchValue,
   setCandidatePage,
-  itemLabel = 'hotel',
+  itemLabel = 'hotel'
 }: {
   slotIndex: number
-  candidatesQuery: ReturnType<typeof useQuery<HomepageHotelGridCandidatesResponse>>
+  candidatesQuery: ReturnType<
+    typeof useQuery<HomepageHotelGridCandidatesResponse>
+  >
   searchValue: string
   candidatePage: number
   usedIds: Set<number>
@@ -51,7 +53,10 @@ export function HotelGridPickerModal({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
-  const candidateError = candidatesQuery.error instanceof Error ? candidatesQuery.error.message : null
+  const candidateError =
+    candidatesQuery.error instanceof Error
+      ? candidatesQuery.error.message
+      : null
   const totalPages = candidatesQuery.data?.totalPages ?? 1
   const isFetchingHotels = candidatesQuery.isFetching
   const showInitialLoad = candidatesQuery.isPending && !candidatesQuery.data
@@ -74,15 +79,9 @@ export function HotelGridPickerModal({
       >
         <div className="hf-modal-top">
           <div className="hf-modal-title-row">
-            <h2>Slot {slotIndex + 1} - Pick a {itemLabel}</h2>
-            <button
-              type="button"
-              className="hf-modal-close"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              ×
-            </button>
+            <h2>
+              Slot {slotIndex + 1} - Pick a {itemLabel}
+            </h2>
           </div>
 
           <div className="hf-modal-search">
@@ -96,7 +95,11 @@ export function HotelGridPickerModal({
             />
           </div>
           {showUpdatingBanner ? (
-            <p className="hf-modal-empty" style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }} role="status">
+            <p
+              className="hf-modal-empty"
+              style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}
+              role="status"
+            >
               Updating list…
             </p>
           ) : null}
@@ -110,9 +113,11 @@ export function HotelGridPickerModal({
           ) : candidatesQuery.data && candidatesQuery.data.docs.length > 0 ? (
             candidatesQuery.data.docs.map((candidate) => {
               const isCurrentSlot = candidate.id === currentSlotId
-              const isUsedElsewhere = usedIds.has(candidate.id) && !isCurrentSlot
+              const isUsedElsewhere =
+                usedIds.has(candidate.id) && !isCurrentSlot
               const thumbSrc =
-                typeof candidate.imageUrl === 'string' && candidate.imageUrl.trim()
+                typeof candidate.imageUrl === 'string' &&
+                candidate.imageUrl.trim()
                   ? candidate.imageUrl.trim()
                   : null
 
@@ -132,28 +137,49 @@ export function HotelGridPickerModal({
                     ) : null}
                   </div>
                   <div className="hf-location-picker-body">
-                    <p className="hf-location-picker-title">{candidate.title}</p>
+                    <p className="hf-location-picker-title">
+                      {candidate.title}
+                    </p>
                     <div className="hf-location-picker-meta">
-                      <span className="hf-level-tag">{candidate.type ?? 'hotel'}</span>
-                      <span className="hf-location-picker-key">{candidate.location ?? candidate.slug ?? 'No location'}</span>
-                      <span className="hf-location-picker-date">{formatDate(candidate.updatedAt)}</span>
+                      <span className="hf-level-tag">
+                        {candidate.type ?? 'hotel'}
+                      </span>
+                      <span className="hf-location-picker-key">
+                        {candidate.location ?? candidate.slug ?? 'No location'}
+                      </span>
+                      <span className="hf-location-picker-date">
+                        {formatDate(candidate.updatedAt)}
+                      </span>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    className="hf-btn-primary"
+                    className={
+                      isCurrentSlot ? 'hf-btn-ghost' : 'hf-btn-primary'
+                    }
                     onClick={() => onPick(candidate)}
-                    disabled={isUsedElsewhere}
-                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.9rem', minHeight: '2rem', flexShrink: 0 }}
+                    disabled={isCurrentSlot || isUsedElsewhere}
+                    style={{
+                      fontSize: '0.82rem',
+                      padding: '0.4rem 0.9rem',
+                      minHeight: '2rem',
+                      flexShrink: 0
+                    }}
                   >
-                    {isCurrentSlot ? 'Keep' : isUsedElsewhere ? 'In use' : 'Pick'}
+                    {isCurrentSlot
+                      ? 'Current'
+                      : isUsedElsewhere
+                        ? 'In use'
+                        : 'Pick'}
                   </button>
                 </div>
               )
             })
           ) : (
-            <p className="hf-modal-empty">No {itemLabel}s matched your search.</p>
+            <p className="hf-modal-empty">
+              No {itemLabel}s matched your search.
+            </p>
           )}
         </div>
 
@@ -173,7 +199,9 @@ export function HotelGridPickerModal({
             <button
               type="button"
               className="hf-btn-ghost"
-              onClick={() => setCandidatePage((page) => Math.min(totalPages, page + 1))}
+              onClick={() =>
+                setCandidatePage((page) => Math.min(totalPages, page + 1))
+              }
               disabled={candidatePage >= totalPages}
             >
               Next →

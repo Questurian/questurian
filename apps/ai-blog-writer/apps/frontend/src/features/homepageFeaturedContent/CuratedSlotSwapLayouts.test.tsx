@@ -61,14 +61,13 @@ function hotel(id: number, title: string): HomepageHotelGridCandidate {
 
 describe('remaining curated slot swap layouts', () => {
   it('adds filled-slot handles to the featured article carousel without replacing slide arrows', () => {
-    const onRemove = vi.fn()
+    const onSlotClick = vi.fn()
 
     const { container } = render(
       <FeaturedArticleCarouselLayout
         slots={[article(1, 'First'), null, article(3, 'Third')]}
         invalidItemsBySlot={new Map()}
-        onSlotClick={vi.fn()}
-        onRemove={onRemove}
+        onSlotClick={onSlotClick}
         onReorder={vi.fn()}
       />
     )
@@ -83,20 +82,18 @@ describe('remaining curated slot swap layouts', () => {
       screen.getByRole('button', { name: 'Next slide' })
     ).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
-    expect(onRemove).toHaveBeenCalledWith(0)
+    fireEvent.click(screen.getByRole('button', { name: /First/i }))
+    expect(onSlotClick).toHaveBeenCalledWith(0)
   })
 
   it('uses filled-slot handles for Questurian Maps and keeps empty cells click-to-fill', () => {
     const onSlotClick = vi.fn()
-    const onRemove = vi.fn()
 
     const { container } = render(
       <QuesturianMapsArticleLayout
         slots={[article(1, 'Map one'), null, article(3, 'Map three')]}
         invalidItemsBySlot={new Map()}
         onSlotClick={onSlotClick}
-        onRemove={onRemove}
         onReorder={vi.fn()}
       />
     )
@@ -110,13 +107,12 @@ describe('remaining curated slot swap layouts', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add listicle/i }))
     expect(onSlotClick).toHaveBeenCalledWith(1)
 
-    fireEvent.click(screen.getAllByTitle('Remove')[0])
-    expect(onRemove).toHaveBeenCalledWith(0)
+    fireEvent.click(screen.getByRole('button', { name: /Map one/i }))
+    expect(onSlotClick).toHaveBeenCalledWith(0)
   })
 
   it('uses filled-slot handles for location grids and keeps empty cells click-to-fill', () => {
     const onSlotClick = vi.fn()
-    const onRemove = vi.fn()
 
     const { container } = render(
       <LocationGridLayout
@@ -124,7 +120,6 @@ describe('remaining curated slot swap layouts', () => {
         childLevel="city"
         invalidItemsBySlot={new Map()}
         onSlotClick={onSlotClick}
-        onRemove={onRemove}
         onReorder={vi.fn()}
       />
     )
@@ -138,20 +133,18 @@ describe('remaining curated slot swap layouts', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add city/i }))
     expect(onSlotClick).toHaveBeenCalledWith(1)
 
-    fireEvent.click(screen.getAllByTitle('Remove')[0])
-    expect(onRemove).toHaveBeenCalledWith(0)
+    fireEvent.click(screen.getByRole('button', { name: /Paris/i }))
+    expect(onSlotClick).toHaveBeenCalledWith(0)
   })
 
   it('uses filled-slot handles for hotel, tour, and place grids and keeps empty cells click-to-fill', () => {
     const onSlotClick = vi.fn()
-    const onRemove = vi.fn()
 
     const { container } = render(
       <HotelGridLayout
         slots={[hotel(1, 'Hotel one'), null, hotel(3, 'Hotel three')]}
         invalidItemsBySlot={new Map()}
         onSlotClick={onSlotClick}
-        onRemove={onRemove}
         onReorder={vi.fn()}
       />
     )
@@ -165,7 +158,7 @@ describe('remaining curated slot swap layouts', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add hotel/i }))
     expect(onSlotClick).toHaveBeenCalledWith(1)
 
-    fireEvent.click(screen.getAllByTitle('Remove')[0])
-    expect(onRemove).toHaveBeenCalledWith(0)
+    fireEvent.click(screen.getByRole('button', { name: /Hotel one/i }))
+    expect(onSlotClick).toHaveBeenCalledWith(0)
   })
 })

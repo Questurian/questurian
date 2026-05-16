@@ -320,6 +320,21 @@
   border-color: rgba(184, 68, 68, 0.3);
 }
 
+.hf-curated-slot-replace {
+  width: 100%;
+  height: 100%;
+  border: inherit;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hf-curated-slot-replace:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 /* ── Two-column editor grid ───────────────────────────────────── */
 
 .hf-editor-grid {
@@ -2467,6 +2482,7 @@
 }
 
 .hf-location-grid-body {
+  min-width: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -2479,11 +2495,17 @@
   gap: 0.4rem;
   flex-wrap: wrap;
   align-items: center;
+  min-width: 0;
 }
 
 .hf-location-grid-subtitle {
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.76rem;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hf-location-grid-title {
@@ -2491,6 +2513,10 @@
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .hf-location-grid-key {
@@ -2499,6 +2525,9 @@
   color: var(--muted);
   font-family: monospace;
   line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hf-location-grid-actions {
@@ -4654,6 +4683,26 @@
   padding: clamp(1.5rem, 4vw, 3rem);
 }
 
+.hf-fa-spotlight-copy-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hf-fa-spotlight-copy-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 0.35rem;
+}
+
 .hf-fa-spotlight-title {
   margin: 0;
   font-family: Georgia, 'Times New Roman', Times, serif;
@@ -4768,7 +4817,10 @@
 .hf-fa-spotlight-media {
   position: relative;
   min-height: 12rem;
+  padding: 0;
+  border: 0;
   background: #0a0a0a;
+  cursor: pointer;
 }
 
 .hf-fa-spotlight-media img {

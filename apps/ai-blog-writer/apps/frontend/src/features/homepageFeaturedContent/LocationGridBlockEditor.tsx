@@ -13,16 +13,16 @@ import {
   type HomepageLocationGridItemRef,
   type HomepageLocationGridLevel,
   type HomepageLocationGridSelection,
-  type LocationGridMediaAspect,
+  type LocationGridMediaAspect
 } from './locationGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
   type CuratedHomepageBlockType,
-  type LocationGridBlockResponse,
+  type LocationGridBlockResponse
 } from './pageBlocks'
 import {
   useHomepageLocationGridSlots,
-  type LocationGridCandidateParams,
+  type LocationGridCandidateParams
 } from './useHomepageLocationGridSlots'
 
 function getInvalidMessage(count: number): string {
@@ -42,22 +42,31 @@ type Props = {
   selectionQueryKey: unknown[]
   saveSelection: (
     token: string,
-    items: HomepageLocationGridItemRef[],
+    items: HomepageLocationGridItemRef[]
   ) => Promise<HomepageLocationGridSelection>
   fetchCandidates: (
     token: string,
-    params: LocationGridCandidateParams,
+    params: LocationGridCandidateParams
   ) => Promise<HomepageLocationGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
-  saveLocationGridSectionHeading?: (token: string, value: string | null) => Promise<void>
-  saveLocationGridSectionSubheading?: (token: string, value: string | null) => Promise<void>
-  saveLocationGridMediaAspect?: (token: string, value: LocationGridMediaAspect) => Promise<void>
+  saveLocationGridSectionHeading?: (
+    token: string,
+    value: string | null
+  ) => Promise<void>
+  saveLocationGridSectionSubheading?: (
+    token: string,
+    value: string | null
+  ) => Promise<void>
+  saveLocationGridMediaAspect?: (
+    token: string,
+    value: LocationGridMediaAspect
+  ) => Promise<void>
   /** When the grid has no saved locations, user may switch block type (section title kept). */
   convertBlockTargets?: CuratedHomepageBlockType[]
   onConvertEmptyBlock?: (
     token: string,
     blockType: CuratedHomepageBlockType,
-    slotCount: number,
+    slotCount: number
   ) => Promise<void>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
@@ -80,13 +89,15 @@ export default function LocationGridBlockEditor({
   onConvertEmptyBlock,
   onDeleteBlock,
   isDeletingBlock,
-  deleteError,
+  deleteError
 }: Props) {
   const savedSectionHeading = block.sectionHeading ?? ''
   const savedSectionSubheading = block.sectionSubheading ?? ''
-  const savedMediaAspect: LocationGridMediaAspect = block.mediaAspect ?? 'rectangle'
+  const savedMediaAspect: LocationGridMediaAspect =
+    block.mediaAspect ?? 'rectangle'
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [mediaAspectDraft, setMediaAspectDraft] = useState<LocationGridMediaAspect>(savedMediaAspect)
+  const [mediaAspectDraft, setMediaAspectDraft] =
+    useState<LocationGridMediaAspect>(savedMediaAspect)
 
   useEffect(() => {
     setMediaAspectDraft(savedMediaAspect)
@@ -98,7 +109,7 @@ export default function LocationGridBlockEditor({
     mutationFn: async (value: LocationGridMediaAspect) => {
       if (!token || !saveLocationGridMediaAspect) return
       await saveLocationGridMediaAspect(token, value)
-    },
+    }
   })
 
   const slotEditorState = useHomepageLocationGridSlots({
@@ -107,7 +118,7 @@ export default function LocationGridBlockEditor({
     selection: block.selection,
     saveSelection,
     fetchCandidates,
-    selectionQueryKey,
+    selectionQueryKey
   })
 
   const {
@@ -126,14 +137,13 @@ export default function LocationGridBlockEditor({
     candidatePage,
     handleCandidatePick,
     handleReorderAll,
-    handleRemove,
     handleSave,
     setSearchValue,
     setCandidatePage,
     setPickerSlotIndex,
     draftSlots,
     hasAllSlotsFilled,
-    hasUnsavedChanges,
+    hasUnsavedChanges
   } = slotEditorState
 
   const convertTargetOptions = useMemo(() => {
@@ -143,11 +153,11 @@ export default function LocationGridBlockEditor({
   }, [convertBlockTargets, block.blockType])
 
   const canConvertEmptyBlock =
-    Boolean(onConvertEmptyBlock)
-    && convertTargetOptions.length > 0
-    && !hasUnsavedChanges
-    && savedSlots.every((s) => !s)
-    && savedInvalidItems.length === 0
+    Boolean(onConvertEmptyBlock) &&
+    convertTargetOptions.length > 0 &&
+    !hasUnsavedChanges &&
+    savedSlots.every((s) => !s) &&
+    savedInvalidItems.length === 0
 
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
   const childLabel = childLevel === 'city' ? 'cities' : 'neighborhoods'
@@ -178,18 +188,24 @@ export default function LocationGridBlockEditor({
     )
   }
 
-  const currentSlotItem = pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
+  const currentSlotItem =
+    pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
   const currentSlotId = currentSlotItem?.id ?? null
 
   const saveNeedsAllSlots =
-    hasUnsavedChanges && !hasAllSlotsFilled && Boolean(token) && !saveMutation.isPending
+    hasUnsavedChanges &&
+    !hasAllSlotsFilled &&
+    Boolean(token) &&
+    !saveMutation.isPending
 
   return (
     <div className="hf-block-section">
       <div className="hf-block-header">
         <div className="hf-block-label">
           <span>Block {blockIndex + 1}</span>
-          <span className="hf-block-type-label-minimal">{blockConfig.label}</span>
+          <span className="hf-block-type-label-minimal">
+            {blockConfig.label}
+          </span>
         </div>
         <div className="hf-block-header-actions">
           <span className="hf-block-slot-meta" aria-live="polite">
@@ -243,109 +259,116 @@ export default function LocationGridBlockEditor({
         >
           {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
         </p>
-          <HomepageBlockSectionTextFields
-            blockId={block.id}
-            token={token}
-            sectionHeading={block.sectionHeading}
-            sectionSubheading={block.sectionSubheading}
-            settingsOpen={settingsOpen}
-            saveSectionHeading={saveLocationGridSectionHeading}
-            saveSectionSubheading={saveLocationGridSectionSubheading}
-          />
+        <HomepageBlockSectionTextFields
+          blockId={block.id}
+          token={token}
+          sectionHeading={block.sectionHeading}
+          sectionSubheading={block.sectionSubheading}
+          settingsOpen={settingsOpen}
+          saveSectionHeading={saveLocationGridSectionHeading}
+          saveSectionSubheading={saveLocationGridSectionSubheading}
+        />
 
-          {saveLocationGridMediaAspect ? (
-            <section className="hf-block-settings-section">
-              <h3 className="hf-block-settings-kicker">Card image shape</h3>
-              <p className="hf-block-settings-hint">
-                Aspect ratio for each location cover image in this grid (editor preview matches the
-                public homepage).
-              </p>
-              <div
-                className="hf-slot3-layout-options"
-                role="radiogroup"
-                aria-label="Location grid image shape"
-              >
-                {LOCATION_GRID_MEDIA_ASPECTS.map((aspect) => (
-                  <label key={aspect} className="hf-slot3-layout-label">
-                    <input
-                      type="radio"
-                      name={`hf-lg-aspect-${block.id}`}
-                      checked={mediaAspectDraft === aspect}
-                      onChange={() => setMediaAspectDraft(aspect)}
-                      disabled={!token || mediaAspectMutation.isPending}
-                    />
-                    <span>
-                      {aspect === 'rectangle'
-                        ? 'Rectangle — wide (16:10)'
-                        : aspect === 'square'
-                          ? 'Square — 1:1'
-                          : 'Portrait — taller (3:4, not phone-tall)'}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              <div className="hf-block-section-heading-row">
-                <button
-                  type="button"
-                  className="hf-btn-ghost"
-                  disabled={!token || !mediaAspectDirty || mediaAspectMutation.isPending}
-                  onClick={() => setMediaAspectDraft(savedMediaAspect)}
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  className="hf-btn-primary"
-                  disabled={!token || !mediaAspectDirty || mediaAspectMutation.isPending}
-                  onClick={() => mediaAspectMutation.mutate(mediaAspectDraft)}
-                >
-                  {mediaAspectMutation.isPending ? 'Saving…' : 'Save shape'}
-                </button>
-              </div>
-              {mediaAspectMutation.isError ? (
-                <p className="hf-block-section-heading-error">
-                  {mediaAspectMutation.error instanceof Error
-                    ? mediaAspectMutation.error.message
-                    : 'Failed to save image shape.'}
-                </p>
-              ) : null}
-            </section>
-          ) : null}
-
+        {saveLocationGridMediaAspect ? (
           <section className="hf-block-settings-section">
-            <h3 className="hf-block-settings-kicker">Saving the grid</h3>
+            <h3 className="hf-block-settings-kicker">Card image shape</h3>
             <p className="hf-block-settings-hint">
-              The public homepage expects every slot filled ({block.selection.totalSlots}{' '}
-              {childLabel}). Save is only available when all slots have a location and there are no
-              duplicate picks.
+              Aspect ratio for each location cover image in this grid (editor
+              preview matches the public homepage).
             </p>
-            {saveNeedsAllSlots ? (
-              <p className="hf-block-settings-hint" style={{ color: 'var(--accent)' }}>
-                You have unsaved changes but the grid is not complete — fill the remaining slots
-                before saving.
+            <div
+              className="hf-slot3-layout-options"
+              role="radiogroup"
+              aria-label="Location grid image shape"
+            >
+              {LOCATION_GRID_MEDIA_ASPECTS.map((aspect) => (
+                <label key={aspect} className="hf-slot3-layout-label">
+                  <input
+                    type="radio"
+                    name={`hf-lg-aspect-${block.id}`}
+                    checked={mediaAspectDraft === aspect}
+                    onChange={() => setMediaAspectDraft(aspect)}
+                    disabled={!token || mediaAspectMutation.isPending}
+                  />
+                  <span>
+                    {aspect === 'rectangle'
+                      ? 'Rectangle — wide (16:10)'
+                      : aspect === 'square'
+                        ? 'Square — 1:1'
+                        : 'Portrait — taller (3:4, not phone-tall)'}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="hf-block-section-heading-row">
+              <button
+                type="button"
+                className="hf-btn-ghost"
+                disabled={
+                  !token || !mediaAspectDirty || mediaAspectMutation.isPending
+                }
+                onClick={() => setMediaAspectDraft(savedMediaAspect)}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="hf-btn-primary"
+                disabled={
+                  !token || !mediaAspectDirty || mediaAspectMutation.isPending
+                }
+                onClick={() => mediaAspectMutation.mutate(mediaAspectDraft)}
+              >
+                {mediaAspectMutation.isPending ? 'Saving…' : 'Save shape'}
+              </button>
+            </div>
+            {mediaAspectMutation.isError ? (
+              <p className="hf-block-section-heading-error">
+                {mediaAspectMutation.error instanceof Error
+                  ? mediaAspectMutation.error.message
+                  : 'Failed to save image shape.'}
               </p>
             ) : null}
           </section>
+        ) : null}
 
-          <HomepageBlockConvertSection
-            blockId={block.id}
-            currentBlockType={block.blockType}
-            currentSlotCount={block.selection.totalSlots}
-            token={token}
-            convertTargetOptions={convertTargetOptions}
-            canConvert={canConvertEmptyBlock}
-            onConvert={async (tok, blockType, slotCount) => {
-              if (!onConvertEmptyBlock) return
-              await onConvertEmptyBlock(tok, blockType, slotCount)
-            }}
-            onConverted={() => setSettingsOpen(false)}
-          />
-          {onConvertEmptyBlock && !canConvertEmptyBlock ? (
-            <p className="hf-block-settings-hint">
-              To change type, remove every location, save an empty grid (or discard unsaved edits), and
-              fix any invalid picks first.
+        <section className="hf-block-settings-section">
+          <h3 className="hf-block-settings-kicker">Saving the grid</h3>
+          <p className="hf-block-settings-hint">
+            The public homepage expects every slot filled (
+            {block.selection.totalSlots} {childLabel}). Save is only available
+            when all slots have a location and there are no duplicate picks.
+          </p>
+          {saveNeedsAllSlots ? (
+            <p
+              className="hf-block-settings-hint"
+              style={{ color: 'var(--accent)' }}
+            >
+              You have unsaved changes but the grid is not complete — fill the
+              remaining slots before saving.
             </p>
           ) : null}
+        </section>
+
+        <HomepageBlockConvertSection
+          blockId={block.id}
+          currentBlockType={block.blockType}
+          currentSlotCount={block.selection.totalSlots}
+          token={token}
+          convertTargetOptions={convertTargetOptions}
+          canConvert={canConvertEmptyBlock}
+          onConvert={async (tok, blockType, slotCount) => {
+            if (!onConvertEmptyBlock) return
+            await onConvertEmptyBlock(tok, blockType, slotCount)
+          }}
+          onConverted={() => setSettingsOpen(false)}
+        />
+        {onConvertEmptyBlock && !canConvertEmptyBlock ? (
+          <p className="hf-block-settings-hint">
+            To change type, remove every location, save an empty grid (or
+            discard unsaved edits), and fix any invalid picks first.
+          </p>
+        ) : null}
       </HomepageBlockSettingsModal>
 
       <div className="hf-block-content">
@@ -355,19 +378,26 @@ export default function LocationGridBlockEditor({
           </h2>
         ) : null}
         {savedSectionSubheading.trim() ? (
-          <p className="hf-block-public-section-subtitle">{savedSectionSubheading.trim()}</p>
+          <p className="hf-block-public-section-subtitle">
+            {savedSectionSubheading.trim()}
+          </p>
         ) : null}
         <p className="hf-panel-desc">
-          {blockConfig.description}. This block can only select {childLabel}. Click a card to pick or
-          swap a location; drag handles swap slot positions.
+          {blockConfig.description}. This block can only select {childLabel}.
+          Click a card to pick or swap a location; drag handles swap slot
+          positions.
         </p>
 
         {savedInvalidItems.length > 0 && (
-          <div className="hf-banner warning">{getInvalidMessage(savedInvalidItems.length)}</div>
+          <div className="hf-banner warning">
+            {getInvalidMessage(savedInvalidItems.length)}
+          </div>
         )}
 
         {resultMessage && (
-          <div className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}>
+          <div
+            className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}
+          >
             {resultMessage}
           </div>
         )}
@@ -378,7 +408,6 @@ export default function LocationGridBlockEditor({
           mediaAspect={mediaAspectDraft}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onRemove={handleRemove}
           onReorder={handleReorderAll}
         />
       </div>

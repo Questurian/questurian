@@ -9,22 +9,36 @@ import { HotelGridPickerModal } from './HotelGridPickerModal'
 import type {
   HomepageHotelGridCandidatesResponse,
   HomepageHotelGridItemRef,
-  HomepageHotelGridSelection,
+  HomepageHotelGridSelection
 } from './hotelGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
   type CuratedHomepageBlockType,
-  type HotelOrAttractionGridBlockResponse,
+  type HotelOrAttractionGridBlockResponse
 } from './pageBlocks'
 import {
   useHomepageHotelGridSlots,
-  type HotelGridCandidateParams,
+  type HotelGridCandidateParams
 } from './useHomepageHotelGridSlots'
 
-function getInvalidMessage(blockType: HotelOrAttractionGridBlockResponse['blockType'], count: number): string {
-  const noun = blockType === 'things-to-do-attractions' ? 'place' : blockType === 'tour-grid' ? 'tour' : 'hotel'
-  const plural = blockType === 'things-to-do-attractions' ? 'places' : blockType === 'tour-grid' ? 'tours' : 'hotels'
-  if (count === 1) return `One saved ${noun} is no longer eligible. Replace it before saving again.`
+function getInvalidMessage(
+  blockType: HotelOrAttractionGridBlockResponse['blockType'],
+  count: number
+): string {
+  const noun =
+    blockType === 'things-to-do-attractions'
+      ? 'place'
+      : blockType === 'tour-grid'
+        ? 'tour'
+        : 'hotel'
+  const plural =
+    blockType === 'things-to-do-attractions'
+      ? 'places'
+      : blockType === 'tour-grid'
+        ? 'tours'
+        : 'hotels'
+  if (count === 1)
+    return `One saved ${noun} is no longer eligible. Replace it before saving again.`
   return `${count} saved ${plural} are no longer eligible. Replace them before saving.`
 }
 
@@ -42,26 +56,35 @@ export default function HotelGridBlockEditor({
   saveHotelGridSectionSubheading,
   onDeleteBlock,
   isDeletingBlock,
-  deleteError,
+  deleteError
 }: {
   block: HotelOrAttractionGridBlockResponse
   blockIndex: number
   token: string | null
   canManage: boolean
   selectionQueryKey: unknown[]
-  saveSelection: (token: string, items: HomepageHotelGridItemRef[]) => Promise<HomepageHotelGridSelection>
+  saveSelection: (
+    token: string,
+    items: HomepageHotelGridItemRef[]
+  ) => Promise<HomepageHotelGridSelection>
   fetchCandidates: (
     token: string,
-    params: HotelGridCandidateParams,
+    params: HotelGridCandidateParams
   ) => Promise<HomepageHotelGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
-  saveHotelGridSectionHeading?: (token: string, value: string | null) => Promise<void>
-  saveHotelGridSectionSubheading?: (token: string, value: string | null) => Promise<void>
+  saveHotelGridSectionHeading?: (
+    token: string,
+    value: string | null
+  ) => Promise<void>
+  saveHotelGridSectionSubheading?: (
+    token: string,
+    value: string | null
+  ) => Promise<void>
   convertBlockTargets?: CuratedHomepageBlockType[]
   onConvertEmptyBlock?: (
     token: string,
     blockType: CuratedHomepageBlockType,
-    slotCount: number,
+    slotCount: number
   ) => Promise<void>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
@@ -77,7 +100,7 @@ export default function HotelGridBlockEditor({
     selection: block.selection,
     saveSelection,
     fetchCandidates,
-    selectionQueryKey,
+    selectionQueryKey
   })
 
   const {
@@ -96,13 +119,12 @@ export default function HotelGridBlockEditor({
     candidatePage,
     handleCandidatePick,
     handleReorderAll,
-    handleRemove,
     handleSave,
     setSearchValue,
     setCandidatePage,
     setPickerSlotIndex,
     draftSlots,
-    hasUnsavedChanges,
+    hasUnsavedChanges
   } = slotEditorState
 
   const convertTargetOptions = useMemo(() => {
@@ -112,11 +134,11 @@ export default function HotelGridBlockEditor({
   }, [convertBlockTargets, block.blockType])
 
   const canConvertEmptyBlock =
-    Boolean(onConvertEmptyBlock)
-    && convertTargetOptions.length > 0
-    && !hasUnsavedChanges
-    && savedSlots.every((s) => !s)
-    && savedInvalidItems.length === 0
+    Boolean(onConvertEmptyBlock) &&
+    convertTargetOptions.length > 0 &&
+    !hasUnsavedChanges &&
+    savedSlots.every((s) => !s) &&
+    savedInvalidItems.length === 0
 
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
 
@@ -146,7 +168,8 @@ export default function HotelGridBlockEditor({
     )
   }
 
-  const currentSlotItem = pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
+  const currentSlotItem =
+    pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
   const currentSlotId = currentSlotItem?.id ?? null
 
   return (
@@ -154,7 +177,9 @@ export default function HotelGridBlockEditor({
       <div className="hf-block-header">
         <div className="hf-block-label">
           <span>Block {blockIndex + 1}</span>
-          <span className="hf-block-type-tag">{blockConfig.label} · {block.selection.totalSlots} slots</span>
+          <span className="hf-block-type-tag">
+            {blockConfig.label} · {block.selection.totalSlots} slots
+          </span>
         </div>
         <div className="hf-block-header-actions">
           <span className="hf-block-slot-meta" aria-live="polite">
@@ -224,8 +249,8 @@ export default function HotelGridBlockEditor({
         />
         {!canConvertEmptyBlock ? (
           <p className="hf-block-settings-hint">
-            To change type, clear every slot and save (or discard unsaved edits) so there are no saved
-            picks.
+            To change type, clear every slot and save (or discard unsaved edits)
+            so there are no saved picks.
           </p>
         ) : null}
       </HomepageBlockSettingsModal>
@@ -237,7 +262,9 @@ export default function HotelGridBlockEditor({
           </h2>
         ) : null}
         {savedSectionSubheading.trim() ? (
-          <p className="hf-block-public-section-subtitle">{savedSectionSubheading.trim()}</p>
+          <p className="hf-block-public-section-subtitle">
+            {savedSectionSubheading.trim()}
+          </p>
         ) : null}
         <p className="hf-panel-desc">{blockConfig.description}.</p>
         {savedInvalidItems.length > 0 && (
@@ -246,15 +273,24 @@ export default function HotelGridBlockEditor({
           </div>
         )}
         {resultMessage && (
-          <div className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}>{resultMessage}</div>
+          <div
+            className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}
+          >
+            {resultMessage}
+          </div>
         )}
         <HotelGridLayout
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onRemove={handleRemove}
           onReorder={handleReorderAll}
-          itemLabel={block.blockType === 'tour-grid' ? 'tour' : block.blockType === 'things-to-do-attractions' ? 'place' : 'hotel'}
+          itemLabel={
+            block.blockType === 'tour-grid'
+              ? 'tour'
+              : block.blockType === 'things-to-do-attractions'
+                ? 'place'
+                : 'hotel'
+          }
         />
       </div>
 
@@ -270,7 +306,13 @@ export default function HotelGridBlockEditor({
           onClose={() => setPickerSlotIndex(null)}
           setSearchValue={setSearchValue}
           setCandidatePage={setCandidatePage}
-          itemLabel={block.blockType === 'tour-grid' ? 'tour' : block.blockType === 'things-to-do-attractions' ? 'place' : 'hotel'}
+          itemLabel={
+            block.blockType === 'tour-grid'
+              ? 'tour'
+              : block.blockType === 'things-to-do-attractions'
+                ? 'place'
+                : 'hotel'
+          }
         />
       )}
     </div>

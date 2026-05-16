@@ -33,7 +33,6 @@ describe('ArticleGridLayout', () => {
         ]}
         invalidItemsBySlot={new Map()}
         onSlotClick={vi.fn()}
-        onRemove={vi.fn()}
         onReorder={vi.fn()}
       />
     )
@@ -53,7 +52,6 @@ describe('ArticleGridLayout', () => {
         slots={[article(1, 'First'), null, article(3, 'Third'), null]}
         invalidItemsBySlot={new Map()}
         onSlotClick={onSlotClick}
-        onRemove={vi.fn()}
         onReorder={vi.fn()}
       />
     )
@@ -63,6 +61,27 @@ describe('ArticleGridLayout', () => {
     ).toHaveLength(2)
 
     fireEvent.click(screen.getAllByRole('button', { name: /Add article/i })[0])
+    expect(onSlotClick).toHaveBeenCalledWith(1)
+  })
+
+  it('opens replacement picker when a filled card is clicked', () => {
+    const onSlotClick = vi.fn()
+
+    render(
+      <ArticleGridLayout
+        slots={[
+          article(1, 'First'),
+          article(2, 'Second'),
+          article(3, 'Third'),
+          article(4, 'Fourth')
+        ]}
+        invalidItemsBySlot={new Map()}
+        onSlotClick={onSlotClick}
+        onReorder={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Second/i }))
     expect(onSlotClick).toHaveBeenCalledWith(1)
   })
 })

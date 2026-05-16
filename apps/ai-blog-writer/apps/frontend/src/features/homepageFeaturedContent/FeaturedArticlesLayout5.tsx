@@ -235,7 +235,6 @@ type GridProps = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
-  onRemove: (slotIndex: number) => void
   onReorder: (newSlots: SlotValue[]) => void
 }
 
@@ -243,7 +242,6 @@ function CardGrid({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onRemove,
   onReorder
 }: GridProps) {
   return (
@@ -306,7 +304,11 @@ function CardGrid({
               key={`slot-${slotIndex + 1}`}
               slotIndex={slotIndex}
             >
-              <article className="hf-slot-card">
+              <button
+                type="button"
+                className="hf-slot-card hf-curated-slot-replace"
+                onClick={() => onSlotClick(slotIndex)}
+              >
                 <div className="hf-slot-card-thumb">
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt="" loading="lazy" />
@@ -326,31 +328,8 @@ function CardGrid({
                     </span>
                   </div>
                   <p className="hf-slot-card-title">{item.title}</p>
-
-                  <div className="hf-slot-card-actions">
-                    <button
-                      type="button"
-                      className="hf-btn-ghost"
-                      onClick={() => onSlotClick(slotIndex)}
-                      style={{
-                        fontSize: '0.78rem',
-                        padding: '0.25rem 0.6rem',
-                        minHeight: '1.8rem'
-                      }}
-                    >
-                      Swap
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon danger"
-                      title="Remove"
-                      onClick={() => onRemove(slotIndex)}
-                    >
-                      ×
-                    </button>
-                  </div>
                 </div>
-              </article>
+              </button>
             </CuratedArticleSlotSwapWrap>
           )
         })}
@@ -367,7 +346,6 @@ export default function FeaturedArticlesLayout5({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onRemove,
   onReorder,
   layout
 }: Props) {
@@ -381,7 +359,6 @@ export default function FeaturedArticlesLayout5({
         slots={slots}
         invalidItemsBySlot={invalidItemsBySlot}
         onSlotClick={onSlotClick}
-        onRemove={onRemove}
         onReorder={onReorder}
       />
     )

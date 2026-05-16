@@ -32,7 +32,6 @@ type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
-  onRemove: (slotIndex: number) => void
   onReorder: (newSlots: SlotValue[]) => void
 }
 
@@ -40,7 +39,6 @@ export default function QuesturianMapsArticleLayout({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onRemove,
   onReorder
 }: Props) {
   return (
@@ -92,7 +90,11 @@ export default function QuesturianMapsArticleLayout({
                 key={`slot-${slotIndex + 1}`}
                 slotIndex={slotIndex}
               >
-                <article className="hf-questurian-maps-cell filled">
+                <button
+                  type="button"
+                  className="hf-questurian-maps-cell filled hf-curated-slot-replace"
+                  onClick={() => onSlotClick(slotIndex)}
+                >
                   <span className="hf-slot-card-num">{slotIndex + 1}</span>
                   <div className="hf-questurian-maps-row">
                     {item.imageUrl ? (
@@ -111,31 +113,9 @@ export default function QuesturianMapsArticleLayout({
                       <p className="hf-questurian-maps-headline">
                         {item.title}
                       </p>
-                      <div className="hf-questurian-maps-actions">
-                        <button
-                          type="button"
-                          className="hf-btn-ghost"
-                          onClick={() => onSlotClick(slotIndex)}
-                          style={{
-                            fontSize: '0.78rem',
-                            padding: '0.2rem 0.55rem',
-                            minHeight: '1.65rem'
-                          }}
-                        >
-                          Swap
-                        </button>
-                        <button
-                          type="button"
-                          className="hf-btn-icon danger"
-                          title="Remove"
-                          onClick={() => onRemove(slotIndex)}
-                        >
-                          ×
-                        </button>
-                      </div>
                     </div>
                   </div>
-                </article>
+                </button>
               </CuratedSlotSwapWrap>
             )
           })}

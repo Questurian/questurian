@@ -25,14 +25,12 @@ export default function HotelGridLayout({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onRemove,
   onReorder,
   itemLabel = 'hotel'
 }: {
   slots: HotelGridSlotValue[]
   invalidItemsBySlot: Map<number, HomepageHotelGridInvalidItem>
   onSlotClick: (slotIndex: number) => void
-  onRemove: (slotIndex: number) => void
   onReorder: (newSlots: HotelGridSlotValue[]) => void
   itemLabel?: string
 }) {
@@ -85,7 +83,11 @@ export default function HotelGridLayout({
               key={`slot-${slotIndex + 1}`}
               slotIndex={slotIndex}
             >
-              <article className="hf-location-grid-card hf-location-grid-card--filled">
+              <button
+                type="button"
+                className="hf-location-grid-card hf-location-grid-card--filled hf-curated-slot-replace"
+                onClick={() => onSlotClick(slotIndex)}
+              >
                 <span className="hf-slot-card-num">{slotIndex + 1}</span>
                 {imageSrc ? (
                   <div className="hf-location-grid-media">
@@ -110,30 +112,8 @@ export default function HotelGridLayout({
                   <p className="hf-location-grid-key">
                     {item.location ?? item.slug ?? 'No location'}
                   </p>
-                  <div className="hf-location-grid-actions">
-                    <button
-                      type="button"
-                      className="hf-btn-ghost"
-                      onClick={() => onSlotClick(slotIndex)}
-                      style={{
-                        fontSize: '0.78rem',
-                        padding: '0.25rem 0.6rem',
-                        minHeight: '1.8rem'
-                      }}
-                    >
-                      Swap
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon danger"
-                      title="Remove"
-                      onClick={() => onRemove(slotIndex)}
-                    >
-                      ×
-                    </button>
-                  </div>
                 </div>
-              </article>
+              </button>
             </CuratedSlotSwapWrap>
           )
         })}
