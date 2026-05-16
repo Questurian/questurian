@@ -1,3 +1,7 @@
+import {
+  CuratedArticleSlotSwapProvider,
+  CuratedArticleSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
 import type { FeaturedArticlesSlot3Layout } from './pageBlocks'
@@ -6,13 +10,22 @@ function formatDate(value: string | null): string {
   if (!value) return ''
   const ts = Date.parse(value)
   if (Number.isNaN(ts)) return ''
-  return new Date(ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  return new Date(ts).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  })
 }
 
 function ImgPlaceholder() {
   return (
     <svg
-      style={{ width: '38%', height: '38%', color: 'var(--muted)', opacity: 0.4 }}
+      style={{
+        width: '38%',
+        height: '38%',
+        color: 'var(--muted)',
+        opacity: 0.4
+      }}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -38,14 +51,28 @@ function CardHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
 
   if (!item) {
     return (
-      <button type="button" className={`hf-l3-card-hero${invalid ? ' invalid' : ''}`} onClick={onClick}>
+      <button
+        type="button"
+        className={`hf-l3-card-hero${invalid ? ' invalid' : ''}`}
+        onClick={onClick}
+      >
         <div className="hf-l3-hero-empty">
-          <span className="hf-l3-num" style={{ position: 'static' }}>{num}</span>
+          <span className="hf-l3-num" style={{ position: 'static' }}>
+            {num}
+          </span>
           {invalid ? (
             <>
               <span style={{ fontSize: '1.4rem' }}>⚠</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.85rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -65,7 +92,16 @@ function CardHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -80,7 +116,12 @@ function CardHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
 }
 
 // ── Center column hero (featured-center layout, slot 2) ─────────
-function CardHeroCenterFeature({ slotIndex, item, invalid, onClick }: SlotCardProps) {
+function CardHeroCenterFeature({
+  slotIndex,
+  item,
+  invalid,
+  onClick
+}: SlotCardProps) {
   const num = slotIndex + 1
 
   if (!item) {
@@ -91,12 +132,22 @@ function CardHeroCenterFeature({ slotIndex, item, invalid, onClick }: SlotCardPr
         onClick={onClick}
       >
         <div className="hf-l3-hero-empty hf-l3-fc-center-empty">
-          <span className="hf-l3-num" style={{ position: 'static' }}>{num}</span>
+          <span className="hf-l3-num" style={{ position: 'static' }}>
+            {num}
+          </span>
           {invalid ? (
             <>
               <span style={{ fontSize: '1.4rem' }}>⚠</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.85rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -111,12 +162,25 @@ function CardHeroCenterFeature({ slotIndex, item, invalid, onClick }: SlotCardPr
   }
 
   return (
-    <button type="button" className="hf-l3-card-hero hf-l3-fc-center" onClick={onClick}>
+    <button
+      type="button"
+      className="hf-l3-card-hero hf-l3-fc-center"
+      onClick={onClick}
+    >
       <div className="hf-l3-hero-img hf-l3-fc-center-img">
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -125,7 +189,9 @@ function CardHeroCenterFeature({ slotIndex, item, invalid, onClick }: SlotCardPr
       <div className="hf-l3-hero-body">
         <p className="hf-l3-label">{item.collectionLabel}</p>
         <p className="hf-l3-hero-title">{item.title}</p>
-        {item.authorLabel ? <p className="hf-l3-author">By {item.authorLabel}</p> : null}
+        {item.authorLabel ? (
+          <p className="hf-l3-author">By {item.authorLabel}</p>
+        ) : null}
       </div>
     </button>
   )
@@ -146,7 +212,16 @@ function CardImg({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         {item?.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -161,10 +236,17 @@ function CardImg({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           </>
         ) : invalid ? (
           <p className="hf-l3-img-title" style={{ color: 'var(--error)' }}>
-            {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+            {invalid.reason === 'not_published'
+              ? 'No longer published'
+              : 'Not found'}
           </p>
         ) : (
-          <p className="hf-l3-img-title" style={{ color: 'var(--muted)', fontWeight: 400 }}>＋ Add article</p>
+          <p
+            className="hf-l3-img-title"
+            style={{ color: 'var(--muted)', fontWeight: 400 }}
+          >
+            ＋ Add article
+          </p>
         )}
       </div>
     </button>
@@ -186,7 +268,16 @@ function CardFcSide({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         {item?.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -197,15 +288,24 @@ function CardFcSide({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           <>
             <p className="hf-l3-label">{item.collectionLabel}</p>
             <p className="hf-l3-img-title hf-l3-fc-side-title">{item.title}</p>
-            {item.authorLabel ? <p className="hf-l3-author">By {item.authorLabel}</p> : null}
+            {item.authorLabel ? (
+              <p className="hf-l3-author">By {item.authorLabel}</p>
+            ) : null}
             {date ? <p className="hf-l3-date">{date}</p> : null}
           </>
         ) : invalid ? (
           <p className="hf-l3-img-title" style={{ color: 'var(--error)' }}>
-            {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+            {invalid.reason === 'not_published'
+              ? 'No longer published'
+              : 'Not found'}
           </p>
         ) : (
-          <p className="hf-l3-img-title" style={{ color: 'var(--muted)', fontWeight: 400 }}>＋ Add article</p>
+          <p
+            className="hf-l3-img-title"
+            style={{ color: 'var(--muted)', fontWeight: 400 }}
+          >
+            ＋ Add article
+          </p>
         )}
       </div>
     </button>
@@ -217,49 +317,87 @@ type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
+  onReorder: (newSlots: SlotValue[]) => void
   layout: FeaturedArticlesSlot3Layout
 }
 
-export default function FeaturedArticlesLayout3({ slots, invalidItemsBySlot, onSlotClick, layout }: Props) {
+export default function FeaturedArticlesLayout3({
+  slots,
+  invalidItemsBySlot,
+  onSlotClick,
+  onReorder,
+  layout
+}: Props) {
   function invalid(i: number) {
     return invalidItemsBySlot.get(i + 1)
   }
 
   if (layout === 'featured-center') {
     return (
-      <div className="hf-l3 hf-l3-fc">
-        <CardFcSide
-          slotIndex={0}
-          item={slots[0] ?? null}
-          invalid={invalid(0)}
-          onClick={() => onSlotClick(0)}
-        />
-        <CardHeroCenterFeature
-          slotIndex={1}
-          item={slots[1] ?? null}
-          invalid={invalid(1)}
-          onClick={() => onSlotClick(1)}
-        />
-        <CardFcSide
-          slotIndex={2}
-          item={slots[2] ?? null}
-          invalid={invalid(2)}
-          onClick={() => onSlotClick(2)}
-        />
-      </div>
+      <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>
+        <div className="hf-l3 hf-l3-fc">
+          <CuratedArticleSlotSwapWrap slotIndex={0}>
+            <CardFcSide
+              slotIndex={0}
+              item={slots[0] ?? null}
+              invalid={invalid(0)}
+              onClick={() => onSlotClick(0)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={1}>
+            <CardHeroCenterFeature
+              slotIndex={1}
+              item={slots[1] ?? null}
+              invalid={invalid(1)}
+              onClick={() => onSlotClick(1)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={2}>
+            <CardFcSide
+              slotIndex={2}
+              item={slots[2] ?? null}
+              invalid={invalid(2)}
+              onClick={() => onSlotClick(2)}
+            />
+          </CuratedArticleSlotSwapWrap>
+        </div>
+      </CuratedArticleSlotSwapProvider>
     )
   }
 
   return (
-    <div className="hf-l3">
-      {/* Slot 1 — hero left */}
-      <CardHero slotIndex={0} item={slots[0] ?? null} invalid={invalid(0)} onClick={() => onSlotClick(0)} />
+    <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>
+      <div className="hf-l3">
+        {/* Slot 1 — hero left */}
+        <CuratedArticleSlotSwapWrap slotIndex={0}>
+          <CardHero
+            slotIndex={0}
+            item={slots[0] ?? null}
+            invalid={invalid(0)}
+            onClick={() => onSlotClick(0)}
+          />
+        </CuratedArticleSlotSwapWrap>
 
-      {/* Slots 2 & 3 — stacked right */}
-      <div className="hf-l3-right">
-        <CardImg slotIndex={1} item={slots[1] ?? null} invalid={invalid(1)} onClick={() => onSlotClick(1)} />
-        <CardImg slotIndex={2} item={slots[2] ?? null} invalid={invalid(2)} onClick={() => onSlotClick(2)} />
+        {/* Slots 2 & 3 — stacked right */}
+        <div className="hf-l3-right">
+          <CuratedArticleSlotSwapWrap slotIndex={1}>
+            <CardImg
+              slotIndex={1}
+              item={slots[1] ?? null}
+              invalid={invalid(1)}
+              onClick={() => onSlotClick(1)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={2}>
+            <CardImg
+              slotIndex={2}
+              item={slots[2] ?? null}
+              invalid={invalid(2)}
+              onClick={() => onSlotClick(2)}
+            />
+          </CuratedArticleSlotSwapWrap>
+        </div>
       </div>
-    </div>
+    </CuratedArticleSlotSwapProvider>
   )
 }

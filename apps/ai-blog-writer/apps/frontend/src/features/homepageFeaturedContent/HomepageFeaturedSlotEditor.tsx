@@ -14,13 +14,17 @@ import FeaturedArticlesLayout5 from './FeaturedArticlesLayout5'
 import FeaturedArticlesLayout8 from './FeaturedArticlesLayout8'
 import FeaturedArticlesLayout7 from './FeaturedArticlesLayout7'
 import FeaturedArticlesLayout9 from './FeaturedArticlesLayout9'
+import {
+  CuratedSlotSwapProvider,
+  CuratedSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import QuesturianMapsArticleLayout from './QuesturianMapsArticleLayout'
 import type {
   ArticleCuratedHomepageBlockType,
   ArticleGridFourLayout,
   FeaturedArticlesSlot3Layout,
   FeaturedArticlesSlot4Layout,
-  FeaturedArticlesSlot5Layout,
+  FeaturedArticlesSlot5Layout
 } from './pageBlocks'
 
 function getInvalidMessage(item: HomepageFeaturedInvalidItem): string {
@@ -76,7 +80,7 @@ export default function HomepageFeaturedSlotEditor({
   featuredArticlesSlot3Layout = 'hero-left',
   featuredArticlesSlot4Layout = 'sidebar-stack',
   featuredArticlesSlot5Layout = 'card-grid',
-  articleGridFourLayout = 'four-across',
+  articleGridFourLayout = 'four-across'
 }: Props) {
   const {
     selectionQuery,
@@ -97,7 +101,6 @@ export default function HomepageFeaturedSlotEditor({
     lockedCollectionFilter,
     candidatePage,
     handleCandidatePick,
-    handleMove,
     handleRemove,
     handleReorderAll,
     handleSave,
@@ -105,10 +108,11 @@ export default function HomepageFeaturedSlotEditor({
     setCollectionFilter,
     setCandidatePage,
     setPickerSlotIndex,
-    draftSlots,
+    draftSlots
   } = slotEditorState
 
-  const loadError = selectionQuery.error instanceof Error ? selectionQuery.error.message : null
+  const loadError =
+    selectionQuery.error instanceof Error ? selectionQuery.error.message : null
   const isComplete = selectionQuery.data?.isComplete
 
   if (selectionQuery.isLoading && draftSlots === null) {
@@ -131,7 +135,8 @@ export default function HomepageFeaturedSlotEditor({
     return compact ? screen : <div className="hf-page">{screen}</div>
   }
 
-  const currentSlotItem = pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
+  const currentSlotItem =
+    pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
   const currentSlotKey = currentSlotItem
     ? `${currentSlotItem.relationTo}:${currentSlotItem.id}`
     : null
@@ -153,7 +158,8 @@ export default function HomepageFeaturedSlotEditor({
       {!(compact && suppressToolbar) ? (
         <div className="hf-slot-controls">
           <span className="hf-panel-desc">
-            {slots.filter(Boolean).length} / {selectionQuery.data?.totalSlots ?? slots.length} slots filled
+            {slots.filter(Boolean).length} /{' '}
+            {selectionQuery.data?.totalSlots ?? slots.length} slots filled
           </span>
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             <button
@@ -174,8 +180,8 @@ export default function HomepageFeaturedSlotEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onMove={handleMove}
           onRemove={handleRemove}
+          onReorder={handleReorderAll}
         />
       ) : variant === 'featured-article' ? (
         <FeaturedArticleSpotlightLayout
@@ -190,6 +196,7 @@ export default function HomepageFeaturedSlotEditor({
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onRemove={handleRemove}
+          onReorder={handleReorderAll}
         />
       ) : variant === 'article-grid' ? (
         <ArticleGridLayout
@@ -197,14 +204,15 @@ export default function HomepageFeaturedSlotEditor({
           articleGridFourLayout={articleGridFourLayout}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onMove={handleMove}
           onRemove={handleRemove}
+          onReorder={handleReorderAll}
         />
       ) : totalSlots === 9 ? (
         <FeaturedArticlesLayout9
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
         />
       ) : totalSlots === 7 ? (
         <FeaturedArticlesLayout7
@@ -218,14 +226,15 @@ export default function HomepageFeaturedSlotEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
         />
       ) : totalSlots === 5 ? (
         <FeaturedArticlesLayout5
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onMove={handleMove}
           onRemove={handleRemove}
+          onReorder={handleReorderAll}
           layout={featuredArticlesSlot5Layout}
         />
       ) : totalSlots === 4 ? (
@@ -233,6 +242,7 @@ export default function HomepageFeaturedSlotEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
           layout={featuredArticlesSlot4Layout}
         />
       ) : totalSlots === 3 ? (
@@ -240,106 +250,132 @@ export default function HomepageFeaturedSlotEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
           layout={featuredArticlesSlot3Layout}
         />
       ) : (
-      <div className="hf-slot-grid">
-        {slots.map((item, slotIndex) => {
-          const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
+        <CuratedSlotSwapProvider slots={slots} onReorder={handleReorderAll}>
+          <div className="hf-slot-grid">
+            {slots.map((item, slotIndex) => {
+              const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
 
-          if (!item) {
-            // Empty or invalid slot — clickable card
-            return (
-              <button
-                key={`slot-${slotIndex + 1}`}
-                type="button"
-                className={`hf-slot-card empty${invalidItem ? ' invalid' : ''}`}
-                onClick={() => setPickerSlotIndex(slotIndex)}
-              >
-                <span className="hf-slot-card-num">{slotIndex + 1}</span>
-                {invalidItem ? (
-                  <>
-                    <span style={{ fontSize: '1.4rem' }}>⚠</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600 }}>
-                      {getInvalidMessage(invalidItem)}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                      Click to replace
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ fontSize: '1.6rem', color: 'var(--muted)' }}>＋</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Add article</span>
-                  </>
-                )}
-              </button>
-            )
-          }
-
-          // Filled slot card
-          return (
-            <article
-              key={`slot-${slotIndex + 1}`}
-              className="hf-slot-card"
-            >
-              <div className="hf-slot-card-thumb">
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" loading="lazy" />
-                ) : (
-                  <ImgPlaceholder />
-                )}
-                <span className="hf-slot-card-num">{slotIndex + 1}</span>
-              </div>
-
-              <div className="hf-slot-card-body">
-                <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                  <span className="hf-level-tag">{item.collectionLabel}</span>
-                  <span className="hf-level-tag">{item.status ?? 'unknown'}</span>
-                </div>
-                <p className="hf-slot-card-title">{item.title}</p>
-
-                <div className="hf-slot-card-actions">
+              if (!item) {
+                // Empty or invalid slot — clickable card
+                return (
                   <button
+                    key={`slot-${slotIndex + 1}`}
                     type="button"
-                    className="hf-btn-ghost"
+                    className={`hf-slot-card empty${invalidItem ? ' invalid' : ''}`}
                     onClick={() => setPickerSlotIndex(slotIndex)}
-                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', minHeight: '1.8rem' }}
                   >
-                    Swap
+                    <span className="hf-slot-card-num">{slotIndex + 1}</span>
+                    {invalidItem ? (
+                      <>
+                        <span style={{ fontSize: '1.4rem' }}>⚠</span>
+                        <span
+                          style={{
+                            fontSize: '0.8rem',
+                            color: 'var(--danger)',
+                            fontWeight: 600
+                          }}
+                        >
+                          {getInvalidMessage(invalidItem)}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--muted)'
+                          }}
+                        >
+                          Click to replace
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          style={{
+                            fontSize: '1.6rem',
+                            color: 'var(--muted)'
+                          }}
+                        >
+                          ＋
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.8rem',
+                            color: 'var(--muted)'
+                          }}
+                        >
+                          Add article
+                        </span>
+                      </>
+                    )}
                   </button>
-                  <button
-                    type="button"
-                    className="hf-btn-icon"
-                    title="Move up"
-                    onClick={() => handleMove(slotIndex, -1)}
-                    disabled={slotIndex === 0}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className="hf-btn-icon"
-                    title="Move down"
-                    onClick={() => handleMove(slotIndex, 1)}
-                    disabled={slotIndex === slots.length - 1}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    className="hf-btn-icon danger"
-                    title="Remove"
-                    onClick={() => handleRemove(slotIndex)}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            </article>
-          )
-        })}
-      </div>
+                )
+              }
+
+              // Filled slot card
+              return (
+                <CuratedSlotSwapWrap
+                  key={`slot-${slotIndex + 1}`}
+                  slotIndex={slotIndex}
+                >
+                  <article className="hf-slot-card">
+                    <div className="hf-slot-card-thumb">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt="" loading="lazy" />
+                      ) : (
+                        <ImgPlaceholder />
+                      )}
+                      <span className="hf-slot-card-num">{slotIndex + 1}</span>
+                    </div>
+
+                    <div className="hf-slot-card-body">
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '0.3rem',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <span className="hf-level-tag">
+                          {item.collectionLabel}
+                        </span>
+                        <span className="hf-level-tag">
+                          {item.status ?? 'unknown'}
+                        </span>
+                      </div>
+                      <p className="hf-slot-card-title">{item.title}</p>
+
+                      <div className="hf-slot-card-actions">
+                        <button
+                          type="button"
+                          className="hf-btn-ghost"
+                          onClick={() => setPickerSlotIndex(slotIndex)}
+                          style={{
+                            fontSize: '0.78rem',
+                            padding: '0.25rem 0.6rem',
+                            minHeight: '1.8rem'
+                          }}
+                        >
+                          Swap
+                        </button>
+                        <button
+                          type="button"
+                          className="hf-btn-icon danger"
+                          title="Remove"
+                          onClick={() => handleRemove(slotIndex)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                </CuratedSlotSwapWrap>
+              )
+            })}
+          </div>
+        </CuratedSlotSwapProvider>
       )}
 
       {/* ── Picker modal ───────────────────────────────────── */}
@@ -375,7 +411,7 @@ export default function HomepageFeaturedSlotEditor({
           <h1>{pageTitle}</h1>
           <p className="hf-hero-desc">
             {pageSubtitle ??
-              `Curate ${totalSlots} article slots. Click any slot to pick or swap its article, then save.`}
+              `Curate ${totalSlots} article slots. Click a slot to pick an article. Drag handles swap slot positions.`}
           </p>
         </div>
         <div className="hf-hero-badges">
@@ -385,10 +421,14 @@ export default function HomepageFeaturedSlotEditor({
               {isComplete ? 'Selection complete' : 'Needs attention'}
             </span>
           )}
-          <span className={`hf-badge ${hasAllSlotsFilled ? 'success' : 'warning'}`}>
+          <span
+            className={`hf-badge ${hasAllSlotsFilled ? 'success' : 'warning'}`}
+          >
             {slots.filter(Boolean).length} / {totalSlots} slots
           </span>
-          <span className={`hf-badge ${hasUnsavedChanges ? 'warning' : 'muted'}`}>
+          <span
+            className={`hf-badge ${hasUnsavedChanges ? 'warning' : 'muted'}`}
+          >
             {hasUnsavedChanges ? 'Unsaved changes' : 'Saved'}
           </span>
           {selectionQuery.data && (
@@ -404,8 +444,8 @@ export default function HomepageFeaturedSlotEditor({
       <div className="hf-banner">
         Need more content?{' '}
         <Link to="/single-type-listicles">Single Type Listicles</Link>,{' '}
-        <Link to="/listicle-itineraries">Listicle Itineraries</Link>, or the standard article
-        staging flow, then come back here to feature it.
+        <Link to="/listicle-itineraries">Listicle Itineraries</Link>, or the
+        standard article staging flow, then come back here to feature it.
       </div>
     </div>
   )

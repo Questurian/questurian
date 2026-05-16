@@ -1,10 +1,19 @@
+import {
+  CuratedArticleSlotSwapProvider,
+  CuratedArticleSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
 
 function ImgPlaceholder() {
   return (
     <svg
-      style={{ width: '40%', height: '40%', color: 'var(--muted)', opacity: 0.4 }}
+      style={{
+        width: '40%',
+        height: '40%',
+        color: 'var(--muted)',
+        opacity: 0.4
+      }}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -17,7 +26,10 @@ function ImgPlaceholder() {
   )
 }
 
-function captionFromExcerpt(excerpt: string | null, maxLen = 96): string | null {
+function captionFromExcerpt(
+  excerpt: string | null,
+  maxLen = 96
+): string | null {
   if (!excerpt?.trim()) return null
   const t = excerpt.trim()
   if (t.length <= maxLen) return t
@@ -46,8 +58,16 @@ function LeftStackCard({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           {invalid ? (
             <>
               <span style={{ fontSize: '1.2rem' }}>⚠</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -75,7 +95,11 @@ function LeftStackCard({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         )}
         <span className="hf-l7-num">{num}</span>
       </div>
-      {cap ? <p className="hf-l7-credit">{cap}</p> : <p className="hf-l7-credit hf-l7-credit--muted"> </p>}
+      {cap ? (
+        <p className="hf-l7-credit">{cap}</p>
+      ) : (
+        <p className="hf-l7-credit hf-l7-credit--muted"> </p>
+      )}
       <p className="hf-l7-headline hf-l7-headline--left">{item.title}</p>
       <p className="hf-l7-byline">{item.authorLabel ?? '—'}</p>
     </button>
@@ -97,8 +121,16 @@ function CenterHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           {invalid ? (
             <>
               <span style={{ fontSize: '1.2rem' }}>⚠</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -129,7 +161,9 @@ function CenterHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
       <div className="hf-l7-hero-copy">
         <p className="hf-l7-headline hf-l7-headline--hero">{item.title}</p>
         {sub ? <p className="hf-l7-dek">{sub}</p> : null}
-        <p className="hf-l7-byline hf-l7-byline--center">{item.authorLabel ?? '—'}</p>
+        <p className="hf-l7-byline hf-l7-byline--center">
+          {item.authorLabel ?? '—'}
+        </p>
       </div>
     </button>
   )
@@ -189,33 +223,63 @@ type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
+  onReorder: (newSlots: SlotValue[]) => void
 }
 
-export default function FeaturedArticlesLayout8({ slots, invalidItemsBySlot, onSlotClick }: Props) {
+export default function FeaturedArticlesLayout8({
+  slots,
+  invalidItemsBySlot,
+  onSlotClick,
+  onReorder
+}: Props) {
   function invalid(slotIndex: number) {
     return invalidItemsBySlot.get(slotIndex + 1)
   }
 
   return (
-    <div className="hf-l7">
-      <div className="hf-l7-col hf-l7-col--left">
-        <LeftStackCard slotIndex={1} item={slots[1] ?? null} invalid={invalid(1)} onClick={() => onSlotClick(1)} />
-        <LeftStackCard slotIndex={2} item={slots[2] ?? null} invalid={invalid(2)} onClick={() => onSlotClick(2)} />
+    <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>
+      <div className="hf-l7">
+        <div className="hf-l7-col hf-l7-col--left">
+          <CuratedArticleSlotSwapWrap slotIndex={1}>
+            <LeftStackCard
+              slotIndex={1}
+              item={slots[1] ?? null}
+              invalid={invalid(1)}
+              onClick={() => onSlotClick(1)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={2}>
+            <LeftStackCard
+              slotIndex={2}
+              item={slots[2] ?? null}
+              invalid={invalid(2)}
+              onClick={() => onSlotClick(2)}
+            />
+          </CuratedArticleSlotSwapWrap>
+        </div>
+        <div className="hf-l7-col hf-l7-col--center">
+          <CuratedArticleSlotSwapWrap slotIndex={0}>
+            <CenterHero
+              slotIndex={0}
+              item={slots[0] ?? null}
+              invalid={invalid(0)}
+              onClick={() => onSlotClick(0)}
+            />
+          </CuratedArticleSlotSwapWrap>
+        </div>
+        <div className="hf-l7-col hf-l7-col--right">
+          {[3, 4, 5, 6, 7].map((i) => (
+            <CuratedArticleSlotSwapWrap key={i} slotIndex={i}>
+              <RightRow
+                slotIndex={i}
+                item={slots[i] ?? null}
+                invalid={invalid(i)}
+                onClick={() => onSlotClick(i)}
+              />
+            </CuratedArticleSlotSwapWrap>
+          ))}
+        </div>
       </div>
-      <div className="hf-l7-col hf-l7-col--center">
-        <CenterHero slotIndex={0} item={slots[0] ?? null} invalid={invalid(0)} onClick={() => onSlotClick(0)} />
-      </div>
-      <div className="hf-l7-col hf-l7-col--right">
-        {[3, 4, 5, 6, 7].map((i) => (
-          <RightRow
-            key={i}
-            slotIndex={i}
-            item={slots[i] ?? null}
-            invalid={invalid(i)}
-            onClick={() => onSlotClick(i)}
-          />
-        ))}
-      </div>
-    </div>
+    </CuratedArticleSlotSwapProvider>
   )
 }

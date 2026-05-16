@@ -1,3 +1,7 @@
+import {
+  CuratedArticleSlotSwapProvider,
+  CuratedArticleSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
 import type { FeaturedArticlesSlot5Layout } from './pageBlocks'
@@ -39,7 +43,9 @@ function formatShortRelative(iso: string | null | undefined): string {
 function bylineCaps(item: SlotValue): string {
   if (!item?.authorLabel) return ''
   const a = item.authorLabel
-  return a.toLowerCase().startsWith('by ') ? a.toUpperCase() : `BY ${a.toUpperCase()}`
+  return a.toLowerCase().startsWith('by ')
+    ? a.toUpperCase()
+    : `BY ${a.toUpperCase()}`
 }
 
 /** Prefer media-set square asset; else OG/wide `imageUrl` (shown in a 1:1 frame). */
@@ -59,14 +65,26 @@ function MagazineHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
   const num = slotIndex + 1
   if (!item) {
     return (
-      <button type="button" className={`hf-l5-mag-hero${invalid ? ' invalid' : ''}`} onClick={onClick}>
+      <button
+        type="button"
+        className={`hf-l5-mag-hero${invalid ? ' invalid' : ''}`}
+        onClick={onClick}
+      >
         <div className="hf-l5-mag-hero-img hf-l5-mag-hero-img-empty">
           <span className="hf-l5-num">{num}</span>
           {invalid ? (
             <>
               <span style={{ fontSize: '1.4rem' }}>⚠</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.85rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -95,7 +113,7 @@ function MagazineHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'rgba(220,218,214,0.35)',
+              background: 'rgba(220,218,214,0.35)'
             }}
           >
             <ImgPlaceholder />
@@ -105,8 +123,12 @@ function MagazineHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
       </div>
       <div className="hf-l5-mag-hero-body">
         <p className="hf-l5-mag-hero-title">{item.title}</p>
-        {item.excerpt ? <p className="hf-l5-mag-hero-dek">{item.excerpt}</p> : null}
-        {bylineCaps(item) ? <p className="hf-l5-mag-hero-byline">{bylineCaps(item)}</p> : null}
+        {item.excerpt ? (
+          <p className="hf-l5-mag-hero-dek">{item.excerpt}</p>
+        ) : null}
+        {bylineCaps(item) ? (
+          <p className="hf-l5-mag-hero-byline">{bylineCaps(item)}</p>
+        ) : null}
       </div>
     </button>
   )
@@ -132,7 +154,7 @@ function SidebarRowMedia({ slotIndex, item, invalid, onClick }: SlotCardProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'rgba(220,218,214,0.35)',
+              background: 'rgba(220,218,214,0.35)'
             }}
           >
             <ImgPlaceholder />
@@ -145,14 +167,21 @@ function SidebarRowMedia({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           <>
             <p className="hf-l5-mag-side-label">{item.collectionLabel}</p>
             <p className="hf-l5-mag-side-title">{item.title}</p>
-            {bylineCaps(item) ? <p className="hf-l5-mag-side-meta">{bylineCaps(item)}</p> : null}
+            {bylineCaps(item) ? (
+              <p className="hf-l5-mag-side-meta">{bylineCaps(item)}</p>
+            ) : null}
           </>
         ) : invalid ? (
           <p className="hf-l5-mag-side-title" style={{ color: 'var(--error)' }}>
-            {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+            {invalid.reason === 'not_published'
+              ? 'No longer published'
+              : 'Not found'}
           </p>
         ) : (
-          <p className="hf-l5-mag-side-title" style={{ color: 'var(--muted)', fontWeight: 400 }}>
+          <p
+            className="hf-l5-mag-side-title"
+            style={{ color: 'var(--muted)', fontWeight: 400 }}
+          >
             ＋ Add article
           </p>
         )}
@@ -175,17 +204,25 @@ function SidebarRowText({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           <>
             <p className="hf-l5-mag-side-label">{item.collectionLabel}</p>
             <p className="hf-l5-mag-side-title">{item.title}</p>
-            {item.excerpt ? <p className="hf-l5-mag-side-dek">{item.excerpt}</p> : null}
+            {item.excerpt ? (
+              <p className="hf-l5-mag-side-dek">{item.excerpt}</p>
+            ) : null}
             <p className="hf-l5-mag-side-meta">
-              {bylineCaps(item) || formatShortRelative(item.publishedAt ?? item.updatedAt)}
+              {bylineCaps(item) ||
+                formatShortRelative(item.publishedAt ?? item.updatedAt)}
             </p>
           </>
         ) : invalid ? (
           <p className="hf-l5-mag-side-title" style={{ color: 'var(--error)' }}>
-            {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+            {invalid.reason === 'not_published'
+              ? 'No longer published'
+              : 'Not found'}
           </p>
         ) : (
-          <p className="hf-l5-mag-side-title" style={{ color: 'var(--muted)', fontWeight: 400 }}>
+          <p
+            className="hf-l5-mag-side-title"
+            style={{ color: 'var(--muted)', fontWeight: 400 }}
+          >
             ＋ Add article
           </p>
         )}
@@ -198,108 +235,127 @@ type GridProps = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
-  onMove: (slotIndex: number, delta: -1 | 1) => void
   onRemove: (slotIndex: number) => void
+  onReorder: (newSlots: SlotValue[]) => void
 }
 
 function CardGrid({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onMove,
   onRemove,
+  onReorder
 }: GridProps) {
   return (
-    <div className="hf-slot-grid">
-      {slots.map((item, slotIndex) => {
-        const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
+    <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>
+      <div className="hf-slot-grid">
+        {slots.map((item, slotIndex) => {
+          const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
 
-        if (!item) {
-          return (
-            <button
-              key={`slot-${slotIndex + 1}`}
-              type="button"
-              className={`hf-slot-card empty${invalidItem ? ' invalid' : ''}`}
-              onClick={() => onSlotClick(slotIndex)}
-            >
-              <span className="hf-slot-card-num">{slotIndex + 1}</span>
-              {invalidItem ? (
-                <>
-                  <span style={{ fontSize: '1.4rem' }}>⚠</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600 }}>
-                    {getInvalidMessage(invalidItem)}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Click to replace</span>
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: '1.6rem', color: 'var(--muted)' }}>＋</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Add article</span>
-                </>
-              )}
-            </button>
-          )
-        }
-
-        return (
-          <article key={`slot-${slotIndex + 1}`} className="hf-slot-card">
-            <div className="hf-slot-card-thumb">
-              {item.imageUrl ? (
-                <img src={item.imageUrl} alt="" loading="lazy" />
-              ) : (
-                <ImgPlaceholder />
-              )}
-              <span className="hf-slot-card-num">{slotIndex + 1}</span>
-            </div>
-
-            <div className="hf-slot-card-body">
-              <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                <span className="hf-level-tag">{item.collectionLabel}</span>
-                <span className="hf-level-tag">{item.status ?? 'unknown'}</span>
-              </div>
-              <p className="hf-slot-card-title">{item.title}</p>
-
-              <div className="hf-slot-card-actions">
+          if (!item) {
+            return (
+              <CuratedArticleSlotSwapWrap
+                key={`slot-${slotIndex + 1}`}
+                slotIndex={slotIndex}
+              >
                 <button
                   type="button"
-                  className="hf-btn-ghost"
+                  className={`hf-slot-card empty${invalidItem ? ' invalid' : ''}`}
                   onClick={() => onSlotClick(slotIndex)}
-                  style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', minHeight: '1.8rem' }}
                 >
-                  Swap
+                  <span className="hf-slot-card-num">{slotIndex + 1}</span>
+                  {invalidItem ? (
+                    <>
+                      <span style={{ fontSize: '1.4rem' }}>⚠</span>
+                      <span
+                        style={{
+                          fontSize: '0.8rem',
+                          color: 'var(--danger)',
+                          fontWeight: 600
+                        }}
+                      >
+                        {getInvalidMessage(invalidItem)}
+                      </span>
+                      <span
+                        style={{ fontSize: '0.75rem', color: 'var(--muted)' }}
+                      >
+                        Click to replace
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span
+                        style={{ fontSize: '1.6rem', color: 'var(--muted)' }}
+                      >
+                        ＋
+                      </span>
+                      <span
+                        style={{ fontSize: '0.8rem', color: 'var(--muted)' }}
+                      >
+                        Add article
+                      </span>
+                    </>
+                  )}
                 </button>
-                <button
-                  type="button"
-                  className="hf-btn-icon"
-                  title="Move up"
-                  onClick={() => onMove(slotIndex, -1)}
-                  disabled={slotIndex === 0}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="hf-btn-icon"
-                  title="Move down"
-                  onClick={() => onMove(slotIndex, 1)}
-                  disabled={slotIndex === slots.length - 1}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  className="hf-btn-icon danger"
-                  title="Remove"
-                  onClick={() => onRemove(slotIndex)}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          </article>
-        )
-      })}
-    </div>
+              </CuratedArticleSlotSwapWrap>
+            )
+          }
+
+          return (
+            <CuratedArticleSlotSwapWrap
+              key={`slot-${slotIndex + 1}`}
+              slotIndex={slotIndex}
+            >
+              <article className="hf-slot-card">
+                <div className="hf-slot-card-thumb">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt="" loading="lazy" />
+                  ) : (
+                    <ImgPlaceholder />
+                  )}
+                  <span className="hf-slot-card-num">{slotIndex + 1}</span>
+                </div>
+
+                <div className="hf-slot-card-body">
+                  <div
+                    style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}
+                  >
+                    <span className="hf-level-tag">{item.collectionLabel}</span>
+                    <span className="hf-level-tag">
+                      {item.status ?? 'unknown'}
+                    </span>
+                  </div>
+                  <p className="hf-slot-card-title">{item.title}</p>
+
+                  <div className="hf-slot-card-actions">
+                    <button
+                      type="button"
+                      className="hf-btn-ghost"
+                      onClick={() => onSlotClick(slotIndex)}
+                      style={{
+                        fontSize: '0.78rem',
+                        padding: '0.25rem 0.6rem',
+                        minHeight: '1.8rem'
+                      }}
+                    >
+                      Swap
+                    </button>
+                    <button
+                      type="button"
+                      className="hf-btn-icon danger"
+                      title="Remove"
+                      onClick={() => onRemove(slotIndex)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </CuratedArticleSlotSwapWrap>
+          )
+        })}
+      </div>
+    </CuratedArticleSlotSwapProvider>
   )
 }
 
@@ -311,9 +367,9 @@ export default function FeaturedArticlesLayout5({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onMove,
   onRemove,
-  layout,
+  onReorder,
+  layout
 }: Props) {
   function invalid(i: number) {
     return invalidItemsBySlot.get(i + 1)
@@ -325,46 +381,58 @@ export default function FeaturedArticlesLayout5({
         slots={slots}
         invalidItemsBySlot={invalidItemsBySlot}
         onSlotClick={onSlotClick}
-        onMove={onMove}
         onRemove={onRemove}
+        onReorder={onReorder}
       />
     )
   }
 
   return (
-    <div className="hf-l5-mag">
-      <MagazineHero
-        slotIndex={0}
-        item={slots[0] ?? null}
-        invalid={invalid(0)}
-        onClick={() => onSlotClick(0)}
-      />
-      <div className="hf-l5-mag-sidebar">
-        <SidebarRowMedia
-          slotIndex={1}
-          item={slots[1] ?? null}
-          invalid={invalid(1)}
-          onClick={() => onSlotClick(1)}
-        />
-        <SidebarRowText
-          slotIndex={2}
-          item={slots[2] ?? null}
-          invalid={invalid(2)}
-          onClick={() => onSlotClick(2)}
-        />
-        <SidebarRowText
-          slotIndex={3}
-          item={slots[3] ?? null}
-          invalid={invalid(3)}
-          onClick={() => onSlotClick(3)}
-        />
-        <SidebarRowText
-          slotIndex={4}
-          item={slots[4] ?? null}
-          invalid={invalid(4)}
-          onClick={() => onSlotClick(4)}
-        />
+    <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>
+      <div className="hf-l5-mag">
+        <CuratedArticleSlotSwapWrap slotIndex={0}>
+          <MagazineHero
+            slotIndex={0}
+            item={slots[0] ?? null}
+            invalid={invalid(0)}
+            onClick={() => onSlotClick(0)}
+          />
+        </CuratedArticleSlotSwapWrap>
+        <div className="hf-l5-mag-sidebar">
+          <CuratedArticleSlotSwapWrap slotIndex={1}>
+            <SidebarRowMedia
+              slotIndex={1}
+              item={slots[1] ?? null}
+              invalid={invalid(1)}
+              onClick={() => onSlotClick(1)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={2}>
+            <SidebarRowText
+              slotIndex={2}
+              item={slots[2] ?? null}
+              invalid={invalid(2)}
+              onClick={() => onSlotClick(2)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={3}>
+            <SidebarRowText
+              slotIndex={3}
+              item={slots[3] ?? null}
+              invalid={invalid(3)}
+              onClick={() => onSlotClick(3)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={4}>
+            <SidebarRowText
+              slotIndex={4}
+              item={slots[4] ?? null}
+              invalid={invalid(4)}
+              onClick={() => onSlotClick(4)}
+            />
+          </CuratedArticleSlotSwapWrap>
+        </div>
       </div>
-    </div>
+    </CuratedArticleSlotSwapProvider>
   )
 }

@@ -1,10 +1,19 @@
+import {
+  CuratedArticleSlotSwapProvider,
+  CuratedArticleSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
 
 function ImgPlaceholder() {
   return (
     <svg
-      style={{ width: '40%', height: '40%', color: 'var(--muted)', opacity: 0.4 }}
+      style={{
+        width: '40%',
+        height: '40%',
+        color: 'var(--muted)',
+        opacity: 0.4
+      }}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -34,15 +43,30 @@ function CardA({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         type="button"
         className={`hf-l9-card-a hf-l9-empty${invalid ? ' invalid' : ''}`}
         onClick={onClick}
-        style={{ width: '100%', background: 'none', padding: 0, textAlign: 'left' }}
+        style={{
+          width: '100%',
+          background: 'none',
+          padding: 0,
+          textAlign: 'left'
+        }}
       >
         <div className="hf-l9-empty" style={{ width: '100%', minHeight: 160 }}>
-          <span className="hf-l9-num" style={{ position: 'static' }}>{num}</span>
+          <span className="hf-l9-num" style={{ position: 'static' }}>
+            {num}
+          </span>
           {invalid ? (
             <>
               <span style={{ fontSize: '1.2rem' }}>⚠</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -57,12 +81,32 @@ function CardA({ slotIndex, item, invalid, onClick }: SlotCardProps) {
   }
 
   return (
-    <button type="button" className="hf-l9-card-a" onClick={onClick} style={{ width: '100%', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
+    <button
+      type="button"
+      className="hf-l9-card-a"
+      onClick={onClick}
+      style={{
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        textAlign: 'left'
+      }}
+    >
       <div className="hf-l9-thumb">
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -86,15 +130,31 @@ function CardHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         type="button"
         className={`hf-l9-card-hero${invalid ? ' invalid' : ''}`}
         onClick={onClick}
-        style={{ width: '100%', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}
+        style={{
+          width: '100%',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          textAlign: 'left'
+        }}
       >
         <div className="hf-l9-empty" style={{ minHeight: 240 }}>
-          <span className="hf-l9-num" style={{ position: 'static' }}>{num}</span>
+          <span className="hf-l9-num" style={{ position: 'static' }}>
+            {num}
+          </span>
           {invalid ? (
             <>
               <span style={{ fontSize: '1.2rem' }}>⚠</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -109,12 +169,32 @@ function CardHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
   }
 
   return (
-    <button type="button" className="hf-l9-card-hero" onClick={onClick} style={{ width: '100%', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
+    <button
+      type="button"
+      className="hf-l9-card-hero"
+      onClick={onClick}
+      style={{
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        textAlign: 'left'
+      }}
+    >
       <div className="hf-l9-thumb">
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -138,24 +218,51 @@ function CardHoriz({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         type="button"
         className={`hf-l9-card-horiz${invalid ? ' invalid' : ''}`}
         onClick={onClick}
-        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}
+        style={{
+          width: '100%',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer'
+        }}
       >
         <div className="hf-l9-body">
           <div className="hf-l9-num-row">
-            <span className="hf-l9-num" style={{ position: 'static' }}>{num}</span>
+            <span className="hf-l9-num" style={{ position: 'static' }}>
+              {num}
+            </span>
           </div>
-          <p className="hf-l9-title" style={{ color: 'var(--muted)', fontWeight: 400 }}>＋ Add article</p>
+          <p
+            className="hf-l9-title"
+            style={{ color: 'var(--muted)', fontWeight: 400 }}
+          >
+            ＋ Add article
+          </p>
         </div>
-        <div className="hf-l9-thumb hf-l9-empty" style={{ minHeight: 'unset' }} />
+        <div
+          className="hf-l9-thumb hf-l9-empty"
+          style={{ minHeight: 'unset' }}
+        />
       </button>
     )
   }
 
   return (
-    <button type="button" className="hf-l9-card-horiz" onClick={onClick} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}>
+    <button
+      type="button"
+      className="hf-l9-card-horiz"
+      onClick={onClick}
+      style={{
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer'
+      }}
+    >
       <div className="hf-l9-body">
         <div className="hf-l9-num-row">
-          <span className="hf-l9-num" style={{ position: 'static' }}>{num}</span>
+          <span className="hf-l9-num" style={{ position: 'static' }}>
+            {num}
+          </span>
           <p className="hf-l9-label">{item.collectionLabel}</p>
         </div>
         <p className="hf-l9-title">{item.title}</p>
@@ -164,7 +271,16 @@ function CardHoriz({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -183,23 +299,51 @@ function CardList({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         type="button"
         className={`hf-l9-card-list${invalid ? ' invalid' : ''}`}
         onClick={onClick}
-        style={{ width: '100%', background: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+        style={{
+          width: '100%',
+          background: 'none',
+          borderTop: 'none',
+          borderLeft: 'none',
+          borderRight: 'none',
+          borderBottom: '1px solid var(--border)',
+          cursor: 'pointer'
+        }}
       >
         <div className="hf-l9-body">
           <div className="hf-l9-num-row">
             <span className="hf-l9-num">{num}</span>
-            <p className="hf-l9-title" style={{ color: 'var(--muted)', fontWeight: 400 }}>
-              {invalid ? (invalid.reason === 'not_published' ? 'No longer published' : 'Not found') : '＋ Add article'}
+            <p
+              className="hf-l9-title"
+              style={{ color: 'var(--muted)', fontWeight: 400 }}
+            >
+              {invalid
+                ? invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'
+                : '＋ Add article'}
             </p>
           </div>
         </div>
-        <div className="hf-l9-thumb hf-l9-empty" style={{ minHeight: 'unset', padding: 0 }} />
+        <div
+          className="hf-l9-thumb hf-l9-empty"
+          style={{ minHeight: 'unset', padding: 0 }}
+        />
       </button>
     )
   }
 
   return (
-    <button type="button" className="hf-l9-card-list" onClick={onClick} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}>
+    <button
+      type="button"
+      className="hf-l9-card-list"
+      onClick={onClick}
+      style={{
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer'
+      }}
+    >
       <div className="hf-l9-body">
         <div className="hf-l9-num-row">
           <span className="hf-l9-num">{num}</span>
@@ -211,7 +355,16 @@ function CardList({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(220,218,214,0.35)' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(220,218,214,0.35)'
+            }}
+          >
             <ImgPlaceholder />
           </div>
         )}
@@ -225,39 +378,76 @@ type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
+  onReorder: (newSlots: SlotValue[]) => void
 }
 
-export default function FeaturedArticlesLayout9({ slots, invalidItemsBySlot, onSlotClick }: Props) {
+export default function FeaturedArticlesLayout9({
+  slots,
+  invalidItemsBySlot,
+  onSlotClick,
+  onReorder
+}: Props) {
   function invalid(slotIndex: number) {
     return invalidItemsBySlot.get(slotIndex + 1)
   }
 
   return (
-    <div className="hf-l9">
-      {/* ── Left column: slots 1 & 2 ── */}
-      <div className="hf-l9-left">
-        <CardA slotIndex={0} item={slots[0] ?? null} invalid={invalid(0)} onClick={() => onSlotClick(0)} />
-        <CardA slotIndex={1} item={slots[1] ?? null} invalid={invalid(1)} onClick={() => onSlotClick(1)} />
-      </div>
+    <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>
+      <div className="hf-l9">
+        {/* ── Left column: slots 1 & 2 ── */}
+        <div className="hf-l9-left">
+          <CuratedArticleSlotSwapWrap slotIndex={0}>
+            <CardA
+              slotIndex={0}
+              item={slots[0] ?? null}
+              invalid={invalid(0)}
+              onClick={() => onSlotClick(0)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={1}>
+            <CardA
+              slotIndex={1}
+              item={slots[1] ?? null}
+              invalid={invalid(1)}
+              onClick={() => onSlotClick(1)}
+            />
+          </CuratedArticleSlotSwapWrap>
+        </div>
 
-      {/* ── Center column: slot 3 (hero) + slot 4 (horiz) ── */}
-      <div className="hf-l9-center">
-        <CardHero slotIndex={2} item={slots[2] ?? null} invalid={invalid(2)} onClick={() => onSlotClick(2)} />
-        <CardHoriz slotIndex={3} item={slots[3] ?? null} invalid={invalid(3)} onClick={() => onSlotClick(3)} />
-      </div>
+        {/* ── Center column: slot 3 (hero) + slot 4 (horiz) ── */}
+        <div className="hf-l9-center">
+          <CuratedArticleSlotSwapWrap slotIndex={2}>
+            <CardHero
+              slotIndex={2}
+              item={slots[2] ?? null}
+              invalid={invalid(2)}
+              onClick={() => onSlotClick(2)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={3}>
+            <CardHoriz
+              slotIndex={3}
+              item={slots[3] ?? null}
+              invalid={invalid(3)}
+              onClick={() => onSlotClick(3)}
+            />
+          </CuratedArticleSlotSwapWrap>
+        </div>
 
-      {/* ── Right column: slots 5–9 ── */}
-      <div className="hf-l9-right">
-        {[4, 5, 6, 7, 8].map((i) => (
-          <CardList
-            key={i}
-            slotIndex={i}
-            item={slots[i] ?? null}
-            invalid={invalid(i)}
-            onClick={() => onSlotClick(i)}
-          />
-        ))}
+        {/* ── Right column: slots 5–9 ── */}
+        <div className="hf-l9-right">
+          {[4, 5, 6, 7, 8].map((i) => (
+            <CuratedArticleSlotSwapWrap key={i} slotIndex={i}>
+              <CardList
+                slotIndex={i}
+                item={slots[i] ?? null}
+                invalid={invalid(i)}
+                onClick={() => onSlotClick(i)}
+              />
+            </CuratedArticleSlotSwapWrap>
+          ))}
+        </div>
       </div>
-    </div>
+    </CuratedArticleSlotSwapProvider>
   )
 }

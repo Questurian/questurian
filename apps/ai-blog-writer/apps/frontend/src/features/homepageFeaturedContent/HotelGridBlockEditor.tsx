@@ -95,7 +95,7 @@ export default function HotelGridBlockEditor({
     searchValue,
     candidatePage,
     handleCandidatePick,
-    handleMove,
+    handleReorderAll,
     handleRemove,
     handleSave,
     setSearchValue,
@@ -252,8 +252,8 @@ export default function HotelGridBlockEditor({
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onMove={handleMove}
           onRemove={handleRemove}
+          onReorder={handleReorderAll}
           itemLabel={block.blockType === 'tour-grid' ? 'tour' : block.blockType === 'things-to-do-attractions' ? 'place' : 'hotel'}
         />
       </div>

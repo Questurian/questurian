@@ -1,41 +1,19 @@
-import type { ReactNode } from 'react'
-import { useCallback, useState } from 'react'
 import {
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  pointerWithin,
-  useSensor,
-  useSensors,
-  useDraggable,
-  useDroppable,
-  type DraggableAttributes,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core'
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-
+  CuratedArticleSlotSwapProvider,
+  CuratedArticleSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
-
-function GripIcon() {
-  return (
-    <svg width="10" height="15" viewBox="0 0 10 15" fill="currentColor" aria-hidden="true">
-      <circle cx="2" cy="2.5" r="1.5" />
-      <circle cx="8" cy="2.5" r="1.5" />
-      <circle cx="2" cy="7.5" r="1.5" />
-      <circle cx="8" cy="7.5" r="1.5" />
-      <circle cx="2" cy="12.5" r="1.5" />
-      <circle cx="8" cy="12.5" r="1.5" />
-    </svg>
-  )
-}
 
 function ImgPlaceholder() {
   return (
     <svg
-      style={{ width: '40%', height: '40%', color: 'var(--muted)', opacity: 0.4 }}
+      style={{
+        width: '40%',
+        height: '40%',
+        color: 'var(--muted)',
+        opacity: 0.4
+      }}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -48,52 +26,14 @@ function ImgPlaceholder() {
   )
 }
 
-function captionFromExcerpt(excerpt: string | null, maxLen = 96): string | null {
+function captionFromExcerpt(
+  excerpt: string | null,
+  maxLen = 96
+): string | null {
   if (!excerpt?.trim()) return null
   const t = excerpt.trim()
   if (t.length <= maxLen) return t
   return `${t.slice(0, maxLen - 1)}…`
-}
-
-type ConnectedSlotWrapProps = {
-  slotId: string
-  children: ReactNode
-}
-
-function ConnectedSlotWrap({ slotId, children }: ConnectedSlotWrapProps) {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: slotId })
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: slotId })
-
-  const setRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      setDragRef(el)
-      setDropRef(el)
-    },
-    [setDragRef, setDropRef],
-  )
-
-  return (
-    <div
-      ref={setRef}
-      className={[
-        'hf-l7-slot-wrap',
-        isDragging ? 'hf-l7-slot-wrap--dragging' : '',
-        isOver ? 'hf-l7-slot-wrap--over' : '',
-      ].filter(Boolean).join(' ')}
-    >
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <button
-        type="button"
-        className="hf-l7-drag-handle"
-        aria-label="Drag to reorder"
-        {...(attributes as DraggableAttributes)}
-        {...(listeners as any)}
-      >
-        <GripIcon />
-      </button>
-      {children}
-    </div>
-  )
 }
 
 type SlotCardProps = {
@@ -118,8 +58,16 @@ function LeftStackCard({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           {invalid ? (
             <>
               <span style={{ fontSize: '1.2rem' }}>⚠</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -147,7 +95,11 @@ function LeftStackCard({ slotIndex, item, invalid, onClick }: SlotCardProps) {
         )}
         <span className="hf-l7-num">{num}</span>
       </div>
-      {cap ? <p className="hf-l7-credit">{cap}</p> : <p className="hf-l7-credit hf-l7-credit--muted"> </p>}
+      {cap ? (
+        <p className="hf-l7-credit">{cap}</p>
+      ) : (
+        <p className="hf-l7-credit hf-l7-credit--muted"> </p>
+      )}
       <p className="hf-l7-headline hf-l7-headline--left">{item.title}</p>
       <p className="hf-l7-byline">{item.authorLabel ?? '—'}</p>
     </button>
@@ -169,8 +121,16 @@ function CenterHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
           {invalid ? (
             <>
               <span style={{ fontSize: '1.2rem' }}>⚠</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--error)', fontWeight: 600 }}>
-                {invalid.reason === 'not_published' ? 'No longer published' : 'Not found'}
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--error)',
+                  fontWeight: 600
+                }}
+              >
+                {invalid.reason === 'not_published'
+                  ? 'No longer published'
+                  : 'Not found'}
               </span>
             </>
           ) : (
@@ -201,7 +161,9 @@ function CenterHero({ slotIndex, item, invalid, onClick }: SlotCardProps) {
       <div className="hf-l7-hero-copy">
         <p className="hf-l7-headline hf-l7-headline--hero">{item.title}</p>
         {sub ? <p className="hf-l7-dek">{sub}</p> : null}
-        <p className="hf-l7-byline hf-l7-byline--center">{item.authorLabel ?? '—'}</p>
+        <p className="hf-l7-byline hf-l7-byline--center">
+          {item.authorLabel ?? '—'}
+        </p>
       </div>
     </button>
   )
@@ -257,94 +219,67 @@ function RightRow({ slotIndex, item, invalid, onClick }: SlotCardProps) {
   )
 }
 
-function DragGhost({ item }: { item: SlotValue }) {
-  return (
-    <div className="hf-l7-drag-ghost">
-      {item?.imageUrl ? (
-        <img src={item.imageUrl} alt="" />
-      ) : (
-        <div className="hf-l7-drag-ghost-placeholder" />
-      )}
-      <span className="hf-l7-drag-ghost-title">{item?.title ?? 'Empty slot'}</span>
-    </div>
-  )
-}
-
 type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
-  onReorder?: (newSlots: SlotValue[]) => void
+  onReorder: (newSlots: SlotValue[]) => void
 }
 
-export default function FeaturedArticlesLayout7({ slots, invalidItemsBySlot, onSlotClick, onReorder }: Props) {
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(String(event.active.id))
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    setActiveId(null)
-    if (!over || active.id === over.id || !onReorder) return
-    const from = Number(active.id)
-    const to = Number(over.id)
-    const next = [...slots]
-    const tmp = next[from]
-    next[from] = next[to]
-    next[to] = tmp
-    onReorder(next)
-  }
-
+export default function FeaturedArticlesLayout7({
+  slots,
+  invalidItemsBySlot,
+  onSlotClick,
+  onReorder
+}: Props) {
   function invalid(slotIndex: number) {
     return invalidItemsBySlot.get(slotIndex + 1)
   }
 
-  const activeSlot = activeId !== null ? (slots[Number(activeId)] ?? null) : null
-
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={pointerWithin}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>
       <div className="hf-l7">
         <div className="hf-l7-col hf-l7-col--left">
-          <ConnectedSlotWrap slotId="1">
-            <LeftStackCard slotIndex={1} item={slots[1] ?? null} invalid={invalid(1)} onClick={() => onSlotClick(1)} />
-          </ConnectedSlotWrap>
-          <ConnectedSlotWrap slotId="2">
-            <LeftStackCard slotIndex={2} item={slots[2] ?? null} invalid={invalid(2)} onClick={() => onSlotClick(2)} />
-          </ConnectedSlotWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={1}>
+            <LeftStackCard
+              slotIndex={1}
+              item={slots[1] ?? null}
+              invalid={invalid(1)}
+              onClick={() => onSlotClick(1)}
+            />
+          </CuratedArticleSlotSwapWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={2}>
+            <LeftStackCard
+              slotIndex={2}
+              item={slots[2] ?? null}
+              invalid={invalid(2)}
+              onClick={() => onSlotClick(2)}
+            />
+          </CuratedArticleSlotSwapWrap>
         </div>
         <div className="hf-l7-col hf-l7-col--center">
-          <ConnectedSlotWrap slotId="0">
-            <CenterHero slotIndex={0} item={slots[0] ?? null} invalid={invalid(0)} onClick={() => onSlotClick(0)} />
-          </ConnectedSlotWrap>
+          <CuratedArticleSlotSwapWrap slotIndex={0}>
+            <CenterHero
+              slotIndex={0}
+              item={slots[0] ?? null}
+              invalid={invalid(0)}
+              onClick={() => onSlotClick(0)}
+            />
+          </CuratedArticleSlotSwapWrap>
         </div>
         <div className="hf-l7-col hf-l7-col--right">
           {[3, 4, 5, 6].map((i) => (
-            <ConnectedSlotWrap key={i} slotId={String(i)}>
+            <CuratedArticleSlotSwapWrap key={i} slotIndex={i}>
               <RightRow
                 slotIndex={i}
                 item={slots[i] ?? null}
                 invalid={invalid(i)}
                 onClick={() => onSlotClick(i)}
               />
-            </ConnectedSlotWrap>
+            </CuratedArticleSlotSwapWrap>
           ))}
         </div>
       </div>
-      <DragOverlay dropAnimation={null}>
-        {activeId !== null ? <DragGhost item={activeSlot} /> : null}
-      </DragOverlay>
-    </DndContext>
+    </CuratedArticleSlotSwapProvider>
   )
 }

@@ -91,12 +91,40 @@ Definition: LLM model selector for the editor-assist tools (e.g. `gemini-2.5-fla
 Definition: the rule that any item (article, listicle, or itinerary — all `HomepageFeaturedCollection` types) already present in any block's draft slots on a page is blocked from being picked into any other block on the same page. Enforced in the picker UI (greyed out, "In use") and at save time (`saveDisabled`). Applies to both `MainHomepagePage` and `LocationHomepagePage`.
 Code references: `externalUsedKeys` prop on `CuratedHomepageBlockEditor`; `pageBlockSlotKeys` state in each page component.
 
+### Featured Articles
+
+Definition: a curated homepage block made of ordered editorial slots for articles, listicles, or itineraries.
+Related terms: Curated slot, HomepageFeaturedCollection, Page-level article exclusion.
+Do not confuse with: a single `featured-article` spotlight block.
+Code references: `src/features/homepageFeaturedContent/HomepageFeaturedSlotEditor.tsx`.
+
+### Article Grid
+
+Definition: a curated homepage block made of 4 or 8 ordered article slots rendered as a uniform visual grid.
+Related terms: Curated slot, HomepageFeaturedCollection, Page-level article exclusion.
+Do not confuse with: Featured Articles, which has asymmetric editorial layouts.
+Code references: `src/features/homepageFeaturedContent/ArticleGridLayout.tsx`.
+
+### Curated slot
+
+Definition: a numbered editorial position inside a homepage block; for Featured Articles, each slot may map to a distinct visual role such as hero, side card, or list row.
+Related terms: Featured Articles, Article Grid.
+Do not confuse with: a time slot or upload slot.
+
+### Slot swap
+
+Definition: drag reorder behavior where dropping one curated slot on another exchanges only those two slot contents.
+Related terms: Featured Articles, Article Grid, Curated slot.
+Do not confuse with: insert-and-shift list reordering.
+
 ## Relationships
 
 - A **Feature Page** owns at most one active **Run** at a time (current poll).
 - A **Run** result produces one or more **Draft**s.
 - A **Draft** points to zero or one **Payload entity**; Sync writes through.
 - A `PipelineStatusResponse.state = "completed"` is the trigger for hydrating a Draft from the run output.
+- **Featured Articles** has 3–9 **Curated slots**; a **Slot swap** preserves the number of slots and exchanges exactly two slot contents.
+- **Article Grid** has either 4 or 8 **Curated slots** and uses the same **Slot swap** behavior as Featured Articles.
 
 ## Domain Rules
 

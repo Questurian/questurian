@@ -1,4 +1,10 @@
-import { useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState
+} from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
 import type {
@@ -6,7 +12,7 @@ import type {
   HomepageHotelGridCandidatesResponse,
   HomepageHotelGridInvalidItem,
   HomepageHotelGridItemRef,
-  HomepageHotelGridSelection,
+  HomepageHotelGridSelection
 } from './hotelGridTypes'
 
 const CANDIDATE_PAGE_SIZE = 24
@@ -17,7 +23,9 @@ function createEmptySlots(count: number): HotelGridSlotValue[] {
   return Array.from({ length: count }, () => null)
 }
 
-function mapSelectionToSlots(selection: HomepageHotelGridSelection): HotelGridSlotValue[] {
+function mapSelectionToSlots(
+  selection: HomepageHotelGridSelection
+): HotelGridSlotValue[] {
   const slots = createEmptySlots(selection.totalSlots)
   for (const item of selection.items) {
     if (!item.slot) continue
@@ -28,11 +36,14 @@ function mapSelectionToSlots(selection: HomepageHotelGridSelection): HotelGridSl
   return slots
 }
 
-function areSlotListsEqual(left: HotelGridSlotValue[] | null, right: HotelGridSlotValue[]): boolean {
+function areSlotListsEqual(
+  left: HotelGridSlotValue[] | null,
+  right: HotelGridSlotValue[]
+): boolean {
   if (!left) return false
   return (
-    left.length === right.length
-    && left.every((item, index) => item?.id === right[index]?.id)
+    left.length === right.length &&
+    left.every((item, index) => item?.id === right[index]?.id)
   )
 }
 
@@ -46,20 +57,34 @@ export function useHomepageHotelGridSlots(options: {
   token: string | null
   canManage: boolean
   selection: HomepageHotelGridSelection
-  saveSelection: (token: string, items: HomepageHotelGridItemRef[]) => Promise<HomepageHotelGridSelection>
+  saveSelection: (
+    token: string,
+    items: HomepageHotelGridItemRef[]
+  ) => Promise<HomepageHotelGridSelection>
   fetchCandidates: (
     token: string,
-    params: HotelGridCandidateParams,
+    params: HotelGridCandidateParams
   ) => Promise<HomepageHotelGridCandidatesResponse>
   selectionQueryKey: unknown[]
 }) {
-  const { token, canManage, selection, saveSelection, fetchCandidates, selectionQueryKey } = options
+  const {
+    token,
+    canManage,
+    selection,
+    saveSelection,
+    fetchCandidates,
+    selectionQueryKey
+  } = options
   const [searchValue, setSearchValue] = useState('')
   const deferredSearchValue = useDeferredValue(searchValue.trim())
   const [candidatePage, setCandidatePage] = useState(1)
-  const [draftSlots, setDraftSlots] = useState<HotelGridSlotValue[] | null>(null)
+  const [draftSlots, setDraftSlots] = useState<HotelGridSlotValue[] | null>(
+    null
+  )
   const [savedSlots, setSavedSlots] = useState<HotelGridSlotValue[]>([])
-  const [savedInvalidItems, setSavedInvalidItems] = useState<HomepageHotelGridInvalidItem[]>([])
+  const [savedInvalidItems, setSavedInvalidItems] = useState<
+    HomepageHotelGridInvalidItem[]
+  >([])
   const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
 
@@ -69,8 +94,8 @@ export function useHomepageHotelGridSlots(options: {
 
   useLayoutEffect(() => {
     if (
-      prevSelectionKeyJsonRef.current === selectionKeyJson
-      && prevSelectionRef.current === selection
+      prevSelectionKeyJsonRef.current === selectionKeyJson &&
+      prevSelectionRef.current === selection
     ) {
       return
     }
@@ -88,7 +113,7 @@ export function useHomepageHotelGridSlots(options: {
     error: null,
     isLoading: false,
     isPending: false,
-    isFetching: false,
+    isFetching: false
   } as ReturnType<typeof useQuery<HomepageHotelGridSelection>>
 
   useEffect(() => {
@@ -96,19 +121,25 @@ export function useHomepageHotelGridSlots(options: {
   }, [deferredSearchValue])
 
   const candidatesQuery = useQuery({
-    queryKey: [...selectionQueryKey, 'hotel-candidates', deferredSearchValue, candidatePage],
+    queryKey: [
+      ...selectionQueryKey,
+      'hotel-candidates',
+      deferredSearchValue,
+      candidatePage
+    ],
     queryFn: () =>
       fetchCandidates(token!, {
         query: deferredSearchValue || undefined,
         page: candidatePage,
-        limit: CANDIDATE_PAGE_SIZE,
+        limit: CANDIDATE_PAGE_SIZE
       }),
     enabled: Boolean(token && canManage && pickerSlotIndex !== null),
-    placeholderData: (previousData) => previousData,
+    placeholderData: (previousData) => previousData
   })
 
   const saveMutation = useMutation({
-    mutationFn: (items: HomepageHotelGridItemRef[]) => saveSelection(token!, items),
+    mutationFn: (items: HomepageHotelGridItemRef[]) =>
+      saveSelection(token!, items),
     onSuccess: (selection) => {
       const nextSlots = mapSelectionToSlots(selection)
       setSavedSlots(nextSlots)
@@ -118,19 +149,26 @@ export function useHomepageHotelGridSlots(options: {
       setResultMessage('Homepage hotel grid saved.')
     },
     onError: (error: unknown) => {
-      setResultMessage(error instanceof Error ? error.message : 'Failed to save homepage hotel grid.')
-    },
+      setResultMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to save homepage hotel grid.'
+      )
+    }
   })
 
   const slots = draftSlots ?? savedSlots
   const usedIds = new Set(slots.flatMap((item) => (item ? [item.id] : [])))
   const hasAllSlotsFilled = slots.every((item) => item !== null)
   const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false
-  const saveDisabled = !token || !hasAllSlotsFilled || saveMutation.isPending || !hasUnsavedChanges
+  const saveDisabled =
+    !token || !hasAllSlotsFilled || saveMutation.isPending || !hasUnsavedChanges
   const invalidItemsBySlot = new Map<number, HomepageHotelGridInvalidItem>()
   for (const item of savedInvalidItems) invalidItemsBySlot.set(item.slot, item)
 
-  function updateSlots(transform: (current: HotelGridSlotValue[]) => HotelGridSlotValue[]) {
+  function updateSlots(
+    transform: (current: HotelGridSlotValue[]) => HotelGridSlotValue[]
+  ) {
     setDraftSlots((current) => {
       const base = current ?? savedSlots
       return transform([...base])
@@ -157,6 +195,13 @@ export function useHomepageHotelGridSlots(options: {
       next[slotIndex] = next[nextIndex]
       next[nextIndex] = currentValue
       return next
+    })
+  }
+
+  function handleReorderAll(newSlots: HotelGridSlotValue[]) {
+    updateSlots((current) => {
+      if (newSlots.length !== current.length) return current
+      return [...newSlots]
     })
   }
 
@@ -197,12 +242,13 @@ export function useHomepageHotelGridSlots(options: {
     candidatePage,
     handleCandidatePick,
     handleMove,
+    handleReorderAll,
     handleRemove,
     handleReset,
     handleSave,
     setSearchValue,
     setCandidatePage,
     setPickerSlotIndex,
-    draftSlots,
+    draftSlots
   }
 }

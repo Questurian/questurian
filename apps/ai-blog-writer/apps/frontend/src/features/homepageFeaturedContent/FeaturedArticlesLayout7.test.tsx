@@ -17,7 +17,7 @@ function article(id: number, title: string): NonNullable<SlotValue> {
     collectionLabel: 'Article',
     imageUrl: null,
     excerpt: `Excerpt ${id}`,
-    authorLabel: 'Editor',
+    authorLabel: 'Editor'
   }
 }
 
@@ -30,7 +30,7 @@ describe('FeaturedArticlesLayout7', () => {
       article(4, 'Right story four'),
       article(5, 'Right story five'),
       article(6, 'Right story six'),
-      article(7, 'Right story seven'),
+      article(7, 'Right story seven')
     ]
     const onSlotClick = vi.fn()
 
@@ -39,7 +39,8 @@ describe('FeaturedArticlesLayout7', () => {
         slots={slots}
         invalidItemsBySlot={new Map()}
         onSlotClick={onSlotClick}
-      />,
+        onReorder={vi.fn()}
+      />
     )
 
     const center = container.querySelector('.hf-l7-col--center')
@@ -47,9 +48,15 @@ describe('FeaturedArticlesLayout7', () => {
     expect(center).not.toBeNull()
     expect(left).not.toBeNull()
 
-    expect(within(center as HTMLElement).getByText('Lead story')).toBeInTheDocument()
-    expect(within(left as HTMLElement).getByText('Left story two')).toBeInTheDocument()
-    expect(within(left as HTMLElement).getByText('Left story three')).toBeInTheDocument()
+    expect(
+      within(center as HTMLElement).getByText('Lead story')
+    ).toBeInTheDocument()
+    expect(
+      within(left as HTMLElement).getByText('Left story two')
+    ).toBeInTheDocument()
+    expect(
+      within(left as HTMLElement).getByText('Left story three')
+    ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Lead story/i }))
     fireEvent.click(screen.getByRole('button', { name: /Left story two/i }))
@@ -68,7 +75,7 @@ describe('FeaturedArticlesLayout7', () => {
     expect(buildSaveItems([lead, second, third])).toEqual([
       { relationTo: 'articles', id: 10 },
       { relationTo: 'articles', id: 20 },
-      { relationTo: 'articles', id: 30 },
+      { relationTo: 'articles', id: 30 }
     ])
   })
 })

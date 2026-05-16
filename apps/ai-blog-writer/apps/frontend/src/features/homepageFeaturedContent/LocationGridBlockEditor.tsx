@@ -125,7 +125,7 @@ export default function LocationGridBlockEditor({
     searchValue,
     candidatePage,
     handleCandidatePick,
-    handleMove,
+    handleReorderAll,
     handleRemove,
     handleSave,
     setSearchValue,
@@ -359,7 +359,7 @@ export default function LocationGridBlockEditor({
         ) : null}
         <p className="hf-panel-desc">
           {blockConfig.description}. This block can only select {childLabel}. Click a card to pick or
-          swap a location; use the arrows to reorder.
+          swap a location; drag handles swap slot positions.
         </p>
 
         {savedInvalidItems.length > 0 && (
@@ -378,8 +378,8 @@ export default function LocationGridBlockEditor({
           mediaAspect={mediaAspectDraft}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
-          onMove={handleMove}
           onRemove={handleRemove}
+          onReorder={handleReorderAll}
         />
       </div>
 

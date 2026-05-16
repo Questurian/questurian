@@ -1,5 +1,7 @@
-import type { MouseEvent } from 'react'
-
+import {
+  CuratedSlotSwapProvider,
+  CuratedSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import type { HomepageFeaturedInvalidItem } from './types'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 
@@ -30,125 +32,116 @@ type Props = {
   slots: SlotValue[]
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   onSlotClick: (slotIndex: number) => void
-  onMove: (slotIndex: number, direction: -1 | 1) => void
   onRemove: (slotIndex: number) => void
+  onReorder: (newSlots: SlotValue[]) => void
 }
 
 export default function QuesturianMapsArticleLayout({
   slots,
   invalidItemsBySlot,
   onSlotClick,
-  onMove,
   onRemove,
+  onReorder
 }: Props) {
-  function stopEvent(event: MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation()
-  }
-
   return (
-    <section className="hf-questurian-maps" aria-label="Questurian Maps">
-      <div className="hf-questurian-maps-rule" />
-      <header className="hf-questurian-maps-header">
-        <MapsPinIcon />
-        <span className="hf-questurian-maps-title">Questurian Maps</span>
-      </header>
-      <div className="hf-questurian-maps-rule" />
-      <div className="hf-questurian-maps-grid">
-        {slots.map((item, slotIndex) => {
-          const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
+    <CuratedSlotSwapProvider slots={slots} onReorder={onReorder}>
+      <section className="hf-questurian-maps" aria-label="Questurian Maps">
+        <div className="hf-questurian-maps-rule" />
+        <header className="hf-questurian-maps-header">
+          <MapsPinIcon />
+          <span className="hf-questurian-maps-title">Questurian Maps</span>
+        </header>
+        <div className="hf-questurian-maps-rule" />
+        <div className="hf-questurian-maps-grid">
+          {slots.map((item, slotIndex) => {
+            const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
 
-          if (!item) {
+            if (!item) {
+              return (
+                <button
+                  key={`slot-${slotIndex + 1}`}
+                  type="button"
+                  className={`hf-questurian-maps-cell empty${invalidItem ? ' invalid' : ''}`}
+                  onClick={() => onSlotClick(slotIndex)}
+                >
+                  <span className="hf-slot-card-num">{slotIndex + 1}</span>
+                  {invalidItem ? (
+                    <>
+                      <span className="hf-questurian-maps-empty-warn">⚠</span>
+                      <span className="hf-questurian-maps-empty-text">
+                        {getInvalidMessage(invalidItem)}
+                      </span>
+                      <span className="hf-questurian-maps-empty-hint">
+                        Click to replace
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hf-questurian-maps-empty-plus">＋</span>
+                      <span className="hf-questurian-maps-empty-text">
+                        Add listicle
+                      </span>
+                    </>
+                  )}
+                </button>
+              )
+            }
+
             return (
-              <button
+              <CuratedSlotSwapWrap
                 key={`slot-${slotIndex + 1}`}
-                type="button"
-                className={`hf-questurian-maps-cell empty${invalidItem ? ' invalid' : ''}`}
-                onClick={() => onSlotClick(slotIndex)}
+                slotIndex={slotIndex}
               >
-                <span className="hf-slot-card-num">{slotIndex + 1}</span>
-                {invalidItem ? (
-                  <>
-                    <span className="hf-questurian-maps-empty-warn">⚠</span>
-                    <span className="hf-questurian-maps-empty-text">
-                      {getInvalidMessage(invalidItem)}
-                    </span>
-                    <span className="hf-questurian-maps-empty-hint">Click to replace</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="hf-questurian-maps-empty-plus">＋</span>
-                    <span className="hf-questurian-maps-empty-text">Add listicle</span>
-                  </>
-                )}
-              </button>
+                <article className="hf-questurian-maps-cell filled">
+                  <span className="hf-slot-card-num">{slotIndex + 1}</span>
+                  <div className="hf-questurian-maps-row">
+                    {item.imageUrl ? (
+                      <div className="hf-questurian-maps-thumb">
+                        <img
+                          src={item.imageUrl}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
+                    ) : (
+                      <div className="hf-questurian-maps-thumb hf-questurian-maps-thumb--placeholder" />
+                    )}
+                    <div className="hf-questurian-maps-copy">
+                      <p className="hf-questurian-maps-headline">
+                        {item.title}
+                      </p>
+                      <div className="hf-questurian-maps-actions">
+                        <button
+                          type="button"
+                          className="hf-btn-ghost"
+                          onClick={() => onSlotClick(slotIndex)}
+                          style={{
+                            fontSize: '0.78rem',
+                            padding: '0.2rem 0.55rem',
+                            minHeight: '1.65rem'
+                          }}
+                        >
+                          Swap
+                        </button>
+                        <button
+                          type="button"
+                          className="hf-btn-icon danger"
+                          title="Remove"
+                          onClick={() => onRemove(slotIndex)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </CuratedSlotSwapWrap>
             )
-          }
-
-          return (
-            <article key={`slot-${slotIndex + 1}`} className="hf-questurian-maps-cell filled">
-              <span className="hf-slot-card-num">{slotIndex + 1}</span>
-              <div className="hf-questurian-maps-row">
-                {item.imageUrl ? (
-                  <div className="hf-questurian-maps-thumb">
-                    <img src={item.imageUrl} alt="" loading="lazy" decoding="async" />
-                  </div>
-                ) : (
-                  <div className="hf-questurian-maps-thumb hf-questurian-maps-thumb--placeholder" />
-                )}
-                <div className="hf-questurian-maps-copy">
-                  <p className="hf-questurian-maps-headline">{item.title}</p>
-                  <div className="hf-questurian-maps-actions">
-                    <button
-                      type="button"
-                      className="hf-btn-ghost"
-                      onClick={() => onSlotClick(slotIndex)}
-                      style={{ fontSize: '0.78rem', padding: '0.2rem 0.55rem', minHeight: '1.65rem' }}
-                    >
-                      Swap
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon"
-                      title="Move up"
-                      onClick={(event) => {
-                        stopEvent(event)
-                        onMove(slotIndex, -1)
-                      }}
-                      disabled={slotIndex === 0}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon"
-                      title="Move down"
-                      onClick={(event) => {
-                        stopEvent(event)
-                        onMove(slotIndex, 1)
-                      }}
-                      disabled={slotIndex === slots.length - 1}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="hf-btn-icon danger"
-                      title="Remove"
-                      onClick={(event) => {
-                        stopEvent(event)
-                        onRemove(slotIndex)
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          )
-        })}
-      </div>
-      <div className="hf-questurian-maps-rule" />
-    </section>
+          })}
+        </div>
+        <div className="hf-questurian-maps-rule" />
+      </section>
+    </CuratedSlotSwapProvider>
   )
 }
