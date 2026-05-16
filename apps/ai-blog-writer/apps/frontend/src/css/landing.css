@@ -343,12 +343,6 @@
   --card-accent-softer: var(--accent-softer);
 }
 
-.landing-card--reviews {
-  --card-accent: var(--sage);
-  --card-accent-soft: rgba(93, 122, 100, 0.12);
-  --card-accent-softer: rgba(93, 122, 100, 0.06);
-}
-
 .landing-card--url2blog {
   --card-accent: #0d9488;
   --card-accent-soft: rgba(13, 148, 136, 0.12);

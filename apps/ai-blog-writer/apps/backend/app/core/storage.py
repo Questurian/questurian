@@ -1,7 +1,7 @@
 """
 Core storage utilities for pipeline runs, stages, and outputs.
 
-These are shared across all features (youtube2blog, review2blog, etc.)
+These are shared across all features (youtube2blog, prompt2blog, etc.)
 """
 import json
 from typing import Any, Dict, List, Optional

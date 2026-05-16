@@ -4,7 +4,7 @@
 
 React SPA for operators. Lets a human:
 
-- start a pipeline run for one of the features (Prompt2Blog, YouTube2Blog, Url2Blog, Review2Blog, LocationDocuments, KeywordIntel, ListicleItineraries, SingleTypeListicles, BatchUpload, BatchImageRecreation, …).
+- start a pipeline run for one of the features (Prompt2Blog, YouTube2Blog, Url2Blog, LocationDocuments, KeywordIntel, ListicleItineraries, SingleTypeListicles, BatchUpload, BatchImageRecreation, …).
 - watch a Running Pipeline by polling status.
 - edit the resulting Draft locally.
 - Sync the Draft to a Payload entity (Questura).

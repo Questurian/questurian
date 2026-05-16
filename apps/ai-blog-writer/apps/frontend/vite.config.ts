@@ -25,9 +25,5 @@ export default defineConfig({
       'src/**/*.spec.ts',
       'src/**/*.spec.tsx',
     ],
-    includeSource: [
-      'src/features/review2blog/api.ts',
-      'src/features/review2blog/Review2BlogPage.tsx',
-    ],
   }
 })

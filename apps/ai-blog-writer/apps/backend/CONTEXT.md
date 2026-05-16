@@ -4,7 +4,7 @@
 
 FastAPI service that orchestrates every pipeline in AI Blog Writer. Owns:
 
-- REST endpoints per feature (`/youtube2blog`, `/url2blog`, `/prompt2blog`, `/location-documents`, `/keyword-intel`, `/review2blog`, `/itineraries-pipeline`, `/editor-assist`, `/images`, `/article-types`).
+- REST endpoints per feature (`/youtube2blog`, `/url2blog`, `/prompt2blog`, `/location-documents`, `/keyword-intel`, `/itineraries-pipeline`, `/editor-assist`, `/images`, `/article-types`).
 - Run storage in SQLite.
 - All Vertex AI Gemini calls and prompt assembly.
 - Quality gates, coverage analysis, editorial augmentation.

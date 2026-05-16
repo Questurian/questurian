@@ -66,22 +66,6 @@ Structured Prompt2Blog run input now uses:
 | GET | `/keyword-intel/result/{run_id}` | Get the final keyword-intel artifact with `market_context`, compatibility string arrays (`raw_phrases`, `clean_phrases`, `filtered_out_phrases`), phrase-record arrays (`raw`, `normalized`, `retained`, `filtered_out`), structured `pattern_summary`, scored groups with stable `group_id` + `phrase_ids`, and collection debug artifacts |
 | GET | `/keyword-intel/jobs` | List recent keyword-intel runs for the history panel, including `market_profile`, resolved `geo` / `language`, and raw / clean / filtered / group counts |
 
-### Review2Blog (`/review2blog`)
-
-Primary flow: upload one Location Manager export JSON per run. The export must include `category`, core location fields, a required `editorial` block, and normalized `reviews`. The main pipeline is now category-aware across `dining`, `accommodations`, `attractions`, `nightlife`, and `key_locations`. Review evidence is extracted first, ranked deterministically in phase 2, then written into a final blurb shaped around a required listicle title and requested blurb length.
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/review2blog/upload` | Legacy/debug endpoint: process uploaded review JSON through phase 1 |
-| POST | `/review2blog/phase2` | Legacy/debug endpoint: aggregate phase 1 signals |
-| POST | `/review2blog/phase3` | Legacy/debug endpoint: generate the old restaurant/listicle blurb |
-| POST | `/review2blog/run` | Queue the category-aware Review2Blog graph using `{ review_payload, listicle: { listicle_title, blurb_length }, max_tokens? }` |
-| POST | `/review2blog/run/{run_id}/resume` | Legacy fallback for previously paused runs that still need extra input |
-| GET | `/review2blog/status/{run_id}` | Get pipeline run status (`running`, `awaiting_input`, `completed`, `failed`) |
-| GET | `/review2blog/result/{run_id}` | Get the current pipeline artifact. Completed runs return `location_context`, `editorial_intent`, phase outputs, final blurb, and markdown |
-| POST | `/review2blog/clear` | Clear Review2Blog run data |
-| GET | `/review2blog/articles` | List completed Review2Blog articles |
-
 ### Editor Assist (`/editor-assist`)
 
 | Method | Path | Description |
@@ -134,7 +118,6 @@ Primary flow: upload one Location Manager export JSON per run. The export must i
 | `/youtube2blog/image-pipeline` | Auth required | Image pipeline page |
 | `/youtube2blog/stage` | Auth required | Stage workflow page |
 | `/youtube2blog/stage-article` | Auth required | Stage article editor page |
-| `/review2blog` | Auth required | Review2Blog page |
 | `/prompt2blog` | Auth required | Prompt2Blog main page |
 | `/prompt2blog/articles` | Auth required | Prompt2Blog saved articles page |
 | `/prompt2blog/stage` | Auth required | Prompt2Blog stage workflow page |

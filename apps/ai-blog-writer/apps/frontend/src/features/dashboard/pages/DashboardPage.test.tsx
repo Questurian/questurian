@@ -16,11 +16,10 @@ const PRIMARY_CARD_TITLES = [
 ]
 
 const OCCASIONAL_CARD_TITLES = [
-  'Reviews → Articles',
   'Keyword Intel',
   'Image Recreation Prompts',
   'Batch Image Recreation',
-  'Batch Image Upload',
+  'Media Library',
 ]
 
 function createAuthValue(role = 'admin'): AuthContextValue {

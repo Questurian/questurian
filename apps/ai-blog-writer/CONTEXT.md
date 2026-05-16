@@ -2,7 +2,7 @@
 
 ## Scope
 
-A multi-feature AI content pipeline. Turns source material (YouTube videos, URLs, plain prompts, reviews, location data) into stage-tracked artifacts: Markdown, structured JSON, and Payload-compatible LexicalJSON.
+A multi-feature AI content pipeline. Turns source material (YouTube videos, URLs, plain prompts, location data) into stage-tracked artifacts: Markdown, structured JSON, and Payload-compatible LexicalJSON.
 
 Owns the **run lifecycle** (`run_id`, stages, artifacts) and **all LLM orchestration** for content generation in the Questurian system.
 
@@ -43,7 +43,7 @@ Code references: `packages/shared/src/shared/Stage[0..4]Output.py`.
 
 ### Feature
 
-Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `review2blog`, `keyword_intel`, `keyword_intel_content_plan`, `location_documents`, `itineraries_pipeline`, `images`, `editor_assist`, `article_types`.
+Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `keyword_intel`, `keyword_intel_content_plan`, `location_documents`, `itineraries_pipeline`, `images`, `editor_assist`, `article_types`.
 Related terms: Pipeline Route.
 Do not confuse with: frontend "Feature Page" — that's the UI per feature.
 Code references: `apps/backend/app/features/`.

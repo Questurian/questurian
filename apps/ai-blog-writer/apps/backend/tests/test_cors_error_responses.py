@@ -38,14 +38,8 @@ utils_stub.parse_json_response = lambda *_args, **_kwargs: {}
 utils_stub.LLMPresets = _StubLLMPresets
 sys.modules["utils"] = utils_stub
 
-import app.features.review2blog.routes as review2blog_routes
 import app.features.youtube2blog.routes as youtube2blog_routes
 import app.main as main_module
-
-
-class _RaisingLLM:
-    def invoke(self, _prompt: str) -> str:
-        raise RuntimeError("llm boom")
 
 
 def _build_cors_client(*, router) -> FastAPI:
@@ -108,93 +102,6 @@ async def test_global_unhandled_exception_can_expose_details_in_debug(monkeypatc
     assert "boom-test" in payload["detail"]
     assert isinstance(payload.get("error_id"), str)
     assert payload["error_id"]
-    assert response.headers.get("access-control-allow-origin")
-
-
-def test_review2blog_invalid_max_tokens_env_falls_back(monkeypatch):
-    monkeypatch.setenv("REVIEW2BLOG_MAX_TOKENS", "not-a-number")
-    assert (
-        review2blog_routes._resolve_max_tokens(None)
-        == review2blog_routes.DEFAULT_REVIEW2BLOG_MAX_TOKENS
-    )
-
-@pytest.mark.asyncio
-async def test_review2blog_upload_runtime_error_returns_502_with_cors(monkeypatch):
-    app = _build_cors_client(router=review2blog_routes.router)
-    monkeypatch.setattr(
-        review2blog_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: _RaisingLLM(),
-    )
-
-    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        response = await client.post(
-            "/review2blog/upload",
-            files={
-                "file": (
-                    "reviews.json",
-                    b'{"reviews":[{"text":"great","rating":5,"date":"2025-01-01"}]}',
-                    "application/json",
-                )
-            },
-            headers={"Origin": "http://localhost:3003"},
-        )
-
-    assert response.status_code == 502
-    assert response.json()["detail"] == "Review2Blog phase 1 request failed"
-    assert response.headers.get("access-control-allow-origin")
-
-
-@pytest.mark.asyncio
-async def test_review2blog_phase2_runtime_error_returns_502_with_cors(monkeypatch):
-    app = _build_cors_client(router=review2blog_routes.router)
-    monkeypatch.setattr(
-        review2blog_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: _RaisingLLM(),
-    )
-
-    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        response = await client.post(
-            "/review2blog/phase2",
-            json=[{"d": "2025-01-01", "r": 5, "s": 1}],
-            headers={"Origin": "http://localhost:3003"},
-        )
-
-    assert response.status_code == 502
-    assert response.json()["detail"] == "Review2Blog phase 2 request failed"
-    assert response.headers.get("access-control-allow-origin")
-
-
-@pytest.mark.asyncio
-async def test_review2blog_phase3_runtime_error_returns_502_with_cors(monkeypatch):
-    app = _build_cors_client(router=review2blog_routes.router)
-    monkeypatch.setattr(
-        review2blog_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: _RaisingLLM(),
-    )
-
-    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        response = await client.post(
-            "/review2blog/phase3",
-            json={
-                "aggregated_profile": {"review_count": 1},
-                "restaurant_context": {"name": "Test Spot"},
-                "listicle": {
-                    "listicle_type": "Date Night",
-                    "listicle_title": "Top Date Spots",
-                    "listicle_goal": "Romantic dining picks",
-                },
-            },
-            headers={"Origin": "http://localhost:3003"},
-        )
-
-    assert response.status_code == 502
-    assert response.json()["detail"] == "Review2Blog phase 3 request failed"
     assert response.headers.get("access-control-allow-origin")
 
 
