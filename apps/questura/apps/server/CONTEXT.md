@@ -82,6 +82,16 @@ Public usage slot. Defines required variants per placement (`card`, `square-card
 
 Admin-facing coarse state (empty / partial / usable). **Not** a public-readiness check.
 
+### Public Revalidation
+
+Payload → Next.js client cache invalidator. Translates collection writes (Articles, SingleTypeListicles, ListicleItineraries, LocationHomepages, Locations, ArticleRedirects) into POSTs to `${CLIENT}/api/revalidate` carrying cache tags and paths. Wired via Payload `afterChange` / `afterDelete` hooks. Authed via `QUESTURA_REVALIDATION_SECRET`.
+Code references: `features/public-revalidation/revalidate-client.ts`.
+
+### Public Cache Tag
+
+Tag string shared between the server (to request invalidation) and the Next.js client (via `revalidateTag`) to drop cached entries. Families: `sitemap`, `country-cities:<country>`, `location-homepage:<country>:<city>`, `article:<scope>:<type>:<slug>:<lang>`, `article-path:<path>:<lang>`, `article-index:<scope>:<type>:<lang>`, `article-redirect:<path>`, `related-maps:<country>:<city>`.
+Code references: `publicCacheTags` in `features/public-revalidation/revalidate-client.ts`.
+
 ### `LocationHomepages`
 
 Per-location homepage content (featured blocks).
@@ -112,6 +122,7 @@ Identity + general-purpose taxonomy.
 - `features/emails/` — transactional email templates.
 - `features/places/` — Places (Google) integration utilities.
 - `features/admin/` — Payload admin customisations.
+- `features/public-revalidation/` — Payload-write → Next.js cache invalidation hooks.
 
 ## Relationships
 
@@ -132,6 +143,7 @@ Identity + general-purpose taxonomy.
 - `Currencies` exchange rates are pulled via `sync:exchange-rates`; do not hand-edit live values.
 - Synced inbound writes from Location Manager must validate against the collection schema; rejected writes return 4xx with a reason.
 - `resolveLocationGuideForHierarchy` is the **only** correct way to read a Location's guide for SSR; do not read `Locations` directly without resolving.
+- Any collection write that affects public content must register a Public Revalidation hook; otherwise the Next.js client serves stale cache.
 
 ## Naming Conventions
 

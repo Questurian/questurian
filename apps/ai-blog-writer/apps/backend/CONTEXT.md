@@ -4,7 +4,7 @@
 
 FastAPI service that orchestrates every pipeline in AI Blog Writer. Owns:
 
-- REST endpoints per feature (`/youtube2blog`, `/url2blog`, `/prompt2blog`, `/location-documents`, `/keyword-intel`, `/itineraries-pipeline`, `/editor-assist`, `/images`, `/article-types`).
+- REST endpoints per feature (`/youtube2blog`, `/url2blog`, `/prompt2blog`, `/keyword-intel`, `/itineraries-pipeline`, `/editor-assist`, `/images`, `/article-types`).
 - Run storage in SQLite.
 - All Vertex AI Gemini calls and prompt assembly.
 - Quality gates, coverage analysis, editorial augmentation.
@@ -24,7 +24,7 @@ Pipelines need a single home: shared run lifecycle, shared LLM client, shared st
 
 - Python 3.11, FastAPI, Pydantic
 - SQLite (run + feature storage)
-- LangGraph (used by `location_documents`)
+- LangGraph via the shared `ai_graph` runtime (used by `prompt2blog`, `youtube2blog`, `url2blog`, `keyword_intel`, `editor_assist`)
 - Vertex AI Gemini (`packages/utils.get_vertex_llm`)
 - Nx for build/serve via the parent ABW monorepo
 
@@ -75,20 +75,11 @@ Do not confuse with: `ArticleTypeOption` (the DTO sent to UI).
 
 Definition: the Pydantic shape exposed to clients for selection UI. Subset of the table row.
 
-### `LocationDocumentDraft`
-
-Definition: strict Pydantic model used by the location-documents pipeline to represent a working document before sync.
-
-### `LocationDocumentsGraphState`
-
-Definition: TypedDict that flows through the LangGraph state machine for that pipeline.
-
 ## Relationships
 
 - A **Pipeline Route** owns one **Running Pipeline** at a time per `run_id`.
 - A **Running Pipeline** writes one **StageResult** per stage to SQLite; the final state assembles a **PipelineArtifact**.
 - A **Classification** binds a run to one **`ArticleType`** row, which provides the `guideline` consumed by compose.
-- `location_documents` does **not** emit a `Stage4Output` — it emits a `LocationDocumentDraft` and writes via the contract.
 
 ## Domain Rules
 
@@ -101,13 +92,13 @@ Definition: TypedDict that flows through the LangGraph state machine for that pi
 ## Naming Conventions
 
 - Module layout per feature: `routes.py`, `service.py`, `prompts.py`, `models.py`, `storage.py`, `graph.py` (when LangGraph is used).
-- REST paths: kebab-case feature name (`/keyword-intel`, `/location-documents`).
+- REST paths: kebab-case feature name (`/keyword-intel`, `/itineraries-pipeline`).
 - Pydantic models: `Stage[N]Output`, `*Request`, `*Response`, `*Option`.
 
 ## Decisions
 
 - **SQLite per-feature schema fragments** rather than one shared schema. Easier to retire a feature.
-- **LangGraph only where it's earning its weight** (`location_documents`); other pipelines stay as straight-line stage chains.
+- **LangGraph is the default orchestration substrate** via the shared `ai_graph` runtime; features compose nodes rather than hand-rolling stage chains.
 - **No background worker queue** — pipelines run inside FastAPI request lifecycle with async tasks. Acceptable today; revisit if a pipeline grows past a few minutes.
 - → **Suggest ADR**: persistence layout for runs is informal; if multi-tenant or remote storage is ever needed, this becomes hard to retrofit.
 
@@ -122,6 +113,5 @@ Definition: TypedDict that flows through the LangGraph state machine for that pi
 
 ## Open Questions
 
-- Should non-article features (`keyword_intel`, `location_documents`, `images`, `editor_assist`) live in a separate sub-context with their own non-stage vocabulary?
+- Should non-article features (`keyword_intel`, `images`, `editor_assist`) live in a separate sub-context with their own non-stage vocabulary?
 - Where does the contract for pushing into Payload live? Today the frontend assembles writes; the backend does not own the schema there.
-- Is SQLite still the right store now that some features (`location_documents`) carry larger document trees? Possibly yes; flag for review.

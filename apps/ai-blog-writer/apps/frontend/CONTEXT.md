@@ -86,6 +86,13 @@ Definition: schema row for the location-documents form. Includes `type`, `path`,
 
 Definition: LLM model selector for the editor-assist tools (e.g. `gemini-2.5-flash`, `gemini-3.1-pro`).
 
+### `ImageRecreationPromptsPage`
+
+Definition: operator tool for crafting a single image-recreation prompt from a reference image. Composes scene category, people handling, camera/lens, capture style, lighting, film-look, and Flux model into a structured prompt, then calls `generateFluxEditedImage` directly — no pipeline run, no Draft, no Sync. Includes a `ReferenceImageCropModal` for trimming the reference before generation.
+Related terms: Flux Model, Prompt Preset, Scene Category.
+Do not confuse with: `BatchImageRecreationPage` (bulk variant that processes many images against saved settings) or any `*Page` listed under Feature Page (those run pipelines; this is a direct LLM tool).
+Code references: `src/features/imageRecreationPrompts/`, `promptBuilder.ts`, `shared/images.generateFluxEditedImage`.
+
 ### Page-level article exclusion
 
 Definition: the rule that any item (article, listicle, or itinerary — all `HomepageFeaturedCollection` types) already present in any block's draft slots on a page is blocked from being picked into any other block on the same page. Enforced in the picker UI (greyed out, "In use") and at save time (`saveDisabled`). Applies to both `MainHomepagePage` and `LocationHomepagePage`.

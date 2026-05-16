@@ -43,7 +43,7 @@ Code references: `packages/shared/src/shared/Stage[0..4]Output.py`.
 
 ### Feature
 
-Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `keyword_intel`, `keyword_intel_content_plan`, `location_documents`, `itineraries_pipeline`, `images`, `editor_assist`, `article_types`.
+Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `keyword_intel`, `itineraries_pipeline`, `images`, `editor_assist`, `article_types`.
 Related terms: Pipeline Route.
 Do not confuse with: frontend "Feature Page" — that's the UI per feature.
 Code references: `apps/backend/app/features/`.
@@ -99,7 +99,8 @@ Definition: validation checkpoints during compose. Coverage Analysis asks whethe
 - A **Feature** defines its own route, prompts, and may produce a Markdown article, a structured JSON output, or both.
 - A **Draft** points to at most one Payload entity; an unbound Draft has no Sync state.
 - A **Pipeline Artifact** may be converted to **LexicalJSON** before being synced to Payload.
-- `location_documents` and `keyword_intel` are features that do **not** produce articles — they emit structured data only.
+- `keyword_intel` is a feature that does **not** produce articles — it emits structured data only.
+- `LocationDocumentsPage` is a frontend-only operator tool that writes directly to Payload (Questura) over the Payload REST API; it has no AI Blog Writer backend pipeline.
 
 ## Domain Rules
 
@@ -111,10 +112,10 @@ Definition: validation checkpoints during compose. Coverage Analysis asks whethe
 
 ## Naming Conventions
 
-- Feature folders: snake_case verb_noun pairs (`youtube2blog`, `prompt2blog`, `location_documents`).
+- Feature folders: snake_case (`youtube2blog`, `prompt2blog`, `url2blog`).
 - Stage classes: `Stage[N]Output`, `StageEditorialAugmentationOutput`.
 - Frontend feature pages: camelCase folder, `*Page` component (`Prompt2BlogPage`, `LocationDocumentsPage`).
-- REST routes: kebab-case feature path (`/youtube2blog`, `/location-documents`).
+- REST routes: kebab-case feature path (`/youtube2blog`, `/keyword-intel`).
 - LLM presets: `LLMPresets.<intent>` (e.g. `compose`, `classify`).
 
 ## Decisions
@@ -139,7 +140,7 @@ When working in this context:
 ## Open Questions
 
 - Where does the contract for **inbound** content into Payload live? Today it's implicit ("Payload-accepts-this").
-- Should `keyword_intel` and `location_documents` (non-article features) be split into their own context? They share the run lifecycle but not the article shape.
+- Should `keyword_intel` (non-article feature) be split into its own context? It shares the run lifecycle but not the article shape.
 - Is the converter genuinely stateless across content edge cases (tables, embedded HTML)? No regression tests exist at the converter boundary.
 - The `images` and `editor_assist` features are not represented in the Stage[N] vocabulary — they're orthogonal services. Should the glossary distinguish "article features" vs "assist features"?
 
