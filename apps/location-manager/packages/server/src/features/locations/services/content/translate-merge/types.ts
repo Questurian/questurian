@@ -1,4 +1,9 @@
-import type { RejectedReview, UnifiedReview } from "../../../types/translate-merge-reviews.types";
+import type {
+  MergedReviewsGoogleSourceMeta,
+  MergedReviewsTripadvisorSourceMeta,
+  RejectedReview,
+  UnifiedReview,
+} from "../../../types/translate-merge-reviews.types";
 
 export type TranslationRunStats = {
   googleReviews: number;
@@ -6,6 +11,7 @@ export type TranslationRunStats = {
   needsTranslation: number;
   translated: number;
   alreadyEnglish: number;
+  translationFailed: number;
   errors: number;
 };
 
@@ -13,11 +19,19 @@ export type LoadSourceReviewsResult = {
   allReviews: UnifiedReview[];
   rejectedReviews: RejectedReview[];
   stats: TranslationRunStats;
+  sourceMeta: {
+    google: MergedReviewsGoogleSourceMeta;
+    tripadvisor: MergedReviewsTripadvisorSourceMeta;
+  };
 };
 
 export type TranslateReviewsResult = {
   mergedReviews: UnifiedReview[];
-  stats: Pick<TranslationRunStats, "needsTranslation" | "alreadyEnglish" | "translated" | "errors">;
+  failedRejects: RejectedReview[];
+  stats: Pick<
+    TranslationRunStats,
+    "needsTranslation" | "alreadyEnglish" | "translated" | "translationFailed" | "errors"
+  >;
 };
 
 export type PrefilterReviewsResult = {

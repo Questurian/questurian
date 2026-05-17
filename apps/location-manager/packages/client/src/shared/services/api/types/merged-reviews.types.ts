@@ -4,6 +4,7 @@ export interface MergedReviewsStats {
   tripadvisorReviews: number;
   translated: number;
   alreadyEnglish: number;
+  translationFailed: number;
   errors: number;
 }
 
@@ -12,6 +13,7 @@ export interface RejectsReportSummary {
   totalRejected: number;
   replacedWithEnglish: number;
   rejectedNonEnglish: number;
+  translationFailed: number;
 }
 
 export interface TranslateMergeReviewsResponse {
@@ -42,6 +44,7 @@ export interface MergedReviewsReportData {
     totalRejected: number;
     replacedWithEnglish: number;
     rejectedNonEnglish: number;
+    translationFailed: number;
   } | null;
 }
 

@@ -38,6 +38,7 @@ export interface MergedReviewsResult {
     tripadvisorReviews: number;
     translated: number;
     alreadyEnglish: number;
+    translationFailed: number;
     errors: number;
   };
   usability: MergedReviewsUsability;
@@ -46,6 +47,7 @@ export interface MergedReviewsResult {
     totalRejected: number;
     replacedWithEnglish: number;
     rejectedNonEnglish: number;
+    translationFailed: number;
   } | null;
 }
 

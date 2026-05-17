@@ -24,6 +24,7 @@ export interface TranslateMergeStats {
   tripadvisorReviews: number;
   translated: number;
   alreadyEnglish: number;
+  translationFailed: number;
   errors: number;
 }
 
@@ -39,12 +40,14 @@ export interface TranslateMergeRejectsReport {
   totalRejected: number;
   replacedWithEnglish: number;
   rejectedNonEnglish: number;
+  translationFailed: number;
 }
 
 export interface TranslateMergeRejectsSummary {
   totalRejected: number;
   replacedWithEnglish: number;
   rejectedNonEnglish: number;
+  translationFailed: number;
 }
 
 export interface TranslateMergeResult {
@@ -62,13 +65,50 @@ export interface RejectedReviewVersion {
   source_file: string;
 }
 
+export type RejectedReviewAction =
+  | "rejected_non_english"
+  | "replaced_with_english"
+  | "translation_failed";
+
 export interface RejectedReview {
   review_id: string;
-  action: "rejected_non_english" | "replaced_with_english";
+  action: RejectedReviewAction;
   reason: string;
-  kept: RejectedReviewVersion;
+  kept: RejectedReviewVersion | null;
   rejected: RejectedReviewVersion;
 }
+
+export interface MergedReviewsGoogleSourceMeta {
+  fetchedAt: string | null;
+  fileFound: boolean;
+  reviewCount: number;
+}
+
+export interface MergedReviewsTripadvisorSourceMeta {
+  fetchedAt: string | null;
+  fileCount: number;
+  fileLoadErrors: number;
+  reviewCountRaw: number;
+  reviewCountUnique: number;
+}
+
+export interface MergedReviewsSourceMeta {
+  google: MergedReviewsGoogleSourceMeta;
+  tripadvisor: MergedReviewsTripadvisorSourceMeta;
+}
+
+export interface MergedReviewsPipelineFilters {
+  minChars: number;
+  minReviewDate: string;
+}
+
+export interface MergedReviewsPipelineMeta {
+  translatorVersion: string;
+  filters: MergedReviewsPipelineFilters;
+  schemaVersion: number;
+}
+
+export const MERGED_REVIEWS_SCHEMA_VERSION = 1;
 
 export interface MergedReviewsFile {
   locationId: number;
@@ -76,6 +116,11 @@ export interface MergedReviewsFile {
   stats: TranslateMergeStats;
   usability: MergedReviewsUsability;
   reviews: UnifiedReview[];
+  // Fields below were introduced with schemaVersion=1. They are optional on read
+  // for back-compat with pre-schemaVersion files, and always written on new merges.
+  contentHash?: string;
+  sources?: MergedReviewsSourceMeta;
+  pipeline?: MergedReviewsPipelineMeta;
 }
 
 export interface RejectsReportFile {
@@ -85,6 +130,7 @@ export interface RejectsReportFile {
     totalRejected: number;
     replacedWithEnglish: number;
     rejectedNonEnglish: number;
+    translationFailed: number;
   };
   explanation: {
     why: string;
@@ -92,6 +138,7 @@ export interface RejectsReportFile {
     actions: {
       replaced_with_english: string;
       rejected_non_english: string;
+      translation_failed: string;
     };
   };
   rejectedReviews: RejectedReview[];

@@ -27,6 +27,7 @@ export function buildRejectsSummary(
     totalRejected: rejectedReviews.length,
     replacedWithEnglish: countRejectedByAction(rejectedReviews, "replaced_with_english"),
     rejectedNonEnglish: countRejectedByAction(rejectedReviews, "rejected_non_english"),
+    translationFailed: countRejectedByAction(rejectedReviews, "translation_failed"),
   };
 }
 

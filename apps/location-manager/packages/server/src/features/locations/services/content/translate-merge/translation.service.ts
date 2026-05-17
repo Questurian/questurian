@@ -7,9 +7,25 @@ import {
   type TranslationCacheKey,
   type TranslationCacheUpsert,
 } from "../../../repositories/content/translation-cache.repository";
-import type { UnifiedReview } from "../../../types/translate-merge-reviews.types";
+import type { RejectedReview, UnifiedReview } from "../../../types/translate-merge-reviews.types";
 import { needsTranslation } from "../../../utils/translate-merge-language.utils";
+import { truncateText } from "./helpers.utils";
 import type { TranslateReviewsResult } from "./types";
+
+function buildTranslationFailedReject(review: UnifiedReview, reason: string): RejectedReview {
+  return {
+    review_id: review.id,
+    action: "translation_failed",
+    reason,
+    kept: null,
+    rejected: {
+      language: review.original_language || "unknown",
+      title: review.title,
+      review_text_preview: truncateText(review.review_text),
+      source_file: review.source,
+    },
+  };
+}
 
 function applyCachedTranslation(original: UnifiedReview, cached: CachedTranslation): UnifiedReview {
   return {
@@ -37,10 +53,12 @@ export async function translateReviews(
     console.log("[Translate & Merge] No reviews need translation - all are already in English");
     return {
       mergedReviews: alreadyEnglishReviews,
+      failedRejects: [],
       stats: {
         needsTranslation: 0,
         alreadyEnglish: alreadyEnglishReviews.length,
         translated: 0,
+        translationFailed: 0,
         errors: 0,
       },
     };
@@ -67,20 +85,23 @@ export async function translateReviews(
     `[Translate & Merge] Translation cache: ${cacheHits.length} hits, ${cacheMisses.length} misses`
   );
 
-  let translated = 0;
-  let errors = 0;
-  let apiTranslatedReviews: UnifiedReview[] = [];
+  const apiTranslatedReviews: UnifiedReview[] = [];
+  const failedRejects: RejectedReview[] = [];
+  let translatedViaApi = 0;
+  let apiReportedErrors = 0;
 
   if (cacheMisses.length > 0) {
     console.log(`[Translate & Merge] Translation API URL: ${leadsApiUrl}`);
 
     if (!translationClient.isConfigured()) {
-      console.warn("[Translate & Merge] Translation API not configured - skipping translation step");
-      apiTranslatedReviews = cacheMisses.map((review) => ({
-        ...review,
-        was_translated: false,
-      }));
-      errors = cacheMisses.length;
+      console.warn(
+        `[Translate & Merge] Translation API not configured — dropping ${cacheMisses.length} untranslated reviews`
+      );
+      for (const review of cacheMisses) {
+        failedRejects.push(
+          buildTranslationFailedReject(review, "Translation API not configured")
+        );
+      }
     } else {
       try {
         const reviewsForApi = cacheMisses.map((review) => ({
@@ -98,8 +119,8 @@ export async function translateReviews(
           source_language: "auto",
         });
 
-        translated = translationResult.stats.translated;
-        errors = translationResult.stats.errors;
+        translatedViaApi = translationResult.stats.translated;
+        apiReportedErrors = translationResult.stats.errors;
 
         const translatedById = new Map<string, Record<string, unknown>>();
         for (const translatedReview of translationResult.reviews) {
@@ -110,31 +131,46 @@ export async function translateReviews(
         }
 
         const upserts: TranslationCacheUpsert[] = [];
-        apiTranslatedReviews = cacheMisses.map((original) => {
+        for (const original of cacheMisses) {
           const translatedReview = translatedById.get(original.id);
-          const translatedText =
-            (translatedReview?.review_text as string | undefined) ?? original.review_text;
-          const translatedTitle =
-            (translatedReview?.title as string | undefined) ?? original.title;
-
-          if (translatedReview) {
-            upserts.push({
-              source: original.source,
-              reviewId: original.id,
-              locationId,
-              originalLanguage: original.original_language,
-              translatedText,
-              translatedTitle,
-            });
+          if (!translatedReview) {
+            failedRejects.push(
+              buildTranslationFailedReject(
+                original,
+                "Translation API response did not include this review id"
+              )
+            );
+            continue;
           }
 
-          return {
+          const translatedText = translatedReview.review_text as string | undefined;
+          const translatedTitle = translatedReview.title as string | undefined;
+          if (!translatedText) {
+            failedRejects.push(
+              buildTranslationFailedReject(
+                original,
+                "Translation API returned empty review_text"
+              )
+            );
+            continue;
+          }
+
+          upserts.push({
+            source: original.source,
+            reviewId: original.id,
+            locationId,
+            originalLanguage: original.original_language,
+            translatedText,
+            translatedTitle: translatedTitle ?? original.title,
+          });
+
+          apiTranslatedReviews.push({
             ...original,
             review_text: translatedText,
-            title: translatedTitle,
+            title: translatedTitle ?? original.title,
             was_translated: true,
-          };
-        });
+          });
+        }
 
         if (upserts.length > 0) {
           upsertTranslations(upserts);
@@ -142,17 +178,19 @@ export async function translateReviews(
         }
 
         console.log(
-          `[Translate & Merge] Translation complete: ${translated} translated, ${errors} errors`
+          `[Translate & Merge] Translation API: ${translatedViaApi} translated, ${apiReportedErrors} reported errors, ${failedRejects.length} dropped as translation_failed`
         );
       } catch (error) {
-        console.error("[Translate & Merge] Translation error:", error);
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[Translate & Merge] Error details: ${errorMessage}`);
-        apiTranslatedReviews = cacheMisses.map((review) => ({
-          ...review,
-          was_translated: false,
-        }));
-        errors = cacheMisses.length;
+        console.error(`[Translate & Merge] Translation error: ${errorMessage}`);
+        for (const review of cacheMisses) {
+          failedRejects.push(
+            buildTranslationFailedReject(
+              review,
+              `Translation API call failed: ${errorMessage}`
+            )
+          );
+        }
       }
     }
   }
@@ -164,15 +202,18 @@ export async function translateReviews(
   console.log(`[Translate & Merge]   - Already English: ${alreadyEnglishReviews.length}`);
   console.log(`[Translate & Merge]   - From cache: ${cacheHits.length}`);
   console.log(`[Translate & Merge]   - Translated via API: ${apiTranslatedReviews.length}`);
+  console.log(`[Translate & Merge]   - Translation failed (dropped): ${failedRejects.length}`);
   console.log(`[Translate & Merge]   - Merged total: ${mergedReviews.length}`);
 
   return {
     mergedReviews,
+    failedRejects,
     stats: {
       needsTranslation: reviewsToTranslate.length,
       alreadyEnglish: alreadyEnglishReviews.length,
-      translated: translated + cacheHits.length,
-      errors,
+      translated: translatedViaApi + cacheHits.length,
+      translationFailed: failedRejects.length,
+      errors: apiReportedErrors,
     },
   };
 }

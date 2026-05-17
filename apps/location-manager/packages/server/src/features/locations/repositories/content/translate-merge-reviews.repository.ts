@@ -1,12 +1,14 @@
 import path from "node:path";
 import { existsSync } from "node:fs";
-import { mkdir, readdir } from "node:fs/promises";
+import { mkdir, readdir, rename, unlink } from "node:fs/promises";
 import {
   GOOGLE_REVIEWS_DIR,
   MERGED_REVIEWS_DIR,
   TRIPADVISOR_REVIEWS_DIR,
 } from "../../constants/translate-merge-reviews.constants";
 import type { ReviewFileReference } from "../../types/translate-merge-reviews.types";
+
+const MERGED_REVIEWS_RETENTION = 3;
 
 async function ensureDir(dir: string): Promise<void> {
   if (!existsSync(dir)) {
@@ -84,6 +86,34 @@ export async function writeJsonFile(filepath: string, data: unknown): Promise<vo
   await Bun.write(filepath, JSON.stringify(data, null, 2));
 }
 
+async function writeJsonFileAtomic(filepath: string, data: unknown): Promise<void> {
+  const tmpPath = `${filepath}.tmp`;
+  await Bun.write(tmpPath, JSON.stringify(data, null, 2));
+  await rename(tmpPath, filepath);
+}
+
+async function pruneOldMergedReviews(locationId: number, keep: number): Promise<void> {
+  if (!existsSync(MERGED_REVIEWS_DIR)) return;
+  const files = await readdir(MERGED_REVIEWS_DIR);
+  const merged = sortNewestFirst(
+    files.filter((f) => f.startsWith(`merged_reviews_${locationId}_`) && f.endsWith(".json"))
+  );
+  const rejects = sortNewestFirst(
+    files.filter((f) => f.startsWith(`rejects_report_${locationId}_`) && f.endsWith(".json"))
+  );
+  const mergedToDelete = merged.slice(keep);
+  const rejectsToDelete = rejects.slice(keep);
+  await Promise.all(
+    [...mergedToDelete, ...rejectsToDelete].map(async (f) => {
+      try {
+        await unlink(path.join(MERGED_REVIEWS_DIR, f));
+      } catch (error) {
+        console.warn(`[Translate & Merge] Failed to prune ${f}:`, error);
+      }
+    })
+  );
+}
+
 export function createMergedReviewsFilename(locationId: number, timestamp: number): string {
   return `merged_reviews_${locationId}_${timestamp}.json`;
 }
@@ -104,7 +134,8 @@ export async function saveMergedReviewsFile(
   await ensureMergedReviewsDir();
   const filename = createMergedReviewsFilename(locationId, timestamp);
   const filepath = path.join(MERGED_REVIEWS_DIR, filename);
-  await writeJsonFile(filepath, data);
+  await writeJsonFileAtomic(filepath, data);
+  await pruneOldMergedReviews(locationId, MERGED_REVIEWS_RETENTION);
   return { filename, filepath };
 }
 
@@ -116,7 +147,8 @@ export async function saveRejectsReportFile(
   await ensureMergedReviewsDir();
   const filename = createRejectsReportFilename(locationId, timestamp);
   const filepath = path.join(MERGED_REVIEWS_DIR, filename);
-  await writeJsonFile(filepath, data);
+  await writeJsonFileAtomic(filepath, data);
+  await pruneOldMergedReviews(locationId, MERGED_REVIEWS_RETENTION);
   return { filename, filepath };
 }
 

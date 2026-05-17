@@ -1,14 +1,41 @@
 import path from "node:path";
 import {
+  extractTimestampFromFilename,
   getAllTripAdvisorReviewFiles,
   getLatestGoogleReviewsFile,
   readJsonFile,
 } from "../../../repositories/content/translate-merge-reviews.repository";
-import type { RejectedReview, UnifiedReview } from "../../../types/translate-merge-reviews.types";
+import type {
+  MergedReviewsGoogleSourceMeta,
+  MergedReviewsTripadvisorSourceMeta,
+  RejectedReview,
+  UnifiedReview,
+} from "../../../types/translate-merge-reviews.types";
 import { isEnglishLanguage } from "../../../utils/translate-merge-language.utils";
 import { parseGoogleReviews, parseTripAdvisorReviews } from "../../../utils/translate-merge-parsers.utils";
 import { truncateText } from "./helpers.utils";
 import type { LoadSourceReviewsResult, TranslationRunStats } from "./types";
+
+function fetchedAtFromFilename(filepath: string | null): string | null {
+  if (!filepath) return null;
+  const ts = extractTimestampFromFilename(path.basename(filepath));
+  if (!ts) return null;
+  const ms = parseInt(ts, 10);
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms).toISOString();
+}
+
+function newestFetchedAtFromFilenames(filepaths: string[]): string | null {
+  let newest: number | null = null;
+  for (const p of filepaths) {
+    const ts = extractTimestampFromFilename(path.basename(p));
+    if (!ts) continue;
+    const ms = parseInt(ts, 10);
+    if (!Number.isFinite(ms)) continue;
+    if (newest === null || ms > newest) newest = ms;
+  }
+  return newest === null ? null : new Date(newest).toISOString();
+}
 
 export async function loadSourceReviews(
   locationId: number,
@@ -22,7 +49,14 @@ export async function loadSourceReviews(
     needsTranslation: 0,
     translated: 0,
     alreadyEnglish: 0,
+    translationFailed: 0,
     errors: 0,
+  };
+
+  const googleMeta: MergedReviewsGoogleSourceMeta = {
+    fetchedAt: null,
+    fileFound: false,
+    reviewCount: 0,
   };
 
   if (includeGoogle) {
@@ -30,11 +64,14 @@ export async function loadSourceReviews(
     console.log(`[Translate & Merge] Google file: ${googleFile || "NOT FOUND"}`);
 
     if (googleFile) {
+      googleMeta.fileFound = true;
+      googleMeta.fetchedAt = fetchedAtFromFilename(googleFile);
       try {
         const data = await readJsonFile<unknown>(googleFile);
         const googleReviews = parseGoogleReviews(data);
         allReviews.push(...googleReviews);
         stats.googleReviews = googleReviews.length;
+        googleMeta.reviewCount = googleReviews.length;
         console.log(`[Translate & Merge] Loaded ${googleReviews.length} Google reviews`);
       } catch (error) {
         console.error("[Translate & Merge] Error loading Google reviews:", error);
@@ -46,9 +83,18 @@ export async function loadSourceReviews(
 
   const tripadvisorReviewsMap = new Map<string, UnifiedReview>();
   const rejectedReviews: RejectedReview[] = [];
+  const tripadvisorMeta: MergedReviewsTripadvisorSourceMeta = {
+    fetchedAt: null,
+    fileCount: 0,
+    fileLoadErrors: 0,
+    reviewCountRaw: 0,
+    reviewCountUnique: 0,
+  };
 
   if (includeTripadvisor) {
     const tripadvisorFiles = await getAllTripAdvisorReviewFiles(locationId);
+    tripadvisorMeta.fileCount = tripadvisorFiles.length;
+    tripadvisorMeta.fetchedAt = newestFetchedAtFromFilenames(tripadvisorFiles);
 
     console.log(`[Translate & Merge] Found ${tripadvisorFiles.length} TripAdvisor files:`);
     tripadvisorFiles.forEach((file) => console.log(`  - ${path.basename(file)}`));
@@ -81,6 +127,7 @@ export async function loadSourceReviews(
 
       if (loadError) {
         console.error(`[Translate & Merge] Error loading TripAdvisor reviews from ${file}:`, loadError);
+        tripadvisorMeta.fileLoadErrors += 1;
         continue;
       }
 
@@ -148,8 +195,11 @@ export async function loadSourceReviews(
         );
       } catch (error) {
         console.error(`[Translate & Merge] Error parsing TripAdvisor reviews from ${file}:`, error);
+        tripadvisorMeta.fileLoadErrors += 1;
       }
     }
+
+    tripadvisorMeta.reviewCountRaw = totalTripAdvisorLoaded;
 
     console.log(
       `[Translate & Merge] Total TripAdvisor loaded: ${totalTripAdvisorLoaded}, Unique after dedup: ${tripadvisorReviewsMap.size}`
@@ -162,6 +212,12 @@ export async function loadSourceReviews(
   const uniqueTripAdvisorReviews = Array.from(tripadvisorReviewsMap.values());
   allReviews.push(...uniqueTripAdvisorReviews);
   stats.tripadvisorReviews = uniqueTripAdvisorReviews.length;
+  tripadvisorMeta.reviewCountUnique = uniqueTripAdvisorReviews.length;
 
-  return { allReviews, rejectedReviews, stats };
+  return {
+    allReviews,
+    rejectedReviews,
+    stats,
+    sourceMeta: { google: googleMeta, tripadvisor: tripadvisorMeta },
+  };
 }

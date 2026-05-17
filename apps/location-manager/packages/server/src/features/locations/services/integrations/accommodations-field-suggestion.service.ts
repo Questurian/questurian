@@ -6,7 +6,8 @@ import {
   type AccommodationsSuggestionKind,
 } from "@shared/types/accommodations-options";
 import type { LocationCategory } from "@shared/types/location-category";
-import { getLatestMergedReviewsAiSample } from "../../repositories/content/merged-reviews.repository";
+import { REVIEW_SAMPLE_FOR_AI } from "../../constants/translate-merge-reviews.constants";
+import { getLatestMergedReviewsForLocation } from "../../repositories/content/merged-reviews.repository";
 import type {
   FieldSuggestionAiRequest,
   FieldSuggestionAiResponse,
@@ -98,31 +99,33 @@ async function loadReviewSampleIfUsable(
     return null;
   }
 
-  const sample = await getLatestMergedReviewsAiSample(locationId);
-  if (!sample) {
+  const merged = await getLatestMergedReviewsForLocation(locationId);
+  if (!merged) {
     console.log(`[FieldSuggestion] No merged reviews for location ${locationId}; pure-AI mode`);
     return null;
   }
 
-  if (sample.usability.unusable) {
+  if (merged.usability.unusable) {
     console.log(
-      `[FieldSuggestion] Merged reviews for location ${locationId} are unusable (${sample.usability.unusableReason}); pure-AI mode`
+      `[FieldSuggestion] Merged reviews for location ${locationId} are unusable (${merged.usability.unusableReason}); pure-AI mode`
     );
     return null;
   }
 
-  if (sample.reviews.length === 0) {
+  if (merged.reviews.length === 0) {
     console.log(`[FieldSuggestion] Merged reviews file empty for location ${locationId}; pure-AI mode`);
     return null;
   }
 
+  // Sampling/projection are consumer concerns; the repository returns the full clean record.
+  const sample = merged.reviews.slice(0, REVIEW_SAMPLE_FOR_AI);
   console.log(
-    `[FieldSuggestion] Using ${sample.reviews.length} review samples for location ${locationId}`
+    `[FieldSuggestion] Using ${sample.length} review samples for location ${locationId}`
   );
-  return sample.reviews.map((review) => ({
-    text: review.text,
+  return sample.map((review) => ({
+    text: review.review_text ?? "",
     rating: review.rating ?? null,
-    date: review.date || null,
+    date: review.review_datetime_utc || null,
   }));
 }
 

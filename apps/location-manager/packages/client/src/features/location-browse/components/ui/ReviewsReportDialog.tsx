@@ -96,25 +96,33 @@ export function ReviewsReportDialog({
               </div>
             </div>
 
-            {/* Duplicates */}
+            {/* Rejected reviews */}
             {report.rejectsReport && report.rejectsReport.totalRejected > 0 && (
               <div className="bg-amber-500/10 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertCircle className="h-5 w-5 text-amber-400" />
-                  <h3 className="font-medium text-foreground">Duplicates Removed</h3>
+                  <h3 className="font-medium text-foreground">Excluded From Merged Dataset</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Total Rejected:</span>
+                    <span className="text-muted-foreground">Total Excluded:</span>
                     <span className="ml-2 font-semibold">{report.rejectsReport.totalRejected}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Replaced with English:</span>
                     <span className="ml-2 font-semibold">{report.rejectsReport.replacedWithEnglish}</span>
                   </div>
+                  <div>
+                    <span className="text-muted-foreground">Duplicate non-English:</span>
+                    <span className="ml-2 font-semibold">{report.rejectsReport.rejectedNonEnglish}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Translation failed:</span>
+                    <span className="ml-2 font-semibold">{report.rejectsReport.translationFailed}</span>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Duplicate reviews from multiple language files were deduplicated, preferring English versions.
+                  Duplicate non-English reviews were deduplicated (preferring English versions); translation-failed reviews were dropped to prevent garbled non-English text from leaking into the merged dataset.
                 </p>
               </div>
             )}

@@ -67,6 +67,7 @@ export async function getMergedReviewsReportPayload(
         totalRejected: rejectsData.summary.totalRejected,
         replacedWithEnglish: rejectsData.summary.replacedWithEnglish,
         rejectedNonEnglish: rejectsData.summary.rejectedNonEnglish,
+        translationFailed: rejectsData.summary.translationFailed ?? 0,
       };
     }
   }

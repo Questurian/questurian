@@ -1,14 +1,15 @@
-import { REVIEW_SAMPLE_FOR_AI } from "../../constants/translate-merge-reviews.constants";
 import type {
   MergedReviewsFile,
   MergedReviewsUsability,
-  MinimalReview,
+  UnifiedReview,
 } from "../../types/translate-merge-reviews.types";
 import { getLatestMergedReviewsFile, readJsonFile } from "./translate-merge-reviews.repository";
 
-export interface MergedReviewsAiSample {
-  reviews: MinimalReview[];
+export interface MergedReviewsForLocation {
+  reviews: UnifiedReview[];
   usability: MergedReviewsUsability;
+  mergedAt: string;
+  contentHash: string | null;
 }
 
 async function readLatestMergedReviews(locationId: number): Promise<MergedReviewsFile | null> {
@@ -20,28 +21,9 @@ async function readLatestMergedReviews(locationId: number): Promise<MergedReview
   return readJsonFile<MergedReviewsFile>(latestFile.filepath);
 }
 
-export async function getLatestMinimalMergedReviews(locationId: number): Promise<MinimalReview[] | null> {
-  const data = await readLatestMergedReviews(locationId);
-  if (!data) {
-    return null;
-  }
-
-  if (!Array.isArray(data.reviews)) {
-    return [];
-  }
-
-  return data.reviews
-    .filter((review) => typeof review.review_text === "string" && review.review_text.trim().length > 0)
-    .map((review) => ({
-      text: review.review_text ?? "",
-      rating: review.rating ?? 0,
-      date: review.review_datetime_utc ?? "",
-    }));
-}
-
-export async function getLatestMergedReviewsAiSample(
+export async function getLatestMergedReviewsForLocation(
   locationId: number
-): Promise<MergedReviewsAiSample | null> {
+): Promise<MergedReviewsForLocation | null> {
   const data = await readLatestMergedReviews(locationId);
   if (!data) {
     return null;
@@ -49,17 +31,15 @@ export async function getLatestMergedReviewsAiSample(
 
   const usability = data.usability ?? { unusable: false, unusableReason: null };
   const reviews = Array.isArray(data.reviews)
-    ? data.reviews
-        .filter(
-          (review) => typeof review.review_text === "string" && review.review_text.trim().length > 0
-        )
-        .slice(0, REVIEW_SAMPLE_FOR_AI)
-        .map((review) => ({
-          text: review.review_text ?? "",
-          rating: review.rating ?? 0,
-          date: review.review_datetime_utc ?? "",
-        }))
+    ? data.reviews.filter(
+        (review) => typeof review.review_text === "string" && review.review_text.trim().length > 0
+      )
     : [];
 
-  return { reviews, usability };
+  return {
+    reviews,
+    usability,
+    mergedAt: data.mergedAt,
+    contentHash: data.contentHash ?? null,
+  };
 }

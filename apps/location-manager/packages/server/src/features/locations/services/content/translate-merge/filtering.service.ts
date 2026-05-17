@@ -1,4 +1,4 @@
-import { MIN_REVIEW_DATE_TIMESTAMP } from "../../../constants/translate-merge-reviews.constants";
+import { resolveMinReviewDateTimestamp } from "../../../constants/translate-merge-reviews.constants";
 import type { UnifiedReview } from "../../../types/translate-merge-reviews.types";
 import {
   getReviewTimestamp,
@@ -6,7 +6,10 @@ import {
 } from "../../../utils/translate-merge-language.utils";
 import type { FilterReviewsResult, PrefilterReviewsResult } from "./types";
 
-export function prefilterByLengthAndDate(reviews: UnifiedReview[]): PrefilterReviewsResult {
+export function prefilterByLengthAndDate(
+  reviews: UnifiedReview[],
+  minReviewDateTimestamp: number = resolveMinReviewDateTimestamp()
+): PrefilterReviewsResult {
   let filteredOutShort = 0;
   let filteredOutOld = 0;
   let filteredOutInvalidDate = 0;
@@ -24,7 +27,7 @@ export function prefilterByLengthAndDate(reviews: UnifiedReview[]): PrefilterRev
       continue;
     }
 
-    if (timestamp < MIN_REVIEW_DATE_TIMESTAMP) {
+    if (timestamp < minReviewDateTimestamp) {
       filteredOutOld += 1;
       continue;
     }

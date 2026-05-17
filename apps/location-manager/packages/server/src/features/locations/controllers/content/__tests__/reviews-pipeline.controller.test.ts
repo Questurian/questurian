@@ -4,6 +4,7 @@ import { executePipeline } from "../reviews-pipeline.controller";
 const baseMergeStats = {
   translated: 0,
   alreadyEnglish: 0,
+  translationFailed: 0,
   errors: 0,
 };
 
