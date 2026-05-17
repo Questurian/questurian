@@ -20,11 +20,11 @@ export function DiningPostCreatePhase({
       pendingEmptyHint="Reviews still being fetched — AI suggestions will appear here when ready."
       headerSlot={
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
             <Check className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[20px] sm:text-[24px] opacity-70 font-medium text-foreground truncate">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate">
               Location Added
             </h1>
             <p className="text-xs text-muted-foreground">

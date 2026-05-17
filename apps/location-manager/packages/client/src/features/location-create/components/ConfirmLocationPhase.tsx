@@ -26,12 +26,12 @@ export function ConfirmLocationPhase({
 }: ConfirmLocationPhaseProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-card border border-border rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-xl bg-card border border-border rounded-2xl p-6 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
             <Check className="w-4 h-4 text-white" />
           </div>
-          <h1 className="text-[24px]! opacity-70 font-medium text-foreground">Confirm Location Details</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Confirm Location Details</h1>
         </div>
 
         <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
