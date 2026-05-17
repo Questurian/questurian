@@ -19,15 +19,15 @@ function validateLongitude(value: string) {
   return !Number.isNaN(parsed) && parsed >= -180 && parsed <= 180;
 }
 
-export function normalizeRestaurantAddress(address: string) {
+export function normalizeDiningAddress(address: string) {
   return address.trim();
 }
 
-export function buildRestaurantPrefillSignature(name: string, address: string) {
-  return `${name.trim().toLowerCase()}|${normalizeRestaurantAddress(address).toLowerCase()}`;
+export function buildDiningPrefillSignature(name: string, address: string) {
+  return `${name.trim().toLowerCase()}|${normalizeDiningAddress(address).toLowerCase()}`;
 }
 
-export const addRestaurantSchema = z.object({
+export const addDiningSchema = z.object({
   name: z
     .string()
     .trim()
@@ -98,22 +98,22 @@ export const addRestaurantSchema = z.object({
   ianaTimeId: z.string().trim().optional().or(z.literal("")),
 });
 
-export const addRestaurantSubmitSchema = z
+export const addDiningSubmitSchema = z
   .object({
     prefillSignature: z.string().nullable(),
-    formValues: addRestaurantSchema,
+    formValues: addDiningSchema,
   })
   .superRefine((data, ctx) => {
     if (data.prefillSignature === null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["prefillSignature"],
-        message: "Run Google lookup before creating the restaurant document.",
+        message: "Run Google lookup before creating the dining document.",
       });
       return;
     }
 
-    const currentSignature = buildRestaurantPrefillSignature(
+    const currentSignature = buildDiningPrefillSignature(
       data.formValues.name,
       data.formValues.address
     );
@@ -127,4 +127,4 @@ export const addRestaurantSubmitSchema = z
     }
   });
 
-export type AddRestaurantFormData = z.infer<typeof addRestaurantSchema>;
+export type AddDiningFormData = z.infer<typeof addDiningSchema>;

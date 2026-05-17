@@ -1,9 +1,9 @@
 import { apiGet } from "./client";
 import { API_ENDPOINTS } from "./config";
-import type { LeadsApiHealthResponse } from "./types";
+import type { TranslationApiHealthResponse } from "./types";
 
 export const healthApi = {
-  async checkLeadsApiHealth(): Promise<LeadsApiHealthResponse["data"]> {
-    return apiGet<LeadsApiHealthResponse["data"]>(API_ENDPOINTS.LEADS_API_HEALTH);
+  async checkTranslationApiHealth(): Promise<TranslationApiHealthResponse["data"]> {
+    return apiGet<TranslationApiHealthResponse["data"]>(API_ENDPOINTS.TRANSLATION_API_HEALTH);
   },
 };

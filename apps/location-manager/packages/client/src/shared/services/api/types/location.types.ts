@@ -161,6 +161,8 @@ export interface LocationResponse {
   reviewsGoogleCount: number | null;
   reviewsTripadvisorCount: number | null;
   reviewsEnabled: boolean;
+  provenance: Record<string, string> | null;
+  pendingSuggestions: Record<string, { value: string | string[]; provenance: string }> | null;
   created_at: string;
   updated_at: string;
 }

@@ -18,6 +18,7 @@ app = FastAPI()
 DEFAULT_MODEL = "gemini-2.5-pro"
 DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL = "gemini-2.5-flash"
 DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = "gemini-2.5-flash"
+DEFAULT_TRANSLATION_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_LOCATION = "us-central1"
 
 
@@ -62,6 +63,10 @@ ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = (
     ).strip()
     or DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL
 )
+TRANSLATION_MODEL = (
+    os.getenv("TRANSLATION_MODEL", DEFAULT_TRANSLATION_MODEL).strip()
+    or DEFAULT_TRANSLATION_MODEL
+)
 
 _vertex_initialized = False
 _vertex_init_lock = threading.Lock()
@@ -90,7 +95,7 @@ class ReviewSample(BaseModel):
     date: str | None = None
 
 
-SUPPORTED_FIELD_SUGGESTION_CATEGORIES = {"accommodations"}
+SUPPORTED_FIELD_SUGGESTION_CATEGORIES = {"accommodations", "dining"}
 
 
 class FieldSuggestionRequest(BaseModel):
@@ -102,6 +107,25 @@ class FieldSuggestionRequest(BaseModel):
     form_values: dict
     api_context: dict | None = None
     reviews: list[ReviewSample] | None = None
+
+
+class TranslateReviewsRequest(BaseModel):
+    reviews: list[dict]
+    fields_to_translate: list[str]
+
+
+class TranslateReviewsResponseStats(BaseModel):
+    total: int
+    translated: int
+    already_english: int
+    errors: int
+    skipped: int
+
+
+class TranslateReviewsResponse(BaseModel):
+    reviews: list[dict]
+    stats: TranslateReviewsResponseStats
+    message: str
 
 
 def ensure_vertex_initialized() -> None:
@@ -335,6 +359,149 @@ def generate_grounded_json_from_prompt(
         return parse_json_object(generate_text_from_prompt(prompt, model_name))
 
 
+def build_translation_prompt(
+    reviews: list[dict], fields_to_translate: list[str]
+) -> str:
+    # Sparse payload: omit empty fields per review so we don't pay tokens
+    # round-tripping "title": "" for Google reviews (which have no titles).
+    payload: list[dict] = []
+    for review in reviews:
+        entry: dict = {"id": str(review.get("id", ""))}
+        for field in fields_to_translate:
+            value = review.get(field)
+            if isinstance(value, str) and value.strip():
+                entry[field] = value
+        payload.append(entry)
+
+    # The LM caller pre-filters with needsTranslation() before calling this
+    # endpoint, so we trust that everything in `reviews` is non-English and
+    # skip the model-side English-detection step. If translation failure rates
+    # spike (e.g. mixed-language reviews tagged as non-English get returned
+    # as-is and miscounted), the revert is to restore the safety-net
+    # detection: re-add "If a field is already English, return it unchanged"
+    # to this prompt and an `already_english_ids` array to the response
+    # schema in translate_reviews_with_vertex below.
+    return (
+        "You are a translator. Each review below has an `id` and one or more text fields.\n"
+        "Translate every present text field into clear, natural English.\n"
+        "Do not summarise, embellish, or add commentary. Preserve meaning faithfully.\n"
+        "If a field is missing on the input, omit it from the output.\n\n"
+        f"Fields to translate (when present): {json.dumps(fields_to_translate)}\n"
+        f"Reviews JSON:\n{json.dumps(payload, ensure_ascii=False)}"
+    )
+
+
+def build_translation_response_schema(fields: list[str]) -> dict:
+    review_props: dict = {"id": {"type": "string"}}
+    for field in fields:
+        review_props[field] = {"type": "string"}
+    return {
+        "type": "object",
+        "properties": {
+            "reviews": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": review_props,
+                    "required": ["id"],
+                },
+            },
+        },
+        "required": ["reviews"],
+    }
+
+
+def translate_reviews_with_vertex(
+    request: TranslateReviewsRequest,
+) -> TranslateReviewsResponse:
+    fields = [field for field in request.fields_to_translate if isinstance(field, str)]
+    if not fields:
+        raise ValueError("fields_to_translate must be non-empty")
+    if not request.reviews:
+        return TranslateReviewsResponse(
+            reviews=[],
+            stats=TranslateReviewsResponseStats(
+                total=0, translated=0, already_english=0, errors=0, skipped=0
+            ),
+            message="No reviews to translate",
+        )
+
+    ensure_vertex_initialized()
+
+    prompt = build_translation_prompt(request.reviews, fields)
+    schema = build_translation_response_schema(fields)
+
+    model = GenerativeModel(TRANSLATION_MODEL)
+    response = model.generate_content(
+        prompt,
+        generation_config={
+            "response_mime_type": "application/json",
+            "response_schema": schema,
+            "temperature": 0,
+        },
+    )
+
+    usage = getattr(response, "usage_metadata", None)
+    if usage is not None:
+        logger.info(
+            "[translate/reviews] model=%s chunk_size=%d prompt_tokens=%s output_tokens=%s total_tokens=%s",
+            TRANSLATION_MODEL,
+            len(request.reviews),
+            getattr(usage, "prompt_token_count", "?"),
+            getattr(usage, "candidates_token_count", "?"),
+            getattr(usage, "total_token_count", "?"),
+        )
+
+    raw = (response.text or "").strip()
+    if not raw:
+        raise RuntimeError("Vertex AI returned empty translation response.")
+
+    parsed = parse_json_object(raw)
+    translated_list = parsed.get("reviews") or []
+    if not isinstance(translated_list, list):
+        raise ValueError("Translation response had no `reviews` array")
+
+    translated_by_id: dict[str, dict] = {}
+    for entry in translated_list:
+        if not isinstance(entry, dict):
+            continue
+        entry_id = str(entry.get("id", "")).strip()
+        if not entry_id:
+            continue
+        translated_by_id[entry_id] = entry
+
+    output_reviews: list[dict] = []
+    translated_count = 0
+    errors_count = 0
+
+    for original in request.reviews:
+        original_id = str(original.get("id", "")).strip()
+        translated_entry = translated_by_id.get(original_id) if original_id else None
+        merged = dict(original)
+        if translated_entry:
+            for field in fields:
+                value = translated_entry.get(field)
+                if isinstance(value, str):
+                    merged[field] = value
+            translated_count += 1
+        else:
+            errors_count += 1
+        output_reviews.append(merged)
+
+    stats = TranslateReviewsResponseStats(
+        total=len(request.reviews),
+        translated=translated_count,
+        already_english=0,
+        errors=errors_count,
+        skipped=0,
+    )
+    return TranslateReviewsResponse(
+        reviews=output_reviews,
+        stats=stats,
+        message=f"Translated {translated_count}/{stats.total} reviews via Vertex",
+    )
+
+
 def generate_field_suggestion(request: FieldSuggestionRequest) -> dict:
     if request.category not in SUPPORTED_FIELD_SUGGESTION_CATEGORIES:
         raise ValueError(
@@ -450,6 +617,17 @@ async def field_suggestion(request: FieldSuggestionRequest):
         raise
     except Exception as exc:
         logger.exception("Vertex field suggestion failed (category=%s)", request.category)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/translate/reviews", response_model=TranslateReviewsResponse)
+async def translate_reviews(request: TranslateReviewsRequest):
+    try:
+        return await asyncio.to_thread(translate_reviews_with_vertex, request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Vertex translation failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

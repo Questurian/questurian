@@ -268,6 +268,45 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     }
   };
 
+  const parseStringMap = (json?: string | null): Record<string, string> | null => {
+    if (!json) return null;
+    try {
+      const parsed = JSON.parse(json);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+      const result: Record<string, string> = {};
+      for (const [key, value] of Object.entries(parsed)) {
+        if (typeof value === "string") result[key] = value;
+      }
+      return Object.keys(result).length > 0 ? result : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const parsePendingSuggestions = (
+    json?: string | null
+  ): Record<string, { value: string | string[]; provenance: string }> | null => {
+    if (!json) return null;
+    try {
+      const parsed = JSON.parse(json);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+      const result: Record<string, { value: string | string[]; provenance: string }> = {};
+      for (const [key, raw] of Object.entries(parsed)) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+        const entry = raw as Record<string, unknown>;
+        const value = entry.value;
+        const provenance = entry.provenance;
+        if (typeof provenance !== "string") continue;
+        if (typeof value === "string" || (Array.isArray(value) && value.every((v) => typeof v === "string"))) {
+          result[key] = { value: value as string | string[], provenance };
+        }
+      }
+      return Object.keys(result).length > 0 ? result : null;
+    } catch {
+      return null;
+    }
+  };
+
   const parseSelectedPayloadMediaSetIds = (
     selectedPayloadMediaSetIdsJson?: string | null
   ): string[] | null => {
@@ -348,6 +387,8 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     reviewsGoogleCount: location.reviewsGoogleCount ?? null,
     reviewsTripadvisorCount: location.reviewsTripadvisorCount ?? null,
     reviewsEnabled: toReviewsEnabled(location.reviewsEnabled),
+    provenance: parseStringMap(location.provenanceJson || null),
+    pendingSuggestions: parsePendingSuggestions(location.pendingSuggestionsJson || null),
     created_at: location.created_at || new Date().toISOString(),
     updated_at: location.updated_at || location.created_at || new Date().toISOString(),
   };

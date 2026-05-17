@@ -135,7 +135,7 @@ async function executeTranslateAndMergeReviews(
     locationId,
     prefiltered.kept,
     translationClient,
-    config.LEADS_API_URL
+    config.altTextApiUrl
   );
   stats.translated = translationStep.stats.translated;
   stats.alreadyEnglish = translationStep.stats.alreadyEnglish;

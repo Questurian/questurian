@@ -7,7 +7,7 @@ export const MERGED_REVIEWS_DIR = path.join(process.cwd(), "data", "merged-revie
 export const MIN_REVIEW_CHAR_COUNT = 150;
 export const MIN_REVIEW_AGE_YEARS = 3;
 export const MIN_USABLE_REVIEW_COUNT = 5;
-export const TRANSLATOR_VERSION = "v1";
+export const TRANSLATOR_VERSION = "v2-vertex";
 export const REVIEW_SAMPLE_FOR_AI = 20;
 
 export function resolveMinReviewDateTimestamp(now: Date = new Date()): number {

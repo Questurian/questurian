@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { AlertCircle, Check, MessageSquare, SkipForward } from "lucide-react";
 import { Button } from "@client/components/ui/button";
 import { PipelineProgress, type PipelineStep } from "./PipelineProgress";
-import { useLeadsApiHealth } from "@client/shared/services/api/hooks";
+import { useTranslationApiHealth } from "@client/shared/services/api/hooks";
 import { useFetchReviewsPipeline } from "@client/shared/services/api/hooks/useReviewsPipeline";
 import type { Category, ReviewsPipelineJobStatus, ReviewSource } from "@client/shared/services/api/types";
 
@@ -40,7 +40,7 @@ export function ReviewsFetchPhase({
     data: healthData,
     isLoading: isCheckingHealth,
     error: healthError,
-  } = useLeadsApiHealth({ enabled: phaseState === "checking" });
+  } = useTranslationApiHealth({ enabled: phaseState === "checking" });
 
   // Handle health check result
   useEffect(() => {

@@ -22,6 +22,9 @@ export const API_ENDPOINTS = {
   CREATE_LOCATION: (category: Category) => `/api/${category}`,
   GOOGLE_PREFILL: (category: Category) => `/api/${category}/google-prefill`,
   FIELD_SUGGESTIONS: "/api/field-suggestions",
+  DINING_STAGE2_SUGGEST: (id: number) => `/api/dining/${id}/stage2-suggest`,
+  PENDING_SUGGESTION_ACCEPT: (id: number) => `/api/dining/${id}/pending-suggestions/accept`,
+  PENDING_SUGGESTION_DISMISS: (id: number) => `/api/dining/${id}/pending-suggestions/dismiss`,
   UPDATE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   DELETE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   REFETCH_PLACE_ID: (category: Category, id: number) => `/api/${category}/${id}/refetch-place-id`,
@@ -103,5 +106,5 @@ export const API_ENDPOINTS = {
   DOWNLOAD_REJECTS_REPORT: (category: Category, id: number) => `/api/${category}/${id}/reviews/rejects/download`,
 
   // Health checks
-  LEADS_API_HEALTH: "/api/health/leads-api",
+  TRANSLATION_API_HEALTH: "/api/health/translation-api",
 } as const;

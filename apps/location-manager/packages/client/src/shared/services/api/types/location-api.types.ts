@@ -34,6 +34,7 @@ export interface CreateMapsRequest {
   tripadvisorFeatures?: string[] | string;
   reviewsEnabled?: boolean;
   tourIds?: number[];
+  provenance?: Record<string, string>;
 }
 
 export interface GooglePrefillRequest {
@@ -63,6 +64,26 @@ export interface GooglePrefillResponse {
     parking?: string[];
     pool?: string[];
   } | null;
+  type: string | null;
+  tripadvisorUrl: string | null;
+  menuUrl: string | null;
+  reservationUrl: string | null;
+  provenance: Record<string, string>;
+}
+
+export interface DiningStage2SuggestionOutcome {
+  field: "type" | "idealFor";
+  applied: "live" | "pending" | "skipped";
+  reason?: string;
+  value?: string | string[];
+  provenance?: "ai-reviews" | "ai-google";
+  confidence?: number;
+}
+
+export interface DiningStage2SuggestionResult {
+  locationId: number;
+  reviewsUsed: boolean;
+  outcomes: DiningStage2SuggestionOutcome[];
 }
 
 export type AccommodationsFieldSuggestionFieldKey =

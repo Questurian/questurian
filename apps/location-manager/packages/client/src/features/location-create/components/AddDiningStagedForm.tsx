@@ -7,20 +7,22 @@ import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
 import { FormTagMultiSelect } from "@client/shared/components/forms";
 import { getIdealForOptionGroups } from "../constants/ai-prompt-template";
-import type { AddRestaurantFormData } from "../validation/add-restaurant.schema";
+import type { AddDiningFormData } from "../validation/add-dining.schema";
+import type { FieldProvenance } from "@questurian/lm-shared";
+import { ProvenanceBadge } from "./ProvenanceBadge";
 
-type RestaurantFormSection = "step1" | "entities" | "classification" | "optional";
+type DiningFormSection = "step1" | "entities" | "classification" | "optional";
 
-const RESTAURANT_SECTION_ORDER: RestaurantFormSection[] = [
+const DINING_SECTION_ORDER: DiningFormSection[] = [
   "step1",
   "entities",
   "classification",
   "optional",
 ];
 
-interface AddRestaurantStagedFormProps {
-  form: UseFormReturn<AddRestaurantFormData>;
-  onSubmit: (data: AddRestaurantFormData) => void;
+interface AddDiningStagedFormProps {
+  form: UseFormReturn<AddDiningFormData>;
+  onSubmit: (data: AddDiningFormData) => void;
   onRunGooglePrefill: () => Promise<boolean>;
   isPrefillingGoogle: boolean;
   isCreating: boolean;
@@ -31,9 +33,10 @@ interface AddRestaurantStagedFormProps {
   isPrefillReady: boolean;
   locationTypes: { value: string; label: string }[];
   isLoadingTypes: boolean;
+  provenance: Partial<Record<"type" | "tripadvisorUrl" | "menuUrl" | "reservationUrl", FieldProvenance>>;
 }
 
-export function AddRestaurantStagedForm({
+export function AddDiningStagedForm({
   form,
   onSubmit,
   onRunGooglePrefill,
@@ -46,9 +49,10 @@ export function AddRestaurantStagedForm({
   isPrefillReady,
   locationTypes,
   isLoadingTypes,
-}: AddRestaurantStagedFormProps) {
+  provenance,
+}: AddDiningStagedFormProps) {
   const idealForOptionGroups = getIdealForOptionGroups("dining");
-  const [activeSection, setActiveSection] = useState<RestaurantFormSection>("step1");
+  const [activeSection, setActiveSection] = useState<DiningFormSection>("step1");
   const [isAdvancing, setIsAdvancing] = useState(false);
 
   const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
@@ -64,7 +68,7 @@ export function AddRestaurantStagedForm({
     !form.formState.errors.reservationUrl;
 
   const flowSections: Array<{
-    key: RestaurantFormSection;
+    key: DiningFormSection;
     label: string;
     complete: boolean;
   }> = [
@@ -74,27 +78,27 @@ export function AddRestaurantStagedForm({
     { key: "optional", label: "Optional", complete: optionalComplete },
   ];
 
-  const canOpenSection = (section: RestaurantFormSection) => {
+  const canOpenSection = (section: DiningFormSection) => {
     if (section === "step1") return true;
     return isPrefillReady;
   };
 
-  const goToSection = (section: RestaurantFormSection) => {
+  const goToSection = (section: DiningFormSection) => {
     if (!canOpenSection(section)) return;
     setActiveSection(section);
   };
 
   const goToPreviousSection = () => {
-    const currentIndex = RESTAURANT_SECTION_ORDER.indexOf(activeSection);
-    const previousSection = RESTAURANT_SECTION_ORDER[currentIndex - 1];
+    const currentIndex = DINING_SECTION_ORDER.indexOf(activeSection);
+    const previousSection = DINING_SECTION_ORDER[currentIndex - 1];
     if (previousSection) {
       goToSection(previousSection);
     }
   };
 
   const goToNextSection = async () => {
-    const currentIndex = RESTAURANT_SECTION_ORDER.indexOf(activeSection);
-    const nextSection = RESTAURANT_SECTION_ORDER[currentIndex + 1];
+    const currentIndex = DINING_SECTION_ORDER.indexOf(activeSection);
+    const nextSection = DINING_SECTION_ORDER[currentIndex + 1];
     if (!nextSection) return;
 
     if (activeSection === "entities") {
@@ -139,7 +143,7 @@ export function AddRestaurantStagedForm({
                   <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <h1 className="text-3xl font-semibold tracking-tight text-foreground underline">
-                  Add Restaurant
+                  Add Dining
                 </h1>
               </div>
               <Button
@@ -334,7 +338,7 @@ export function AddRestaurantStagedForm({
                   Classification
                 </h2>
                 <div className="space-y-2">
-                  <Label>Type</Label>
+                  <Label className="inline-flex items-center gap-2">Type <ProvenanceBadge provenance={provenance.type} /></Label>
                   <select
                     value={form.watch("type") || ""}
                     onChange={(event) =>
@@ -383,7 +387,7 @@ export function AddRestaurantStagedForm({
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">Optional</h2>
                 <div className="space-y-2">
-                  <Label>TripAdvisor URL</Label>
+                  <Label className="inline-flex items-center gap-2">TripAdvisor URL <ProvenanceBadge provenance={provenance.tripadvisorUrl} /></Label>
                   <Input
                     placeholder="https://www.tripadvisor.com/..."
                     {...form.register("tripadvisorUrl")}
@@ -397,7 +401,7 @@ export function AddRestaurantStagedForm({
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Menu URL</Label>
+                    <Label className="inline-flex items-center gap-2">Menu URL <ProvenanceBadge provenance={provenance.menuUrl} /></Label>
                     <Input
                       placeholder="https://example.com/menu"
                       {...form.register("menuUrl")}
@@ -409,7 +413,7 @@ export function AddRestaurantStagedForm({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Reservation URL</Label>
+                    <Label className="inline-flex items-center gap-2">Reservation URL <ProvenanceBadge provenance={provenance.reservationUrl} /></Label>
                     <Input
                       placeholder="https://example.com/reservations"
                       {...form.register("reservationUrl")}
@@ -430,7 +434,7 @@ export function AddRestaurantStagedForm({
                     type="submit"
                     disabled={!isPrefillReady || !form.formState.isValid || isCreating}
                   >
-                    {isCreating ? "Creating..." : "Create Restaurant Document"}
+                    {isCreating ? "Creating..." : "Create Dining Document"}
                   </Button>
                 </div>
               </section>

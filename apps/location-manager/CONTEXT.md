@@ -88,6 +88,14 @@ Operator-defined spelling/normalization rules, keyed by `part_type` (`country` /
 
 Per-collection record of last sync result + Payload doc id. Tracks drift between LM and Questura.
 
+### `FieldProvenance`
+
+Per-field tag recording who supplied a value: `google` | `tripadvisor` | `scraper` | `ai-reviews` | `ai-google` | `operator`. Stored as a sidecar map on the Location (e.g. `provenance.type = "google"`, `provenance.idealFor["date_night"] = "ai-reviews"`). For set-valued fields like `idealFor`, provenance is per-element keyed by tag value. Cleared to `operator` when the operator edits the field. **Not synced to Payload** — provenance is an enrichment-pipeline concept, not a public-facing one. Renders in the operator UI as a per-field badge.
+
+### Pending Suggestion
+
+An AI-derived value that the suggestion pipeline produced *after* the operator already touched the live field. Held in `pendingSuggestions.<fieldPath>` rather than overwriting operator-supplied values. Surfaces on the edit page as a ghosted chip the operator can manually accept. Distinguishes the system's evolving best-guess from the operator's committed choice; lets re-suggest passes run safely without churning confirmed data.
+
 ## Relationships
 
 - A **Location** has one **LocationHierarchy** and zero or more **IdealForTag**s (scoped by category).

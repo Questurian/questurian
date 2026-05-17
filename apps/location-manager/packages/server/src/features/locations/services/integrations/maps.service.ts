@@ -10,6 +10,9 @@ import {
   type AccommodationsApiHints,
   FoursquareApiClient,
 } from "./clients/foursquare-api.client";
+import { fetchPlaceTypes, mapGoogleTypesToDiningType } from "./google-dining-type";
+import { searchTripadvisorUrl } from "./tripadvisor-url-search";
+import { scrapeRestaurantLinks } from "./website-link-scraper";
 import {
   findPotentialDuplicateLocations,
   getAttractionTours,
@@ -48,6 +51,11 @@ export interface GooglePrefillResult {
   priceLevel: string | null;
   operationHours: Record<string, unknown> | null;
   accommodationsHints: AccommodationsApiHints | null;
+  type: string | null;
+  tripadvisorUrl: string | null;
+  menuUrl: string | null;
+  reservationUrl: string | null;
+  provenance: Record<string, string>;
 }
 
 const MAX_ATTRACTION_GALLERY_ITEMS = 20;
@@ -578,13 +586,22 @@ export class MapsService {
       }
     })();
 
-    const accommodationsHints = await this.resolveAccommodationsHints(
-      category,
-      trimmedName,
-      trimmedAddress,
-      entry.lat,
-      entry.lng
-    );
+    const [accommodationsHints, diningEnrichment] = await Promise.all([
+      this.resolveAccommodationsHints(
+        category,
+        trimmedName,
+        trimmedAddress,
+        entry.lat,
+        entry.lng
+      ),
+      this.resolveDiningEnrichment(category, entry.placeId, trimmedName, entry.lat, entry.lng, entry.website ?? null),
+    ]);
+
+    const provenance: Record<string, string> = {};
+    if (diningEnrichment.type) provenance.type = "google";
+    if (diningEnrichment.tripadvisorUrl) provenance.tripadvisorUrl = "tripadvisor";
+    if (diningEnrichment.menuUrl) provenance.menuUrl = "scraper";
+    if (diningEnrichment.reservationUrl) provenance.reservationUrl = "scraper";
 
     return {
       googleUrl: generateGoogleMapsUrl(trimmedName, trimmedAddress),
@@ -599,6 +616,70 @@ export class MapsService {
       priceLevel: entry.priceLevel ?? accommodationsHints?.price ?? null,
       operationHours,
       accommodationsHints,
+      type: diningEnrichment.type,
+      tripadvisorUrl: diningEnrichment.tripadvisorUrl,
+      menuUrl: diningEnrichment.menuUrl,
+      reservationUrl: diningEnrichment.reservationUrl,
+      provenance,
+    };
+  }
+
+  private async resolveDiningEnrichment(
+    category: LocationCategory | undefined,
+    placeId: string,
+    name: string,
+    lat: number | null | undefined,
+    lng: number | null | undefined,
+    website: string | null
+  ): Promise<{
+    type: string | null;
+    tripadvisorUrl: string | null;
+    menuUrl: string | null;
+    reservationUrl: string | null;
+  }> {
+    if (category !== "dining") {
+      return { type: null, tripadvisorUrl: null, menuUrl: null, reservationUrl: null };
+    }
+
+    const googleTypesPromise = (async () => {
+      try {
+        const types = await fetchPlaceTypes(placeId, this.config.GOOGLE_MAPS_API_KEY);
+        return mapGoogleTypesToDiningType(types);
+      } catch (error) {
+        console.warn("[MapsService] Google types lookup failed:", error);
+        return null;
+      }
+    })();
+
+    const tripadvisorPromise = (async () => {
+      try {
+        return await searchTripadvisorUrl(this.config.SERPAPI_KEY, name, lat ?? null, lng ?? null);
+      } catch (error) {
+        console.warn("[MapsService] TripAdvisor URL search failed:", error);
+        return null;
+      }
+    })();
+
+    const scrapePromise = (async () => {
+      try {
+        return await scrapeRestaurantLinks(website);
+      } catch (error) {
+        console.warn("[MapsService] Website link scrape failed:", error);
+        return { menuUrl: null, reservationUrl: null };
+      }
+    })();
+
+    const [type, tripadvisorUrl, links] = await Promise.all([
+      googleTypesPromise,
+      tripadvisorPromise,
+      scrapePromise,
+    ]);
+
+    return {
+      type,
+      tripadvisorUrl,
+      menuUrl: links.menuUrl,
+      reservationUrl: links.reservationUrl,
     };
   }
 
@@ -704,6 +785,9 @@ export class MapsService {
     }
     if (payload.reviewsEnabled !== undefined) {
       entry.reviewsEnabled = payload.reviewsEnabled;
+    }
+    if (payload.provenance && Object.keys(payload.provenance).length > 0) {
+      entry.provenanceJson = JSON.stringify(payload.provenance);
     }
     if (this.shouldPersistIdealFor(category)) {
       this.validateIdealForTagsByCategory(category, payload.idealFor);

@@ -11,7 +11,6 @@ export interface TranslationStats {
 export interface TranslateReviewsRequest {
   reviews: Record<string, unknown>[];
   fields_to_translate: string[];
-  source_language?: string;
 }
 
 export interface TranslateReviewsResponse {
@@ -20,11 +19,18 @@ export interface TranslateReviewsResponse {
   message: string;
 }
 
+export class TranslationApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "TranslationApiError";
+  }
+}
+
 export class TranslationApiClient {
   private readonly apiUrl: string;
 
   constructor(config: EnvConfig) {
-    this.apiUrl = config.LEADS_API_URL;
+    this.apiUrl = config.altTextApiUrl;
   }
 
   isConfigured(): boolean {
@@ -32,7 +38,7 @@ export class TranslationApiClient {
   }
 
   /**
-   * Translate reviews using the Leads API translation service
+   * Translate reviews via the python-alt-text Vertex-backed translation endpoint.
    */
   async translateReviews(request: TranslateReviewsRequest): Promise<TranslateReviewsResponse> {
     const url = `${this.apiUrl}/translate/reviews`;
@@ -48,14 +54,16 @@ export class TranslationApiClient {
       body: JSON.stringify({
         reviews: request.reviews,
         fields_to_translate: request.fields_to_translate,
-        source_language: request.source_language || "auto",
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[Translation API] Error response: ${response.status} - ${errorText}`);
-      throw new Error(`Translation API error: ${response.status} - ${errorText}`);
+      throw new TranslationApiError(
+        response.status,
+        `Translation API error: ${response.status} - ${errorText}`
+      );
     }
 
     const data = (await response.json()) as TranslateReviewsResponse;

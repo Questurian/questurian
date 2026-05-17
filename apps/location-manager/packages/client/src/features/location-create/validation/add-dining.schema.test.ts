@@ -1,8 +1,8 @@
 import {
-  addRestaurantSchema,
-  addRestaurantSubmitSchema,
-  buildRestaurantPrefillSignature,
-} from "./add-restaurant.schema";
+  addDiningSchema,
+  addDiningSubmitSchema,
+  buildDiningPrefillSignature,
+} from "./add-dining.schema";
 
 declare const describe: (name: string, callback: () => void) => void;
 declare const test: (name: string, callback: () => void) => void;
@@ -27,14 +27,14 @@ const validBaseForm = {
   ianaTimeId: "America/Lima",
 };
 
-describe("add restaurant schema", () => {
-  test("accepts a valid staged restaurant payload", () => {
-    const result = addRestaurantSchema.safeParse(validBaseForm);
+describe("add dining schema", () => {
+  test("accepts a valid staged dining payload", () => {
+    const result = addDiningSchema.safeParse(validBaseForm);
     expect(result.success).toBe(true);
   });
 
   test("rejects missing required fields", () => {
-    const result = addRestaurantSchema.safeParse({
+    const result = addDiningSchema.safeParse({
       ...validBaseForm,
       name: "",
       address: "",
@@ -45,7 +45,7 @@ describe("add restaurant schema", () => {
   });
 
   test("rejects invalid URL and coordinate fields", () => {
-    const result = addRestaurantSchema.safeParse({
+    const result = addDiningSchema.safeParse({
       ...validBaseForm,
       tripadvisorUrl: "not-a-url",
       menuUrl: "not-a-url",
@@ -58,7 +58,7 @@ describe("add restaurant schema", () => {
   });
 
   test("accepts valid optional menu and reservation URLs", () => {
-    const result = addRestaurantSchema.safeParse({
+    const result = addDiningSchema.safeParse({
       ...validBaseForm,
       menuUrl: "https://example.com/menu",
       reservationUrl: "https://example.com/reserve",
@@ -68,9 +68,9 @@ describe("add restaurant schema", () => {
   });
 });
 
-describe("add restaurant submit schema prefill signature requirements", () => {
+describe("add dining submit schema prefill signature requirements", () => {
   test("rejects submit payload when prefill signature is missing", () => {
-    const result = addRestaurantSubmitSchema.safeParse({
+    const result = addDiningSubmitSchema.safeParse({
       prefillSignature: null,
       formValues: validBaseForm,
     });
@@ -79,8 +79,8 @@ describe("add restaurant submit schema prefill signature requirements", () => {
   });
 
   test("rejects submit payload when prefill signature is stale", () => {
-    const result = addRestaurantSubmitSchema.safeParse({
-      prefillSignature: buildRestaurantPrefillSignature("Old Name", "Old Address"),
+    const result = addDiningSubmitSchema.safeParse({
+      prefillSignature: buildDiningPrefillSignature("Old Name", "Old Address"),
       formValues: validBaseForm,
     });
 
@@ -88,8 +88,8 @@ describe("add restaurant submit schema prefill signature requirements", () => {
   });
 
   test("accepts submit payload when prefill signature matches current form values", () => {
-    const result = addRestaurantSubmitSchema.safeParse({
-      prefillSignature: buildRestaurantPrefillSignature(validBaseForm.name, validBaseForm.address),
+    const result = addDiningSubmitSchema.safeParse({
+      prefillSignature: buildDiningPrefillSignature(validBaseForm.name, validBaseForm.address),
       formValues: validBaseForm,
     });
 

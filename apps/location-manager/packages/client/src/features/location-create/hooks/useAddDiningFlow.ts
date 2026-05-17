@@ -9,17 +9,18 @@ import {
 } from "@client/shared/services/api/hooks";
 import { locationsApi } from "@client/shared/services/api";
 import type { LocationCategory } from "@shared/types/location-category";
+import type { FieldProvenance } from "@questurian/lm-shared";
 import type { ConfirmLocationFormData } from "../validation/add-location.schema";
 import { confirmLocationSchema } from "../validation/add-location.schema";
 import {
-  addRestaurantSchema,
-  addRestaurantSubmitSchema,
-  buildRestaurantPrefillSignature,
-  normalizeRestaurantAddress,
-  type AddRestaurantFormData,
-} from "../validation/add-restaurant.schema";
+  addDiningSchema,
+  addDiningSubmitSchema,
+  buildDiningPrefillSignature,
+  normalizeDiningAddress,
+  type AddDiningFormData,
+} from "../validation/add-dining.schema";
 
-export type RestaurantPhase = "add" | "confirm" | "reviews" | "success";
+export type DiningPhase = "add" | "confirm" | "reviews" | "stage2" | "success";
 
 interface CreatedLocation {
   id: number;
@@ -34,9 +35,9 @@ interface CreatedLocation {
   placeId?: string | null;
 }
 
-const RESTAURANT_DRAFT_STORAGE_KEY = "lm:add-restaurant:draft:v1";
+const DINING_DRAFT_STORAGE_KEY = "lm:add-dining:draft:v1";
 
-const RESTAURANT_FORM_DEFAULT_VALUES: AddRestaurantFormData = {
+const DINING_FORM_DEFAULT_VALUES: AddDiningFormData = {
   name: "",
   address: "",
   type: "",
@@ -53,46 +54,97 @@ const RESTAURANT_FORM_DEFAULT_VALUES: AddRestaurantFormData = {
   ianaTimeId: "",
 };
 
-interface RestaurantDraftPayload {
-  formValues: AddRestaurantFormData;
+type ProvenanceTrackedField = "type" | "tripadvisorUrl" | "menuUrl" | "reservationUrl";
+
+const PROVENANCE_TRACKED_FIELDS: readonly ProvenanceTrackedField[] = [
+  "type",
+  "tripadvisorUrl",
+  "menuUrl",
+  "reservationUrl",
+];
+
+interface DiningDraftPayload {
+  formValues: AddDiningFormData;
   prefillSignature: string | null;
   prefillOperationHours: Record<string, unknown> | null;
   prefillPhoneNumber: string | null;
   prefillWebsite: string | null;
+  provenance: Partial<Record<ProvenanceTrackedField, FieldProvenance>>;
+  prefilledValues: Partial<Record<ProvenanceTrackedField, string>>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isDraftEffectivelyEmpty(payload: RestaurantDraftPayload) {
+function isDraftEffectivelyEmpty(payload: DiningDraftPayload) {
   if (payload.prefillSignature !== null) return false;
   if (payload.prefillOperationHours !== null) return false;
   if (payload.prefillPhoneNumber !== null) return false;
   if (payload.prefillWebsite !== null) return false;
-  return JSON.stringify(payload.formValues) === JSON.stringify(RESTAURANT_FORM_DEFAULT_VALUES);
+  if (Object.keys(payload.provenance).length > 0) return false;
+  return JSON.stringify(payload.formValues) === JSON.stringify(DINING_FORM_DEFAULT_VALUES);
 }
 
-function clearRestaurantDraftFromStorage() {
+function isFieldProvenanceValue(value: unknown): value is FieldProvenance {
+  return (
+    value === "google" ||
+    value === "tripadvisor" ||
+    value === "scraper" ||
+    value === "ai-reviews" ||
+    value === "ai-google" ||
+    value === "operator"
+  );
+}
+
+function sanitizeProvenanceMap(
+  raw: unknown
+): Partial<Record<ProvenanceTrackedField, FieldProvenance>> {
+  if (!isRecord(raw)) return {};
+  const result: Partial<Record<ProvenanceTrackedField, FieldProvenance>> = {};
+  for (const field of PROVENANCE_TRACKED_FIELDS) {
+    const value = raw[field];
+    if (isFieldProvenanceValue(value)) {
+      result[field] = value;
+    }
+  }
+  return result;
+}
+
+function sanitizePrefilledValues(
+  raw: unknown
+): Partial<Record<ProvenanceTrackedField, string>> {
+  if (!isRecord(raw)) return {};
+  const result: Partial<Record<ProvenanceTrackedField, string>> = {};
+  for (const field of PROVENANCE_TRACKED_FIELDS) {
+    const value = raw[field];
+    if (typeof value === "string") {
+      result[field] = value;
+    }
+  }
+  return result;
+}
+
+function clearDiningDraftFromStorage() {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(RESTAURANT_DRAFT_STORAGE_KEY);
+    window.localStorage.removeItem(DINING_DRAFT_STORAGE_KEY);
   } catch {
     // Ignore storage deletion failures.
   }
 }
 
-function readRestaurantDraftFromStorage(): RestaurantDraftPayload | null {
+function readDiningDraftFromStorage(): DiningDraftPayload | null {
   if (typeof window === "undefined") return null;
 
-  const raw = window.localStorage.getItem(RESTAURANT_DRAFT_STORAGE_KEY);
+  const raw = window.localStorage.getItem(DINING_DRAFT_STORAGE_KEY);
   if (!raw) return null;
 
   try {
-    const parsed = JSON.parse(raw) as Partial<RestaurantDraftPayload>;
-    const parsedValues = addRestaurantSchema.partial().safeParse(parsed.formValues);
+    const parsed = JSON.parse(raw) as Partial<DiningDraftPayload>;
+    const parsedValues = addDiningSchema.partial().safeParse(parsed.formValues);
     if (!parsedValues.success) {
-      clearRestaurantDraftFromStorage();
+      clearDiningDraftFromStorage();
       return null;
     }
 
@@ -108,38 +160,40 @@ function readRestaurantDraftFromStorage(): RestaurantDraftPayload | null {
 
     return {
       formValues: {
-        ...RESTAURANT_FORM_DEFAULT_VALUES,
-        ...(parsedValues.data as Partial<AddRestaurantFormData>),
+        ...DINING_FORM_DEFAULT_VALUES,
+        ...(parsedValues.data as Partial<AddDiningFormData>),
       },
       prefillSignature,
       prefillOperationHours,
       prefillPhoneNumber,
       prefillWebsite,
+      provenance: sanitizeProvenanceMap(parsed.provenance),
+      prefilledValues: sanitizePrefilledValues(parsed.prefilledValues),
     };
   } catch {
-    clearRestaurantDraftFromStorage();
+    clearDiningDraftFromStorage();
     return null;
   }
 }
 
-function writeRestaurantDraftToStorage(payload: RestaurantDraftPayload) {
+function writeDiningDraftToStorage(payload: DiningDraftPayload) {
   if (typeof window === "undefined") return;
 
   try {
     if (isDraftEffectivelyEmpty(payload)) {
-      window.localStorage.removeItem(RESTAURANT_DRAFT_STORAGE_KEY);
+      window.localStorage.removeItem(DINING_DRAFT_STORAGE_KEY);
       return;
     }
 
-    window.localStorage.setItem(RESTAURANT_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+    window.localStorage.setItem(DINING_DRAFT_STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // Ignore storage write failures (quota/private browsing/etc).
   }
 }
 
-export function useAddRestaurantFlow() {
+export function useAddDiningFlow() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<RestaurantPhase>("add");
+  const [phase, setPhase] = useState<DiningPhase>("add");
   const [createdLocation, setCreatedLocation] = useState<CreatedLocation | null>(null);
   const [isPrefillingGoogle, setIsPrefillingGoogle] = useState(false);
   const [prefillMessage, setPrefillMessage] = useState<string | null>(null);
@@ -148,15 +202,17 @@ export function useAddRestaurantFlow() {
   const [prefillOperationHours, setPrefillOperationHours] = useState<Record<string, unknown> | null>(null);
   const [prefillPhoneNumber, setPrefillPhoneNumber] = useState<string | null>(null);
   const [prefillWebsite, setPrefillWebsite] = useState<string | null>(null);
+  const [provenance, setProvenance] = useState<Partial<Record<ProvenanceTrackedField, FieldProvenance>>>({});
+  const [prefilledValues, setPrefilledValues] = useState<Partial<Record<ProvenanceTrackedField, string>>>({});
   const hasHydratedDraftRef = useRef(false);
 
   const { mutate: createLocation, isPending: isCreating, error: createError } = useCreateLocation();
   const { mutate: updateLocation, isPending: isUpdating, error: updateError } = useUpdateLocation();
   const { data: locationTypes = [], isLoading: isLoadingTypes } = useLocationTypes("dining");
 
-  const addForm = useForm<AddRestaurantFormData>({
-    resolver: zodResolver(addRestaurantSchema),
-    defaultValues: RESTAURANT_FORM_DEFAULT_VALUES,
+  const addForm = useForm<AddDiningFormData>({
+    resolver: zodResolver(addDiningSchema),
+    defaultValues: DINING_FORM_DEFAULT_VALUES,
     mode: "onChange",
   });
 
@@ -170,7 +226,7 @@ export function useAddRestaurantFlow() {
   });
 
   useEffect(() => {
-    const draft = readRestaurantDraftFromStorage();
+    const draft = readDiningDraftFromStorage();
     if (!draft) {
       hasHydratedDraftRef.current = true;
       return;
@@ -181,6 +237,8 @@ export function useAddRestaurantFlow() {
     setPrefillOperationHours(draft.prefillOperationHours);
     setPrefillPhoneNumber(draft.prefillPhoneNumber);
     setPrefillWebsite(draft.prefillWebsite);
+    setProvenance(draft.provenance);
+    setPrefilledValues(draft.prefilledValues);
     setPrefillMessage("Restored unsaved draft from your previous session.");
     setPrefillError(null);
     hasHydratedDraftRef.current = true;
@@ -190,15 +248,17 @@ export function useAddRestaurantFlow() {
     const subscription = addForm.watch((value) => {
       if (!hasHydratedDraftRef.current) return;
 
-      writeRestaurantDraftToStorage({
+      writeDiningDraftToStorage({
         formValues: {
-          ...RESTAURANT_FORM_DEFAULT_VALUES,
-          ...(value as Partial<AddRestaurantFormData>),
+          ...DINING_FORM_DEFAULT_VALUES,
+          ...(value as Partial<AddDiningFormData>),
         },
         prefillSignature,
         prefillOperationHours,
         prefillPhoneNumber,
         prefillWebsite,
+        provenance,
+        prefilledValues,
       });
     });
 
@@ -209,17 +269,21 @@ export function useAddRestaurantFlow() {
     prefillOperationHours,
     prefillPhoneNumber,
     prefillWebsite,
+    provenance,
+    prefilledValues,
   ]);
 
   useEffect(() => {
     if (!hasHydratedDraftRef.current) return;
 
-    writeRestaurantDraftToStorage({
+    writeDiningDraftToStorage({
       formValues: addForm.getValues(),
       prefillSignature,
       prefillOperationHours,
       prefillPhoneNumber,
       prefillWebsite,
+      provenance,
+      prefilledValues,
     });
   }, [
     addForm,
@@ -227,14 +291,39 @@ export function useAddRestaurantFlow() {
     prefillOperationHours,
     prefillPhoneNumber,
     prefillWebsite,
+    provenance,
+    prefilledValues,
   ]);
 
-  const currentPrefillSignature = buildRestaurantPrefillSignature(
+  const currentPrefillSignature = buildDiningPrefillSignature(
     addForm.watch("name"),
     addForm.watch("address")
   );
   const isPrefillReady = prefillSignature !== null && prefillSignature === currentPrefillSignature;
   const prefillIsStale = prefillSignature !== null && !isPrefillReady;
+
+  // Clear provenance for any tracked field whose value diverges from the prefilled value.
+  // Operator edit ⇒ field is operator-owned ⇒ no badge.
+  useEffect(() => {
+    const subscription = addForm.watch((value, { name }) => {
+      if (!name) return;
+      const trackedField = PROVENANCE_TRACKED_FIELDS.find((field) => field === name);
+      if (!trackedField) return;
+      const current = (value as Partial<AddDiningFormData>)[trackedField];
+      const prefilled = prefilledValues[trackedField];
+      if (prefilled === undefined) return;
+      if (typeof current !== "string" || current !== prefilled) {
+        setProvenance((prev) => {
+          if (!(trackedField in prev)) return prev;
+          const next = { ...prev };
+          delete next[trackedField];
+          return next;
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [addForm, prefilledValues]);
 
   async function handleGooglePrefill() {
     setPrefillError(null);
@@ -246,12 +335,14 @@ export function useAddRestaurantFlow() {
       setPrefillOperationHours(null);
       setPrefillPhoneNumber(null);
       setPrefillWebsite(null);
+      setProvenance({});
+      setPrefilledValues({});
       setPrefillError("Enter a valid name and address before running Google lookup.");
       return false;
     }
 
     const name = addForm.getValues("name").trim();
-    const normalizedAddress = normalizeRestaurantAddress(addForm.getValues("address"));
+    const normalizedAddress = normalizeDiningAddress(addForm.getValues("address"));
     addForm.setValue("address", normalizedAddress, {
       shouldDirty: true,
       shouldValidate: true,
@@ -302,12 +393,55 @@ export function useAddRestaurantFlow() {
         shouldTouch: true,
       });
 
+      if (prefill.type) {
+        addForm.setValue("type", prefill.type, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+      if (prefill.tripadvisorUrl) {
+        addForm.setValue("tripadvisorUrl", prefill.tripadvisorUrl, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+      if (prefill.menuUrl) {
+        addForm.setValue("menuUrl", prefill.menuUrl, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+      if (prefill.reservationUrl) {
+        addForm.setValue("reservationUrl", prefill.reservationUrl, {
+          shouldDirty: true,
+          shouldValidate: true,
+          shouldTouch: true,
+        });
+      }
+
       setPrefillOperationHours(prefill.operationHours || null);
       setPrefillPhoneNumber(prefill.phoneNumber || null);
       setPrefillWebsite(prefill.website || null);
-      setPrefillSignature(buildRestaurantPrefillSignature(name, normalizedAddress));
+      setPrefillSignature(buildDiningPrefillSignature(name, normalizedAddress));
+
+      const nextProvenance: Partial<Record<ProvenanceTrackedField, FieldProvenance>> = {};
+      const nextPrefilled: Partial<Record<ProvenanceTrackedField, string>> = {};
+      for (const field of PROVENANCE_TRACKED_FIELDS) {
+        const value = prefill[field];
+        const raw = prefill.provenance?.[field];
+        if (value && isFieldProvenanceValue(raw)) {
+          nextProvenance[field] = raw;
+          nextPrefilled[field] = value;
+        }
+      }
+      setProvenance(nextProvenance);
+      setPrefilledValues(nextPrefilled);
+
       setPrefillMessage(
-        "Google lookup complete. Place ID, coordinates, location key, district, time zone, phone, website, and hours were prefilled when available."
+        "Google lookup complete. Place ID, coordinates, location key, district, time zone, phone, website, hours, type, TripAdvisor URL, menu URL, and reservation URL were prefilled when available."
       );
       return true;
     } catch (lookupError) {
@@ -317,6 +451,8 @@ export function useAddRestaurantFlow() {
       setPrefillOperationHours(null);
       setPrefillPhoneNumber(null);
       setPrefillWebsite(null);
+      setProvenance({});
+      setPrefilledValues({});
       setPrefillError(errorMessage);
       return false;
     } finally {
@@ -324,15 +460,15 @@ export function useAddRestaurantFlow() {
     }
   }
 
-  function handleAddRestaurant(data: AddRestaurantFormData) {
-    const submitValidation = addRestaurantSubmitSchema.safeParse({
+  function handleAddDining(data: AddDiningFormData) {
+    const submitValidation = addDiningSubmitSchema.safeParse({
       prefillSignature,
       formValues: data,
     });
 
     if (!submitValidation.success) {
       const firstIssue = submitValidation.error.issues[0]?.message;
-      setPrefillError(firstIssue || "Run Google lookup before creating the restaurant document.");
+      setPrefillError(firstIssue || "Run Google lookup before creating the dining document.");
       return;
     }
 
@@ -342,7 +478,7 @@ export function useAddRestaurantFlow() {
     createLocation(
       {
         name: data.name,
-        address: normalizeRestaurantAddress(data.address),
+        address: normalizeDiningAddress(data.address),
         category: "dining",
         type: data.type || undefined,
         idealFor: data.idealFor,
@@ -359,6 +495,10 @@ export function useAddRestaurantFlow() {
         operationHours: prefillOperationHours || undefined,
         phoneNumber: prefillPhoneNumber || undefined,
         website: prefillWebsite || undefined,
+        provenance:
+          Object.keys(provenance).length > 0
+            ? (provenance as Record<string, string>)
+            : undefined,
       },
       {
         onSuccess: (response) => {
@@ -378,14 +518,16 @@ export function useAddRestaurantFlow() {
           confirmForm.setValue("phoneNumber", response.contact?.phoneNumber || "");
           confirmForm.setValue("website", response.contact?.website || "");
           setPhase("confirm");
-          addForm.reset(RESTAURANT_FORM_DEFAULT_VALUES);
+          addForm.reset(DINING_FORM_DEFAULT_VALUES);
           setPrefillSignature(null);
           setPrefillOperationHours(null);
           setPrefillPhoneNumber(null);
           setPrefillWebsite(null);
+          setProvenance({});
+          setPrefilledValues({});
           setPrefillMessage(null);
           setPrefillError(null);
-          clearRestaurantDraftFromStorage();
+          clearDiningDraftFromStorage();
         },
       }
     );
@@ -415,15 +557,17 @@ export function useAddRestaurantFlow() {
   function handleReset() {
     setPhase("add");
     setCreatedLocation(null);
-    addForm.reset(RESTAURANT_FORM_DEFAULT_VALUES);
+    addForm.reset(DINING_FORM_DEFAULT_VALUES);
     confirmForm.reset();
     setPrefillSignature(null);
     setPrefillOperationHours(null);
     setPrefillPhoneNumber(null);
     setPrefillWebsite(null);
+    setProvenance({});
+    setPrefilledValues({});
     setPrefillMessage(null);
     setPrefillError(null);
-    clearRestaurantDraftFromStorage();
+    clearDiningDraftFromStorage();
   }
 
   function navigateHome() {
@@ -449,9 +593,10 @@ export function useAddRestaurantFlow() {
     isPrefillReady,
     prefillIsStale,
     handleGooglePrefill,
-    handleAddRestaurant,
+    handleAddDining,
     handleConfirmTitle,
     handleReset,
     navigateHome,
+    provenance,
   };
 }

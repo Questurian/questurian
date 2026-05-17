@@ -5,6 +5,8 @@ import { fileURLToPath } from "url";
 import { splitLocationsToEntities } from "./migrations/split-locations-to-entities";
 import { clearInvalidNightlifeIdealFor } from "./migrations/clear-invalid-nightlife-ideal-for";
 import { addTranslationsCacheTable } from "./migrations/add-translations-cache";
+import { addEntityProvenance } from "./migrations/add-entity-provenance";
+import { addEntityPendingSuggestions } from "./migrations/add-entity-pending-suggestions";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -64,6 +66,10 @@ export function initDb() {
   splitLocationsToEntities(database);
 
   addTranslationsCacheTable(database);
+
+  addEntityProvenance(database);
+
+  addEntityPendingSuggestions(database);
 
   const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
   if (nightlifeIdealForCleanup.cleared > 0) {

@@ -1,11 +1,12 @@
-import { AddRestaurantStagedForm } from "../components/AddRestaurantStagedForm";
+import { AddDiningStagedForm } from "../components/AddDiningStagedForm";
 import { ConfirmLocationPhase } from "../components/ConfirmLocationPhase";
 import { ReviewsFetchPhase } from "../components/ReviewsFetchPhase";
-import { SuccessPhase } from "../components/SuccessPhase";
-import { useAddRestaurantFlow } from "../hooks/useAddRestaurantFlow";
+import { Stage2Phase } from "../components/Stage2Phase";
+import { DiningPreviewPhase } from "../components/DiningPreviewPhase";
+import { useAddDiningFlow } from "../hooks/useAddDiningFlow";
 
-export function AddRestaurantLocation() {
-  const flow = useAddRestaurantFlow();
+export function AddDiningLocation() {
+  const flow = useAddDiningFlow();
 
   switch (flow.phase) {
     case "confirm":
@@ -26,14 +27,22 @@ export function AddRestaurantLocation() {
           locationName={flow.createdLocation!.title || flow.createdLocation!.name}
           tripadvisorUrl={flow.createdLocation!.tripadvisorUrl || null}
           placeId={flow.createdLocation!.placeId || null}
+          onComplete={() => flow.setPhase("stage2")}
+          onSkip={() => flow.setPhase("success")}
+        />
+      );
+    case "stage2":
+      return (
+        <Stage2Phase
+          locationId={flow.createdLocation!.id}
           onComplete={() => flow.setPhase("success")}
           onSkip={() => flow.setPhase("success")}
         />
       );
     case "success":
       return (
-        <SuccessPhase
-          locationTitle={flow.createdLocation!.title}
+        <DiningPreviewPhase
+          locationId={flow.createdLocation!.id}
           onAddAnother={flow.handleReset}
           onDone={flow.navigateHome}
         />
@@ -41,9 +50,9 @@ export function AddRestaurantLocation() {
     case "add":
     default:
       return (
-        <AddRestaurantStagedForm
+        <AddDiningStagedForm
           form={flow.addForm}
-          onSubmit={flow.handleAddRestaurant}
+          onSubmit={flow.handleAddDining}
           onRunGooglePrefill={flow.handleGooglePrefill}
           isPrefillingGoogle={flow.isPrefillingGoogle}
           isCreating={flow.isCreating}
@@ -54,6 +63,7 @@ export function AddRestaurantLocation() {
           isPrefillReady={flow.isPrefillReady}
           locationTypes={flow.locationTypes}
           isLoadingTypes={flow.isLoadingTypes}
+          provenance={flow.provenance}
         />
       );
   }

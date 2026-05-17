@@ -108,6 +108,7 @@ export const createMapsSchema = z.object({
   ]).optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   reviewsEnabled: z.boolean().optional(),
   tourIds: tourIdsSchema.optional(),
+  provenance: z.record(z.string(), z.string()).optional(),
 }).superRefine((data, ctx) => {
   validateIdealForTagsForCategory(data.category, data.idealFor, ctx);
 

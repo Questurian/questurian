@@ -35,6 +35,8 @@ export type {
   TourMediaSetResponse,
   GooglePrefillRequest,
   GooglePrefillResponse,
+  DiningStage2SuggestionOutcome,
+  DiningStage2SuggestionResult,
   AccommodationsFieldSuggestionFieldKey,
   AccommodationsFieldSuggestionRequest,
   AccommodationsFieldSuggestionResponse,
@@ -120,4 +122,4 @@ export type {
 } from "./payload.types";
 
 // Health types
-export type { LeadsApiHealthResponse } from "./health.types";
+export type { TranslationApiHealthResponse } from "./health.types";

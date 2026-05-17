@@ -8,6 +8,7 @@ import { TaxonomyFieldsSection } from "../components/TaxonomyFieldsSection";
 import { ContactFieldsSection } from "../components/ContactFieldsSection";
 import { DetailsFieldsSection } from "../components/DetailsFieldsSection";
 import { ExternalFieldsSection } from "../components/ExternalFieldsSection";
+import { PendingSuggestionsPanel } from "../components/PendingSuggestionsPanel";
 
 export function EditLocation() {
   const {
@@ -76,6 +77,12 @@ export function EditLocation() {
             Edit Location
           </h1>
         </div>
+
+        <PendingSuggestionsPanel
+          locationId={location.id}
+          category={location.category}
+          pending={location.pendingSuggestions}
+        />
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <CoreFieldsSection

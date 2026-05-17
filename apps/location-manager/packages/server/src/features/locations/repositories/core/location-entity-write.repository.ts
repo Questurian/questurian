@@ -133,6 +133,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       tripadvisor_location_id,
       payload_location_ref,
       selected_payload_media_set_ids_json,
+      provenance,
       reviews_enabled,
       created_at,
       updated_at
@@ -160,6 +161,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       $tripadvisor_location_id,
       $payload_location_ref,
       $selected_payload_media_set_ids_json,
+      $provenance,
       $reviews_enabled,
       CURRENT_TIMESTAMP,
       CURRENT_TIMESTAMP
@@ -187,6 +189,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
     $tripadvisor_location_id: location.tripadvisorLocationId || null,
     $payload_location_ref: location.payload_location_ref || null,
     $selected_payload_media_set_ids_json: location.selectedPayloadMediaSetIdsJson || null,
+    $provenance: location.provenanceJson || null,
     $reviews_enabled: location.reviewsEnabled === false ? 0 : 1,
   });
 
@@ -289,6 +292,14 @@ export function buildEntityUpdatePlan(id: number, updates: Partial<Location>): U
   if (updates.selectedPayloadMediaSetIdsJson !== undefined) {
     setClause.push("selected_payload_media_set_ids_json = $selected_payload_media_set_ids_json");
     params.$selected_payload_media_set_ids_json = updates.selectedPayloadMediaSetIdsJson;
+  }
+  if (updates.provenanceJson !== undefined) {
+    setClause.push("provenance = $provenance");
+    params.$provenance = updates.provenanceJson;
+  }
+  if (updates.pendingSuggestionsJson !== undefined) {
+    setClause.push("pending_suggestions = $pending_suggestions");
+    params.$pending_suggestions = updates.pendingSuggestionsJson;
   }
   if (updates.reviewsFetchedAt !== undefined) {
     setClause.push("reviews_fetched_at = $reviews_fetched_at");

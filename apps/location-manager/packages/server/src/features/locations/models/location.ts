@@ -99,6 +99,8 @@ export interface Location {
   tripadvisorLocationId?: string | null;
   payload_location_ref?: string | null;  // Payload CMS location hierarchy ID
   selectedPayloadMediaSetIdsJson?: string | null;
+  provenanceJson?: string | null;        // ADR-0002 sidecar: per-field provenance map
+  pendingSuggestionsJson?: string | null; // ADR-0002 side channel: AI re-suggestions for operator-touched fields
   tours?: Tour[];
   // Reviews tracking fields
   reviewsFetchedAt?: string | null;      // Timestamp of last fetch
@@ -198,6 +200,7 @@ export interface CreateMapsRequest {
   tripadvisorFeatures?: string[] | string;
   reviewsEnabled?: boolean;
   tourIds?: number[];
+  provenance?: Record<string, string>;   // ADR-0002 sidecar: field name → FieldProvenance
 }
 
 
@@ -268,6 +271,8 @@ export interface LocationResponse {
   reviewsGoogleCount: number | null;
   reviewsTripadvisorCount: number | null;
   reviewsEnabled: boolean;
+  provenance: Record<string, string> | null;
+  pendingSuggestions: Record<string, { value: string | string[]; provenance: string }> | null;
   created_at: string;
   updated_at: string;
 }

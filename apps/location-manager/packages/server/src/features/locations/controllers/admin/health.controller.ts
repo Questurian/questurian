@@ -1,35 +1,33 @@
 import type { Context } from "hono";
-import { successResponse, errorResponse } from "@shared/types/api-response";
+import { successResponse } from "@shared/types/api-response";
+import { EnvConfig } from "@server/shared/config/env.config";
 
-const LEADS_API_URL = process.env.LEADS_API_URL || "http://localhost:4004";
 const HEALTH_CHECK_TIMEOUT_MS = 5000;
 
 /**
- * Check if the leads API is healthy (for reviews fetching)
+ * Check whether the translation backend (Vertex-backed python-alt-text) is reachable.
+ * The reviews pipeline needs it to translate non-English reviews mid-merge.
  *
- * GET /api/health/leads-api
+ * GET /api/health/translation-api
  */
-export async function checkLeadsApiHealth(c: Context) {
+export async function checkTranslationApiHealth(c: Context) {
+  const baseUrl = EnvConfig.getInstance().altTextApiUrl;
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
 
-    const response = await fetch(`${LEADS_API_URL}/health`, {
-      signal: controller.signal,
-    });
+    const response = await fetch(`${baseUrl}/test`, { signal: controller.signal });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
       return c.json(successResponse({
         healthy: false,
-        error: `Leads API returned status ${response.status}`,
+        error: `Translation API returned status ${response.status}`,
       }));
     }
 
-    return c.json(successResponse({
-      healthy: true,
-    }));
+    return c.json(successResponse({ healthy: true }));
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const isTimeout = error instanceof Error && error.name === "AbortError";

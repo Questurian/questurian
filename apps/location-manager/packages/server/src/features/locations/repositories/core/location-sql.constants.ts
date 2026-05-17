@@ -35,6 +35,8 @@ export const LOCATION_SELECT_COLUMNS = `
   e.tripadvisor_location_id as tripadvisorLocationId,
   e.payload_location_ref,
   e.selected_payload_media_set_ids_json as selectedPayloadMediaSetIdsJson,
+  e.provenance as provenanceJson,
+  e.pending_suggestions as pendingSuggestionsJson,
   e.reviews_fetched_at as reviewsFetchedAt,
   e.reviews_count as reviewsCount,
   e.reviews_google_count as reviewsGoogleCount,

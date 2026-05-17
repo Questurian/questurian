@@ -20,11 +20,11 @@ type LocationFlow = {
 
 const LOCATION_FLOWS: LocationFlow[] = [
   {
-    to: "/add/restaurant",
-    title: "Restaurant",
+    to: "/add/dining",
+    title: "Dining",
     eyebrow: "Dining",
     description:
-      "Staged restaurant flow: name/address lookup, entities review, classification, then optional fields before creation.",
+      "Staged dining flow: name/address lookup, entities review, classification, then optional fields before creation.",
     icon: UtensilsCrossed,
     accent: "from-amber-300/25 via-amber-200/8 to-transparent",
   },

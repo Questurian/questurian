@@ -13,7 +13,6 @@ export class EnvConfig {
   readonly PAYLOAD_SERVICE_EMAIL: string;
   readonly PAYLOAD_SERVICE_PASSWORD: string;
   readonly ALT_TEXT_API_URL: string;
-  readonly LEADS_API_URL: string;
   readonly PORT: number;
   readonly NODE_ENV: string;
 
@@ -30,7 +29,6 @@ export class EnvConfig {
     this.PAYLOAD_SERVICE_EMAIL = process.env.PAYLOAD_SERVICE_EMAIL || "";
     this.PAYLOAD_SERVICE_PASSWORD = process.env.PAYLOAD_SERVICE_PASSWORD || "";
     this.ALT_TEXT_API_URL = process.env.ALT_TEXT_API_URL || "http://localhost:8642";
-    this.LEADS_API_URL = process.env.LEADS_API_URL || "http://localhost:4004";
     this.PORT = Number(process.env.PORT || 4317);
     this.NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -86,8 +84,6 @@ export class EnvConfig {
     if (!process.env.GOOGLE_CLOUD_PROJECT) {
       warnings.push("GOOGLE_CLOUD_PROJECT not set - Vertex AI not configured (alt text and neighborhood descriptions will fail)");
     }
-
-    // LEADS_API_URL defaults to localhost for review translation
 
     if (warnings.length > 0 && this.NODE_ENV !== "test") {
       console.warn("Configuration warnings:", warnings.join(", "));

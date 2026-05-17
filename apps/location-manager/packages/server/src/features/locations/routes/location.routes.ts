@@ -37,7 +37,8 @@ import {
   refetchPlaceId,
   getTours, getTour, postTour, patchTour, postTourMediaSet,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
-  postAddMaps, patchMapsById, postGooglePrefill, postFieldSuggestion,
+  postAddMaps, patchMapsById, postGooglePrefill, postFieldSuggestion, postDiningStage2Suggest,
+  postPendingSuggestionAccept, postPendingSuggestionDismiss,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
   // Content
@@ -54,7 +55,7 @@ import {
   getPendingTaxonomy, approveTaxonomy, rejectTaxonomy,
   getAllCorrections, previewCorrection, createCorrection, deleteCorrection,
   getPayloadLocationRefs,
-  checkLeadsApiHealth,
+  checkTranslationApiHealth,
 
   // Integration
   postSyncLocation, postSyncAll, postSyncTour,
@@ -167,6 +168,21 @@ app.post(
   validateBody(fieldSuggestionSchema),
   postFieldSuggestion
 );
+app.post(
+  "/api/dining/:id/stage2-suggest",
+  validateParams(deleteLocationIdSchema),
+  postDiningStage2Suggest
+);
+app.post(
+  "/api/dining/:id/pending-suggestions/accept",
+  validateParams(deleteLocationIdSchema),
+  postPendingSuggestionAccept
+);
+app.post(
+  "/api/dining/:id/pending-suggestions/dismiss",
+  validateParams(deleteLocationIdSchema),
+  postPendingSuggestionDismiss
+);
 app.delete(
   "/api/uploads/:id",
   validateParams(deleteUploadParamsSchema),
@@ -211,7 +227,7 @@ app.get("/api/admin/orphaned-files", scanOrphanedFiles);
 app.post("/api/admin/orphaned-files/cleanup", cleanupOrphanedFiles);
 
 // Health check routes
-app.get("/api/health/leads-api", checkLeadsApiHealth);
+app.get("/api/health/translation-api", checkTranslationApiHealth);
 
 // Admin payload location refs route
 app.get("/api/admin/payload-location-refs", getPayloadLocationRefs);

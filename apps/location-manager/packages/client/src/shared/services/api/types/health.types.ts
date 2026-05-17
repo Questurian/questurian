@@ -1,4 +1,4 @@
-export interface LeadsApiHealthResponse {
+export interface TranslationApiHealthResponse {
   success: true;
   data: {
     healthy: boolean;

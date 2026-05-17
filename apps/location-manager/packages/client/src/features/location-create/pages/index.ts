@@ -1,6 +1,6 @@
 export { AddLocation } from "./AddLocation";
 export { AddLocationChooser } from "./AddLocationChooser";
-export { AddRestaurantLocation } from "./AddRestaurantLocation";
+export { AddDiningLocation } from "./AddDiningLocation";
 export { AddNightlifeLocation } from "./AddNightlifeLocation";
 export { AddAccommodationsLocation } from "./AddAccommodationsLocation";
 export { AddAttractionsLocation } from "./AddAttractionsLocation";
