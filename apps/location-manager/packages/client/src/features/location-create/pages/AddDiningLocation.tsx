@@ -2,7 +2,7 @@ import { AddDiningStagedForm } from "../components/AddDiningStagedForm";
 import { ConfirmLocationPhase } from "../components/ConfirmLocationPhase";
 import { ReviewsFetchPhase } from "../components/ReviewsFetchPhase";
 import { Stage2Phase } from "../components/Stage2Phase";
-import { DiningPreviewPhase } from "../components/DiningPreviewPhase";
+import { DiningPostCreatePhase } from "../components/DiningPostCreatePhase";
 import { useAddDiningFlow } from "../hooks/useAddDiningFlow";
 
 export function AddDiningLocation() {
@@ -41,7 +41,7 @@ export function AddDiningLocation() {
       );
     case "success":
       return (
-        <DiningPreviewPhase
+        <DiningPostCreatePhase
           locationId={flow.createdLocation!.id}
           onAddAnother={flow.handleReset}
           onDone={flow.navigateHome}

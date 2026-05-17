@@ -1,7 +1,9 @@
 import { Pencil } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
 import { SubmitButton, ErrorAlert } from "@client/shared/components/ui";
 import { Breadcrumbs } from "@client/shared/components/layout";
 import { Skeleton } from "@client/shared/components/ui";
+import type { LocationCategory } from "@shared/types/location-category";
 import { useEditLocationForm } from "../hooks/useEditLocationForm";
 import { CoreFieldsSection } from "../components/CoreFieldsSection";
 import { TaxonomyFieldsSection } from "../components/TaxonomyFieldsSection";
@@ -9,8 +11,43 @@ import { ContactFieldsSection } from "../components/ContactFieldsSection";
 import { DetailsFieldsSection } from "../components/DetailsFieldsSection";
 import { ExternalFieldsSection } from "../components/ExternalFieldsSection";
 import { PendingSuggestionsPanel } from "../components/PendingSuggestionsPanel";
+import { LocationDetail } from "../components/LocationDetail";
+
+const VALID_CATEGORIES: readonly LocationCategory[] = [
+  "dining",
+  "accommodations",
+  "attractions",
+  "nightlife",
+  "key_locations",
+];
 
 export function EditLocation() {
+  const { id, category } = useParams<{ id: string; category: LocationCategory }>();
+  const navigate = useNavigate();
+  const locationId = id ? parseInt(id, 10) : null;
+  const routeCategory = VALID_CATEGORIES.includes((category || "") as LocationCategory)
+    ? (category as LocationCategory)
+    : null;
+
+  // Dining is on the unified LocationDetail surface (ADR-0004). The other four
+  // categories keep the legacy form until each gets its own re-review pass.
+  if (routeCategory === "dining" && locationId !== null) {
+    return (
+      <LocationDetail
+        locationId={locationId}
+        category="dining"
+        headerSlot={
+          <Breadcrumbs items={[{ label: "Edit Location" }]} />
+        }
+        onUpdateSuccess={() => navigate("/")}
+      />
+    );
+  }
+
+  return <LegacyEditLocation />;
+}
+
+function LegacyEditLocation() {
   const {
     form,
     location,
