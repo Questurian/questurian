@@ -19,6 +19,8 @@ from .graph import (
 from .angle_assignment import ListicleAngle as AssignmentAngle, assign_dining_angles
 from .critical_fields import TierEvaluation, evaluate_tiers
 from .listicle_writer import (
+    LIST_TONE_GUIDANCE,
+    LISTICLE_ANGLE_GUIDANCE,
     ListicleArticleType,
     ListicleCategory,
     ListicleWriterTarget,
@@ -893,6 +895,20 @@ async def rewrite_block(request: RewriteBlockRequest) -> RewriteBlockResponse:
             status_code=502,
             detail="AI rewrite graph failed",
         ) from exc
+
+
+class ListicleGuidelinesResponse(BaseModel):
+    angles: dict[str, str]
+    tones: dict[str, str]
+
+
+@router.get("/listicle-guidelines", response_model=ListicleGuidelinesResponse)
+async def get_listicle_guidelines() -> ListicleGuidelinesResponse:
+    """Return the exact angle and tone guidance strings injected into the writer prompt."""
+    return ListicleGuidelinesResponse(
+        angles=dict(LISTICLE_ANGLE_GUIDANCE),
+        tones=dict(LIST_TONE_GUIDANCE),
+    )
 
 
 @router.post("/generate-listicle-content", response_model=GenerateListicleContentResponse)

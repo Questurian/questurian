@@ -17,6 +17,9 @@ import { InstagramPickerModal } from '../../../../shared/builder/components/Inst
 import { PhotoPickerModal } from '../../../../shared/builder/components/PhotoPickerModal'
 import { RelatedItemPickerModal } from '../../../../shared/builder/components/RelatedItemPickerModal'
 import { AiJobButtonContent } from './AiJobButtonContent'
+import { AngleGuidelinePreviewModal } from './AngleGuidelinePreviewModal'
+import { fetchListicleGuidelines } from '../../../staging/api'
+import type { ListicleGuidelinesResponse } from '../../../staging/api'
 
 type AiRewriteInput = {
   blockId: string
@@ -105,6 +108,32 @@ export function BuilderItemsPanel({
   const [copyErrorItemId, setCopyErrorItemId] = useState<string | null>(null)
   const [photoPreviewIndexByItem, setPhotoPreviewIndexByItem] = useState<Record<string, number>>({})
   const [activeInstagramEmbedPreviewItemId, setActiveInstagramEmbedPreviewItemId] = useState<string | null>(null)
+  const [guidelinePreviewItemId, setGuidelinePreviewItemId] = useState<string | null>(null)
+  const [guidelines, setGuidelines] = useState<ListicleGuidelinesResponse | null>(null)
+  const [guidelinesLoading, setGuidelinesLoading] = useState(false)
+  const [guidelinesError, setGuidelinesError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setGuidelinesLoading(true)
+    fetchListicleGuidelines()
+      .then((res) => {
+        if (cancelled) return
+        setGuidelines(res)
+        setGuidelinesError(null)
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        setGuidelinesError(err instanceof Error ? err.message : String(err))
+      })
+      .finally(() => {
+        if (cancelled) return
+        setGuidelinesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
   const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
@@ -184,8 +213,30 @@ export function BuilderItemsPanel({
     }
   }
 
+  const guidelinePreviewItem = guidelinePreviewItemId
+    ? draft.items.find((entry) => entry.id === guidelinePreviewItemId) ?? null
+    : null
+  const guidelinePreviewIndex = guidelinePreviewItem
+    ? draft.items.findIndex((entry) => entry.id === guidelinePreviewItemId)
+    : -1
+
   return (
     <section className="stl-panel">
+      <AngleGuidelinePreviewModal
+        isOpen={guidelinePreviewItem !== null}
+        onClose={() => setGuidelinePreviewItemId(null)}
+        itemLabel={
+          guidelinePreviewItem
+            ? `Item ${guidelinePreviewIndex + 1}`
+            : ''
+        }
+        itemAngle={guidelinePreviewItem?.angle ?? null}
+        listTone={draft.listTone}
+        listicleType={draft.listicleType}
+        guidelines={guidelines}
+        isLoading={guidelinesLoading}
+        error={guidelinesError}
+      />
       <div className="stl-panel-header">
         <h2>
           {!isSynced ? <span className="stl-kicker">Step 3</span> : null}
@@ -579,6 +630,15 @@ export function BuilderItemsPanel({
                             </option>
                           ))}
                         </select>
+                        <button
+                          type="button"
+                          className="stl-btn stl-btn-secondary stl-btn-guideline-preview"
+                          onClick={() => setGuidelinePreviewItemId(item.id)}
+                          aria-label={`Preview prompt guidance for item ${index + 1}`}
+                          title="Preview the angle and tone guidance injected into the AI prompt"
+                        >
+                          ⓘ
+                        </button>
                         <button
                           type="button"
                           className={aiButtonClassName}

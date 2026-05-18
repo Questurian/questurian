@@ -23,6 +23,11 @@ export type GenerateTitleWithAiResponse = {
   title: string
 }
 
+export type ListicleGuidelinesResponse = {
+  angles: Record<string, string>
+  tones: Record<string, string>
+}
+
 export type ListicleWriterArticleType = 'single-type-listicle' | 'listicle-itinerary'
 export type ListicleWriterFieldType = 'intro' | 'blurb'
 export type ListicleWriterCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key_location'

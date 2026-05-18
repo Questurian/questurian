@@ -5,6 +5,7 @@ import type {
   GenerateTitleWithAiResponse,
   GenerateListicleContentRequest,
   GenerateListicleContentResponse,
+  ListicleGuidelinesResponse,
   RewriteBlockWithAiRequest,
   RewriteBlockWithAiResponse,
 } from './rewrite.types'
@@ -61,6 +62,22 @@ export async function rewriteBlockWithAi(
 
   if (!response.ok) {
     const message = await parseErrorResponse(response, 'AI rewrite failed', { detail: 'AI rewrite failed' })
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+export async function fetchListicleGuidelines(): Promise<ListicleGuidelinesResponse> {
+  const response = await fetch(`${API_BASE_URL}/editor-assist/listicle-guidelines`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, 'Failed to load listicle guidelines', { detail: 'Failed to load listicle guidelines' })
     throw new Error(message)
   }
 

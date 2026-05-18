@@ -18,12 +18,12 @@ export type ListicleAngle =
   | 'whats-different'
 
 export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<{ value: ListicleAngle; label: string }> = [
-  { value: 'signature-dish', label: 'Signature Dish — lead with a celebrated item' },
-  { value: 'atmosphere', label: 'Atmosphere — lead with the room and feel' },
-  { value: 'founders-backstory', label: 'Founders / Backstory — lead with origin' },
-  { value: 'insider-tip', label: 'Insider Tip — lead with something only locals know' },
-  { value: 'best-for', label: 'Best-For — lead with the occasion or audience' },
-  { value: 'whats-different', label: 'What\'s Different — lead with the contrast' },
+  { value: 'signature-dish', label: 'Signature Dish' },
+  { value: 'atmosphere', label: 'Atmosphere' },
+  { value: 'founders-backstory', label: 'Founders / Backstory' },
+  { value: 'insider-tip', label: 'Insider Tip' },
+  { value: 'best-for', label: 'Best-For' },
+  { value: 'whats-different', label: "What's Different" },
 ]
 
 export function resolveListicleAngle(value: unknown): ListicleAngle | null {
