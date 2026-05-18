@@ -59,6 +59,22 @@ function mapBlockTypeToCategory(blockType: ListicleBlockType): ListicleWriterCat
   }
 }
 
+function mapBlockTypeToPayloadCollection(
+  blockType: ListicleBlockType,
+): 'dining' | 'accommodations' | 'attractions' | 'nightlife' {
+  switch (blockType) {
+    case 'data-accommodations':
+      return 'accommodations'
+    case 'data-attractions':
+      return 'attractions'
+    case 'data-nightlife':
+      return 'nightlife'
+    case 'data-dining':
+    default:
+      return 'dining'
+  }
+}
+
 export function getSingleTypeIntroTargetId(draft: SingleTypeListicleDraft): string {
   return `${draft.draftId}${INTRO_TARGET_ID_SUFFIX}`
 }
@@ -110,6 +126,9 @@ function buildItemTarget(
     locationLabel: relatedItem.location?.trim() || articleLocationLabel,
     currentContent: item.blurbMarkdown,
     supportingContext,
+    payloadDocId: relatedItem.id ? String(relatedItem.id) : undefined,
+    payloadCollection: mapBlockTypeToPayloadCollection(item.blockType),
+    angle: item.angle ?? null,
   }
 }
 
@@ -181,6 +200,7 @@ export function buildSingleTypeGenerateListicleContentRequest(params: {
     modelName,
     customInstruction,
     skipExisting,
+    listTone: draft.listTone,
     targets,
   }
 }

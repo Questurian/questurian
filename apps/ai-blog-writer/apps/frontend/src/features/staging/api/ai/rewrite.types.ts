@@ -26,6 +26,28 @@ export type GenerateTitleWithAiResponse = {
 export type ListicleWriterArticleType = 'single-type-listicle' | 'listicle-itinerary'
 export type ListicleWriterFieldType = 'intro' | 'blurb'
 export type ListicleWriterCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key_location'
+export type ListicleWriterListTone =
+  | 'elevated'
+  | 'casual'
+  | 'hidden-gem'
+  | 'family-friendly'
+  | 'date-night'
+  | 'budget'
+
+export type PayloadCollectionSlug =
+  | 'dining'
+  | 'accommodations'
+  | 'attractions'
+  | 'nightlife'
+  | 'key-locations'
+
+export type ListicleWriterAngle =
+  | 'signature-dish'
+  | 'atmosphere'
+  | 'founders-backstory'
+  | 'insider-tip'
+  | 'best-for'
+  | 'whats-different'
 
 export type GenerateListicleContentTarget = {
   targetId: string
@@ -36,6 +58,9 @@ export type GenerateListicleContentTarget = {
   locationLabel?: string
   currentContent?: string
   supportingContext?: string
+  payloadDocId?: string
+  payloadCollection?: PayloadCollectionSlug
+  angle?: ListicleWriterAngle | null
 }
 
 export type GenerateListicleContentRequest = {
@@ -46,7 +71,28 @@ export type GenerateListicleContentRequest = {
   modelName?: EditorAssistModelName
   customInstruction?: string
   skipExisting?: boolean
+  listTone?: ListicleWriterListTone
   targets: GenerateListicleContentTarget[]
+}
+
+export type ListicleStepEventName =
+  | 'critical_fields_evaluated'
+  | 'fallback_research_called'
+  | 'writer_called'
+  | 'validated'
+  | 'retry_called'
+  | 'finalized'
+
+export type ListicleStepEventStatus = 'ok' | 'skipped' | 'failed'
+
+export type ListicleStepEvent = {
+  name: ListicleStepEventName
+  status: ListicleStepEventStatus
+  prompt?: string | null
+  output?: string | null
+  model?: string | null
+  details: Record<string, unknown>
+  duration_ms: number
 }
 
 export type GenerateListicleContentTargetResponse = {
@@ -57,6 +103,7 @@ export type GenerateListicleContentTargetResponse = {
   source_urls: string[]
   validation_errors: string[]
   error_message?: string | null
+  steps?: ListicleStepEvent[]
 }
 
 export type GenerateListicleContentResponse = {

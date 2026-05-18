@@ -83,6 +83,7 @@ export async function generateListicleContentWithAi(
       model_name: input.modelName,
       custom_instruction: input.customInstruction,
       skip_existing: input.skipExisting,
+      list_tone: input.listTone,
       targets: input.targets.map((target) => ({
         target_id: target.targetId,
         field_type: target.fieldType,
@@ -92,6 +93,9 @@ export async function generateListicleContentWithAi(
         location_label: target.locationLabel,
         current_content: target.currentContent,
         supporting_context: target.supportingContext,
+        payload_doc_id: target.payloadDocId,
+        payload_collection: target.payloadCollection,
+        angle: target.angle,
       })),
     }),
   })

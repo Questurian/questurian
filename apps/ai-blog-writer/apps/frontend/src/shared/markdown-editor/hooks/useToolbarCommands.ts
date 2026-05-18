@@ -12,6 +12,8 @@ type UseToolbarCommandsParams = {
   draftMarkdownRef: MutableRefObject<string>
   applyValueWithHeadingGuard: (nextValue: string) => boolean
   onAiRewrite?: () => void
+  aiToolbarLabel?: string
+  aiToolbarTitle?: string
   onOpenLinkPopover: () => void
 }
 
@@ -27,6 +29,8 @@ export function useToolbarCommands({
   draftMarkdownRef,
   applyValueWithHeadingGuard,
   onAiRewrite,
+  aiToolbarLabel,
+  aiToolbarTitle,
   onOpenLinkPopover,
 }: UseToolbarCommandsParams): UseToolbarCommandsResult {
   const toolbarActions = useMemo(() => {
@@ -34,8 +38,15 @@ export function useToolbarCommands({
       return BASE_TOOLBAR_ACTIONS
     }
 
-    return [...BASE_TOOLBAR_ACTIONS, { key: 'ai' as const, label: 'AI', title: 'Rewrite this block with AI' }]
-  }, [onAiRewrite])
+    return [
+      ...BASE_TOOLBAR_ACTIONS,
+      {
+        key: 'ai' as const,
+        label: aiToolbarLabel ?? 'AI',
+        title: aiToolbarTitle ?? 'Rewrite this block with AI',
+      },
+    ]
+  }, [onAiRewrite, aiToolbarLabel, aiToolbarTitle])
 
   const syncEditorToMarkdown = useCallback((): boolean => {
     const editor = editorRef.current

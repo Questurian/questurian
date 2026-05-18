@@ -1,4 +1,5 @@
 export type EditorAssistModelName =
+  | 'claude-opus-4-7'
   | 'gemini-3.1-pro-preview'
   | 'gemini-3.1-flash-lite-preview'
   | 'gemini-3.1-flash-image-preview'
@@ -9,7 +10,8 @@ export type EditorAssistModelName =
 export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'gemini-2.5-flash'
 
 export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; label: string }> = [
-  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — best quality)' },
+  { value: 'claude-opus-4-7', label: 'Claude Opus 4.7 (premier writer — recommended for blurbs)' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — best Gemini quality)' },
   { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (Preview — fast & cheap)' },
   { value: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash Image (Preview — multimodal)' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
@@ -39,6 +41,7 @@ export const Y2B_MODEL_OPTIONS: Array<{ value: Y2BModelName; label: string }> = 
 ]
 
 export function resolveEditorAssistModelName(value?: string): EditorAssistModelName {
+  if (value === 'claude-opus-4-7') return value
   if (value === 'gemini-3.1-pro-preview') return value
   if (value === 'gemini-3.1-flash-lite-preview') return value
   if (value === 'gemini-3.1-flash-image-preview') return value

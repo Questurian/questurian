@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import type {
+  GenerateListicleContentResponse,
+  ListicleStepEvent,
+} from '../../staging/api'
 import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../auth'
 import {
@@ -9,6 +13,7 @@ import {
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
 import { BuilderHero } from '../../../shared/builder/components/BuilderHero'
 import { BuilderItemsPanel } from '../builder/components/BuilderItemsPanel'
+import { InspectListicleRunModal } from '../builder/components/InspectListicleRunModal'
 import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
@@ -75,8 +80,43 @@ export default function SingleTypeListicleBuilderPage() {
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [isUploadingOgImage, setIsUploadingOgImage] = useState(false)
   const [aiJobVisualStateById, setAiJobVisualStateById] = useState<Record<string, AiJobVisualState>>({})
+  const [stepsByTargetId, setStepsByTargetId] = useState<Record<string, ListicleStepEvent[]>>({})
+  const [inspectTarget, setInspectTarget] = useState<
+    { targetId: string; label: string; openedAutomatically: boolean } | null
+  >(null)
   const lastAutoStructuredDataRef = useRef<string>('')
   const aiJobClearTimersRef = useRef<Record<string, number>>({})
+
+  const recordResponseSteps = useCallback((response: GenerateListicleContentResponse) => {
+    setStepsByTargetId((prev) => {
+      const next = { ...prev }
+      for (const [targetId, entry] of Object.entries(response.results)) {
+        if (entry?.steps && entry.steps.length > 0) {
+          next[targetId] = entry.steps
+        }
+      }
+      return next
+    })
+  }, [])
+
+  const openInspect = useCallback(
+    (targetId: string, label: string, openedAutomatically = false) => {
+      setStepsByTargetId((prev) => {
+        if (!openedAutomatically) return prev
+        // Clear stale steps so the new run animates from the beginning.
+        if (!(targetId in prev)) return prev
+        const next = { ...prev }
+        delete next[targetId]
+        return next
+      })
+      setInspectTarget({ targetId, label, openedAutomatically })
+    },
+    [],
+  )
+
+  const closeInspect = useCallback(() => {
+    setInspectTarget(null)
+  }, [])
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -374,6 +414,7 @@ export default function SingleTypeListicleBuilderPage() {
     })
 
     const response = await generateListicleContentWithAi(request)
+    recordResponseSteps(response)
     const targetResult = response.results[params.targetId]
 
     if (!targetResult) {
@@ -393,7 +434,7 @@ export default function SingleTypeListicleBuilderPage() {
       || targetResult.validation_errors[0]
       || 'AI generation failed for this field.',
     )
-  }, [buildGenerationRequest])
+  }, [buildGenerationRequest, recordResponseSteps])
 
   const rewriteDraftBlockWithAi = useCallback(async (input: AiRewriteInput): Promise<string> => {
     return runSingleTargetGeneration({
@@ -413,6 +454,7 @@ export default function SingleTypeListicleBuilderPage() {
 
     onError('')
     setResult(null)
+    openInspect(targetId, 'Intro', true)
     markAiJobVisualState(targetId, 'queued')
 
     enqueueAiWriteTask({
@@ -453,7 +495,7 @@ export default function SingleTypeListicleBuilderPage() {
         }
       },
     })
-  }, [clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, runSingleTargetGeneration, setDraft])
+  }, [clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, openInspect, runSingleTargetGeneration, setDraft])
 
   const autoWriteItemBlurb = useCallback(async (itemId: string): Promise<void> => {
     const currentDraft = draftRef.current
@@ -461,9 +503,12 @@ export default function SingleTypeListicleBuilderPage() {
 
     const draftId = currentDraft.draftId
     const targetId = `${itemId}_blurb`
+    const itemIndex = currentDraft.items.findIndex((entry) => entry.id === itemId)
+    const itemLabel = itemIndex >= 0 ? `Item ${itemIndex + 1} blurb` : 'Item blurb'
 
     onError('')
     setResult(null)
+    openInspect(targetId, itemLabel, true)
     markAiJobVisualState(targetId, 'queued')
 
     enqueueAiWriteTask({
@@ -514,7 +559,7 @@ export default function SingleTypeListicleBuilderPage() {
         }
       },
     })
-  }, [clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, runSingleTargetGeneration, setDraft])
+  }, [clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, openInspect, runSingleTargetGeneration, setDraft])
 
   const autoWriteEmptyFields = useCallback(async (): Promise<void> => {
     const currentDraft = draftRef.current
@@ -549,6 +594,7 @@ export default function SingleTypeListicleBuilderPage() {
             includeArticleContext: true,
           })
           const response = await generateListicleContentWithAi(request)
+          recordResponseSteps(response)
 
           if (draftRef.current?.draftId !== draftId) return
 
@@ -582,7 +628,7 @@ export default function SingleTypeListicleBuilderPage() {
         }
       },
     })
-  }, [buildGenerationRequest, clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, setDraft])
+  }, [buildGenerationRequest, clearAiJobVisualState, enqueueAiWriteTask, markAiJobVisualState, onError, recordResponseSteps, setDraft])
 
   const saveLocalDraft = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -878,6 +924,8 @@ export default function SingleTypeListicleBuilderPage() {
               isIntroAiGenerating={activeAiWriteJobId === introTargetId}
               introAiQueueCount={queuedIntroAiCount}
               introAiStatus={introAiStatus}
+              onIntroInspect={() => openInspect(introTargetId, 'Intro')}
+              introHasInspectableSteps={Boolean(stepsByTargetId[introTargetId]?.length)}
               isLocked={isStep2Locked}
               isSynced={isSynced}
               onContinueStep2={actions.handleContinueStep2}
@@ -897,6 +945,15 @@ export default function SingleTypeListicleBuilderPage() {
               updateItem={actions.updateItem}
               onItemBlurbAiAutoWrite={autoWriteItemBlurb}
               onItemBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
+              onItemBlurbInspect={(itemId, index) =>
+                openInspect(`${itemId}_blurb`, `Item ${index + 1} blurb`)
+              }
+              hasInspectableStepsByItemId={Object.fromEntries(
+                draft.items.map((entry) => [
+                  entry.id,
+                  Boolean(stepsByTargetId[`${entry.id}_blurb`]?.length),
+                ]),
+              )}
               activeAiItemId={runningAiItemId ?? null}
               queuedAiItemIds={queuedAiItemIds}
               isLocked={isStep3Locked}
@@ -941,6 +998,17 @@ export default function SingleTypeListicleBuilderPage() {
           onSyncToPayload={() => submit('draft')}
         />
       </div>
+
+      <InspectListicleRunModal
+        isOpen={Boolean(inspectTarget)}
+        onClose={closeInspect}
+        targetLabel={inspectTarget?.label ?? ''}
+        steps={inspectTarget ? stepsByTargetId[inspectTarget.targetId] : undefined}
+        isRunning={
+          inspectTarget ? aiJobVisualStateById[inspectTarget.targetId] === 'running' : false
+        }
+        autoCloseOnCompletion={inspectTarget?.openedAutomatically ?? false}
+      />
     </div>
   )
 }

@@ -11,6 +11,7 @@ function buildDraft(): SingleTypeListicleDraft {
   return {
     draftId: 'draft-1',
     editorModelName: 'gemini-2.5-flash',
+    listTone: 'elevated',
     title: 'Best Restaurants in Lima',
     location: 'peru|lima|barranco',
     locationRef: 1,

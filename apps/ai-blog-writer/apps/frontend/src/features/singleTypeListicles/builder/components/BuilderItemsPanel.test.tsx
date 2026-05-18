@@ -36,6 +36,7 @@ function buildDraft(listicleType: SingleTypeListicleDraft['listicleType']): Sing
   return {
     draftId: 'draft-1',
     editorModelName: 'gemini-2.5-flash',
+    listTone: 'elevated',
     title: 'Best Restaurants',
     location: 'lima-peru',
     locationRef: 1,
@@ -121,6 +122,8 @@ function renderPanel(
       updateItem={vi.fn()}
       onItemBlurbAiAutoWrite={options?.onItemBlurbAiAutoWrite ?? vi.fn(async () => {})}
       onItemBlurbAiRewrite={vi.fn(async (_itemId: string, input: { currentContent: string }) => input.currentContent)}
+      onItemBlurbInspect={vi.fn()}
+      hasInspectableStepsByItemId={{}}
       activeAiItemId={options?.activeAiItemId ?? null}
       queuedAiItemIds={options?.queuedAiItemIds ?? []}
       isLocked={false}

@@ -9,6 +9,58 @@ import type {
 
 export type ListicleType = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
 
+export type ListicleAngle =
+  | 'signature-dish'
+  | 'atmosphere'
+  | 'founders-backstory'
+  | 'insider-tip'
+  | 'best-for'
+  | 'whats-different'
+
+export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<{ value: ListicleAngle; label: string }> = [
+  { value: 'signature-dish', label: 'Signature Dish — lead with a celebrated item' },
+  { value: 'atmosphere', label: 'Atmosphere — lead with the room and feel' },
+  { value: 'founders-backstory', label: 'Founders / Backstory — lead with origin' },
+  { value: 'insider-tip', label: 'Insider Tip — lead with something only locals know' },
+  { value: 'best-for', label: 'Best-For — lead with the occasion or audience' },
+  { value: 'whats-different', label: 'What\'s Different — lead with the contrast' },
+]
+
+export function resolveListicleAngle(value: unknown): ListicleAngle | null {
+  if (typeof value !== 'string') return null
+  if (LISTICLE_ANGLE_OPTIONS.some((opt) => opt.value === value)) {
+    return value as ListicleAngle
+  }
+  return null
+}
+
+export type ListTone =
+  | 'elevated'
+  | 'casual'
+  | 'hidden-gem'
+  | 'family-friendly'
+  | 'date-night'
+  | 'budget'
+
+export const LIST_TONE_OPTIONS: ReadonlyArray<{ value: ListTone; label: string; description: string }> = [
+  { value: 'elevated', label: 'Elevated', description: 'Polished, refined, slightly formal' },
+  { value: 'casual', label: 'Casual', description: 'Friendly, conversational, easygoing' },
+  { value: 'hidden-gem', label: 'Hidden Gem', description: 'Off-the-radar, insider, discovery-led' },
+  { value: 'family-friendly', label: 'Family-Friendly', description: 'Warm, practical, kid-aware' },
+  { value: 'date-night', label: 'Date Night', description: 'Intimate, atmospheric, romantic' },
+  { value: 'budget', label: 'Budget', description: 'Value-focused, practical, accessible' },
+]
+
+export const DEFAULT_LIST_TONE: ListTone = 'elevated'
+
+export function resolveListTone(value: unknown): ListTone {
+  if (typeof value !== 'string') return DEFAULT_LIST_TONE
+  if (LIST_TONE_OPTIONS.some((opt) => opt.value === value)) {
+    return value as ListTone
+  }
+  return DEFAULT_LIST_TONE
+}
+
 export type ListicleBlockType =
   | 'data-dining'
   | 'data-accommodations'
@@ -38,6 +90,8 @@ export type ListicleItemBlock = {
   blurbMarkdown: string
   blurbLexical?: PayloadRichText
   blurbJsonText?: string
+  /** Operator override; null = backend auto-assigns. */
+  angle?: ListicleAngle | null
 }
 
 export type SingleTypeListicleDraft = {
@@ -49,6 +103,7 @@ export type SingleTypeListicleDraft = {
   payloadUpdatedAt?: string
   payloadAuthorName?: string
   editorModelName: EditorAssistModelName
+  listTone: ListTone
   title: string
   location: string
   locationRef: number | null
@@ -91,6 +146,7 @@ export type PayloadListicleDoc = {
   sharedNeighborhoods?: Array<number | { id?: number }>
   listicleType?: ListicleType
   targetItemCount?: number
+  listTone?: ListTone
   step1_complete?: boolean
   in_update_mode?: boolean
   step2_complete?: boolean
@@ -109,6 +165,7 @@ export type PayloadListicleDoc = {
     selectedPhotos?: Array<number | { id?: number }>
     selectedInstagramPost?: number | { id?: number } | null
     blurb?: PayloadRichText
+    angle?: ListicleAngle | null
   }>
   seoSection?: {
     seoTitle?: string | null

@@ -33,6 +33,8 @@ export type MarkdownBlockEditorProps = {
     prompt: string
     includeWholeArticleContext: boolean
   }) => Promise<string>
+  aiToolbarLabel?: string
+  aiToolbarTitle?: string
   className?: string
   rows?: number
   placeholder?: string

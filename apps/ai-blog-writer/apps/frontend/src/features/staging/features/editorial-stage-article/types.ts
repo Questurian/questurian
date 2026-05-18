@@ -24,6 +24,7 @@ export type ImgTrioFormat = 'square' | 'landscape'
 export type PexelsOrientationOption = PexelsOrientation | ''
 export type ImageSourceOption = 'payload' | 'upload' | 'unsplash' | 'pexels'
 export type EditorModelName =
+  | 'claude-opus-4-7'
   | 'gemini-3.1-pro-preview'
   | 'gemini-3.1-flash-lite-preview'
   | 'gemini-3.1-flash-image-preview'

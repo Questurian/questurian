@@ -60,6 +60,7 @@ export async function submitListicle({
       mediaMode: item.mediaMode,
       selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
       selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,
+      angle: item.angle ?? null,
       blurb,
     })
   }
@@ -94,6 +95,7 @@ export async function submitListicle({
     sharedNeighborhoods: draft.sharedNeighborhoods,
     listicleType: draft.listicleType,
     targetItemCount: draft.targetItemCount,
+    listTone: draft.listTone,
     step1_complete: true,
     in_update_mode: false,
     step2_complete: draft.step2_complete,

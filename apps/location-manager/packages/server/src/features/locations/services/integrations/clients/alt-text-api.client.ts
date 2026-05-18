@@ -53,6 +53,30 @@ export interface FieldSuggestionAiResponse {
 export type AccommodationsFieldSuggestionAiRequest = FieldSuggestionAiRequest;
 export type AccommodationsFieldSuggestionAiResponse = FieldSuggestionAiResponse;
 
+export interface ReviewsDigestAiReviewInput {
+  text: string;
+  rating?: number | null;
+  date?: string | null;
+}
+
+export interface ReviewsDigestAiRequest {
+  venue_name: string;
+  venue_category: string;
+  venue_location?: string | null;
+  reviews: ReviewsDigestAiReviewInput[];
+}
+
+export interface ReviewsDigestAiResponse {
+  version: number;
+  knownFor: string[];
+  commonPositives: string[];
+  commonGripes: string[];
+  namedDishes?: string[] | null;
+  summary: string;
+  model_used: string;
+  reviews_considered: number;
+}
+
 export class AltTextApiClient {
   private baseUrl: string;
 
@@ -147,5 +171,25 @@ export class AltTextApiClient {
     }
 
     return response.json() as Promise<FieldSuggestionAiResponse>;
+  }
+
+  /**
+   * Summarize a venue's merged reviews into a compact Reviews Digest used by
+   * the AI Blog Writer's listicle blurb pipeline.
+   */
+  async generateReviewsDigest(input: ReviewsDigestAiRequest): Promise<ReviewsDigestAiResponse> {
+    const response = await fetch(`${this.baseUrl}/reviews/digest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const errorDetail = (await response.text().catch(() => "")).trim();
+      const errorMessage = errorDetail || response.statusText;
+      throw new Error(`Reviews digest generation failed (${response.status}): ${errorMessage}`);
+    }
+
+    return response.json() as Promise<ReviewsDigestAiResponse>;
   }
 }

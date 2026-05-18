@@ -6,10 +6,26 @@ import type {
   SyncAllDto,
   PayloadMediaSetsQueryDto,
 } from "../../validation/schemas/payload.schemas";
+import type { LocationsByPayloadRefsDto } from "../../validation/schemas/payload-refs.schemas";
 import type { TourIdParamsDto } from "../../validation/schemas/tours.schemas";
 import * as PayloadSyncRepo from "../../repositories/integration/payload-sync.repository";
+import { getEditorialLocationsByPayloadRefs } from "../../services/integrations/payload-refs.service";
 
 const container = ServiceContainer.getInstance();
+
+/**
+ * POST /api/payload/locations/by-refs
+ * Bulk-hydrate LM Locations given Payload (collection, docId) pairs.
+ * Used by ABW to enrich listicle blurb generation with canonical venue facts
+ * and an on-demand Reviews Digest cached per venue (invalidated by reviewsFetchedAt).
+ */
+export async function postLocationsByPayloadRefs(c: Context) {
+  const dto = c.get("validatedBody") as LocationsByPayloadRefsDto;
+  const results = await getEditorialLocationsByPayloadRefs(dto.refs, {
+    altTextApiClient: container.altTextApiClient,
+  });
+  return c.json(successResponse({ results }));
+}
 
 /**
  * POST /api/payload/sync/:id

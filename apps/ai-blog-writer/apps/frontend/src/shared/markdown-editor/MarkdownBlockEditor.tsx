@@ -18,6 +18,8 @@ export function MarkdownBlockEditor({
   showToolbar = true,
   enforceHeadingStructure = false,
   onAiRewrite,
+  aiToolbarLabel,
+  aiToolbarTitle,
   className = 'block-textarea',
   rows = 6,
   placeholder = '',
@@ -68,6 +70,8 @@ export function MarkdownBlockEditor({
     applyValueWithHeadingGuard: heading.applyValueWithHeadingGuard,
     onOpenLinkPopover: selection.openLinkPopover,
     onAiRewrite: onAiRewrite ? openAiRewritePrompt : undefined,
+    aiToolbarLabel,
+    aiToolbarTitle,
   })
 
   syncEditorToMarkdownRef.current = toolbar.syncEditorToMarkdown

@@ -1,4 +1,5 @@
-import type { ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
+import type { ListTone, ListicleType, LocationOption, SingleTypeListicleDraft } from '../../types'
+import { LIST_TONE_OPTIONS } from '../../types'
 import { AiTitleInput } from '../../../../shared/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
 import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
@@ -240,6 +241,28 @@ export function BuilderSetupPanel({
           {selectedTargetCount ? null : (
             <p className="stl-summary-note stl-setup-note">Pick a target size to generate blank item cards.</p>
           )}
+
+          <div className="stl-field">
+            <label className="stl-field-label-row">
+              <span>List Tone *</span>
+            </label>
+            <select
+              className="stl-field-input"
+              value={draft.listTone}
+              disabled={isSetupLocked}
+              onChange={(event) => updateDraft({ listTone: event.target.value as ListTone })}
+              aria-label="List tone for AI-generated copy"
+            >
+              {LIST_TONE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} — {option.description}
+                </option>
+              ))}
+            </select>
+            <p className="stl-summary-note stl-setup-note">
+              Sets the editorial register for every blurb and the intro in this listicle. You can change it any time and re-generate.
+            </p>
+          </div>
         </>
       )}
     </section>

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/normalizeRelatedItems'
 import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { getBlockTypeForListicleType } from '../../api'
-import type { ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
+import type { ListicleAngle, ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
+import { LISTICLE_ANGLE_OPTIONS } from '../../types'
 import {
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
@@ -33,6 +34,8 @@ type BuilderItemsPanelProps = {
   updateItem: (itemId: string, updater: (item: ListicleItemBlock) => ListicleItemBlock) => void
   onItemBlurbAiAutoWrite: (itemId: string) => Promise<void>
   onItemBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
+  onItemBlurbInspect: (itemId: string, index: number) => void
+  hasInspectableStepsByItemId: Record<string, boolean>
   activeAiItemId: string | null
   queuedAiItemIds: string[]
   isLocked: boolean
@@ -86,6 +89,8 @@ export function BuilderItemsPanel({
   updateItem,
   onItemBlurbAiAutoWrite,
   onItemBlurbAiRewrite,
+  onItemBlurbInspect,
+  hasInspectableStepsByItemId,
   activeAiItemId,
   queuedAiItemIds,
   isLocked,
@@ -554,6 +559,26 @@ export function BuilderItemsPanel({
                     <div className="stl-field-label-row stl-ai-field-label-row">
                       <span>Blurb *</span>
                       <div className="stl-inline-actions stl-ai-field-actions">
+                        <select
+                          className="stl-field-input stl-angle-select"
+                          value={item.angle ?? ''}
+                          onChange={(event) => {
+                            const next = event.target.value
+                            updateItem(item.id, (current) => ({
+                              ...current,
+                              angle: next === '' ? null : (next as ListicleAngle),
+                            }))
+                          }}
+                          aria-label={`Blurb angle for item ${index + 1}`}
+                          title="Blurb angle (Auto = backend picks based on this venue's data)"
+                        >
+                          <option value="">Angle: Auto</option>
+                          {LISTICLE_ANGLE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                         <button
                           type="button"
                           className={aiButtonClassName}
@@ -567,6 +592,17 @@ export function BuilderItemsPanel({
                             queuedLabel={`Queued${queuedAiCount > 1 ? ` (${queuedAiCount})` : ''}`}
                             idleLabel={item.blurbMarkdown.trim() ? 'Regenerate' : 'Auto Write'}
                           />
+                        </button>
+                        <button
+                          type="button"
+                          className="stl-btn stl-btn-secondary stl-btn-inspect"
+                          onClick={() => onItemBlurbInspect(item.id, index)}
+                          disabled={
+                            !hasInspectableStepsByItemId[item.id] && activeAiItemId !== item.id
+                          }
+                          title="Inspect the AI pipeline for this blurb (prompts, model, validation, retry)"
+                        >
+                          Inspect
                         </button>
                       </div>
                     </div>
@@ -592,6 +628,8 @@ export function BuilderItemsPanel({
                         showToolbar
                         enforceHeadingStructure={false}
                         onAiRewrite={(input) => onItemBlurbAiRewrite(item.id, input)}
+                        aiToolbarLabel="AI Tweak"
+                        aiToolbarTitle="Rewrite with an instruction — runs the full blurb pipeline (tone, angle, venue facts). For a clean regenerate, use Auto Write instead."
                         placeholder="Write why this item made the list..."
                         className="stl-markdown-textarea"
                         rows={5}

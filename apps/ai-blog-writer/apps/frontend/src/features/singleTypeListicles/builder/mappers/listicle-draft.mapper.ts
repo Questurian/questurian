@@ -2,6 +2,7 @@ import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../../shared/api/ai/models'
 import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
 import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
+import { resolveListTone, resolveListicleAngle } from '../../types'
 import { buildPayloadListicleMetadataPatch } from '../services/payload-listicle-metadata.service'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
@@ -20,6 +21,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     blurbMarkdown: item.blurb ? lexicalRichTextToMarkdown(item.blurb) : '',
     blurbLexical: item.blurb,
     blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
+    angle: resolveListicleAngle(item.angle),
   }))
 
   const fallbackTargetItemCount = typeof doc.targetItemCount === 'number' ? doc.targetItemCount : 0
@@ -37,6 +39,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
       fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
     }),
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
+    listTone: resolveListTone(doc.listTone),
     title: doc.title || '',
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),

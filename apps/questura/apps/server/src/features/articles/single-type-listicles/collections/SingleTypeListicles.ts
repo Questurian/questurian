@@ -34,6 +34,7 @@ import {
   sharedNeighborhoods,
   listicleType,
   targetItemCount,
+  listTone,
   step1UiWrapper,
   headerSection,
   items,
@@ -299,6 +300,7 @@ export const SingleTypeListicles: CollectionConfig = {
     sharedNeighborhoods,
     listicleType,
     targetItemCount,
+    listTone,
     step1UiWrapper,
 
     headerSection,

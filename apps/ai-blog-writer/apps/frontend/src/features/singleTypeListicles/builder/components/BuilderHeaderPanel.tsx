@@ -17,6 +17,8 @@ type BuilderHeaderPanelProps = {
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
   onIntroAiAutoWrite: () => Promise<void>
   onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
+  onIntroInspect: () => void
+  introHasInspectableSteps: boolean
   isIntroAiGenerating: boolean
   introAiQueueCount: number
   introAiStatus: string | null
@@ -36,6 +38,8 @@ export function BuilderHeaderPanel({
   updateHeader,
   onIntroAiAutoWrite,
   onIntroAiRewrite,
+  onIntroInspect,
+  introHasInspectableSteps,
   isIntroAiGenerating,
   introAiQueueCount,
   introAiStatus,
@@ -77,20 +81,31 @@ export function BuilderHeaderPanel({
       introLabelRowExtraClassName="stl-ai-field-label-row"
       introActionsExtraClassName="stl-ai-field-actions"
       renderIntroAiActions={() => (
-        <button
-          type="button"
-          className={introAiButtonClassName}
-          onClick={() => void onIntroAiAutoWrite()}
-          disabled={isIntroAiGenerating}
-        >
-          <AiJobButtonContent
-            isRunning={isIntroAiGenerating}
-            isQueued={introAiQueueCount > 0}
-            runningLabel="Writing..."
-            queuedLabel={`Queued${introAiQueueCount > 1 ? ` (${introAiQueueCount})` : ''}`}
-            idleLabel={draft.header.introMarkdown.trim() ? 'Regenerate' : 'Auto Write'}
-          />
-        </button>
+        <>
+          <button
+            type="button"
+            className={introAiButtonClassName}
+            onClick={() => void onIntroAiAutoWrite()}
+            disabled={isIntroAiGenerating}
+          >
+            <AiJobButtonContent
+              isRunning={isIntroAiGenerating}
+              isQueued={introAiQueueCount > 0}
+              runningLabel="Writing..."
+              queuedLabel={`Queued${introAiQueueCount > 1 ? ` (${introAiQueueCount})` : ''}`}
+              idleLabel={draft.header.introMarkdown.trim() ? 'Regenerate' : 'Auto Write'}
+            />
+          </button>
+          <button
+            type="button"
+            className="stl-btn stl-btn-secondary stl-btn-inspect"
+            onClick={onIntroInspect}
+            disabled={!introHasInspectableSteps && !isIntroAiGenerating}
+            title="Inspect the AI pipeline for the intro (prompts, model, validation, retry)"
+          >
+            Inspect
+          </button>
+        </>
       )}
       renderIntroEditorWrapper={(editor) => (
         <div className={`stl-ai-editor-shell stl-ai-editor-shell--${introAiState}`}>

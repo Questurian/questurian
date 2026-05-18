@@ -1,6 +1,7 @@
 import { Block } from 'payload'
 import { createLocationFilter } from './utils/locationFilter'
 import { createItemMediaFields } from './utils/itemMedia'
+import { angleField } from './utils/angleField'
 
 export const DataAttractionsBlock: Block = {
   slug: 'data-attractions',
@@ -20,6 +21,7 @@ export const DataAttractionsBlock: Block = {
       },
     },
     ...createItemMediaFields('attractions'),
+    angleField,
     {
       name: 'blurb',
       type: 'richText',

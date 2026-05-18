@@ -163,6 +163,8 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
       showToolbar
       enforceHeadingStructure={false}
       onAiRewrite={onIntroAiRewrite}
+      aiToolbarLabel="AI Tweak"
+      aiToolbarTitle="Rewrite with an instruction — runs the full intro pipeline (tone, venue facts). For a clean regenerate, use Auto Write instead."
       placeholder={introPlaceholder}
       className="stl-markdown-textarea"
       rows={6}

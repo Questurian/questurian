@@ -93,6 +93,36 @@ Code references: backend `Stage_EditorialAugmentation`.
 
 Definition: validation checkpoints during compose. Coverage Analysis asks whether the composed article covers the article-type guideline; Quality Gate triggers `repair` + `retry` if not.
 
+### Critical Fields Guideline
+
+Definition: per-category specification of which Location fields a listicle-content generation request requires (Tier 1: blocks generation if missing), should have (Tier 2: triggers Fallback Research if missing), or may use silently (Tier 3). Lives per listicle category (dining, accommodations, attractions, nightlife). The guideline is what makes "do not invent details" enforceable instead of aspirational — it tells the system when LM data is sufficient and when external research is required.
+Related terms: Fallback Research, Reviews Digest.
+Do not confuse with: Article Type `guideline` (that's compose instructions per article type, not per-venue input requirements).
+
+### Fallback Research
+
+Definition: a scoped web-search pass triggered when a venue's Location data fails the Critical Fields Guideline (Tier-2 gaps or stale `reviewsFetchedAt`). Returns short structured findings keyed to the specific missing fields, not free-form prose. Distinct from the legacy "always-grounded" generation path where every blurb call ran Gemini with Google Search regardless of data quality.
+Related terms: Critical Fields Guideline.
+Code references: today the only research path is `invoke_google_grounded_text` in `packages/utils/src/utils/google_grounding.py` (unconditional, not gap-driven).
+
+### Reviews Digest
+
+Definition: a compact per-venue summary derived once from the merged Google + TripAdvisor reviews JSON file (`merged_reviews_{locationId}_{ts}.json`) on the LM side. Cached per venue, invalidated when `reviewsFetchedAt` changes. Used as Tier-2 evidence by the blurb writer instead of passing raw reviews into prompts.
+Related terms: Critical Fields Guideline.
+Do not confuse with: the raw merged reviews file itself (`merged_reviews_*.json`), which is the input to the digest, not the digest.
+
+### List Tone
+
+Definition: a single editorial register chosen by the operator at listicle setup that applies uniformly to every blurb and the intro in that listicle (e.g. Elevated, Casual, Hidden Gem, Family-Friendly, Date Night, Budget). One per listicle.
+Related terms: Listicle Angle.
+Do not confuse with: Article Type (which is the structural template — single-type-listicle vs guide vs review — not a voice register).
+
+### Listicle Angle
+
+Definition: a per-item editorial framing assigned to each blurb in a listicle, drawn from a category-specific pool (for dining: Signature Dish, Atmosphere, Founders/Backstory, Insider Tip, Best-For, What's Different). Auto-assigned by the system using LM data heuristics and rotation to avoid adjacent repeats, and overrideable per item by the operator. Combined with List Tone, the writer prompt becomes "write in <tone> from the <angle> angle for <venue>."
+Related terms: List Tone, Critical Fields Guideline.
+Do not confuse with: List Tone (one per listicle vs one per item); `idealFor` (a venue attribute, not an editorial angle).
+
 ## Relationships
 
 - A **Run** has one **PipelineMeta** and many **StageResults**, finalized into one **PipelineArtifact**.

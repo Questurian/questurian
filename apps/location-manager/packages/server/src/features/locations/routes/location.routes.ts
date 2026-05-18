@@ -27,6 +27,7 @@ import {
   syncAllSchema,
   payloadMediaSetsQuerySchema,
 } from "../validation/schemas/payload.schemas";
+import { locationsByPayloadRefsSchema } from "../validation/schemas/payload-refs.schemas";
 import type { LocationCategory } from "../models/location";
 import { getLocationByIdForUpdate } from "../repositories/core";
 
@@ -60,6 +61,7 @@ import {
   // Integration
   postSyncLocation, postSyncAll, postSyncTour,
   getSyncStatus, getPayloadMediaSets, getTestConnection, deletePayloadSyncState,
+  postLocationsByPayloadRefs,
 } from "../controllers";
 
 const CATEGORY_ROUTES: readonly LocationCategory[] = [
@@ -302,6 +304,11 @@ app.get("/api/payload/sync-status", getSyncStatus);
 app.get("/api/payload/sync-status/:id", getSyncStatus);
 app.get("/api/payload/test-connection", getTestConnection);
 app.delete("/api/payload/sync-state", deletePayloadSyncState);
+app.post(
+  "/api/payload/locations/by-refs",
+  validateBody(locationsByPayloadRefsSchema),
+  postLocationsByPayloadRefs
+);
 
 // Serve uploaded images
 app.get("/api/images/*", serveImage);

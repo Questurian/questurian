@@ -19,6 +19,10 @@ DEFAULT_MODEL = "gemini-2.5-pro"
 DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL = "gemini-2.5-flash"
 DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = "gemini-2.5-flash"
 DEFAULT_TRANSLATION_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_REVIEWS_DIGEST_MODEL = "gemini-2.5-flash"
+REVIEWS_DIGEST_VERSION = 1
+REVIEWS_DIGEST_MAX_REVIEWS = 80
+REVIEWS_DIGEST_MAX_CHARS_PER_REVIEW = 600
 DEFAULT_LOCATION = "us-central1"
 
 
@@ -66,6 +70,10 @@ ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = (
 TRANSLATION_MODEL = (
     os.getenv("TRANSLATION_MODEL", DEFAULT_TRANSLATION_MODEL).strip()
     or DEFAULT_TRANSLATION_MODEL
+)
+REVIEWS_DIGEST_MODEL = (
+    os.getenv("REVIEWS_DIGEST_MODEL", DEFAULT_REVIEWS_DIGEST_MODEL).strip()
+    or DEFAULT_REVIEWS_DIGEST_MODEL
 )
 
 _vertex_initialized = False
@@ -126,6 +134,30 @@ class TranslateReviewsResponse(BaseModel):
     reviews: list[dict]
     stats: TranslateReviewsResponseStats
     message: str
+
+
+class ReviewsDigestReviewInput(BaseModel):
+    text: str
+    rating: float | int | None = None
+    date: str | None = None
+
+
+class ReviewsDigestRequest(BaseModel):
+    venue_name: str
+    venue_category: str  # 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key-locations'
+    venue_location: str | None = None
+    reviews: list[ReviewsDigestReviewInput]
+
+
+class ReviewsDigestResponse(BaseModel):
+    version: int
+    knownFor: list[str]
+    commonPositives: list[str]
+    commonGripes: list[str]
+    namedDishes: list[str] | None = None
+    summary: str
+    model_used: str
+    reviews_considered: int
 
 
 def ensure_vertex_initialized() -> None:
@@ -502,6 +534,106 @@ def translate_reviews_with_vertex(
     )
 
 
+def build_reviews_digest_prompt(request: ReviewsDigestRequest) -> str:
+    is_dining = request.venue_category == "dining"
+    named_dishes_line = (
+        '  "namedDishes": ["dish name", ...],   // 0-5 specific dishes that recur by name in reviews\n'
+        if is_dining
+        else ""
+    )
+    schema_block = (
+        "{\n"
+        '  "knownFor": ["short phrase", ...],   // 1-5 things this venue is celebrated for\n'
+        '  "commonPositives": ["short phrase", ...],   // 1-5 recurring praises\n'
+        '  "commonGripes": ["short phrase", ...],   // 0-3 recurring complaints (or [])\n'
+        f"{named_dishes_line}"
+        '  "summary": "one or two sentences"\n'
+        "}"
+    )
+
+    reviews_block_lines: list[str] = []
+    for i, review in enumerate(request.reviews, start=1):
+        text = (review.text or "").strip()
+        if not text:
+            continue
+        if len(text) > REVIEWS_DIGEST_MAX_CHARS_PER_REVIEW:
+            text = text[:REVIEWS_DIGEST_MAX_CHARS_PER_REVIEW] + "…"
+        rating_str = f" [{review.rating}/5]" if review.rating is not None else ""
+        date_str = f" ({review.date})" if review.date else ""
+        reviews_block_lines.append(f"{i}.{rating_str}{date_str} {text}")
+    reviews_block = "\n".join(reviews_block_lines) or "(no review text supplied)"
+
+    location_line = (
+        f"Venue location: {request.venue_location}\n"
+        if request.venue_location
+        else ""
+    )
+
+    return (
+        "You are an editorial research assistant. Given a venue's aggregated user reviews, "
+        "produce a tight structured digest that an editor will use to write a publication-ready blurb.\n\n"
+        f"Venue name: {request.venue_name}\n"
+        f"Venue category: {request.venue_category}\n"
+        f"{location_line}"
+        "\n"
+        "REVIEWS\n"
+        f"{reviews_block}\n"
+        "\n"
+        "Output rules:\n"
+        "- Return STRICT JSON matching the schema below. No prose outside the JSON.\n"
+        "- Use short factual phrases. No marketing language, no superlatives.\n"
+        "- Do not invent details. If a field has no support in the reviews, return an empty array or omit it.\n"
+        "- Do not include reviewer names, ratings, dates, or quotes inside the output.\n"
+        "- Keep `summary` neutral and factual; 1-2 sentences max.\n"
+        "\n"
+        "SCHEMA\n"
+        f"{schema_block}\n"
+        "\n"
+        "Output JSON only."
+    ).strip()
+
+
+def generate_reviews_digest(request: ReviewsDigestRequest) -> ReviewsDigestResponse:
+    if not request.reviews:
+        raise ValueError("reviews must be a non-empty list.")
+    if not request.venue_name.strip():
+        raise ValueError("venue_name is required.")
+    if not request.venue_category.strip():
+        raise ValueError("venue_category is required.")
+
+    capped_reviews = request.reviews[:REVIEWS_DIGEST_MAX_REVIEWS]
+    capped_request = request.model_copy(update={"reviews": capped_reviews})
+
+    prompt = build_reviews_digest_prompt(capped_request)
+    raw = generate_text_from_prompt(prompt, REVIEWS_DIGEST_MODEL)
+    parsed = parse_json_object(raw)
+
+    def _coerce_list(value: object) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(v).strip() for v in value if isinstance(v, (str, int, float)) and str(v).strip()]
+
+    known_for = _coerce_list(parsed.get("knownFor"))[:5]
+    common_positives = _coerce_list(parsed.get("commonPositives"))[:5]
+    common_gripes = _coerce_list(parsed.get("commonGripes"))[:3]
+    named_dishes_raw = parsed.get("namedDishes")
+    named_dishes: list[str] | None = (
+        _coerce_list(named_dishes_raw)[:5] if named_dishes_raw is not None else None
+    )
+    summary = str(parsed.get("summary", "")).strip()
+
+    return ReviewsDigestResponse(
+        version=REVIEWS_DIGEST_VERSION,
+        knownFor=known_for,
+        commonPositives=common_positives,
+        commonGripes=common_gripes,
+        namedDishes=named_dishes,
+        summary=summary,
+        model_used=REVIEWS_DIGEST_MODEL,
+        reviews_considered=len(capped_reviews),
+    )
+
+
 def generate_field_suggestion(request: FieldSuggestionRequest) -> dict:
     if request.category not in SUPPORTED_FIELD_SUGGESTION_CATEGORIES:
         raise ValueError(
@@ -628,6 +760,19 @@ async def translate_reviews(request: TranslateReviewsRequest):
         raise
     except Exception as exc:
         logger.exception("Vertex translation failed")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/reviews/digest", response_model=ReviewsDigestResponse)
+async def reviews_digest(request: ReviewsDigestRequest):
+    try:
+        return await asyncio.to_thread(generate_reviews_digest, request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Reviews digest generation failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

@@ -15,6 +15,67 @@ ListicleCategory = Literal[
     "nightlife",
     "key_location",
 ]
+ListTone = Literal[
+    "elevated", "casual", "hidden-gem", "family-friendly", "date-night", "budget"
+]
+
+ListicleAngle = Literal[
+    "signature-dish",
+    "atmosphere",
+    "founders-backstory",
+    "insider-tip",
+    "best-for",
+    "whats-different",
+]
+
+LISTICLE_ANGLE_GUIDANCE: dict[ListicleAngle, str] = {
+    "signature-dish": (
+        "Lead with a specific dish or item the place is celebrated for. Use it as the entry point, "
+        "then surround it with what makes the cooking distinctive. Do not list multiple dishes; pick one."
+    ),
+    "atmosphere": (
+        "Lead with the room — design, light, sound, crowd, energy. The food matters but is supporting "
+        "evidence, not the headline."
+    ),
+    "founders-backstory": (
+        "Lead with the people, the origin, or the lineage. Only choose this if the context actually "
+        "supports it; do not invent a backstory. If insufficient signal, switch to atmosphere."
+    ),
+    "insider-tip": (
+        "Lead with something a first-time visitor would not figure out on their own — best time to go, "
+        "what to order, where to sit. Practical, specific, no hedging."
+    ),
+    "best-for": (
+        "Lead with the occasion or audience the venue serves best (date night, business lunch, family). "
+        "Make the fit feel earned, not asserted."
+    ),
+    "whats-different": (
+        "Lead with what sets this place apart from neighboring options of the same kind. "
+        "Comparative without naming competitors."
+    ),
+}
+
+
+LIST_TONE_GUIDANCE: dict[ListTone, str] = {
+    "elevated": (
+        "Polished, refined, slightly formal. Confident editorial voice; favor precise nouns over hype."
+    ),
+    "casual": (
+        "Friendly and conversational. Approachable cadence; second person sparingly; never breezy or chatty to a fault."
+    ),
+    "hidden-gem": (
+        "Insider, discovery-led. Frame the venue as a find; avoid clichés like \"best-kept secret\"; concrete specifics over mystique."
+    ),
+    "family-friendly": (
+        "Warm and practical. Note the things parents and kids will actually care about; never condescending or saccharine."
+    ),
+    "date-night": (
+        "Intimate and atmospheric. Lean on lighting, music, room feel, and pacing; never crass or sentimental."
+    ),
+    "budget": (
+        "Value-focused and practical. Be direct about what makes it affordable; never patronizing about price."
+    ),
+}
 
 BLURB_MIN_WORDS = 90
 BLURB_MAX_WORDS = 140
@@ -257,6 +318,162 @@ def build_generation_prompt(
     ).strip()
 
 
+def _tone_block(list_tone: ListTone | None) -> str:
+    if list_tone is None:
+        return ""
+    guidance = LIST_TONE_GUIDANCE.get(list_tone)
+    if not guidance:
+        return ""
+    return f"\n\nLIST TONE\n{list_tone}: {guidance}"
+
+
+def _angle_block(listicle_angle: ListicleAngle | None) -> str:
+    if listicle_angle is None:
+        return ""
+    guidance = LISTICLE_ANGLE_GUIDANCE.get(listicle_angle)
+    if not guidance:
+        return ""
+    return f"\n\nBLURB ANGLE\n{listicle_angle}: {guidance}"
+
+
+def build_writer_prompt(
+    *,
+    article_title: str,
+    article_type: ListicleArticleType,
+    article_location: str,
+    target: ListicleWriterTarget,
+    article_context: str,
+    custom_instruction: str = "",
+    list_tone: ListTone | None = None,
+    listicle_angle: ListicleAngle | None = None,
+) -> str:
+    """Writer-only prompt: same shape as build_generation_prompt but without
+    the "research this online" instruction. Used when LOCATION FACTS (and
+    optionally Fallback Research findings) have already been supplied in
+    supporting_context.
+    """
+    article_type_label = ARTICLE_TYPE_LABELS[article_type]
+    rendered_context = _render_supporting_context(target.supporting_context, article_context)
+    tone_block = _tone_block(list_tone)
+    # Angle only applies to blurbs; intros are list-level and have no per-item angle.
+    angle_block = _angle_block(listicle_angle) if target.field_type == "blurb" else ""
+    current_copy_block = (
+        f"\n\nCURRENT BUILDER COPY\n{target.current_content.strip()}"
+        if target.current_content.strip()
+        else ""
+    )
+
+    if target.field_type == "intro":
+        rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="intro"))
+        itinerary_context = (
+            "Frame the piece like a polished itinerary opener that previews the overall day or sequence."
+            if article_type == "listicle-itinerary"
+            else "Frame the piece like a polished publication intro that sets up the list without turning into a table of contents."
+        )
+        custom_block = (
+            f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
+            if custom_instruction.strip()
+            else ""
+        )
+        context_block = f"\n\n{rendered_context}" if rendered_context else ""
+        return (
+            "You are writing the intro for a travel listicle in the style of a polished digital publication. "
+            "Write like a confident travel editor, not like a review summary.\n\n"
+            f"Article type:\n{article_type_label}\n\n"
+            f"Article title:\n{article_title.strip()}\n\n"
+            f"Location:\n{article_location.strip()}"
+            f"{tone_block}\n"
+            f"{context_block}"
+            f"{current_copy_block}"
+            "\n\nTask:\n"
+            "Use the supplied context as the source of truth. Write one publication-ready intro paragraph. "
+            "If CURRENT BUILDER COPY is present, treat it as a draft reference only and improve it freely. "
+            "Do not invent details beyond what the context supports.\n\n"
+            "Requirements:\n"
+            f"{rules}\n"
+            f"- {itinerary_context}\n"
+            "- Make clear what kind of experience this article delivers in this location.\n"
+            f"{'- Match the LIST TONE precisely.' + chr(10) if tone_block else ''}"
+            "- Keep the writing concise, polished, and specific.\n"
+            f"{custom_block}\n\n"
+            "Output:\n"
+            "One intro paragraph only."
+        ).strip()
+
+    category = target.category or "dining"
+    variant = CATEGORY_PROMPT_VARIANTS[category]
+    rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="blurb"))
+    subject_label = variant["subject_label"]
+    subject_name = (target.research_subject or target.display_name or "").strip()
+    subject_location = (target.location_label or article_location).strip()
+    custom_block = (
+        f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
+        if custom_instruction.strip()
+        else ""
+    )
+    context_block = f"\n\n{rendered_context}" if rendered_context else ""
+    return (
+        "You are writing a blurb for a travel listicle in the style of a polished digital publication. "
+        f"Write like a confident {variant['editor_role']}, not like a review summary.\n\n"
+        f"Article type:\n{article_type_label}\n\n"
+        f"Article title:\n{article_title.strip()}\n\n"
+        f"{subject_label}:\n{subject_name}\n\n"
+        f"Location:\n{subject_location}"
+        f"{tone_block}"
+        f"{angle_block}\n"
+        f"{context_block}"
+        f"{current_copy_block}"
+        "\n\nTask:\n"
+        "Use the supplied context as the source of truth. Write one publication-ready blurb. "
+        "If CURRENT BUILDER COPY is present, treat it as a draft reference only and improve it freely. "
+        "Do not invent details beyond what the context supports.\n\n"
+        "Requirements:\n"
+        f"{rules}\n"
+        f"- {variant['focus']}\n"
+        "- Make clear why it belongs in this specific list.\n"
+        "- Anchor the writing in the concrete facts you have; do not speculate.\n"
+        f"{'- Match the LIST TONE precisely.' + chr(10) if tone_block else ''}"
+        f"{'- Lead from the BLURB ANGLE; let it shape the first sentence.' + chr(10) if angle_block else ''}"
+        "- Keep the writing concise, polished, and specific.\n"
+        f"{custom_block}\n\n"
+        "Output:\n"
+        "One blurb paragraph only."
+    ).strip()
+
+
+def build_fallback_research_prompt(
+    *,
+    subject_name: str,
+    subject_location: str,
+    category: ListicleCategory,
+    gap_descriptions: list[str],
+) -> str:
+    """Scoped research prompt: returns short structured findings keyed to the
+    specific Tier-2 gaps the LM record could not fill. Intended for a single
+    Gemini call with Google Search grounding. Output is meant to be injected
+    into the writer prompt's supporting_context, not shown to the operator.
+    """
+    variant = CATEGORY_PROMPT_VARIANTS.get(category) or CATEGORY_PROMPT_VARIANTS["dining"]
+    gaps_block = "\n".join(f"- {gap}" for gap in gap_descriptions) or "- general overview"
+    return (
+        f"You are a research assistant gathering verified facts about a specific {variant['label'].lower()} venue. "
+        f"You will be given the venue name and location, plus a list of information gaps. "
+        f"Research only the gaps; do not summarize the entire venue.\n\n"
+        f"Venue:\n{subject_name}\n\n"
+        f"Location:\n{subject_location}\n\n"
+        f"Information gaps to fill:\n{gaps_block}\n\n"
+        f"Research guidance:\n{variant['research']}\n\n"
+        "Output rules:\n"
+        "- Return short bullet points, one fact per line, prefixed by the gap label.\n"
+        "- No prose, no marketing language, no opinions, no review quotes.\n"
+        "- If a gap cannot be answered from credible sources, write 'unknown' for that gap.\n"
+        "- Do not include URLs, citation markers, or source names in the body.\n"
+        "- Maximum 12 bullets total.\n\n"
+        "Output:\n"
+        "Bulleted research findings only."
+    ).strip()
+
+
 def build_retry_prompt(
     *,
     article_title: str,
@@ -267,15 +484,19 @@ def build_retry_prompt(
     custom_instruction: str,
     current_output: str,
     validation_errors: list[str],
+    list_tone: ListTone | None = None,
+    listicle_angle: ListicleAngle | None = None,
 ) -> str:
     failures = "\n".join(f"- {item}" for item in validation_errors)
-    base_prompt = build_generation_prompt(
+    base_prompt = build_writer_prompt(
         article_title=article_title,
         article_type=article_type,
         article_location=article_location,
         target=target,
         article_context=article_context,
         custom_instruction=custom_instruction,
+        list_tone=list_tone,
+        listicle_angle=listicle_angle,
     )
     return (
         f"{base_prompt}\n\n"

@@ -111,6 +111,59 @@ export function saveSyncState(
   }
 }
 
+export type PayloadCollectionSlug =
+  | "dining"
+  | "accommodations"
+  | "attractions"
+  | "nightlife"
+  | "key-locations";
+
+export interface PayloadRef {
+  collection: PayloadCollectionSlug;
+  docId: string;
+}
+
+export interface ResolvedPayloadRef extends PayloadRef {
+  entityId: number;
+}
+
+/**
+ * Bulk-resolve Payload (collection, docId) pairs to LM entity IDs.
+ * Returns one row per ref that has a sync_state record; missing refs are absent.
+ */
+export function resolveEntityIdsByPayloadRefs(refs: PayloadRef[]): ResolvedPayloadRef[] {
+  if (refs.length === 0) return [];
+
+  const db = getDb();
+  const placeholders = refs.map((_, idx) => `($c${idx}, $d${idx})`).join(", ");
+  const params: Record<string, string> = {};
+  refs.forEach((ref, idx) => {
+    params[`$c${idx}`] = ref.collection;
+    params[`$d${idx}`] = ref.docId;
+  });
+
+  const sql = `
+    WITH input(payload_collection, payload_doc_id) AS (VALUES ${placeholders})
+    SELECT s.payload_collection, s.payload_doc_id, s.entity_id
+    FROM payload_sync_state s
+    JOIN input i
+      ON i.payload_collection = s.payload_collection
+     AND i.payload_doc_id = s.payload_doc_id
+  `;
+
+  const rows = db.query(sql).all(params) as Array<{
+    payload_collection: PayloadCollectionSlug;
+    payload_doc_id: string;
+    entity_id: number;
+  }>;
+
+  return rows.map((row) => ({
+    collection: row.payload_collection,
+    docId: row.payload_doc_id,
+    entityId: row.entity_id,
+  }));
+}
+
 /**
  * Delete sync state for a specific location or all locations.
  * Also clears payload_location_ref so the next sync re-resolves a fresh
