@@ -5,16 +5,14 @@ export type FieldProvenance =
   | "google"
   | "tripadvisor"
   | "scraper"
-  | "ai-reviews"
-  | "ai-google"
+  | "ai"
   | "operator";
 
 export const FIELD_PROVENANCE_VALUES: readonly FieldProvenance[] = [
   "google",
   "tripadvisor",
   "scraper",
-  "ai-reviews",
-  "ai-google",
+  "ai",
   "operator",
 ] as const;
 

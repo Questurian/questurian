@@ -4,11 +4,6 @@ import {
   type PayloadRef,
   type PayloadCollectionSlug,
 } from "../../repositories/integration/payload-sync.repository";
-import {
-  ensureReviewsDigest,
-  type ReviewsDigestSummary,
-} from "../content/reviews-digest.service";
-import { AltTextApiClient } from "./clients/alt-text-api.client";
 
 export interface EditorialLocation {
   entityId: number;
@@ -26,8 +21,6 @@ export interface EditorialLocation {
   idealFor: string[] | null;
   features: string[] | null;
   mealTypes: string[] | null;
-  reviewsCount: number | null;
-  reviewsFetchedAt: string | null;
 }
 
 export type PayloadRefLookupResult =
@@ -36,7 +29,6 @@ export type PayloadRefLookupResult =
       collection: PayloadCollectionSlug;
       docId: string;
       location: EditorialLocation;
-      reviewsDigest: ReviewsDigestSummary | null;
     }
   | { found: false; collection: PayloadCollectionSlug; docId: string; reason: "no_sync_state" | "entity_missing" };
 
@@ -61,20 +53,10 @@ function safeParseJsonValue(raw: string | null | undefined): unknown | null {
   }
 }
 
-export interface GetEditorialLocationsOptions {
-  includeReviewsDigest?: boolean;
-  /** Inject a client (test seam). Defaults to a fresh AltTextApiClient. */
-  altTextApiClient?: AltTextApiClient;
-}
-
 export async function getEditorialLocationsByPayloadRefs(
   refs: PayloadRef[],
-  options: GetEditorialLocationsOptions = {},
 ): Promise<PayloadRefLookupResult[]> {
   if (refs.length === 0) return [];
-
-  const includeDigest = options.includeReviewsDigest !== false; // default true
-  const client = options.altTextApiClient ?? new AltTextApiClient();
 
   const resolved = resolveEntityIdsByPayloadRefs(refs);
   const byKey = new Map<string, number>();
@@ -82,7 +64,7 @@ export async function getEditorialLocationsByPayloadRefs(
     byKey.set(`${r.collection}::${r.docId}`, r.entityId);
   }
 
-  const tasks: Array<Promise<PayloadRefLookupResult>> = refs.map(async (ref): Promise<PayloadRefLookupResult> => {
+  return refs.map((ref): PayloadRefLookupResult => {
     const entityId = byKey.get(`${ref.collection}::${ref.docId}`);
     if (entityId === undefined) {
       return { found: false, collection: ref.collection, docId: ref.docId, reason: "no_sync_state" };
@@ -109,36 +91,13 @@ export async function getEditorialLocationsByPayloadRefs(
       idealFor: safeParseJsonArray(location.idealForJson),
       features: safeParseJsonArray(location.tripadvisorFeaturesJson),
       mealTypes: safeParseJsonArray(location.tripadvisorMealTypesJson),
-      reviewsCount: location.reviewsCount ?? null,
-      reviewsFetchedAt: location.reviewsFetchedAt ?? null,
     };
-
-    let reviewsDigest: ReviewsDigestSummary | null = null;
-    if (
-      includeDigest &&
-      (editorial.reviewsCount ?? 0) > 0 &&
-      editorial.category != null
-    ) {
-      reviewsDigest = await ensureReviewsDigest(
-        location.id,
-        {
-          name: location.name,
-          category: ref.collection, // use Payload slug; digest prompt branches on dining vs others
-          location: location.address ?? null,
-        },
-        editorial.reviewsFetchedAt,
-        client,
-      );
-    }
 
     return {
       found: true,
       collection: ref.collection,
       docId: ref.docId,
       location: editorial,
-      reviewsDigest,
     };
   });
-
-  return Promise.all(tasks);
 }

@@ -9,15 +9,15 @@ The Add Dining flow ends in a read-only `DiningPreviewPhase` (`features/location
 The two surfaces show the same record but disagree on almost everything else:
 
 - **Shape:** preview uses a `Section` / `Row` pattern (label left, value right, badge inline); Edit uses form rows (label above input).
-- **Editability:** preview is fully read-only; Edit is fully editable (with no read-only view of system-managed fields like `placeId`, `coordinates`, `ianaTimeId`, review counts, upload counts).
+- **Editability:** preview is fully read-only; Edit is fully editable (with no read-only view of system-managed fields like `placeId`, `coordinates`, `ianaTimeId`, upload counts).
 - **Width:** preview is `max-w-2xl`; Edit is `max-w-[1200px]`.
-- **Suggestion surface:** Edit renders `PendingSuggestionsPanel` (ADR-0002); preview doesn't, even though Stage-2 review-derived suggestions can arrive *while the operator is dwelling on the preview*.
+- **Suggestion surface:** Edit renders `PendingSuggestionsPanel` (ADR-0002); preview doesn't, even though Stage-2 AI suggestions can arrive *while the operator is dwelling on the preview*.
 
 Three forces converge:
 
 1. **Operator goal at post-create is the same as in Edit:** inspect every field on the record, fix anything that's wrong, accept or dismiss any AI suggestion. There is no second-pass workflow where the operator returns later under different intent — Edit *is* the second pass.
 2. **The post-create moment is the highest-leverage review opportunity.** The operator just created the record, has fresh context, and is one click from leaving. If the preview hides editability, every correction becomes a navigation round-trip to Edit.
-3. **Stage-2 review-derived suggestions arrive asynchronously** (15–60s after create per ADR-0002). The preview surface needs to either ignore them (defeating half their value at the moment the operator cares most) or surface them live.
+3. **Stage-2 AI suggestions arrive asynchronously** after create (per ADR-0002, now via grounded Google Search per ADR-0005). The preview surface needs to either ignore them (defeating half their value at the moment the operator cares most) or surface them live.
 
 ## Decision
 
@@ -28,7 +28,7 @@ Unify the post-create preview and the Edit page into a single `<LocationDetail>`
 Every field on the Location falls into one of three buckets, surfaced uniformly in `<LocationDetail>`:
 
 - **A. Domain-editable** — `title`, `type`, `idealFor`, `priceLevel`, contact fields, external URLs, `operationHours`, `district`, `neighborhoodDescription`. Editable inline.
-- **B. System-managed, read-only-visible** — `placeId`, `coordinates`, `ianaTimeId`, review counts, `reviewsFetchedAt`, uploads count, instagram embed count. Rendered as labelled Rows with values visible; not editable. Editing these by hand is almost always wrong, but they are high-value for debugging.
+- **B. System-managed, read-only-visible** — `placeId`, `coordinates`, `ianaTimeId`, uploads count, instagram embed count. Rendered as labelled Rows with values visible; not editable. Editing these by hand is almost always wrong, but they are high-value for debugging.
 - **C. Identity, gated** — `locationKey`, `category`. Mutating these breaks invariants (uniqueness per `country|city|neighborhood`, category-bound `idealFor` tags). Read-only by default with an explicit "Edit identity" affordance, not part of the routine form.
 
 This is a sharpening of "every field on a location should be inspectable and editable in one detailed view": *every* field is inspectable; only the safe ones are routinely editable.

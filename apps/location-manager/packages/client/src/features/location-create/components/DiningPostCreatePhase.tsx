@@ -17,7 +17,7 @@ export function DiningPostCreatePhase({
       locationId={locationId}
       category="dining"
       pollForSuggestions
-      pendingEmptyHint="Reviews still being fetched — AI suggestions will appear here when ready."
+      pendingEmptyHint="AI suggestions will appear here as the grounded research completes."
       headerSlot={
         <div className="flex items-center gap-2.5 mb-4">
           <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center shrink-0">

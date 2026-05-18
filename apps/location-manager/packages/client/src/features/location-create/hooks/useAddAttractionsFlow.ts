@@ -21,7 +21,7 @@ import {
   type AddAttractionsFormData,
 } from "../validation/add-attractions.schema";
 
-export type AttractionsPhase = "add" | "confirm" | "reviews" | "success";
+export type AttractionsPhase = "add" | "confirm" | "success";
 
 interface CreatedLocation {
   id: number;
@@ -392,7 +392,7 @@ export function useAddAttractionsFlow() {
       },
       {
         onSuccess: () => {
-          setPhase("reviews");
+          setPhase("success");
         },
       }
     );

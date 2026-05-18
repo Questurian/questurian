@@ -6,7 +6,6 @@ import { BatchInputPhase } from "../components/BatchInputPhase";
 import { BatchUploadPhase } from "../components/BatchUploadPhase";
 import { BatchCompletePhase } from "../components/BatchCompletePhase";
 import { ConfirmLocationPhase } from "../components/ConfirmLocationPhase";
-import { ReviewsFetchPhase } from "../components/ReviewsFetchPhase";
 import { SuccessPhase } from "../components/SuccessPhase";
 import type { LocationCategory } from "@shared/types/location-category";
 
@@ -72,19 +71,6 @@ export function AddLocation({
           onSubmit={flow.handleConfirmTitle}
           isUpdating={flow.isUpdating}
           updateError={flow.updateError}
-        />
-      );
-
-    case "reviews":
-      return (
-        <ReviewsFetchPhase
-          category={flow.createdLocation!.category}
-          locationId={flow.createdLocation!.id}
-          locationName={flow.createdLocation!.title || flow.createdLocation!.name}
-          tripadvisorUrl={flow.createdLocation!.tripadvisorUrl || null}
-          placeId={flow.createdLocation!.placeId || null}
-          onComplete={() => flow.setPhase("success")}
-          onSkip={() => flow.setPhase("success")}
         />
       );
 

@@ -20,7 +20,7 @@ import {
   type AddDiningFormData,
 } from "../validation/add-dining.schema";
 
-export type DiningPhase = "add" | "confirm" | "reviews" | "stage2" | "success";
+export type DiningPhase = "add" | "confirm" | "stage2" | "success";
 
 interface CreatedLocation {
   id: number;
@@ -91,8 +91,7 @@ function isFieldProvenanceValue(value: unknown): value is FieldProvenance {
     value === "google" ||
     value === "tripadvisor" ||
     value === "scraper" ||
-    value === "ai-reviews" ||
-    value === "ai-google" ||
+    value === "ai" ||
     value === "operator"
   );
 }
@@ -548,7 +547,7 @@ export function useAddDiningFlow() {
       },
       {
         onSuccess: () => {
-          setPhase("reviews");
+          setPhase("stage2");
         },
       }
     );

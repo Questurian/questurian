@@ -1,6 +1,5 @@
 import { AddDiningStagedForm } from "../components/AddDiningStagedForm";
 import { ConfirmLocationPhase } from "../components/ConfirmLocationPhase";
-import { ReviewsFetchPhase } from "../components/ReviewsFetchPhase";
 import { Stage2Phase } from "../components/Stage2Phase";
 import { DiningPostCreatePhase } from "../components/DiningPostCreatePhase";
 import { useAddDiningFlow } from "../hooks/useAddDiningFlow";
@@ -17,18 +16,6 @@ export function AddDiningLocation() {
           onSubmit={flow.handleConfirmTitle}
           isUpdating={flow.isUpdating}
           updateError={flow.updateError}
-        />
-      );
-    case "reviews":
-      return (
-        <ReviewsFetchPhase
-          category={flow.createdLocation!.category}
-          locationId={flow.createdLocation!.id}
-          locationName={flow.createdLocation!.title || flow.createdLocation!.name}
-          tripadvisorUrl={flow.createdLocation!.tripadvisorUrl || null}
-          placeId={flow.createdLocation!.placeId || null}
-          onComplete={() => flow.setPhase("stage2")}
-          onSkip={() => flow.setPhase("success")}
         />
       );
     case "stage2":

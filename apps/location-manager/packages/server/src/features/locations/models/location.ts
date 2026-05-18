@@ -102,12 +102,6 @@ export interface Location {
   provenanceJson?: string | null;        // ADR-0002 sidecar: per-field provenance map
   pendingSuggestionsJson?: string | null; // ADR-0002 side channel: AI re-suggestions for operator-touched fields
   tours?: Tour[];
-  // Reviews tracking fields
-  reviewsFetchedAt?: string | null;      // Timestamp of last fetch
-  reviewsCount?: number | null;          // Total merged reviews
-  reviewsGoogleCount?: number | null;    // From Google
-  reviewsTripadvisorCount?: number | null; // From TripAdvisor
-  reviewsEnabled?: boolean | number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -198,7 +192,6 @@ export interface CreateMapsRequest {
   tripadvisorMealTypes?: string[] | string;
   tripadvisorCuisines?: string[] | string;
   tripadvisorFeatures?: string[] | string;
-  reviewsEnabled?: boolean;
   tourIds?: number[];
   provenance?: Record<string, string>;   // ADR-0002 sidecar: field name → FieldProvenance
 }
@@ -265,12 +258,6 @@ export interface LocationResponse {
   instagram_embeds: InstagramEmbed[];
   uploads: Upload[];
   slug: string | null;
-  // Reviews tracking fields
-  reviewsFetchedAt: string | null;
-  reviewsCount: number | null;
-  reviewsGoogleCount: number | null;
-  reviewsTripadvisorCount: number | null;
-  reviewsEnabled: boolean;
   provenance: Record<string, string> | null;
   pendingSuggestions: Record<string, { value: string | string[]; provenance: string }> | null;
   created_at: string;
@@ -290,10 +277,4 @@ export interface LocationBasic {
   category: LocationCategory;
   type: string | null;
   isComplete: boolean;
-  // Reviews tracking fields
-  reviewsFetchedAt: string | null;
-  reviewsCount: number | null;
-  reviewsGoogleCount: number | null;
-  reviewsTripadvisorCount: number | null;
-  reviewsEnabled: boolean;
 }

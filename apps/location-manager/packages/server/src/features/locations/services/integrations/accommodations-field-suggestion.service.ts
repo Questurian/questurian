@@ -6,12 +6,9 @@ import {
   type AccommodationsSuggestionKind,
 } from "@shared/types/accommodations-options";
 import type { LocationCategory } from "@shared/types/location-category";
-import { REVIEW_SAMPLE_FOR_AI } from "../../constants/translate-merge-reviews.constants";
-import { getLatestMergedReviewsForLocation } from "../../repositories/content/merged-reviews.repository";
 import type {
   FieldSuggestionAiRequest,
   FieldSuggestionAiResponse,
-  FieldSuggestionAiReviewSample,
 } from "./clients/alt-text-api.client";
 import type { AltTextApiClient } from "./clients/alt-text-api.client";
 
@@ -62,7 +59,6 @@ export interface AccommodationsFieldSuggestionResponse {
   reason: string;
   sources: AccommodationsSuggestionSource[];
   source: "existing-data" | "ai";
-  reviewsUsed: boolean;
   error?: string;
 }
 
@@ -78,55 +74,12 @@ export class AccommodationsFieldSuggestionService {
       return existingSuggestion;
     }
 
-    const reviewSample = await loadReviewSampleIfUsable(request.locationId);
     const aiResponse = await this.aiClient.suggestField(
-      buildAiRequest(request, definition, reviewSample)
+      buildAiRequest(request, definition)
     );
 
-    return normalizeAiResponse(
-      request.fieldKey,
-      definition,
-      aiResponse,
-      reviewSample !== null
-    );
+    return normalizeAiResponse(request.fieldKey, definition, aiResponse);
   }
-}
-
-async function loadReviewSampleIfUsable(
-  locationId: number | undefined
-): Promise<FieldSuggestionAiReviewSample[] | null> {
-  if (typeof locationId !== "number") {
-    return null;
-  }
-
-  const merged = await getLatestMergedReviewsForLocation(locationId);
-  if (!merged) {
-    console.log(`[FieldSuggestion] No merged reviews for location ${locationId}; pure-AI mode`);
-    return null;
-  }
-
-  if (merged.usability.unusable) {
-    console.log(
-      `[FieldSuggestion] Merged reviews for location ${locationId} are unusable (${merged.usability.unusableReason}); pure-AI mode`
-    );
-    return null;
-  }
-
-  if (merged.reviews.length === 0) {
-    console.log(`[FieldSuggestion] Merged reviews file empty for location ${locationId}; pure-AI mode`);
-    return null;
-  }
-
-  // Sampling/projection are consumer concerns; the repository returns the full clean record.
-  const sample = merged.reviews.slice(0, REVIEW_SAMPLE_FOR_AI);
-  console.log(
-    `[FieldSuggestion] Using ${sample.length} review samples for location ${locationId}`
-  );
-  return sample.map((review) => ({
-    text: review.review_text ?? "",
-    rating: review.rating ?? null,
-    date: review.review_datetime_utc || null,
-  }));
 }
 
 export function resolveFieldDefinition(
@@ -194,8 +147,7 @@ export function validateSuggestionValue(
 export function normalizeAiResponse(
   fieldKey: AccommodationsSuggestionFieldKey,
   definition: AccommodationsSuggestionFieldDefinition,
-  aiResponse: FieldSuggestionAiResponse,
-  reviewsUsed: boolean
+  aiResponse: FieldSuggestionAiResponse
 ): AccommodationsFieldSuggestionResponse {
   const unknownKeys = Object.keys(aiResponse as unknown as Record<string, unknown>).filter(
     (key) => !["suggestion", "confidence", "reason", "sources"].includes(key)
@@ -213,7 +165,6 @@ export function normalizeAiResponse(
     reason: cleanReason(aiResponse.reason),
     sources: normalizeSources(aiResponse.sources),
     source: "ai" as const,
-    reviewsUsed,
   };
 
   if (unknownKeys.length > 0) {
@@ -290,14 +241,12 @@ function buildExistingDataSuggestion(
     reason: "Suggested from the existing Google/Foursquare prefill data for this accommodation.",
     sources,
     source: "existing-data",
-    reviewsUsed: false,
   };
 }
 
 function buildAiRequest(
   request: AccommodationsFieldSuggestionRequest,
-  definition: AccommodationsSuggestionFieldDefinition,
-  reviews: FieldSuggestionAiReviewSample[] | null
+  definition: AccommodationsSuggestionFieldDefinition
 ): FieldSuggestionAiRequest {
   return {
     category: request.category,
@@ -307,7 +256,6 @@ function buildAiRequest(
     allowed_options: definition.options || [],
     form_values: request.formValues,
     api_context: { ...(request.apiContext || {}) },
-    ...(reviews ? { reviews } : {}),
   };
 }
 

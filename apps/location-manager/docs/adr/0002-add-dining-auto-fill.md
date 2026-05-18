@@ -1,6 +1,8 @@
 # AI-assisted Add Dining: field provenance, two-stage suggestion pipeline, and pending-suggestion side channel
 
-**Status:** proposed (2026-05-17)
+**Status:** proposed (2026-05-17); partially superseded by [ADR-0005](./0005-remove-review-pipeline.md) (2026-05-18)
+
+**Note (2026-05-18, ADR-0005):** the review pipeline referenced throughout this ADR has been removed. Stage 2 now fires inline after create (no `ReviewsFetchPhase`), runs grounded Google Search rather than review-grounded prompting, and `FieldProvenance` for AI suggestions collapses from `ai-reviews` / `ai-google` to a single `ai`. The §4 "Unusable-reviews fallback" behavior is now the default and only path. Stage 1 (Google `types[]` mapping, TripAdvisor URL search, website scrape) and the pending-suggestion side channel (§3) are unchanged.
 
 ## Context
 

@@ -328,11 +328,6 @@ function SuggestionStackOverlay({
               <span className="font-semibold text-foreground">
                 {top.fieldLabel || top.fieldKey}
               </span>
-              {top.reviewsUsed && (
-                <span className="inline-flex items-center rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-normal text-emerald-500">
-                  Review-grounded
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-1.5">
               {stack.length > 1 && (
@@ -369,11 +364,7 @@ function SuggestionStackOverlay({
                   Evidence
                 </div>
                 <div className="mt-1 text-foreground">
-                  {top.source === "existing-data"
-                    ? "Google/Foursquare"
-                    : top.reviewsUsed
-                    ? "Guest reviews + Gemini"
-                    : "Gemini research"}
+                  {top.source === "existing-data" ? "Google/Foursquare" : "Gemini grounded search"}
                 </div>
               </div>
             </div>
@@ -673,7 +664,6 @@ export function EditAccommodationsLocation() {
           kind: field.kind,
           confidence: 0,
           source: "ai",
-          reviewsUsed: false,
           reason: "",
           sources: [],
           error: getErrorMessage(err),

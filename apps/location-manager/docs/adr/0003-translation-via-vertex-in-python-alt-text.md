@@ -1,6 +1,10 @@
 # Translation runs through python-alt-text on Vertex, not a dedicated Leads API
 
-**Status:** proposed (2026-05-17)
+**Status:** superseded by [ADR-0005](./0005-remove-review-pipeline.md) (2026-05-18)
+
+Translation only existed to feed the review pipeline. With reviews removed (ADR-0005), translation is no longer needed.
+
+(Original ADR text retained below for historical context. **Original status:** proposed (2026-05-17).)
 
 ## Context
 

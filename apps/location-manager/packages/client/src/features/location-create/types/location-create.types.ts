@@ -1,6 +1,6 @@
 import type { BatchItem } from "../validation/add-location.schema";
 
-export type Phase = "add" | "confirm" | "reviews" | "success" | "batch-input" | "batch-processing" | "batch-complete";
+export type Phase = "add" | "confirm" | "success" | "batch-input" | "batch-processing" | "batch-complete";
 
 export interface BatchResult {
   index: number;

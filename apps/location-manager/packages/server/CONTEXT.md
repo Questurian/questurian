@@ -77,12 +77,11 @@ Bookable activity linked to a Location via `locationKey`.
 ## Features
 
 - `features/locations/{controllers,services,repositories,models,utils,validation,routes,types,constants,container,scripts}` — main domain.
-- Services integrate Google Maps (geocoding), TripAdvisor (reviews + place data), Vertex AI (via the python-alt-text service).
+- Services integrate Google Maps (geocoding), TripAdvisor place data via SerpAPI, Vertex AI grounded search (via the python-alt-text service).
 
 ## Relationships
 
 - A **Location** has one **LocationHierarchy**, many **InstagramEmbed**s, many **ImageSetUpload**s, and at most one **PayloadSyncState** per target collection.
-- A **ReviewsChecklist** belongs to one Location; has many **ReviewsSourceStep**s and one **ReviewsMergePhase**.
 - A **Tour** belongs to one Location via `locationKey`; has its own **TourPayloadSyncState**.
 - A **CorrectionRule** is global per `part_type`; applies across many `LocationHierarchy` rows.
 

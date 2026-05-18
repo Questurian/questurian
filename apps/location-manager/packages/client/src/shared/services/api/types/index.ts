@@ -67,44 +67,11 @@ export type {
   CorrectionResult,
 } from "./taxonomy.types";
 
-// Reviews types
+// TripAdvisor place data types
 export type {
-  FetchReviewsRequest,
-  FetchReviewsResponse,
-  ReviewsStatusResponse,
-} from "./reviews.types";
-
-// Reviews pipeline types
-export type {
-  ReviewSource,
-  FetchReviewsPipelineRequest,
-  FetchReviewsPipelineWarning,
-  ReviewsPipelineResult,
-  ReviewsPipelineStatus,
-  ReviewsPipelineStep,
-  ReviewsPipelineJobStatus,
-  FetchReviewsPipelineStartResponse,
-  FetchReviewsPipelineStatusResponse,
-} from "./reviews-pipeline.types";
-
-// TripAdvisor types
-export type {
-  FetchTripAdvisorReviewsRequest,
-  FetchTripAdvisorReviewsResponse,
-  TripAdvisorReviewsStatusResponse,
   FetchTripAdvisorPlaceResponse,
   TripAdvisorPlaceStatusResponse,
 } from "./tripadvisor.types";
-
-// Merged reviews types
-export type {
-  MergedReviewsStats,
-  RejectsReportSummary,
-  TranslateMergeReviewsResponse,
-  MergedReviewsStatusResponse,
-  MergedReviewsReportData,
-  MergedReviewsReportResponse,
-} from "./merged-reviews.types";
 
 // Payload sync types
 export type {
@@ -122,4 +89,3 @@ export type {
 } from "./payload.types";
 
 // Health types
-export type { TranslationApiHealthResponse } from "./health.types";

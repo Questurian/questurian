@@ -167,11 +167,6 @@ function ensureEntitySchema(db: Database): void {
       tripadvisor_location_id TEXT,
       payload_location_ref TEXT,
       selected_payload_media_set_ids_json TEXT,
-      reviews_fetched_at TEXT,
-      reviews_count INTEGER,
-      reviews_google_count INTEGER,
-      reviews_tripadvisor_count INTEGER,
-      reviews_enabled INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(category, name, address)
@@ -181,9 +176,6 @@ function ensureEntitySchema(db: Database): void {
   ensureEntitiesTableAcceptsKeyLocations(db);
 
   const entityColumns = getTableColumns(db, "entities");
-  if (!entityColumns.has("reviews_enabled")) {
-    db.run("ALTER TABLE entities ADD COLUMN reviews_enabled INTEGER NOT NULL DEFAULT 1");
-  }
   if (!entityColumns.has("selected_payload_media_set_ids_json")) {
     db.run("ALTER TABLE entities ADD COLUMN selected_payload_media_set_ids_json TEXT");
   }

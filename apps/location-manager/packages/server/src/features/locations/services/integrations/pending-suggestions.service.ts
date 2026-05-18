@@ -1,6 +1,6 @@
 // Accept or dismiss a pendingSuggestions entry on a Location.
 // On accept: write the suggestion's value to the live field with provenance =
-// the suggestion's own provenance (ai-reviews / ai-google), then remove the entry.
+// the suggestion's own provenance (ai), then remove the entry.
 // On dismiss: just remove the entry.
 
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
@@ -11,7 +11,7 @@ type PendingField = "type" | "idealFor";
 
 interface PendingEntry {
   value: string | string[];
-  provenance: "ai-reviews" | "ai-google";
+  provenance: "ai";
 }
 
 interface PendingMap {
@@ -27,7 +27,7 @@ function parsePending(json: string | null | undefined): PendingMap {
     for (const [key, raw] of Object.entries(parsed)) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
       const entry = raw as Record<string, unknown>;
-      if (entry.provenance !== "ai-reviews" && entry.provenance !== "ai-google") continue;
+      if (entry.provenance !== "ai") continue;
       if (typeof entry.value !== "string" && !Array.isArray(entry.value)) continue;
       result[key] = entry as unknown as PendingEntry;
     }

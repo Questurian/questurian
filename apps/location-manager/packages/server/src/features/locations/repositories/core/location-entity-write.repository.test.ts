@@ -33,7 +33,6 @@ function createTestDb(): Database {
       tripadvisor_url TEXT,
       tripadvisor_location_id TEXT,
       payload_location_ref TEXT,
-      reviews_enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT,
       updated_at TEXT,
       UNIQUE(category, name, address)

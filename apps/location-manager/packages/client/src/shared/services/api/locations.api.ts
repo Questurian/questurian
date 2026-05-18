@@ -5,19 +5,13 @@
 import { locationsCrudApi } from "./locations-crud.api";
 import { locationsAiApi } from "./locations-ai.api";
 import { locationsUploadsApi } from "./locations-uploads.api";
-import { locationsReviewsApi } from "./locations-reviews.api";
 import { locationsTripAdvisorApi } from "./locations-tripadvisor.api";
-import { locationsMergedReviewsApi } from "./locations-merged-reviews.api";
 import { locationsExportsApi } from "./locations-exports.api";
-import { healthApi } from "./health.api";
 
 export const locationsApi = {
   ...locationsAiApi,
   ...locationsCrudApi,
   ...locationsUploadsApi,
-  ...locationsReviewsApi,
   ...locationsTripAdvisorApi,
-  ...locationsMergedReviewsApi,
   ...locationsExportsApi,
-  ...healthApi,
 } as const;

@@ -40,14 +40,6 @@ A grouping of `ChecklistField`s under a `category` heading.
 
 Field-level readiness for Payload sync. Includes `completionPercent`, `lastSyncedAt`, `syncStatus`, `targetCollection`, `items`, `summary`, `canSync`, `actions`.
 
-### `ReviewsChecklist`
-
-Google + TripAdvisor fetch + merge progress.
-
-### `ReviewsSourceStatus` / `ReviewsMergeStatus` / `PipelineStatus`
-
-Status enums for review-fetch steps, the merge phase, and generic pipeline state.
-
 ### `JsonExportChecklist`
 
 Export-readiness gate.
@@ -71,7 +63,6 @@ Standard envelope for server responses.
 ## Relationships
 
 - `PayloadSyncChecklist` has many `ChecklistCategory`s, each with many `ChecklistField`s.
-- `ReviewsChecklist` has many `ReviewsSourceStep`s and one `ReviewsMergePhase`.
 - `IdealForTag` is a discriminated union by `LocationCategory`.
 
 ## Domain Rules

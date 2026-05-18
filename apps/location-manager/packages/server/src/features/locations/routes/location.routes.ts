@@ -46,17 +46,13 @@ import {
   postAddInstagram, deleteInstagramEmbed,
   postAddUpload, postAddUploadImageSet, postGenerateAltText, postGenerateNeighborhoodDescription, deleteUpload, patchUploadPhotographerCredit, postReprocessUploadVariants, postReplaceUploadVariants,
   serveImage,
-  fetchReviews, fetchReviewsPipeline, getReviewsPipelineStatus, downloadReviews, getReviewsStatus,
-  fetchTripAdvisorReviews, downloadTripAdvisorReviews, getTripAdvisorReviewsStatus,
   fetchTripAdvisorPlace, downloadTripAdvisorPlace, getTripAdvisorPlaceStatus, downloadLocationExport,
-  translateAndMergeReviews, downloadMergedReviews, getMergedReviewsStatus, getMergedReviewsReport, downloadRejectsReport,
 
   // Admin
   clearDatabase, scanOrphanedFiles, cleanupOrphanedFiles,
   getPendingTaxonomy, approveTaxonomy, rejectTaxonomy,
   getAllCorrections, previewCorrection, createCorrection, deleteCorrection,
   getPayloadLocationRefs,
-  checkTranslationApiHealth,
 
   // Integration
   postSyncLocation, postSyncAll, postSyncTour,
@@ -136,32 +132,13 @@ for (const category of CATEGORY_ROUTES) {
     postGenerateNeighborhoodDescription
   );
 
-  // Google Reviews
-  app.post(`/api/${category}/:id/reviews/fetch`, routeCategory, validateParams(deleteLocationIdSchema), fetchReviews);
-  app.post(`/api/${category}/:id/reviews/fetch-pipeline`, routeCategory, validateParams(deleteLocationIdSchema), fetchReviewsPipeline);
-  app.get(`/api/${category}/:id/reviews/pipeline-status`, routeCategory, validateParams(deleteLocationIdSchema), getReviewsPipelineStatus);
-  app.get(`/api/${category}/:id/reviews/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadReviews);
-  app.get(`/api/${category}/:id/reviews/status`, routeCategory, validateParams(deleteLocationIdSchema), getReviewsStatus);
-
-  // TripAdvisor Reviews
-  app.post(`/api/${category}/:id/tripadvisor-reviews/fetch`, routeCategory, validateParams(deleteLocationIdSchema), fetchTripAdvisorReviews);
-  app.get(`/api/${category}/:id/tripadvisor-reviews/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadTripAdvisorReviews);
-  app.get(`/api/${category}/:id/tripadvisor-reviews/status`, routeCategory, validateParams(deleteLocationIdSchema), getTripAdvisorReviewsStatus);
-
-  // TripAdvisor Place (SerpAPI)
+  // TripAdvisor Place (SerpAPI) — used for Stage 1 dining auto-fill (canonical TA URL lookup)
   app.post(`/api/${category}/:id/tripadvisor-place/fetch`, routeCategory, validateParams(deleteLocationIdSchema), fetchTripAdvisorPlace);
   app.get(`/api/${category}/:id/tripadvisor-place/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadTripAdvisorPlace);
   app.get(`/api/${category}/:id/tripadvisor-place/status`, routeCategory, validateParams(deleteLocationIdSchema), getTripAdvisorPlaceStatus);
 
   // Export (location + TripAdvisor place data)
   app.get(`/api/${category}/:id/export`, routeCategory, validateParams(deleteLocationIdSchema), downloadLocationExport);
-
-  // Merged Reviews (translate & merge)
-  app.post(`/api/${category}/:id/reviews/translate-merge`, routeCategory, validateParams(deleteLocationIdSchema), translateAndMergeReviews);
-  app.get(`/api/${category}/:id/reviews/merged/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadMergedReviews);
-  app.get(`/api/${category}/:id/reviews/merged/status`, routeCategory, validateParams(deleteLocationIdSchema), getMergedReviewsStatus);
-  app.get(`/api/${category}/:id/reviews/merged/report`, routeCategory, validateParams(deleteLocationIdSchema), getMergedReviewsReport);
-  app.get(`/api/${category}/:id/reviews/rejects/download`, routeCategory, validateParams(deleteLocationIdSchema), downloadRejectsReport);
 }
 
 app.post("/api/generate-alt-text", postGenerateAltText);
@@ -227,9 +204,6 @@ app.patch(
 // Admin orphan cleanup routes
 app.get("/api/admin/orphaned-files", scanOrphanedFiles);
 app.post("/api/admin/orphaned-files/cleanup", cleanupOrphanedFiles);
-
-// Health check routes
-app.get("/api/health/translation-api", checkTranslationApiHealth);
 
 // Admin payload location refs route
 app.get("/api/admin/payload-location-refs", getPayloadLocationRefs);

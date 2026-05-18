@@ -74,9 +74,7 @@ export function Stage2Phase({ locationId, onComplete, onSkip }: Stage2PhaseProps
         {status === "done" && result && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {result.reviewsUsed
-                ? "Suggestions generated from the merged reviews."
-                : "No reviews available — fell back to Google grounding."}
+              Suggestions generated from grounded Google Search.
             </p>
             <ul className="divide-y divide-border/60 rounded-md border border-border/60 overflow-hidden">
               {result.outcomes.map((outcome) => (

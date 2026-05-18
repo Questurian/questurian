@@ -75,7 +75,6 @@ export function updateExistingEntity(db: DbClient, entityId: number, location: L
       tripadvisor_location_id = $tripadvisor_location_id,
       payload_location_ref = $payload_location_ref,
       selected_payload_media_set_ids_json = $selected_payload_media_set_ids_json,
-      reviews_enabled = COALESCE($reviews_enabled, reviews_enabled),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = $id
   `).run({
@@ -99,10 +98,6 @@ export function updateExistingEntity(db: DbClient, entityId: number, location: L
     $tripadvisor_location_id: location.tripadvisorLocationId || null,
     $payload_location_ref: location.payload_location_ref || null,
     $selected_payload_media_set_ids_json: location.selectedPayloadMediaSetIdsJson || null,
-    $reviews_enabled:
-      location.reviewsEnabled == null
-        ? null
-        : (location.reviewsEnabled ? 1 : 0),
   });
 }
 
@@ -134,7 +129,6 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       payload_location_ref,
       selected_payload_media_set_ids_json,
       provenance,
-      reviews_enabled,
       created_at,
       updated_at
     )
@@ -162,7 +156,6 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       $payload_location_ref,
       $selected_payload_media_set_ids_json,
       $provenance,
-      $reviews_enabled,
       CURRENT_TIMESTAMP,
       CURRENT_TIMESTAMP
     )
@@ -190,7 +183,6 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
     $payload_location_ref: location.payload_location_ref || null,
     $selected_payload_media_set_ids_json: location.selectedPayloadMediaSetIdsJson || null,
     $provenance: location.provenanceJson || null,
-    $reviews_enabled: location.reviewsEnabled === false ? 0 : 1,
   });
 
   const inserted = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
@@ -300,26 +292,6 @@ export function buildEntityUpdatePlan(id: number, updates: Partial<Location>): U
   if (updates.pendingSuggestionsJson !== undefined) {
     setClause.push("pending_suggestions = $pending_suggestions");
     params.$pending_suggestions = updates.pendingSuggestionsJson;
-  }
-  if (updates.reviewsFetchedAt !== undefined) {
-    setClause.push("reviews_fetched_at = $reviews_fetched_at");
-    params.$reviews_fetched_at = updates.reviewsFetchedAt;
-  }
-  if (updates.reviewsCount !== undefined) {
-    setClause.push("reviews_count = $reviews_count");
-    params.$reviews_count = updates.reviewsCount;
-  }
-  if (updates.reviewsGoogleCount !== undefined) {
-    setClause.push("reviews_google_count = $reviews_google_count");
-    params.$reviews_google_count = updates.reviewsGoogleCount;
-  }
-  if (updates.reviewsTripadvisorCount !== undefined) {
-    setClause.push("reviews_tripadvisor_count = $reviews_tripadvisor_count");
-    params.$reviews_tripadvisor_count = updates.reviewsTripadvisorCount;
-  }
-  if (updates.reviewsEnabled !== undefined) {
-    setClause.push("reviews_enabled = $reviews_enabled");
-    params.$reviews_enabled = updates.reviewsEnabled ? 1 : 0;
   }
   if (updates.updated_at !== undefined) {
     setClause.push("updated_at = $updated_at");

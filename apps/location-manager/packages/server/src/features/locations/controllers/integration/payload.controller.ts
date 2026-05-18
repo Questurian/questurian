@@ -16,14 +16,11 @@ const container = ServiceContainer.getInstance();
 /**
  * POST /api/payload/locations/by-refs
  * Bulk-hydrate LM Locations given Payload (collection, docId) pairs.
- * Used by ABW to enrich listicle blurb generation with canonical venue facts
- * and an on-demand Reviews Digest cached per venue (invalidated by reviewsFetchedAt).
+ * Used by ABW to enrich listicle blurb generation with canonical venue facts.
  */
 export async function postLocationsByPayloadRefs(c: Context) {
   const dto = c.get("validatedBody") as LocationsByPayloadRefsDto;
-  const results = await getEditorialLocationsByPayloadRefs(dto.refs, {
-    altTextApiClient: container.altTextApiClient,
-  });
+  const results = await getEditorialLocationsByPayloadRefs(dto.refs);
   return c.json(successResponse({ results }));
 }
 

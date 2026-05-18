@@ -82,7 +82,6 @@ export interface Location {
   tripadvisorLocationId: string | null;
   menuUrl: string | null;
   reservationUrl: string | null;
-  reviewsEnabled: boolean;
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
   attractionsDetails: Record<string, unknown> | null;
@@ -113,12 +112,6 @@ export interface LocationBasic {
   category: Category;
   type: string | null;
   isComplete: boolean;
-  // Reviews tracking fields
-  reviewsFetchedAt: string | null;
-  reviewsCount: number | null;
-  reviewsGoogleCount: number | null;
-  reviewsTripadvisorCount: number | null;
-  reviewsEnabled: boolean;
 }
 
 export interface LocationResponse {
@@ -155,12 +148,6 @@ export interface LocationResponse {
   instagram_embeds: InstagramEmbed[];
   uploads: Upload[];
   slug: string | null;
-  // Reviews tracking fields
-  reviewsFetchedAt: string | null;
-  reviewsCount: number | null;
-  reviewsGoogleCount: number | null;
-  reviewsTripadvisorCount: number | null;
-  reviewsEnabled: boolean;
   provenance: Record<string, string> | null;
   pendingSuggestions: Record<string, { value: string | string[]; provenance: string }> | null;
   created_at: string;

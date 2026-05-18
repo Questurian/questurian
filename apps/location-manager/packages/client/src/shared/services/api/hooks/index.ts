@@ -17,7 +17,6 @@ export {
 export { useApprovedTaxonomy } from "./useApprovedTaxonomy";
 export { useClearDatabase } from "./useClearDatabase";
 export { useLocationTypes } from "./useLocationTypes";
-export { useTranslationApiHealth } from "./useTranslationApiHealth";
 export { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
 export { useUpdateUploadPhotographerCredit } from "./useUpdateUploadPhotographerCredit";
 export { useReprocessUploadVariants } from "./useReprocessUploadVariants";

@@ -24,20 +24,6 @@ function assertCategory(category: unknown): LocationCategory {
   throw new Error(`Invalid location category in database row: ${String(category)}`);
 }
 
-function toReviewsEnabled(value: unknown): boolean {
-  if (typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "number") {
-    return value !== 0;
-  }
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    return normalized !== "0" && normalized !== "false" && normalized.length > 0;
-  }
-  return true;
-}
-
 function stripNightlifeSpendLevel(details: Record<string, unknown>): Record<string, unknown> {
   const detailsNode = details.details;
   if (!detailsNode || typeof detailsNode !== "object" || Array.isArray(detailsNode)) {
@@ -381,12 +367,6 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     instagram_embeds: location.instagram_embeds || [],
     uploads: location.uploads || [],
     slug: location.slug || null,
-    // Reviews tracking fields
-    reviewsFetchedAt: location.reviewsFetchedAt || null,
-    reviewsCount: location.reviewsCount ?? null,
-    reviewsGoogleCount: location.reviewsGoogleCount ?? null,
-    reviewsTripadvisorCount: location.reviewsTripadvisorCount ?? null,
-    reviewsEnabled: toReviewsEnabled(location.reviewsEnabled),
     provenance: parseStringMap(location.provenanceJson || null),
     pendingSuggestions: parsePendingSuggestions(location.pendingSuggestionsJson || null),
     created_at: location.created_at || new Date().toISOString(),
@@ -870,12 +850,6 @@ export function transformLocationToBasicResponse(
     category,
     type: location.type || null,
     isComplete,
-    // Reviews tracking fields
-    reviewsFetchedAt: location.reviewsFetchedAt || null,
-    reviewsCount: location.reviewsCount ?? null,
-    reviewsGoogleCount: location.reviewsGoogleCount ?? null,
-    reviewsTripadvisorCount: location.reviewsTripadvisorCount ?? null,
-    reviewsEnabled: toReviewsEnabled(location.reviewsEnabled),
   };
 }
 

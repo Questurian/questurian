@@ -47,7 +47,7 @@ describe("accommodations field suggestion validation", () => {
       reason: "Official site positions the hotel as upscale.",
       sources: [],
       unsupported: true,
-    } as never, false);
+    } as never);
 
     expect(response.suggestion).toBeNull();
     expect(response.error).toContain("unsupported keys");
@@ -65,7 +65,7 @@ describe("accommodations field suggestion validation", () => {
       confidence: 0.82,
       reason: "Rates and positioning match a premium property.",
       sources: [{ label: "Official site", url: "https://example.com" }],
-    }, false);
+    });
 
     expect(response.suggestion).toBe("$$$");
     expect(response.confidence).toBe(0.82);
@@ -84,7 +84,7 @@ describe("accommodations field suggestion validation", () => {
       confidence: 0.77,
       reason: "The property advertises suites and event-friendly stays.",
       sources: [],
-    }, false);
+    });
 
     expect(response.suggestion).toEqual(["Couples", "Groups"]);
   });

@@ -32,7 +32,6 @@ export interface CreateMapsRequest {
   tripadvisorMealTypes?: string[] | string;
   tripadvisorCuisines?: string[] | string;
   tripadvisorFeatures?: string[] | string;
-  reviewsEnabled?: boolean;
   tourIds?: number[];
   provenance?: Record<string, string>;
 }
@@ -76,13 +75,12 @@ export interface DiningStage2SuggestionOutcome {
   applied: "live" | "pending" | "skipped";
   reason?: string;
   value?: string | string[];
-  provenance?: "ai-reviews" | "ai-google";
+  provenance?: "ai";
   confidence?: number;
 }
 
 export interface DiningStage2SuggestionResult {
   locationId: number;
-  reviewsUsed: boolean;
   outcomes: DiningStage2SuggestionOutcome[];
 }
 
@@ -131,7 +129,6 @@ export interface AccommodationsFieldSuggestionResponse {
     snippet?: string;
   }>;
   source: "existing-data" | "ai";
-  reviewsUsed: boolean;
   error?: string;
 }
 
@@ -166,7 +163,6 @@ export interface UpdateMapsRequest {
   tripadvisorFeatures?: string[] | string | null;
   priceLevel?: string | null;
   placeId?: string | null;
-  reviewsEnabled?: boolean;
   autoApproveTaxonomy?: boolean;
   tourIds?: number[];
 }

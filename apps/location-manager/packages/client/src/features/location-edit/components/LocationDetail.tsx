@@ -149,7 +149,6 @@ export function LocationDetail({
             setOperationHoursModalOpen={setOperationHoursModalOpen}
           />
           <ExternalLinksSection form={form} location={location} />
-          <ReviewsSection location={location} />
           <MediaSection location={location} />
 
           <div className="space-y-2 pt-2">
@@ -540,25 +539,6 @@ function ExternalLinksSection({
   );
 }
 
-function ReviewsSection({ location }: { location: LocationResponse }) {
-  return (
-    <DetailSection title="Reviews">
-      <DetailRow label="Total reviews">
-        <ReadOnlyValue value={location.reviewsCount ?? 0} />
-      </DetailRow>
-      <DetailRow label="Google">
-        <ReadOnlyValue value={location.reviewsGoogleCount ?? 0} />
-      </DetailRow>
-      <DetailRow label="TripAdvisor">
-        <ReadOnlyValue value={location.reviewsTripadvisorCount ?? 0} />
-      </DetailRow>
-      <DetailRow label="Last fetched">
-        <ReadOnlyValue value={formatDateTime(location.reviewsFetchedAt)} />
-      </DetailRow>
-    </DetailSection>
-  );
-}
-
 function MediaSection({ location }: { location: LocationResponse }) {
   return (
     <DetailSection title="Media">
@@ -720,8 +700,7 @@ function fieldProvenance(
     value === "google" ||
     value === "tripadvisor" ||
     value === "scraper" ||
-    value === "ai-reviews" ||
-    value === "ai-google" ||
+    value === "ai" ||
     value === "operator"
   ) {
     return value;

@@ -1,7 +1,6 @@
 import type { LocationResponse } from "@client/shared/services/api/types";
 import { DetailField } from "../list/DetailField";
 import { LocationCompleteness } from "./LocationCompleteness";
-import { LocationReviewsSection } from "./LocationReviewsSection";
 import { LocationIdealForEditor } from "./LocationIdealForEditor";
 import { LocationMediaGallery } from "./LocationMediaGallery";
 import { AttractionToursManager } from "@client/shared/components/tours/AttractionToursManager";
@@ -46,8 +45,6 @@ export function LocationDetailView({ locationDetail, isLoading, error, onCopyFie
     <div className="mt-4 pt-4 border-t border-border">
       <div className="space-y-3">
         <LocationCompleteness locationDetail={locationDetail} />
-
-        <LocationReviewsSection locationDetail={locationDetail} />
 
         <LocationIdealForEditor locationDetail={locationDetail} />
 

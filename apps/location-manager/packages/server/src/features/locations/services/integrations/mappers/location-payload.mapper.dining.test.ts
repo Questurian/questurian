@@ -41,11 +41,6 @@ describe("mapLocationToPayloadFormat dining", () => {
       instagram_embeds: [],
       uploads: [],
       slug: null,
-      reviewsFetchedAt: null,
-      reviewsCount: null,
-      reviewsGoogleCount: null,
-      reviewsTripadvisorCount: null,
-      reviewsEnabled: false,
       created_at: "2026-01-01 00:00:00",
       updated_at: "2026-01-01 00:00:00",
     } as unknown as LocationResponse;
@@ -110,11 +105,6 @@ describe("mapLocationToPayloadFormat dining", () => {
       instagram_embeds: [],
       uploads: [],
       slug: null,
-      reviewsFetchedAt: null,
-      reviewsCount: null,
-      reviewsGoogleCount: null,
-      reviewsTripadvisorCount: null,
-      reviewsEnabled: false,
       created_at: "2026-01-01 00:00:00",
       updated_at: "2026-01-01 00:00:00",
     } as unknown as LocationResponse;

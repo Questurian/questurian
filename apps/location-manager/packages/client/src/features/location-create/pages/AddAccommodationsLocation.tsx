@@ -1108,7 +1108,6 @@ export function AddAccommodationsLocation() {
           kind: field.kind,
           confidence: 0,
           source: "ai",
-          reviewsUsed: false,
           reason: "",
           sources: [],
           error: getErrorMessage(err),

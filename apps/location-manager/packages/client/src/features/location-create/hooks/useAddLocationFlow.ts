@@ -121,7 +121,7 @@ export function useAddLocationFlow(forcedCategory?: LocationCategory) {
       },
     }, {
       onSuccess: () => {
-        setPhase("reviews");
+        setPhase("success");
       },
       onError: (error) => {
         console.error("Update location error:", error);

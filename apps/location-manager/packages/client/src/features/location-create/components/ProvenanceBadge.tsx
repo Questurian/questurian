@@ -26,15 +26,10 @@ const BADGE_STYLES: Record<Exclude<FieldProvenance, "operator">, BadgeStyle> = {
     title: "Auto-filled from the venue's website",
     className: "border-amber-400/40 bg-amber-400/10 text-amber-300",
   },
-  "ai-reviews": {
+  ai: {
     letters: "AI",
-    title: "Suggested by AI from reviews",
+    title: "Suggested by AI via grounded Google Search",
     className: "border-purple-400/40 bg-purple-400/10 text-purple-300",
-  },
-  "ai-google": {
-    letters: "AI",
-    title: "Suggested by AI from Google place summary (reviews unusable)",
-    className: "border-rose-400/40 bg-rose-400/10 text-rose-300",
   },
 };
 

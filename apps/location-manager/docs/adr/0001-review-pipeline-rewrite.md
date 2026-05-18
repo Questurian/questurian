@@ -1,6 +1,10 @@
 # Review pipeline rewrite: LM-owned enrichment, not an export bundle
 
-**Status:** accepted (2026-05-16)
+**Status:** superseded by [ADR-0005](./0005-remove-review-pipeline.md) (2026-05-18)
+
+The review pipeline this ADR rewrote has been removed entirely; field suggestions now use grounded Google Search instead. See ADR-0005.
+
+(Original ADR text retained below for historical context. **Original status:** accepted (2026-05-16).)
 
 ## Context
 

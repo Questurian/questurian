@@ -20,7 +20,7 @@ import {
   type AddKeyLocationsFormData,
 } from "../validation/add-key-locations.schema";
 
-export type KeyLocationsPhase = "add" | "confirm" | "reviews" | "success";
+export type KeyLocationsPhase = "add" | "confirm" | "success";
 
 interface CreatedLocation {
   id: number;
@@ -381,7 +381,7 @@ export function useAddKeyLocationsFlow() {
       },
       {
         onSuccess: () => {
-          setPhase("reviews");
+          setPhase("success");
         },
       }
     );

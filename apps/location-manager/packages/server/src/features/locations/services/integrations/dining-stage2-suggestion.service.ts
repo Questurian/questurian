@@ -1,14 +1,14 @@
-// Stage 2 of the Add Dining auto-fill pipeline (per ADR-0002).
+// Stage 2 of the Add Dining auto-fill pipeline (per ADR-0002, updated by ADR-0005).
 //
-// Runs AFTER the reviews pipeline has produced merged reviews. Calls python
-// /field-suggestion once per AI-eligible dining field (currently: `type`, `idealFor`),
-// then routes each result either into the live Location value (with provenance
-// flipped to `ai-reviews` / `ai-google`) or into the `pendingSuggestions` side
-// channel — depending on whether the operator has touched the field since Stage 1.
+// Calls python /field-suggestion once per AI-eligible dining field (currently:
+// `type`, `idealFor`) using grounded Google Search as the evidence source, then
+// routes each result either into the live Location value (with provenance set to
+// `ai`) or into the `pendingSuggestions` side channel — depending on whether the
+// operator has touched the field since Stage 1.
 //
 // Decision rule per field:
 //   - If the live field is empty, OR the existing provenance entry indicates the
-//     value is still pipeline-owned (google/tripadvisor/scraper/ai-*), the AI
+//     value is still pipeline-owned (google/tripadvisor/scraper/ai), the AI
 //     suggestion is written to the live field and provenance is updated.
 //   - Otherwise (operator edited the field, dropping provenance), the suggestion
 //     lands in `pendingSuggestions[<field>]` for review on the edit page.
@@ -18,22 +18,19 @@
 
 import { DINING_ESTABLISHMENT_TYPES } from "@shared/types/dining-taxonomy";
 import { DINING_IDEAL_FOR_TAGS } from "@shared/types/location-ideal-for";
-import { REVIEW_SAMPLE_FOR_AI } from "../../constants/translate-merge-reviews.constants";
-import { getLatestMergedReviewsForLocation } from "../../repositories/content/merged-reviews.repository";
 import { getLocationByIdForUpdate } from "../../repositories/core/location-read.repository";
 import { updateLocationById } from "../../repositories/core/location-write.repository";
 import type {
   AltTextApiClient,
   FieldSuggestionAiRequest,
   FieldSuggestionAiResponse,
-  FieldSuggestionAiReviewSample,
 } from "./clients/alt-text-api.client";
 
 const MIN_AI_CONFIDENCE = 0.6;
 
 type DiningStage2Field = "type" | "idealFor";
 
-type ResolvedProvenanceSource = "ai-reviews" | "ai-google";
+type ResolvedProvenanceSource = "ai";
 
 interface FieldOutcome {
   field: DiningStage2Field;
@@ -46,7 +43,6 @@ interface FieldOutcome {
 
 export interface DiningStage2Result {
   locationId: number;
-  reviewsUsed: boolean;
   outcomes: FieldOutcome[];
 }
 
@@ -62,10 +58,9 @@ export class DiningStage2SuggestionService {
       throw new Error(`Stage 2 dining suggestion only applies to dining locations (got ${location.category})`);
     }
 
-    const reviews = await loadReviewSampleIfUsable(locationId);
     const provenance = parseStringMap(location.provenanceJson);
     const pending = parsePendingSuggestions(location.pendingSuggestionsJson);
-    const provenanceSource: ResolvedProvenanceSource = reviews ? "ai-reviews" : "ai-google";
+    const provenanceSource: ResolvedProvenanceSource = "ai";
 
     const currentIdealFor = parseStringArray(location.idealForJson);
     const formValues = {
@@ -102,7 +97,6 @@ export class DiningStage2SuggestionService {
             district: location.district ?? null,
             priceLevel: location.priceLevel ?? null,
           },
-          ...(reviews ? { reviews } : {}),
         },
         validate: (value) =>
           typeof value === "string" &&
@@ -143,7 +137,6 @@ export class DiningStage2SuggestionService {
             district: location.district ?? null,
             priceLevel: location.priceLevel ?? null,
           },
-          ...(reviews ? { reviews } : {}),
         },
         validate: (value) => {
           if (!Array.isArray(value)) return null;
@@ -189,7 +182,6 @@ export class DiningStage2SuggestionService {
 
     return {
       locationId,
-      reviewsUsed: reviews !== null,
       outcomes,
     };
   }
@@ -251,20 +243,6 @@ export class DiningStage2SuggestionService {
   }
 }
 
-async function loadReviewSampleIfUsable(
-  locationId: number
-): Promise<FieldSuggestionAiReviewSample[] | null> {
-  const merged = await getLatestMergedReviewsForLocation(locationId);
-  if (!merged) return null;
-  if (merged.usability.unusable) return null;
-  if (merged.reviews.length === 0) return null;
-  return merged.reviews.slice(0, REVIEW_SAMPLE_FOR_AI).map((review) => ({
-    text: review.review_text ?? "",
-    rating: review.rating ?? null,
-    date: review.review_datetime_utc || null,
-  }));
-}
-
 function parseStringMap(json: string | null | undefined): Record<string, string> {
   if (!json) return {};
   try {
@@ -309,7 +287,7 @@ function parsePendingSuggestions(
       const entry = raw as Record<string, unknown>;
       const provenance = entry.provenance;
       const value = entry.value;
-      if (provenance !== "ai-reviews" && provenance !== "ai-google") continue;
+      if (provenance !== "ai") continue;
       if (typeof value === "string" || Array.isArray(value)) {
         result[key] = { value: value as string | string[], provenance };
       }

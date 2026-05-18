@@ -783,9 +783,6 @@ export class MapsService {
     if (payload.neighborhoodDescription) {
       entry.neighborhoodDescription = payload.neighborhoodDescription;
     }
-    if (payload.reviewsEnabled !== undefined) {
-      entry.reviewsEnabled = payload.reviewsEnabled;
-    }
     if (payload.provenance && Object.keys(payload.provenance).length > 0) {
       entry.provenanceJson = JSON.stringify(payload.provenance);
     }
@@ -978,7 +975,6 @@ export class MapsService {
       ...(tripadvisorFeaturesJson !== undefined && { tripadvisorFeaturesJson }),
       ...(updates.priceLevel !== undefined && { priceLevel: updates.priceLevel }),
       ...(updates.placeId !== undefined && { placeId: updates.placeId }),
-      ...(updates.reviewsEnabled !== undefined && { reviewsEnabled: updates.reviewsEnabled }),
       ...(shouldUpdateUrl && { url: generateGoogleMapsUrl(nextName, nextAddress) }),
       ...(updates.tripadvisorUrl !== undefined && this.resolveTripadvisorFields(updates.tripadvisorUrl)),
     };

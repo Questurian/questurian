@@ -288,17 +288,6 @@ describe("field suggestion schema", () => {
 });
 
 describe("maps patch schema reviews toggle", () => {
-  test("accepts reviewsEnabled as the only patch field", () => {
-    const result = patchMapsSchema.safeParse({
-      reviewsEnabled: false,
-    });
-
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-
-    expect(result.data.reviewsEnabled).toBe(false);
-  });
-
   test("accepts attractionsDetails as a patch field", () => {
     const result = patchMapsSchema.safeParse({
       attractionsDetails: {

@@ -16,12 +16,6 @@ export interface NeighborhoodDescriptionGenerationInput {
   address?: string | null;
 }
 
-export interface FieldSuggestionAiReviewSample {
-  text: string;
-  rating: number | null;
-  date: string | null;
-}
-
 export interface FieldSuggestionAiRequest {
   category: string;
   field_key: string;
@@ -34,7 +28,6 @@ export interface FieldSuggestionAiRequest {
   }>;
   form_values: Record<string, unknown>;
   api_context: Record<string, unknown>;
-  reviews?: FieldSuggestionAiReviewSample[];
 }
 
 export interface FieldSuggestionAiResponse {
@@ -52,30 +45,6 @@ export interface FieldSuggestionAiResponse {
 // These will be removed once that service is renamed.
 export type AccommodationsFieldSuggestionAiRequest = FieldSuggestionAiRequest;
 export type AccommodationsFieldSuggestionAiResponse = FieldSuggestionAiResponse;
-
-export interface ReviewsDigestAiReviewInput {
-  text: string;
-  rating?: number | null;
-  date?: string | null;
-}
-
-export interface ReviewsDigestAiRequest {
-  venue_name: string;
-  venue_category: string;
-  venue_location?: string | null;
-  reviews: ReviewsDigestAiReviewInput[];
-}
-
-export interface ReviewsDigestAiResponse {
-  version: number;
-  knownFor: string[];
-  commonPositives: string[];
-  commonGripes: string[];
-  namedDishes?: string[] | null;
-  summary: string;
-  model_used: string;
-  reviews_considered: number;
-}
 
 export class AltTextApiClient {
   private baseUrl: string;
@@ -152,8 +121,7 @@ export class AltTextApiClient {
 
   /**
    * Suggest one option field via the generalized /field-suggestion endpoint.
-   * Pass `reviews` only when the location has usable merged reviews; the prompt
-   * branch depends on their presence.
+   * Backed by grounded Google Search on the Python side.
    */
   async suggestField(input: FieldSuggestionAiRequest): Promise<FieldSuggestionAiResponse> {
     const response = await fetch(`${this.baseUrl}/field-suggestion`, {
@@ -171,25 +139,5 @@ export class AltTextApiClient {
     }
 
     return response.json() as Promise<FieldSuggestionAiResponse>;
-  }
-
-  /**
-   * Summarize a venue's merged reviews into a compact Reviews Digest used by
-   * the AI Blog Writer's listicle blurb pipeline.
-   */
-  async generateReviewsDigest(input: ReviewsDigestAiRequest): Promise<ReviewsDigestAiResponse> {
-    const response = await fetch(`${this.baseUrl}/reviews/digest`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
-
-    if (!response.ok) {
-      const errorDetail = (await response.text().catch(() => "")).trim();
-      const errorMessage = errorDetail || response.statusText;
-      throw new Error(`Reviews digest generation failed (${response.status}): ${errorMessage}`);
-    }
-
-    return response.json() as Promise<ReviewsDigestAiResponse>;
   }
 }

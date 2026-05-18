@@ -77,34 +77,11 @@ export const API_ENDPOINTS = {
   OPEN_FOLDER: "/api/open-folder",
   IMAGES: "/api/images",
 
-  // Google Reviews
-  FETCH_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/fetch`,
-  FETCH_REVIEWS_PIPELINE: (category: Category, id: number) => `/api/${category}/${id}/reviews/fetch-pipeline`,
-  REVIEWS_PIPELINE_STATUS: (category: Category, id: number, jobId: string) => `/api/${category}/${id}/reviews/pipeline-status?jobId=${jobId}`,
-  DOWNLOAD_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/download`,
-  REVIEWS_STATUS: (category: Category, id: number) => `/api/${category}/${id}/reviews/status`,
-
-  // TripAdvisor Reviews
-  FETCH_TRIPADVISOR_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-reviews/fetch`,
-  DOWNLOAD_TRIPADVISOR_REVIEWS: (category: Category, id: number, lang?: string) =>
-    `/api/${category}/${id}/tripadvisor-reviews/download${lang ? `?lang=${lang}` : ""}`,
-  TRIPADVISOR_REVIEWS_STATUS: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-reviews/status`,
-
-  // TripAdvisor Place (SerpAPI)
+  // TripAdvisor Place (SerpAPI) — used for Stage 1 dining auto-fill (canonical TA URL lookup)
   FETCH_TRIPADVISOR_PLACE: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-place/fetch`,
   DOWNLOAD_TRIPADVISOR_PLACE: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-place/download`,
   TRIPADVISOR_PLACE_STATUS: (category: Category, id: number) => `/api/${category}/${id}/tripadvisor-place/status`,
 
-  // Location Export (location + TripAdvisor place, no reviews)
+  // Location Export
   DOWNLOAD_LOCATION_EXPORT: (category: Category, id: number) => `/api/${category}/${id}/export`,
-
-  // Merged Reviews (translate & merge)
-  TRANSLATE_MERGE_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/translate-merge`,
-  DOWNLOAD_MERGED_REVIEWS: (category: Category, id: number) => `/api/${category}/${id}/reviews/merged/download`,
-  MERGED_REVIEWS_STATUS: (category: Category, id: number) => `/api/${category}/${id}/reviews/merged/status`,
-  MERGED_REVIEWS_REPORT: (category: Category, id: number) => `/api/${category}/${id}/reviews/merged/report`,
-  DOWNLOAD_REJECTS_REPORT: (category: Category, id: number) => `/api/${category}/${id}/reviews/rejects/download`,
-
-  // Health checks
-  TRANSLATION_API_HEALTH: "/api/health/translation-api",
 } as const;
