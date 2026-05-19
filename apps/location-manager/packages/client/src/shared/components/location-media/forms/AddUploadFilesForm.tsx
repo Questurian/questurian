@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Upload, Clock3 } from 'lucide-react';
+import { Upload, Clock3, ShieldCheck } from 'lucide-react';
 import { VARIANT_SPECS } from '@questurian/lm-shared';
 import { FormInput } from '@client/shared/components/forms';
 import { Button } from '@client/components/ui/button';
@@ -99,7 +99,7 @@ export function AddUploadFilesForm({
   const { mutate, isPending, uploadProgress } = useAddUploadImageSet(category ?? null, locationId ?? 0, {
     onSuccess: () => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(`Image set uploaded successfully (${variantCount} variants)`, centerPosition);
+      showToast(`Image set uploaded. Image metadata cleaned. (${variantCount} variants)`, centerPosition);
       handleReset();
     },
     onError: (error: Error) => {
@@ -294,6 +294,10 @@ export function AddUploadFilesForm({
         {isUploadMode ? 'Add Images' : 'Queue Images'}
         {!isUploadMode && <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
       </h4>
+      <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+        <span>Image metadata cleaned on upload</span>
+      </div>
 
       <form onSubmit={handleFormSubmit} className="space-y-3">
         {!hasCroppedImages() && (

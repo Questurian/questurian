@@ -18,6 +18,7 @@ import { getLocationById, updateLocationById } from "../../repositories/core";
 import { saveUpload, getUploadById, deleteUploadById } from "../../repositories/content";
 import { createFromUpload, createFromImageSetUpload } from "../geocoding/location-geocoding.helper";
 import { extractImageMetadata } from "../../utils/image-metadata-extractor";
+import { sanitizeUploadedImageBuffer, UPLOAD_WEBP_QUALITY } from "../../utils/image-upload-sanitizer";
 import { sanitizeLocationName, getFileExtension } from "../../utils/location-utils";
 import { join, relative } from "node:path";
 import { existsSync } from "node:fs";
@@ -33,7 +34,6 @@ const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
   "hero",
 ];
 const REQUIRED_VARIANT_COUNT = REQUIRED_VARIANT_TYPES.length;
-const WEBP_QUALITY = 85;
 
 export class UploadsService {
   constructor(
@@ -520,14 +520,9 @@ export class UploadsService {
    * Save a File object to a specific path, converting to WebP format
    */
   private async saveFileToPath(file: File, filePath: string): Promise<void> {
-    const { default: sharp } = await import("sharp");
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
-    // Convert to WebP using Sharp
-    const webpBuffer = await sharp(buffer)
-      .webp({ quality: WEBP_QUALITY })
-      .toBuffer();
+    const webpBuffer = await sanitizeUploadedImageBuffer(buffer);
 
     await Bun.write(filePath, webpBuffer);
   }
@@ -541,7 +536,7 @@ export class UploadsService {
     const { default: sharp } = await import("sharp");
     const webpBuffer = await sharp(sourceBuffer)
       .resize(width, height, { fit: "cover", position: "centre" })
-      .webp({ quality: WEBP_QUALITY })
+      .webp({ quality: UPLOAD_WEBP_QUALITY })
       .toBuffer();
     await Bun.write(outputPath, webpBuffer);
   }

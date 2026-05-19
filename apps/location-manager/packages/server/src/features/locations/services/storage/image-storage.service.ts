@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, rm, readdir, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import sharp from "sharp";
+import { sanitizeUploadedImageBuffer } from "../../utils/image-upload-sanitizer";
 
 export interface ImageStorageConfig {
   baseDir: string;
@@ -220,11 +220,8 @@ export class ImageStorageService {
       }
 
       try {
-        // Convert to WebP using Sharp
         const buffer = Buffer.from(await file.arrayBuffer());
-        const webpBuffer = await sharp(buffer)
-          .webp({ quality: 85 }) // Adjust quality as needed (0-100)
-          .toBuffer();
+        const webpBuffer = await sanitizeUploadedImageBuffer(buffer);
 
         const filename = `image_${i}.webp`;
         const filePath = join(storagePath, filename);
