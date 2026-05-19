@@ -70,10 +70,10 @@ function getErrorMessage(error: unknown): string {
   return "Unknown error";
 }
 
-function booleanToYesNo(value: boolean | null | undefined, fallback: "yes" | "no" = "yes"): "yes" | "no" {
+function booleanToOptionalYesNo(value: boolean | null | undefined): "" | "yes" | "no" {
   if (value === true) return "yes";
   if (value === false) return "no";
-  return fallback;
+  return "";
 }
 
 function toBoolean(value: "yes" | "no"): boolean {
@@ -82,24 +82,22 @@ function toBoolean(value: "yes" | "no"): boolean {
 
 function pickSingleOption<T extends readonly string[]>(
   value: string | null | undefined,
-  options: T,
-  fallback: T[number]
-): T[number] {
+  options: T
+): T[number] | "" {
   if (value && options.includes(value as T[number])) {
     return value as T[number];
   }
-  return fallback;
+  return "";
 }
 
 function pickMultiOptions<T extends readonly string[]>(
   values: string[] | null | undefined,
-  options: T,
-  fallback: readonly T[number][]
+  options: T
 ): T[number][] {
-  if (!values || values.length === 0) return [...fallback] as T[number][];
+  if (!values || values.length === 0) return [];
   const optionSet = new Set<string>(options);
   const validValues = values.filter((value): value is T[number] => optionSet.has(value));
-  if (validValues.length === 0) return [...fallback] as T[number][];
+  if (validValues.length === 0) return [];
   return validValues;
 }
 
@@ -121,7 +119,8 @@ function getSuggestionFieldOptions(
   if (fieldKey === "checkInTime") return [...CHECK_IN_TIME_OPTIONS];
   if (fieldKey === "checkOutTime") return [...CHECK_OUT_TIME_OPTIONS];
 
-  return [...(getSuggestionField(fieldKey)?.options || [])];
+  const field = getSuggestionField(fieldKey);
+  return field && "options" in field ? [...field.options] : [];
 }
 
 function formatSuggestionValue(
@@ -208,6 +207,7 @@ function OptionSelect({ label, options, value, onChange, error, canSuggest, isSu
         onChange={(event) => onChange(event.target.value)}
         className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
       >
+        <option value="" disabled>— Select —</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -430,29 +430,29 @@ function SuggestionStackOverlay({
   );
 }
 
-const DEFAULT_FORM_VALUES: AddAccommodationsFormData = {
+const DEFAULT_FORM_VALUES = {
   name: "",
   title: "",
   address: "",
   type: "",
-  price: "$$$",
-  perfectFor: ["Solo"],
-  kidFriendly: "yes",
-  ac: "yes",
-  wifi: "yes",
-  extraGuestFee: "no",
-  parking: ["onsite"],
-  breakfastServed: "yes",
-  vibe: ["Luxury"],
-  workspace: ["Dedicated Desk"],
-  restaurant: "yes",
-  pool: ["outdoor"],
-  rooftopLounge: "no",
-  jacuzzi: ["shared"],
-  gym: "Basic",
-  walkability: "Walkable Downtown",
-  checkInTime: "15:00",
-  checkOutTime: "11:00",
+  price: "",
+  perfectFor: [],
+  kidFriendly: "",
+  ac: "",
+  wifi: "",
+  extraGuestFee: "",
+  parking: [],
+  breakfastServed: "",
+  vibe: [],
+  workspace: [],
+  restaurant: "",
+  pool: [],
+  rooftopLounge: "",
+  jacuzzi: [],
+  gym: "",
+  walkability: "",
+  checkInTime: "",
+  checkOutTime: "",
   phone: "",
   websiteUrl: "",
   bookingUrl: "",
@@ -464,7 +464,7 @@ const DEFAULT_FORM_VALUES: AddAccommodationsFormData = {
   locationKey: "",
   district: "",
   ianaTimeId: "",
-};
+} as unknown as AddAccommodationsFormData;
 
 export function EditAccommodationsLocation() {
   const { id, category } = useParams<{ id: string; category: LocationCategory }>();
@@ -509,7 +509,7 @@ export function EditAccommodationsLocation() {
 
     const details = parseAccommodationsDetails(location.accommodationsDetails);
 
-    const values: AddAccommodationsFormData = {
+    const values = {
       name: location.source.name || details.coreName || DEFAULT_FORM_VALUES.name,
       title:
         location.title?.trim() ||
@@ -518,33 +518,30 @@ export function EditAccommodationsLocation() {
         DEFAULT_FORM_VALUES.title,
       address: location.source.address || details.address || DEFAULT_FORM_VALUES.address,
       type: location.type || details.coreType || "",
-      price: pickSingleOption(details.corePrice || location.priceLevel || null, ["$", "$$", "$$$", "$$$$"] as const, DEFAULT_FORM_VALUES.price),
-      perfectFor: pickMultiOptions(details.perfectFor, ["Solo", "Couples", "Groups"] as const, DEFAULT_FORM_VALUES.perfectFor),
-      kidFriendly: booleanToYesNo(details.kidFriendly, "yes"),
-      ac: booleanToYesNo(details.ac, "yes"),
-      wifi: booleanToYesNo(details.wifi, "yes"),
-      extraGuestFee: booleanToYesNo(details.extraGuestFee, "no"),
-      parking: pickMultiOptions(details.parking, ["none", "onsite", "valet", "street", "garage"] as const, DEFAULT_FORM_VALUES.parking),
-      breakfastServed: booleanToYesNo(details.breakfastServed, "yes"),
+      price: pickSingleOption(details.corePrice || location.priceLevel || null, ["$", "$$", "$$$", "$$$$"] as const),
+      perfectFor: pickMultiOptions(details.perfectFor, ["Solo", "Couples", "Groups"] as const),
+      kidFriendly: booleanToOptionalYesNo(details.kidFriendly),
+      ac: booleanToOptionalYesNo(details.ac),
+      wifi: booleanToOptionalYesNo(details.wifi),
+      extraGuestFee: booleanToOptionalYesNo(details.extraGuestFee),
+      parking: pickMultiOptions(details.parking, ["none", "onsite", "valet", "street", "garage"] as const),
+      breakfastServed: booleanToOptionalYesNo(details.breakfastServed),
       vibe: pickMultiOptions(
         details.vibe,
-        ["Luxury", "Social", "Quiet", "Boutique", "Family-Friendly", "Business-Friendly"] as const,
-        DEFAULT_FORM_VALUES.vibe
+        ["Luxury", "Social", "Quiet", "Boutique", "Family-Friendly", "Business-Friendly"] as const
       ),
       workspace: pickMultiOptions(
         details.workspace,
-        ["None", "Shared Lounge", "Dedicated Desk", "Co-working Space"] as const,
-        DEFAULT_FORM_VALUES.workspace
+        ["None", "Shared Lounge", "Dedicated Desk", "Co-working Space"] as const
       ),
-      restaurant: booleanToYesNo(details.restaurant, "yes"),
-      pool: pickMultiOptions(details.pool, ["none", "indoor", "outdoor", "rooftop", "infinity"] as const, DEFAULT_FORM_VALUES.pool),
-      rooftopLounge: booleanToYesNo(details.rooftopLounge, "no"),
-      jacuzzi: pickMultiOptions(details.jacuzzi, ["private", "shared", "rooftop"] as const, DEFAULT_FORM_VALUES.jacuzzi),
-      gym: pickSingleOption(details.gym, ["None", "Basic", "Full", "24/7"] as const, DEFAULT_FORM_VALUES.gym),
+      restaurant: booleanToOptionalYesNo(details.restaurant),
+      pool: pickMultiOptions(details.pool, ["none", "indoor", "outdoor", "rooftop", "infinity"] as const),
+      rooftopLounge: booleanToOptionalYesNo(details.rooftopLounge),
+      jacuzzi: pickMultiOptions(details.jacuzzi, ["none", "private", "shared", "rooftop"] as const),
+      gym: pickSingleOption(details.gym, ["None", "Basic", "Full", "24/7"] as const),
       walkability: pickSingleOption(
         details.walkability,
-        ["Walkable Downtown", "Transit-Friendly", "Car Needed", "Secluded"] as const,
-        DEFAULT_FORM_VALUES.walkability
+        ["Walkable Downtown", "Transit-Friendly", "Car Needed", "Secluded"] as const
       ),
       checkInTime: details.checkInTime || DEFAULT_FORM_VALUES.checkInTime,
       checkOutTime: details.checkOutTime || DEFAULT_FORM_VALUES.checkOutTime,
@@ -559,7 +556,7 @@ export function EditAccommodationsLocation() {
       locationKey: location.locationKey || "",
       district: location.district || details.coreDistrict || "",
       ianaTimeId: location.ianaTimeId || "",
-    };
+    } as unknown as AddAccommodationsFormData;
 
     form.reset(values);
     setPrefillSignature(buildAccommodationsPrefillSignature(values.name, values.address));
@@ -723,7 +720,7 @@ export function EditAccommodationsLocation() {
       name: data.name,
       price: data.price,
       district: data.district || "",
-      type: data.type || "",
+      type: data.type,
       perfectFor: data.perfectFor,
       kidFriendly: toBoolean(data.kidFriendly),
       ac: toBoolean(data.ac),
@@ -756,7 +753,7 @@ export function EditAccommodationsLocation() {
           name: data.name,
           title: data.title?.trim() || undefined,
           address: normalizedAddress,
-          type: data.type || undefined,
+          type: data.type,
           priceLevel: data.price,
           phoneNumber: data.phone || undefined,
           website: data.websiteUrl || undefined,
@@ -1186,7 +1183,7 @@ export function EditAccommodationsLocation() {
           <div className="space-y-2 mt-6">
             <Button
               type="submit"
-              disabled={isPending || (!form.formState.isDirty && !needsTitleBackfill)}
+              disabled={isPending || !form.formState.isValid || (!form.formState.isDirty && !needsTitleBackfill)}
               className="w-full h-10 text-sm font-normal bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isPending ? "Updating..." : "Update Accommodations"}

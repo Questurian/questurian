@@ -712,12 +712,3 @@ function formatCoords(lat: number | null, lng: number | null): string | null {
   if (lat === null || lng === null) return null;
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 }
-
-function formatDateTime(iso: string | null): string | null {
-  if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}

@@ -21,7 +21,11 @@ import {
   normalizeAccommodationsAddress,
   type AddAccommodationsFormData,
 } from "../validation/add-accommodations.schema";
-import { isAccommodationOptionSuggestionEligible } from "../utils/accommodations-ai-suggestions";
+import {
+  isAccommodationOptionSuggestionEligible,
+  optionValueIsEmpty,
+  optionValueMatchesDefault,
+} from "../utils/accommodations-ai-suggestions";
 import {
   BOOLEAN_OPTIONS,
   ACCOMMODATIONS_SUGGESTION_FIELDS,
@@ -114,12 +118,21 @@ interface AccommodationsDraftPayload {
   prefillSignature: string | null;
 }
 
+interface AutoFillProgress {
+  total: number;
+  completed: number;
+  applied: number;
+  failed: number;
+  currentFieldLabel: string | null;
+}
+
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return "Unknown error";
 }
 
 const ACCOMMODATIONS_DRAFT_STORAGE_KEY = "lm:add-accommodations:draft:v1";
+const AUTO_FILL_CONCURRENCY = 3;
 const ACCOMMODATIONS_SECTION_ORDER: AccommodationsFormSection[] = [
   "step1",
   "entities",
@@ -256,7 +269,8 @@ function getSuggestionFieldOptions(
   if (fieldKey === "checkInTime") return [...CHECK_IN_TIME_OPTIONS];
   if (fieldKey === "checkOutTime") return [...CHECK_OUT_TIME_OPTIONS];
 
-  return [...(getSuggestionField(fieldKey)?.options || [])];
+  const field = getSuggestionField(fieldKey);
+  return field && "options" in field ? [...field.options] : [];
 }
 
 function formatSuggestionValue(
@@ -307,6 +321,98 @@ function ManuallySelectedBadge() {
     <span className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-normal text-amber-500">
       Manually selected
     </span>
+  );
+}
+
+function AutoFillProgressOverlay({ progress }: { progress: AutoFillProgress | null }) {
+  if (!progress) return null;
+
+  const percent =
+    progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 100;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-2xl">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sky-500/15 text-sky-400">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Filling accommodations fields</h2>
+            <p className="text-sm text-muted-foreground">
+              Filling {progress.completed}/{progress.total} fields
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-sky-500 transition-all"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+          <span>{progress.currentFieldLabel || "Preparing suggestions"}</span>
+          <span>
+            {progress.applied} applied, {progress.failed} need review
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AutoFillEvidencePanel({
+  evidence,
+}: {
+  evidence: Partial<Record<AiSuggestedField, AccommodationsFieldSuggestionResponse>>;
+}) {
+  const entries = Object.entries(evidence) as Array<
+    [AiSuggestedField, AccommodationsFieldSuggestionResponse]
+  >;
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-sm">
+      <div className="font-medium text-sky-300">AI-filled field evidence</div>
+      <div className="mt-2 space-y-2">
+        {entries.map(([fieldKey, item]) => {
+          const field = getSuggestionField(fieldKey);
+          return (
+            <details key={fieldKey} className="rounded-md border border-sky-500/20 bg-background/60 p-2">
+              <summary className="cursor-pointer text-xs font-medium text-foreground">
+                {field?.label || item.fieldLabel || fieldKey}
+                {item.error ? " needs review" : `: ${formatSuggestionValue(item.suggestion, getSuggestionFieldOptions(fieldKey, []))}`}
+              </summary>
+              {item.reason && (
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{item.reason}</p>
+              )}
+              {item.sources.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {item.sources.map((source, index) => (
+                    <div key={`${source.label}-${index}`} className="text-xs text-muted-foreground">
+                      {source.url ? (
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {source.label}
+                        </a>
+                      ) : (
+                        <span className="font-medium text-foreground">{source.label}</span>
+                      )}
+                      {source.snippet && <p className="mt-0.5 leading-relaxed">{source.snippet}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {item.error && <p className="mt-2 text-xs text-destructive">{item.error}</p>}
+            </details>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -675,6 +781,12 @@ const EXPERIENCE_SUGGESTION_FIELDS: AiSuggestedField[] = [
   "vibe", "workspace", "restaurant", "pool", "rooftopLounge", "jacuzzi", "gym",
 ];
 const DETAILS_SUGGESTION_FIELDS: AiSuggestedField[] = ["walkability", "checkInTime", "checkOutTime"];
+const AUTO_AI_SUGGESTION_FIELDS: AiSuggestedField[] = [
+  ...CORE_SUGGESTION_FIELDS,
+  ...STAY_SUGGESTION_FIELDS,
+  ...EXPERIENCE_SUGGESTION_FIELDS,
+  ...DETAILS_SUGGESTION_FIELDS,
+];
 
 export function AddAccommodationsLocation() {
   const [activeSection, setActiveSection] = useState<AccommodationsFormSection>("step1");
@@ -688,6 +800,10 @@ export function AddAccommodationsLocation() {
   const [manuallySelectedFields, setManuallySelectedFields] = useState<Set<AiSuggestedField>>(() => new Set());
   const [pendingFields, setPendingFields] = useState<Set<AiSuggestedField>>(() => new Set());
   const [suggestionStack, setSuggestionStack] = useState<AccommodationsFieldSuggestionResponse[]>([]);
+  const [autoFillProgress, setAutoFillProgress] = useState<AutoFillProgress | null>(null);
+  const [aiSuggestionEvidence, setAiSuggestionEvidence] = useState<
+    Partial<Record<AiSuggestedField, AccommodationsFieldSuggestionResponse>>
+  >({});
   const [createdName, setCreatedName] = useState<string | null>(null);
   const hasHydratedDraftRef = useRef(false);
 
@@ -745,6 +861,7 @@ export function AddAccommodationsLocation() {
   );
   const isPrefillReady = prefillSignature !== null && prefillSignature === currentPrefillSignature;
   const prefillIsStale = prefillSignature !== null && !isPrefillReady;
+  const canRunGooglePrefill = !isPrefillReady && !isPrefillingGoogle && !isPending;
   const isApiFilled = (field: string) => apiFilledFields.has(field as ApiFilledField);
   const isAiSuggested = (field: AiSuggestedField) => aiSuggestedFields.has(field);
   const isManuallySelected = (field: AiSuggestedField) => manuallySelectedFields.has(field);
@@ -764,6 +881,13 @@ export function AddAccommodationsLocation() {
       isAiSuggested: isAiSuggested(field),
     });
   };
+  const isEmptyOrDefaultSuggestionField = (field: AiSuggestedField) => {
+    const currentValue = form.getValues(field) as AddAccommodationsFormData[AiSuggestedField];
+    return (
+      optionValueIsEmpty(currentValue) ||
+      optionValueMatchesDefault(currentValue, ACCOMMODATIONS_FORM_DEFAULT_VALUES[field])
+    );
+  };
 
   const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
   const stepOneComplete = isPrefillReady;
@@ -771,17 +895,59 @@ export function AddAccommodationsLocation() {
   const coreComplete = Boolean(form.watch("price")) && (form.watch("type")?.length ?? 0) > 0;
   const stayComplete =
     (form.watch("perfectFor")?.length ?? 0) > 0 &&
-    (form.watch("parking")?.length ?? 0) > 0;
+    hasValue(form.watch("kidFriendly")) &&
+    hasValue(form.watch("ac")) &&
+    hasValue(form.watch("wifi")) &&
+    hasValue(form.watch("extraGuestFee")) &&
+    (form.watch("parking")?.length ?? 0) > 0 &&
+    hasValue(form.watch("breakfastServed"));
   const experienceComplete =
     (form.watch("vibe")?.length ?? 0) > 0 &&
     (form.watch("workspace")?.length ?? 0) > 0 &&
+    hasValue(form.watch("restaurant")) &&
     (form.watch("pool")?.length ?? 0) > 0 &&
-    (form.watch("jacuzzi")?.length ?? 0) > 0;
+    hasValue(form.watch("rooftopLounge")) &&
+    (form.watch("jacuzzi")?.length ?? 0) > 0 &&
+    hasValue(form.watch("gym"));
   const detailsComplete =
+    hasValue(form.watch("walkability")) &&
     hasValue(form.watch("phone")) &&
     hasValue(form.watch("websiteUrl")) &&
     hasValue(form.watch("checkInTime")) &&
     hasValue(form.watch("checkOutTime"));
+  const missingRequiredFields = [
+    !isPrefillReady ? "Google lookup" : null,
+    !hasValue(form.watch("type")) ? "Type" : null,
+    !hasValue(form.watch("price")) ? "Price" : null,
+    (form.watch("perfectFor")?.length ?? 0) === 0 ? "Perfect For" : null,
+    !hasValue(form.watch("kidFriendly")) ? "Kid Friendly" : null,
+    !hasValue(form.watch("ac")) ? "AC" : null,
+    !hasValue(form.watch("wifi")) ? "WiFi" : null,
+    !hasValue(form.watch("extraGuestFee")) ? "Extra Adult Guest Fee" : null,
+    (form.watch("parking")?.length ?? 0) === 0 ? "Parking" : null,
+    !hasValue(form.watch("breakfastServed")) ? "Breakfast Served" : null,
+    (form.watch("vibe")?.length ?? 0) === 0 ? "Vibe" : null,
+    (form.watch("workspace")?.length ?? 0) === 0 ? "Workspace" : null,
+    !hasValue(form.watch("restaurant")) ? "Restaurant" : null,
+    (form.watch("pool")?.length ?? 0) === 0 ? "Pool" : null,
+    !hasValue(form.watch("rooftopLounge")) ? "Rooftop Lounge" : null,
+    (form.watch("jacuzzi")?.length ?? 0) === 0 ? "Jacuzzi" : null,
+    !hasValue(form.watch("gym")) ? "Gym" : null,
+    !hasValue(form.watch("walkability")) ? "Walkability" : null,
+    !hasValue(form.watch("checkInTime")) ? "Check-In Time" : null,
+    !hasValue(form.watch("checkOutTime")) ? "Check-Out Time" : null,
+    !hasValue(form.watch("phone")) ? "Phone" : null,
+    !hasValue(form.watch("websiteUrl")) ? "Website URL" : null,
+    !hasValue(form.watch("placeId")) ? "Place ID" : null,
+    !hasValue(form.watch("latitude")) ? "Latitude" : null,
+    !hasValue(form.watch("longitude")) ? "Longitude" : null,
+  ].filter((field): field is string => Boolean(field));
+  const createDisabledReason =
+    missingRequiredFields.length > 0
+      ? `Missing: ${missingRequiredFields.slice(0, 6).join(", ")}${missingRequiredFields.length > 6 ? "..." : ""}`
+      : !form.formState.isValid
+        ? "Fix invalid field values before creating."
+        : null;
 
   const canOpenSection = (section: AccommodationsFormSection) => {
     if (section === "step1") return true;
@@ -822,6 +988,8 @@ export function AddAccommodationsLocation() {
     setGooglePrefillContext(null);
     setPendingFields(new Set());
     setSuggestionStack([]);
+    setAutoFillProgress(null);
+    setAiSuggestionEvidence({});
     clearAccommodationsDraftFromStorage();
   };
 
@@ -844,7 +1012,7 @@ export function AddAccommodationsLocation() {
     field: TField,
     value: AddAccommodationsFormData[TField]
   ) => {
-    form.setValue(field, value, {
+    form.setValue(field, value as never, {
       shouldDirty: true,
       shouldValidate: true,
       shouldTouch: true,
@@ -852,6 +1020,11 @@ export function AddAccommodationsLocation() {
     setAiSuggestedFields((current) => {
       const next = new Set(current);
       next.delete(field);
+      return next;
+    });
+    setAiSuggestionEvidence((current) => {
+      const next = { ...current };
+      delete next[field];
       return next;
     });
     setManuallySelectedFields((current) => {
@@ -877,6 +1050,11 @@ export function AddAccommodationsLocation() {
       next.delete(field);
       return next;
     });
+    setAiSuggestionEvidence((current) => {
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
     setManuallySelectedFields((current) => {
       const next = new Set(current);
       next.add(field);
@@ -884,7 +1062,165 @@ export function AddAccommodationsLocation() {
     });
   };
 
+  const buildSuggestionRequest = (
+    fieldKey: AiSuggestedField,
+    prefillContext: GooglePrefillResponse | null
+  ) => {
+    const allowedOptions = getSuggestionFieldOptions(fieldKey, locationTypes);
+
+    return {
+      category: "accommodations" as const,
+      fieldKey,
+      formValues: form.getValues() as unknown as Record<string, unknown>,
+      apiContext: {
+        googleUrl: prefillContext?.googleUrl || form.getValues("googleUrl") || null,
+        placeId: prefillContext?.placeId || form.getValues("placeId") || null,
+        locationKey: prefillContext?.locationKey || form.getValues("locationKey") || null,
+        district: prefillContext?.district || form.getValues("district") || null,
+        ianaTimeId: prefillContext?.ianaTimeId || form.getValues("ianaTimeId") || null,
+        phoneNumber: prefillContext?.phoneNumber || form.getValues("phone") || null,
+        website: prefillContext?.website || form.getValues("websiteUrl") || null,
+        priceLevel: prefillContext?.priceLevel || null,
+        accommodationsHints: prefillContext?.accommodationsHints || null,
+      },
+      allowedOptions,
+    };
+  };
+
+  const applySuggestionToField = (
+    item: AccommodationsFieldSuggestionResponse,
+    source: "auto" | "manual"
+  ) => {
+    const fieldKey = item.fieldKey as AiSuggestedField;
+    const allowedOptions = getSuggestionFieldOptions(fieldKey, locationTypes);
+    const validatedSuggestion = validateClientSuggestion(
+      item.suggestion,
+      allowedOptions,
+      item.kind === "multi"
+    );
+
+    if (!validatedSuggestion) return false;
+
+    form.setValue(fieldKey, validatedSuggestion as never, {
+      shouldDirty: source === "manual",
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    setAiSuggestedFields((prev) => new Set(prev).add(fieldKey));
+    setManuallySelectedFields((prev) => {
+      const next = new Set(prev);
+      next.delete(fieldKey);
+      return next;
+    });
+    if (source === "auto") {
+      setAiSuggestionEvidence((prev) => ({ ...prev, [fieldKey]: item }));
+    }
+    return true;
+  };
+
+  const runAutoAiFill = async (
+    prefillContext: GooglePrefillResponse,
+    apiFields: Set<ApiFilledField>
+  ) => {
+    const eligibleFields = AUTO_AI_SUGGESTION_FIELDS.filter((field) => {
+      const fieldDefinition = getSuggestionField(field);
+      const options = getSuggestionFieldOptions(field, locationTypes);
+      return (
+        Boolean(fieldDefinition) &&
+        options.length > 0 &&
+        !apiFields.has(field as ApiFilledField) &&
+        isEmptyOrDefaultSuggestionField(field)
+      );
+    });
+
+    if (eligibleFields.length === 0) {
+      setAutoFillProgress(null);
+      return { applied: 0, failed: 0, total: 0 };
+    }
+
+    setAutoFillProgress({
+      total: eligibleFields.length,
+      completed: 0,
+      applied: 0,
+      failed: 0,
+      currentFieldLabel: "Starting AI fill",
+    });
+
+    let cursor = 0;
+    let applied = 0;
+    let failed = 0;
+
+    const worker = async () => {
+      while (cursor < eligibleFields.length) {
+        const fieldKey = eligibleFields[cursor];
+        cursor += 1;
+        const field = getSuggestionField(fieldKey);
+        setPendingFields((prev) => new Set(prev).add(fieldKey));
+        setAutoFillProgress((prev) =>
+          prev ? { ...prev, currentFieldLabel: field?.label || fieldKey } : prev
+        );
+
+        try {
+          const response = await locationsApi.suggestField(
+            buildSuggestionRequest(fieldKey, prefillContext)
+          );
+          const didApply = !response.error && applySuggestionToField(response, "auto");
+          if (didApply) {
+            applied += 1;
+          } else {
+            failed += 1;
+            setAiSuggestionEvidence((prev) => ({ ...prev, [fieldKey]: response }));
+          }
+        } catch (err) {
+          failed += 1;
+          setAiSuggestionEvidence((prev) => ({
+            ...prev,
+            [fieldKey]: {
+              fieldKey,
+              fieldLabel: field?.label || fieldKey,
+              suggestion: null,
+              kind: field?.kind || "single",
+              confidence: 0,
+              source: "ai",
+              reason: "",
+              sources: [],
+              error: getErrorMessage(err),
+            },
+          }));
+        } finally {
+          setPendingFields((prev) => {
+            const next = new Set(prev);
+            next.delete(fieldKey);
+            return next;
+          });
+          setAutoFillProgress((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  completed: prev.completed + 1,
+                  applied,
+                  failed,
+                }
+              : prev
+          );
+        }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(AUTO_FILL_CONCURRENCY, eligibleFields.length) }, () => worker())
+    );
+    setAutoFillProgress(null);
+    return { applied, failed, total: eligibleFields.length };
+  };
+
   const handleGooglePrefill = async () => {
+    if (isPrefillReady) {
+      setPrefillMessage("Google lookup already ran for this name and address. Change name/address or clear fields to run it again.");
+      setPrefillError(null);
+      return;
+    }
+
     setPrefillError(null);
     setPrefillMessage(null);
     setApiFilledFields(new Set());
@@ -893,6 +1229,8 @@ export function AddAccommodationsLocation() {
     setGooglePrefillContext(null);
     setPendingFields(new Set());
     setSuggestionStack([]);
+    setAutoFillProgress(null);
+    setAiSuggestionEvidence({});
 
     const isStepValid = await form.trigger(["name", "address"]);
     if (!isStepValid) {
@@ -1055,10 +1393,17 @@ export function AddAccommodationsLocation() {
       setApiFilledFields(nextApiFilledFields);
       setGooglePrefillContext(prefill);
       setPrefillSignature(buildAccommodationsPrefillSignature(name, normalizedAddress));
+      const autoFillResult = await runAutoAiFill(prefill, nextApiFilledFields);
       setPrefillMessage(
         `Google lookup complete. Place ID, coordinates, location key, district, time zone, phone, and website were prefilled when available.${
           appliedEnrichmentFields.length > 0
             ? ` Additional enrichment filled ${appliedEnrichmentFields.join(", ")}.`
+            : ""
+        }${
+          autoFillResult.total > 0
+            ? ` AI filled ${autoFillResult.applied}/${autoFillResult.total} eligible fields${
+                autoFillResult.failed > 0 ? `; ${autoFillResult.failed} need manual review.` : "."
+              }`
             : ""
         }`
       );
@@ -1069,6 +1414,7 @@ export function AddAccommodationsLocation() {
       setPrefillError(getErrorMessage(lookupError));
     } finally {
       setIsPrefillingGoogle(false);
+      setAutoFillProgress(null);
     }
   };
 
@@ -1080,23 +1426,9 @@ export function AddAccommodationsLocation() {
     setPendingFields((prev) => new Set(prev).add(fieldKey));
 
     try {
-      const response = await locationsApi.suggestField({
-        category: "accommodations",
-        fieldKey,
-        formValues: form.getValues() as unknown as Record<string, unknown>,
-        apiContext: {
-          googleUrl: googlePrefillContext?.googleUrl || form.getValues("googleUrl") || null,
-          placeId: googlePrefillContext?.placeId || form.getValues("placeId") || null,
-          locationKey: googlePrefillContext?.locationKey || form.getValues("locationKey") || null,
-          district: googlePrefillContext?.district || form.getValues("district") || null,
-          ianaTimeId: googlePrefillContext?.ianaTimeId || form.getValues("ianaTimeId") || null,
-          phoneNumber: googlePrefillContext?.phoneNumber || form.getValues("phone") || null,
-          website: googlePrefillContext?.website || form.getValues("websiteUrl") || null,
-          priceLevel: googlePrefillContext?.priceLevel || null,
-          accommodationsHints: googlePrefillContext?.accommodationsHints || null,
-        },
-        allowedOptions,
-      });
+      const response = await locationsApi.suggestField(
+        buildSuggestionRequest(fieldKey, googlePrefillContext)
+      );
       setSuggestionStack((prev) => [...prev, response]);
     } catch (err) {
       setSuggestionStack((prev) => [
@@ -1123,23 +1455,7 @@ export function AddAccommodationsLocation() {
   };
 
   const applyStackedSuggestion = (item: AccommodationsFieldSuggestionResponse) => {
-    const fieldKey = item.fieldKey as AiSuggestedField;
-    const allowedOptions = getSuggestionFieldOptions(fieldKey, locationTypes);
-    const validatedSuggestion = validateClientSuggestion(item.suggestion, allowedOptions, item.kind === "multi");
-
-    if (validatedSuggestion) {
-      form.setValue(fieldKey, validatedSuggestion as AddAccommodationsFormData[typeof fieldKey], {
-        shouldDirty: true,
-        shouldValidate: true,
-        shouldTouch: true,
-      });
-      setAiSuggestedFields((prev) => new Set(prev).add(fieldKey));
-      setManuallySelectedFields((prev) => {
-        const next = new Set(prev);
-        next.delete(fieldKey);
-        return next;
-      });
-    }
+    applySuggestionToField(item, "manual");
     setSuggestionStack((prev) => prev.filter((s) => s !== item));
   };
 
@@ -1174,7 +1490,7 @@ export function AddAccommodationsLocation() {
       name: data.name,
       price: data.price,
       district: data.district || "",
-      type: data.type || "",
+      type: data.type,
       perfectFor: data.perfectFor,
       kidFriendly: toBoolean(data.kidFriendly),
       ac: toBoolean(data.ac),
@@ -1205,7 +1521,7 @@ export function AddAccommodationsLocation() {
         title: data.title?.trim() || data.name,
         address: normalizedAddress,
         category: "accommodations",
-        type: data.type || undefined,
+        type: data.type,
         priceLevel: data.price,
         phoneNumber: data.phone || undefined,
         website: data.websiteUrl || undefined,
@@ -1231,6 +1547,8 @@ export function AddAccommodationsLocation() {
           setGooglePrefillContext(null);
           setPendingFields(new Set());
           setSuggestionStack([]);
+          setAutoFillProgress(null);
+          setAiSuggestionEvidence({});
           setActiveSection("step1");
           clearAccommodationsDraftFromStorage();
         },
@@ -1331,9 +1649,15 @@ export function AddAccommodationsLocation() {
                   <Button
                     type="button"
                     onClick={() => void handleGooglePrefill()}
-                    disabled={isPrefillingGoogle || isPending}
+                    disabled={!canRunGooglePrefill}
                   >
-                    {isPrefillingGoogle ? "Continuing..." : "Continue"}
+                    {isPrefillingGoogle
+                      ? "Continuing..."
+                      : isPrefillReady
+                        ? "Lookup Complete"
+                        : prefillIsStale
+                          ? "Refresh Lookup"
+                          : "Continue"}
                   </Button>
                 </div>
 
@@ -1354,12 +1678,15 @@ export function AddAccommodationsLocation() {
                     Name or address changed after lookup. Run Google lookup again to refresh Place ID and coordinates.
                   </div>
                 )}
+
+                <AutoFillEvidencePanel evidence={aiSuggestionEvidence} />
               </section>
             )}
 
             {isPrefillReady && activeSection === "entities" && (
               <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
                 <SectionHeader title="Entities Fields (Optional Manual Overrides)" isComplete={entitiesComplete} />
+                <AutoFillEvidencePanel evidence={aiSuggestionEvidence} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <FieldLabel apiFilled={isApiFilled("googleUrl")}>Google URL</FieldLabel>
@@ -1752,7 +2079,16 @@ export function AddAccommodationsLocation() {
                     >
                       Check-In Time
                     </FieldLabel>
-                    <Input type="time" {...form.register("checkInTime")} />
+                    <Input
+                      type="time"
+                      value={form.watch("checkInTime")}
+                      onChange={(event) =>
+                        setSingleOptionField(
+                          "checkInTime",
+                          event.target.value as AddAccommodationsFormData["checkInTime"]
+                        )
+                      }
+                    />
                     {form.formState.errors.checkInTime && (
                       <p className="text-xs text-destructive">{form.formState.errors.checkInTime.message}</p>
                     )}
@@ -1766,7 +2102,16 @@ export function AddAccommodationsLocation() {
                     >
                       Check-Out Time
                     </FieldLabel>
-                    <Input type="time" {...form.register("checkOutTime")} />
+                    <Input
+                      type="time"
+                      value={form.watch("checkOutTime")}
+                      onChange={(event) =>
+                        setSingleOptionField(
+                          "checkOutTime",
+                          event.target.value as AddAccommodationsFormData["checkOutTime"]
+                        )
+                      }
+                    />
                     {form.formState.errors.checkOutTime && (
                       <p className="text-xs text-destructive">{form.formState.errors.checkOutTime.message}</p>
                     )}
@@ -1804,9 +2149,16 @@ export function AddAccommodationsLocation() {
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>
                     Previous
                   </Button>
-                  <Button type="submit" disabled={!isPrefillReady || !form.formState.isValid || isPending}>
+                  <div className="flex flex-col items-end gap-2">
+                    {createDisabledReason && (
+                      <p className="max-w-md text-right text-xs text-muted-foreground">
+                        {createDisabledReason}
+                      </p>
+                    )}
+                    <Button type="submit" disabled={Boolean(createDisabledReason) || isPending}>
                     {isPending ? "Creating..." : "Create Accommodations Document"}
-                  </Button>
+                    </Button>
+                  </div>
                 </div>
               </section>
             )}
@@ -1826,6 +2178,7 @@ export function AddAccommodationsLocation() {
             onApply={applyStackedSuggestion}
             onDismiss={dismissStackedSuggestion}
           />
+          <AutoFillProgressOverlay progress={autoFillProgress} />
         </div>
       </div>
     </div>

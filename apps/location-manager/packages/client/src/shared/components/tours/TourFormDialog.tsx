@@ -18,7 +18,6 @@ import {
 import type { PayloadMediaSetItem, Tour } from "@client/shared/services/api/types";
 import { AltTextReviewModal } from "@client/shared/components/location-media/modals/AltTextReviewModal";
 import { MultiVariantCropperModal } from "@client/shared/components/location-media/modals/MultiVariantCropperModal";
-import type { ImageVariantType } from "@questurian/lm-shared";
 import type { ImageVariantUploadFile } from "@client/shared/types/location-media.types";
 import { useCountries } from "@client/shared/hooks/useCountries";
 import {

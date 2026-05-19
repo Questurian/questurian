@@ -101,7 +101,9 @@ export type AccommodationsFieldSuggestionFieldKey =
   | "rooftopLounge"
   | "jacuzzi"
   | "gym"
-  | "walkability";
+  | "walkability"
+  | "checkInTime"
+  | "checkOutTime";
 
 export interface AccommodationsFieldSuggestionRequest {
   category: Category;

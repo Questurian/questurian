@@ -167,7 +167,7 @@ const accommodationsOptionSchema = z.object({
 });
 
 export const fieldSuggestionSchema = z.object({
-  category: z.enum(LOCATION_CATEGORIES),
+  category: z.literal("accommodations"),
   locationId: z.number().int().positive().optional(),
   fieldKey: z.enum(ACCOMMODATIONS_SUGGESTION_FIELD_KEYS),
   formValues: z.record(z.any()).refine((values) => {

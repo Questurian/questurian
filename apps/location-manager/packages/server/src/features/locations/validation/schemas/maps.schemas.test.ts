@@ -285,6 +285,19 @@ describe("field suggestion schema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  test("rejects non-accommodations category until that service is implemented", () => {
+    const result = fieldSuggestionSchema.safeParse({
+      category: "dining",
+      fieldKey: "wifi",
+      formValues: {
+        name: "Example Hotel",
+        address: "123 Main St",
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("maps patch schema reviews toggle", () => {

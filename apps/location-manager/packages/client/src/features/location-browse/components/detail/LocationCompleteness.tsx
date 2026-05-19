@@ -389,29 +389,30 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
   const isCompletenessExpanded = completenessExpanded ?? !isComplete;
   const [editField, setEditField] = useState<{ key: string; label: string; present: boolean } | null>(null);
 
-  const getEditField = (field: { key: string; label: string; present: boolean }) => {
+  const getEditField = (field: { key: string; label: string; present: boolean | null }) => {
+    const present = Boolean(field.present);
     if (field.key.startsWith("accommodations.")) {
       return {
         key: "accommodationsDetails",
         label: "Accommodations Profile",
-        present: field.present,
+        present,
       };
     }
     if (field.key.startsWith("attractions.")) {
       return {
         key: "attractionsDetails",
         label: "Attractions Profile",
-        present: field.present,
+        present,
       };
     }
     if (field.key.startsWith("keyLocations.")) {
       return {
         key: "keyLocationsDetails",
         label: "Key Locations Profile",
-        present: field.present,
+        present,
       };
     }
-    return field;
+    return { ...field, present };
   };
 
   const tripAdvisorPlaceStatusQuery = useTripAdvisorPlaceStatus({

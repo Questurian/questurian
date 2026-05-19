@@ -106,7 +106,7 @@ export function CorrectionModal({
   const [aggregatedPreview, setAggregatedPreview] =
     useState<AggregatedPreview | null>(null);
 
-  const { control, handleSubmit, reset, getValues, trigger, setValue } =
+  const { control, handleSubmit, reset, getValues, trigger } =
     useForm<CorrectionFormData>({
       resolver: zodResolver(correctionSchema),
       defaultValues: buildDefaults(locationKey),

@@ -83,6 +83,11 @@ Per-field tag recording who supplied a value: `google` | `tripadvisor` | `scrape
 
 An AI-derived value that the suggestion pipeline produced *after* the operator already touched the live field. Held in `pendingSuggestions.<fieldPath>` rather than overwriting operator-supplied values. Surfaces on the edit page as a ghosted chip the operator can manually accept. Distinguishes the system's evolving best-guess from the operator's committed choice; lets re-suggest passes run safely without churning confirmed data.
 
+### Add Accommodations autofill flow
+
+The add-time workflow where an operator enters a Google place name and address, API prefill fills high-confidence fields, and AI field suggestions fill remaining eligible accommodations fields before the Location is created.
+_Avoid_: TripAdvisor review pipeline, accommodations review pipeline.
+
 ## Relationships
 
 - A **Location** has one **LocationHierarchy** and zero or more **IdealForTag**s (scoped by category).
@@ -97,6 +102,15 @@ An AI-derived value that the suggestion pipeline produced *after* the operator a
 - Image variant files are generated **on the LM side** before sync — Questura validates and serves, but does not produce variants (per the MediaSet ADR).
 - TaxonomyCorrections apply uniformly: an applied rule must update all matching rows, not only newly imported ones.
 - `IdealForTag` selections are category-bound; an `AccommodationsIdealForTag` may not appear on a `dining` Location.
+- In the **Add Accommodations autofill flow**, field ownership precedence is `operator` > API (`google` / `foursquare`) > `ai`; AI suggestions may fill only still-empty/default eligible fields and must not overwrite operator- or API-owned values during the same add flow.
+- In the **Add Accommodations autofill flow**, Google/Foursquare owns high-confidence prefill for place identity, coordinates, location key, district, time zone, phone, website, price, perfect-for tags, AC, Wi-Fi, parking, and pool; accommodations does not require a TripAdvisor URL.
+- In the **Add Accommodations autofill flow**, AI gap-fill runs automatically as a batch immediately after API prefill; per-field and per-section suggest actions remain as fallback/retry controls.
+- In the **Add Accommodations autofill flow**, valid AI suggestions write directly into eligible empty/default form fields, mark those fields as AI-owned, and retain the suggestion's reason/evidence for operator review.
+- In the **Add Accommodations autofill flow**, automatic AI gap-fill blocks form review briefly with progress, runs with small concurrency, routes to the first review section when complete, and reports failed/low-confidence fields as needing manual review instead of stacking modal suggestions.
+- In the **Add Accommodations autofill flow**, AI suggestion reason/evidence is add-session review state only and is not persisted to the Location.
+- In the **Add Accommodations autofill flow**, AI failure is not its own create blocker; existing form validation blocks Create when required fields remain blank/default, and operators manually complete those fields. The create UI must surface which required fields are still missing so operators are not left with an unexplained disabled button.
+- The **Add Accommodations autofill flow** is client-orchestrated before create: the client calls the existing per-field `/api/field-suggestions` endpoint, manages progress/concurrency/evidence, and does not require a server-side batch endpoint.
+- In the **Add Accommodations autofill flow**, API/AI prefill is one-shot for a given name/address signature. Restored drafts do not auto-run AI on page load; changing name/address makes prior prefill stale until Continue is clicked again, while the same already-prefilled signature cannot be rerun unless the operator clears the flow.
 
 ## Naming Conventions
 
@@ -130,6 +144,7 @@ An AI-derived value that the suggestion pipeline produced *after* the operator a
 - Should `Tour` have its own CONTEXT.md inside `packages/server`? It has its own PayloadSyncState shape and is the only non-Location entity here.
 - Taxonomy corrections feel like they could be a top-level admin module — currently it's split across services.
 - (Resolved 2026-05-18, ADR-0005) The Google + TripAdvisor review pipeline was removed. `/field-suggestion` is grounded-only via Vertex `GoogleSearch`. Accommodations + dining stage 2 are wired; other categories return 400 until rollout.
+- (Resolved 2026-05-18) In Add Accommodations, "pipeline" means the **Add Accommodations autofill flow**, not the removed Google + TripAdvisor review pipeline.
 
 ## Child Contexts
 

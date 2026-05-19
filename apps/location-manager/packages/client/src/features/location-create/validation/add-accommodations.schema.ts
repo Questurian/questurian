@@ -40,7 +40,7 @@ export const addAccommodationsSchema = z.object({
   title: z.string().trim().max(200, "Title must be less than 200 characters").optional().or(z.literal("")),
   address: z.string().trim().min(1, "Address is required").max(500, "Address must be less than 500 characters"),
 
-  type: z.string().trim().optional().or(z.literal("")).transform((value) => (value === "" ? undefined : value)),
+  type: z.string().trim().min(1, "Type is required"),
   price: z.enum(PRICE_VALUES),
 
   perfectFor: z.array(z.enum(PERFECT_FOR_VALUES)).min(1, "Select at least 1 perfect-for option"),
@@ -112,4 +112,3 @@ export const addAccommodationsSubmitSchema = z
   });
 
 export type AddAccommodationsFormData = z.infer<typeof addAccommodationsSchema>;
-

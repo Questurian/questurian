@@ -74,6 +74,15 @@ describe("add accommodations schema", () => {
     expect(result.success).toBe(false);
   });
 
+  test("rejects missing accommodation type", () => {
+    const result = addAccommodationsSchema.safeParse({
+      ...validBaseForm,
+      type: "",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   test("rejects empty required multi-select fields", () => {
     const result = addAccommodationsSchema.safeParse({
       ...validBaseForm,

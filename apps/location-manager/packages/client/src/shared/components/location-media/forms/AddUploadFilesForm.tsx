@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Upload, Clock3 } from 'lucide-react';
-import { type ImageVariantType, VARIANT_SPECS } from '@questurian/lm-shared';
+import { VARIANT_SPECS } from '@questurian/lm-shared';
 import { FormInput } from '@client/shared/components/forms';
 import { Button } from '@client/components/ui/button';
 import { useToast } from '@client/shared/hooks/useToast';
