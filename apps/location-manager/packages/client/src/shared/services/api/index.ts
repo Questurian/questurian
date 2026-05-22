@@ -9,6 +9,8 @@
 export { locationsApi } from "./locations.api";
 export { hierarchyApi } from "./hierarchy.api";
 export { toursApi } from "./tours.api";
+export { photoImportApi } from "./photo-import.api";
+export type { StagedSourceSnapshot } from "./photo-import.api";
 
 // React Query hooks
 export * from "./hooks";

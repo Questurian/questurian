@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch, apiDelete, unwrapEntry } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, apiPostFormData, unwrapEntry } from "./client";
 import { API_ENDPOINTS } from "./config";
 import type {
   LocationsResponse,
@@ -59,6 +59,52 @@ export const locationsCrudApi = {
 
   async createLocation(data: CreateMapsRequest): Promise<LocationResponse> {
     const response = await apiPost<LocationEntryResponse>(API_ENDPOINTS.CREATE_LOCATION(data.category), data);
+    return unwrapEntry(response);
+  },
+
+  /**
+   * Multipart Create for the Add-flow Photo Import path (ADR-0007). The server
+   * creates the Location and writes N fully-formed image-sets in a single
+   * handler; rolls back the Location on any image-set failure.
+   *
+   * `sources[i].variants` MUST contain all 7 variants in any order; the server
+   * checks. `sources[i].photographerCredit` MUST be non-empty.
+   */
+  async createLocationWithPhotos(
+    data: CreateMapsRequest,
+    sources: Array<{
+      sourceName: string;
+      sourceFile: File;
+      variants: { type: string; file: File }[];
+      photographerCredit: string;
+    }>
+  ): Promise<LocationResponse> {
+    if (sources.length === 0) {
+      throw new Error("createLocationWithPhotos requires at least one source");
+    }
+    const form = new FormData();
+    form.append("payload", JSON.stringify(data));
+    form.append(
+      "manifest",
+      JSON.stringify({
+        sources: sources.map((s, i) => ({
+          index: i,
+          photographerCredit: s.photographerCredit,
+          googlePhotoName: s.sourceName,
+        })),
+      })
+    );
+    for (let i = 0; i < sources.length; i++) {
+      const s = sources[i];
+      form.append(`source_${i}`, s.sourceFile, s.sourceFile.name);
+      for (const v of s.variants) {
+        form.append(`variant_${i}_${v.type}`, v.file, v.file.name);
+      }
+    }
+    const response = await apiPostFormData<LocationEntryResponse>(
+      `${API_ENDPOINTS.CREATE_LOCATION(data.category)}/with-photos`,
+      form
+    );
     return unwrapEntry(response);
   },
 

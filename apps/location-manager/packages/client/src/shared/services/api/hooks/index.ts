@@ -24,6 +24,17 @@ export { useReplaceUploadVariants } from "./useReplaceUploadVariants";
 export { usePayloadMediaSets } from "./usePayloadMediaSets";
 export { useGenerateAltText } from "./useGenerateAltText";
 export {
+  usePhotoImportPreview,
+  usePhotoImportPreviewByPlace,
+  useStagedSources,
+  useStartPhotoImport,
+  useRejectPhoto,
+  useUnrejectPhoto,
+  useRetryStagedSource,
+  useDeleteStagedSource,
+  photoImportKeys,
+} from "./usePhotoImport";
+export {
   useCreateTour,
   useSyncPayloadTour,
   useTours,

@@ -8,6 +8,8 @@ import {
   useUpdateLocation,
 } from "@client/shared/services/api/hooks";
 import { locationsApi } from "@client/shared/services/api";
+import { addFlowPhotoSession } from "../lib/add-flow-photo-session";
+import type { CroppedPhotoSource } from "../components/PhotoImportPhase";
 import type { LocationCategory } from "@shared/types/location-category";
 import type { FieldProvenance } from "@questurian/lm-shared";
 import type { ConfirmLocationFormData } from "../validation/add-location.schema";
@@ -207,6 +209,8 @@ export function useAddDiningFlow() {
 
   const { mutate: createLocation, isPending: isCreating, error: createError } = useCreateLocation();
   const { mutate: updateLocation, isPending: isUpdating, error: updateError } = useUpdateLocation();
+  const [photoSubmitError, setPhotoSubmitError] = useState<Error | null>(null);
+  const [isCreatingWithPhotos, setIsCreatingWithPhotos] = useState(false);
   const { data: locationTypes = [], isLoading: isLoadingTypes } = useLocationTypes("dining");
 
   const addForm = useForm<AddDiningFormData>({
@@ -459,7 +463,67 @@ export function useAddDiningFlow() {
     }
   }
 
-  function handleAddDining(data: AddDiningFormData) {
+  function buildDiningCreatePayload(data: AddDiningFormData) {
+    const lat = Number(data.latitude);
+    const lng = Number(data.longitude);
+    return {
+      name: data.name,
+      address: normalizeDiningAddress(data.address),
+      category: "dining" as const,
+      type: data.type || undefined,
+      idealFor: data.idealFor,
+      tripadvisorUrl: data.tripadvisorUrl || undefined,
+      menuUrl: data.menuUrl || undefined,
+      reservationUrl: data.reservationUrl || undefined,
+      url: data.googleUrl || undefined,
+      placeId: data.placeId || undefined,
+      lat: Number.isFinite(lat) ? lat : undefined,
+      lng: Number.isFinite(lng) ? lng : undefined,
+      locationKey: data.locationKey || undefined,
+      district: data.district || undefined,
+      ianaTimeId: data.ianaTimeId || undefined,
+      operationHours: prefillOperationHours || undefined,
+      phoneNumber: prefillPhoneNumber || undefined,
+      website: prefillWebsite || undefined,
+      provenance:
+        Object.keys(provenance).length > 0
+          ? (provenance as Record<string, string>)
+          : undefined,
+    };
+  }
+
+  function onCreateSuccess(response: Awaited<ReturnType<typeof locationsApi.createLocation>>) {
+    setCreatedLocation({
+      id: response.id,
+      category: response.category,
+      name: response.source.name,
+      title: response.title || response.source.name,
+      phoneNumber: response.contact?.phoneNumber || undefined,
+      website: response.contact?.website || undefined,
+      tripadvisorUrl: response.tripadvisorUrl,
+      menuUrl: response.menuUrl,
+      reservationUrl: response.reservationUrl,
+      placeId: response.placeId,
+    });
+    confirmForm.setValue("title", response.title || response.source.name);
+    confirmForm.setValue("phoneNumber", response.contact?.phoneNumber || "");
+    confirmForm.setValue("website", response.contact?.website || "");
+    addForm.reset(DINING_FORM_DEFAULT_VALUES);
+    setPrefillSignature(null);
+    setPrefillOperationHours(null);
+    setPrefillPhoneNumber(null);
+    setPrefillWebsite(null);
+    setProvenance({});
+    setPrefilledValues({});
+    setPrefillMessage(null);
+    setPrefillError(null);
+    clearDiningDraftFromStorage();
+  }
+
+  function handleAddDining(
+    data: AddDiningFormData,
+    photoSession?: { sessionId: string; cropped: CroppedPhotoSource[] }
+  ) {
     const submitValidation = addDiningSubmitSchema.safeParse({
       prefillSignature,
       formValues: data,
@@ -471,65 +535,44 @@ export function useAddDiningFlow() {
       return;
     }
 
-    const lat = Number(data.latitude);
-    const lng = Number(data.longitude);
+    const payload = buildDiningCreatePayload(data);
+    const hasPhotos = !!photoSession && photoSession.cropped.length > 0;
 
-    createLocation(
-      {
-        name: data.name,
-        address: normalizeDiningAddress(data.address),
-        category: "dining",
-        type: data.type || undefined,
-        idealFor: data.idealFor,
-        tripadvisorUrl: data.tripadvisorUrl || undefined,
-        menuUrl: data.menuUrl || undefined,
-        reservationUrl: data.reservationUrl || undefined,
-        url: data.googleUrl || undefined,
-        placeId: data.placeId || undefined,
-        lat: Number.isFinite(lat) ? lat : undefined,
-        lng: Number.isFinite(lng) ? lng : undefined,
-        locationKey: data.locationKey || undefined,
-        district: data.district || undefined,
-        ianaTimeId: data.ianaTimeId || undefined,
-        operationHours: prefillOperationHours || undefined,
-        phoneNumber: prefillPhoneNumber || undefined,
-        website: prefillWebsite || undefined,
-        provenance:
-          Object.keys(provenance).length > 0
-            ? (provenance as Record<string, string>)
-            : undefined,
-      },
-      {
+    if (!hasPhotos) {
+      createLocation(payload, {
         onSuccess: (response) => {
-          setCreatedLocation({
-            id: response.id,
-            category: response.category,
-            name: response.source.name,
-            title: response.title || response.source.name,
-            phoneNumber: response.contact?.phoneNumber || undefined,
-            website: response.contact?.website || undefined,
-            tripadvisorUrl: response.tripadvisorUrl,
-            menuUrl: response.menuUrl,
-            reservationUrl: response.reservationUrl,
-            placeId: response.placeId,
-          });
-          confirmForm.setValue("title", response.title || response.source.name);
-          confirmForm.setValue("phoneNumber", response.contact?.phoneNumber || "");
-          confirmForm.setValue("website", response.contact?.website || "");
+          onCreateSuccess(response);
           setPhase("confirm");
-          addForm.reset(DINING_FORM_DEFAULT_VALUES);
-          setPrefillSignature(null);
-          setPrefillOperationHours(null);
-          setPrefillPhoneNumber(null);
-          setPrefillWebsite(null);
-          setProvenance({});
-          setPrefilledValues({});
-          setPrefillMessage(null);
-          setPrefillError(null);
-          clearDiningDraftFromStorage();
         },
+      });
+      return;
+    }
+
+    // ADR-0007: single atomic multipart Create with all variants attached.
+    setIsCreatingWithPhotos(true);
+    setPhotoSubmitError(null);
+    void (async () => {
+      try {
+        const response = await locationsApi.createLocationWithPhotos(
+          payload,
+          photoSession!.cropped.map((c) => ({
+            sourceName: c.sourceName,
+            sourceFile: c.sourceFile,
+            variants: c.variants.map((v) => ({ type: v.type as string, file: v.file })),
+            photographerCredit: c.photographerCredit,
+          }))
+        );
+        onCreateSuccess(response);
+        await addFlowPhotoSession.clearSession(photoSession!.sessionId).catch(() => undefined);
+        navigate("/");
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error("Create with photos failed");
+        setPhotoSubmitError(error);
+        console.error("[useAddDiningFlow] createLocationWithPhotos failed", err);
+      } finally {
+        setIsCreatingWithPhotos(false);
       }
-    );
+    })();
   }
 
   function handleConfirmTitle(data: ConfirmLocationFormData) {
@@ -581,8 +624,8 @@ export function useAddDiningFlow() {
     confirmForm,
     locationTypes,
     isLoadingTypes,
-    isCreating,
-    createError,
+    isCreating: isCreating || isCreatingWithPhotos,
+    createError: photoSubmitError ?? createError,
     isUpdating,
     updateError,
     isPrefillingGoogle,

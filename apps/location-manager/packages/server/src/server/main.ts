@@ -14,10 +14,14 @@ export function startServer(port = Number(process.env.PORT || 4317)) {
   }
   console.log("Press Ctrl+C to stop the server.");
 
-  // Use Bun's serve with Hono app
+  // Use Bun's serve with Hono app. maxRequestBodySize bumped to 512MB so the
+  // Add-flow photo import multipart (1 source + 7 variants per photo, dozens
+  // of photos per Location) doesn't trip Bun's default body limit and EPIPE
+  // through the Vite proxy.
   return Bun.serve({
     port,
     fetch: app.fetch,
+    maxRequestBodySize: 512 * 1024 * 1024,
   });
 }
 

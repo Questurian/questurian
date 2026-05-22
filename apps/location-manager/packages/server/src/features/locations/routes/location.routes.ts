@@ -38,7 +38,7 @@ import {
   refetchPlaceId,
   getTours, getTour, postTour, patchTour, postTourMediaSet,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
-  postAddMaps, patchMapsById, postGooglePrefill, postFieldSuggestion, postDiningStage2Suggest,
+  postAddMaps, postAddMapsWithPhotos, patchMapsById, postGooglePrefill, postFieldSuggestion, postDiningStage2Suggest,
   postPendingSuggestionAccept, postPendingSuggestionDismiss,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
@@ -58,6 +58,10 @@ import {
   postSyncLocation, postSyncAll, postSyncTour,
   getSyncStatus, getPayloadMediaSets, getTestConnection, deletePayloadSyncState,
   postLocationsByPayloadRefs,
+
+  // Photo Import flow
+  getPhotoImportPreview, getPhotoImportPreviewByPlace, getPhotoImportProxy, postPhotoImportStart, getPhotoImportSources,
+  postPhotoImportReject, postPhotoImportUnreject, postPhotoImportRetry, deleteStagedSource,
 } from "../controllers";
 
 const CATEGORY_ROUTES: readonly LocationCategory[] = [
@@ -95,6 +99,9 @@ for (const category of CATEGORY_ROUTES) {
   app.get(`/api/${category}-basic`, routeCategory, validateQuery(listLocationsQuerySchema), getLocationsBasic);
   app.get(`/api/${category}/:id`, routeCategory, validateParams(deleteLocationIdSchema), getLocationById);
   app.post(`/api/${category}`, routeCategory, validateBody(createMapsSchema), postAddMaps);
+  // ADR-0007: multipart variant for Add flows that bundle pre-cropped Google photos.
+  // Skips the JSON body validator — controller parses + validates the embedded JSON payload itself.
+  app.post(`/api/${category}/with-photos`, routeCategory, postAddMapsWithPhotos);
   app.post(`/api/${category}/google-prefill`, routeCategory, validateBody(googlePrefillSchema), postGooglePrefill);
   app.patch(`/api/${category}/:id`, routeCategory, validateBody(patchMapsSchema), patchMapsById);
   app.delete(`/api/${category}/:id`, routeCategory, validateParams(deleteLocationIdSchema), deleteLocationById);
@@ -140,6 +147,17 @@ for (const category of CATEGORY_ROUTES) {
   // Export (location + TripAdvisor place data)
   app.get(`/api/${category}/:id/export`, routeCategory, validateParams(deleteLocationIdSchema), downloadLocationExport);
 }
+
+// Photo Import flow — see ADR-0006 (operator-staged), ADR-0007 (Add-flow pre-Create), LM CONTEXT.md "Photo Import flow"
+app.get("/api/photo-import/preview-by-place", getPhotoImportPreviewByPlace);
+app.get("/api/photo-import/proxy", getPhotoImportProxy);
+app.get("/api/locations/:id/photo-import/preview", getPhotoImportPreview);
+app.post("/api/locations/:id/photo-import/start", postPhotoImportStart);
+app.get("/api/locations/:id/photo-import/sources", getPhotoImportSources);
+app.post("/api/locations/:id/photo-import/reject", postPhotoImportReject);
+app.post("/api/locations/:id/photo-import/unreject", postPhotoImportUnreject);
+app.post("/api/uploads/:id/photo-import/retry", postPhotoImportRetry);
+app.delete("/api/uploads/:id/staged-source", deleteStagedSource);
 
 app.post("/api/generate-alt-text", postGenerateAltText);
 app.post(

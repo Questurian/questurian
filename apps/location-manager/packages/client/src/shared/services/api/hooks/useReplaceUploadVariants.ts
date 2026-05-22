@@ -3,6 +3,7 @@ import { useState } from "react";
 import { locationsApi } from "../locations.api";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 import { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
+import { photoImportKeys } from "./usePhotoImport";
 import type { Category, Upload } from "../types";
 import type { ImageVariantType } from "@questurian/lm-shared";
 
@@ -45,6 +46,7 @@ export function useReplaceUploadVariants(
       });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: LOCATIONS_BASIC_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: photoImportKeys.sources(options.locationId) });
       options?.onSuccess?.(data);
     },
     onError: (error) => {

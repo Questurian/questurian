@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { BedDouble, CheckCircle2, ChevronLeft, Loader2, Sparkles } from "lucide-react";
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
 import { locationsApi } from "@client/shared/services/api";
 import { useCreateLocation } from "@client/shared/services/api/hooks";
+import { PhotoImportPhase, type PhotoImportSessionState } from "../components/PhotoImportPhase";
+import { addFlowPhotoSession } from "../lib/add-flow-photo-session";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
 import type {
   AccommodationsFieldSuggestionResponse,
@@ -54,7 +56,8 @@ type AccommodationsFormSection =
   | "core"
   | "stay"
   | "experience"
-  | "details";
+  | "details"
+  | "photos";
 
 type MultiField = "perfectFor" | "parking" | "vibe" | "workspace" | "pool" | "jacuzzi";
 type AiSuggestedField = AccommodationsSuggestionFieldKey;
@@ -140,6 +143,7 @@ const ACCOMMODATIONS_SECTION_ORDER: AccommodationsFormSection[] = [
   "stay",
   "experience",
   "details",
+  "photos",
 ];
 
 const ACCOMMODATIONS_FORM_DEFAULT_VALUES = {
@@ -813,7 +817,14 @@ export function AddAccommodationsLocation() {
     mode: "onChange",
   });
 
+  const navigate = useNavigate();
   const { mutate: createLocation, isPending, error } = useCreateLocation();
+  const [photoSession, setPhotoSession] = useState<PhotoImportSessionState | null>(null);
+  const [isCreatingWithPhotos, setIsCreatingWithPhotos] = useState(false);
+  const [photoSubmitError, setPhotoSubmitError] = useState<Error | null>(null);
+  const photoReady = photoSession?.ready ?? false;
+  const photoCount = photoSession?.cropped.length ?? 0;
+  const selectedCount = photoSession?.selected.length ?? 0;
   const { data: locationTypes = [], isLoading: isLoadingTypes } = useLocationTypes("accommodations");
 
   useEffect(() => {
@@ -1000,6 +1011,7 @@ export function AddAccommodationsLocation() {
     { key: "stay", label: "Stay", complete: stayComplete },
     { key: "experience", label: "Experience", complete: experienceComplete },
     { key: "details", label: "Details", complete: detailsComplete },
+    { key: "photos", label: "Photos", complete: photoReady || selectedCount === 0 },
   ];
 
   useEffect(() => {
@@ -1515,45 +1527,78 @@ export function AddAccommodationsLocation() {
       googleMapsUrl: data.googleMapsUrl || "",
     });
 
-    createLocation(
-      {
-        name: data.name,
-        title: data.title?.trim() || data.name,
-        address: normalizedAddress,
-        category: "accommodations",
-        type: data.type,
-        priceLevel: data.price,
-        phoneNumber: data.phone || undefined,
-        website: data.websiteUrl || undefined,
-        district: data.district || undefined,
-        locationKey: data.locationKey || undefined,
-        ianaTimeId: data.ianaTimeId || undefined,
-        placeId: data.placeId || undefined,
-        url: data.googleUrl || data.googleMapsUrl || undefined,
-        lat: Number.isFinite(latValue) ? latValue : undefined,
-        lng: Number.isFinite(lngValue) ? lngValue : undefined,
-        accommodationsDetails,
-      },
-      {
-        onSuccess: (response) => {
-          setCreatedName(response.title || response.source.name);
-          form.reset(ACCOMMODATIONS_FORM_DEFAULT_VALUES);
-          setPrefillSignature(null);
-          setPrefillMessage(null);
-          setPrefillError(null);
-          setApiFilledFields(new Set());
-          setAiSuggestedFields(new Set());
-          setManuallySelectedFields(new Set());
-          setGooglePrefillContext(null);
-          setPendingFields(new Set());
-          setSuggestionStack([]);
-          setAutoFillProgress(null);
-          setAiSuggestionEvidence({});
-          setActiveSection("step1");
-          clearAccommodationsDraftFromStorage();
-        },
+    const payload = {
+      name: data.name,
+      title: data.title?.trim() || data.name,
+      address: normalizedAddress,
+      category: "accommodations" as const,
+      type: data.type,
+      priceLevel: data.price,
+      phoneNumber: data.phone || undefined,
+      website: data.websiteUrl || undefined,
+      district: data.district || undefined,
+      locationKey: data.locationKey || undefined,
+      ianaTimeId: data.ianaTimeId || undefined,
+      placeId: data.placeId || undefined,
+      url: data.googleUrl || data.googleMapsUrl || undefined,
+      lat: Number.isFinite(latValue) ? latValue : undefined,
+      lng: Number.isFinite(lngValue) ? lngValue : undefined,
+      accommodationsDetails,
+    };
+
+    const finalizeSuccess = (response: { id: number; category: string; source: { name: string }; title?: string | null }) => {
+      setCreatedName(response.title || response.source.name);
+      setPhotoSession(null);
+      form.reset(ACCOMMODATIONS_FORM_DEFAULT_VALUES);
+      setPrefillSignature(null);
+      setPrefillMessage(null);
+      setPrefillError(null);
+      setApiFilledFields(new Set());
+      setAiSuggestedFields(new Set());
+      setManuallySelectedFields(new Set());
+      setGooglePrefillContext(null);
+      setPendingFields(new Set());
+      setSuggestionStack([]);
+      setAutoFillProgress(null);
+      setAiSuggestionEvidence({});
+      setActiveSection("step1");
+      clearAccommodationsDraftFromStorage();
+    };
+
+    const hasPhotos = !!photoSession && photoSession.cropped.length > 0;
+
+    if (!hasPhotos) {
+      createLocation(payload, {
+        onSuccess: (response) => finalizeSuccess(response),
+      });
+      return;
+    }
+
+    // ADR-0007: atomic multipart Create with all cropped variants attached.
+    setIsCreatingWithPhotos(true);
+    setPhotoSubmitError(null);
+    void (async () => {
+      try {
+        const response = await locationsApi.createLocationWithPhotos(
+          payload,
+          photoSession!.cropped.map((c) => ({
+            sourceName: c.sourceName,
+            sourceFile: c.sourceFile,
+            variants: c.variants.map((v) => ({ type: v.type as string, file: v.file })),
+            photographerCredit: c.photographerCredit,
+          }))
+        );
+        await addFlowPhotoSession.clearSession(photoSession!.sessionId).catch(() => undefined);
+        finalizeSuccess(response);
+        navigate(`/edit/accommodations/${response.id}`);
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error("Create with photos failed");
+        setPhotoSubmitError(e);
+        console.error("[AddAccommodationsLocation] createLocationWithPhotos failed", err);
+      } finally {
+        setIsCreatingWithPhotos(false);
       }
-    );
+    })();
   };
 
 
@@ -2149,14 +2194,56 @@ export function AddAccommodationsLocation() {
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>
                     Previous
                   </Button>
+                  <Button type="button" onClick={goToNextSection}>
+                    Next
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {isPrefillReady && activeSection === "photos" && (
+              <section className="space-y-5">
+                <PhotoImportPhase
+                  placeId={form.watch("placeId") || null}
+                  category="accommodations"
+                  onSessionChange={setPhotoSession}
+                />
+                <div className="flex justify-between border-t border-border/70 pt-4">
+                  <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                    Previous
+                  </Button>
                   <div className="flex flex-col items-end gap-2">
                     {createDisabledReason && (
                       <p className="max-w-md text-right text-xs text-muted-foreground">
                         {createDisabledReason}
                       </p>
                     )}
-                    <Button type="submit" disabled={Boolean(createDisabledReason) || isPending}>
-                    {isPending ? "Creating..." : "Create Accommodations Document"}
+                    {photoSubmitError && (
+                      <p className="max-w-md text-right text-xs text-destructive">
+                        {photoSubmitError.message}
+                      </p>
+                    )}
+                    <Button
+                      type="submit"
+                      disabled={
+                        Boolean(createDisabledReason) ||
+                        isPending ||
+                        isCreatingWithPhotos ||
+                        (selectedCount > 0 && !photoReady)
+                      }
+                      title={
+                        selectedCount > 0 && !photoReady
+                          ? `${photoCount} of ${selectedCount} photos cropped — finish each crop before Create`
+                          : undefined
+                      }
+                    >
+                      {isPending || isCreatingWithPhotos
+                        ? "Creating..."
+                        : selectedCount === 0
+                          ? "Create Accommodations Document"
+                          : photoReady
+                            ? `Create with ${photoCount} photo${photoCount === 1 ? "" : "s"}`
+                            : `Crop ${selectedCount - photoCount} more to enable Create`}
                     </Button>
                   </div>
                 </div>

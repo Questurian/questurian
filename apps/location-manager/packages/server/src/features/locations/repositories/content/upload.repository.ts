@@ -12,6 +12,9 @@ interface UploadDbRow {
   imageSets: string | null;
   uploadFormat: string;
   created_at: string;
+  staged_source_status: string | null;
+  error_message: string | null;
+  google_photo_name: string | null;
 }
 
 /**
@@ -25,8 +28,16 @@ function mapRow(row: UploadDbRow): Upload {
     imageSet: row.imageSets ? JSON.parse(row.imageSets) : undefined,
     format: 'imageset',
     created_at: row.created_at,
+    stagedSourceStatus: (row.staged_source_status as ImageSetUpload['stagedSourceStatus']) ?? null,
+    errorMessage: row.error_message ?? null,
+    googlePhotoName: row.google_photo_name ?? null,
   } as ImageSetUpload;
 }
+
+const SELECT_UPLOAD_COLUMNS = `
+  id, entity_id as location_id, imageSets, uploadFormat, created_at,
+  staged_source_status, error_message, google_photo_name
+`;
 
 /**
  * Saves an ImageSetUpload to the database
@@ -42,24 +53,33 @@ export function saveUpload(upload: Upload): number | boolean {
       const query = db.query(`
         UPDATE uploads
         SET imageSets = $imageSets,
-            uploadFormat = 'imageset'
+            uploadFormat = 'imageset',
+            staged_source_status = $staged_source_status,
+            error_message = $error_message,
+            google_photo_name = $google_photo_name
         WHERE id = $id
       `);
 
       query.run({
         $id: imageSetUpload.id,
         $imageSets: imageSetUpload.imageSet ? JSON.stringify(imageSetUpload.imageSet) : null,
+        $staged_source_status: imageSetUpload.stagedSourceStatus ?? null,
+        $error_message: imageSetUpload.errorMessage ?? null,
+        $google_photo_name: imageSetUpload.googlePhotoName ?? null,
       });
 
       return imageSetUpload.id;
     } else {
       // Insert new
       db.query(`
-        INSERT INTO uploads (entity_id, imageSets, uploadFormat)
-        VALUES ($location_id, $imageSets, 'imageset')
+        INSERT INTO uploads (entity_id, imageSets, uploadFormat, staged_source_status, error_message, google_photo_name)
+        VALUES ($location_id, $imageSets, 'imageset', $staged_source_status, $error_message, $google_photo_name)
       `).run({
         $location_id: imageSetUpload.location_id,
         $imageSets: imageSetUpload.imageSet ? JSON.stringify(imageSetUpload.imageSet) : null,
+        $staged_source_status: imageSetUpload.stagedSourceStatus ?? null,
+        $error_message: imageSetUpload.errorMessage ?? null,
+        $google_photo_name: imageSetUpload.googlePhotoName ?? null,
       });
 
       const result = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
@@ -74,7 +94,7 @@ export function saveUpload(upload: Upload): number | boolean {
 export function getUploadById(id: number): Upload | null {
   const db = getDb();
   const query = db.query(`
-    SELECT id, entity_id as location_id, imageSets, uploadFormat, created_at
+    SELECT ${SELECT_UPLOAD_COLUMNS}
     FROM uploads
     WHERE id = $id
   `);
@@ -86,7 +106,7 @@ export function getUploadById(id: number): Upload | null {
 export function getUploadsByLocationId(locationId: number): Upload[] {
   const db = getDb();
   const query = db.query(`
-    SELECT id, entity_id as location_id, imageSets, uploadFormat, created_at
+    SELECT ${SELECT_UPLOAD_COLUMNS}
     FROM uploads
     WHERE entity_id = $locationId
     ORDER BY created_at DESC
@@ -108,7 +128,7 @@ export function getUploadsByLocationIds(locationIds: number[]): Map<number, Uplo
   const db = getDb();
   const placeholders = locationIds.map(() => '?').join(',');
   const query = db.query(`
-    SELECT id, entity_id as location_id, imageSets, uploadFormat, created_at
+    SELECT ${SELECT_UPLOAD_COLUMNS}
     FROM uploads
     WHERE entity_id IN (${placeholders})
     ORDER BY created_at DESC

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { locationsApi } from "../locations.api";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 import { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
+import { photoImportKeys } from "./usePhotoImport";
 import type { Category } from "../types";
 
 interface UseDeleteUploadOptions {
@@ -22,6 +23,8 @@ export function useDeleteUpload(options: UseDeleteUploadOptions) {
       });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: LOCATIONS_BASIC_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: photoImportKeys.sources(options.locationId) });
+      queryClient.invalidateQueries({ queryKey: photoImportKeys.preview(options.locationId) });
       options?.onSuccess?.();
     },
     onError: (error) => {

@@ -8,6 +8,7 @@ import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
 import { Breadcrumbs } from "@client/shared/components/layout";
 import { ErrorAlert } from "@client/shared/components/ui";
+import { PhotoImportPanel } from "@client/shared/components/location-media/PhotoImportPanel";
 import { locationsApi, useLocationById, useUpdateLocation } from "@client/shared/services/api";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
 import type { AccommodationsFieldSuggestionResponse } from "@client/shared/services/api/types";
@@ -827,6 +828,14 @@ export function EditAccommodationsLocation() {
               Back
             </Link>
           </Button>
+        </div>
+
+        <div className="mb-6">
+          <PhotoImportPanel
+            locationId={location.id}
+            category="accommodations"
+            placeId={location.placeId ?? null}
+          />
         </div>
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">

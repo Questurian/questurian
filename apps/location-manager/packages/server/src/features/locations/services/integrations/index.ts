@@ -5,6 +5,7 @@ export { PayloadSyncService } from './payload-sync.service';
 export { InstagramService } from './instagram.service';
 export { MapsService } from './maps.service';
 export { UploadsService } from './uploads.service';
+export { PhotoImportService } from './photo-import.service';
 export { TripAdvisorPlaceService } from './tripadvisor-place.service';
 
 // Re-export types for external usage

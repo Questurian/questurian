@@ -54,6 +54,7 @@ export function AddUploadFilesForm({
   const [altTextGenerationError, setAltTextGenerationError] = useState<string | null>(null);
   const [confirmedAltTexts, setConfirmedAltTexts] = useState<(string | undefined)[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [showMetadataCleanedBadge, setShowMetadataCleanedBadge] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: location } = useLocationById(locationId ?? null, category ?? null);
@@ -101,6 +102,7 @@ export function AddUploadFilesForm({
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       showToast(`Image set uploaded. Image metadata cleaned. (${variantCount} variants)`, centerPosition);
       handleReset();
+      setShowMetadataCleanedBadge(true);
     },
     onError: (error: Error) => {
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -117,6 +119,7 @@ export function AddUploadFilesForm({
     const fileArray = Array.from(files);
     const startIndex = selectedFiles.length;
 
+    setShowMetadataCleanedBadge(false);
     setSelectedFiles((prev) => [...prev, ...fileArray]);
     setProcessedImageSets((prev) => [...prev, ...new Array(fileArray.length).fill(null)]);
     setConfirmedAltTexts((prev) => [...prev, ...new Array(fileArray.length).fill(undefined)]);
@@ -294,10 +297,12 @@ export function AddUploadFilesForm({
         {isUploadMode ? 'Add Images' : 'Queue Images'}
         {!isUploadMode && <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
       </h4>
-      <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-        <span>Image metadata cleaned on upload</span>
-      </div>
+      {showMetadataCleanedBadge && (
+        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+          <span>Image metadata cleaned on upload</span>
+        </div>
+      )}
 
       <form onSubmit={handleFormSubmit} className="space-y-3">
         {!hasCroppedImages() && (

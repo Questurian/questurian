@@ -143,6 +143,12 @@ export interface ImageSetUpload {
   imageSet?: import('@questurian/lm-shared').ImageSet;  // Single ImageSet object
   created_at?: string;
   format: 'imageset';  // Format discriminator
+  /** Photo Import flow: status of the StagedSource lifecycle. NULL = operator upload, not from Photo Import. */
+  stagedSourceStatus?: import('@questurian/lm-shared').StagedSourceStatus | null;
+  /** Photo Import flow: error message if stagedSourceStatus='failed'. */
+  errorMessage?: string | null;
+  /** Photo Import flow: Google resource name (places/X/photos/Y) this Upload originated from. */
+  googlePhotoName?: string | null;
 }
 
 /**

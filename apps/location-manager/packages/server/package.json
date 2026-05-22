@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "node scripts/show-commands.cjs && bun run src/server/main.ts",
-    "dev:clean": "lsof -ti:4002 | xargs kill -9 2>/dev/null || true; pnpm install --filter @questurian/lm-server... && node scripts/show-commands.cjs && bun run src/server/main.ts",
+    "dev": "node scripts/show-commands.cjs && bun --hot run src/server/main.ts",
+    "dev:clean": "lsof -ti:4002 | xargs kill -9 2>/dev/null || true; pnpm install --filter @questurian/lm-server... && node scripts/show-commands.cjs && bun --hot run src/server/main.ts",
     "build": "echo 'No build step needed for Bun'",
     "lint": "echo 'Lint intentionally skipped for lm-server (TypeScript baseline not yet clean)'",
     "test": "bun test",

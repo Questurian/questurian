@@ -11,19 +11,24 @@ import type { AddDiningFormData } from "../validation/add-dining.schema";
 import type { FieldProvenance } from "@questurian/lm-shared";
 import { ProvenanceBadge } from "./ProvenanceBadge";
 import { ProcessingCard } from "./ProcessingCard";
+import { PhotoImportPhase, type PhotoImportSessionState } from "./PhotoImportPhase";
 
-type DiningFormSection = "step1" | "entities" | "classification" | "optional";
+type DiningFormSection = "step1" | "entities" | "classification" | "optional" | "photos";
 
 const DINING_SECTION_ORDER: DiningFormSection[] = [
   "step1",
   "entities",
   "classification",
   "optional",
+  "photos",
 ];
 
 interface AddDiningStagedFormProps {
   form: UseFormReturn<AddDiningFormData>;
-  onSubmit: (data: AddDiningFormData) => void;
+  onSubmit: (
+    data: AddDiningFormData,
+    photoSession?: { sessionId: string; cropped: PhotoImportSessionState["cropped"] }
+  ) => void;
   onRunGooglePrefill: () => Promise<boolean>;
   isPrefillingGoogle: boolean;
   isCreating: boolean;
@@ -55,6 +60,11 @@ export function AddDiningStagedForm({
   const idealForOptionGroups = getIdealForOptionGroups("dining");
   const [activeSection, setActiveSection] = useState<DiningFormSection>("step1");
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [photoSession, setPhotoSession] = useState<PhotoImportSessionState | null>(null);
+  const photoReady = photoSession?.ready ?? false;
+  const photoCount = photoSession?.cropped.length ?? 0;
+  const selectedCount = photoSession?.selected.length ?? 0;
+  const watchedPlaceId = form.watch("placeId");
 
   const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
   const stepOneComplete = isPrefillReady;
@@ -77,6 +87,7 @@ export function AddDiningStagedForm({
     { key: "entities", label: "Place", complete: entitiesComplete },
     { key: "classification", label: "Classification", complete: classificationComplete },
     { key: "optional", label: "Links", complete: optionalComplete },
+    { key: "photos", label: "Photos", complete: photoReady || selectedCount === 0 },
   ];
 
   const canOpenSection = (section: DiningFormSection) => {
@@ -191,7 +202,17 @@ export function AddDiningStagedForm({
           </div>
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form
+          onSubmit={form.handleSubmit((data) =>
+            onSubmit(
+              data,
+              photoSession && photoSession.cropped.length > 0
+                ? { sessionId: photoSession.sessionId, cropped: photoSession.cropped }
+                : undefined
+            )
+          )}
+          className="space-y-5"
+        >
           {activeSection === "step1" && (
             <section className="space-y-5">
               {isPrefillRunning ? (
@@ -442,13 +463,47 @@ export function AddDiningStagedForm({
                 <Button type="button" variant="outline" onClick={goToPreviousSection}>
                   Previous
                 </Button>
+                <Button type="button" onClick={() => void goToNextSection()}>
+                  Next
+                </Button>
+              </div>
+            </section>
+          )}
+
+          {isPrefillReady && activeSection === "photos" && (
+            <section className="space-y-5">
+              <PhotoImportPhase
+                placeId={watchedPlaceId || null}
+                category="dining"
+                onSessionChange={setPhotoSession}
+              />
+              <div className="flex justify-between border-t border-border/70 pt-4">
+                <Button type="button" variant="outline" onClick={goToPreviousSection}>
+                  Previous
+                </Button>
                 <Button
                   type="submit"
-                  disabled={!isPrefillReady || !form.formState.isValid || isCreating}
+                  disabled={
+                    !isPrefillReady ||
+                    !form.formState.isValid ||
+                    isCreating ||
+                    (selectedCount > 0 && !photoReady)
+                  }
                   className="gap-2"
+                  title={
+                    selectedCount > 0 && !photoReady
+                      ? `${photoCount} of ${selectedCount} photos cropped — finish each crop before Create`
+                      : undefined
+                  }
                 >
                   {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isCreating ? "Creating..." : "Create Dining Document"}
+                  {isCreating
+                    ? "Creating..."
+                    : selectedCount === 0
+                      ? "Create without photos"
+                      : photoReady
+                        ? `Create with ${photoCount} photo${photoCount === 1 ? "" : "s"}`
+                        : `Crop ${selectedCount - photoCount} more to enable Create`}
                 </Button>
               </div>
             </section>

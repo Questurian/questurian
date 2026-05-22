@@ -24,7 +24,19 @@ interface MultiVariantCropperModalProps {
   file: File;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (sourceFile: File, variantFiles: ImageVariantUploadFile[]) => void;
+  onConfirm: (
+    sourceFile: File,
+    variantFiles: ImageVariantUploadFile[],
+    photographerCredit?: string
+  ) => void;
+  /**
+   * Optional photographer credit. When provided, the modal renders an editable
+   * input pre-filled with this string and passes the final value back through
+   * onConfirm. Used by the Add-flow Photo Import path (ADR-0007) where the
+   * Google `authorAttributions[0].displayName` is editable before finalizing.
+   * Omit on operator-uploaded photos that have no credit semantics yet.
+   */
+  initialPhotographerCredit?: string;
 }
 
 const variantSequence: ImageVariantType[] = ['thumbnail', 'square', 'wide', 'open_graph', 'editorial', 'portrait', 'hero'];
@@ -156,6 +168,7 @@ export function MultiVariantCropperModal({
   isOpen,
   onClose,
   onConfirm,
+  initialPhotographerCredit,
 }: MultiVariantCropperModalProps) {
   const { showToast } = useToast();
   const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -163,6 +176,12 @@ export function MultiVariantCropperModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [baseRotation, setBaseRotation] = useState(0);
   const [straightenAngle, setStraightenAngle] = useState(0);
+  const showCreditField = initialPhotographerCredit !== undefined;
+  const [photographerCredit, setPhotographerCredit] = useState(initialPhotographerCredit ?? "");
+
+  useEffect(() => {
+    setPhotographerCredit(initialPhotographerCredit ?? "");
+  }, [initialPhotographerCredit, file]);
 
   // Initialize crop states for all variants
   const [cropStates, setCropStates] = useState<Record<ImageVariantType, CropState>>(() => createInitialCropStates());
@@ -315,7 +334,11 @@ export function MultiVariantCropperModal({
         createMultiVariantImages(previewUrl, cropStates, file.name, normalizedRotation),
       ]);
 
-      onConfirm(sourceFile, variantFiles);
+      onConfirm(
+        sourceFile,
+        variantFiles,
+        showCreditField ? photographerCredit.trim() : undefined
+      );
     } catch (error) {
       console.error("Error processing variants:", error);
       const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -480,6 +503,28 @@ export function MultiVariantCropperModal({
             <span>Zoom: {Math.round(currentState.zoom * 100)}%</span>
             <span>Use scroll wheel or pinch to adjust</span>
           </div>
+
+          {showCreditField && (
+            <div className="rounded-lg border border-border bg-background/60 p-3">
+              <label
+                htmlFor="photographer-credit"
+                className="mb-1 block text-xs font-medium text-foreground"
+              >
+                Photographer credit
+              </label>
+              <input
+                id="photographer-credit"
+                type="text"
+                value={photographerCredit}
+                onChange={(e) => setPhotographerCredit(e.target.value)}
+                placeholder="Google"
+                className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Prefilled from Google's <code>authorAttributions</code>. Edit if you want a different attribution string on this image-set.
+              </p>
+            </div>
+          )}
 
           <div className="rounded-lg bg-blue-500/10 p-3">
             <h4 className="mb-1 text-sm font-medium text-blue-300">

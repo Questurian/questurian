@@ -30,6 +30,7 @@ import { useReplaceUploadVariants } from "@client/shared/services/api/hooks/useR
 import { useUpdateUploadPhotographerCredit } from "@client/shared/services/api/hooks/useUpdateUploadPhotographerCredit";
 import { AddInstagramEmbedForm } from "./forms/AddInstagramEmbedForm";
 import { AddUploadFilesForm } from "./forms/AddUploadFilesForm";
+import { PhotoImportPanel } from "./PhotoImportPanel";
 import { MultiVariantCropperModal } from "./modals/MultiVariantCropperModal";
 import { PayloadMediaSetSelector } from "./PayloadMediaSetSelector";
 import { ImageLightbox } from "./ui/ImageLightbox";
@@ -513,6 +514,13 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       {locationDetail.category === "attractions" && (
         <PayloadMediaSetSelector locationDetail={locationDetail} />
       )}
+
+      {/* Photo Import flow — see ADR-0006 / CONTEXT.md "Photo Import flow" */}
+      <PhotoImportPanel
+        locationId={locationDetail.id}
+        category={locationDetail.category}
+        placeId={locationDetail.placeId ?? null}
+      />
 
       {/* Instagram and Upload Forms */}
       <div className="flex gap-4">

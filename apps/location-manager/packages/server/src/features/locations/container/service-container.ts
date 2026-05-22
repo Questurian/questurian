@@ -17,6 +17,8 @@ import {
   PayloadSyncService,
   TripAdvisorPlaceService
 } from "../services";
+import { GooglePlacesPhotosClient } from "../services/integrations/clients/google-places-photos.client";
+import { PhotoImportService } from "../services/integrations/photo-import.service";
 import { AccommodationsFieldSuggestionService } from "../services/integrations/accommodations-field-suggestion.service";
 import { DiningStage2SuggestionService } from "../services/integrations/dining-stage2-suggestion.service";
 import { PendingSuggestionsService } from "../services/integrations/pending-suggestions.service";
@@ -37,6 +39,8 @@ export class ServiceContainer {
   readonly mapsService: MapsService;
   readonly instagramService: InstagramService;
   readonly uploadsService: UploadsService;
+  readonly googlePhotosClient: GooglePlacesPhotosClient;
+  readonly photoImportService: PhotoImportService;
   readonly locationQueryService: LocationQueryService;
   readonly locationMutationService: LocationMutationService;
   readonly payloadSyncService: PayloadSyncService;
@@ -72,6 +76,12 @@ export class ServiceContainer {
       this.imageStorage
     );
     this.uploadsService = new UploadsService(this.imageStorage, this.altTextApiClient);
+    this.googlePhotosClient = new GooglePlacesPhotosClient(this.config);
+    this.photoImportService = new PhotoImportService(
+      this.googlePhotosClient,
+      this.imageStorage,
+      this.altTextApiClient
+    );
     this.accommodationsFieldSuggestionService = new AccommodationsFieldSuggestionService(this.altTextApiClient);
     this.diningStage2SuggestionService = new DiningStage2SuggestionService(this.altTextApiClient);
     this.pendingSuggestionsService = new PendingSuggestionsService();

@@ -88,6 +88,31 @@ An AI-derived value that the suggestion pipeline produced *after* the operator a
 The add-time workflow where an operator enters a Google place name and address, API prefill fills high-confidence fields, and AI field suggestions fill remaining eligible accommodations fields before the Location is created.
 _Avoid_: TripAdvisor review pipeline, accommodations review pipeline.
 
+### Photo Import flow
+
+Umbrella term for the two operator workflows that pull a Location's photos from Google Places by `placeId`. Bytes are fetched via a server proxy of the Places `media` endpoint; the operator deselects unwanted photos from the returned set (default: all selected); rejected photo `name`s are remembered per-Location as **Rejected Source**s. Scoped today to Accommodations, Dining, and Nightlife.
+
+Two surfaces with structurally different persistence:
+
+- **Add-time photo import** — pre-Create. Selected photos' source bytes are proxied to the browser, cropped client-side through `MultiVariantCropperModal` (all 7 variants mandatory per source), persisted to IndexedDB during the session, and uploaded as multipart parts to an atomic Create call. No Location row exists until every selected source is fully cropped and the Create transaction succeeds. **Does not produce StagedSources.**
+- **Operator-staged photo import** — post-Create, item-card "Pull from Google" on the Location's edit surface. Server downloads bytes and writes them as **StagedSource** rows for deferred per-variant cropping in `LocationMediaGallery`.
+
+_Avoid_: photo sync, Google photo upload, place photo pipeline.
+
+### StagedSource
+
+A durable `Upload` row with `format: "imageset"`, source bytes on disk, **no variants yet**, awaiting manual per-variant cropping by the operator. Produced only by **Operator-staged photo import** on the Location's edit surface. The **Add-time photo import** path does *not* produce StagedSources — its sources arrive at Create time with all 7 variants already populated. Promoted to a fully-formed image-set when the operator completes the crop pass for that source. Distinct from **Pending Suggestion** (which holds an AI-derived value awaiting operator acceptance — a different concern).
+_Avoid_: pending upload, draft image, uncropped photo (overlapping with operator-uploaded uncropped state).
+
+### Rejected Source
+
+A photo previously returned by Google for a Location that the operator deselected during a **Photo Import flow**. The set of rejected photo `name`s is remembered per-Location so that subsequent re-pulls do not re-surface them as default-selected. Rejection is an operator intent, not a system outcome: photos whose download failed remain re-importable and are **not** rejected.
+_Avoid_: deleted photo, hidden photo, failed photo.
+
+### Photo Import provenance
+
+Photos sourced via the **Photo Import flow** carry their Google contributor name in `Upload.imageSet.photographerCredit` (mapped from `authorAttributions[0].displayName`). Operator may edit this string before finalizing the image-set. Provenance otherwise tracked via the existing **FieldProvenance** mechanism is not extended for image-sets today.
+
 ## Relationships
 
 - A **Location** has one **LocationHierarchy** and zero or more **IdealForTag**s (scoped by category).

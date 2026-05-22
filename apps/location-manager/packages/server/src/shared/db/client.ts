@@ -8,6 +8,7 @@ import { addEntityProvenance } from "./migrations/add-entity-provenance";
 import { addEntityPendingSuggestions } from "./migrations/add-entity-pending-suggestions";
 import { collapseAiProvenance } from "./migrations/collapse-ai-provenance";
 import { dropReviewPipelineSchema } from "./migrations/drop-review-pipeline-schema";
+import { addPhotoImportFields } from "./migrations/add-photo-import-fields";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -73,6 +74,8 @@ export function initDb() {
   collapseAiProvenance(database);
 
   dropReviewPipelineSchema(database);
+
+  addPhotoImportFields(database);
 
   const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
   if (nightlifeIdealForCleanup.cleared > 0) {
