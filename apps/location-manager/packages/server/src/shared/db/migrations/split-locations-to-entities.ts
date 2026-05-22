@@ -280,6 +280,11 @@ function ensureEntitySchema(db: Database): void {
       booking_link TEXT NOT NULL,
       price TEXT NOT NULL,
       location_key TEXT,
+      source_provider TEXT,
+      source_url TEXT,
+      source_title TEXT,
+      source_image_url TEXT,
+      source_product_code TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(title)
@@ -289,6 +294,21 @@ function ensureEntitySchema(db: Database): void {
   const tourColumns = getTableColumns(db, "tours");
   if (!tourColumns.has("location_key")) {
     db.run("ALTER TABLE tours ADD COLUMN location_key TEXT");
+  }
+  if (!tourColumns.has("source_provider")) {
+    db.run("ALTER TABLE tours ADD COLUMN source_provider TEXT");
+  }
+  if (!tourColumns.has("source_url")) {
+    db.run("ALTER TABLE tours ADD COLUMN source_url TEXT");
+  }
+  if (!tourColumns.has("source_title")) {
+    db.run("ALTER TABLE tours ADD COLUMN source_title TEXT");
+  }
+  if (!tourColumns.has("source_image_url")) {
+    db.run("ALTER TABLE tours ADD COLUMN source_image_url TEXT");
+  }
+  if (!tourColumns.has("source_product_code")) {
+    db.run("ALTER TABLE tours ADD COLUMN source_product_code TEXT");
   }
 
   db.run(`

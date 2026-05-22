@@ -1,11 +1,12 @@
 import { useDeferredValue, useMemo, useState } from "react";
-import { Button, Input } from "@client/components/ui";
+import { Button, Input, Textarea } from "@client/components/ui";
 import { TourFormDialog } from "@client/shared/components/tours/TourFormDialog";
-import { useSyncPayloadTour, useTours } from "@client/shared/services/api/hooks";
-import type { Tour } from "@client/shared/services/api/types";
+import { usePreviewTourImport, useSyncPayloadTour, useTours } from "@client/shared/services/api/hooks";
+import type { Tour, TourDraftPreview } from "@client/shared/services/api/types";
 import { useToast } from "@client/shared/hooks/useToast";
 import { formatLocationHierarchy } from "@client/shared/lib/utils";
-import { CloudUpload, ExternalLink, Loader2, Pencil, Plus, Search, Ticket } from "lucide-react";
+import { AlertCircle, CloudUpload, Copy, ExternalLink, Loader2, Pencil, Plus, Search, Ticket, Wand2 } from "lucide-react";
+import { ApiError } from "@client/shared/services/api/client";
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Unknown";
@@ -16,6 +17,120 @@ function formatDate(value: string | null | undefined) {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function formatImportError(error: unknown): string {
+  if (error instanceof ApiError) {
+    return JSON.stringify(
+      {
+        status: error.status,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      },
+      null,
+      2
+    );
+  }
+  return error instanceof Error ? error.message : "Tour import failed.";
+}
+
+function TourImportPanel({
+  onDraftReady,
+  onOpenExisting,
+}: {
+  onDraftReady: (draft: TourDraftPreview) => void;
+  onOpenExisting: (tour: Tour) => void;
+}) {
+  const [url, setUrl] = useState("");
+  const [draft, setDraft] = useState<TourDraftPreview | null>(null);
+  const [errorText, setErrorText] = useState("");
+  const previewImport = usePreviewTourImport();
+  const canImport = url.trim().length > 0 && !previewImport.isPending;
+
+  function runImport() {
+    const value = url.trim();
+    if (!value) return;
+    setDraft(null);
+    setErrorText("");
+    previewImport.mutate(value, {
+      onSuccess: (nextDraft) => {
+        setDraft(nextDraft);
+        if (!nextDraft.duplicateTour) {
+          onDraftReady(nextDraft);
+        }
+      },
+      onError: (err) => setErrorText(formatImportError(err)),
+    });
+  }
+
+  return (
+    <div className="rounded-md border border-border bg-background">
+      <div className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Wand2 className="h-4 w-4 text-primary" />
+            Import from URL
+          </div>
+          <Input
+            value={url}
+            onChange={(event) => {
+              setUrl(event.target.value);
+              setErrorText("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") runImport();
+            }}
+            placeholder="https://www.viator.com/tours/..."
+          />
+        </div>
+        <Button type="button" onClick={runImport} disabled={!canImport} className="lg:mt-7">
+          {previewImport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+          Detect and import
+        </Button>
+      </div>
+
+      {draft?.duplicateTour && (
+        <div className="border-t border-border p-4">
+          <div className="rounded-md border border-amber-300/70 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+            <p className="font-medium">Existing tour uses this booking link.</p>
+            <p className="mt-1">{draft.duplicateTour.title}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="secondary" onClick={() => onOpenExisting(draft.duplicateTour!)}>
+                Open existing
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => onDraftReady(draft)}>
+                Import anyway
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {errorText && (
+        <div className="border-t border-border p-4">
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                Import failed
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void navigator.clipboard.writeText(errorText)}
+              >
+                <Copy className="h-4 w-4" />
+                Copy
+              </Button>
+            </div>
+            <Textarea value={errorText} readOnly className="min-h-28 font-mono text-xs" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PayloadTourStatus({ tour }: { tour: Tour }) {
@@ -137,6 +252,7 @@ export function Tours() {
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
+  const [importDraft, setImportDraft] = useState<TourDraftPreview | null>(null);
   const deferredSearch = useDeferredValue(search.trim());
   const toursQuery = useTours({
     query: deferredSearch || undefined,
@@ -152,11 +268,19 @@ export function Tours() {
 
   function openCreateDialog() {
     setEditingTour(null);
+    setImportDraft(null);
     setIsFormOpen(true);
   }
 
   function openEditDialog(tour: Tour) {
     setEditingTour(tour);
+    setImportDraft(null);
+    setIsFormOpen(true);
+  }
+
+  function openImportDraft(draft: TourDraftPreview) {
+    setEditingTour(null);
+    setImportDraft(draft);
     setIsFormOpen(true);
   }
 
@@ -199,6 +323,8 @@ export function Tours() {
           New tour
         </Button>
       </div>
+
+      <TourImportPanel onDraftReady={openImportDraft} onOpenExisting={openEditDialog} />
 
       <div className="rounded-md border border-border bg-background">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -258,6 +384,7 @@ export function Tours() {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         tour={editingTour}
+        importDraft={importDraft}
       />
     </div>
   );

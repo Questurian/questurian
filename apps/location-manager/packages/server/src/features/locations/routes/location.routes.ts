@@ -19,7 +19,10 @@ import { createCorrectionSchema, deleteCorrectionParamsSchema } from "../validat
 import {
   createTourSchema,
   listToursQuerySchema,
+  tourImportPreviewSchema,
   tourIdParamsSchema,
+  tourSourceImageQuerySchema,
+  tourTitleSuggestionSchema,
   updateTourSchema,
 } from "../validation/schemas/tours.schemas";
 import {
@@ -36,7 +39,8 @@ import {
   // Core
   getLocations, getLocationsBasic, getLocationById, deleteLocationById,
   refetchPlaceId,
-  getTours, getTour, postTour, patchTour, postTourMediaSet,
+  getTours, getTour, postTour, patchTour, postTourMediaSet, postTourImportPreview,
+  postTourTitleSuggestion, getTourSourceImage,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
   postAddMaps, postAddMapsWithPhotos, patchMapsById, postGooglePrefill, postFieldSuggestion, postDiningStage2Suggest,
   postPendingSuggestionAccept, postPendingSuggestionDismiss,
@@ -209,6 +213,9 @@ app.delete(
 app.get("/api/clear-db", clearDatabase);
 
 app.get("/api/tours", validateQuery(listToursQuerySchema), getTours);
+app.post("/api/tours/import/preview", validateBody(tourImportPreviewSchema), postTourImportPreview);
+app.post("/api/tours/import/title-suggestion", validateBody(tourTitleSuggestionSchema), postTourTitleSuggestion);
+app.get("/api/tours/import/source-image", validateQuery(tourSourceImageQuerySchema), getTourSourceImage);
 app.get("/api/tours/:id", validateParams(tourIdParamsSchema), getTour);
 app.post("/api/tours", validateBody(createTourSchema), postTour);
 app.post("/api/tours/media-set", postTourMediaSet);

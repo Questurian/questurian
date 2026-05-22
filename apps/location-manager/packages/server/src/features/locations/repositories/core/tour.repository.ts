@@ -9,6 +9,11 @@ type TourRowDb = {
   bookingLink: string;
   price: string;
   locationKey: string | null;
+  sourceProvider: string | null;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  sourceImageUrl: string | null;
+  sourceProductCode: string | null;
   created_at: string;
   updated_at: string;
   payloadSyncPayloadDocId: string | null;
@@ -40,6 +45,11 @@ function mapTourRow(row: TourRowDb): Tour {
     bookingLink: row.bookingLink,
     price: row.price,
     locationKey: row.locationKey,
+    sourceProvider: row.sourceProvider,
+    sourceUrl: row.sourceUrl,
+    sourceTitle: row.sourceTitle,
+    sourceImageUrl: row.sourceImageUrl,
+    sourceProductCode: row.sourceProductCode,
     created_at: row.created_at,
     updated_at: row.updated_at,
     payloadSync,
@@ -54,6 +64,11 @@ const TOUR_SELECT = `
     tours.booking_link as bookingLink,
     tours.price,
     tours.location_key as locationKey,
+    tours.source_provider as sourceProvider,
+    tours.source_url as sourceUrl,
+    tours.source_title as sourceTitle,
+    tours.source_image_url as sourceImageUrl,
+    tours.source_product_code as sourceProductCode,
     tours.created_at,
     tours.updated_at,
     pss.payload_doc_id as payloadSyncPayloadDocId,
@@ -92,6 +107,8 @@ export function listTours(params: {
           OR tours.booking_link LIKE $query
           OR tours.price LIKE $query
           OR IFNULL(tours.location_key, '') LIKE $query
+          OR IFNULL(tours.source_title, '') LIKE $query
+          OR IFNULL(tours.source_provider, '') LIKE $query
         ORDER BY tours.updated_at DESC, tours.id DESC
         LIMIT $limit
       `)
@@ -126,18 +143,53 @@ export function getTourById(id: number): Tour | null {
   return row ? mapTourRow(row) : null;
 }
 
+export function getTourByBookingLink(bookingLink: string): Tour | null {
+  const db = getDb();
+  const row = db
+    .query(`${TOUR_SELECT} WHERE tours.booking_link = $bookingLink LIMIT 1`)
+    .get({ $bookingLink: bookingLink }) as TourRowDb | null;
+  return row ? mapTourRow(row) : null;
+}
+
 export function createTour(data: {
   title: string;
   imgPayloadMediaSetId: string;
   bookingLink: string;
   price: string;
   locationKey?: string | null;
+  sourceProvider?: string | null;
+  sourceUrl?: string | null;
+  sourceTitle?: string | null;
+  sourceImageUrl?: string | null;
+  sourceProductCode?: string | null;
 }): Tour {
   const db = getDb();
   db
     .query(`
-      INSERT INTO tours (title, img_payload_media_set_id, booking_link, price, location_key)
-      VALUES ($title, $imgPayloadMediaSetId, $bookingLink, $price, $locationKey)
+      INSERT INTO tours (
+        title,
+        img_payload_media_set_id,
+        booking_link,
+        price,
+        location_key,
+        source_provider,
+        source_url,
+        source_title,
+        source_image_url,
+        source_product_code
+      )
+      VALUES (
+        $title,
+        $imgPayloadMediaSetId,
+        $bookingLink,
+        $price,
+        $locationKey,
+        $sourceProvider,
+        $sourceUrl,
+        $sourceTitle,
+        $sourceImageUrl,
+        $sourceProductCode
+      )
     `)
     .run({
       $title: data.title,
@@ -145,6 +197,11 @@ export function createTour(data: {
       $bookingLink: data.bookingLink,
       $price: data.price,
       $locationKey: data.locationKey?.trim() || null,
+      $sourceProvider: data.sourceProvider?.trim() || null,
+      $sourceUrl: data.sourceUrl?.trim() || null,
+      $sourceTitle: data.sourceTitle?.trim() || null,
+      $sourceImageUrl: data.sourceImageUrl?.trim() || null,
+      $sourceProductCode: data.sourceProductCode?.trim() || null,
     });
 
   const row = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
@@ -163,6 +220,11 @@ export function updateTour(
     bookingLink: string;
     price: string;
     locationKey: string | null;
+    sourceProvider: string | null;
+    sourceUrl: string | null;
+    sourceTitle: string | null;
+    sourceImageUrl: string | null;
+    sourceProductCode: string | null;
   }>
 ): Tour {
   const setClause: string[] = [];
@@ -188,6 +250,26 @@ export function updateTour(
     setClause.push("location_key = $locationKey");
     const raw = data.locationKey;
     params.$locationKey = raw === null || raw === "" ? null : raw.trim();
+  }
+  if (data.sourceProvider !== undefined) {
+    setClause.push("source_provider = $sourceProvider");
+    params.$sourceProvider = data.sourceProvider?.trim() || null;
+  }
+  if (data.sourceUrl !== undefined) {
+    setClause.push("source_url = $sourceUrl");
+    params.$sourceUrl = data.sourceUrl?.trim() || null;
+  }
+  if (data.sourceTitle !== undefined) {
+    setClause.push("source_title = $sourceTitle");
+    params.$sourceTitle = data.sourceTitle?.trim() || null;
+  }
+  if (data.sourceImageUrl !== undefined) {
+    setClause.push("source_image_url = $sourceImageUrl");
+    params.$sourceImageUrl = data.sourceImageUrl?.trim() || null;
+  }
+  if (data.sourceProductCode !== undefined) {
+    setClause.push("source_product_code = $sourceProductCode");
+    params.$sourceProductCode = data.sourceProductCode?.trim() || null;
   }
 
   if (setClause.length === 0) {

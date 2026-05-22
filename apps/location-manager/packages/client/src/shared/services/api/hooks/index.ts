@@ -36,6 +36,9 @@ export {
 } from "./usePhotoImport";
 export {
   useCreateTour,
+  useDownloadTourSourceImage,
+  usePreviewTourImport,
+  useSuggestTourTitle,
   useSyncPayloadTour,
   useTours,
   useUpdateTour,

@@ -46,6 +46,9 @@ export const API_ENDPOINTS = {
   TOURS: "/api/tours",
   TOUR_BY_ID: (id: number) => `/api/tours/${id}`,
   TOUR_MEDIA_SET: "/api/tours/media-set",
+  TOUR_IMPORT_PREVIEW: "/api/tours/import/preview",
+  TOUR_TITLE_SUGGESTION: "/api/tours/import/title-suggestion",
+  TOUR_SOURCE_IMAGE: "/api/tours/import/source-image",
 
   // Location hierarchy
   HIERARCHY: "/api/location-hierarchy",

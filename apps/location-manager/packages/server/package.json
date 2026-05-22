@@ -16,6 +16,7 @@
   "dependencies": {
     "@questurian/lm-shared": "workspace:*",
     "hono": "^4.10.8",
+    "patchright": "^1.60.0",
     "sharp": "^0.34.5",
     "zod": "^3.22.4"
   },

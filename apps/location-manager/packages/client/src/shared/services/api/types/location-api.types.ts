@@ -175,6 +175,11 @@ export interface TourRequest {
   bookingLink: string;
   price: string;
   locationKey?: string | null;
+  sourceProvider?: string | null;
+  sourceUrl?: string | null;
+  sourceTitle?: string | null;
+  sourceImageUrl?: string | null;
+  sourceProductCode?: string | null;
 }
 
 export type UpdateTourRequest = Partial<TourRequest>;
@@ -189,6 +194,42 @@ export interface TourResponse {
 
 export interface TourMediaSetResponse {
   mediaSetId: string;
+}
+
+export interface TourDraftPreview {
+  provider: "viator";
+  sourceUrl: string;
+  sourceProductCode: string | null;
+  sourceTitle: string;
+  sourceImageUrl: string | null;
+  displayTitle: string;
+  bookingLink: string;
+  price: string;
+  description: string | null;
+  duration: string | null;
+  supplier: string | null;
+  rating: number | null;
+  reviewCount: number | null;
+  duplicateTour: import("./location.types").Tour | null;
+}
+
+export interface TourImportPreviewResponse {
+  draft: TourDraftPreview;
+}
+
+export interface TourTitleSuggestionRequest {
+  sourceTitle: string;
+  description?: string | null;
+  provider?: string | null;
+  duration?: string | null;
+  price?: string | null;
+  locationKey?: string | null;
+}
+
+export interface TourTitleSuggestionResponse {
+  displayTitle: string;
+  source: "ai" | "fallback";
+  reason?: string;
 }
 
 export interface AddInstagramRequest {

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toursApi } from "../tours.api";
 import { payloadApi } from "../payload.api";
-import type { TourRequest, UpdateTourRequest } from "../types";
+import type { TourRequest, TourTitleSuggestionRequest, UpdateTourRequest } from "../types";
 import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 import { LOCATIONS_QUERY_KEY } from "./useLocations";
 import { PAYLOAD_MEDIA_SETS_QUERY_KEY } from "./usePayloadMediaSets";
@@ -42,6 +42,24 @@ export function useCreateTour() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: TOURS_QUERY_KEY, refetchType: "all" });
     },
+  });
+}
+
+export function usePreviewTourImport() {
+  return useMutation({
+    mutationFn: (url: string) => toursApi.previewImport(url),
+  });
+}
+
+export function useSuggestTourTitle() {
+  return useMutation({
+    mutationFn: (data: TourTitleSuggestionRequest) => toursApi.suggestTitle(data),
+  });
+}
+
+export function useDownloadTourSourceImage() {
+  return useMutation({
+    mutationFn: (url: string) => toursApi.downloadSourceImage(url),
   });
 }
 

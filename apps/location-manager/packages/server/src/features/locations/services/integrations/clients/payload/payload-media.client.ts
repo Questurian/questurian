@@ -56,7 +56,11 @@ export class PayloadMediaClient {
     }
 
     if (options.mediaSet) {
-      payload.mediaSet = options.mediaSet;
+      const parsedMediaSet = Number(options.mediaSet);
+      if (Number.isNaN(parsedMediaSet)) {
+        throw new Error(`Invalid mediaSet ID for Payload media upload: ${options.mediaSet}`);
+      }
+      payload.mediaSet = parsedMediaSet;
       console.log("✅ [PAYLOAD CLIENT] Added mediaSet to payload:", payload.mediaSet);
     }
 

@@ -59,6 +59,51 @@ Field-level completion tracking before Payload sync. Each field tags `status` as
 
 A bookable offering tied to a `locationKey`. Has its own `PayloadSyncState` (`TourPayloadSyncState`).
 
+### `TourDraft`
+
+Operator-reviewable staging shape for a prospective Tour before confirmation.
+_Avoid_: Product, scraped tour.
+
+### Tour Display Title
+
+The operator-approved public-facing title for a Tour, optionally drafted with AI from source context.
+_Avoid_: source title, provider title.
+
+### Source Tour Title
+
+The title as supplied by a `Tour Source Provider` before operator review.
+_Avoid_: display title.
+
+### Source Product Code
+
+A provider-assigned stable identifier for a source tour, when the provider exposes one.
+_Avoid_: LM Tour ID, Payload doc ID.
+
+### `ViatorProduct`
+
+A source-specific bookable offering scraped from Viator before it is mapped into a `TourDraft`.
+_Avoid_: Tour, external API record.
+
+### Tour Source Image
+
+A remote source image attached to a `TourDraft` before it becomes an operator-reviewed image set.
+_Avoid_: final tour image, Payload media set.
+
+### Tour Source Provider
+
+The website or vendor family a tour import URL belongs to, such as Viator.
+_Avoid_: API provider, scraper.
+
+### Unsupported Tour URL
+
+A tour import URL that LM cannot map to a known `Tour Source Provider`.
+_Avoid_: invalid URL, failed scrape.
+
+### Duplicate Tour Candidate
+
+A `TourDraft` whose source URL matches an existing Tour's booking link.
+_Avoid_: duplicate title, same tour.
+
 ### `ImageSet` / `ImageVariant`
 
 A multi-variant image bundle (e.g. thumbnail / preview / full). LM generates variant files before Payload sync (per ADR `0001-mediaset-as-public-image-source` in Questura).
@@ -118,6 +163,13 @@ Photos sourced via the **Photo Import flow** carry their Google contributor name
 - A **Location** has one **LocationHierarchy** and zero or more **IdealForTag**s (scoped by category).
 - A **Location** has one **PayloadSyncState** per target collection (`dining`, `accommodations`, `attractions`, `nightlife`, `key-locations`).
 - A **Tour** belongs to one Location via `locationKey`; it has its own `TourPayloadSyncState`.
+- A **Tour** has one **Tour Display Title**.
+- A **ViatorProduct** maps into one **TourDraft**; a **TourDraft** may become one **Tour** after operator confirmation.
+- A **Source Tour Title** may inform a **Tour Display Title**, but it is not the same value.
+- A **Source Product Code** may be attached to a **Tour** as source provenance.
+- A **ViatorProduct** may supply one **Tour Source Image** for the **TourDraft** image pipeline.
+- An **Unsupported Tour URL** produces no **TourDraft**.
+- A **Duplicate Tour Candidate** points at an existing **Tour** but does not automatically update it.
 - A **CorrectionRule** applies to many `LocationHierarchy` rows.
 
 ## Domain Rules
@@ -131,6 +183,11 @@ Photos sourced via the **Photo Import flow** carry their Google contributor name
 - In the **Add Accommodations autofill flow**, Google/Foursquare owns high-confidence prefill for place identity, coordinates, location key, district, time zone, phone, website, price, perfect-for tags, AC, Wi-Fi, parking, and pool; accommodations does not require a TripAdvisor URL.
 - In the **Add Accommodations autofill flow**, AI gap-fill runs automatically as a batch immediately after API prefill; per-field and per-section suggest actions remain as fallback/retry controls.
 - In the **Add Accommodations autofill flow**, valid AI suggestions write directly into eligible empty/default form fields, mark those fields as AI-owned, and retain the suggestion's reason/evidence for operator review.
+- A **ViatorProduct** cannot create a **Tour** directly; scraped source data must be reviewed as a **TourDraft** because Location and image/media readiness are operator-owned.
+- A **Tour Display Title** is operator-approved; AI may suggest it from source context but cannot confirm it.
+- A **Tour Source Image** must pass through the normal image review path before a **Tour** is confirmed; remote source images are not final tour images.
+- Tour import always begins by detecting the **Tour Source Provider** from the URL; unknown providers surface as **Unsupported Tour URL** rather than falling through to a generic scraper.
+- A **Duplicate Tour Candidate** is detected by source URL/booking link, not title; creating a second **Tour** from it requires operator override.
 - In the **Add Accommodations autofill flow**, automatic AI gap-fill blocks form review briefly with progress, runs with small concurrency, routes to the first review section when complete, and reports failed/low-confidence fields as needing manual review instead of stacking modal suggestions.
 - In the **Add Accommodations autofill flow**, AI suggestion reason/evidence is add-session review state only and is not persisted to the Location.
 - In the **Add Accommodations autofill flow**, AI failure is not its own create blocker; existing form validation blocks Create when required fields remain blank/default, and operators manually complete those fields. The create UI must surface which required fields are still missing so operators are not left with an unexplained disabled button.

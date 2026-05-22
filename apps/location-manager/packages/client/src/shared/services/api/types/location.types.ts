@@ -35,6 +35,11 @@ export interface Tour {
   price: string;
   /** Pipe taxonomy key; synced to Payload `tours.locationRef` when set. */
   locationKey: string | null;
+  sourceProvider: string | null;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  sourceImageUrl: string | null;
+  sourceProductCode: string | null;
   created_at: string;
   updated_at: string;
   payloadSync?: TourPayloadSyncSummary | null;

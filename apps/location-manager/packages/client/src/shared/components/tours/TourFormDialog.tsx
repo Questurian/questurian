@@ -10,12 +10,14 @@ import {
 import { ErrorBoundary } from "@client/shared/components/ErrorBoundary";
 import {
   useCreateTour,
+  useDownloadTourSourceImage,
   useGenerateAltText,
   usePayloadMediaSets,
+  useSuggestTourTitle,
   useUpdateTour,
   useUploadTourMediaSet,
 } from "@client/shared/services/api/hooks";
-import type { PayloadMediaSetItem, Tour } from "@client/shared/services/api/types";
+import type { PayloadMediaSetItem, Tour, TourDraftPreview } from "@client/shared/services/api/types";
 import { AltTextReviewModal } from "@client/shared/components/location-media/modals/AltTextReviewModal";
 import { MultiVariantCropperModal } from "@client/shared/components/location-media/modals/MultiVariantCropperModal";
 import type { ImageVariantUploadFile } from "@client/shared/types/location-media.types";
@@ -33,12 +35,18 @@ interface TourDraft {
   bookingLink: string;
   price: string;
   locationKey: string;
+  sourceProvider: string;
+  sourceUrl: string;
+  sourceTitle: string;
+  sourceImageUrl: string;
+  sourceProductCode: string;
 }
 
 interface TourFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tour?: Tour | null;
+  importDraft?: TourDraftPreview | null;
 }
 
 interface ProcessedTourImageSet {
@@ -53,6 +61,11 @@ const EMPTY_TOUR_DRAFT: TourDraft = {
   bookingLink: "",
   price: "",
   locationKey: "",
+  sourceProvider: "",
+  sourceUrl: "",
+  sourceTitle: "",
+  sourceImageUrl: "",
+  sourceProductCode: "",
 };
 
 function tourToDraft(tour: Tour): TourDraft {
@@ -62,6 +75,26 @@ function tourToDraft(tour: Tour): TourDraft {
     bookingLink: tour.bookingLink,
     price: tour.price,
     locationKey: tour.locationKey?.trim() ?? "",
+    sourceProvider: tour.sourceProvider ?? "",
+    sourceUrl: tour.sourceUrl ?? "",
+    sourceTitle: tour.sourceTitle ?? "",
+    sourceImageUrl: tour.sourceImageUrl ?? "",
+    sourceProductCode: tour.sourceProductCode ?? "",
+  };
+}
+
+function importDraftToDraft(importDraft: TourDraftPreview): TourDraft {
+  return {
+    title: importDraft.displayTitle,
+    imgPayloadMediaSetId: "",
+    bookingLink: importDraft.bookingLink,
+    price: importDraft.price,
+    locationKey: "",
+    sourceProvider: importDraft.provider,
+    sourceUrl: importDraft.sourceUrl,
+    sourceTitle: importDraft.sourceTitle,
+    sourceImageUrl: importDraft.sourceImageUrl ?? "",
+    sourceProductCode: importDraft.sourceProductCode ?? "",
   };
 }
 
@@ -296,11 +329,15 @@ function MediaSetPicker({
 
 function TourImageUploadPanel({
   title,
+  sourceImageUrl,
+  sourceProvider,
   onUploaded,
   onLocalImageStateChange,
   onUploadPendingChange,
 }: {
   title: string;
+  sourceImageUrl?: string | null;
+  sourceProvider?: string | null;
   onUploaded: (mediaSetId: string) => void;
   onLocalImageStateChange?: (hasLocalImage: boolean) => void;
   onUploadPendingChange?: (isPending: boolean) => void;
@@ -316,6 +353,7 @@ function TourImageUploadPanel({
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const uploadTourMediaSet = useUploadTourMediaSet();
+  const downloadSourceImage = useDownloadTourSourceImage();
   const { mutate: generateAltText, isPending: isGeneratingAltText } = useGenerateAltText({
     onSuccess: (data) => {
       setAiGeneratedAltText(data.altText);
@@ -326,6 +364,11 @@ function TourImageUploadPanel({
       setAltTextGenerationError("AI alt text unavailable. Enter alt text manually.");
     },
   });
+
+  useEffect(() => {
+    if (!sourceProvider || photographerCredit.trim()) return;
+    setPhotographerCredit(sourceProvider === "viator" ? "Viator" : sourceProvider);
+  }, [sourceProvider, photographerCredit]);
 
   function resetUploadState() {
     setSourceFile(null);
@@ -365,6 +408,23 @@ function TourImageUploadPanel({
       fileInputRef.current.value = "";
     }
   }
+
+  useEffect(() => {
+    if (!sourceImageUrl || sourceFile || downloadSourceImage.isPending) return;
+    downloadSourceImage.mutate(sourceImageUrl, {
+      onSuccess: (file) => {
+        handleFileSelect({
+          0: file,
+          length: 1,
+          item: (index: number) => (index === 0 ? file : null),
+        } as FileList);
+      },
+      onError: (error) => {
+        setFileError(error instanceof Error ? error.message : "Could not download source image.");
+      },
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceImageUrl]);
 
   function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -472,7 +532,9 @@ function TourImageUploadPanel({
         >
           <Upload className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Drag and drop one source photo here, or click to choose.
+            {downloadSourceImage.isPending
+              ? "Downloading source image..."
+              : "Drag and drop one source photo here, or click to choose."}
           </p>
           {fileError && <p className="mt-2 text-xs text-destructive">{fileError}</p>}
           <input
@@ -593,18 +655,25 @@ function TourFormDialogContent({
   tour = null,
   initialMediaSetId = "",
   onMediaSetIdPersist,
+  importDraft = null,
 }: Pick<TourFormDialogProps, "onOpenChange" | "tour"> & {
   initialMediaSetId?: string;
   onMediaSetIdPersist?: (id: string) => void;
+  importDraft?: TourDraftPreview | null;
 }) {
   const [draft, setDraft] = useState<TourDraft>(() =>
-    tour ? tourToDraft(tour) : { ...EMPTY_TOUR_DRAFT, imgPayloadMediaSetId: initialMediaSetId }
+    tour
+      ? tourToDraft(tour)
+      : importDraft
+        ? { ...importDraftToDraft(importDraft), imgPayloadMediaSetId: initialMediaSetId }
+        : { ...EMPTY_TOUR_DRAFT, imgPayloadMediaSetId: initialMediaSetId }
   );
   const [formError, setFormError] = useState<string | null>(null);
   const [hasPendingLocalImage, setHasPendingLocalImage] = useState(false);
   const [isImageUploadPending, setIsImageUploadPending] = useState(false);
   const createTourMutation = useCreateTour();
   const updateTourMutation = useUpdateTour();
+  const suggestTitleMutation = useSuggestTourTitle();
   const isEditing = Boolean(tour);
   const { data: countries = [], isLoading: isLoadingCountries } = useCountries();
 
@@ -709,6 +778,11 @@ function TourFormDialogContent({
       bookingLink,
       price,
       ...(locationKeyTrimmed ? { locationKey: locationKeyTrimmed } : {}),
+      ...(draft.sourceProvider.trim() ? { sourceProvider: draft.sourceProvider.trim() } : {}),
+      ...(draft.sourceUrl.trim() ? { sourceUrl: draft.sourceUrl.trim() } : {}),
+      ...(draft.sourceTitle.trim() ? { sourceTitle: draft.sourceTitle.trim() } : {}),
+      ...(draft.sourceImageUrl.trim() ? { sourceImageUrl: draft.sourceImageUrl.trim() } : {}),
+      ...(draft.sourceProductCode.trim() ? { sourceProductCode: draft.sourceProductCode.trim() } : {}),
     };
     if (tour) {
       updateTourMutation.mutate(
@@ -720,6 +794,11 @@ function TourFormDialogContent({
             bookingLink,
             price,
             locationKey: locationKeyTrimmed || null,
+            sourceProvider: draft.sourceProvider.trim() || null,
+            sourceUrl: draft.sourceUrl.trim() || null,
+            sourceTitle: draft.sourceTitle.trim() || null,
+            sourceImageUrl: draft.sourceImageUrl.trim() || null,
+            sourceProductCode: draft.sourceProductCode.trim() || null,
           },
         },
         { onSuccess: () => onOpenChange(false) }
@@ -747,12 +826,45 @@ function TourFormDialogContent({
 
       <div className="min-w-0 space-y-4">
         <div className="space-y-2">
-          <Label>Title</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label>Display title</Label>
+            {draft.sourceTitle && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={suggestTitleMutation.isPending}
+                onClick={() => {
+                  suggestTitleMutation.mutate(
+                    {
+                      sourceTitle: draft.sourceTitle,
+                      description: importDraft?.description ?? null,
+                      provider: draft.sourceProvider || null,
+                      duration: importDraft?.duration ?? null,
+                      price: draft.price || null,
+                      locationKey: draft.locationKey || null,
+                    },
+                    {
+                      onSuccess: (result) => updateDraft({ title: result.displayTitle }),
+                    }
+                  );
+                }}
+              >
+                {suggestTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                AI title
+              </Button>
+            )}
+          </div>
           <Input
             value={draft.title}
             onChange={(event) => updateDraft({ title: event.target.value })}
             placeholder="Sacred Valley Day Tour"
           />
+          {draft.sourceTitle && (
+            <p className="text-xs text-muted-foreground">
+              Source title: <span className="font-medium text-foreground">{draft.sourceTitle}</span>
+            </p>
+          )}
         </div>
         <MediaSetPicker
           value={draft.imgPayloadMediaSetId}
@@ -760,6 +872,8 @@ function TourFormDialogContent({
         />
         <TourImageUploadPanel
           title={draft.title}
+          sourceImageUrl={draft.sourceImageUrl || null}
+          sourceProvider={draft.sourceProvider || null}
           onUploaded={(mediaSetId) => updateDraft({ imgPayloadMediaSetId: mediaSetId })}
           onLocalImageStateChange={setHasPendingLocalImage}
           onUploadPendingChange={setIsImageUploadPending}
@@ -854,8 +968,8 @@ function TourFormDialogContent({
   );
 }
 
-export function TourFormDialog({ open, onOpenChange, tour = null }: TourFormDialogProps) {
-  const baseKey = tour ? `tour-${tour.id}` : "new-tour";
+export function TourFormDialog({ open, onOpenChange, tour = null, importDraft = null }: TourFormDialogProps) {
+  const baseKey = tour ? `tour-${tour.id}` : importDraft ? `import-${importDraft.sourceUrl}` : "new-tour";
   // Persisted outside ErrorBoundary so it survives crash+reset.
   const [persistedMediaSetId, setPersistedMediaSetId] = useState("");
   const [resetCount, setResetCount] = useState(0);
@@ -904,6 +1018,7 @@ export function TourFormDialog({ open, onOpenChange, tour = null }: TourFormDial
             key={contentKey}
             onOpenChange={onOpenChange}
             tour={tour}
+            importDraft={importDraft}
             initialMediaSetId={persistedMediaSetId}
             onMediaSetIdPersist={setPersistedMediaSetId}
           />

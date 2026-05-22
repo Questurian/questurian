@@ -182,7 +182,7 @@ export class PayloadMediaSetsClient {
       `✓ Created media-set in Payload: ${result.doc.title} → ID: ${result.doc.id} (status: ${result.doc.status})`
     );
 
-    return result.doc.id;
+    return String(result.doc.id);
   }
 
   async setMediaSetLocationRef(mediaSetId: string, locationRef: string): Promise<void> {
