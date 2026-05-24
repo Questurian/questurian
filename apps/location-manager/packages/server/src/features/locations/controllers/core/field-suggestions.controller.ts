@@ -2,6 +2,10 @@ import type { Context } from "hono";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { errorResponse, successResponse } from "@shared/types/api-response";
 import type { FieldSuggestionDto } from "../../validation/schemas/maps.schemas";
+import type {
+  AccommodationsFieldSuggestionRequest,
+} from "../../services/integrations/accommodations-field-suggestion.service";
+import type { DiningSuggestionFieldKey } from "../../services/integrations/dining-field-suggestion.service";
 
 const container = ServiceContainer.getInstance();
 const AI_TIMEOUT_MS = 60000;
@@ -29,8 +33,22 @@ export async function postFieldSuggestion(c: Context) {
   const dto = c.get("validatedBody") as FieldSuggestionDto;
 
   try {
+    if (dto.category === "dining") {
+      const suggestion = await withTimeout(
+        container.diningFieldSuggestionService.suggestField({
+          fieldKey: dto.fieldKey as DiningSuggestionFieldKey,
+          formValues: dto.formValues,
+          apiContext: dto.apiContext as Record<string, unknown> | undefined,
+        }),
+        AI_TIMEOUT_MS
+      );
+      return c.json(successResponse(suggestion));
+    }
+
     const suggestion = await withTimeout(
-      container.accommodationsFieldSuggestionService.suggestField(dto),
+      container.accommodationsFieldSuggestionService.suggestField(
+        dto as AccommodationsFieldSuggestionRequest
+      ),
       AI_TIMEOUT_MS
     );
     return c.json(successResponse(suggestion));

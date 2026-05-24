@@ -4,6 +4,8 @@ import type {
   Category,
   AccommodationsFieldSuggestionRequest,
   AccommodationsFieldSuggestionResponse,
+  DiningFieldSuggestionRequest,
+  DiningFieldSuggestionResponse,
   NeighborhoodDescriptionGenerationResponse,
 } from "./types";
 
@@ -21,6 +23,15 @@ export const locationsAiApi = {
     request: AccommodationsFieldSuggestionRequest
   ): Promise<AccommodationsFieldSuggestionResponse> {
     return apiPost<AccommodationsFieldSuggestionResponse>(
+      API_ENDPOINTS.FIELD_SUGGESTIONS,
+      request
+    );
+  },
+
+  async suggestDiningField(
+    request: DiningFieldSuggestionRequest
+  ): Promise<DiningFieldSuggestionResponse> {
+    return apiPost<DiningFieldSuggestionResponse>(
       API_ENDPOINTS.FIELD_SUGGESTIONS,
       request
     );

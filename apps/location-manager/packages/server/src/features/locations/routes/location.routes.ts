@@ -42,7 +42,7 @@ import {
   getTours, getTour, postTour, patchTour, postTourMediaSet, postTourImportPreview,
   postTourTitleSuggestion, getTourSourceImage,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
-  postAddMaps, postAddMapsWithPhotos, patchMapsById, postGooglePrefill, postFieldSuggestion, postDiningStage2Suggest,
+  postAddMaps, postAddMapsWithPhotos, patchMapsById, postGooglePrefill, postFieldSuggestion,
   postPendingSuggestionAccept, postPendingSuggestionDismiss,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
@@ -168,11 +168,6 @@ app.post(
   "/api/field-suggestions",
   validateBody(fieldSuggestionSchema),
   postFieldSuggestion
-);
-app.post(
-  "/api/dining/:id/stage2-suggest",
-  validateParams(deleteLocationIdSchema),
-  postDiningStage2Suggest
 );
 app.post(
   "/api/dining/:id/pending-suggestions/accept",

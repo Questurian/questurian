@@ -91,7 +91,8 @@ class FieldSuggestionRequest(BaseModel):
     field_key: str
     field_label: str
     kind: str
-    allowed_options: list[AccommodationsOption]
+    # `allowed_options` is required for kind=single|multi and ignored for kind=url.
+    allowed_options: list[AccommodationsOption] = []
     form_values: dict
     api_context: dict | None = None
 
@@ -165,6 +166,9 @@ def build_neighborhood_description_prompt(
 
 
 def build_field_suggestion_prompt(request: FieldSuggestionRequest) -> str:
+    if request.kind == "url":
+        return build_url_field_suggestion_prompt(request)
+
     allowed_options = [
         {
             "value": option.value,
@@ -194,7 +198,9 @@ def build_field_suggestion_prompt(request: FieldSuggestionRequest) -> str:
         "Return only JSON. Do not return markdown.\n"
         "The suggestion must use exact option value strings from allowed_options only.\n"
         "For kind=single, suggestion must be one string or null.\n"
-        "For kind=multi, suggestion must be an array of strings or null.\n"
+        "For kind=multi, suggestion must be an array of 2 to 4 distinct strings (never a single-item array), "
+        "or null if the evidence does not support at least two confident tags. Choose every tag that is "
+        "clearly supported by the evidence — do not stop at the first match.\n"
         "If evidence is weak, return suggestion null and confidence below 0.6.\n"
         "Do not invent amenities. Do not use values outside allowed_options.\n\n"
         "Return schema:\n"
@@ -204,6 +210,46 @@ def build_field_suggestion_prompt(request: FieldSuggestionRequest) -> str:
         "Context JSON:\n"
         f"{json.dumps(context, ensure_ascii=False)}"
     )
+
+
+def build_url_field_suggestion_prompt(request: FieldSuggestionRequest) -> str:
+    context = {
+        "field": {
+            "key": request.field_key,
+            "label": request.field_label,
+            "kind": "url",
+        },
+        "current_form_values": request.form_values,
+        "google_foursquare_prefill": request.api_context or {},
+    }
+
+    return (
+        f"You suggest one missing {request.category} link for a location-management database.\n"
+        f"Find the most likely public URL for the {request.field_label} of the venue named in current_form_values.\n"
+        "Use Google Search grounding to find the canonical link. Prefer the venue's own website, an official "
+        "PDF, or a well-known booking provider (OpenTable, Resy, SevenRooms, Tock) when the field is a "
+        "reservation link. For menu fields, prefer the venue's own menu page over aggregators.\n"
+        "Return only JSON. Do not return markdown.\n"
+        "The suggestion must be a single string containing an absolute http:// or https:// URL, or null if no "
+        "high-confidence link exists.\n"
+        "If evidence is weak or you cannot find a canonical link, return suggestion null and confidence below 0.6.\n"
+        "Do not guess. Do not return search-result URLs. Do not return social-media profile URLs unless the "
+        "venue uses them as the official menu/reservation page.\n"
+        "Include each citing source in `sources[].snippet` so an operator can verify the evidence.\n\n"
+        "Return schema:\n"
+        '{ "suggestion": "https://..." | null, "confidence": number, '
+        '"reason": "short evidence-backed reason", '
+        '"sources": [{ "label": "source name", "url": "https://...", "snippet": "short evidence passage from the source" }] }\n\n'
+        "Context JSON:\n"
+        f"{json.dumps(context, ensure_ascii=False)}"
+    )
+
+
+def is_valid_http_url(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    trimmed = value.strip()
+    return trimmed.startswith("http://") or trimmed.startswith("https://")
 
 
 def parse_json_object(text: str) -> dict:
@@ -346,15 +392,25 @@ def generate_field_suggestion(request: FieldSuggestionRequest) -> dict:
             f"category '{request.category}' is not implemented yet. "
             f"Supported: {sorted(SUPPORTED_FIELD_SUGGESTION_CATEGORIES)}"
         )
-    if request.kind not in {"single", "multi"}:
-        raise ValueError("kind must be single or multi.")
-    if not request.allowed_options:
-        raise ValueError("allowed_options cannot be empty.")
+    if request.kind not in {"single", "multi", "url"}:
+        raise ValueError("kind must be single, multi, or url.")
+    if request.kind in {"single", "multi"} and not request.allowed_options:
+        raise ValueError("allowed_options cannot be empty for kind=single|multi.")
 
-    return generate_grounded_json_from_prompt(
+    result = generate_grounded_json_from_prompt(
         build_field_suggestion_prompt(request),
         ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
     )
+
+    if request.kind == "url":
+        # Force low confidence when the model returns anything that isn't an absolute
+        # http(s) URL, so the existing skip-on-low-confidence branch handles it.
+        suggestion = result.get("suggestion")
+        if suggestion is not None and not is_valid_http_url(suggestion):
+            result["suggestion"] = None
+            result["confidence"] = 0
+
+    return result
 
 
 @app.on_event("startup")

@@ -155,10 +155,38 @@ export const createMapsSchema = z.object({
   }
 });
 
-export const googlePrefillSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  address: z.string().trim().min(1, "Address is required"),
-});
+export const googlePrefillSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required"),
+    address: z.string().trim().min(1, "Address is required"),
+    // Optional operator-supplied TripAdvisor URL. When present and parseable
+    // (`...-d<locationId>-Reviews-...`), the dining branch uses it directly
+    // and skips the SerpAPI search-by-name path. Ignored for non-dining.
+    tripadvisorUrl: z
+      .string()
+      .trim()
+      .url("TripAdvisor URL must be a valid URL")
+      .refine(
+        (value) => /-d\d+-Reviews/i.test(value),
+        "TripAdvisor URL must match pattern ...-d<locationId>-Reviews-..."
+      )
+      .optional()
+      .or(z.literal(""))
+      .transform((value) => (value === "" ? undefined : value)),
+    // When true, the dining branch skips TripAdvisor enrichment entirely and
+    // any provided `tripadvisorUrl` is rejected.
+    noTripadvisorListing: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.noTripadvisorListing && data.tripadvisorUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["tripadvisorUrl"],
+        message:
+          "Cannot provide a TripAdvisor URL when noTripadvisorListing is set",
+      });
+    }
+  });
 
 const accommodationsOptionSchema = z.object({
   value: z.string().trim().min(1),
@@ -166,18 +194,51 @@ const accommodationsOptionSchema = z.object({
   description: z.string().trim().optional().default(""),
 });
 
-export const fieldSuggestionSchema = z.object({
-  category: z.literal("accommodations"),
-  locationId: z.number().int().positive().optional(),
-  fieldKey: z.enum(ACCOMMODATIONS_SUGGESTION_FIELD_KEYS),
-  formValues: z.record(z.any()).refine((values) => {
-    const name = typeof values.name === "string" ? values.name.trim() : "";
-    const address = typeof values.address === "string" ? values.address.trim() : "";
-    return name.length > 0 && address.length > 0;
-  }, "Run Step 1 with a valid name and address before requesting AI suggestions."),
-  apiContext: z.record(z.any()).optional(),
-  allowedOptions: z.array(accommodationsOptionSchema).optional(),
-});
+const DINING_SUGGESTION_FIELD_KEYS_LIST = [
+  "type",
+  "idealFor",
+  "menuUrl",
+  "reservationUrl",
+] as const;
+
+export const fieldSuggestionSchema = z
+  .object({
+    category: z.enum(["accommodations", "dining"]),
+    locationId: z.number().int().positive().optional(),
+    fieldKey: z.string().min(1),
+    formValues: z.record(z.any()).refine((values) => {
+      const name = typeof values.name === "string" ? values.name.trim() : "";
+      const address = typeof values.address === "string" ? values.address.trim() : "";
+      return name.length > 0 && address.length > 0;
+    }, "Run Step 1 with a valid name and address before requesting AI suggestions."),
+    apiContext: z.record(z.any()).optional(),
+    allowedOptions: z.array(accommodationsOptionSchema).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.category === "accommodations") {
+      if (
+        !(ACCOMMODATIONS_SUGGESTION_FIELD_KEYS as readonly string[]).includes(data.fieldKey)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fieldKey"],
+          message: `fieldKey must be one of ${ACCOMMODATIONS_SUGGESTION_FIELD_KEYS.join(", ")} for accommodations`,
+        });
+      }
+      return;
+    }
+    if (data.category === "dining") {
+      if (
+        !(DINING_SUGGESTION_FIELD_KEYS_LIST as readonly string[]).includes(data.fieldKey)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fieldKey"],
+          message: `fieldKey must be one of ${DINING_SUGGESTION_FIELD_KEYS_LIST.join(", ")} for dining`,
+        });
+      }
+    }
+  });
 
 // PATCH /api/maps/:id schema - only updatable fields allowed
 export const patchMapsSchema = z.object({

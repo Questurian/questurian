@@ -1,6 +1,4 @@
 import { AddDiningStagedForm } from "../components/AddDiningStagedForm";
-import { ConfirmLocationPhase } from "../components/ConfirmLocationPhase";
-import { Stage2Phase } from "../components/Stage2Phase";
 import { DiningPostCreatePhase } from "../components/DiningPostCreatePhase";
 import { useAddDiningFlow } from "../hooks/useAddDiningFlow";
 
@@ -8,24 +6,6 @@ export function AddDiningLocation() {
   const flow = useAddDiningFlow();
 
   switch (flow.phase) {
-    case "confirm":
-      return (
-        <ConfirmLocationPhase
-          createdLocation={flow.createdLocation!}
-          confirmForm={flow.confirmForm}
-          onSubmit={flow.handleConfirmTitle}
-          isUpdating={flow.isUpdating}
-          updateError={flow.updateError}
-        />
-      );
-    case "stage2":
-      return (
-        <Stage2Phase
-          locationId={flow.createdLocation!.id}
-          onComplete={() => flow.setPhase("success")}
-          onSkip={() => flow.setPhase("success")}
-        />
-      );
     case "success":
       return (
         <DiningPostCreatePhase
@@ -42,6 +22,7 @@ export function AddDiningLocation() {
           onSubmit={flow.handleAddDining}
           onRunGooglePrefill={flow.handleGooglePrefill}
           isPrefillingGoogle={flow.isPrefillingGoogle}
+          aiBatchStep={flow.aiBatchStep}
           isCreating={flow.isCreating}
           createError={flow.createError}
           prefillMessage={flow.prefillMessage}
@@ -51,6 +32,11 @@ export function AddDiningLocation() {
           locationTypes={flow.locationTypes}
           isLoadingTypes={flow.isLoadingTypes}
           provenance={flow.provenance}
+          verifiedAiUrls={flow.verifiedAiUrls}
+          onAcknowledgeAiUrl={flow.acknowledgeAiUrl}
+          allAiUrlsVerified={flow.allAiUrlsVerified}
+          aiFieldStatus={flow.aiFieldStatus}
+          onRetryAiField={flow.retryAiField}
         />
       );
   }

@@ -133,6 +133,11 @@ An AI-derived value that the suggestion pipeline produced *after* the operator a
 The add-time workflow where an operator enters a Google place name and address, API prefill fills high-confidence fields, and AI field suggestions fill remaining eligible accommodations fields before the Location is created.
 _Avoid_: TripAdvisor review pipeline, accommodations review pipeline.
 
+### Add Dining autofill flow
+
+The add-time workflow where an operator enters name, address, and a TripAdvisor URL (or marks the place as having no TripAdvisor listing); deterministic Google place data and — when supplied — TripAdvisor place data prefill high-confidence fields; and a grounded AI batch fills `idealFor`, `type` (only when Google's `types[]` mapping resolves to null or `other`), `menuUrl`, and `reservationUrl` before the Location is created. The flow is two reviewable phases (Basics, Review) plus the **Add-time photo import**; the prior post-create Stage 2 phase and the post-create Confirm Title phase do not exist in this flow.
+_Avoid_: Add Dining Stage 1/Stage 2, ReviewsFetchPhase, dining review pipeline.
+
 ### Photo Import flow
 
 Umbrella term for the two operator workflows that pull a Location's photos from Google Places by `placeId`. Bytes are fetched via a server proxy of the Places `media` endpoint; the operator deselects unwanted photos from the returned set (default: all selected); rejected photo `name`s are remembered per-Location as **Rejected Source**s. Scoped today to Accommodations, Dining, and Nightlife.
@@ -193,6 +198,11 @@ Photos sourced via the **Photo Import flow** carry their Google contributor name
 - In the **Add Accommodations autofill flow**, AI failure is not its own create blocker; existing form validation blocks Create when required fields remain blank/default, and operators manually complete those fields. The create UI must surface which required fields are still missing so operators are not left with an unexplained disabled button.
 - The **Add Accommodations autofill flow** is client-orchestrated before create: the client calls the existing per-field `/api/field-suggestions` endpoint, manages progress/concurrency/evidence, and does not require a server-side batch endpoint.
 - In the **Add Accommodations autofill flow**, API/AI prefill is one-shot for a given name/address signature. Restored drafts do not auto-run AI on page load; changing name/address makes prior prefill stale until Continue is clicked again, while the same already-prefilled signature cannot be rerun unless the operator clears the flow.
+- In the **Add Dining autofill flow**, the operator either supplies a TripAdvisor URL at Step 1 or explicitly marks the place as having no TripAdvisor listing; auto-resolution of TripAdvisor URL by external name+coordinate search is not part of this flow.
+- In the **Add Dining autofill flow**, field ownership precedence is `operator` > API (`google` / `tripadvisor`) > `ai`. Google owns deterministic prefill for placeId, coordinates, location key, district, time zone, phone, website, hours, and the initial `type` (when Google's `types[]` resolves to a known dining type). When the operator supplied a TripAdvisor URL, TripAdvisor place data prefills meal types, cuisines, features, and neighborhood description in the same Step 1 batch.
+- In the **Add Dining autofill flow**, the AI batch fires automatically inline after API prefill and blocks Step 1 with a single processing card until done. AI fills `idealFor` (always), `type` (only when Google deterministic mapping yielded null/`other`), `menuUrl`, and `reservationUrl`. Provenance for AI-supplied values is `ai`.
+- In the **Add Dining autofill flow**, AI-supplied URL fields (`menuUrl`, `reservationUrl`) require the operator to explicitly acknowledge each URL — by checking a verify control or by clearing/replacing the URL — before Create is enabled. AI-supplied option-list values (`idealFor`, `type`) do not require this acknowledgment because their domain is bounded.
+- In the **Add Dining autofill flow**, the prior post-create AI re-suggest (Stage 2) phase, the post-create Confirm Title phase, the SerpAPI TripAdvisor-URL search by name+coordinates, and the Google-website link scraper for menu/reservation are removed. Title is operator-polished inline in the Review section.
 
 ## Naming Conventions
 

@@ -11,8 +11,6 @@ import {
   FoursquareApiClient,
 } from "./clients/foursquare-api.client";
 import { fetchPlaceTypes, mapGoogleTypesToDiningType } from "./google-dining-type";
-import { searchTripadvisorUrl } from "./tripadvisor-url-search";
-import { scrapeRestaurantLinks } from "./website-link-scraper";
 import {
   findPotentialDuplicateLocations,
   getAttractionTours,
@@ -34,9 +32,55 @@ import {
   normalizeTripadvisorStringList,
 } from "../../utils/tripadvisor-utils";
 import type { TripAdvisorPlaceService } from "./tripadvisor-place.service";
+import type { TripAdvisorPlaceResult } from "./clients/serpapi-tripadvisor.client";
 import { isValidIdealForTag } from "@shared/types/location-ideal-for";
 
 import type { PayloadApiClient } from "./clients/payload-api.client";
+
+function extractTripadvisorPrefillFields(
+  placeResult: TripAdvisorPlaceResult
+): TripadvisorPrefillFields {
+  const stringOrNull = (value: unknown): string | null =>
+    typeof value === "string" && value.trim() ? value.trim() : null;
+
+  const operationHours = (() => {
+    const raw = placeResult.operation_hours;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    return raw as Record<string, unknown>;
+  })();
+
+  return {
+    email: stringOrNull(placeResult.email),
+    phoneNumber: stringOrNull(placeResult.phone),
+    website: stringOrNull(placeResult.website),
+    priceLevel: stringOrNull(placeResult.price_level),
+    neighborhood: stringOrNull(placeResult.neighborhood),
+    neighborhoodDescription: stringOrNull(placeResult.neighborhood_description),
+    operationHours,
+    mealTypes:
+      normalizeTripadvisorStringList(placeResult.meal_types) ??
+      normalizeTripadvisorStringList(placeResult.mealtypes),
+    cuisines: normalizeTripadvisorStringList(placeResult.cuisines),
+    features:
+      filterTripadvisorFeatures(
+        normalizeTripadvisorStringList(placeResult.features) ??
+          normalizeTripadvisorStringList(placeResult.dining_options)
+      ) ?? null,
+  };
+}
+
+export interface TripadvisorPrefillFields {
+  email: string | null;
+  phoneNumber: string | null;
+  website: string | null;
+  priceLevel: string | null;
+  neighborhood: string | null;
+  neighborhoodDescription: string | null;
+  operationHours: Record<string, unknown> | null;
+  mealTypes: string[] | null;
+  cuisines: string[] | null;
+  features: string[] | null;
+}
 
 export interface GooglePrefillResult {
   googleUrl: string;
@@ -53,6 +97,7 @@ export interface GooglePrefillResult {
   accommodationsHints: AccommodationsApiHints | null;
   type: string | null;
   tripadvisorUrl: string | null;
+  tripadvisorPlaceData: TripadvisorPrefillFields | null;
   menuUrl: string | null;
   reservationUrl: string | null;
   provenance: Record<string, string>;
@@ -545,7 +590,11 @@ export class MapsService {
   async resolveGooglePrefill(
     name: string,
     address: string,
-    category?: LocationCategory
+    category?: LocationCategory,
+    diningEnrichmentOverrides?: {
+      operatorTripadvisorUrl?: string;
+      noTripadvisorListing?: boolean;
+    }
   ): Promise<GooglePrefillResult> {
     const trimmedName = name.trim();
     const trimmedAddress = address.trim();
@@ -594,12 +643,14 @@ export class MapsService {
         entry.lat,
         entry.lng
       ),
-      this.resolveDiningEnrichment(category, entry.placeId, trimmedName, entry.lat, entry.lng, entry.website ?? null),
+      this.resolveDiningEnrichment(category, entry.placeId, diningEnrichmentOverrides),
     ]);
 
     const provenance: Record<string, string> = {};
     if (diningEnrichment.type) provenance.type = "google";
-    if (diningEnrichment.tripadvisorUrl) provenance.tripadvisorUrl = "tripadvisor";
+    if (diningEnrichment.tripadvisorUrl) {
+      provenance.tripadvisorUrl = diningEnrichment.tripadvisorUrlProvenance;
+    }
     if (diningEnrichment.menuUrl) provenance.menuUrl = "scraper";
     if (diningEnrichment.reservationUrl) provenance.reservationUrl = "scraper";
 
@@ -618,6 +669,7 @@ export class MapsService {
       accommodationsHints,
       type: diningEnrichment.type,
       tripadvisorUrl: diningEnrichment.tripadvisorUrl,
+      tripadvisorPlaceData: diningEnrichment.tripadvisorPlaceData,
       menuUrl: diningEnrichment.menuUrl,
       reservationUrl: diningEnrichment.reservationUrl,
       provenance,
@@ -627,18 +679,27 @@ export class MapsService {
   private async resolveDiningEnrichment(
     category: LocationCategory | undefined,
     placeId: string,
-    name: string,
-    lat: number | null | undefined,
-    lng: number | null | undefined,
-    website: string | null
+    overrides?: {
+      operatorTripadvisorUrl?: string;
+      noTripadvisorListing?: boolean;
+    }
   ): Promise<{
     type: string | null;
     tripadvisorUrl: string | null;
+    tripadvisorUrlProvenance: "operator" | "tripadvisor";
+    tripadvisorPlaceData: TripadvisorPrefillFields | null;
     menuUrl: string | null;
     reservationUrl: string | null;
   }> {
     if (category !== "dining") {
-      return { type: null, tripadvisorUrl: null, menuUrl: null, reservationUrl: null };
+      return {
+        type: null,
+        tripadvisorUrl: null,
+        tripadvisorUrlProvenance: "tripadvisor",
+        tripadvisorPlaceData: null,
+        menuUrl: null,
+        reservationUrl: null,
+      };
     }
 
     const googleTypesPromise = (async () => {
@@ -651,35 +712,45 @@ export class MapsService {
       }
     })();
 
-    const tripadvisorPromise = (async () => {
-      try {
-        return await searchTripadvisorUrl(this.config.SERPAPI_KEY, name, lat ?? null, lng ?? null);
-      } catch (error) {
-        console.warn("[MapsService] TripAdvisor URL search failed:", error);
-        return null;
-      }
-    })();
+    // Per ADR-0008: TA URL is operator-supplied or explicitly absent.
+    // SerpAPI search-by-name fallback was removed alongside the Google-website
+    // menu/reservation scraper — both rarely yielded usable values and the
+    // AI batch covers the same surface more reliably.
+    const tripadvisor: {
+      url: string | null;
+      provenance: "operator" | "tripadvisor";
+    } = overrides?.operatorTripadvisorUrl && !overrides.noTripadvisorListing
+      ? {
+          url: normalizeTripadvisorUrl(overrides.operatorTripadvisorUrl),
+          provenance: "operator",
+        }
+      : { url: null, provenance: "tripadvisor" };
 
-    const scrapePromise = (async () => {
-      try {
-        return await scrapeRestaurantLinks(website);
-      } catch (error) {
-        console.warn("[MapsService] Website link scrape failed:", error);
-        return { menuUrl: null, reservationUrl: null };
-      }
-    })();
+    const type = await googleTypesPromise;
 
-    const [type, tripadvisorUrl, links] = await Promise.all([
-      googleTypesPromise,
-      tripadvisorPromise,
-      scrapePromise,
-    ]);
+    // When the operator supplied a TA URL we can extract a tripadvisorLocationId
+    // for, fetch TA place data inline so the Step 1 payload carries TripAdvisor-
+    // derived fields (cuisines, meal types, features, neighborhood, ...).
+    let tripadvisorPlaceData: TripadvisorPrefillFields | null = null;
+    if (tripadvisor.url) {
+      const tripadvisorLocationId = extractTripadvisorLocationId(tripadvisor.url);
+      if (tripadvisorLocationId) {
+        const placeResult = await this.tripAdvisorPlaceService.fetchPlaceDataForPrefill(
+          tripadvisorLocationId
+        );
+        if (placeResult) {
+          tripadvisorPlaceData = extractTripadvisorPrefillFields(placeResult);
+        }
+      }
+    }
 
     return {
       type,
-      tripadvisorUrl,
-      menuUrl: links.menuUrl,
-      reservationUrl: links.reservationUrl,
+      tripadvisorUrl: tripadvisor.url,
+      tripadvisorUrlProvenance: tripadvisor.provenance,
+      tripadvisorPlaceData,
+      menuUrl: null,
+      reservationUrl: null,
     };
   }
 

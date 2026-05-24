@@ -22,7 +22,6 @@ export const API_ENDPOINTS = {
   CREATE_LOCATION: (category: Category) => `/api/${category}`,
   GOOGLE_PREFILL: (category: Category) => `/api/${category}/google-prefill`,
   FIELD_SUGGESTIONS: "/api/field-suggestions",
-  DINING_STAGE2_SUGGEST: (id: number) => `/api/dining/${id}/stage2-suggest`,
   PENDING_SUGGESTION_ACCEPT: (id: number) => `/api/dining/${id}/pending-suggestions/accept`,
   PENDING_SUGGESTION_DISMISS: (id: number) => `/api/dining/${id}/pending-suggestions/dismiss`,
   UPDATE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,

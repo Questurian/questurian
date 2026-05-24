@@ -39,6 +39,23 @@ export interface CreateMapsRequest {
 export interface GooglePrefillRequest {
   name: string;
   address: string;
+  /** Operator-supplied TripAdvisor URL. Dining only. */
+  tripadvisorUrl?: string;
+  /** Operator confirmed this place has no TripAdvisor listing. Dining only. */
+  noTripadvisorListing?: boolean;
+}
+
+export interface TripadvisorPrefillFields {
+  email: string | null;
+  phoneNumber: string | null;
+  website: string | null;
+  priceLevel: string | null;
+  neighborhood: string | null;
+  neighborhoodDescription: string | null;
+  operationHours: Record<string, unknown> | null;
+  mealTypes: string[] | null;
+  cuisines: string[] | null;
+  features: string[] | null;
 }
 
 export interface GooglePrefillResponse {
@@ -65,24 +82,12 @@ export interface GooglePrefillResponse {
   } | null;
   type: string | null;
   tripadvisorUrl: string | null;
+  tripadvisorPlaceData: TripadvisorPrefillFields | null;
   menuUrl: string | null;
   reservationUrl: string | null;
   provenance: Record<string, string>;
 }
 
-export interface DiningStage2SuggestionOutcome {
-  field: "type" | "idealFor";
-  applied: "live" | "pending" | "skipped";
-  reason?: string;
-  value?: string | string[];
-  provenance?: "ai";
-  confidence?: number;
-}
-
-export interface DiningStage2SuggestionResult {
-  locationId: number;
-  outcomes: DiningStage2SuggestionOutcome[];
-}
 
 export type AccommodationsFieldSuggestionFieldKey =
   | "type"
@@ -131,6 +136,34 @@ export interface AccommodationsFieldSuggestionResponse {
     snippet?: string;
   }>;
   source: "existing-data" | "ai";
+  error?: string;
+}
+
+export type DiningFieldSuggestionFieldKey =
+  | "type"
+  | "idealFor"
+  | "menuUrl"
+  | "reservationUrl";
+
+export interface DiningFieldSuggestionRequest {
+  category: "dining";
+  fieldKey: DiningFieldSuggestionFieldKey;
+  formValues: Record<string, unknown>;
+  apiContext?: Record<string, unknown>;
+}
+
+export interface DiningFieldSuggestionResponse {
+  fieldKey: DiningFieldSuggestionFieldKey;
+  fieldLabel: string;
+  kind: "single" | "multi" | "url";
+  suggestion: string | string[] | null;
+  confidence: number;
+  reason: string;
+  sources: Array<{
+    label: string;
+    url?: string;
+    snippet?: string;
+  }>;
   error?: string;
 }
 

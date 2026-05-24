@@ -27,6 +27,8 @@ export function buildDiningPrefillSignature(name: string, address: string) {
   return `${name.trim().toLowerCase()}|${normalizeDiningAddress(address).toLowerCase()}`;
 }
 
+const TRIPADVISOR_URL_PATTERN = /-d\d+-Reviews/i;
+
 export const addDiningSchema = z.object({
   name: z
     .string()
@@ -38,15 +40,39 @@ export const addDiningSchema = z.object({
     .trim()
     .min(1, "Address is required")
     .max(500, "Address must be less than 500 characters"),
+  title: z
+    .string()
+    .trim()
+    .max(200, "Title must be less than 200 characters")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
+  phoneNumber: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
+  website: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
   type: z.string().optional().or(z.literal("")).transform((value) => (value === "" ? undefined : value)),
   idealFor: idealForSchema,
   tripadvisorUrl: z
     .string()
     .trim()
     .url("TripAdvisor URL must be a valid URL")
+    .refine(
+      (value) => TRIPADVISOR_URL_PATTERN.test(value),
+      "TripAdvisor URL must match pattern ...-d<locationId>-Reviews-..."
+    )
     .optional()
     .or(z.literal(""))
     .transform((value) => (value === "" ? undefined : value)),
+  noTripadvisorListing: z.boolean().default(false),
   menuUrl: z
     .string()
     .trim()
@@ -97,6 +123,19 @@ export const addDiningSchema = z.object({
   district: z.string().trim().optional().or(z.literal("")),
   ianaTimeId: z.string().trim().optional().or(z.literal("")),
 });
+
+export function validateTripadvisorEntry(values: {
+  tripadvisorUrl?: string;
+  noTripadvisorListing?: boolean;
+}): string | null {
+  if (values.noTripadvisorListing && values.tripadvisorUrl) {
+    return 'Uncheck "No TripAdvisor listing" before entering a URL';
+  }
+  if (!values.noTripadvisorListing && !values.tripadvisorUrl) {
+    return 'Paste the TripAdvisor URL, or check "No TripAdvisor listing"';
+  }
+  return null;
+}
 
 export const addDiningSubmitSchema = z
   .object({

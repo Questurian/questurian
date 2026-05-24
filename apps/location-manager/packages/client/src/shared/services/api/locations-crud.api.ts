@@ -9,7 +9,6 @@ import type {
   UpdateMapsRequest,
   GooglePrefillRequest,
   GooglePrefillResponse,
-  DiningStage2SuggestionResult,
   AddInstagramRequest,
   InstagramEmbedResponse,
   SuccessResponse,
@@ -110,10 +109,6 @@ export const locationsCrudApi = {
 
   async googlePrefill(category: Category, data: GooglePrefillRequest): Promise<GooglePrefillResponse> {
     return apiPost<GooglePrefillResponse>(API_ENDPOINTS.GOOGLE_PREFILL(category), data);
-  },
-
-  async runDiningStage2Suggest(id: number): Promise<DiningStage2SuggestionResult> {
-    return apiPost<DiningStage2SuggestionResult>(API_ENDPOINTS.DINING_STAGE2_SUGGEST(id), {});
   },
 
   async acceptPendingSuggestion(id: number, field: string): Promise<void> {

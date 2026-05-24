@@ -20,8 +20,9 @@ export interface FieldSuggestionAiRequest {
   category: string;
   field_key: string;
   field_label: string;
-  kind: "single" | "multi";
-  allowed_options: Array<{
+  kind: "single" | "multi" | "url";
+  /** Required for kind=single|multi; ignored for kind=url. */
+  allowed_options?: Array<{
     value: string;
     label: string;
     description?: string;

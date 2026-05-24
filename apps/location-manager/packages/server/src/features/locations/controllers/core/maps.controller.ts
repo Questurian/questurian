@@ -150,7 +150,15 @@ export async function postAddMapsWithPhotos(c: Context) {
 export async function postGooglePrefill(c: Context) {
   const dto = c.get("validatedBody") as GooglePrefillDto;
   const routeCategory = c.get("routeCategory") as LocationCategory | undefined;
-  const result = await container.mapsService.resolveGooglePrefill(dto.name, dto.address, routeCategory);
+  const result = await container.mapsService.resolveGooglePrefill(
+    dto.name,
+    dto.address,
+    routeCategory,
+    {
+      operatorTripadvisorUrl: dto.tripadvisorUrl,
+      noTripadvisorListing: dto.noTripadvisorListing,
+    }
+  );
   return c.json(successResponse(result));
 }
 

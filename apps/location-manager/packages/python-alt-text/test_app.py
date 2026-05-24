@@ -128,5 +128,117 @@ class AltTextServiceTests(unittest.TestCase):
         mocked_generate.assert_called_once_with(request)
 
 
+class UrlFieldSuggestionTests(unittest.TestCase):
+    def _url_request(self, **overrides) -> app.FieldSuggestionRequest:
+        defaults = {
+            "category": "dining",
+            "field_key": "menuUrl",
+            "field_label": "Menu",
+            "kind": "url",
+            "allowed_options": [],
+            "form_values": {"name": "Maido", "address": "Calle San Martin 399, Lima"},
+            "api_context": {"website": "https://maido.pe"},
+        }
+        defaults.update(overrides)
+        return app.FieldSuggestionRequest(**defaults)
+
+    def test_url_prompt_drops_option_constraint_language(self) -> None:
+        prompt = app.build_field_suggestion_prompt(self._url_request())
+
+        self.assertIn("absolute http:// or https:// URL", prompt)
+        self.assertNotIn("allowed_options", prompt)
+        self.assertIn("Maido", prompt)
+
+    def test_url_kind_allows_empty_allowed_options(self) -> None:
+        request = self._url_request()
+        with patch(
+            "app.generate_grounded_json_from_prompt",
+            return_value={
+                "suggestion": "https://maido.pe/menu",
+                "confidence": 0.82,
+                "reason": "Linked from the venue's homepage.",
+                "sources": [],
+            },
+        ):
+            result = app.generate_field_suggestion(request)
+
+        self.assertEqual(result["suggestion"], "https://maido.pe/menu")
+        self.assertEqual(result["confidence"], 0.82)
+
+    def test_url_kind_rejects_non_http_suggestion(self) -> None:
+        request = self._url_request()
+        with patch(
+            "app.generate_grounded_json_from_prompt",
+            return_value={
+                "suggestion": "maido.pe/menu",
+                "confidence": 0.9,
+                "reason": "",
+                "sources": [],
+            },
+        ):
+            result = app.generate_field_suggestion(request)
+
+        self.assertIsNone(result["suggestion"])
+        self.assertEqual(result["confidence"], 0)
+
+    def test_url_kind_passes_through_null_suggestion(self) -> None:
+        request = self._url_request()
+        with patch(
+            "app.generate_grounded_json_from_prompt",
+            return_value={
+                "suggestion": None,
+                "confidence": 0.3,
+                "reason": "No canonical link found.",
+                "sources": [],
+            },
+        ):
+            result = app.generate_field_suggestion(request)
+
+        self.assertIsNone(result["suggestion"])
+        self.assertEqual(result["confidence"], 0.3)
+
+    def test_single_kind_still_requires_allowed_options(self) -> None:
+        request = app.FieldSuggestionRequest(
+            category="dining",
+            field_key="type",
+            field_label="Type",
+            kind="single",
+            allowed_options=[],
+            form_values={"name": "Maido"},
+        )
+        with self.assertRaises(ValueError):
+            app.generate_field_suggestion(request)
+
+    def test_unknown_kind_rejected(self) -> None:
+        request = app.FieldSuggestionRequest(
+            category="dining",
+            field_key="menuUrl",
+            field_label="Menu",
+            kind="freetext",
+            allowed_options=[],
+            form_values={"name": "Maido"},
+        )
+        with self.assertRaises(ValueError):
+            app.generate_field_suggestion(request)
+
+
+class UrlValidationTests(unittest.TestCase):
+    def test_accepts_https_url(self) -> None:
+        self.assertTrue(app.is_valid_http_url("https://example.com/menu"))
+
+    def test_accepts_http_url(self) -> None:
+        self.assertTrue(app.is_valid_http_url("http://example.com"))
+
+    def test_rejects_scheme_relative(self) -> None:
+        self.assertFalse(app.is_valid_http_url("//example.com"))
+
+    def test_rejects_bare_domain(self) -> None:
+        self.assertFalse(app.is_valid_http_url("example.com"))
+
+    def test_rejects_non_string(self) -> None:
+        self.assertFalse(app.is_valid_http_url(None))
+        self.assertFalse(app.is_valid_http_url(42))
+
+
 if __name__ == "__main__":
     unittest.main()

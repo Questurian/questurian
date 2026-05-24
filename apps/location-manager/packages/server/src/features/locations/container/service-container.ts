@@ -20,7 +20,7 @@ import {
 import { GooglePlacesPhotosClient } from "../services/integrations/clients/google-places-photos.client";
 import { PhotoImportService } from "../services/integrations/photo-import.service";
 import { AccommodationsFieldSuggestionService } from "../services/integrations/accommodations-field-suggestion.service";
-import { DiningStage2SuggestionService } from "../services/integrations/dining-stage2-suggestion.service";
+import { DiningFieldSuggestionService } from "../services/integrations/dining-field-suggestion.service";
 import { PendingSuggestionsService } from "../services/integrations/pending-suggestions.service";
 
 export class ServiceContainer {
@@ -46,7 +46,7 @@ export class ServiceContainer {
   readonly payloadSyncService: PayloadSyncService;
   readonly tripAdvisorPlaceService: TripAdvisorPlaceService;
   readonly accommodationsFieldSuggestionService: AccommodationsFieldSuggestionService;
-  readonly diningStage2SuggestionService: DiningStage2SuggestionService;
+  readonly diningFieldSuggestionService: DiningFieldSuggestionService;
   readonly pendingSuggestionsService: PendingSuggestionsService;
 
   private constructor() {
@@ -83,7 +83,7 @@ export class ServiceContainer {
       this.altTextApiClient
     );
     this.accommodationsFieldSuggestionService = new AccommodationsFieldSuggestionService(this.altTextApiClient);
-    this.diningStage2SuggestionService = new DiningStage2SuggestionService(this.altTextApiClient);
+    this.diningFieldSuggestionService = new DiningFieldSuggestionService(this.altTextApiClient);
     this.pendingSuggestionsService = new PendingSuggestionsService();
     this.locationQueryService = new LocationQueryService();
     this.locationMutationService = new LocationMutationService(this.imageStorage);

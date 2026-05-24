@@ -48,6 +48,33 @@ export class TripAdvisorPlaceService {
   }
 
   /**
+   * Fetch TripAdvisor place data without persisting or merging — used by the
+   * Add Dining autofill flow so Step 1 can return TA-derived fields in the
+   * prefill response. Returns null if SerpAPI is not configured, the upstream
+   * call fails, or the response is missing place_result.
+   */
+  async fetchPlaceDataForPrefill(
+    tripadvisorLocationId: string
+  ): Promise<TripAdvisorPlaceResult | null> {
+    if (!this.isConfigured()) {
+      return null;
+    }
+    try {
+      const response = await this.serpApiClient.fetchPlaceData(tripadvisorLocationId);
+      if (response.error || !response.place_result) {
+        return null;
+      }
+      return response.place_result;
+    } catch (error) {
+      console.warn(
+        `[TripAdvisorPlaceService] Pre-Create place fetch failed for TA ID ${tripadvisorLocationId}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
    * Merge TripAdvisor place data into a location record.
    * Fills empty fields for most attributes.
    * Trusted attributes (operation hours and price level) overwrite existing data when present.
