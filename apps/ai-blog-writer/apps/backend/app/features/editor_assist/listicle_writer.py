@@ -6,6 +6,9 @@ from dataclasses import dataclass
 import re
 from typing import Literal
 
+from app.shared.prompts import ANTI_AI_TELLS_BLURB
+from app.shared.text import normalize_dashes
+
 ListicleArticleType = Literal["single-type-listicle", "listicle-itinerary"]
 ListicleFieldType = Literal["intro", "blurb"]
 ListicleCategory = Literal[
@@ -30,28 +33,34 @@ ListicleAngle = Literal[
 
 LISTICLE_ANGLE_GUIDANCE: dict[ListicleAngle, str] = {
     "signature-dish": (
-        "Lead with a specific dish or item the place is celebrated for. Use it as the entry point, "
-        "then surround it with what makes the cooking distinctive. Do not list multiple dishes; pick one."
+        "Sentence 1 must name one specific dish or item. Not a category, not a metaphor about the "
+        "cooking — the dish itself, by name. Build the rest of the blurb around it. If the context "
+        "does not contain a named dish, switch to whats-different rather than inventing one."
     ),
     "atmosphere": (
-        "Lead with the room — design, light, sound, crowd, energy. The food matters but is supporting "
-        "evidence, not the headline."
+        "Sentence 1 must place the reader in the room using one concrete physical detail (the light, "
+        "the seating count, the music, a material, the crowd at a specific hour). No mood adjectives "
+        "in the lead. The food is supporting evidence, not the headline."
     ),
     "founders-backstory": (
-        "Lead with the people, the origin, or the lineage. Only choose this if the context actually "
-        "supports it; do not invent a backstory. If insufficient signal, switch to atmosphere."
+        "Sentence 1 must name the person and one specific fact about them (where they trained, what "
+        "they ran before, the year they opened). Only choose this angle if those facts are in the "
+        "context. If the signal is thin, switch to atmosphere — do not invent a backstory."
     ),
     "insider-tip": (
-        "Lead with something a first-time visitor would not figure out on their own — best time to go, "
-        "what to order, where to sit. Practical, specific, no hedging."
+        "Sentence 1 must deliver one specific, actionable tip a first-time visitor would not guess "
+        "(a time, a seat, an order, a side door). No setup, no hedging, no clever metaphor — the "
+        "tip is the lead. Avoid clipped imperative closers; the tip belongs at the top, not the end."
     ),
     "best-for": (
-        "Lead with the occasion or audience the venue serves best (date night, business lunch, family). "
-        "Make the fit feel earned, not asserted."
+        "Sentence 1 must name the occasion or audience the venue serves best, then immediately back "
+        "it with one concrete reason (a feature of the room, the menu, the pacing, the price). "
+        "Assertion plus evidence in the same opening, not assertion alone."
     ),
     "whats-different": (
-        "Lead with what sets this place apart from neighboring options of the same kind. "
-        "Comparative without naming competitors."
+        "Sentence 1 must name the specific thing that sets this place apart from neighboring options "
+        "of the same kind (a technique, a sourcing choice, a format, a hybrid). Comparative without "
+        "naming competitors. No 'X rather than Y' constructions — state the differentiator directly."
     ),
 }
 
@@ -186,12 +195,13 @@ def strip_generation_fence(text: str) -> str:
     stripped = text.strip()
     fenced = FENCE_PATTERN.match(stripped)
     if fenced:
-        return fenced.group(1).strip()
-
-    for prefix in ("Paragraph:", "Intro:", "Blurb:", "Copy:"):
-        if stripped.startswith(prefix):
-            return stripped[len(prefix):].strip()
-    return stripped
+        stripped = fenced.group(1).strip()
+    else:
+        for prefix in ("Paragraph:", "Intro:", "Blurb:", "Copy:"):
+            if stripped.startswith(prefix):
+                stripped = stripped[len(prefix):].strip()
+                break
+    return normalize_dashes(stripped)
 
 
 def _normalize_block(text: str) -> str:
@@ -293,6 +303,7 @@ def build_generation_prompt(
         else ""
     )
     context_block = f"\n\n{rendered_context}" if rendered_context else ""
+    voice_block = _voice_rules_block(category, target.field_type)
     return (
         "You are writing a blurb for a travel listicle in the style of a polished digital publication. "
         f"Write like a confident {variant['editor_role']}, not like a review summary.\n\n"
@@ -312,10 +323,20 @@ def build_generation_prompt(
         "- Make clear why it belongs in this specific list.\n"
         "- Absorb the research into direct, confident editorial writing.\n"
         "- Keep the writing concise, polished, and specific.\n"
-        f"{custom_block}\n\n"
+        f"{custom_block}"
+        f"{voice_block}\n\n"
         "Output:\n"
         "One blurb paragraph only."
     ).strip()
+
+
+def _voice_rules_block(category: ListicleCategory | None, field_type: ListicleFieldType) -> str:
+    # Dining-blurb pilot only. Other categories and intros are unaffected
+    # until the pilot's stopping rule (≥70% banned-phrase reduction across 20
+    # blurbs AND zero fabricated anchors) is met.
+    if field_type != "blurb" or category != "dining":
+        return ""
+    return f"\n\n{ANTI_AI_TELLS_BLURB}"
 
 
 def _tone_block(list_tone: ListTone | None) -> str:
@@ -412,6 +433,7 @@ def build_writer_prompt(
         else ""
     )
     context_block = f"\n\n{rendered_context}" if rendered_context else ""
+    voice_block = _voice_rules_block(category, target.field_type)
     return (
         "You are writing a blurb for a travel listicle in the style of a polished digital publication. "
         f"Write like a confident {variant['editor_role']}, not like a review summary.\n\n"
@@ -435,7 +457,8 @@ def build_writer_prompt(
         f"{'- Match the LIST TONE precisely.' + chr(10) if tone_block else ''}"
         f"{'- Lead from the BLURB ANGLE; let it shape the first sentence.' + chr(10) if angle_block else ''}"
         "- Keep the writing concise, polished, and specific.\n"
-        f"{custom_block}\n\n"
+        f"{custom_block}"
+        f"{voice_block}\n\n"
         "Output:\n"
         "One blurb paragraph only."
     ).strip()

@@ -32,6 +32,7 @@ from .listicle_writer import (
 )
 from .lm_client import fetch_editorial_locations_by_payload_refs
 from .writer_models import WriterModelError, invoke_writer_model
+from app.shared.text import normalize_dashes
 
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
 logger = logging.getLogger(__name__)
@@ -876,6 +877,8 @@ def _rewrite_block_impl(request: RewriteBlockRequest) -> RewriteBlockResponse:
     rewritten_content = _extract_rewritten_block(raw_text)
     if not rewritten_content:
         raise HTTPException(status_code=502, detail="AI rewrite returned empty block content")
+
+    rewritten_content = normalize_dashes(rewritten_content)
 
     return RewriteBlockResponse(
         rewritten_content=rewritten_content,
