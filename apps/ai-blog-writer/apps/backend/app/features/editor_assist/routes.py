@@ -16,33 +16,43 @@ from .graph import (
     run_editor_assist_listicle_generation_graph,
     run_editor_assist_rewrite_graph,
 )
-from .angle_assignment import ListicleAngle as AssignmentAngle, assign_dining_angles
-from .critical_fields import TierEvaluation, evaluate_tiers
+from .angle_assignment import (
+    ANTI_AI_PROMPT_CATEGORIES,
+    LEAN_PROMPT_CATEGORIES,
+    ListicleAngle as AssignmentAngle,
+)
+from .critical_fields import CriticalFieldsResult, evaluate_critical_fields
+from .research_profile import (
+    ResearchFinding,
+    ResearchProfile,
+    ResearchProfileRequest,
+    ResearchProfileTrace,
+    run_research_profiles_concurrently,
+)
 from .listicle_writer import (
     LIST_TONE_GUIDANCE,
     LISTICLE_ANGLE_GUIDANCE,
     ListicleArticleType,
     ListicleCategory,
     ListicleWriterTarget,
-    build_fallback_research_prompt,
+    build_identity_only_writer_prompt,
+    build_lean_writer_prompt,
     build_retry_prompt,
     build_writer_prompt,
     strip_generation_fence,
     validate_generated_text,
 )
-from .lm_client import fetch_editorial_locations_by_payload_refs
+from .writer_brief import (
+    MIN_SOURCE_FACTS,
+    WriterBrief,
+    WriterBriefTrace,
+    run_writer_brief,
+)
 from .writer_models import WriterModelError, invoke_writer_model
 from app.shared.text import normalize_dashes
 
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
 logger = logging.getLogger(__name__)
-
-
-def invoke_google_grounded_text(*args: Any, **kwargs: Any) -> Any:
-    """Import grounding lazily so route modules stay importable under light test stubs."""
-    from utils import invoke_google_grounded_text as _invoke_google_grounded_text
-
-    return _invoke_google_grounded_text(*args, **kwargs)
 
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
@@ -150,8 +160,17 @@ PayloadCollectionSlug = Literal[
     "dining", "accommodations", "attractions", "nightlife", "key-locations"
 ]
 ListicleAngleRequest = Literal[
+    # Dining
     "signature-dish", "atmosphere", "founders-backstory",
     "insider-tip", "best-for", "whats-different",
+    # Accommodations
+    "signature-amenity", "room-style", "property-backstory",
+    "booking-tip", "best-for-stay-type",
+    # Attractions
+    "signature-feature", "setting", "history-built",
+    "visit-time-tip", "best-for-visit-type",
+    # Nightlife (single-angle pool per ADR 0008)
+    "best-for-night",
 ]
 
 
@@ -188,7 +207,9 @@ class GenerateListicleContentRequest(BaseModel):
 
 StepEventName = Literal[
     "critical_fields_evaluated",
-    "fallback_research_called",
+    "evidence_profile_completed",
+    "research_profile_completed",
+    "writer_brief_completed",
     "writer_called",
     "validated",
     "retry_called",
@@ -215,6 +236,10 @@ class GenerateListicleTargetResponse(BaseModel):
     source_urls: list[str] = Field(default_factory=list)
     validation_errors: list[str] = Field(default_factory=list)
     error_message: str | None = None
+    low_confidence: bool = False
+    warnings: list[str] = Field(default_factory=list)
+    requested_angle: ListicleAngleRequest | None = None
+    effective_angle: ListicleAngleRequest | None = None
     steps: list[StepEvent] = Field(default_factory=list)
 
 
@@ -288,13 +313,6 @@ async def generate_title(request: GenerateTitleRequest) -> GenerateTitleResponse
         ) from exc
 
 
-def _resolve_grounded_model(model_name: str) -> str:
-    resolved = model_name.strip()
-    if resolved in {"gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"}:
-        return resolved
-    return "gemini-2.5-flash"
-
-
 def _merge_urls(*groups: list[str]) -> list[str]:
     merged: list[str] = []
     seen: set[str] = set()
@@ -307,103 +325,53 @@ def _merge_urls(*groups: list[str]) -> list[str]:
     return merged
 
 
-def _format_lm_facts(location: dict[str, Any]) -> str:
-    """Render an EditorialLocation dict as a labeled facts block to splice
-    into the writer prompt's BUILDER CONTEXT. Empty/null fields are skipped."""
-    lines: list[str] = []
-
-    def _list_line(label: str, value: Any) -> None:
-        if isinstance(value, list) and value:
-            lines.append(f"{label}: {', '.join(str(v) for v in value)}")
-
-    def _str_line(label: str, value: Any) -> None:
-        if isinstance(value, str) and value.strip():
-            lines.append(f"{label}: {value.strip()}")
-
-    _str_line("Type", location.get("type"))
-    _str_line("Price level", location.get("priceLevel"))
-    _list_line("Cuisines", location.get("cuisines"))
-    _list_line("Meal types", location.get("mealTypes"))
-    _list_line("Ideal for", location.get("idealFor"))
-    _list_line("Features", location.get("features"))
-    _str_line("Address", location.get("address"))
-    _str_line("Neighborhood description", location.get("neighborhoodDescription"))
-
-    hours = location.get("operationHours")
-    if isinstance(hours, dict) and hours:
-        rendered = "; ".join(f"{k}: {v}" for k, v in hours.items())
-        lines.append(f"Operation hours: {rendered}")
-
-    facts_block = (
-        "LOCATION FACTS (from Location Manager)\n" + "\n".join(lines) if lines else ""
-    )
-
-    digest_block = _format_reviews_digest(location.get("_reviewsDigest"))
-    if facts_block and digest_block:
-        return f"{facts_block}\n\n{digest_block}"
-    return facts_block or digest_block
-
-
-def _format_reviews_digest(digest: Any) -> str:
-    if not isinstance(digest, dict):
+def _format_research_profile_block(
+    profile: ResearchProfile | None,
+) -> str:
+    """Render supported angle evidence and bucket evidence for the writer."""
+    if profile is None:
         return ""
-
-    def _list(label: str, value: Any) -> str | None:
-        if isinstance(value, list) and value:
-            return f"{label}: {', '.join(str(v) for v in value)}"
-        return None
-
-    lines: list[str] = []
-    summary = digest.get("summary")
-    if isinstance(summary, str) and summary.strip():
-        lines.append(f"Summary: {summary.strip()}")
-    for entry in (
-        _list("Known for", digest.get("knownFor")),
-        _list("Common positives", digest.get("commonPositives")),
-        _list("Common gripes", digest.get("commonGripes")),
-        _list("Named dishes", digest.get("namedDishes")),
-    ):
-        if entry:
-            lines.append(entry)
-
-    if not lines:
-        return ""
-    return (
-        "REVIEWS DIGEST (cached, from aggregated Google + TripAdvisor reviews)\n"
-        + "\n".join(lines)
-    )
+    lines: list[str] = ["RESEARCH PROFILE"]
+    selected = profile.selected_angle
+    if selected.status == "supported" and selected.angle and selected.summary:
+        lines.append("SELECTED ANGLE EVIDENCE")
+        lines.append(f"- {selected.angle} (effective angle): {selected.summary}")
+    bucket_lines: list[str] = []
+    for bucket, findings in profile.standard_buckets.items():
+        for finding in findings:
+            bucket_lines.append(f"- {bucket}: {finding.summary}")
+    if bucket_lines:
+        lines.append("STANDARD EVIDENCE BUCKETS")
+        lines.extend(bucket_lines)
+    return "\n".join(lines)
 
 
-def _collect_payload_refs(
-    targets: list[GenerateListicleTargetRequest],
-) -> list[dict[str, str]]:
-    """Collect unique (collection, docId) refs from blurb targets that carry them."""
-    seen: set[tuple[str, str]] = set()
-    refs: list[dict[str, str]] = []
-    for t in targets:
-        if t.field_type != "blurb":
-            continue
-        if not t.payload_doc_id or not t.payload_collection:
-            continue
-        key = (t.payload_collection, t.payload_doc_id)
-        if key in seen:
-            continue
-        seen.add(key)
-        refs.append({"collection": t.payload_collection, "docId": t.payload_doc_id})
-    return refs
+def _research_buckets_details(
+    buckets: dict[str, list[ResearchFinding]],
+) -> dict[str, list[dict[str, Any]]]:
+    return {
+        bucket: [
+            {
+                "summary": finding.summary,
+                "citations": list(finding.citations),
+            }
+            for finding in findings
+        ]
+        for bucket, findings in buckets.items()
+    }
 
 
 def _to_listicle_writer_target(
     request_target: GenerateListicleTargetRequest,
     *,
-    lm_facts_block: str = "",
+    extra_supporting_context: str = "",
 ) -> ListicleWriterTarget:
     base_context = request_target.supporting_context or ""
-    if lm_facts_block:
+    if extra_supporting_context:
         supporting_context = (
-            f"{base_context}\n\n{lm_facts_block}".strip()
+            f"{base_context}\n\n{extra_supporting_context}".strip()
             if base_context.strip()
-            else lm_facts_block
+            else extra_supporting_context
         )
     else:
         supporting_context = base_context
@@ -420,170 +388,211 @@ def _to_listicle_writer_target(
     )
 
 
-def _run_fallback_research(
-    *,
-    target: ListicleWriterTarget,
-    evaluation: TierEvaluation,
-    article_location: str,
-    grounded_model: str,
-) -> tuple[str, list[str]]:
-    """Single Gemini-grounded call to fill Tier-2 gaps. Returns (findings_block, source_urls).
-    Degrades to empty findings on failure — the writer still runs without research.
-    """
-    if target.field_type != "blurb" or target.category is None:
-        return "", []
-    subject_name = (target.research_subject or target.display_name or "").strip()
-    if not subject_name:
-        return "", []
-
-    prompt = build_fallback_research_prompt(
-        subject_name=subject_name,
-        subject_location=(target.location_label or article_location).strip(),
-        category=target.category,
-        gap_descriptions=evaluation.gap_descriptions,
-    )
-    grounded = invoke_google_grounded_text(
-        prompt,
-        model_name=grounded_model,
-        fallback_model_name="gemini-2.5-flash",
-        max_tokens=768,
-        temperature=0.05,
-    )
-    if grounded is None or not grounded.text.strip():
-        logger.warning(
-            "Fallback Research returned no findings for target %s", target.target_id
-        )
-        return "", []
-    findings = grounded.text.strip()
-    block = f"RESEARCH FINDINGS (web, scoped to gaps)\n{findings}"
-    return block, list(grounded.source_urls or [])
-
-
-def _augment_target_with_research(
-    target: ListicleWriterTarget,
-    research_block: str,
-) -> ListicleWriterTarget:
-    if not research_block:
-        return target
-    base = target.supporting_context or ""
-    augmented = (
-        f"{base}\n\n{research_block}".strip() if base.strip() else research_block
-    )
-    return ListicleWriterTarget(
-        target_id=target.target_id,
-        field_type=target.field_type,
-        category=target.category,
-        display_name=target.display_name,
-        research_subject=target.research_subject,
-        location_label=target.location_label,
-        current_content=target.current_content,
-        supporting_context=augmented,
-    )
-
-
 def _generate_single_listicle_target(
     *,
     article_title: str,
     article_type: ListicleArticleType,
     article_location: str,
     article_context: str,
-    target: ListicleWriterTarget,
+    request_target: GenerateListicleTargetRequest,
     custom_instruction: str,
     model_name: str,
-    lm_location: dict[str, Any] | None = None,
+    cf_result: CriticalFieldsResult,
+    research_profile: ResearchProfile | None,
+    research_profile_trace: ResearchProfileTrace | None,
     list_tone: ListTone | None = None,
-    listicle_angle: AssignmentAngle | None = None,
+    requested_angle: AssignmentAngle | None = None,
+    effective_angle: AssignmentAngle | None = None,
 ) -> GenerateListicleTargetResponse:
-    grounded_model = _resolve_grounded_model(model_name)
-    source_urls: list[str] = []
     steps: list[StepEvent] = []
+    source_urls: list[str] = []
+    warnings: list[str] = []
 
     def _elapsed_ms(start: float) -> int:
         return int((time.perf_counter() - start) * 1000)
 
     # 1) critical_fields_evaluated
     cf_start = time.perf_counter()
-    evaluation = evaluate_tiers(target.category, lm_location)
-    if evaluation.has_tier1_gaps:
-        logger.warning(
-            "Tier-1 gaps for target %s (%s): missing %s — generation will proceed but quality is at risk",
-            target.target_id,
-            target.research_subject or target.display_name,
-            ", ".join(evaluation.tier1_missing),
-        )
     steps.append(StepEvent(
         name="critical_fields_evaluated",
-        status="ok",
+        status="ok" if cf_result.passed else "failed",
         details={
-            "category": target.category,
-            "has_lm_data": lm_location is not None,
-            "tier1_missing": list(evaluation.tier1_missing),
-            "tier2_gap_descriptions": list(evaluation.gap_descriptions),
-            "needs_fallback_research": evaluation.needs_fallback_research,
-            "has_tier1_gaps": evaluation.has_tier1_gaps,
+            "passed": cf_result.passed,
+            "missing": list(cf_result.missing),
+            "category": request_target.category,
+            "field_type": request_target.field_type,
         },
         duration_ms=_elapsed_ms(cf_start),
     ))
-
-    # 2) fallback_research_called (only when LM data leaves Tier-2 gaps)
-    if evaluation.needs_fallback_research and lm_location is not None:
-        fr_start = time.perf_counter()
-        research_prompt = build_fallback_research_prompt(
-            subject_name=(target.research_subject or target.display_name or "").strip(),
-            subject_location=(target.location_label or article_location).strip(),
-            category=target.category or "dining",
-            gap_descriptions=evaluation.gap_descriptions,
+    if not cf_result.passed:
+        return GenerateListicleTargetResponse(
+            target_id=request_target.target_id,
+            status="error",
+            model_used=model_name,
+            error_message=f"Critical Fields gate failed: missing {', '.join(cf_result.missing)}",
+            requested_angle=requested_angle,
+            effective_angle=effective_angle,
+            steps=steps,
         )
-        try:
-            research_block, research_urls = _run_fallback_research(
-                target=target,
-                evaluation=evaluation,
-                article_location=article_location,
-                grounded_model=grounded_model,
-            )
-        except Exception as exc:  # noqa: BLE001
-            steps.append(StepEvent(
-                name="fallback_research_called",
-                status="failed",
-                prompt=research_prompt,
-                model=grounded_model,
-                details={"error": str(exc)},
-                duration_ms=_elapsed_ms(fr_start),
-            ))
-            research_block, research_urls = "", []
-        else:
-            target = _augment_target_with_research(target, research_block)
-            source_urls = _merge_urls(source_urls, research_urls)
-            steps.append(StepEvent(
-                name="fallback_research_called",
-                status="ok" if research_block else "failed",
-                prompt=research_prompt,
-                output=research_block or None,
-                model=grounded_model,
-                details={
-                    "gap_descriptions": list(evaluation.gap_descriptions),
-                    "source_urls": list(research_urls),
+
+    # 2) research_profile_completed (blurbs only)
+    is_blurb = request_target.field_type == "blurb"
+    if is_blurb and research_profile is not None:
+        rp_start = time.perf_counter()
+        source_urls = _merge_urls(source_urls, research_profile.source_urls)
+        warnings = list(research_profile.warnings)
+        trace = research_profile_trace or ResearchProfileTrace(prompt="")
+        steps.append(StepEvent(
+            name="research_profile_completed",
+            status="ok" if research_profile.usable_for_blurb else "failed",
+            prompt=trace.prompt or None,
+            output=trace.raw_response or None,
+            model=trace.model or None,
+            details={
+                "requested_angle": requested_angle,
+                "effective_angle": research_profile.effective_angle,
+                "selected_angle": {
+                    "angle": research_profile.selected_angle.angle,
+                    "status": research_profile.selected_angle.status,
+                    "summary": research_profile.selected_angle.summary,
+                    "citations": list(research_profile.selected_angle.citations),
+                    "reason": research_profile.selected_angle.reason,
                 },
-                duration_ms=_elapsed_ms(fr_start),
-            ))
+                "standard_buckets": _research_buckets_details(
+                    research_profile.standard_buckets
+                ),
+                "usable_for_blurb": research_profile.usable_for_blurb,
+                "source_urls": list(source_urls),
+                "warnings": list(warnings),
+                "parser_dropped_reason": trace.parser_dropped_reason,
+                "error": trace.error,
+            },
+            duration_ms=_elapsed_ms(rp_start),
+        ))
 
     # 3) writer_called
-    wr_start = time.perf_counter()
-    prompt = build_writer_prompt(
-        article_title=article_title,
-        article_type=article_type,
-        article_location=article_location,
-        target=target,
-        article_context=article_context,
-        custom_instruction=custom_instruction,
-        list_tone=list_tone,
-        listicle_angle=listicle_angle,
+    angle_failed = (
+        is_blurb
+        and request_target.category in ANTI_AI_PROMPT_CATEGORIES
+        and requested_angle is not None
+        and effective_angle is None
     )
+    low_confidence = angle_failed
+    if is_blurb and research_profile is not None and not research_profile.usable_for_blurb:
+        low_confidence = True
+
+    # 2b) writer_brief. The Writer Brief curator compresses the Research
+    # Profile into a venue-tailored angle directive + flat Source Facts list.
+    # Runs for categories on the lean writer path (ADR 0007 nightlife,
+    # ADR 0009 dining). The bucket-dump path remains for categories outside
+    # LEAN_PROMPT_CATEGORIES until they are individually ported.
+    use_lean_prompt = (
+        is_blurb
+        and request_target.category in LEAN_PROMPT_CATEGORIES
+        and research_profile is not None
+        and research_profile.usable_for_blurb
+    )
+    writer_brief: WriterBrief | None = None
+    if use_lean_prompt:
+        wb_start = time.perf_counter()
+        venue_name = (
+            request_target.research_subject
+            or request_target.display_name
+            or ""
+        ).strip()
+        location_label = (
+            request_target.location_label or article_location
+        ).strip()
+        writer_brief, wb_trace = run_writer_brief(
+            venue_name=venue_name,
+            location_label=location_label,
+            category=request_target.category or "nightlife",
+            angle=effective_angle,
+            research_profile=research_profile,
+        )
+        if not writer_brief.is_usable:
+            low_confidence = True
+        steps.append(StepEvent(
+            name="writer_brief_completed",
+            status="ok" if writer_brief.is_usable else "failed",
+            prompt=wb_trace.prompt or None,
+            output=wb_trace.raw_response or None,
+            model=wb_trace.model or None,
+            details={
+                "angle": writer_brief.angle,
+                "angle_directive": writer_brief.angle_directive,
+                "source_facts": [
+                    {"fact": entry.fact, "citations": list(entry.citations)}
+                    for entry in writer_brief.source_facts
+                ],
+                "source_facts_count": len(writer_brief.source_facts),
+                "min_source_facts": MIN_SOURCE_FACTS,
+                "is_usable": writer_brief.is_usable,
+                "parser_dropped_reason": wb_trace.parser_dropped_reason,
+                "error": wb_trace.error,
+            },
+            duration_ms=_elapsed_ms(wb_start),
+        ))
+
+    findings_block = _format_research_profile_block(research_profile)
+    target = _to_listicle_writer_target(
+        request_target, extra_supporting_context=findings_block
+    )
+
+    wr_start = time.perf_counter()
+    if use_lean_prompt and writer_brief is not None and writer_brief.is_usable:
+        # Lean path: prompt is built from the Writer Brief only. BUILDER CONTEXT
+        # and the bucket-labeled Research Profile findings are intentionally not
+        # passed to the writer for categories on the lean path.
+        lean_target = _to_listicle_writer_target(request_target)
+        prompt = build_lean_writer_prompt(
+            category=request_target.category or "nightlife",
+            article_title=article_title,
+            article_type=article_type,
+            article_location=article_location,
+            target=lean_target,
+            brief=writer_brief,
+            custom_instruction=custom_instruction,
+            list_tone=list_tone,
+        )
+    elif is_blurb and research_profile is not None and not research_profile.usable_for_blurb:
+        prompt = build_identity_only_writer_prompt(
+            article_title=article_title,
+            article_type=article_type,
+            article_location=article_location,
+            target=target,
+            article_context=article_context,
+            custom_instruction=custom_instruction,
+            list_tone=list_tone,
+        )
+    elif use_lean_prompt:
+        # Lean fallback: curator returned an unusable brief. Drop to the
+        # identity-only path with low_confidence already flagged above.
+        prompt = build_identity_only_writer_prompt(
+            article_title=article_title,
+            article_type=article_type,
+            article_location=article_location,
+            target=target,
+            article_context=article_context,
+            custom_instruction=custom_instruction,
+            list_tone=list_tone,
+        )
+    else:
+        prompt = build_writer_prompt(
+            article_title=article_title,
+            article_type=article_type,
+            article_location=article_location,
+            target=target,
+            article_context=article_context,
+            custom_instruction=custom_instruction,
+            list_tone=list_tone,
+            listicle_angle=effective_angle,
+        )
     try:
         writer_result = invoke_writer_model(
             prompt=prompt,
             model_name=model_name,
-            max_tokens=1536,
+            max_tokens=8192,
             temperature=0.15,
         )
     except WriterModelError as exc:
@@ -596,11 +605,14 @@ def _generate_single_listicle_target(
                 "error": str(exc),
                 "custom_instruction": custom_instruction or None,
                 "list_tone": list_tone,
-                "listicle_angle": listicle_angle,
+                "requested_angle": requested_angle,
+                "effective_angle": effective_angle,
+                "low_confidence": low_confidence,
+                "warnings": list(warnings),
             },
             duration_ms=_elapsed_ms(wr_start),
         ))
-        logger.exception("Writer model call failed for target %s", target.target_id)
+        logger.exception("Writer model call failed for target %s", request_target.target_id)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     candidate = strip_generation_fence(writer_result.text)
@@ -615,7 +627,10 @@ def _generate_single_listicle_target(
             "raw_output": writer_result.text,
             "custom_instruction": custom_instruction or None,
             "list_tone": list_tone,
-            "listicle_angle": listicle_angle,
+            "requested_angle": requested_angle,
+            "effective_angle": effective_angle,
+            "low_confidence": low_confidence,
+            "warnings": list(warnings),
         },
         duration_ms=_elapsed_ms(wr_start),
     ))
@@ -640,23 +655,68 @@ def _generate_single_listicle_target(
     # 5) retry_called (only when first validation failed)
     if validation_errors:
         rt_start = time.perf_counter()
-        retry_prompt = build_retry_prompt(
-            article_title=article_title,
-            article_type=article_type,
-            article_location=article_location,
-            target=target,
-            article_context=article_context,
-            custom_instruction=custom_instruction,
-            current_output=candidate,
-            validation_errors=validation_errors,
-            list_tone=list_tone,
-            listicle_angle=listicle_angle,
-        )
+        if (
+            use_lean_prompt
+            and writer_brief is not None
+            and writer_brief.is_usable
+            and request_target.category == "nightlife"
+        ):
+            # Nightlife: retry inline on the lean prompt (existing behavior
+            # preserved from ADR 0007). ADR 0009 intentionally leaves this
+            # path on inline construction rather than build_retry_prompt to
+            # avoid touching nightlife.
+            lean_target = _to_listicle_writer_target(request_target)
+            base_lean_prompt = build_lean_writer_prompt(
+                category="nightlife",
+                article_title=article_title,
+                article_type=article_type,
+                article_location=article_location,
+                target=lean_target,
+                brief=writer_brief,
+                custom_instruction=custom_instruction,
+                list_tone=list_tone,
+            )
+            failures = "\n".join(f"- {item}" for item in validation_errors)
+            retry_prompt = (
+                f"{base_lean_prompt}\n\n"
+                "REVISION TASK\n"
+                "The previous draft did not pass validation. Rewrite it so it fully complies.\n\n"
+                f"VALIDATION FAILURES\n{failures}\n\n"
+                f"CURRENT DRAFT\n{candidate.strip()}\n\n"
+                "Return only the corrected final paragraph."
+            )
+        else:
+            # Dining lean retry routes through build_retry_prompt with a usable
+            # brief (ADR 0009). All other categories (and dining without a
+            # usable brief) get the fat-prompt retry.
+            retry_brief = (
+                writer_brief
+                if (
+                    use_lean_prompt
+                    and writer_brief is not None
+                    and writer_brief.is_usable
+                    and request_target.category == "dining"
+                )
+                else None
+            )
+            retry_prompt = build_retry_prompt(
+                article_title=article_title,
+                article_type=article_type,
+                article_location=article_location,
+                target=target,
+                article_context=article_context,
+                custom_instruction=custom_instruction,
+                current_output=candidate,
+                validation_errors=validation_errors,
+                list_tone=list_tone,
+                listicle_angle=effective_angle,
+                brief=retry_brief,
+            )
         try:
             retry_result = invoke_writer_model(
                 prompt=retry_prompt,
                 model_name=model_name,
-                max_tokens=1536,
+                max_tokens=8192,
                 temperature=0.1,
             )
         except WriterModelError as exc:
@@ -668,7 +728,7 @@ def _generate_single_listicle_target(
                 details={"error": str(exc)},
                 duration_ms=_elapsed_ms(rt_start),
             ))
-            logger.exception("Writer model retry failed for target %s", target.target_id)
+            logger.exception("Writer model retry failed for target %s", request_target.target_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
         candidate = strip_generation_fence(retry_result.text)
@@ -703,16 +763,22 @@ def _generate_single_listicle_target(
                 "final_status": "error",
                 "validation_errors": list(validation_errors),
                 "source_urls": list(source_urls),
+                "low_confidence": low_confidence,
+                "warnings": list(warnings),
             },
             duration_ms=_elapsed_ms(fn_start),
         ))
         return GenerateListicleTargetResponse(
-            target_id=target.target_id,
+            target_id=request_target.target_id,
             status="error",
             model_used=model_used,
             source_urls=source_urls,
             validation_errors=validation_errors,
             error_message="Generated content failed validation after retry.",
+            low_confidence=low_confidence,
+            warnings=warnings,
+            requested_angle=requested_angle,
+            effective_angle=effective_angle,
             steps=steps,
         )
 
@@ -724,17 +790,71 @@ def _generate_single_listicle_target(
         details={
             "final_status": "generated",
             "source_urls": list(source_urls),
+            "low_confidence": low_confidence,
+            "warnings": list(warnings),
         },
         duration_ms=_elapsed_ms(fn_start),
     ))
     return GenerateListicleTargetResponse(
-        target_id=target.target_id,
+        target_id=request_target.target_id,
         status="generated",
         markdown=candidate,
         model_used=model_used,
         source_urls=source_urls,
+        low_confidence=low_confidence,
+        warnings=warnings,
+        requested_angle=requested_angle,
+        effective_angle=effective_angle,
         steps=steps,
     )
+
+
+def _evaluate_target_cf(
+    request_target: GenerateListicleTargetRequest,
+) -> CriticalFieldsResult:
+    return evaluate_critical_fields(
+        name=request_target.display_name or request_target.research_subject,
+        category=request_target.category,
+        location_label=request_target.location_label,
+        payload_doc_id=request_target.payload_doc_id,
+    )
+
+
+def _is_skipped_existing_target(
+    target: GenerateListicleTargetRequest,
+    *,
+    skip_existing: bool,
+) -> bool:
+    return skip_existing and bool((target.current_content or "").strip())
+
+
+def _build_research_profile_requests(
+    targets: list[GenerateListicleTargetRequest],
+    cf_by_target_id: dict[str, CriticalFieldsResult],
+    *,
+    article_location: str,
+    skip_existing: bool,
+) -> list[ResearchProfileRequest]:
+    requests: list[ResearchProfileRequest] = []
+    for t in targets:
+        if t.field_type != "blurb":
+            continue
+        if _is_skipped_existing_target(t, skip_existing=skip_existing):
+            continue
+        if not cf_by_target_id.get(t.target_id, CriticalFieldsResult(False, [])).passed:
+            continue
+        if t.category not in ANTI_AI_PROMPT_CATEGORIES:
+            continue
+        venue_name = (t.display_name or t.research_subject or "").strip()
+        location_label = (t.location_label or article_location).strip()
+        requests.append(ResearchProfileRequest(
+            target_id=t.target_id,
+            venue_name=venue_name,
+            location_label=location_label,
+            category=t.category,
+            requested_angle=t.angle,
+        ))
+    return requests
 
 
 def _generate_listicle_content_impl(
@@ -755,63 +875,75 @@ def _generate_listicle_content_impl(
     model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
     results: dict[str, GenerateListicleTargetResponse] = {}
 
-    payload_refs = _collect_payload_refs(request.targets)
-    lm_locations_by_doc_id = (
-        fetch_editorial_locations_by_payload_refs(payload_refs) if payload_refs else {}
+    # 1) Critical Fields pass (per-target, in-memory, no I/O).
+    cf_by_target_id: dict[str, CriticalFieldsResult] = {
+        t.target_id: _evaluate_target_cf(t) for t in request.targets
+    }
+
+    # 2) Research Profile parallel pass for every generating blurb in enabled
+    #    categories. The operator-selected angle is authoritative (ADR 0010);
+    #    Research Profile validates it post-hoc.
+    rp_requests = _build_research_profile_requests(
+        request.targets,
+        cf_by_target_id,
+        article_location=article_location,
+        skip_existing=request.skip_existing,
     )
-
-    # Angle assignment pass: order-sensitive (rotation looks at preceding picks),
-    # so we walk blurb targets in their original sequence.
-    angle_inputs: list[tuple[str, dict[str, Any] | None, AssignmentAngle | None]] = []
+    research_results: dict[str, tuple[ResearchProfile, ResearchProfileTrace]] = (
+        run_research_profiles_concurrently(rp_requests) if rp_requests else {}
+    )
+    research_by_target_id: dict[str, ResearchProfile] = {
+        tid: pair[0] for tid, pair in research_results.items()
+    }
+    research_trace_by_target_id: dict[str, ResearchProfileTrace] = {
+        tid: pair[1] for tid, pair in research_results.items()
+    }
+    effective_angle_by_target_id: dict[str, AssignmentAngle | None] = {}
     for t in request.targets:
-        if t.field_type != "blurb" or t.category != "dining":
-            continue
-        loc = lm_locations_by_doc_id.get(t.payload_doc_id) if t.payload_doc_id else None
-        angle_inputs.append((t.target_id, loc, t.angle))
-    angle_by_target_id = assign_dining_angles(angle_inputs) if angle_inputs else {}
+        profile = research_by_target_id.get(t.target_id)
+        if profile is not None:
+            effective_angle_by_target_id[t.target_id] = profile.effective_angle
 
+    # 5) Per-target composition.
     for request_target in request.targets:
-        lm_location = (
-            lm_locations_by_doc_id.get(request_target.payload_doc_id)
-            if request_target.payload_doc_id
-            else None
-        )
-        lm_facts_block = _format_lm_facts(lm_location) if lm_location else ""
-        target = _to_listicle_writer_target(request_target, lm_facts_block=lm_facts_block)
-        resolved_angle = angle_by_target_id.get(request_target.target_id)
-        current_content = target.current_content.strip()
+        current_content = (request_target.current_content or "").strip()
         if request.skip_existing and current_content:
-            results[target.target_id] = GenerateListicleTargetResponse(
-                target_id=target.target_id,
+            results[request_target.target_id] = GenerateListicleTargetResponse(
+                target_id=request_target.target_id,
                 status="skipped",
                 model_used=model_used,
                 markdown=current_content,
             )
             continue
 
+        requested_angle = request_target.angle
+        effective_angle = effective_angle_by_target_id.get(request_target.target_id)
         try:
-            results[target.target_id] = _generate_single_listicle_target(
+            results[request_target.target_id] = _generate_single_listicle_target(
                 article_title=article_title,
                 article_type=request.article_type,
                 article_location=article_location,
                 article_context=article_context,
-                target=target,
+                request_target=request_target,
                 custom_instruction=custom_instruction,
                 model_name=model_used,
-                lm_location=lm_location,
+                cf_result=cf_by_target_id[request_target.target_id],
+                research_profile=research_by_target_id.get(request_target.target_id),
+                research_profile_trace=research_trace_by_target_id.get(request_target.target_id),
                 list_tone=request.list_tone,
-                listicle_angle=resolved_angle,
+                requested_angle=requested_angle,
+                effective_angle=effective_angle,
             )
         except HTTPException:
             raise
         except Exception as exc:  # noqa: BLE001
             logger.exception(
                 "Listicle generation failed for target %s: %s",
-                target.target_id,
+                request_target.target_id,
                 exc,
             )
-            results[target.target_id] = GenerateListicleTargetResponse(
-                target_id=target.target_id,
+            results[request_target.target_id] = GenerateListicleTargetResponse(
+                target_id=request_target.target_id,
                 status="error",
                 model_used=model_used,
                 error_message=str(exc),

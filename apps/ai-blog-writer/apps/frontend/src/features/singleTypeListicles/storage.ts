@@ -1,8 +1,8 @@
-import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../shared/api/ai/models'
+import { DEFAULT_EDITOR_ASSIST_MODEL, resolveEditorAssistModelName } from '../../shared/api/ai/models'
 import { createDraftStorage } from '../../shared/builder/storage/createDraftStorage'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
-import type { SingleTypeListicleDraft } from './types'
-import { DEFAULT_LIST_TONE, resolveListTone } from './types'
+import type { ListicleItemBlock, SingleTypeListicleDraft } from './types'
+import { DEFAULT_LIST_TONE, resolveListTone, resolveListicleAngleForBlockType } from './types'
 import { normalizeLocationIds } from '../../shared/locationScope/scope'
 
 const STORAGE_KEY = 'single_type_listicles_staged_v4_exact_neighborhoods'
@@ -10,6 +10,25 @@ const STORAGE_KEY = 'single_type_listicles_staged_v4_exact_neighborhoods'
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 )
+
+/**
+ * Coerce items pulled from localStorage. Nightlife items with legacy
+ * angle values (room-feel, order-timing-tip) or null get normalized to
+ * best-for-night per ADR 0008. Non-nightlife items are passed through.
+ */
+function coerceStoredItems(items: unknown[]): ListicleItemBlock[] {
+  return items.map((entry) => {
+    if (!isRecord(entry)) return entry as ListicleItemBlock
+    const blockType = entry.blockType as ListicleItemBlock['blockType'] | undefined
+    if (blockType === 'data-nightlife') {
+      return {
+        ...(entry as ListicleItemBlock),
+        angle: resolveListicleAngleForBlockType(blockType, entry.angle),
+      }
+    }
+    return entry as ListicleItemBlock
+  })
+}
 
 function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicleDraft | null {
   if (!isRecord(value)) return null
@@ -26,9 +45,9 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
     payloadPublishedAt: typeof value.payloadPublishedAt === 'string' && value.payloadPublishedAt.trim() ? value.payloadPublishedAt : undefined,
     payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim() ? value.payloadUpdatedAt : undefined,
     payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim() ? value.payloadAuthorName : undefined,
-    editorModelName: typeof value.editorModelName === 'string'
-      ? value.editorModelName as SingleTypeListicleDraft['editorModelName']
-      : DEFAULT_EDITOR_ASSIST_MODEL,
+    editorModelName: resolveEditorAssistModelName(
+      typeof value.editorModelName === 'string' ? value.editorModelName : undefined,
+    ),
     listTone: resolveListTone(value.listTone),
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',
@@ -54,7 +73,7 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
       introJsonText: typeof header.introJsonText === 'string' ? header.introJsonText : '',
       featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
     },
-    items: Array.isArray(value.items) ? value.items as SingleTypeListicleDraft['items'] : [],
+    items: Array.isArray(value.items) ? coerceStoredItems(value.items) : [],
     seoSection: normalizeSeoSection(value.seoSection ?? createEmptySeoSection()),
     status: value.status === 'published' ? 'published' : 'draft',
     articleType: 'single-type-listicle',

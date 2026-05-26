@@ -1,4 +1,4 @@
-import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../shared/api/ai/models'
+import { DEFAULT_EDITOR_ASSIST_MODEL, resolveEditorAssistModelName } from '../../shared/api/ai/models'
 import { createDraftStorage } from '../../shared/builder/storage/createDraftStorage'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import {
@@ -161,9 +161,9 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
     payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim() ? value.payloadUpdatedAt : undefined,
     payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim() ? value.payloadAuthorName : undefined,
     hasLocalChanges: Boolean(value.hasLocalChanges),
-    editorModelName: typeof value.editorModelName === 'string'
-      ? value.editorModelName as ListicleItineraryDraft['editorModelName']
-      : DEFAULT_EDITOR_ASSIST_MODEL,
+    editorModelName: resolveEditorAssistModelName(
+      typeof value.editorModelName === 'string' ? value.editorModelName : undefined,
+    ),
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',
     locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,

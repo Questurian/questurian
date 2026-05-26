@@ -16,8 +16,11 @@ export type ListicleAngle =
   | 'insider-tip'
   | 'best-for'
   | 'whats-different'
+  | 'best-for-night'
 
-export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<{ value: ListicleAngle; label: string }> = [
+export type ListicleAngleOption = { value: ListicleAngle; label: string }
+
+export const DINING_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
   { value: 'signature-dish', label: 'Signature Dish' },
   { value: 'atmosphere', label: 'Atmosphere' },
   { value: 'founders-backstory', label: 'Founders / Backstory' },
@@ -26,12 +29,44 @@ export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<{ value: ListicleAngle; label
   { value: 'whats-different', label: "What's Different" },
 ]
 
+export const NIGHTLIFE_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
+  { value: 'best-for-night', label: 'Best For Night' },
+]
+
+/** Single-angle nightlife pool per ADR 0008. Operator picks (or default). */
+export const NIGHTLIFE_DEFAULT_ANGLE: ListicleAngle = 'best-for-night'
+
+export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
+  ...DINING_LISTICLE_ANGLE_OPTIONS,
+  ...NIGHTLIFE_LISTICLE_ANGLE_OPTIONS,
+]
+
+export function getListicleAngleOptions(listicleType: ListicleType | ''): ReadonlyArray<ListicleAngleOption> {
+  if (listicleType === 'nightlife') return NIGHTLIFE_LISTICLE_ANGLE_OPTIONS
+  if (listicleType === 'dining') return DINING_LISTICLE_ANGLE_OPTIONS
+  return []
+}
+
 export function resolveListicleAngle(value: unknown): ListicleAngle | null {
   if (typeof value !== 'string') return null
   if (LISTICLE_ANGLE_OPTIONS.some((opt) => opt.value === value)) {
     return value as ListicleAngle
   }
   return null
+}
+
+/**
+ * Per-blockType coercion. Nightlife items always resolve to best-for-night
+ * because the pool is single-angle (ADR 0008); legacy values like 'room-feel'
+ * or 'order-timing-tip' from older drafts are normalized here on read so the
+ * operator does not have to re-pick an angle on every existing item.
+ */
+export function resolveListicleAngleForBlockType(
+  blockType: ListicleBlockType | undefined,
+  value: unknown,
+): ListicleAngle | null {
+  if (blockType === 'data-nightlife') return NIGHTLIFE_DEFAULT_ANGLE
+  return resolveListicleAngle(value)
 }
 
 export type ListTone =
@@ -90,7 +125,7 @@ export type ListicleItemBlock = {
   blurbMarkdown: string
   blurbLexical?: PayloadRichText
   blurbJsonText?: string
-  /** Operator override; null = backend auto-assigns. */
+  /** Operator-selected angle; null = unselected and generation is blocked (ADR 0010). */
   angle?: ListicleAngle | null
 }
 

@@ -4,7 +4,7 @@ Routes by model name:
   - Names starting with "claude" → Anthropic Messages API (premier writer).
   - Everything else → Vertex AI (LangChain VertexAI wrapper), non-grounded.
 
-The Fallback Research call is NOT routed here — it stays on Vertex with Google
+The Grounded Research call is NOT routed here — it stays on Vertex with Google
 Search grounding because that is the capability we rely on for fact discovery.
 This module is for the writer step only, where the prompt now treats supplied
 context as the source of truth and grounding is no longer needed.

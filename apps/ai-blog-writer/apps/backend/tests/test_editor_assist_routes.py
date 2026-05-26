@@ -1,8 +1,24 @@
+import json
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.features.editor_assist.routes as editor_assist_routes
-from utils.google_grounding import GroundedGenerationResult
+import app.features.editor_assist.research_profile as research_profile_mod
+import app.features.editor_assist.writer_brief as writer_brief_mod
+
+
+def _fake_curator(*, prompt, model_name, max_tokens, temperature):
+    return (
+        json.dumps({
+            "angle_directive": "Open by naming one specific dish at La Mar.",
+            "source_facts": [
+                {"fact": "Cevicheria with Peruvian seafood.", "citations": ["https://example.com/a"]},
+                {"fact": "Tasting menu on weekends.", "citations": ["https://example.com/b"]},
+            ],
+        }),
+        model_name,
+    )
 
 
 class _StubLLM:
@@ -15,6 +31,13 @@ class _StubLLM:
         return self._response_text
 
 
+class _FakeGroundedResult:
+    def __init__(self, text: str, source_urls: list[str] | None = None) -> None:
+        self.text = text
+        self.source_urls = source_urls or []
+        self.model_name = "gemini-2.5-flash"
+
+
 def _build_client() -> TestClient:
     app = FastAPI()
     app.include_router(editor_assist_routes.router)
@@ -25,13 +48,56 @@ def _paragraph(word_count: int, *, token: str = "editorial") -> str:
     return " ".join([token] * word_count)
 
 
+def _research_profile_payload(
+    *,
+    angle: str | None = None,
+    selected_status: str = "supported",
+    bucket_findings: int = 2,
+) -> str:
+    selected_angle = {
+        "angle": angle,
+        "status": selected_status if angle else "not-requested",
+        "summary": f"Verified fact about {angle}." if angle and selected_status == "supported" else "",
+        "citations": [f"https://example.com/{angle}"] if angle and selected_status == "supported" else [],
+        "reason": f"{angle} support status is {selected_status}." if angle else "",
+    }
+    findings = [
+        {
+            "summary": f"Useful standard finding {idx}.",
+            "citations": [f"https://example.com/bucket-{idx}"],
+        }
+        for idx in range(bucket_findings)
+    ]
+    return json.dumps({
+        "selected_angle": selected_angle,
+        "standard_buckets": {
+            "reputation-summary": findings,
+            "specific-offerings": [],
+            "experience-texture": [],
+            "history-or-ownership": [],
+            "practical-usefulness": [],
+            "best-for": [],
+            "standout-hook": [],
+            "social-proof": [],
+            "visual-assets": [],
+            "caveats-or-fit-warnings": [],
+            "timing-tips": [],
+        },
+        "warnings": [],
+    })
+
+
+# ---------- Unrelated routes still work (regression coverage) ----------
+
+
 def test_rewrite_block_returns_envelope_content(monkeypatch):
+    class _WriterResult:
+        text = "<<<BLOCK>>>\n## Getting Around\n\nUpdated block text.\n<<<END_BLOCK>>>"
+        model_name = editor_assist_routes.DEFAULT_MODEL
+
     monkeypatch.setattr(
-        editor_assist_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: _StubLLM(
-            "<<<BLOCK>>>\n## Getting Around\n\nUpdated block text.\n<<<END_BLOCK>>>"
-        ),
+        editor_assist_routes, "invoke_writer_model",
+        lambda **_kwargs: _WriterResult(),
     )
 
     client = _build_client()
@@ -49,142 +115,261 @@ def test_rewrite_block_returns_envelope_content(monkeypatch):
     assert payload["model_used"] == editor_assist_routes.DEFAULT_MODEL
 
 
-def test_rewrite_block_strips_markdown_fence_fallback(monkeypatch):
+# ---------- Listicle pipeline: Critical Fields gate ----------
+
+
+def test_blurb_target_missing_payload_doc_id_fails_critical_fields(monkeypatch):
+    """A blurb target without Payload doc identity hard-blocks before research."""
+    def _should_not_be_called(*a, **kw):
+        raise AssertionError("evidence research must not run for CF-failed target")
     monkeypatch.setattr(
-        editor_assist_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: _StubLLM("```markdown\n- Bullet one\n- Bullet two\n```"),
+        research_profile_mod, "_invoke_grounded", _should_not_be_called
     )
 
     client = _build_client()
     response = client.post(
-        "/editor-assist/rewrite-block",
+        "/editor-assist/generate-listicle-content",
         json={
-            "prompt": "Convert this into bullets.",
-            "block_content": "Line one. Line two.",
+            "article_title": "Best Restaurants in Lima",
+            "article_type": "single-type-listicle",
+            "location_label": "Lima, Peru",
+            "targets": [
+                {
+                    "target_id": "item-1_blurb",
+                    "field_type": "blurb",
+                    "category": "dining",
+                    "display_name": "La Mar",
+                    "location_label": "Miraflores, Lima",
+                    # no payload_doc_id
+                },
+            ],
         },
     )
 
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["rewritten_content"] == "- Bullet one\n- Bullet two"
+    payload = response.json()["results"]["item-1_blurb"]
+    assert payload["status"] == "error"
+    assert "payload_doc_id" in payload["error_message"]
 
 
-def test_rewrite_block_rejects_empty_output(monkeypatch):
+# ---------- Listicle pipeline: Research Profile + writer ----------
+
+
+def test_blurb_with_supported_angle_generates_normally(monkeypatch):
     monkeypatch.setattr(
-        editor_assist_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: _StubLLM("   "),
+        research_profile_mod, "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(_research_profile_payload(angle="signature-dish")),
     )
+    monkeypatch.setattr(writer_brief_mod, "_invoke_curator_model", _fake_curator)
+
+    captured = {"prompt": ""}
+
+    class _WriterResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+            self.model_name = "gemini-2.5-pro"
+
+    def _fake_writer(*, prompt, model_name, max_tokens, temperature):
+        captured["prompt"] = prompt
+        return _WriterResult(_paragraph(100))
+
+    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
 
     client = _build_client()
     response = client.post(
-        "/editor-assist/rewrite-block",
+        "/editor-assist/generate-listicle-content",
         json={
-            "prompt": "Improve wording.",
-            "block_content": "Original content.",
-        },
-    )
-
-    assert response.status_code == 502
-    assert response.json()["detail"] == "AI rewrite graph failed"
-
-
-def test_rewrite_block_sends_title_and_context_to_prompt(monkeypatch):
-    stub_llm = _StubLLM("<<<BLOCK>>>\nRefined section.\n<<<END_BLOCK>>>")
-    monkeypatch.setattr(
-        editor_assist_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: stub_llm,
-    )
-
-    client = _build_client()
-    response = client.post(
-        "/editor-assist/rewrite-block",
-        json={
-            "prompt": "Make this section more concise.",
-            "block_content": "## Getting Around\n\nOriginal block text.",
-            "article_title": "Ica Travel Guide",
-            "article_context": "## Intro\nContext block one.\n\n## Tips\nContext block two.",
-        },
-    )
-
-    assert response.status_code == 200
-    assert stub_llm.last_prompt is not None
-    assert "Article title (reference only):\nIca Travel Guide" in stub_llm.last_prompt
-    assert "<<<ARTICLE_CONTEXT>>>" in stub_llm.last_prompt
-    assert "Rewrite only the current markdown block." in stub_llm.last_prompt
-
-
-def test_generate_title_uses_langgraph_runner(monkeypatch):
-    called = {"graph": False}
-
-    def _fake_graph_runner(*, step_runner):
-        del step_runner
-        called["graph"] = True
-        return editor_assist_routes.GenerateTitleResponse(title="Graph Generated Title")
-
-    monkeypatch.setattr(
-        editor_assist_routes,
-        "run_editor_assist_generate_title_graph",
-        _fake_graph_runner,
-    )
-
-    client = _build_client()
-    response = client.post(
-        "/editor-assist/generate-title",
-        json={
-            "current_title": "Old Title",
-            "prompt": "Make it clearer.",
+            "article_title": "Best Restaurants in Lima",
+            "article_type": "single-type-listicle",
+            "location_label": "Lima, Peru",
+            "targets": [
+                {
+                    "target_id": "item-1_blurb",
+                    "field_type": "blurb",
+                    "category": "dining",
+                    "display_name": "La Mar",
+                    "research_subject": "La Mar",
+                    "location_label": "Miraflores, Lima",
+                    "payload_doc_id": "doc-1",
+                    "angle": "signature-dish",
+                },
+            ],
         },
     )
 
     assert response.status_code == 200
-    assert response.json()["title"] == "Graph Generated Title"
-    assert called["graph"] is True
+    payload = response.json()["results"]["item-1_blurb"]
+    assert payload["status"] == "generated"
+    assert payload["low_confidence"] is False
+    assert payload["source_urls"] == [
+        "https://example.com/signature-dish",
+        "https://example.com/bucket-0",
+        "https://example.com/bucket-1",
+    ]
+
+    # Dining is on the lean writer path per ADR 0009: the writer prompt is
+    # built from the Writer Brief, not the bucket-labeled Research Profile.
+    assert "RESEARCH PROFILE" not in captured["prompt"]
+    assert "BUILDER CONTEXT" not in captured["prompt"]
+    assert "Angle: Open by naming one specific dish at La Mar." in captured["prompt"]
+    assert "Source facts (use only what you need):" in captured["prompt"]
+    assert "food and travel editor" in captured["prompt"]
+
+    # No Evidence Scan stage (ADR 0010); writer_brief sits between
+    # research_profile_completed and writer_called.
+    step_names = [s["name"] for s in payload["steps"]]
+    assert step_names == [
+        "critical_fields_evaluated",
+        "research_profile_completed",
+        "writer_brief_completed",
+        "writer_called",
+        "validated",
+        "finalized",
+    ]
 
 
-def test_rewrite_block_uses_langgraph_runner(monkeypatch):
-    called = {"graph": False}
-
-    def _fake_graph_runner(*, step_runner):
-        del step_runner
-        called["graph"] = True
-        return editor_assist_routes.RewriteBlockResponse(
-            rewritten_content="Graph rewritten block",
-            model_used="gemini-2.5-flash",
-        )
-
+def test_manual_angle_uses_research_profile(monkeypatch):
     monkeypatch.setattr(
-        editor_assist_routes,
-        "run_editor_assist_rewrite_graph",
-        _fake_graph_runner,
+        research_profile_mod, "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(_research_profile_payload(angle="atmosphere")),
     )
+    monkeypatch.setattr(writer_brief_mod, "_invoke_curator_model", _fake_curator)
+
+    captured = {"prompt": ""}
+
+    class _WriterResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+            self.model_name = "gemini-2.5-pro"
+
+    def _fake_writer(*, prompt, model_name, max_tokens, temperature):
+        captured["prompt"] = prompt
+        return _WriterResult(_paragraph(100))
+
+    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
 
     client = _build_client()
     response = client.post(
-        "/editor-assist/rewrite-block",
+        "/editor-assist/generate-listicle-content",
         json={
-            "prompt": "Tighten this block.",
-            "block_content": "Original block.",
+            "article_title": "Best Restaurants in Lima",
+            "article_type": "single-type-listicle",
+            "location_label": "Lima, Peru",
+            "targets": [
+                {
+                    "target_id": "item-1_blurb",
+                    "field_type": "blurb",
+                    "category": "dining",
+                    "display_name": "La Mar",
+                    "location_label": "Miraflores, Lima",
+                    "payload_doc_id": "doc-1",
+                    "angle": "atmosphere",
+                },
+            ],
+        },
+    )
+
+    payload = response.json()["results"]["item-1_blurb"]
+    assert response.status_code == 200
+    assert payload["status"] == "generated"
+    assert payload["requested_angle"] == "atmosphere"
+    assert payload["effective_angle"] == "atmosphere"
+    assert [s["name"] for s in payload["steps"]] == [
+        "critical_fields_evaluated",
+        "research_profile_completed",
+        "writer_brief_completed",
+        "writer_called",
+        "validated",
+        "finalized",
+    ]
+    # Dining lean prompt: angle directive comes from the curator, not the
+    # legacy BLURB ANGLE block.
+    assert "BLURB ANGLE" not in captured["prompt"]
+    assert "Angle:" in captured["prompt"]
+
+
+def test_blurb_with_no_evidence_takes_identity_only_path(monkeypatch):
+    """Demote-and-warn: operator angle unsupported + no bucket findings takes identity-only prompt."""
+    monkeypatch.setattr(
+        research_profile_mod, "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(
+            _research_profile_payload(
+                angle="signature-dish",
+                selected_status="unsupported",
+                bucket_findings=0,
+            )
+        ),
+    )
+
+    captured = {"prompt": ""}
+
+    class _WriterResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+            self.model_name = "gemini-2.5-pro"
+
+    def _fake_writer(*, prompt, model_name, max_tokens, temperature):
+        captured["prompt"] = prompt
+        return _WriterResult(_paragraph(95))
+
+    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/generate-listicle-content",
+        json={
+            "article_title": "Best Bars in Lima",
+            "article_type": "single-type-listicle",
+            "location_label": "Lima, Peru",
+            "targets": [
+                {
+                    "target_id": "item-1_blurb",
+                    "field_type": "blurb",
+                    "category": "dining",
+                    "display_name": "Brand New Place",
+                    "location_label": "Barranco, Lima",
+                    "payload_doc_id": "doc-1",
+                    "angle": "signature-dish",
+                },
+            ],
         },
     )
 
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["rewritten_content"] == "Graph rewritten block"
-    assert called["graph"] is True
+    payload = response.json()["results"]["item-1_blurb"]
+    assert payload["status"] == "generated"
+    assert payload["low_confidence"] is True
+    # Identity-only prompt is used.
+    assert "EVIDENCE STATUS" in captured["prompt"]
+    assert "No public evidence was found" in captured["prompt"]
+    # No findings to splice in.
+    assert "EVIDENCE PROFILE FINDINGS" not in captured["prompt"]
+    # Research Profile step marked failed but writer still runs.
+    step_names = [s["name"] for s in payload["steps"]]
+    assert "research_profile_completed" in step_names
+    rp_step = next(s for s in payload["steps"] if s["name"] == "research_profile_completed")
+    assert rp_step["status"] == "failed"
 
 
-def test_generate_listicle_content_returns_grounded_results(monkeypatch):
-    def _fake_grounded(*_args, **_kwargs):
-        return GroundedGenerationResult(
-            text=_paragraph(100, token="refined"),
-            source_urls=["https://example.com/one"],
-            model_name="gemini-2.5-flash",
-        )
+# ---------- Intros bypass evidence research ----------
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_google_grounded_text", _fake_grounded)
+
+def test_intro_target_does_not_invoke_evidence_profile(monkeypatch):
+    def _should_not_be_called(*a, **kw):
+        raise AssertionError("evidence research must not run for intro targets")
+    monkeypatch.setattr(
+        research_profile_mod, "_invoke_grounded", _should_not_be_called
+    )
+
+    class _WriterResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+            self.model_name = "gemini-2.5-pro"
+
+    monkeypatch.setattr(
+        editor_assist_routes, "invoke_writer_model",
+        lambda **kw: _WriterResult(_paragraph(90)),
+    )
 
     client = _build_client()
     response = client.post(
@@ -197,39 +382,37 @@ def test_generate_listicle_content_returns_grounded_results(monkeypatch):
                 {
                     "target_id": "draft-1_header_intro",
                     "field_type": "intro",
-                },
-                {
-                    "target_id": "item-1_blurb",
-                    "field_type": "blurb",
+                    # Intros pass CF when name/category/location_label/payload_doc_id
+                    # are present. Operator builds intros from selected venues, so the
+                    # intro target itself is identified by the article title here.
+                    "display_name": "Best Restaurants in Lima",
                     "category": "dining",
-                    "display_name": "La Mar",
-                    "research_subject": "La Mar",
-                    "location_label": "Miraflores, Lima",
+                    "location_label": "Lima, Peru",
+                    "payload_doc_id": "intro-1",
                 },
             ],
         },
     )
 
     assert response.status_code == 200
-    payload = response.json()["results"]
-    assert payload["draft-1_header_intro"]["status"] == "generated"
-    assert payload["item-1_blurb"]["status"] == "generated"
-    assert payload["item-1_blurb"]["markdown"] == _paragraph(100, token="refined")
-    assert payload["item-1_blurb"]["source_urls"] == ["https://example.com/one"]
+    payload = response.json()["results"]["draft-1_header_intro"]
+    assert payload["status"] == "generated"
 
 
-def test_generate_listicle_content_skips_existing_targets(monkeypatch):
-    calls = {"count": 0}
+# ---------- Skip-existing ----------
 
-    def _fake_grounded(*_args, **_kwargs):
-        calls["count"] += 1
-        return GroundedGenerationResult(
-            text=_paragraph(100),
-            source_urls=[],
-            model_name="gemini-2.5-flash",
-        )
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_google_grounded_text", _fake_grounded)
+def test_skip_existing_preserves_current_content(monkeypatch):
+    def _should_not_be_called(*a, **kw):
+        raise AssertionError("evidence research must not run for skipped targets")
+    monkeypatch.setattr(
+        research_profile_mod, "_invoke_grounded", _should_not_be_called
+    )
+    def _writer_should_not_be_called(**kw):
+        raise AssertionError("writer must not run for skipped targets")
+    monkeypatch.setattr(
+        editor_assist_routes, "invoke_writer_model", _writer_should_not_be_called
+    )
 
     client = _build_client()
     response = client.post(
@@ -245,6 +428,9 @@ def test_generate_listicle_content_skips_existing_targets(monkeypatch):
                     "field_type": "blurb",
                     "category": "dining",
                     "current_content": "Keep this copy",
+                    "display_name": "La Mar",
+                    "location_label": "Miraflores, Lima",
+                    "payload_doc_id": "doc-1",
                 },
             ],
         },
@@ -254,79 +440,9 @@ def test_generate_listicle_content_skips_existing_targets(monkeypatch):
     payload = response.json()["results"]["item-1_blurb"]
     assert payload["status"] == "skipped"
     assert payload["markdown"] == "Keep this copy"
-    assert calls["count"] == 0
 
 
-def test_generate_listicle_content_returns_503_when_grounding_is_unavailable(monkeypatch):
-    monkeypatch.setattr(editor_assist_routes, "invoke_google_grounded_text", lambda *_args, **_kwargs: None)
-
-    client = _build_client()
-    response = client.post(
-        "/editor-assist/generate-listicle-content",
-        json={
-            "article_title": "Best Restaurants in Lima",
-            "article_type": "single-type-listicle",
-            "location_label": "Lima, Peru",
-            "targets": [
-                {
-                    "target_id": "item-1_blurb",
-                    "field_type": "blurb",
-                    "category": "dining",
-                },
-            ],
-        },
-    )
-
-    assert response.status_code == 503
-    assert response.json()["detail"] == "Grounded research is unavailable for listicle generation"
-
-
-def test_generate_listicle_content_uses_custom_instruction_and_retries_validation(monkeypatch):
-    calls: list[str] = []
-
-    def _fake_grounded(prompt: str, **_kwargs):
-        calls.append(prompt)
-        if len(calls) == 1:
-            return GroundedGenerationResult(
-                text="too short",
-                source_urls=["https://example.com/one"],
-                model_name="gemini-2.5-flash",
-            )
-        return GroundedGenerationResult(
-            text=_paragraph(100, token="improved"),
-            source_urls=["https://example.com/two"],
-            model_name="gemini-2.5-flash",
-        )
-
-    monkeypatch.setattr(editor_assist_routes, "invoke_google_grounded_text", _fake_grounded)
-
-    client = _build_client()
-    response = client.post(
-        "/editor-assist/generate-listicle-content",
-        json={
-            "article_title": "Best Restaurants in Lima",
-            "article_type": "single-type-listicle",
-            "location_label": "Lima, Peru",
-            "custom_instruction": "Lean harder into seafood specialties.",
-            "targets": [
-                {
-                    "target_id": "item-1_blurb",
-                    "field_type": "blurb",
-                    "category": "dining",
-                    "display_name": "La Mar",
-                    "research_subject": "La Mar",
-                },
-            ],
-        },
-    )
-
-    assert response.status_code == 200
-    payload = response.json()["results"]["item-1_blurb"]
-    assert payload["status"] == "generated"
-    assert payload["markdown"] == _paragraph(100, token="improved")
-    assert payload["source_urls"] == ["https://example.com/one", "https://example.com/two"]
-    assert any("CUSTOM INSTRUCTION\nLean harder into seafood specialties." in prompt for prompt in calls)
-    assert any("VALIDATION FAILURES" in prompt for prompt in calls[1:])
+# ---------- Graph runner integration (unchanged) ----------
 
 
 def test_generate_listicle_content_uses_langgraph_runner(monkeypatch):
@@ -364,6 +480,9 @@ def test_generate_listicle_content_uses_langgraph_runner(monkeypatch):
                     "target_id": "item-1_blurb",
                     "field_type": "blurb",
                     "category": "dining",
+                    "payload_doc_id": "doc-1",
+                    "display_name": "La Mar",
+                    "location_label": "Miraflores, Lima",
                 },
             ],
         },

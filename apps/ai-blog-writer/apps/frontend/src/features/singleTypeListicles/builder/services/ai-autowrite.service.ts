@@ -178,6 +178,7 @@ export function buildSingleTypeGenerateListicleContentRequest(params: {
   const targets: GenerateListicleContentTarget[] = []
 
   const introTarget = buildIntroTarget(draft, relatedItems, articleLocationLabel)
+  const shouldIncludeArticleContext = includeArticleContext && targetIdSet.has(introTarget.targetId)
   if (targetIdSet.has(introTarget.targetId)) {
     targets.push(introTarget)
   }
@@ -196,7 +197,7 @@ export function buildSingleTypeGenerateListicleContentRequest(params: {
     articleTitle: getListicleAiArticleTitle(draft),
     articleType: 'single-type-listicle',
     locationLabel: articleLocationLabel,
-    articleContext: includeArticleContext ? buildListicleAiArticleContext(draft, relatedItems) : undefined,
+    articleContext: shouldIncludeArticleContext ? buildListicleAiArticleContext(draft, relatedItems) : undefined,
     modelName,
     customInstruction,
     skipExisting,

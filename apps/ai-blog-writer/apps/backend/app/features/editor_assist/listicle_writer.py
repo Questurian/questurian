@@ -9,6 +9,9 @@ from typing import Literal
 from app.shared.prompts import ANTI_AI_TELLS_BLURB
 from app.shared.text import normalize_dashes
 
+from .angle_assignment import ANTI_AI_PROMPT_CATEGORIES, ListicleAngle
+from .writer_brief import WriterBrief, render_source_facts_block
+
 ListicleArticleType = Literal["single-type-listicle", "listicle-itinerary"]
 ListicleFieldType = Literal["intro", "blurb"]
 ListicleCategory = Literal[
@@ -22,16 +25,8 @@ ListTone = Literal[
     "elevated", "casual", "hidden-gem", "family-friendly", "date-night", "budget"
 ]
 
-ListicleAngle = Literal[
-    "signature-dish",
-    "atmosphere",
-    "founders-backstory",
-    "insider-tip",
-    "best-for",
-    "whats-different",
-]
-
 LISTICLE_ANGLE_GUIDANCE: dict[ListicleAngle, str] = {
+    # ---------- Dining ----------
     "signature-dish": (
         "Sentence 1 must name one specific dish or item. Not a category, not a metaphor about the "
         "cooking — the dish itself, by name. Build the rest of the blurb around it. If the context "
@@ -62,7 +57,78 @@ LISTICLE_ANGLE_GUIDANCE: dict[ListicleAngle, str] = {
         "of the same kind (a technique, a sourcing choice, a format, a hybrid). Comparative without "
         "naming competitors. No 'X rather than Y' constructions — state the differentiator directly."
     ),
+    # ---------- Accommodations ----------
+    "signature-amenity": (
+        "Sentence 1 must name one specific amenity that defines the stay (the rooftop pool, the in-house "
+        "spa, a named restaurant, the courtyard) and one concrete fact about it (the floor it's on, the "
+        "hours it runs, the cuisine). If no distinctive amenity is in the context, switch to room-style "
+        "rather than inventing one."
+    ),
+    "room-style": (
+        "Sentence 1 must place the reader in a room using one concrete material, design choice, or view "
+        "(exposed brick, a clawfoot tub, the city skyline from the bed). No vibe adjectives like "
+        "'thoughtfully designed' or 'well-appointed' — describe what's actually there."
+    ),
+    "property-backstory": (
+        "Sentence 1 must name the owner, designer, or origin year and one specific fact about it (a "
+        "former use of the building, the architect, the family that runs it). Only choose this angle "
+        "if the facts are in the context. If the signal is thin, switch to room-style — do not invent "
+        "history."
+    ),
+    "booking-tip": (
+        "Sentence 1 must deliver one specific, actionable booking or stay tip a first-time guest would "
+        "not guess (a specific room number worth requesting, the cheapest night of the week, what time "
+        "to arrive for the best check-in). No clipped imperative closers; the tip belongs at the top."
+    ),
+    "best-for-stay-type": (
+        "Sentence 1 must name the kind of traveler the property serves best (couples, families, solo "
+        "business travelers, long stays) and immediately back it with one concrete reason (a room "
+        "configuration, a service rhythm, a quiet floor, kid amenities). Assertion plus evidence in "
+        "the same opening."
+    ),
+    # ---------- Attractions ----------
+    "signature-feature": (
+        "Sentence 1 must name the single specific thing the attraction is built around (a named "
+        "painting, a specific room, a viewpoint, a route) and one concrete fact about it (height, age, "
+        "scale, when it opens). If no named feature is in the context, switch to setting rather than "
+        "inventing one."
+    ),
+    "setting": (
+        "Sentence 1 must place the reader at the site using one concrete physical detail (the approach, "
+        "the light at a specific hour, the surrounding terrain, the material the building is made of). "
+        "No mood adjectives in the lead."
+    ),
+    "history-built": (
+        "Sentence 1 must name when the place was built or founded and one specific fact tied to the "
+        "date (who designed it, what it replaced, what war or movement it survived). Only choose this "
+        "angle if those facts are in the context. If the signal is thin, switch to setting — do not "
+        "invent dates."
+    ),
+    "visit-time-tip": (
+        "Sentence 1 must deliver one specific, actionable visit tip a first-time visitor would not "
+        "guess (a time of day, a side entrance, an order to walk the rooms, a ticket trick). No "
+        "clipped imperative closers; the tip belongs at the top."
+    ),
+    "best-for-visit-type": (
+        "Sentence 1 must name the kind of visit the place serves best (a half-day with kids, a rainy "
+        "afternoon, a quick photo stop, a full-day deep dive) and immediately back it with one "
+        "concrete reason (the pacing, the layout, what's covered, what's nearby)."
+    ),
+    # ---------- Nightlife ----------
+    "best-for-night": (
+        "Name the kind of night this venue is best suited for and give one concrete reason why. "
+        "The reason can come from the room, pacing, music, menu, crowd, or overall format."
+    ),
 }
+
+NIGHTLIFE_BLURB_CALIBRATION = """\
+NIGHTLIFE BLURB CALIBRATION
+- Reach the nightlife value within the first sentence: drinks, music, dancing, crowd, room feel, or late-night use. Architecture can support the point, but it cannot bury it.
+- Do not write a standalone address sentence ("The address is..."). Use neighborhood or street context only when it changes the reader's decision.
+- Avoid database-field prose. Do not paste address, hours, exact age range, exact square meters, or precise time windows unless they are central to why the venue belongs in the list.
+- Exact late-night windows need a reason. Prefer approximate phrasing unless the exact range is sourced and useful.
+- Use literal verbs for crowd, service, and food. Avoid strained metaphors where service, rooms, balconies, kitchens, or crowds appear to act like machinery or infrastructure.
+- Mention unusual drink ingredients only when the source clearly supports them, and use the menu's own wording when available."""
 
 
 LIST_TONE_GUIDANCE: dict[ListTone, str] = {
@@ -163,6 +229,22 @@ ARTICLE_TYPE_LABELS: dict[ListicleArticleType, str] = {
     "listicle-itinerary": "listicle itinerary",
 }
 
+def format_location_for_prompt(raw: str) -> str:
+    """Flip breadcrumb-style location strings into writer-friendly prose.
+
+    Upstream payloads sometimes deliver location as a country > region > area
+    breadcrumb (e.g. ``"Peru > Lima > Miraflores"``). Writer- and curator-facing
+    prompts read more naturally with the most-specific component first
+    (``"Miraflores, Lima, Peru"``). Strings without the breadcrumb separator
+    are returned unchanged.
+    """
+    stripped = (raw or "").strip()
+    if " > " not in stripped:
+        return stripped
+    parts = [segment.strip() for segment in stripped.split(" > ") if segment.strip()]
+    return ", ".join(reversed(parts)) if parts else stripped
+
+
 WORD_PATTERN = re.compile(r"[A-Za-z0-9']+")
 RATING_PATTERN = re.compile(
     r"\b(?:rating|ratings|rated|review score|review scores|score|scores|stars?)\b",
@@ -229,11 +311,16 @@ def _build_common_rules(*, field_type: ListicleFieldType) -> list[str]:
     return lines
 
 
-def _render_supporting_context(supporting_context: str, article_context: str) -> str:
+def _render_supporting_context(
+    supporting_context: str,
+    article_context: str,
+    *,
+    include_article_context: bool = True,
+) -> str:
     sections: list[str] = []
     if supporting_context.strip():
         sections.append(f"BUILDER CONTEXT\n{supporting_context.strip()}")
-    if article_context.strip():
+    if include_article_context and article_context.strip():
         sections.append(f"ARTICLE CONTEXT\n{article_context.strip()}")
     return "\n\n".join(sections)
 
@@ -248,7 +335,11 @@ def build_generation_prompt(
     custom_instruction: str = "",
 ) -> str:
     article_type_label = ARTICLE_TYPE_LABELS[article_type]
-    rendered_context = _render_supporting_context(target.supporting_context, article_context)
+    rendered_context = _render_supporting_context(
+        target.supporting_context,
+        article_context,
+        include_article_context=target.field_type == "intro",
+    )
     current_copy_block = (
         f"\n\nCURRENT BUILDER COPY\n{target.current_content.strip()}"
         if target.current_content.strip()
@@ -273,7 +364,7 @@ def build_generation_prompt(
             "Write like a confident travel editor, not like a review summary.\n\n"
             f"Article type:\n{article_type_label}\n\n"
             f"Article title:\n{article_title.strip()}\n\n"
-            f"Location:\n{article_location.strip()}\n"
+            f"Location:\n{format_location_for_prompt(article_location)}\n"
             f"{context_block}"
             f"{current_copy_block}"
             "\n\nTask:\n"
@@ -296,7 +387,7 @@ def build_generation_prompt(
     rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="blurb"))
     subject_label = variant["subject_label"]
     subject_name = (target.research_subject or target.display_name or "").strip()
-    subject_location = (target.location_label or article_location).strip()
+    subject_location = format_location_for_prompt(target.location_label or article_location)
     custom_block = (
         f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
         if custom_instruction.strip()
@@ -331,12 +422,18 @@ def build_generation_prompt(
 
 
 def _voice_rules_block(category: ListicleCategory | None, field_type: ListicleFieldType) -> str:
-    # Dining-blurb pilot only. Other categories and intros are unaffected
-    # until the pilot's stopping rule (≥70% banned-phrase reduction across 20
-    # blurbs AND zero fabricated anchors) is met.
-    if field_type != "blurb" or category != "dining":
+    # Per-category gate; see ANTI_AI_PROMPT_CATEGORIES. A category is added to
+    # the set once it clears the validation bar (≥70% banned-phrase reduction
+    # across 20 blurbs, zero fabricated anchors). Intros remain on the legacy
+    # path until a separate intro-shaped rule set lands.
+    if field_type != "blurb" or category not in ANTI_AI_PROMPT_CATEGORIES:
         return ""
-    return f"\n\n{ANTI_AI_TELLS_BLURB}"
+    category_block = (
+        f"\n\n{NIGHTLIFE_BLURB_CALIBRATION}"
+        if category == "nightlife"
+        else ""
+    )
+    return f"\n\n{ANTI_AI_TELLS_BLURB}{category_block}"
 
 
 def _tone_block(list_tone: ListTone | None) -> str:
@@ -370,11 +467,15 @@ def build_writer_prompt(
 ) -> str:
     """Writer-only prompt: same shape as build_generation_prompt but without
     the "research this online" instruction. Used when LOCATION FACTS (and
-    optionally Fallback Research findings) have already been supplied in
+    optionally Grounded Research findings) have already been supplied in
     supporting_context.
     """
     article_type_label = ARTICLE_TYPE_LABELS[article_type]
-    rendered_context = _render_supporting_context(target.supporting_context, article_context)
+    rendered_context = _render_supporting_context(
+        target.supporting_context,
+        article_context,
+        include_article_context=target.field_type == "intro",
+    )
     tone_block = _tone_block(list_tone)
     # Angle only applies to blurbs; intros are list-level and have no per-item angle.
     angle_block = _angle_block(listicle_angle) if target.field_type == "blurb" else ""
@@ -402,7 +503,7 @@ def build_writer_prompt(
             "Write like a confident travel editor, not like a review summary.\n\n"
             f"Article type:\n{article_type_label}\n\n"
             f"Article title:\n{article_title.strip()}\n\n"
-            f"Location:\n{article_location.strip()}"
+            f"Location:\n{format_location_for_prompt(article_location)}"
             f"{tone_block}\n"
             f"{context_block}"
             f"{current_copy_block}"
@@ -426,7 +527,7 @@ def build_writer_prompt(
     rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="blurb"))
     subject_label = variant["subject_label"]
     subject_name = (target.research_subject or target.display_name or "").strip()
-    subject_location = (target.location_label or article_location).strip()
+    subject_location = format_location_for_prompt(target.location_label or article_location)
     custom_block = (
         f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
         if custom_instruction.strip()
@@ -464,36 +565,163 @@ def build_writer_prompt(
     ).strip()
 
 
-def build_fallback_research_prompt(
+LEAN_AVOID_LINES_SHARED = (
+    'Em dashes, and comma-bracketed asides used in their place',
+    'Three-adjective stacks ("warm, intimate, and storied")',
+    'Personified menus, rooms, or drinks',
+    'Kicker closers, imperative sign-offs ("Book ahead"), and tidy summary endings',
+    '"Curate," "craft" as a verb, "elevate," "showcase," "leverage"',
+    'Hedges: arguably, perhaps, truly, simply, just',
+    'Inventing details (prices, named items, specific years, quotes)',
+    'Database-field prose (exact hours, square meters, age ranges)',
+)
+
+# Category-specific avoid lines for the lean writer prompt. Empty by default;
+# add lines here once test runs surface failure modes specific to a category.
+# Example: dining might want "Cuisine-as-mood ('the cuisine is warm and
+# inviting') — describe what's on the plate, not how it feels."
+LEAN_AVOID_LINES_BY_CATEGORY: dict[ListicleCategory, tuple[str, ...]] = {
+    "dining": (),
+    "nightlife": (),
+}
+
+
+def build_lean_writer_prompt(
     *,
-    subject_name: str,
-    subject_location: str,
     category: ListicleCategory,
-    gap_descriptions: list[str],
+    article_title: str,
+    article_type: ListicleArticleType,
+    article_location: str,
+    target: ListicleWriterTarget,
+    brief: WriterBrief,
+    custom_instruction: str = "",
+    list_tone: ListTone | None = None,
 ) -> str:
-    """Scoped research prompt: returns short structured findings keyed to the
-    specific Tier-2 gaps the LM record could not fill. Intended for a single
-    Gemini call with Google Search grounding. Output is meant to be injected
-    into the writer prompt's supporting_context, not shown to the operator.
+    """Lean writer prompt for blurb categories on the curated path
+    (ADR 0007 nightlife, ADR 0009 dining).
+
+    Drops BUILDER CONTEXT, ANTI_AI_TELLS_BLURB, per-category calibration, and
+    the legacy Triad/Rhythm/Cadence triple-stack. Renders the Writer Brief as
+    a tone line, an angle directive, and a flat Source Facts list. The short
+    Avoid list and the editorial voice line replace the legacy voice block.
     """
-    variant = CATEGORY_PROMPT_VARIANTS.get(category) or CATEGORY_PROMPT_VARIANTS["dining"]
-    gaps_block = "\n".join(f"- {gap}" for gap in gap_descriptions) or "- general overview"
+    article_type_label = ARTICLE_TYPE_LABELS[article_type]
+    venue_name = (target.research_subject or target.display_name or "").strip()
+    venue_location = format_location_for_prompt(target.location_label or article_location)
+    tone_guidance = LIST_TONE_GUIDANCE.get(list_tone) if list_tone else None
+    tone_line = (
+        f"Tone: {list_tone}. {tone_guidance}"
+        if list_tone and tone_guidance
+        else "Tone: Elevated editorial. Confident, precise, a point of view. Not formal to the point of stiffness."
+    )
+    angle_line = (
+        f"Angle: {brief.angle_directive}"
+        if brief.angle_directive
+        else "Angle: Open with one concrete reason this venue belongs in the list."
+    )
+    source_facts_block = render_source_facts_block(brief)
+    avoid_lines = LEAN_AVOID_LINES_SHARED + LEAN_AVOID_LINES_BY_CATEGORY.get(
+        category, ()
+    )
+    avoid_block = "Avoid:\n" + "\n".join(f"- {line}" for line in avoid_lines)
+    current_copy_block = (
+        f"\n\nCurrent draft (improve freely; do not preserve its shape):\n{target.current_content.strip()}"
+        if target.current_content.strip()
+        else ""
+    )
+    custom_block = (
+        f"\n\nExtra instruction: {custom_instruction.strip()}"
+        if custom_instruction.strip()
+        else ""
+    )
+    # Plumb the per-category editor_role for dining only, per ADR 0009. Nightlife
+    # keeps its existing voice line untouched — ADR 0009 explicitly preserves
+    # nightlife behavior.
+    if category == "dining":
+        editor_role = CATEGORY_PROMPT_VARIANTS["dining"]["editor_role"]
+        voice_line = (
+            f"Write like a {editor_role} who has been there. Take a position. Pick the "
+            "one detail that actually decides the recommendation and lead with it."
+        )
+        category_label = CATEGORY_PROMPT_VARIANTS["dining"]["label"].lower()
+        listicle_descriptor = f"{category_label} listicle"
+    else:
+        voice_line = (
+            "Write like an editor who has been there. Take a position. Pick the one "
+            "detail that actually decides the recommendation and lead with it."
+        )
+        listicle_descriptor = "nightlife listicle"
     return (
-        f"You are a research assistant gathering verified facts about a specific {variant['label'].lower()} venue. "
-        f"You will be given the venue name and location, plus a list of information gaps. "
-        f"Research only the gaps; do not summarize the entire venue.\n\n"
-        f"Venue:\n{subject_name}\n\n"
-        f"Location:\n{subject_location}\n\n"
-        f"Information gaps to fill:\n{gaps_block}\n\n"
-        f"Research guidance:\n{variant['research']}\n\n"
-        "Output rules:\n"
-        "- Return short bullet points, one fact per line, prefixed by the gap label.\n"
-        "- No prose, no marketing language, no opinions, no review quotes.\n"
-        "- If a gap cannot be answered from credible sources, write 'unknown' for that gap.\n"
-        "- Do not include URLs, citation markers, or source names in the body.\n"
-        "- Maximum 12 bullets total.\n\n"
+        f'You are writing one blurb for a {listicle_descriptor}, "{article_title.strip()}."\n'
+        f"Article type: {article_type_label}\n"
+        f"Venue: {venue_name}, {venue_location}\n"
+        f"{tone_line}\n"
+        f"{angle_line}\n\n"
+        f"{source_facts_block}\n\n"
+        f"Length: {BLURB_MIN_WORDS} to {BLURB_MAX_WORDS} words. One paragraph. No heading.\n"
+        f"{voice_line}\n\n"
+        f"{avoid_block}\n\n"
+        "Vary sentence length. Not every sentence the same shape."
+        f"{current_copy_block}"
+        f"{custom_block}\n\n"
+        "Output the paragraph only."
+    ).strip()
+
+
+def build_identity_only_writer_prompt(
+    *,
+    article_title: str,
+    article_type: ListicleArticleType,
+    article_location: str,
+    target: ListicleWriterTarget,
+    article_context: str,
+    custom_instruction: str = "",
+    list_tone: ListTone | None = None,
+) -> str:
+    """Writer prompt for the demote-and-warn path: Research Profile produced
+    no usable angle or bucket evidence, so the venue has no public footprint
+    to lean on. The blurb is composed from static identity only, with strict
+    constraints against inferred claims.
+    """
+    article_type_label = ARTICLE_TYPE_LABELS[article_type]
+    category = target.category or "dining"
+    variant = CATEGORY_PROMPT_VARIANTS[category]
+    rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="blurb"))
+    subject_label = variant["subject_label"]
+    subject_name = (target.research_subject or target.display_name or "").strip()
+    subject_location = format_location_for_prompt(target.location_label or article_location)
+    tone_block = _tone_block(list_tone)
+    custom_block = (
+        f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
+        if custom_instruction.strip()
+        else ""
+    )
+    voice_block = _voice_rules_block(category, target.field_type)
+    return (
+        "You are writing a blurb for a travel listicle in the style of a polished digital publication. "
+        f"Write like a confident {variant['editor_role']}, not like a review summary.\n\n"
+        "EVIDENCE STATUS\n"
+        "No public evidence was found for this venue. Compose only from the identity fields below. "
+        "Do not infer specifics that are not present here.\n\n"
+        f"Article type:\n{article_type_label}\n\n"
+        f"Article title:\n{article_title.strip()}\n\n"
+        f"{subject_label}:\n{subject_name}\n\n"
+        f"Location:\n{subject_location}"
+        f"{tone_block}\n\n"
+        "Task:\n"
+        "Write one short, factual blurb paragraph using only the identity and category above.\n\n"
+        "Strict constraints:\n"
+        f"{rules}\n"
+        "- Do not claim a signature dish, signature program, signature feature, or signature amenity.\n"
+        "- Do not assert atmosphere, vibe, energy, crowd, or room feel.\n"
+        "- Do not name dishes, drinks, DJs, designers, owners, or founders.\n"
+        "- Do not use superlatives or comparative claims (best, most, finest, beloved, iconic).\n"
+        "- Do not invent history, dates, awards, prices, hours, or amenities.\n"
+        "- Keep to the category and neighborhood positioning only.\n"
+        f"{custom_block}"
+        f"{voice_block}\n\n"
         "Output:\n"
-        "Bulleted research findings only."
+        "One short blurb paragraph only."
     ).strip()
 
 
@@ -509,18 +737,44 @@ def build_retry_prompt(
     validation_errors: list[str],
     list_tone: ListTone | None = None,
     listicle_angle: ListicleAngle | None = None,
+    brief: WriterBrief | None = None,
 ) -> str:
+    """Build a retry prompt anchored on the same prompt shape as the original
+    draft.
+
+    For dining (ADR 0009), retry runs on the lean prompt when a usable Writer
+    Brief is available. For every other category — including nightlife, whose
+    existing retry-on-fat-prompt behavior ADR 0009 explicitly preserves — retry
+    runs on the legacy fat prompt.
+    """
     failures = "\n".join(f"- {item}" for item in validation_errors)
-    base_prompt = build_writer_prompt(
-        article_title=article_title,
-        article_type=article_type,
-        article_location=article_location,
-        target=target,
-        article_context=article_context,
-        custom_instruction=custom_instruction,
-        list_tone=list_tone,
-        listicle_angle=listicle_angle,
-    )
+    if (
+        target.field_type == "blurb"
+        and target.category == "dining"
+        and brief is not None
+        and brief.is_usable
+    ):
+        base_prompt = build_lean_writer_prompt(
+            category="dining",
+            article_title=article_title,
+            article_type=article_type,
+            article_location=article_location,
+            target=target,
+            brief=brief,
+            custom_instruction=custom_instruction,
+            list_tone=list_tone,
+        )
+    else:
+        base_prompt = build_writer_prompt(
+            article_title=article_title,
+            article_type=article_type,
+            article_location=article_location,
+            target=target,
+            article_context=article_context,
+            custom_instruction=custom_instruction,
+            list_tone=list_tone,
+            listicle_angle=listicle_angle,
+        )
     return (
         f"{base_prompt}\n\n"
         "REVISION TASK\n"
@@ -555,7 +809,7 @@ def validate_generated_text(
     if FOOTNOTE_PATTERN.search(stripped):
         errors.append("Output must not include citation markers.")
 
-    if EM_DASH_PATTERN.search(stripped):
+    if EM_DASH_PATTERN.search(text):
         errors.append("Output must not include em dashes.")
 
     if RATING_PATTERN.search(stripped):

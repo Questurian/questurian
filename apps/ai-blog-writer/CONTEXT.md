@@ -95,21 +95,71 @@ Definition: validation checkpoints during compose. Coverage Analysis asks whethe
 
 ### Critical Fields Guideline
 
-Definition: per-category specification of which Location fields a listicle-content generation request requires (Tier 1: blocks generation if missing), should have (Tier 2: triggers Fallback Research if missing), or may use silently (Tier 3). Lives per listicle category (dining, accommodations, attractions, nightlife). The guideline is what makes "do not invent details" enforceable instead of aspirational — it tells the system when LM data is sufficient and when external research is required.
-Related terms: Fallback Research, Reviews Digest.
+Definition: a thin, category-agnostic pre-flight gate that confirms a Location has the minimum static identity needed to enter the listicle blurb pipeline. Checks four booleans: has `name`, has a supported `category`, has a resolvable location label (neighborhood or city), has Payload doc identity. If any fail, the venue is hard-blocked before Research Profile runs.
+Related terms: Research Profile.
 Do not confuse with: Article Type `guideline` (that's compose instructions per article type, not per-venue input requirements).
+History: previously a per-category Tier 1/2/3 LM field whitelist (Tier 2 "scoped Grounded Research when missing"); this premise was retired once public evidence scanning became the source of research scoping and the audit found most LM nightlife/dining detail fields were poor blurb input.
 
-### Fallback Research
+### Grounded Research
 
-Definition: a scoped web-search pass triggered when a venue's Location data fails the Critical Fields Guideline (Tier-2 gaps or stale `reviewsFetchedAt`). Returns short structured findings keyed to the specific missing fields, not free-form prose. Distinct from the legacy "always-grounded" generation path where every blurb call ran Gemini with Google Search regardless of data quality.
-Related terms: Critical Fields Guideline.
-Code references: today the only research path is `invoke_google_grounded_text` in `packages/utils/src/utils/google_grounding.py` (unconditional, not gap-driven).
+Definition: writer-ready cited findings gathered for a chosen listicle blurb framing, consisting of selected-angle evidence plus standard Research Buckets.
+Related terms: Research Profile.
+Do not confuse with: Research Bucket (a kind of evidence gathered for the writer); retired Reviews Digest concept.
+Code references: today the only research path is `invoke_google_grounded_text` in `packages/utils/src/utils/google_grounding.py`; the EP+GR merged call will replace its current usage.
+History: previously a separate pipeline stage that ran after Critical Fields with its own grounded LLM call, then briefly merged into Evidence Profile; ADR 0006 split it into Evidence Scan + Research Profile, and ADR 0010 removed Evidence Scan when auto-angle was retired — Research Profile is now the only research path.
+
+### Research Bucket
+
+Definition: a reusable evidence lane collected for listicle blurb writing regardless of the selected Listicle Angle, currently `reputation-summary`, `specific-offerings`, `experience-texture`, `history-or-ownership`, `practical-usefulness`, `best-for`, `standout-hook`, `social-proof`, `visual-assets`, `caveats-or-fit-warnings`, and `timing-tips`.
+Related terms: Research Profile, Grounded Research, Listicle Angle.
+Do not confuse with: Evidence Profile `bucket` (`rich-public-evidence`, `sparse-public-evidence`, `no-public-evidence`), which summarizes public evidence richness rather than naming what evidence was gathered.
+Writer boundary: selected Listicle Angle evidence supplies the blurb's lead framing; Research Buckets supply supporting texture and factual backup.
+Collection rule: Research Buckets run for every Research Profile even when selected-angle evidence is strong; each bucket may return zero to two cited findings, and uncited findings are dropped.
+Boundary rule: Research Buckets inform facts only; Listicle Angle controls the blurb's framing and lead shape even when bucket names resemble angle names.
+Category rule: all standard buckets stay in the schema, but each venue category can prioritize a subset in the Research Profile prompt; low-signal buckets should stay empty rather than padded.
+`visual-assets` boundary: this bucket gathers visual details for blurb prose only and does not select, upload, or mutate media assets.
+`standout-hook` boundary: this bucket captures the strongest concise fact found, but it must not override the selected Listicle Angle as the blurb's framing.
+`caveats-or-fit-warnings` boundary: this bucket may guide claim avoidance or appear in final prose when useful to readers, but caveats must stay factual and restrained.
+Usability threshold: standard buckets are usable for fallback when they contain at least two cited findings across any buckets, or one cited `standout-hook` finding.
+
+### Research Profile
+
+Definition: the cited evidence bundle for one blurb, scoped to the selected Listicle Angle plus standard Research Buckets and backed by citations. Not directly fed to the writer; passes through [[Writer Brief]] curation first.
+Related terms: Grounded Research, Research Bucket, Listicle Angle, Writer Brief.
+Do not confuse with: Writer Brief, which is the lean writer-ready payload derived from Research Profile.
+Mechanism: one grounded LLM call per blurb that mentions the operator-selected Listicle Angle plus the standard Research Buckets.
+Source visibility: generated item responses keep merged `source_urls`, the run inspector shows sources per angle and bucket, and published Payload prose does not expose citations by default.
+Caching: Research Profiles are generated fresh per run and are not cached until source freshness and invalidation rules exist.
+Source boundary: request identity fields can ground search and writer identity, but Research Bucket findings require citations unless a future LM-curated fact source is explicitly added.
+Target scope: Research Profiles are for blurb targets only; intro generation does not run per-venue Research Profiles.
+Skip rule: when `skip_existing` skips an existing blurb, the pipeline should skip Research Profile work for that target too.
+
+### Evidence Profile
+
+Definition: retired umbrella name for the former combined angle-validation and findings pass in the listicle blurb pipeline.
+Related terms: Research Profile.
+Do not confuse with: Research Profile, the current single research call (auto-angle and its sibling Evidence Scan were retired in ADR 0010).
+Ownership: AI Blog Writer owns Research Profile as the editorial writeability concept; Location Manager owns venue facts.
+
+### Writer Brief
+
+Definition: the lean writer-ready payload for one blurb, derived from a [[Research Profile]] by a per-blurb curation step. Bundles two things: a venue-tailored angle directive (filled from a per-angle template, e.g. "Open by naming the kind of night {venue} is best for, and give one concrete reason rooted in the room, the drinks, the crowd, or the pacing.") and a flat, deduped Source Facts list of 2 to 8 bullets drawn across all Research Buckets with bucket labels stripped. Citations are preserved per fact for inspector display but not shown in the writer prompt.
+Related terms: Research Profile, Listicle Angle, List Tone.
+Do not confuse with: Research Profile (the upstream cited evidence bundle, still bucket-labeled and potentially overlapping); Critical Fields Guideline (a pre-flight identity gate, not a writer payload).
+Mechanism: one short LLM call per blurb that takes the Research Profile plus selected Listicle Angle and emits JSON `{ angle_directive, source_facts: [{ fact, citations }] }`. If the call fails or returns zero facts, the pipeline falls back to identity-only writer prompt and marks the blurb low-confidence.
+Category scope: nightlife (ADR 0007) and dining (ADR 0009). Accommodations and attractions remain on the bucket-dump writer prompt; key_location has no Writer Brief path. Categories on the lean writer path are tracked by `LEAN_PROMPT_CATEGORIES` in `angle_assignment.py`, orthogonal to `ANTI_AI_PROMPT_CATEGORIES`.
+
+### Listicle Pipeline Audit
+
+Definition: a review of how a listicle request moves from selected Locations through evidence gathering, composition, and validation before changing generation behavior.
+Related terms: Research Profile, Grounded Research, Critical Fields Guideline, Listicle Angle.
+Do not confuse with: a production pipeline change or a Payload Sync audit.
 
 ### Reviews Digest
 
-Definition: a compact per-venue summary derived once from the merged Google + TripAdvisor reviews JSON file (`merged_reviews_{locationId}_{ts}.json`) on the LM side. Cached per venue, invalidated when `reviewsFetchedAt` changes. Used as Tier-2 evidence by the blurb writer instead of passing raw reviews into prompts.
-Related terms: Critical Fields Guideline.
-Do not confuse with: the raw merged reviews file itself (`merged_reviews_*.json`), which is the input to the digest, not the digest.
+Definition: retired concept. It referred to a compact per-venue summary derived from LM merged Google + TripAdvisor review artifacts, but LM removed the review pipeline in ADR-0005. ABW listicle blurbs should not depend on `reviewsFetchedAt`, `reviewsCount`, or `_reviewsDigest` as active evidence.
+Related terms: Grounded Research.
+Do not confuse with: grounded-search citation snippets, which are produced on demand by Grounded Research and are not cached LM review artifacts.
 
 ### List Tone
 
@@ -119,7 +169,10 @@ Do not confuse with: Article Type (which is the structural template — single-t
 
 ### Listicle Angle
 
-Definition: a per-item editorial framing assigned to each blurb in a listicle, drawn from a category-specific pool (for dining: Signature Dish, Atmosphere, Founders/Backstory, Insider Tip, Best-For, What's Different). Auto-assigned by the system using LM data heuristics and rotation to avoid adjacent repeats, and overrideable per item by the operator. Combined with List Tone, the writer prompt becomes "write in <tone> from the <angle> angle for <venue>."
+Definition: a per-item editorial framing for each blurb in a listicle, drawn from a category-specific pool of angles that map to lead-sentence shapes (named noun + fact, sensory detail + room, person + fact, actionable tip, occasion + evidence, differentiator). Always operator-selected per item; the pipeline has no auto-angle path (ADR 0010). Combined with List Tone, the writer prompt becomes "write in <tone> from the <angle> angle for <venue>."
+Per-category pool status: dining has a production pool (`signature-dish`, `atmosphere`, `founders-backstory`, `insider-tip`, `best-for`, `whats-different`) since ADR 0003 and routes through the lean writer prompt + Writer Brief since ADR 0009; nightlife ships with a single-angle pool (`best-for-night`); accommodations and attractions pools are deferred per ADR 0004; key_location has no pool yet.
+Pool use: each pool serves as the vocabulary for the operator dropdown and Research Profile selected-angle evidence.
+Requested vs effective: `requested_angle` is the operator's intent; `effective_angle` is the supported angle actually sent to the writer and may be null when the operator's chosen framing lacks cited evidence (low-confidence fallback).
 Related terms: List Tone, Critical Fields Guideline.
 Do not confuse with: List Tone (one per listicle vs one per item); `idealFor` (a venue attribute, not an editorial angle).
 
@@ -139,6 +192,14 @@ Do not confuse with: List Tone (one per listicle vs one per item); `idealFor` (a
 - An article cannot be synced to Payload from a Draft with `hasUnsyncedPayloadChanges = false` that has not been edited locally — that's a no-op, not an error.
 - `aiFieldPaths` filled by AI Blog Writer **must** conform to `/location-guide-contract.json`. Out-of-contract writes are rejected at the contract boundary.
 - Vertex AI usage is centralized in `packages/utils.get_vertex_llm`; features should not instantiate clients directly.
+- **Listicle Angle is always operator-selected.** The pipeline has no auto-angle path; generation is blocked until the operator picks an angle from the category pool (ADR 0010).
+- A user-selected **Listicle Angle** is authoritative research intent; if cited evidence cannot support it, the writer may fall back to **Research Bucket** evidence only and must mark the item low-confidence rather than invent angle support or silently switch angles.
+- **Research Profile** proves or rejects the selected angle while gathering standard **Research Buckets**; if selected-angle evidence is weak/unsupported, the writer falls back to Research Buckets as low-confidence, then identity-only low-confidence if buckets are also unusable.
+- Only supported selected-angle evidence reaches the writer as a **Listicle Angle**; weak or unsupported angle evidence is excluded from the writer prompt and surfaced as a warning.
+- Listicle Angle viability is a backend research concern; the frontend may restrict angle values by category but must not pre-validate web evidence.
+- Unsupported or weak selected Listicle Angle evidence is a generated-with-warning case, not a hard error; hard errors are reserved for Critical Fields failure, model failure, or validation failure.
+- A blurb is low-confidence whenever the operator's selected angle framing fails, even if standard Research Buckets contain usable evidence.
+- The pipeline does not support forcing an unsupported Listicle Angle; operators can manually edit generated copy when they have off-pipeline knowledge.
 
 ## Naming Conventions
 

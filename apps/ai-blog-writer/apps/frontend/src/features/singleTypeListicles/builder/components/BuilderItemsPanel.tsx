@@ -3,7 +3,7 @@ import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/nor
 import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { getBlockTypeForListicleType } from '../../api'
 import type { ListicleAngle, ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
-import { LISTICLE_ANGLE_OPTIONS } from '../../types'
+import { getListicleAngleOptions, resolveListicleAngleForBlockType } from '../../types'
 import {
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
@@ -138,6 +138,7 @@ export function BuilderItemsPanel({
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
   const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
   const activeInstagramPicker = activePicker?.type === 'instagram' ? activePicker : null
+  const angleOptions = getListicleAngleOptions(draft.listicleType)
 
   useEffect(() => {
     if (!copiedItemId) return
@@ -171,10 +172,26 @@ export function BuilderItemsPanel({
   useEffect(() => {
     if (!draft.listicleType) return
     const expectedBlockType = getBlockTypeForListicleType(draft.listicleType)
+    const validAngles = new Set(getListicleAngleOptions(draft.listicleType).map((option) => option.value))
 
     draft.items.forEach((item) => {
-      if (item.blockType === expectedBlockType) return
-      updateItem(item.id, (current) => ({ ...current, blockType: expectedBlockType }))
+      const normalizedAngle = resolveListicleAngleForBlockType(
+        expectedBlockType,
+        item.blockType === expectedBlockType && item.angle && validAngles.has(item.angle)
+          ? item.angle
+          : null,
+      )
+      if (
+        item.blockType === expectedBlockType
+        && (item.angle ?? null) === normalizedAngle
+      ) {
+        return
+      }
+      updateItem(item.id, (current) => ({
+        ...current,
+        blockType: expectedBlockType,
+        angle: normalizedAngle,
+      }))
     })
   }, [draft.items, draft.listicleType, updateItem])
 
@@ -612,7 +629,7 @@ export function BuilderItemsPanel({
                       <div className="stl-inline-actions stl-ai-field-actions">
                         <select
                           className="stl-field-input stl-angle-select"
-                          value={item.angle ?? ''}
+                          value={item.angle && angleOptions.some((option) => option.value === item.angle) ? item.angle : ''}
                           onChange={(event) => {
                             const next = event.target.value
                             updateItem(item.id, (current) => ({
@@ -621,10 +638,12 @@ export function BuilderItemsPanel({
                             }))
                           }}
                           aria-label={`Blurb angle for item ${index + 1}`}
-                          title="Blurb angle (Auto = backend picks based on this venue's data)"
+                          title="Blurb angle — operator must select one before generating"
                         >
-                          <option value="">Angle: Auto</option>
-                          {LISTICLE_ANGLE_OPTIONS.map((option) => (
+                          <option value="" disabled>
+                            Select an angle…
+                          </option>
+                          {angleOptions.map((option) => (
                             <option key={option.value} value={option.value}>
                               {option.label}
                             </option>
@@ -643,7 +662,8 @@ export function BuilderItemsPanel({
                           type="button"
                           className={aiButtonClassName}
                           onClick={() => void onItemBlurbAiAutoWrite(item.id)}
-                          disabled={activeAiItemId === item.id}
+                          disabled={activeAiItemId === item.id || !item.angle}
+                          title={!item.angle ? 'Select an angle before generating' : undefined}
                         >
                           <AiJobButtonContent
                             isRunning={activeAiItemId === item.id}

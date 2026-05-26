@@ -148,6 +148,24 @@ describe('singleTypeListicles ai autowrite service', () => {
     ])
   })
 
+  it('does not send whole article context for item-only blurb generation', () => {
+    const draft = buildDraft()
+    const request = buildSingleTypeGenerateListicleContentRequest({
+      draft,
+      relatedItems: buildRelatedItems(),
+      locations: buildLocations(),
+      targetIds: ['item-1_blurb'],
+      modelName: 'gemini-2.5-flash',
+    })
+
+    expect(request.articleContext).toBeUndefined()
+    expect(request.targets).toHaveLength(1)
+    expect(request.targets[0]).toEqual(expect.objectContaining({
+      targetId: 'item-1_blurb',
+      fieldType: 'blurb',
+    }))
+  })
+
   it('returns only empty intro and blurbs for bulk auto-write', () => {
     const draft = buildDraft()
 

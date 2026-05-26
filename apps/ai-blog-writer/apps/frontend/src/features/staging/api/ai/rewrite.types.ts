@@ -47,12 +47,27 @@ export type PayloadCollectionSlug =
   | 'key-locations'
 
 export type ListicleWriterAngle =
+  // Dining
   | 'signature-dish'
   | 'atmosphere'
   | 'founders-backstory'
   | 'insider-tip'
   | 'best-for'
   | 'whats-different'
+  // Accommodations
+  | 'signature-amenity'
+  | 'room-style'
+  | 'property-backstory'
+  | 'booking-tip'
+  | 'best-for-stay-type'
+  // Attractions
+  | 'signature-feature'
+  | 'setting'
+  | 'history-built'
+  | 'visit-time-tip'
+  | 'best-for-visit-type'
+  // Nightlife (single-angle pool per ADR 0008)
+  | 'best-for-night'
 
 export type GenerateListicleContentTarget = {
   targetId: string
@@ -82,7 +97,9 @@ export type GenerateListicleContentRequest = {
 
 export type ListicleStepEventName =
   | 'critical_fields_evaluated'
-  | 'fallback_research_called'
+  | 'evidence_profile_completed'
+  | 'research_profile_completed'
+  | 'writer_brief_completed'
   | 'writer_called'
   | 'validated'
   | 'retry_called'
@@ -108,6 +125,10 @@ export type GenerateListicleContentTargetResponse = {
   source_urls: string[]
   validation_errors: string[]
   error_message?: string | null
+  low_confidence?: boolean
+  warnings?: string[]
+  requested_angle?: ListicleWriterAngle | null
+  effective_angle?: ListicleWriterAngle | null
   steps?: ListicleStepEvent[]
 }
 

@@ -12,7 +12,9 @@ type InspectListicleRunModalProps = {
 
 const STEP_LABELS: Record<ListicleStepEventName, string> = {
   critical_fields_evaluated: 'Critical Fields evaluated',
-  fallback_research_called: 'Fallback Research called',
+  evidence_profile_completed: 'Evidence Profile completed',
+  research_profile_completed: 'Research Profile completed',
+  writer_brief_completed: 'Writer Brief curated',
   writer_called: 'Writer called',
   validated: 'Validated',
   retry_called: 'Retry called',

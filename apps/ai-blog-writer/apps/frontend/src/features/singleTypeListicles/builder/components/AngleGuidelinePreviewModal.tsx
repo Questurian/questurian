@@ -1,5 +1,5 @@
 import type { ListicleAngle, ListTone, ListicleType } from '../../types'
-import { LISTICLE_ANGLE_OPTIONS, LIST_TONE_OPTIONS } from '../../types'
+import { LISTICLE_ANGLE_OPTIONS, LIST_TONE_OPTIONS, getListicleAngleOptions } from '../../types'
 
 type AngleGuidelinePreviewModalProps = {
   isOpen: boolean
@@ -55,8 +55,8 @@ export function AngleGuidelinePreviewModal({
   const toneLabel = TONE_LABEL_BY_VALUE[listTone] ?? listTone
   const toneGuidance = guidelines?.tones[listTone] ?? ''
 
-  const isDining = listicleType === 'dining'
-  const isAuto = itemAngle === null
+  const angleOptions = getListicleAngleOptions(listicleType)
+  const isUnselected = itemAngle === null
 
   return (
     <div
@@ -96,32 +96,11 @@ export function AngleGuidelinePreviewModal({
             <p className="stl-inspect-empty">No guidance available.</p>
           ) : (
             <>
-              {isAuto ? (
-                isDining ? (
-                  <>
-                    <p className="stl-guideline-note">
-                      Angle is set to <strong>Auto</strong>. The backend will pick one of the
-                      following angles per-item based on this venue&apos;s data.
-                    </p>
-                    {LISTICLE_ANGLE_OPTIONS.map((option) => {
-                      const guidance = guidelines.angles[option.value]
-                      if (!guidance) return null
-                      return (
-                        <AngleSection
-                          key={option.value}
-                          angleValue={option.value}
-                          guidance={guidance}
-                        />
-                      )
-                    })}
-                  </>
-                ) : (
-                  <p className="stl-guideline-note">
-                    Angle is set to <strong>Auto</strong>. No angle block is injected into the
-                    prompt for <strong>{listicleType || 'this category'}</strong> — only the tone
-                    below applies.
-                  </p>
-                )
+              {isUnselected ? (
+                <p className="stl-guideline-note">
+                  No angle selected yet. Pick an angle from the dropdown to see its guidance and
+                  to enable blurb generation.
+                </p>
               ) : (
                 (() => {
                   const guidance = guidelines.angles[itemAngle]

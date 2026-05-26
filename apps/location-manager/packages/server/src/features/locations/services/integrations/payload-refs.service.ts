@@ -21,6 +21,7 @@ export interface EditorialLocation {
   idealFor: string[] | null;
   features: string[] | null;
   mealTypes: string[] | null;
+  nightlifeDetails: Record<string, unknown> | null;
 }
 
 export type PayloadRefLookupResult =
@@ -51,6 +52,14 @@ function safeParseJsonValue(raw: string | null | undefined): unknown | null {
   } catch {
     return null;
   }
+}
+
+function safeParseJsonObject(raw: string | null | undefined): Record<string, unknown> | null {
+  const parsed = safeParseJsonValue(raw);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return null;
+  }
+  return parsed as Record<string, unknown>;
 }
 
 export async function getEditorialLocationsByPayloadRefs(
@@ -91,6 +100,7 @@ export async function getEditorialLocationsByPayloadRefs(
       idealFor: safeParseJsonArray(location.idealForJson),
       features: safeParseJsonArray(location.tripadvisorFeaturesJson),
       mealTypes: safeParseJsonArray(location.tripadvisorMealTypesJson),
+      nightlifeDetails: safeParseJsonObject(location.nightlifeDetailsJson),
     };
 
     return {

@@ -62,6 +62,7 @@ function buildDraft(listicleType: SingleTypeListicleDraft['listicleType']): Sing
         selectedPhotos: [],
         selectedInstagramPost: null,
         blurbMarkdown: '',
+        angle: listicleType === 'dining' ? 'signature-dish' : null,
       },
     ],
     seoSection: {

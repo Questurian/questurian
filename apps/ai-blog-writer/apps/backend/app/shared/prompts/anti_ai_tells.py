@@ -1,11 +1,20 @@
-"""Anti-AI-tells voice guideline shared across prose-producing prompts.
+"""Anti-AI-tells voice guideline appended to prose-producing prompts.
 
-Two variants:
-- ANTI_AI_TELLS_FULL: article-body prompts (composer + auditor + repair across
-  youtube2blog, prompt2blog, url2blog, editor_assist block-rewrite, deep-expand,
-  editorial augmentation).
-- ANTI_AI_TELLS_BLURB: listicle blurbs. Drops rhythm / summary / paragraph-
-  structure rules that do not apply to a single 90-140 word paragraph.
+Two variants are defined; current usage:
+
+- ANTI_AI_TELLS_BLURB: appended in `editor_assist/listicle_writer.py` for
+  listicle blurbs. Gated per-category via `_voice_rules_block`; today the gate
+  is open for dining (pilot from ADR 0003) and is being extended to
+  accommodations, attractions, and nightlife per ADR 0004. Intros, key_location
+  blurbs, and other listicle field types remain on the legacy path.
+
+- ANTI_AI_TELLS_FULL: defined but NOT YET imported anywhere. Intended for
+  article-body composers (youtube2blog, prompt2blog, url2blog,
+  editor_assist block-rewrite, deep-expand, editorial augmentation). Wiring
+  these is out of scope for the current listicle work and will be its own ADR.
+
+The blurb variant drops rhythm / summary / paragraph-structure rules that do
+not apply to a single 90-140 word paragraph.
 
 Both are written to be appended *after* any per-article-type guideline, with the
 precedence statement asserting they override conflicting instructions above.

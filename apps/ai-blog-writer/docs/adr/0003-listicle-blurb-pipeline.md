@@ -4,6 +4,8 @@
 
 Proposed
 
+**Note (2026-05-25):** LM review artifacts were removed by Location Manager ADR-0005, so ABW no longer gates on `reviewsFetchedAt`, `reviewsCount`, or Reviews Digest. The former "Fallback Research" step is now **Grounded Research**: dining and nightlife blurbs always run a grounded search pass for current public reputation/context, and Tier-2 gaps only scope additional research topics.
+
 ## Context
 
 The single-type-listicle and listicle-itinerary features currently generate blurbs and intros via a single Gemini call with Google Search grounding (`invoke_google_grounded_text`). The per-venue context sent to the model is `title`, a one-line `location` string, and `idealFor` tags — nothing else. The prompt instructs "research this online" and the grounding tool does the heavy lifting. This produces generic, sometimes hallucinated blurbs because:

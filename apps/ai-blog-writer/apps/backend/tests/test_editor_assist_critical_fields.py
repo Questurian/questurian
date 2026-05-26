@@ -1,104 +1,69 @@
-from datetime import datetime, timedelta, timezone
+"""Tests for the four-boolean Critical Fields gate."""
 
 from app.features.editor_assist.critical_fields import (
-    STALENESS_DAYS_BY_CATEGORY,
-    evaluate_tiers,
+    CriticalFieldsResult,
+    evaluate_critical_fields,
 )
 
 
-def _dining(**overrides):
-    """Fully-populated dining venue (no Tier-1 or Tier-2 gaps)."""
+def _ok_kwargs(**overrides):
     base = {
-        "name": "La Mar",
-        "type": "Restaurant",
-        "priceLevel": "3",
-        "address": "Av. Mariscal La Mar 770, Miraflores 15074, Peru",
-        "cuisines": ["Peruvian", "Seafood"],
-        "idealFor": ["business-lunch", "date-night"],
-        "features": ["outdoor seating", "reservations recommended"],
-        "mealTypes": ["lunch", "dinner"],
-        "operationHours": {"Monday": "12:00 - 17:00"},
-        "reviewsCount": 1500,
-        "reviewsFetchedAt": datetime.now(timezone.utc).isoformat(),
+        "name": "Maido",
+        "category": "dining",
+        "location_label": "Miraflores, Lima",
+        "payload_doc_id": "abc123",
     }
     base.update(overrides)
     return base
 
 
-def test_dining_with_complete_data_has_no_gaps_and_skips_research():
-    evaluation = evaluate_tiers("dining", _dining())
-
-    assert evaluation.tier1_missing == []
-    assert evaluation.tier2_missing == []
-    assert evaluation.reviews_stale is False
-    assert evaluation.needs_fallback_research is False
+def test_passes_when_all_four_present():
+    result = evaluate_critical_fields(**_ok_kwargs())
+    assert result == CriticalFieldsResult(passed=True, missing=[])
 
 
-def test_dining_missing_cuisines_is_tier1_gap():
-    evaluation = evaluate_tiers("dining", _dining(cuisines=[]))
-
-    assert "cuisines" in evaluation.tier1_missing
-    assert evaluation.has_tier1_gaps is True
-
-
-def test_dining_missing_priceLevel_is_tier1_gap():
-    evaluation = evaluate_tiers("dining", _dining(priceLevel=None))
-
-    assert "priceLevel" in evaluation.tier1_missing
+def test_missing_name_fails():
+    result = evaluate_critical_fields(**_ok_kwargs(name=""))
+    assert result.passed is False
+    assert "name" in result.missing
 
 
-def test_dining_missing_idealFor_triggers_fallback_research():
-    evaluation = evaluate_tiers("dining", _dining(idealFor=None))
-
-    assert "idealFor" in evaluation.tier2_missing
-    assert evaluation.needs_fallback_research is True
-    assert "idealFor" in evaluation.gap_descriptions
+def test_whitespace_name_fails():
+    result = evaluate_critical_fields(**_ok_kwargs(name="   "))
+    assert "name" in result.missing
 
 
-def test_dining_zero_reviews_marks_reviews_stale():
-    evaluation = evaluate_tiers("dining", _dining(reviewsCount=0))
-
-    assert evaluation.reviews_stale is True
-    assert evaluation.needs_fallback_research is True
-    assert "recent reviews / reputation signal" in evaluation.gap_descriptions
+def test_missing_category_fails():
+    result = evaluate_critical_fields(**_ok_kwargs(category=None))
+    assert "category" in result.missing
 
 
-def test_dining_old_reviews_marks_reviews_stale():
-    threshold = STALENESS_DAYS_BY_CATEGORY["dining"]
-    assert threshold is not None
-    too_old = (datetime.now(timezone.utc) - timedelta(days=threshold + 30)).isoformat()
-    evaluation = evaluate_tiers("dining", _dining(reviewsFetchedAt=too_old))
-
-    assert evaluation.reviews_stale is True
-    assert evaluation.needs_fallback_research is True
+def test_unsupported_category_fails():
+    result = evaluate_critical_fields(**_ok_kwargs(category="recipes"))
+    assert "category" in result.missing
 
 
-def test_dining_recent_reviews_within_threshold_are_fresh():
-    threshold = STALENESS_DAYS_BY_CATEGORY["dining"]
-    assert threshold is not None
-    recent = (datetime.now(timezone.utc) - timedelta(days=threshold - 30)).isoformat()
-    evaluation = evaluate_tiers("dining", _dining(reviewsFetchedAt=recent))
-
-    assert evaluation.reviews_stale is False
-
-
-def test_malformed_reviewsFetchedAt_marks_stale():
-    evaluation = evaluate_tiers("dining", _dining(reviewsFetchedAt="not-a-date"))
-
-    assert evaluation.reviews_stale is True
+def test_supported_categories_pass():
+    for category in (
+        "dining", "accommodations", "attractions", "nightlife", "key_location"
+    ):
+        result = evaluate_critical_fields(**_ok_kwargs(category=category))
+        assert result.passed, f"{category} should pass identity gate"
 
 
-def test_non_dining_category_returns_permissive_evaluation():
-    evaluation = evaluate_tiers("accommodations", _dining())
-
-    assert evaluation.tier1_missing == []
-    assert evaluation.tier2_missing == []
-    assert evaluation.reviews_stale is False
-    assert evaluation.needs_fallback_research is False
+def test_missing_location_label_fails():
+    result = evaluate_critical_fields(**_ok_kwargs(location_label=None))
+    assert "location_label" in result.missing
 
 
-def test_missing_location_dict_returns_permissive_evaluation():
-    evaluation = evaluate_tiers("dining", None)
+def test_missing_payload_doc_id_fails():
+    result = evaluate_critical_fields(**_ok_kwargs(payload_doc_id=None))
+    assert "payload_doc_id" in result.missing
 
-    assert evaluation.tier1_missing == []
-    assert evaluation.needs_fallback_research is False
+
+def test_all_missing_lists_every_field():
+    result = evaluate_critical_fields(
+        name=None, category=None, location_label=None, payload_doc_id=None
+    )
+    assert result.passed is False
+    assert set(result.missing) == {"name", "category", "location_label", "payload_doc_id"}

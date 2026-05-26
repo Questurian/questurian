@@ -2,7 +2,7 @@ import { DEFAULT_EDITOR_ASSIST_MODEL } from '../../../../shared/api/ai/models'
 import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
 import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-section.service'
 import type { ListicleItemBlock, PayloadListicleDoc, SingleTypeListicleDraft } from '../../types'
-import { resolveListTone, resolveListicleAngle } from '../../types'
+import { resolveListTone, resolveListicleAngleForBlockType } from '../../types'
 import { buildPayloadListicleMetadataPatch } from '../services/payload-listicle-metadata.service'
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
@@ -11,18 +11,21 @@ import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexi
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
 export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: string): SingleTypeListicleDraft {
-  const items: ListicleItemBlock[] = (doc.items || []).map((item, index) => ({
-    id: item.id || `item_${Date.now()}_${index}`,
-    blockType: item.blockType || 'data-dining',
-    item: getRelationshipId(item.item),
-    mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
-    selectedPhotos: getRelationshipIds(item.selectedPhotos),
-    selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
-    blurbMarkdown: item.blurb ? lexicalRichTextToMarkdown(item.blurb) : '',
-    blurbLexical: item.blurb,
-    blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
-    angle: resolveListicleAngle(item.angle),
-  }))
+  const items: ListicleItemBlock[] = (doc.items || []).map((item, index) => {
+    const blockType = item.blockType || 'data-dining'
+    return {
+      id: item.id || `item_${Date.now()}_${index}`,
+      blockType,
+      item: getRelationshipId(item.item),
+      mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
+      selectedPhotos: getRelationshipIds(item.selectedPhotos),
+      selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),
+      blurbMarkdown: item.blurb ? lexicalRichTextToMarkdown(item.blurb) : '',
+      blurbLexical: item.blurb,
+      blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
+      angle: resolveListicleAngleForBlockType(blockType, item.angle),
+    }
+  })
 
   const fallbackTargetItemCount = typeof doc.targetItemCount === 'number' ? doc.targetItemCount : 0
   const hasStep2Content = Boolean(
