@@ -47,6 +47,10 @@ interface TourFormDialogProps {
   onOpenChange: (open: boolean) => void;
   tour?: Tour | null;
   importDraft?: TourDraftPreview | null;
+  /** When creating, prefill the locationKey selects (operator can still edit). */
+  prefilledLocationKey?: string | null;
+  /** Fires after a new Tour is created. Receives the saved Tour. */
+  onCreated?: (tour: Tour) => void;
 }
 
 interface ProcessedTourImageSet {
@@ -656,18 +660,25 @@ function TourFormDialogContent({
   initialMediaSetId = "",
   onMediaSetIdPersist,
   importDraft = null,
+  prefilledLocationKey = null,
+  onCreated,
 }: Pick<TourFormDialogProps, "onOpenChange" | "tour"> & {
   initialMediaSetId?: string;
   onMediaSetIdPersist?: (id: string) => void;
   importDraft?: TourDraftPreview | null;
+  prefilledLocationKey?: string | null;
+  onCreated?: (tour: Tour) => void;
 }) {
-  const [draft, setDraft] = useState<TourDraft>(() =>
-    tour
-      ? tourToDraft(tour)
-      : importDraft
-        ? { ...importDraftToDraft(importDraft), imgPayloadMediaSetId: initialMediaSetId }
-        : { ...EMPTY_TOUR_DRAFT, imgPayloadMediaSetId: initialMediaSetId }
-  );
+  const initialLocationKey = prefilledLocationKey?.trim() ?? "";
+  const [draft, setDraft] = useState<TourDraft>(() => {
+    if (tour) return tourToDraft(tour);
+    const base = importDraft ? importDraftToDraft(importDraft) : { ...EMPTY_TOUR_DRAFT };
+    return {
+      ...base,
+      imgPayloadMediaSetId: initialMediaSetId,
+      locationKey: base.locationKey || initialLocationKey,
+    };
+  });
   const [formError, setFormError] = useState<string | null>(null);
   const [hasPendingLocalImage, setHasPendingLocalImage] = useState(false);
   const [isImageUploadPending, setIsImageUploadPending] = useState(false);
@@ -807,7 +818,10 @@ function TourFormDialogContent({
     }
 
     createTourMutation.mutate(payload, {
-      onSuccess: () => onOpenChange(false),
+      onSuccess: (createdTour) => {
+        onCreated?.(createdTour);
+        onOpenChange(false);
+      },
     });
   }
 
@@ -968,7 +982,14 @@ function TourFormDialogContent({
   );
 }
 
-export function TourFormDialog({ open, onOpenChange, tour = null, importDraft = null }: TourFormDialogProps) {
+export function TourFormDialog({
+  open,
+  onOpenChange,
+  tour = null,
+  importDraft = null,
+  prefilledLocationKey = null,
+  onCreated,
+}: TourFormDialogProps) {
   const baseKey = tour ? `tour-${tour.id}` : importDraft ? `import-${importDraft.sourceUrl}` : "new-tour";
   // Persisted outside ErrorBoundary so it survives crash+reset.
   const [persistedMediaSetId, setPersistedMediaSetId] = useState("");
@@ -1021,6 +1042,8 @@ export function TourFormDialog({ open, onOpenChange, tour = null, importDraft = 
             importDraft={importDraft}
             initialMediaSetId={persistedMediaSetId}
             onMediaSetIdPersist={setPersistedMediaSetId}
+            prefilledLocationKey={prefilledLocationKey}
+            onCreated={onCreated}
           />
         </ErrorBoundary>
       )}

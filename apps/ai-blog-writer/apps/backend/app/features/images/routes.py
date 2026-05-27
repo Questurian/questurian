@@ -17,6 +17,8 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from .alt_text_generator import generate_alt_text
+from .scene_describer import generate_scene_description
+from .edit_prompt_builder import build_edit_prompt
 from .bfl_client import BflApiError, BflClient
 from .image_processor import (
     VARIANT_SPECS,
@@ -1930,6 +1932,92 @@ async def generate_alt_text_endpoint(
         )
 
     return JSONResponse({"success": True, "alt_text": alt_text})
+
+
+@router.post("/describe-scene")
+async def describe_scene_endpoint(
+    file: UploadFile = File(...),
+) -> JSONResponse:
+    """Generate a mise-en-scène style description of an image for recreation prompting."""
+    content = await _read_upload_file(file, step="validate_file")
+    content_type = file.content_type or "image/jpeg"
+
+    try:
+        description = await generate_scene_description(
+            image_bytes=content,
+            content_type=content_type,
+        )
+    except TimeoutError:
+        _raise_http_error(
+            status_code=504,
+            message="Scene description generation timed out",
+            step="describe_scene",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to generate scene description")
+        _raise_http_error(
+            status_code=500,
+            message="Failed to generate scene description",
+            step="describe_scene",
+            detail=str(exc),
+        )
+
+    return JSONResponse({"success": True, "description": description})
+
+
+@router.post("/build-edit-prompt")
+async def build_edit_prompt_endpoint(
+    file: UploadFile = File(...),
+    scene_description: str = Form(..., description="Mise-en-scène description of the image"),
+    change_request: str = Form(..., description="User's requested changes to the image"),
+) -> JSONResponse:
+    """Build a model-agnostic image-edit prompt from a scene description and change request."""
+    content = await _read_upload_file(file, step="validate_file")
+    content_type = file.content_type or "image/jpeg"
+
+    normalized_scene = scene_description.strip()
+    if not normalized_scene:
+        _raise_http_error(
+            status_code=400,
+            message="scene_description is required",
+            step="validate_scene_description",
+        )
+
+    normalized_changes = change_request.strip()
+    if not normalized_changes:
+        _raise_http_error(
+            status_code=400,
+            message="change_request is required",
+            step="validate_change_request",
+        )
+
+    try:
+        edit_prompt = await build_edit_prompt(
+            image_bytes=content,
+            content_type=content_type,
+            scene_description=normalized_scene,
+            change_request=normalized_changes,
+        )
+    except TimeoutError:
+        _raise_http_error(
+            status_code=504,
+            message="Edit prompt build timed out",
+            step="build_edit_prompt",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to build edit prompt")
+        _raise_http_error(
+            status_code=500,
+            message="Failed to build edit prompt",
+            step="build_edit_prompt",
+            detail=str(exc),
+        )
+
+    return JSONResponse({"success": True, "edit_prompt": edit_prompt})
 
 
 @router.post("/generate-alt-text-from-url")

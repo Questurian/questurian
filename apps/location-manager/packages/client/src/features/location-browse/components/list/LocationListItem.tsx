@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Compass, Instagram, Search } from "lucide-react";
+import { Compass, Instagram, Search, TicketPlus } from "lucide-react";
 import type { LocationBasic } from "@client/shared/services/api/types";
 import { formatLocationHierarchy } from "@client/shared/lib/utils";
 import {
@@ -21,6 +21,7 @@ import { useClipboardCopy } from "../../hooks/useClipboardCopy";
 import { LocationItemMenu } from "./LocationItemMenu";
 import { LocationDetailView } from "../detail/LocationDetailView";
 import { AdvancedDataModal } from "./AdvancedDataModal";
+import { QuickAddTourModal } from "@client/shared/components/tours/QuickAddTourModal";
 
 interface LocationListItemProps {
   location: LocationBasic;
@@ -86,8 +87,10 @@ export function LocationListItem({
   onExpandedChange,
 }: LocationListItemProps) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isQuickAddTourOpen, setIsQuickAddTourOpen] = useState(false);
   const navigate = useNavigate();
   const searchQueries = buildSearchQueries(location);
+  const isAttraction = location.category === "attractions";
 
   // Custom hooks
   const { data: locationDetail, isLoading, error } = useLocationDetail(
@@ -183,6 +186,20 @@ export function LocationListItem({
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
+          {isAttraction && (
+            <button
+              type="button"
+              aria-label="Quick-link tour"
+              title="Quick-link tour"
+              className="inline-flex items-center justify-center rounded p-1 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsQuickAddTourOpen(true);
+              }}
+            >
+              <TicketPlus size={16} />
+            </button>
+          )}
           <LocationItemMenu
             isOpen={isMenuOpen}
             onToggle={(e) => {
@@ -207,6 +224,17 @@ export function LocationListItem({
           isLoading={isLoading}
           error={error}
           onCopyField={copyToClipboard}
+        />
+      )}
+
+      {isAttraction && isQuickAddTourOpen && (
+        <QuickAddTourModal
+          open={isQuickAddTourOpen}
+          onOpenChange={setIsQuickAddTourOpen}
+          locationId={location.id}
+          locationCategory={location.category}
+          locationKey={location.locationKey}
+          locationName={location.title || location.name}
         />
       )}
 

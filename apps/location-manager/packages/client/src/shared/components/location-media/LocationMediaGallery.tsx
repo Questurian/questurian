@@ -33,6 +33,10 @@ import { AddUploadFilesForm } from "./forms/AddUploadFilesForm";
 import { PhotoImportPanel } from "./PhotoImportPanel";
 import { MultiVariantCropperModal } from "./modals/MultiVariantCropperModal";
 import { PayloadMediaSetSelector } from "./PayloadMediaSetSelector";
+import {
+  MAX_ATTRACTION_GALLERY_ITEMS,
+  usePayloadMediaSetSelection,
+} from "./usePayloadMediaSetSelection";
 import { ImageLightbox } from "./ui/ImageLightbox";
 
 interface LocationMediaGalleryProps {
@@ -179,6 +183,11 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       showToast(error.message || "Failed to replace image variants", centerPosition);
     },
   });
+
+  const isAttraction = locationDetail.category === "attractions";
+  const payloadSelection = usePayloadMediaSetSelection(locationDetail);
+  const selectedMediaSets = isAttraction ? payloadSelection.selectedMediaSets : [];
+  const totalGalleryCount = uploadsWithPreview.length + selectedMediaSets.length;
 
   const missingCreditCount = uploadsWithPreview.filter((upload) =>
     hasMissingPhotographerCredit(upload.imageSet?.photographerCredit)
@@ -381,12 +390,30 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
 
   return (
     <>
-      {/* Existing Uploads Gallery */}
-      {uploadsWithPreview.length > 0 && (
+      {/* Unified Gallery: uploads + selected Payload CMS media sets */}
+      {(uploadsWithPreview.length > 0 || isAttraction) && (
         <div className="space-y-2">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Uploaded Images:
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {isAttraction
+                ? `Gallery (${totalGalleryCount}/${MAX_ATTRACTION_GALLERY_ITEMS}):`
+                : "Uploaded Images:"}
+            </span>
+            {isAttraction && (
+              <span className="text-xs text-muted-foreground">
+                {uploadsWithPreview.length} uploaded
+                {selectedMediaSets.length > 0 && ` + ${selectedMediaSets.length} from CMS`}
+              </span>
+            )}
+            {isAttraction && (
+              <div className="ml-auto">
+                <PayloadMediaSetSelector selection={payloadSelection} />
+              </div>
+            )}
+          </div>
+          {payloadSelection.saveError && (
+            <p className="ml-4 text-xs text-amber-600">{payloadSelection.saveError}</p>
+          )}
           {missingCreditCount > 0 && (
             <p className="ml-4 text-xs font-medium text-amber-600">
               {missingCreditCount} image set{missingCreditCount === 1 ? "" : "s"} missing photographer credit
@@ -395,6 +422,11 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
           {incompleteVariantCount > 0 && (
             <p className="ml-4 text-xs font-medium text-amber-600">
               {incompleteVariantCount} image set{incompleteVariantCount === 1 ? "" : "s"} with fewer than {REQUIRED_VARIANT_COUNT} variants
+            </p>
+          )}
+          {totalGalleryCount === 0 && isAttraction && (
+            <p className="ml-4 text-xs text-muted-foreground">
+              No images yet. Upload below or pick existing photos from Payload CMS.
             </p>
           )}
           <ul className="flex gap-2 ml-4 flex-wrap">
@@ -465,6 +497,44 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
 
               return null;
             })}
+            {selectedMediaSets.map((item, index) => {
+              const orderIndex = uploadsWithPreview.length + index;
+              return (
+                <li key={`payload-${item.id}`} className="relative group">
+                  <div className="shrink-0 w-[120px] h-[120px] overflow-hidden rounded bg-muted hover:ring-2 ring-primary transition-all">
+                    {item.previewUrl ? (
+                      <img
+                        src={item.previewUrl}
+                        alt={item.altText || item.title || "Payload CMS photo"}
+                        className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                        loading="lazy"
+                        title={item.title || "Payload CMS photo"}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">
+                        No preview
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                    CMS
+                  </div>
+                  <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                    #{orderIndex + 1}
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => payloadSelection.handleToggle(item)}
+                    disabled={payloadSelection.isPending}
+                    title="Remove from Payload selection"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -509,10 +579,6 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
             })}
           </ul>
         </div>
-      )}
-
-      {locationDetail.category === "attractions" && (
-        <PayloadMediaSetSelector locationDetail={locationDetail} />
       )}
 
       {/* Photo Import flow — see ADR-0006 / CONTEXT.md "Photo Import flow" */}

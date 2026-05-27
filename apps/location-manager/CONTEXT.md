@@ -104,6 +104,11 @@ _Avoid_: invalid URL, failed scrape.
 A `TourDraft` whose source URL matches an existing Tour's booking link.
 _Avoid_: duplicate title, same tour.
 
+### Quick-link Tour flow
+
+The operator workflow launched from an Attractions card on the browse home, where a Tour Source URL is pasted into a modal and the outcome is a Tour linked to *that* attraction in one pass. Composes the existing URL-import preview, `TourFormDialog`, and the attraction's `tourIds` linking — the "quick" is about not leaving the home view and getting the link wired up for free, not about skipping fields. A Duplicate Tour Candidate inside this flow may resolve as a *link to the existing Tour* without creating a second Tour; a non-duplicate URL falls through to the standard `TourDraft` confirm step with `locationKey` prefilled from the attraction.
+_Avoid_: attraction tour modal, quick tour, instant tour, tour import shortcut.
+
 ### `ImageSet` / `ImageVariant`
 
 A multi-variant image bundle (e.g. thumbnail / preview / full). LM generates variant files before Payload sync (per ADR `0001-mediaset-as-public-image-source` in Questura).
@@ -193,6 +198,10 @@ Photos sourced via the **Photo Import flow** carry their Google contributor name
 - A **Tour Source Image** must pass through the normal image review path before a **Tour** is confirmed; remote source images are not final tour images.
 - Tour import always begins by detecting the **Tour Source Provider** from the URL; unknown providers surface as **Unsupported Tour URL** rather than falling through to a generic scraper.
 - A **Duplicate Tour Candidate** is detected by source URL/booking link, not title; creating a second **Tour** from it requires operator override.
+- The **Quick-link Tour flow** is reachable only from an Attractions card on the browse home; other category cards do not surface it.
+- In the **Quick-link Tour flow**, a Duplicate Tour Candidate already present in the attraction's `tourIds` resolves as a no-op with an "already linked" notice; a Duplicate Tour Candidate not yet linked resolves as a one-click link (the existing Tour's `locationKey` is **not** mutated); "Import anyway" remains available as an operator override per the duplicate rule above.
+- In the **Quick-link Tour flow**, a newly created Tour's `locationKey` prefills from the launching attraction but remains operator-editable inside the confirm step.
+- In the **Quick-link Tour flow**, the auto-link write to the attraction's `tourIds` runs after Tour create resolves. A failed link does not roll back the created Tour; the operator may retry the link from the modal or from the attraction edit page's existing tour selector.
 - In the **Add Accommodations autofill flow**, automatic AI gap-fill blocks form review briefly with progress, runs with small concurrency, routes to the first review section when complete, and reports failed/low-confidence fields as needing manual review instead of stacking modal suggestions.
 - In the **Add Accommodations autofill flow**, AI suggestion reason/evidence is add-session review state only and is not persisted to the Location.
 - In the **Add Accommodations autofill flow**, AI failure is not its own create blocker; existing form validation blocks Create when required fields remain blank/default, and operators manually complete those fields. The create UI must surface which required fields are still missing so operators are not left with an unexplained disabled button.

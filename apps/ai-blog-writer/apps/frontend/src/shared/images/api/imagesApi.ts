@@ -5,6 +5,8 @@
 import type { ImageVariantType } from '../utils/imageProcessing';
 import { fluxEditApi } from './flux-edit.api';
 import { generateAltTextApi } from './alt-text/generate-alt-text.api';
+import { describeSceneApi } from './describe-scene.api';
+import { buildEditPromptApi } from './build-edit-prompt.api';
 import { postJson } from './client/imageApiClient';
 import { parseErrorMessage } from './errors/image-api-error.utils';
 import type {
@@ -84,6 +86,26 @@ export async function generateAltText(
   narrativeFocus?: string
 ): Promise<string> {
   return generateAltTextApi({ file, narrativeFocus });
+}
+
+/**
+ * Generate a mise-en-scène style description of an image — framing, subjects,
+ * setting, lighting — for use as an image-recreation prompt.
+ */
+export async function describeImageScene(file: File): Promise<string> {
+  return describeSceneApi(file);
+}
+
+/**
+ * Build a model-agnostic image-edit prompt by combining the image, its scene
+ * description, and the user's requested changes.
+ */
+export async function buildImageEditPrompt(
+  file: File,
+  sceneDescription: string,
+  changeRequest: string,
+): Promise<string> {
+  return buildEditPromptApi({ file, sceneDescription, changeRequest });
 }
 
 /**
