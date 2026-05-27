@@ -163,9 +163,10 @@ ListicleAngleRequest = Literal[
     # Dining
     "signature-dish", "atmosphere", "founders-backstory",
     "insider-tip", "best-for", "whats-different",
-    # Accommodations
-    "signature-amenity", "room-style", "property-backstory",
-    "booking-tip", "best-for-stay-type",
+    # Accommodations (ADR 0011)
+    "location-and-setting", "view-and-vista", "design-and-aesthetic",
+    "signature-amenity", "food-and-beverage", "trip-fit",
+    "property-backstory", "booking-tip",
     # Attractions
     "signature-feature", "setting", "history-built",
     "visit-time-tip", "best-for-visit-type",

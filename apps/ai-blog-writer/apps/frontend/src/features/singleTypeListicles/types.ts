@@ -17,6 +17,14 @@ export type ListicleAngle =
   | 'best-for'
   | 'whats-different'
   | 'best-for-night'
+  | 'location-and-setting'
+  | 'view-and-vista'
+  | 'design-and-aesthetic'
+  | 'signature-amenity'
+  | 'food-and-beverage'
+  | 'trip-fit'
+  | 'property-backstory'
+  | 'booking-tip'
 
 export type ListicleAngleOption = { value: ListicleAngle; label: string }
 
@@ -33,17 +41,31 @@ export const NIGHTLIFE_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption
   { value: 'best-for-night', label: 'Best For Night' },
 ]
 
+export const ACCOMMODATIONS_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
+  { value: 'location-and-setting', label: 'Location & Setting' },
+  { value: 'view-and-vista', label: 'View & Vista' },
+  { value: 'design-and-aesthetic', label: 'Design & Aesthetic' },
+  { value: 'signature-amenity', label: 'Signature Amenity' },
+  { value: 'food-and-beverage', label: 'Food & Beverage' },
+  { value: 'trip-fit', label: 'Trip Fit' },
+  { value: 'property-backstory', label: 'Property Backstory' },
+  { value: 'booking-tip', label: 'Booking Tip' },
+  { value: 'whats-different', label: "What's Different" },
+]
+
 /** Single-angle nightlife pool per ADR 0008. Operator picks (or default). */
 export const NIGHTLIFE_DEFAULT_ANGLE: ListicleAngle = 'best-for-night'
 
 export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
   ...DINING_LISTICLE_ANGLE_OPTIONS,
   ...NIGHTLIFE_LISTICLE_ANGLE_OPTIONS,
+  ...ACCOMMODATIONS_LISTICLE_ANGLE_OPTIONS,
 ]
 
 export function getListicleAngleOptions(listicleType: ListicleType | ''): ReadonlyArray<ListicleAngleOption> {
   if (listicleType === 'nightlife') return NIGHTLIFE_LISTICLE_ANGLE_OPTIONS
   if (listicleType === 'dining') return DINING_LISTICLE_ANGLE_OPTIONS
+  if (listicleType === 'accommodations') return ACCOMMODATIONS_LISTICLE_ANGLE_OPTIONS
   return []
 }
 

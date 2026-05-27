@@ -22,11 +22,14 @@ DiningAngle = Literal[
 ]
 
 AccommodationsAngle = Literal[
+    "location-and-setting",
+    "view-and-vista",
+    "design-and-aesthetic",
     "signature-amenity",
-    "room-style",
+    "food-and-beverage",
+    "trip-fit",
     "property-backstory",
     "booking-tip",
-    "best-for-stay-type",
     "whats-different",
 ]
 
@@ -57,11 +60,14 @@ DINING_ANGLE_POOL: tuple[ListicleAngle, ...] = (
 )
 
 ACCOMMODATIONS_ANGLE_POOL: tuple[ListicleAngle, ...] = (
+    "location-and-setting",
+    "view-and-vista",
+    "design-and-aesthetic",
     "signature-amenity",
-    "room-style",
+    "food-and-beverage",
+    "trip-fit",
     "property-backstory",
     "booking-tip",
-    "best-for-stay-type",
     "whats-different",
 )
 
@@ -80,14 +86,18 @@ NIGHTLIFE_ANGLE_POOL: tuple[ListicleAngle, ...] = (
 
 # Categories whose blurbs use the anti-AI writer prompt block, Research
 # Profile, and Writer Brief.
-ANTI_AI_PROMPT_CATEGORIES: frozenset[str] = frozenset({"dining", "nightlife"})
+ANTI_AI_PROMPT_CATEGORIES: frozenset[str] = frozenset(
+    {"dining", "nightlife", "accommodations"}
+)
 
 # Categories whose blurbs run through the lean writer prompt + Writer Brief
-# curator (ADR 0007 nightlife, ADR 0009 dining). Orthogonal to
-# ANTI_AI_PROMPT_CATEGORIES so a category can in principle opt into Research
-# Profile + Writer Brief without flipping to the lean writer prompt yet, or
-# vice versa.
-LEAN_PROMPT_CATEGORIES: frozenset[str] = frozenset({"dining", "nightlife"})
+# curator (ADR 0007 nightlife, ADR 0009 dining, ADR 0011 accommodations).
+# Orthogonal to ANTI_AI_PROMPT_CATEGORIES so a category can in principle opt
+# into Research Profile + Writer Brief without flipping to the lean writer
+# prompt yet, or vice versa.
+LEAN_PROMPT_CATEGORIES: frozenset[str] = frozenset(
+    {"dining", "nightlife", "accommodations"}
+)
 
 _POOL_BY_CATEGORY: dict[str, tuple[ListicleAngle, ...]] = {
     "dining": DINING_ANGLE_POOL,

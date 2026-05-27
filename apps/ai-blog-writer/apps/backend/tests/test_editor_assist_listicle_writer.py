@@ -209,10 +209,11 @@ def test_voice_rules_block_is_injected_for_nightlife_blurb():
 
 def test_voice_rules_block_is_empty_for_non_enabled_categories():
     """Per ADR 0004 the gate is opened per-category as each clears its
-    validation bar. Until then the writer prompt should not change for
-    accommodations or attractions."""
-    assert _voice_rules_block("accommodations", "blurb") == ""
+    validation bar. Dining, nightlife (ADR 0007/0009), and accommodations
+    (ADR 0011) are enabled; attractions and key_location remain on the
+    fat-prompt path with no voice rules block."""
     assert _voice_rules_block("attractions", "blurb") == ""
+    assert _voice_rules_block("key_location", "blurb") == ""
 
 
 def test_voice_rules_block_is_empty_for_intros_even_in_dining():

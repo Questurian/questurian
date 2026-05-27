@@ -26,6 +26,8 @@ ResearchBucketName = Literal[
     "visual-assets",
     "caveats-or-fit-warnings",
     "timing-tips",
+    "neighborhood-context",
+    "crowd-and-vibe",
 ]
 
 STANDARD_RESEARCH_BUCKETS: tuple[ResearchBucketName, ...] = (
@@ -40,6 +42,8 @@ STANDARD_RESEARCH_BUCKETS: tuple[ResearchBucketName, ...] = (
     "visual-assets",
     "caveats-or-fit-warnings",
     "timing-tips",
+    "neighborhood-context",
+    "crowd-and-vibe",
 )
 
 CATEGORY_BUCKET_PRIORITIES: dict[str, tuple[ResearchBucketName, ...]] = {
@@ -65,10 +69,13 @@ CATEGORY_BUCKET_PRIORITIES: dict[str, tuple[ResearchBucketName, ...]] = {
         "caveats-or-fit-warnings",
     ),
     "accommodations": (
-        "best-for",
+        "neighborhood-context",
         "specific-offerings",
-        "caveats-or-fit-warnings",
+        "experience-texture",
+        "crowd-and-vibe",
+        "best-for",
         "visual-assets",
+        "caveats-or-fit-warnings",
     ),
 }
 
@@ -205,6 +212,38 @@ def _invoke_grounded(*args: Any, **kwargs: Any) -> Any:
 
 _JSON_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.S | re.I)
 
+# Grounded models sometimes drop prose, sentence fragments, or empty strings
+# into the citations array. We only trust entries that look like URLs.
+_URL_RE = re.compile(r"^https?://\S+$", re.I)
+
+
+def _clean_citations(raw: Any) -> list[str]:
+    """Keep only entries that look like URLs. Drop prose contamination."""
+    if not isinstance(raw, list):
+        return []
+    cleaned: list[str] = []
+    for entry in raw:
+        if not isinstance(entry, str):
+            continue
+        candidate = entry.strip()
+        if _URL_RE.match(candidate):
+            cleaned.append(candidate)
+    return cleaned
+
+
+# Inline Google-grounding markers like "[3]", "[3, 9, 10, 13]", or
+# "[3, 9-12]" sometimes leak into summary text. Strip them before
+# storing — the writer should never see grounded-response marker syntax.
+_INLINE_CITATION_MARKER_RE = re.compile(r"\s*\[\s*\d+(?:\s*[,\-]\s*\d+)*\s*\]")
+
+
+def _clean_summary(raw: Any) -> str:
+    if not isinstance(raw, str):
+        return ""
+    stripped = _INLINE_CITATION_MARKER_RE.sub("", raw)
+    # Collapse repeated whitespace introduced by marker removal.
+    return re.sub(r"\s{2,}", " ", stripped).strip()
+
 
 def _extract_json(text: str) -> Any:
     candidate = text.strip()
@@ -281,16 +320,9 @@ def _parse_research_profile_response(
         angle = requested_angle if requested_angle is not None else None
         if requested_angle is not None and angle_value not in {requested_angle, None}:
             drop_reasons.append(f"selected_angle unexpected angle {angle_value!r}")
-        citations_raw = selected_raw.get("citations")
-        citations = [
-            citation.strip()
-            for citation in citations_raw
-            if isinstance(citation, str) and citation.strip()
-        ] if isinstance(citations_raw, list) else []
-        summary_raw = selected_raw.get("summary")
-        summary = summary_raw.strip() if isinstance(summary_raw, str) else ""
-        reason_raw = selected_raw.get("reason")
-        reason = reason_raw.strip() if isinstance(reason_raw, str) else ""
+        citations = _clean_citations(selected_raw.get("citations"))
+        summary = _clean_summary(selected_raw.get("summary"))
+        reason = _clean_summary(selected_raw.get("reason"))
         if requested_angle is None:
             status = "not-requested"
             angle = None
@@ -329,21 +361,16 @@ def _parse_research_profile_response(
                 if not isinstance(entry, dict):
                     drop_reasons.append(f"{bucket_name}: finding not an object")
                     continue
-                summary_raw = entry.get("summary")
-                citations_raw = entry.get("citations")
-                citations = [
-                    citation.strip()
-                    for citation in citations_raw
-                    if isinstance(citation, str) and citation.strip()
-                ] if isinstance(citations_raw, list) else []
-                if not isinstance(summary_raw, str) or not summary_raw.strip():
+                summary = _clean_summary(entry.get("summary"))
+                citations = _clean_citations(entry.get("citations"))
+                if not summary:
                     drop_reasons.append(f"{bucket_name}: empty summary")
                     continue
                 if not citations:
-                    drop_reasons.append(f"{bucket_name}: uncited finding dropped")
+                    drop_reasons.append(f"{bucket_name}: uncited finding dropped (no valid URL citations)")
                     continue
                 cleaned.append(ResearchFinding(
-                    summary=summary_raw.strip(),
+                    summary=summary,
                     citations=citations,
                 ))
             buckets[bucket_name] = cleaned  # type: ignore[index]

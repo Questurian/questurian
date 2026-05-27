@@ -58,33 +58,52 @@ LISTICLE_ANGLE_GUIDANCE: dict[ListicleAngle, str] = {
         "naming competitors. No 'X rather than Y' constructions — state the differentiator directly."
     ),
     # ---------- Accommodations ----------
+    "location-and-setting": (
+        "Sentence 1 must place the property in its physical setting using one concrete geographic detail "
+        "(beachfront on a named bay, perched on a ridge above the medina, set into the old quarter of a "
+        "named city). No vague positioning like 'centrally located' — name what's actually around it. "
+        "Geography anchors the blurb, especially in itineraries."
+    ),
+    "view-and-vista": (
+        "Sentence 1 must name what guests actually see (the volcano from south-facing rooms, the rooftop "
+        "view over the cathedral, the courtyard pool from the suite balcony). One concrete sightline with "
+        "one specific fact about where in the property it lives. No 'sweeping panoramas' or 'stunning views'."
+    ),
+    "design-and-aesthetic": (
+        "Sentence 1 must describe one concrete material, design choice, or named space — the lobby's "
+        "exposed-stone walls, the restaurant's open kitchen, the pool deck's terrazzo, a clawfoot tub in "
+        "the suites. Public spaces often carry more identity than rooms; lead with whichever is strongest. "
+        "No vibe adjectives like 'thoughtfully designed' or 'well-appointed' — describe what's actually there."
+    ),
     "signature-amenity": (
-        "Sentence 1 must name one specific amenity that defines the stay (the rooftop pool, the in-house "
-        "spa, a named restaurant, the courtyard) and one concrete fact about it (the floor it's on, the "
-        "hours it runs, the cuisine). If no distinctive amenity is in the context, switch to room-style "
+        "Sentence 1 must name one specific standalone feature that defines the stay (the rooftop hammam, "
+        "the private beach club, the library, the observatory) and one concrete fact about it (the floor "
+        "it's on, the hours it runs, who designed it). Reserve for features that are genuinely distinctive — "
+        "not every property has one. If no distinctive amenity is in the context, switch to design-and-aesthetic "
         "rather than inventing one."
     ),
-    "room-style": (
-        "Sentence 1 must place the reader in a room using one concrete material, design choice, or view "
-        "(exposed brick, a clawfoot tub, the city skyline from the bed). No vibe adjectives like "
-        "'thoughtfully designed' or 'well-appointed' — describe what's actually there."
+    "food-and-beverage": (
+        "Sentence 1 must name a specific on-site restaurant, bar, breakfast, or rooftop and one concrete fact "
+        "about it (the chef, the cuisine, the hours, the cocktail program). The F&B is often the draw — sometimes "
+        "the property is built around it. If F&B is generic or only breakfast-tier, switch to design-and-aesthetic "
+        "or signature-amenity rather than padding."
+    ),
+    "trip-fit": (
+        "Sentence 1 must name the kind of trip the property serves best (a honeymoon, a long remote-work stay, "
+        "a family with toddlers, a solo business swing) and immediately back it with one concrete reason (a room "
+        "configuration, a service rhythm, a quiet floor, kid amenities, a workspace setup). Assertion plus evidence "
+        "in the same opening."
     ),
     "property-backstory": (
-        "Sentence 1 must name the owner, designer, or origin year and one specific fact about it (a "
-        "former use of the building, the architect, the family that runs it). Only choose this angle "
-        "if the facts are in the context. If the signal is thin, switch to room-style — do not invent "
-        "history."
+        "Sentence 1 must name the owner, designer, or origin year and one specific fact about it (a former "
+        "use of the building, the architect, the family that runs it). Only choose this angle if the facts "
+        "are in the context. If the signal is thin, switch to design-and-aesthetic — do not invent history. "
+        "Most chain properties have no real backstory; pick something else."
     ),
     "booking-tip": (
         "Sentence 1 must deliver one specific, actionable booking or stay tip a first-time guest would "
         "not guess (a specific room number worth requesting, the cheapest night of the week, what time "
         "to arrive for the best check-in). No clipped imperative closers; the tip belongs at the top."
-    ),
-    "best-for-stay-type": (
-        "Sentence 1 must name the kind of traveler the property serves best (couples, families, solo "
-        "business travelers, long stays) and immediately back it with one concrete reason (a room "
-        "configuration, a service rhythm, a quiet floor, kid amenities). Assertion plus evidence in "
-        "the same opening."
     ),
     # ---------- Attractions ----------
     "signature-feature": (
@@ -583,6 +602,18 @@ LEAN_AVOID_LINES_SHARED = (
 LEAN_AVOID_LINES_BY_CATEGORY: dict[ListicleCategory, tuple[str, ...]] = {
     "dining": (),
     "nightlife": (),
+    # Calibration lines added after the first-run audit ADR 0011 anticipated.
+    # Each line targets a concrete failure mode observed in initial outputs:
+    # lazy address-as-lead, brand-name decoration, hedged availability, AI
+    # metaphor closers, amenity-list run-on closers.
+    "accommodations": (
+        'Address-as-lead ("its address", "the address is", "perfectly located", "centrally located") — name the place, the street, the bay, the ridge, or the neighborhood instead',
+        'Brand-name decoration: do not invent drinks, cuisines, music programs, or design details around a branded bar/restaurant/lounge name. Use only what the source facts explicitly say',
+        'Hedged availability ("a lucky few", "for those who", "if you\'re fortunate", "select rooms") — state what exists or omit it',
+        'AI metaphor closers ("at full volume", "in full swing", "meets X meets Y", "feels like a destination rather than a thoroughfare", "punches above its weight")',
+        'Amenity-list closer sentences ("An indoor pool, a 24/7 gym, and the grab-and-go round out the practical side") — fold amenities into the lead or drop them',
+        'Standalone facility sentences (gym, business center, parking) that name nothing distinctive about them',
+    ),
 }
 
 
@@ -634,16 +665,16 @@ def build_lean_writer_prompt(
         if custom_instruction.strip()
         else ""
     )
-    # Plumb the per-category editor_role for dining only, per ADR 0009. Nightlife
-    # keeps its existing voice line untouched — ADR 0009 explicitly preserves
-    # nightlife behavior.
-    if category == "dining":
-        editor_role = CATEGORY_PROMPT_VARIANTS["dining"]["editor_role"]
+    # Plumb the per-category editor_role for dining and accommodations
+    # (ADR 0009, ADR 0011). Nightlife keeps its existing voice line untouched —
+    # ADR 0009 explicitly preserves nightlife behavior.
+    if category in ("dining", "accommodations"):
+        editor_role = CATEGORY_PROMPT_VARIANTS[category]["editor_role"]
         voice_line = (
             f"Write like a {editor_role} who has been there. Take a position. Pick the "
             "one detail that actually decides the recommendation and lead with it."
         )
-        category_label = CATEGORY_PROMPT_VARIANTS["dining"]["label"].lower()
+        category_label = CATEGORY_PROMPT_VARIANTS[category]["label"].lower()
         listicle_descriptor = f"{category_label} listicle"
     else:
         voice_line = (
@@ -742,20 +773,20 @@ def build_retry_prompt(
     """Build a retry prompt anchored on the same prompt shape as the original
     draft.
 
-    For dining (ADR 0009), retry runs on the lean prompt when a usable Writer
-    Brief is available. For every other category — including nightlife, whose
-    existing retry-on-fat-prompt behavior ADR 0009 explicitly preserves — retry
-    runs on the legacy fat prompt.
+    For dining (ADR 0009) and accommodations (ADR 0011), retry runs on the lean
+    prompt when a usable Writer Brief is available. For every other category —
+    including nightlife, whose existing retry-on-fat-prompt behavior ADR 0009
+    explicitly preserves — retry runs on the legacy fat prompt.
     """
     failures = "\n".join(f"- {item}" for item in validation_errors)
     if (
         target.field_type == "blurb"
-        and target.category == "dining"
+        and target.category in ("dining", "accommodations")
         and brief is not None
         and brief.is_usable
     ):
         base_prompt = build_lean_writer_prompt(
-            category="dining",
+            category=target.category,
             article_title=article_title,
             article_type=article_type,
             article_location=article_location,

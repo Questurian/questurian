@@ -82,6 +82,8 @@ def _research_profile_payload(
             "visual-assets": [],
             "caveats-or-fit-warnings": [],
             "timing-tips": [],
+            "neighborhood-context": [],
+            "crowd-and-vibe": [],
         },
         "warnings": [],
     })
@@ -349,6 +351,94 @@ def test_blurb_with_no_evidence_takes_identity_only_path(monkeypatch):
     assert "research_profile_completed" in step_names
     rp_step = next(s for s in payload["steps"] if s["name"] == "research_profile_completed")
     assert rp_step["status"] == "failed"
+
+
+# ---------- Accommodations lean pipeline (ADR 0011) ----------
+
+
+def _fake_accommodations_curator(*, prompt, model_name, max_tokens, temperature):
+    return (
+        json.dumps({
+            "angle_directive": (
+                "Open by placing Hotel B on the ridge above the old quarter, "
+                "naming what sits on either side."
+            ),
+            "source_facts": [
+                {"fact": "Set on a ridge above the medina.", "citations": ["https://example.com/a"]},
+                {"fact": "Walking distance to the souk.", "citations": ["https://example.com/b"]},
+            ],
+        }),
+        model_name,
+    )
+
+
+def test_accommodations_blurb_runs_lean_path(monkeypatch):
+    monkeypatch.setattr(
+        research_profile_mod, "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(_research_profile_payload(angle="location-and-setting")),
+    )
+    monkeypatch.setattr(writer_brief_mod, "_invoke_curator_model", _fake_accommodations_curator)
+
+    captured = {"prompt": ""}
+
+    class _WriterResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+            self.model_name = "gemini-2.5-pro"
+
+    def _fake_writer(*, prompt, model_name, max_tokens, temperature):
+        captured["prompt"] = prompt
+        return _WriterResult(_paragraph(100))
+
+    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/generate-listicle-content",
+        json={
+            "article_title": "Best Hotels in Marrakech",
+            "article_type": "single-type-listicle",
+            "location_label": "Marrakech, Morocco",
+            "targets": [
+                {
+                    "target_id": "item-1_blurb",
+                    "field_type": "blurb",
+                    "category": "accommodations",
+                    "display_name": "Hotel B",
+                    "research_subject": "Hotel B",
+                    "location_label": "Medina, Marrakech",
+                    "payload_doc_id": "doc-1",
+                    "angle": "location-and-setting",
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()["results"]["item-1_blurb"]
+    assert payload["status"] == "generated"
+    assert payload["requested_angle"] == "location-and-setting"
+    assert payload["effective_angle"] == "location-and-setting"
+
+    # Accommodations is on the lean writer path per ADR 0011: prompt is built
+    # from the Writer Brief, not the bucket-labeled Research Profile.
+    assert "RESEARCH PROFILE" not in captured["prompt"]
+    assert "BUILDER CONTEXT" not in captured["prompt"]
+    assert "Hotel B" in captured["prompt"]
+    assert "Angle: Open by placing Hotel B on the ridge" in captured["prompt"]
+    assert "Source facts (use only what you need):" in captured["prompt"]
+    assert "travel editor" in captured["prompt"]
+    assert "accommodations listicle" in captured["prompt"]
+
+    step_names = [s["name"] for s in payload["steps"]]
+    assert step_names == [
+        "critical_fields_evaluated",
+        "research_profile_completed",
+        "writer_brief_completed",
+        "writer_called",
+        "validated",
+        "finalized",
+    ]
 
 
 # ---------- Intros bypass evidence research ----------

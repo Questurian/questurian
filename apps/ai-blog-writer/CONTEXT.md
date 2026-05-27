@@ -110,7 +110,7 @@ History: previously a separate pipeline stage that ran after Critical Fields wit
 
 ### Research Bucket
 
-Definition: a reusable evidence lane collected for listicle blurb writing regardless of the selected Listicle Angle, currently `reputation-summary`, `specific-offerings`, `experience-texture`, `history-or-ownership`, `practical-usefulness`, `best-for`, `standout-hook`, `social-proof`, `visual-assets`, `caveats-or-fit-warnings`, and `timing-tips`.
+Definition: a reusable evidence lane collected for listicle blurb writing regardless of the selected Listicle Angle, currently `reputation-summary`, `specific-offerings`, `experience-texture`, `history-or-ownership`, `practical-usefulness`, `best-for`, `standout-hook`, `social-proof`, `visual-assets`, `caveats-or-fit-warnings`, `timing-tips`, `neighborhood-context`, and `crowd-and-vibe`. `neighborhood-context` and `crowd-and-vibe` are universal but added primarily for accommodations (ADR 0011) — itinerary geography and social texture that every accommodations blurb needs and that nightlife/dining/attractions may benefit from when cited evidence appears.
 Related terms: Research Profile, Grounded Research, Listicle Angle.
 Do not confuse with: Evidence Profile `bucket` (`rich-public-evidence`, `sparse-public-evidence`, `no-public-evidence`), which summarizes public evidence richness rather than naming what evidence was gathered.
 Writer boundary: selected Listicle Angle evidence supplies the blurb's lead framing; Research Buckets supply supporting texture and factual backup.
@@ -147,7 +147,7 @@ Definition: the lean writer-ready payload for one blurb, derived from a [[Resear
 Related terms: Research Profile, Listicle Angle, List Tone.
 Do not confuse with: Research Profile (the upstream cited evidence bundle, still bucket-labeled and potentially overlapping); Critical Fields Guideline (a pre-flight identity gate, not a writer payload).
 Mechanism: one short LLM call per blurb that takes the Research Profile plus selected Listicle Angle and emits JSON `{ angle_directive, source_facts: [{ fact, citations }] }`. If the call fails or returns zero facts, the pipeline falls back to identity-only writer prompt and marks the blurb low-confidence.
-Category scope: nightlife (ADR 0007) and dining (ADR 0009). Accommodations and attractions remain on the bucket-dump writer prompt; key_location has no Writer Brief path. Categories on the lean writer path are tracked by `LEAN_PROMPT_CATEGORIES` in `angle_assignment.py`, orthogonal to `ANTI_AI_PROMPT_CATEGORIES`.
+Category scope: nightlife (ADR 0007), dining (ADR 0009), and accommodations (ADR 0011). Attractions remains on the bucket-dump writer prompt; key_location has no Writer Brief path. Categories on the lean writer path are tracked by `LEAN_PROMPT_CATEGORIES` in `angle_assignment.py`, orthogonal to `ANTI_AI_PROMPT_CATEGORIES`.
 
 ### Listicle Pipeline Audit
 
@@ -170,7 +170,7 @@ Do not confuse with: Article Type (which is the structural template — single-t
 ### Listicle Angle
 
 Definition: a per-item editorial framing for each blurb in a listicle, drawn from a category-specific pool of angles that map to lead-sentence shapes (named noun + fact, sensory detail + room, person + fact, actionable tip, occasion + evidence, differentiator). Always operator-selected per item; the pipeline has no auto-angle path (ADR 0010). Combined with List Tone, the writer prompt becomes "write in <tone> from the <angle> angle for <venue>."
-Per-category pool status: dining has a production pool (`signature-dish`, `atmosphere`, `founders-backstory`, `insider-tip`, `best-for`, `whats-different`) since ADR 0003 and routes through the lean writer prompt + Writer Brief since ADR 0009; nightlife ships with a single-angle pool (`best-for-night`); accommodations and attractions pools are deferred per ADR 0004; key_location has no pool yet.
+Per-category pool status: dining has a production pool (`signature-dish`, `atmosphere`, `founders-backstory`, `insider-tip`, `best-for`, `whats-different`) since ADR 0003 and routes through the lean writer prompt + Writer Brief since ADR 0009; nightlife ships with a single-angle pool (`best-for-night`); accommodations ships with a 9-angle pool (`location-and-setting`, `view-and-vista`, `design-and-aesthetic`, `signature-amenity`, `food-and-beverage`, `trip-fit`, `property-backstory`, `booking-tip`, `whats-different`) since ADR 0011 and routes through the lean writer prompt + Writer Brief; attractions pool is deferred per ADR 0004; key_location has no pool yet.
 Pool use: each pool serves as the vocabulary for the operator dropdown and Research Profile selected-angle evidence.
 Requested vs effective: `requested_angle` is the operator's intent; `effective_angle` is the supported angle actually sent to the writer and may be null when the operator's chosen framing lacks cited evidence (low-confidence fallback).
 Related terms: List Tone, Critical Fields Guideline.
