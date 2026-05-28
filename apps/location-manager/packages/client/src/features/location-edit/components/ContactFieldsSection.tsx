@@ -1,6 +1,10 @@
+import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormInput, FormSelect } from "@client/shared/components/forms";
-import { SelectItem } from "@client/components/ui";
+import { Button, SelectItem } from "@client/components/ui";
+import { locationsApi } from "@client/shared/services/api";
+import { LOCATION_BY_ID_QUERY_KEY } from "@client/shared/services/api/hooks/useLocationById";
 import type { EditLocationFormData } from "../validation/edit-location.schema";
 import { TIMEZONE_OPTIONS } from "../constants/edit-location.constants";
 import type { LocationCategory } from "@shared/types/location-category";
@@ -8,9 +12,51 @@ import type { LocationCategory } from "@shared/types/location-category";
 interface ContactFieldsSectionProps {
   form: UseFormReturn<EditLocationFormData>;
   category: LocationCategory;
+  /** Required for the bookingUrl AI Suggest button on the edit page.
+   *  Omit for create-time renders where no Location exists yet. */
+  locationId?: number;
 }
 
-export function ContactFieldsSection({ form, category }: ContactFieldsSectionProps) {
+function bookingUrlLabelFor(category: LocationCategory): string | null {
+  switch (category) {
+    case "dining":
+    case "nightlife":
+      return "Reservation URL";
+    case "accommodations":
+      return "Booking URL";
+    case "attractions":
+      return "Tickets URL";
+    case "key_locations":
+      return null;
+  }
+}
+
+export function ContactFieldsSection({ form, category, locationId }: ContactFieldsSectionProps) {
+  const queryClient = useQueryClient();
+  const [suggestState, setSuggestState] = useState<
+    { status: "idle" } | { status: "busy" } | { status: "error"; message: string }
+  >({ status: "idle" });
+
+  const bookingUrlLabel = bookingUrlLabelFor(category);
+  const canSuggest = Boolean(locationId) && bookingUrlLabel !== null;
+
+  async function handleSuggest() {
+    if (!locationId) return;
+    setSuggestState({ status: "busy" });
+    try {
+      await locationsApi.proposePendingSuggestion(locationId, "bookingUrl");
+      await queryClient.invalidateQueries({
+        queryKey: LOCATION_BY_ID_QUERY_KEY(category, locationId),
+      });
+      setSuggestState({ status: "idle" });
+    } catch (err) {
+      setSuggestState({
+        status: "error",
+        message: err instanceof Error ? err.message : "Suggest failed",
+      });
+    }
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -45,21 +91,42 @@ export function ContactFieldsSection({ form, category }: ContactFieldsSectionPro
       />
 
       {category === "dining" && (
-        <>
-          <FormInput
-            name="menuUrl"
-            label="Menu URL"
-            control={form.control}
-            placeholder="Menu URL (optional)"
-          />
+        <FormInput
+          name="menuUrl"
+          label="Menu URL"
+          control={form.control}
+          placeholder="Menu URL (optional)"
+        />
+      )}
 
+      {bookingUrlLabel && (
+        <div className="space-y-2">
           <FormInput
-            name="reservationUrl"
-            label="Reservation URL"
+            name="bookingUrl"
+            label={bookingUrlLabel}
             control={form.control}
-            placeholder="Reservation URL (optional)"
+            placeholder={`${bookingUrlLabel} (optional)`}
           />
-        </>
+          {canSuggest && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void handleSuggest()}
+                disabled={suggestState.status === "busy"}
+              >
+                {suggestState.status === "busy" ? "Suggesting…" : "Suggest with AI"}
+              </Button>
+              {suggestState.status === "error" && (
+                <span className="text-xs text-destructive">{suggestState.message}</span>
+              )}
+              <span className="text-xs text-muted-foreground">
+                Lands as a Pending Suggestion — accept to apply.
+              </span>
+            </div>
+          )}
+        </div>
       )}
 
       <FormInput

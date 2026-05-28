@@ -21,7 +21,7 @@ export interface ParsedNightlifeDetails {
   phone: string | null;
   hours: string | null;
   website: string | null;
-  reserveUrl: string | null;
+  bookingUrl: string | null;
   daytimeRestaurant: string | null;
 }
 
@@ -45,7 +45,7 @@ export interface BuildNightlifeDetailsInput {
   phone: string;
   hours: string;
   website: string;
-  reserveUrl: string;
+  bookingUrl: string;
   daytimeRestaurant: string;
 }
 
@@ -62,7 +62,7 @@ export interface NightlifeDetailsPayload extends Record<string, unknown> {
   phone: string;
   hours: string;
   website: string;
-  reserve_url: string;
+  booking_url: string;
   daytime_restaurant: number;
 }
 
@@ -299,7 +299,9 @@ export function parseNightlifeDetails(details: unknown): ParsedNightlifeDetails 
     phone: asString(getNestedValue(root, ["phone"])),
     hours: asString(getNestedValue(root, ["hours"])),
     website: asString(getNestedValue(root, ["website"])),
-    reserveUrl: asString(getNestedValue(root, ["reserve_url"])),
+    bookingUrl:
+      asString(getNestedValue(root, ["booking_url"])) ??
+      asString(getNestedValue(root, ["reserve_url"])),
     daytimeRestaurant: asString(getNestedValue(root, ["daytime_restaurant"])),
   };
 }
@@ -376,7 +378,7 @@ export function buildNightlifeDetails(
     phone: input.phone,
     hours: input.hours,
     website: input.website,
-    reserve_url: input.reserveUrl,
+    booking_url: input.bookingUrl,
     daytime_restaurant: Number(input.daytimeRestaurant),
   };
 }

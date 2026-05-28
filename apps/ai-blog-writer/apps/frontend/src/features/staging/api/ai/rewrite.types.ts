@@ -54,12 +54,15 @@ export type ListicleWriterAngle =
   | 'insider-tip'
   | 'best-for'
   | 'whats-different'
-  // Accommodations
+  // Accommodations (ADR 0011)
+  | 'location-and-setting'
+  | 'view-and-vista'
+  | 'design-and-aesthetic'
   | 'signature-amenity'
-  | 'room-style'
+  | 'food-and-beverage'
+  | 'trip-fit'
   | 'property-backstory'
   | 'booking-tip'
-  | 'best-for-stay-type'
   // Attractions
   | 'signature-feature'
   | 'setting'

@@ -128,6 +128,13 @@ export function validateSuggestionValue(
   definition: AccommodationsSuggestionFieldDefinition,
   value: unknown
 ): string | string[] | null {
+  if (definition.kind === "url") {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return null;
+    return trimmed;
+  }
+
   const allowedValues = new Set((definition.options || []).map((option) => option.value));
   if (allowedValues.size === 0) return null;
 

@@ -52,7 +52,7 @@ const AI_FIELD_KEYS: readonly AiSuggestionFieldKey[] = [
   "type",
   "idealFor",
   "menuUrl",
-  "reservationUrl",
+  "bookingUrl",
 ];
 
 function initialAiFieldStatusMap(): Record<AiSuggestionFieldKey, AiFieldStatus> {
@@ -74,7 +74,7 @@ interface CreatedLocation {
   website?: string;
   tripadvisorUrl?: string | null;
   menuUrl?: string | null;
-  reservationUrl?: string | null;
+  bookingUrl?: string | null;
   placeId?: string | null;
 }
 
@@ -91,7 +91,7 @@ const DINING_FORM_DEFAULT_VALUES: AddDiningFormData = {
   tripadvisorUrl: "",
   noTripadvisorListing: false,
   menuUrl: "",
-  reservationUrl: "",
+  bookingUrl: "",
   googleUrl: "",
   placeId: "",
   latitude: "",
@@ -101,13 +101,13 @@ const DINING_FORM_DEFAULT_VALUES: AddDiningFormData = {
   ianaTimeId: "",
 };
 
-type ProvenanceTrackedField = "type" | "tripadvisorUrl" | "menuUrl" | "reservationUrl";
+type ProvenanceTrackedField = "type" | "tripadvisorUrl" | "menuUrl" | "bookingUrl";
 
 const PROVENANCE_TRACKED_FIELDS: readonly ProvenanceTrackedField[] = [
   "type",
   "tripadvisorUrl",
   "menuUrl",
-  "reservationUrl",
+  "bookingUrl",
 ];
 
 interface DiningDraftPayload {
@@ -299,8 +299,8 @@ export function useAddDiningFlow() {
     "google" | "tripadvisor" | "ai" | null
   >(null);
   const [verifiedAiUrls, setVerifiedAiUrls] = useState<
-    Record<"menuUrl" | "reservationUrl", boolean>
-  >({ menuUrl: true, reservationUrl: true });
+    Record<"menuUrl" | "bookingUrl", boolean>
+  >({ menuUrl: true, bookingUrl: true });
   const [provenance, setProvenance] = useState<Partial<Record<ProvenanceTrackedField, FieldProvenance>>>({});
   const [prefilledValues, setPrefilledValues] = useState<Partial<Record<ProvenanceTrackedField, string>>>({});
   const [aiFieldStatus, setAiFieldStatus] = useState<
@@ -418,7 +418,7 @@ export function useAddDiningFlow() {
           delete next[trackedField];
           return next;
         });
-        if (trackedField === "menuUrl" || trackedField === "reservationUrl") {
+        if (trackedField === "menuUrl" || trackedField === "bookingUrl") {
           setVerifiedAiUrls((prev) =>
             prev[trackedField] ? prev : { ...prev, [trackedField]: true }
           );
@@ -474,7 +474,7 @@ export function useAddDiningFlow() {
       wantsTypeFromAi: boolean;
       nextProvenance: Partial<Record<ProvenanceTrackedField, FieldProvenance>>;
       nextPrefilled: Partial<Record<ProvenanceTrackedField, string>>;
-      onUrlSuggested?: (field: "menuUrl" | "reservationUrl") => void;
+      onUrlSuggested?: (field: "menuUrl" | "bookingUrl") => void;
     }
   ) {
     const { wantsTypeFromAi, nextProvenance, nextPrefilled, onUrlSuggested } = opts;
@@ -499,7 +499,7 @@ export function useAddDiningFlow() {
       nextPrefilled.type = result.suggestion;
     }
     if (
-      (result.fieldKey === "menuUrl" || result.fieldKey === "reservationUrl") &&
+      (result.fieldKey === "menuUrl" || result.fieldKey === "bookingUrl") &&
       typeof result.suggestion === "string"
     ) {
       const field = result.fieldKey;
@@ -675,8 +675,8 @@ export function useAddDiningFlow() {
           shouldTouch: true,
         });
       }
-      if (prefill.reservationUrl) {
-        addForm.setValue("reservationUrl", prefill.reservationUrl, {
+      if (prefill.bookingUrl) {
+        addForm.setValue("bookingUrl", prefill.bookingUrl, {
           shouldDirty: true,
           shouldValidate: true,
           shouldTouch: true,
@@ -733,7 +733,7 @@ export function useAddDiningFlow() {
       const fieldsToRun: AiSuggestionFieldKey[] = [
         "idealFor",
         "menuUrl",
-        "reservationUrl",
+        "bookingUrl",
       ];
       if (wantsTypeFromAi) fieldsToRun.push("type");
 
@@ -761,9 +761,9 @@ export function useAddDiningFlow() {
         )
       );
 
-      const nextVerifiedAiUrls: Record<"menuUrl" | "reservationUrl", boolean> = {
+      const nextVerifiedAiUrls: Record<"menuUrl" | "bookingUrl", boolean> = {
         menuUrl: true,
-        reservationUrl: true,
+        bookingUrl: true,
       };
       const nextStatuses: Partial<Record<AiSuggestionFieldKey, AiFieldStatus>> = {};
 
@@ -809,7 +809,7 @@ export function useAddDiningFlow() {
       setPrefillTripadvisorPlaceData(null);
       setProvenance({});
       setPrefilledValues({});
-      setVerifiedAiUrls({ menuUrl: true, reservationUrl: true });
+      setVerifiedAiUrls({ menuUrl: true, bookingUrl: true });
       setAiFieldStatus(initialAiFieldStatusMap());
       setPrefillError(errorMessage);
       return false;
@@ -832,7 +832,7 @@ export function useAddDiningFlow() {
       idealFor: data.idealFor,
       tripadvisorUrl: data.tripadvisorUrl || undefined,
       menuUrl: data.menuUrl || undefined,
-      reservationUrl: data.reservationUrl || undefined,
+      bookingUrl: data.bookingUrl || undefined,
       url: data.googleUrl || undefined,
       placeId: data.placeId || undefined,
       lat: Number.isFinite(lat) ? lat : undefined,
@@ -866,7 +866,7 @@ export function useAddDiningFlow() {
       website: response.contact?.website || undefined,
       tripadvisorUrl: response.tripadvisorUrl,
       menuUrl: response.menuUrl,
-      reservationUrl: response.reservationUrl,
+      bookingUrl: response.bookingUrl,
       placeId: response.placeId,
     });
     addForm.reset(DINING_FORM_DEFAULT_VALUES);
@@ -877,7 +877,7 @@ export function useAddDiningFlow() {
     setPrefillTripadvisorPlaceData(null);
     setProvenance({});
     setPrefilledValues({});
-    setVerifiedAiUrls({ menuUrl: true, reservationUrl: true });
+    setVerifiedAiUrls({ menuUrl: true, bookingUrl: true });
     setAiFieldStatus(initialAiFieldStatusMap());
     setPrefillMessage(null);
     setPrefillError(null);
@@ -950,7 +950,7 @@ export function useAddDiningFlow() {
     setPrefillTripadvisorPlaceData(null);
     setProvenance({});
     setPrefilledValues({});
-    setVerifiedAiUrls({ menuUrl: true, reservationUrl: true });
+    setVerifiedAiUrls({ menuUrl: true, bookingUrl: true });
     setAiFieldStatus(initialAiFieldStatusMap());
     setPrefillMessage(null);
     setPrefillError(null);
@@ -961,14 +961,14 @@ export function useAddDiningFlow() {
     navigate("/");
   }
 
-  function acknowledgeAiUrl(field: "menuUrl" | "reservationUrl", verified: boolean) {
+  function acknowledgeAiUrl(field: "menuUrl" | "bookingUrl", verified: boolean) {
     setVerifiedAiUrls((prev) =>
       prev[field] === verified ? prev : { ...prev, [field]: verified }
     );
   }
 
   const allAiUrlsVerified =
-    verifiedAiUrls.menuUrl && verifiedAiUrls.reservationUrl;
+    verifiedAiUrls.menuUrl && verifiedAiUrls.bookingUrl;
 
   return {
     phase,

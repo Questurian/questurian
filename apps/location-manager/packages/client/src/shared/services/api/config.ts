@@ -24,6 +24,7 @@ export const API_ENDPOINTS = {
   FIELD_SUGGESTIONS: "/api/field-suggestions",
   PENDING_SUGGESTION_ACCEPT: (id: number) => `/api/dining/${id}/pending-suggestions/accept`,
   PENDING_SUGGESTION_DISMISS: (id: number) => `/api/dining/${id}/pending-suggestions/dismiss`,
+  PENDING_SUGGESTION_PROPOSE: (id: number) => `/api/locations/${id}/pending-suggestions/propose`,
   UPDATE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   DELETE_LOCATION: (category: Category, id: number) => `/api/${category}/${id}`,
   REFETCH_PLACE_ID: (category: Category, id: number) => `/api/${category}/${id}/refetch-place-id`,

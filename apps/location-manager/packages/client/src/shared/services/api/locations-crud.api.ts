@@ -119,6 +119,13 @@ export const locationsCrudApi = {
     await apiPost(API_ENDPOINTS.PENDING_SUGGESTION_DISMISS(id), { field });
   },
 
+  async proposePendingSuggestion(
+    id: number,
+    field: "bookingUrl",
+  ): Promise<{ suggestion: { value: string; confidence: number; reason: string } }> {
+    return apiPost(API_ENDPOINTS.PENDING_SUGGESTION_PROPOSE(id), { field });
+  },
+
   async updateLocation(
     category: Category,
     id: number,

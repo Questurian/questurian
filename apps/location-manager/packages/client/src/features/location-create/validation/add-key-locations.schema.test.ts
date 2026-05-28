@@ -73,13 +73,13 @@ describe("add key locations schema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("rejects missing required phone contact field", () => {
+  test("accepts a staged key locations payload without a phone", () => {
     const result = addKeyLocationsSchema.safeParse({
       ...validBaseForm,
       phone: "",
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });
 

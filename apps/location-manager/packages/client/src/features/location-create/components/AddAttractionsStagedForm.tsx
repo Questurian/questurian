@@ -7,6 +7,7 @@ import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
 import { TourSelector } from "@client/shared/components/tours/TourSelector";
 import { OperationHoursModal } from "./OperationHoursModal";
+import { BookingUrlSuggestRow } from "./BookingUrlSuggestRow";
 import type { AddAttractionsFormData } from "../validation/add-attractions.schema";
 
 type AttractionsFormSection = "step1" | "entities" | "profile" | "tours" | "visitContact";
@@ -51,6 +52,7 @@ export function AddAttractionsStagedForm({
   const [activeSection, setActiveSection] = useState<AttractionsFormSection>("step1");
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [operationHoursModalOpen, setOperationHoursModalOpen] = useState(false);
+  const [bookingUrlAcked, setBookingUrlAcked] = useState(true);
 
   const hasValue = (value: string | undefined) => Boolean(value && value.trim().length > 0);
   const stepOneComplete = isPrefillReady;
@@ -494,11 +496,32 @@ export function AddAttractionsStagedForm({
                   )}
                 </div>
 
+                <BookingUrlSuggestRow
+                  form={form}
+                  category="attractions"
+                  label="Tickets URL"
+                  fieldName="bookingUrl"
+                  onAckChange={setBookingUrlAcked}
+                />
+
                 <div className="flex justify-between border-t border-border/70 pt-4">
                   <Button type="button" variant="outline" onClick={goToPreviousSection}>
                     Previous
                   </Button>
-                  <Button type="submit" disabled={!isPrefillReady || !form.formState.isValid || isCreating}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      !isPrefillReady ||
+                      !form.formState.isValid ||
+                      isCreating ||
+                      !bookingUrlAcked
+                    }
+                    title={
+                      !bookingUrlAcked
+                        ? "Verify the AI-suggested Tickets URL or clear it before creating."
+                        : undefined
+                    }
+                  >
                     {isCreating ? "Creating..." : "Create Attractions Document"}
                   </Button>
                 </div>

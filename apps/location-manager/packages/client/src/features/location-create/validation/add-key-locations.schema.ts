@@ -75,8 +75,10 @@ export const addKeyLocationsSchema = z.object({
   phone: z
     .string()
     .trim()
-    .min(1, "Phone is required")
-    .max(50, "Phone must be less than 50 characters"),
+    .max(50, "Phone must be less than 50 characters")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
   tripadvisorUrl: z
     .string()
     .trim()

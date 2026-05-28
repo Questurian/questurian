@@ -85,7 +85,7 @@ export interface Location {
   phoneNumber?: string | null;
   website?: string | null;
   menuUrl?: string | null;
-  reservationUrl?: string | null;
+  bookingUrl?: string | null;
   email?: string | null;
   hoursJson?: string | null;
   neighborhoodDescription?: string | null;
@@ -187,7 +187,7 @@ export interface CreateMapsRequest {
   phoneNumber?: string;
   website?: string;
   menuUrl?: string;
-  reservationUrl?: string;
+  bookingUrl?: string;
   idealFor?: string[];
   type?: string;
   tripadvisorUrl?: string;
@@ -247,7 +247,7 @@ export interface LocationResponse {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   menuUrl: string | null;
-  reservationUrl: string | null;
+  bookingUrl: string | null;
   payload_location_ref: string | null;
   selectedPayloadMediaSetIds: string[] | null;
   tourIds: number[] | null;

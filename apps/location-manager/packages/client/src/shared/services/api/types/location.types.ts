@@ -86,7 +86,7 @@ export interface Location {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   menuUrl: string | null;
-  reservationUrl: string | null;
+  bookingUrl: string | null;
   nightlifeDetails: Record<string, unknown> | null;
   accommodationsDetails: Record<string, unknown> | null;
   attractionsDetails: Record<string, unknown> | null;
@@ -131,7 +131,7 @@ export interface LocationResponse {
   tripadvisorUrl: string | null;
   tripadvisorLocationId: string | null;
   menuUrl: string | null;
-  reservationUrl: string | null;
+  bookingUrl: string | null;
   payload_location_ref: string | null;
   selectedPayloadMediaSetIds: string[] | null;
   tourIds: number[] | null;

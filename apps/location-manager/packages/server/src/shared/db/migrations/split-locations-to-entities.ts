@@ -195,7 +195,7 @@ function ensureEntitySchema(db: Database): void {
         tripadvisor_cuisines TEXT,
         tripadvisor_features TEXT,
         menu_url TEXT,
-        reservation_url TEXT,
+        booking_url TEXT,
         price_level TEXT,
         FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE
       )
@@ -214,8 +214,8 @@ function ensureEntitySchema(db: Database): void {
     if (!typedColumns.has("menu_url")) {
       db.run(`ALTER TABLE ${category}_locations ADD COLUMN menu_url TEXT`);
     }
-    if (!typedColumns.has("reservation_url")) {
-      db.run(`ALTER TABLE ${category}_locations ADD COLUMN reservation_url TEXT`);
+    if (!typedColumns.has("booking_url") && !typedColumns.has("reservation_url")) {
+      db.run(`ALTER TABLE ${category}_locations ADD COLUMN booking_url TEXT`);
     }
   }
 

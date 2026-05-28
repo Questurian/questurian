@@ -9,6 +9,7 @@ import { addEntityPendingSuggestions } from "./migrations/add-entity-pending-sug
 import { collapseAiProvenance } from "./migrations/collapse-ai-provenance";
 import { dropReviewPipelineSchema } from "./migrations/drop-review-pipeline-schema";
 import { addPhotoImportFields } from "./migrations/add-photo-import-fields";
+import { renameReservationUrlToBookingUrl } from "./migrations/rename-reservation-url-to-booking-url";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -76,6 +77,8 @@ export function initDb() {
   dropReviewPipelineSchema(database);
 
   addPhotoImportFields(database);
+
+  renameReservationUrlToBookingUrl(database);
 
   const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
   if (nightlifeIdealForCleanup.cleared > 0) {

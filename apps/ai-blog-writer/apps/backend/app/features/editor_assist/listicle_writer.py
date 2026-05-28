@@ -248,6 +248,7 @@ ARTICLE_TYPE_LABELS: dict[ListicleArticleType, str] = {
     "listicle-itinerary": "listicle itinerary",
 }
 
+
 def format_location_for_prompt(raw: str) -> str:
     """Flip breadcrumb-style location strings into writer-friendly prose.
 
@@ -668,7 +669,7 @@ def build_lean_writer_prompt(
     # Plumb the per-category editor_role for dining and accommodations
     # (ADR 0009, ADR 0011). Nightlife keeps its existing voice line untouched —
     # ADR 0009 explicitly preserves nightlife behavior.
-    if category in ("dining", "accommodations"):
+    if category in ("dining", "accommodations", "attractions"):
         editor_role = CATEGORY_PROMPT_VARIANTS[category]["editor_role"]
         voice_line = (
             f"Write like a {editor_role} who has been there. Take a position. Pick the "
@@ -773,7 +774,7 @@ def build_retry_prompt(
     """Build a retry prompt anchored on the same prompt shape as the original
     draft.
 
-    For dining (ADR 0009) and accommodations (ADR 0011), retry runs on the lean
+    For dining (ADR 0009), accommodations (ADR 0011), and attractions (ADR 0012), retry runs on the lean
     prompt when a usable Writer Brief is available. For every other category —
     including nightlife, whose existing retry-on-fat-prompt behavior ADR 0009
     explicitly preserves — retry runs on the legacy fat prompt.
@@ -781,7 +782,7 @@ def build_retry_prompt(
     failures = "\n".join(f"- {item}" for item in validation_errors)
     if (
         target.field_type == "blurb"
-        and target.category in ("dining", "accommodations")
+        and target.category in ("dining", "accommodations", "attractions")
         and brief is not None
         and brief.is_usable
     ):

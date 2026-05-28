@@ -92,10 +92,10 @@ const buildNightlifeDetails = (doc: UnknownRecord): UnknownRecord => {
     },
     theDetails: {
       operationHours,
-      reserveUrl:
-        asString(theDetails?.reserveUrl)
+      bookingUrl:
+        asString(theDetails?.bookingUrl)
         ?? asString(existingDetails.reserve_url)
-        ?? asString(getSectionValue(existingDetails, 'theDetails', 'reserveUrl'))
+        ?? asString(getSectionValue(existingDetails, 'theDetails', 'bookingUrl'))
         ?? '',
       daytimeRestaurant:
         asBoolean(theDetails?.daytimeRestaurant)

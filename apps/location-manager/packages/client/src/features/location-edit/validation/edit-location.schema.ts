@@ -55,7 +55,7 @@ export const editLocationSchema = z.object({
     .url("Menu URL must be a valid URL")
     .optional()
     .or(z.literal("")),
-  reservationUrl: z
+  bookingUrl: z
     .string()
     .url("Reservation URL must be a valid URL")
     .optional()

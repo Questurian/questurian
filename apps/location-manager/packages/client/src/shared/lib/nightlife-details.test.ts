@@ -32,7 +32,7 @@ const baseInput = {
   phone: "+51 555-1234",
   hours: "Fri-Sat 10 PM - 5 AM",
   website: "https://nebula.example.com",
-  reserveUrl: "https://nebula.example.com/reserve",
+  bookingUrl: "https://nebula.example.com/reserve",
   daytimeRestaurant: "0",
 };
 
@@ -80,7 +80,7 @@ describe("nightlife details helpers", () => {
     );
 
     expect((payload.nightlifeDetails.name as string)).toBe("Nebula");
-    expect((payload.nightlifeDetails.reserve_url as string)).toBe("https://nebula.example.com/reserve");
+    expect((payload.nightlifeDetails.booking_url as string)).toBe("https://nebula.example.com/reserve");
     expect(
       (
         (payload.nightlifeDetails.details as Record<string, unknown>).theScene as Record<

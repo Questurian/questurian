@@ -26,7 +26,7 @@ describe("mapLocationToPayloadFormat dining", () => {
       tripadvisorCuisines: ["Colombian"],
       tripadvisorFeatures: ["Reservations"],
       menuUrl: "https://dining.example.com/menu",
-      reservationUrl: "https://dining.example.com/reserve",
+      bookingUrl: "https://dining.example.com/reserve",
       priceLevel: "$$",
       contact: {
         countryCode: "CO",
@@ -54,7 +54,7 @@ describe("mapLocationToPayloadFormat dining", () => {
     expect(payload).toHaveProperty("cuisines");
     expect(payload).toHaveProperty("idealFor");
     expect(payload).toHaveProperty("menuUrl", "https://dining.example.com/menu");
-    expect(payload).toHaveProperty("reservationUrl", "https://dining.example.com/reserve");
+    expect(payload).toHaveProperty("bookingUrl", "https://dining.example.com/reserve");
     expect(payload).toHaveProperty("operationHours");
     expect(payload.operationHours).toEqual({
       hours: [{ day: "Monday", hours: "9-5" }],
@@ -90,7 +90,7 @@ describe("mapLocationToPayloadFormat dining", () => {
       tripadvisorCuisines: null,
       tripadvisorFeatures: null,
       menuUrl: null,
-      reservationUrl: null,
+      bookingUrl: null,
       priceLevel: null,
       contact: {
         countryCode: null,
@@ -116,6 +116,6 @@ describe("mapLocationToPayloadFormat dining", () => {
     );
 
     expect(payload).not.toHaveProperty("menuUrl");
-    expect(payload).not.toHaveProperty("reservationUrl");
+    expect(payload).not.toHaveProperty("bookingUrl");
   });
 });

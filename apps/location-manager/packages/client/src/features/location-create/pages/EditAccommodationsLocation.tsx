@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -10,6 +11,8 @@ import { Breadcrumbs } from "@client/shared/components/layout";
 import { ErrorAlert } from "@client/shared/components/ui";
 import { PhotoImportPanel } from "@client/shared/components/location-media/PhotoImportPanel";
 import { locationsApi, useLocationById, useUpdateLocation } from "@client/shared/services/api";
+import { LOCATION_BY_ID_QUERY_KEY } from "@client/shared/services/api/hooks/useLocationById";
+import { PendingSuggestionsPanel } from "@client/features/location-edit/components/PendingSuggestionsPanel";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
 import type { AccommodationsFieldSuggestionResponse } from "@client/shared/services/api/types";
 import type { LocationCategory } from "@shared/types/location-category";
@@ -470,6 +473,7 @@ const DEFAULT_FORM_VALUES = {
 export function EditAccommodationsLocation() {
   const { id, category } = useParams<{ id: string; category: LocationCategory }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const locationId = id ? Number.parseInt(id, 10) : null;
 
   const [isPrefillingGoogle, setIsPrefillingGoogle] = useState(false);
@@ -478,6 +482,9 @@ export function EditAccommodationsLocation() {
   const [prefillSignature, setPrefillSignature] = useState<string | null>(null);
   const [pendingFields, setPendingFields] = useState<Set<AiSuggestedField>>(() => new Set());
   const [suggestionStack, setSuggestionStack] = useState<AccommodationsFieldSuggestionResponse[]>([]);
+  const [bookingSuggestState, setBookingSuggestState] = useState<
+    { status: "idle" } | { status: "busy" } | { status: "error"; message: string }
+  >({ status: "idle" });
 
   const { data: location, isLoading, error: fetchError } = useLocationById(locationId, "accommodations");
   const { mutate: updateLocation, isPending, error: updateError } = useUpdateLocation();
@@ -630,7 +637,8 @@ export function EditAccommodationsLocation() {
   const queueSuggestion = async (fieldKey: AiSuggestedField) => {
     const field = getSuggestionField(fieldKey);
     const allowedOptions = getSuggestionFieldOptions(fieldKey, locationTypes);
-    if (!field || allowedOptions.length === 0 || locationId === null) return;
+    const isUrlKind = field?.kind === "url";
+    if (!field || (!isUrlKind && allowedOptions.length === 0) || locationId === null) return;
 
     setPendingFields((prev) => new Set(prev).add(fieldKey));
 
@@ -702,8 +710,9 @@ export function EditAccommodationsLocation() {
   const canSuggest = (fieldKey: AiSuggestedField) => {
     const name = form.watch("name")?.trim();
     const address = form.watch("address")?.trim();
+    const field = getSuggestionField(fieldKey);
     const options = getSuggestionFieldOptions(fieldKey, locationTypes);
-    return Boolean(name && address && options.length > 0);
+    return Boolean(name && address && field && (field.kind === "url" || options.length > 0));
   };
 
   const suggestProps = (fieldKey: AiSuggestedField) => ({
@@ -711,6 +720,23 @@ export function EditAccommodationsLocation() {
     isSuggesting: pendingFields.has(fieldKey),
     onSuggest: () => void queueSuggestion(fieldKey),
   });
+
+  const handleBookingUrlSuggest = async () => {
+    if (!locationId) return;
+    setBookingSuggestState({ status: "busy" });
+    try {
+      await locationsApi.proposePendingSuggestion(locationId, "bookingUrl");
+      await queryClient.invalidateQueries({
+        queryKey: LOCATION_BY_ID_QUERY_KEY("accommodations", locationId),
+      });
+      setBookingSuggestState({ status: "idle" });
+    } catch (err) {
+      setBookingSuggestState({
+        status: "error",
+        message: err instanceof Error ? err.message : "Suggest failed",
+      });
+    }
+  };
 
   const handleSubmit = (data: AddAccommodationsFormData) => {
     if (!locationId) return;
@@ -839,6 +865,14 @@ export function EditAccommodationsLocation() {
         </div>
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {locationId && (
+            <PendingSuggestionsPanel
+              locationId={locationId}
+              category="accommodations"
+              pending={location.pendingSuggestions}
+            />
+          )}
+
           <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold tracking-tight text-foreground">Step 1 + Entities</h2>
@@ -1175,8 +1209,25 @@ export function EditAccommodationsLocation() {
               <div className="space-y-2">
                 <Label>Booking URL</Label>
                 <Input placeholder="https://example.com/hotel/book" {...form.register("bookingUrl")} />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleBookingUrlSuggest()}
+                    disabled={bookingSuggestState.status === "busy"}
+                  >
+                    {bookingSuggestState.status === "busy" ? "Suggesting..." : "Suggest with AI"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Lands as a Pending Suggestion; accept to apply.
+                  </span>
+                </div>
                 {form.formState.errors.bookingUrl && (
                   <p className="text-xs text-destructive">{form.formState.errors.bookingUrl.message}</p>
+                )}
+                {bookingSuggestState.status === "error" && (
+                  <p className="text-xs text-destructive">{bookingSuggestState.message}</p>
                 )}
               </div>
               <div className="space-y-2">

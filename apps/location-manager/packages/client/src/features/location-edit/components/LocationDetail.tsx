@@ -370,20 +370,20 @@ function ContactSection({
         placeholder="contact@…"
       />
       {category === "dining" ? (
-        <>
-          <ControlledInputRow
-            label="Menu URL"
-            name="menuUrl"
-            control={form.control}
-            placeholder="https://…"
-          />
-          <ControlledInputRow
-            label="Reservation URL"
-            name="reservationUrl"
-            control={form.control}
-            placeholder="https://…"
-          />
-        </>
+        <ControlledInputRow
+          label="Menu URL"
+          name="menuUrl"
+          control={form.control}
+          placeholder="https://…"
+        />
+      ) : null}
+      {bookingUrlLabelFor(category) ? (
+        <ControlledInputRow
+          label={bookingUrlLabelFor(category)!}
+          name="bookingUrl"
+          control={form.control}
+          placeholder="https://…"
+        />
       ) : null}
     </DetailSection>
   );
@@ -711,4 +711,18 @@ function fieldProvenance(
 function formatCoords(lat: number | null, lng: number | null): string | null {
   if (lat === null || lng === null) return null;
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+}
+
+function bookingUrlLabelFor(category: LocationCategory): string | null {
+  switch (category) {
+    case "dining":
+    case "nightlife":
+      return "Reservation URL";
+    case "accommodations":
+      return "Booking URL";
+    case "attractions":
+      return "Tickets URL";
+    case "key_locations":
+      return null;
+  }
 }

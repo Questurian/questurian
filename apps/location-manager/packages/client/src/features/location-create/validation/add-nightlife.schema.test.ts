@@ -29,7 +29,7 @@ const validBaseForm = {
   hours: '',
   tripadvisorUrl: '',
   website: 'https://example.com/club',
-  reserveUrl: '',
+  bookingUrl: '',
   district: 'Miraflores',
   locationKey: 'peru|lima|miraflores',
   ianaTimeId: 'America/Lima',

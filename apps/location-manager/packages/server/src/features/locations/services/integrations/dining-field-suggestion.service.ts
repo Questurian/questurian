@@ -1,5 +1,5 @@
 // Dining field suggestions — invoked pre-Create by the Add Dining autofill
-// flow (ADR-0008) for `idealFor`, `type`, `menuUrl`, and `reservationUrl`.
+// flow (ADR-0008) for `idealFor`, `type`, `menuUrl`, and `bookingUrl`.
 //
 // Does not require a Location row. Accepts the operator's in-flight form
 // values plus the Google/TripAdvisor prefill context, calls python
@@ -18,7 +18,7 @@ export const DINING_SUGGESTION_FIELD_KEYS = [
   "type",
   "idealFor",
   "menuUrl",
-  "reservationUrl",
+  "bookingUrl",
 ] as const;
 export type DiningSuggestionFieldKey = (typeof DINING_SUGGESTION_FIELD_KEYS)[number];
 
@@ -40,6 +40,9 @@ export interface DiningFieldSuggestionRequest {
   fieldKey: DiningSuggestionFieldKey;
   formValues: Record<string, unknown>;
   apiContext?: DiningFieldSuggestionApiContext;
+  /** Per ADR-0009: bookingUrl is supplied by this service for attractions and
+   *  nightlife as well. Defaults to "dining" for backward compatibility. */
+  category?: "dining" | "attractions" | "nightlife";
 }
 
 export interface DiningSuggestionSource {
@@ -109,6 +112,7 @@ export class DiningFieldSuggestionService {
 }
 
 function buildAiRequest(request: DiningFieldSuggestionRequest): FieldSuggestionAiRequest {
+  const category = request.category ?? "dining";
   const baseContext: Record<string, unknown> = {
     placeId: request.apiContext?.placeId ?? null,
     locationKey: request.apiContext?.locationKey ?? null,
@@ -124,7 +128,7 @@ function buildAiRequest(request: DiningFieldSuggestionRequest): FieldSuggestionA
   switch (request.fieldKey) {
     case "type":
       return {
-        category: "dining",
+        category,
         field_key: "type",
         field_label: "Type",
         kind: "single",
@@ -138,7 +142,7 @@ function buildAiRequest(request: DiningFieldSuggestionRequest): FieldSuggestionA
       };
     case "idealFor":
       return {
-        category: "dining",
+        category,
         field_key: "idealFor",
         field_label: "Ideal For",
         kind: "multi",
@@ -152,17 +156,17 @@ function buildAiRequest(request: DiningFieldSuggestionRequest): FieldSuggestionA
       };
     case "menuUrl":
       return {
-        category: "dining",
+        category,
         field_key: "menuUrl",
         field_label: "Menu",
         kind: "url",
         form_values: request.formValues,
         api_context: baseContext,
       };
-    case "reservationUrl":
+    case "bookingUrl":
       return {
-        category: "dining",
-        field_key: "reservationUrl",
+        category,
+        field_key: "bookingUrl",
         field_label: "Reservation",
         kind: "url",
         form_values: request.formValues,
@@ -198,7 +202,7 @@ function validateSuggestion(
     return deduped.length > 0 ? deduped : null;
   }
 
-  if (fieldKey === "menuUrl" || fieldKey === "reservationUrl") {
+  if (fieldKey === "menuUrl" || fieldKey === "bookingUrl") {
     if (typeof value !== "string") return null;
     const trimmed = value.trim();
     if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {

@@ -290,10 +290,17 @@ function formatSuggestionValue(
 function validateClientSuggestion(
   suggestion: string | string[] | null,
   options: AccommodationsOption[],
-  isMulti: boolean
+  kind: "single" | "multi" | "url"
 ) {
+  if (kind === "url") {
+    if (typeof suggestion !== "string") return null;
+    const trimmed = suggestion.trim();
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return null;
+    return trimmed;
+  }
+
   const allowed = new Set(options.map((option) => option.value));
-  if (isMulti) {
+  if (kind === "multi") {
     if (!Array.isArray(suggestion)) return null;
     const validValues = Array.from(
       new Set(suggestion.filter((value): value is string => typeof value === "string" && allowed.has(value)))
@@ -784,7 +791,7 @@ const STAY_SUGGESTION_FIELDS: AiSuggestedField[] = [
 const EXPERIENCE_SUGGESTION_FIELDS: AiSuggestedField[] = [
   "vibe", "workspace", "restaurant", "pool", "rooftopLounge", "jacuzzi", "gym",
 ];
-const DETAILS_SUGGESTION_FIELDS: AiSuggestedField[] = ["walkability", "checkInTime", "checkOutTime"];
+const DETAILS_SUGGESTION_FIELDS: AiSuggestedField[] = ["walkability", "checkInTime", "checkOutTime", "bookingUrl"];
 const AUTO_AI_SUGGESTION_FIELDS: AiSuggestedField[] = [
   ...CORE_SUGGESTION_FIELDS,
   ...STAY_SUGGESTION_FIELDS,
@@ -808,6 +815,12 @@ export function AddAccommodationsLocation() {
   const [aiSuggestionEvidence, setAiSuggestionEvidence] = useState<
     Partial<Record<AiSuggestedField, AccommodationsFieldSuggestionResponse>>
   >({});
+  // Per ADR-0009: AI-supplied URL fields require explicit operator
+  // acknowledgment before Create. `verifiedAiUrls.bookingUrl` defaults true
+  // so non-AI flows are unaffected; flipped to false when AI fills the field.
+  const [verifiedAiUrls, setVerifiedAiUrls] = useState<{ bookingUrl: boolean }>({
+    bookingUrl: true,
+  });
   const [createdName, setCreatedName] = useState<string | null>(null);
   const hasHydratedDraftRef = useRef(false);
 
@@ -882,6 +895,7 @@ export function AddAccommodationsLocation() {
     const isDirty = Boolean(form.formState.dirtyFields[field]);
     const currentValue = form.watch(field) as AddAccommodationsFormData[AiSuggestedField];
 
+    const fieldDefinition = getSuggestionField(field);
     return isAccommodationOptionSuggestionEligible({
       value: currentValue,
       defaultValue: ACCOMMODATIONS_FORM_DEFAULT_VALUES[field],
@@ -890,6 +904,7 @@ export function AddAccommodationsLocation() {
       isDirty,
       isApiFilled: isApiFilled(field),
       isAiSuggested: isAiSuggested(field),
+      isUrlKind: fieldDefinition?.kind === "url",
     });
   };
   const isEmptyOrDefaultSuggestionField = (field: AiSuggestedField) => {
@@ -953,12 +968,17 @@ export function AddAccommodationsLocation() {
     !hasValue(form.watch("latitude")) ? "Latitude" : null,
     !hasValue(form.watch("longitude")) ? "Longitude" : null,
   ].filter((field): field is string => Boolean(field));
+  const isBookingUrlAi = aiSuggestedFields.has("bookingUrl");
+  const bookingUrlAckPending =
+    isBookingUrlAi && Boolean(form.watch("bookingUrl")) && !verifiedAiUrls.bookingUrl;
   const createDisabledReason =
     missingRequiredFields.length > 0
       ? `Missing: ${missingRequiredFields.slice(0, 6).join(", ")}${missingRequiredFields.length > 6 ? "..." : ""}`
       : !form.formState.isValid
         ? "Fix invalid field values before creating."
-        : null;
+        : bookingUrlAckPending
+          ? "Verify the AI-suggested Booking URL or clear it before creating."
+          : null;
 
   const canOpenSection = (section: AccommodationsFormSection) => {
     if (section === "step1") return true;
@@ -1108,7 +1128,7 @@ export function AddAccommodationsLocation() {
     const validatedSuggestion = validateClientSuggestion(
       item.suggestion,
       allowedOptions,
-      item.kind === "multi"
+      item.kind,
     );
 
     if (!validatedSuggestion) return false;
@@ -1124,6 +1144,9 @@ export function AddAccommodationsLocation() {
       next.delete(fieldKey);
       return next;
     });
+    if (item.kind === "url" && fieldKey === "bookingUrl") {
+      setVerifiedAiUrls((prev) => ({ ...prev, bookingUrl: false }));
+    }
     if (source === "auto") {
       setAiSuggestionEvidence((prev) => ({ ...prev, [fieldKey]: item }));
     }
@@ -1137,9 +1160,10 @@ export function AddAccommodationsLocation() {
     const eligibleFields = AUTO_AI_SUGGESTION_FIELDS.filter((field) => {
       const fieldDefinition = getSuggestionField(field);
       const options = getSuggestionFieldOptions(field, locationTypes);
+      const isUrlKind = fieldDefinition?.kind === "url";
       return (
         Boolean(fieldDefinition) &&
-        options.length > 0 &&
+        (isUrlKind || options.length > 0) &&
         !apiFields.has(field as ApiFilledField) &&
         isEmptyOrDefaultSuggestionField(field)
       );
@@ -2176,10 +2200,42 @@ export function AddAccommodationsLocation() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Booking URL</Label>
-                    <Input placeholder="https://example.com/hotel/book" {...form.register("bookingUrl")} />
+                    <div className="flex items-center gap-2">
+                      <Label>Booking URL</Label>
+                      {isAiSuggested("bookingUrl") && <AiSuggestedBadge />}
+                    </div>
+                    <Input
+                      placeholder="https://example.com/hotel/book"
+                      {...form.register("bookingUrl", {
+                        onChange: () => {
+                          if (aiSuggestedFields.has("bookingUrl")) {
+                            setAiSuggestedFields((prev) => {
+                              const next = new Set(prev);
+                              next.delete("bookingUrl");
+                              return next;
+                            });
+                            setVerifiedAiUrls((prev) => ({ ...prev, bookingUrl: true }));
+                          }
+                        },
+                      })}
+                    />
                     {form.formState.errors.bookingUrl && (
                       <p className="text-xs text-destructive">{form.formState.errors.bookingUrl.message}</p>
+                    )}
+                    {isAiSuggested("bookingUrl") && Boolean(form.watch("bookingUrl")) && (
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={verifiedAiUrls.bookingUrl}
+                          onChange={(event) =>
+                            setVerifiedAiUrls((prev) => ({
+                              ...prev,
+                              bookingUrl: event.target.checked,
+                            }))
+                          }
+                        />
+                        I verified this booking URL works.
+                      </label>
                     )}
                   </div>
                   <div className="space-y-2">

@@ -6,9 +6,9 @@
 
 ## Context
 
-ADR-0002 designed Add Dining as a two-stage pipeline. Step 1 prefill: Google Places + SerpAPI TripAdvisor search by name+lat/lng + Google-website link scrape for `menuUrl`/`reservationUrl`. Step 2 (post-Create): grounded AI for `idealFor` and `type` refinement, via the `Stage2Phase` UI. ADR-0005 removed the review-fetching subsystem but left both stages and the SerpAPI URL search intact.
+ADR-0002 designed Add Dining as a two-stage pipeline. Step 1 prefill: Google Places + SerpAPI TripAdvisor search by name+lat/lng + Google-website link scrape for `menuUrl`/`bookingUrl`. Step 2 (post-Create): grounded AI for `idealFor` and `type` refinement, via the `Stage2Phase` UI. ADR-0005 removed the review-fetching subsystem but left both stages and the SerpAPI URL search intact.
 
-In practice the three "Optional / Links" fields (`tripadvisorUrl`, `menuUrl`, `reservationUrl`) are populated by the automation a small fraction of the time:
+In practice the three "Optional / Links" fields (`tripadvisorUrl`, `menuUrl`, `bookingUrl`) are populated by the automation a small fraction of the time:
 
 - The SerpAPI TripAdvisor URL search misfires on chains, sub-locations, and non-English names often enough that operators paste the URL by hand anyway.
 - `scrapeRestaurantLinks` over the Google-listed website almost never yields menu or reservation outlinks — most restaurant sites don't expose them through OpenGraph, common paths, or known providers (OpenTable/Resy/SevenRooms).
@@ -41,7 +41,7 @@ A single `ProcessingCard` displays the running sub-step. Three groups, paralleli
    - `idealFor` — multi, ≤4. Always.
    - `type` — single. Only when group 1's deterministic mapping yielded null or `other`.
    - `menuUrl` — `kind: "url"`. Always.
-   - `reservationUrl` — `kind: "url"`. Always.
+   - `bookingUrl` — `kind: "url"`. Always.
 
 The batch is client-orchestrated (consistent with the **Add Accommodations autofill flow** precedent). The progress card shows: `Google done ✓ → TripAdvisor done ✓ → AI suggestions running… → done`. Realistic latency floor ~15s; the explicit progress UI matches operator expectation.
 
@@ -65,7 +65,7 @@ This trims one phase, one mutation roundtrip, and one mental context switch.
 ### 5. Form sections collapse from five to three: Basics → Review → Photos
 
 - **Basics** — name, address, TripAdvisor URL or "No TA listing" checkbox. Continue triggers the batch.
-- **Review** — single screen showing every prefilled and AI-filled field with provenance badges (G, TA, AI, Operator). Replaces today's Place + Classification + Links + (post-Create) Confirm Title. Operator inline-edits title, phone, website, type, idealFor, menuUrl, reservationUrl, and the place-identity fields.
+- **Review** — single screen showing every prefilled and AI-filled field with provenance badges (G, TA, AI, Operator). Replaces today's Place + Classification + Links + (post-Create) Confirm Title. Operator inline-edits title, phone, website, type, idealFor, menuUrl, bookingUrl, and the place-identity fields.
 - **Photos** — unchanged (`PhotoImportPhase`).
 
 ### 6. Python `/field-suggestion` grows `kind: "url"`
@@ -79,7 +79,7 @@ A new request kind alongside today's `single` / `multi`. The python service:
 
 ### 7. AI-supplied URL acknowledgment invariant
 
-`menuUrl` and `reservationUrl` AI-supplied values render with an "I verified this link works" checkbox alongside the URL input. The checkbox defaults unchecked. The Create button is disabled until each AI-provenanced URL is either:
+`menuUrl` and `bookingUrl` AI-supplied values render with an "I verified this link works" checkbox alongside the URL input. The checkbox defaults unchecked. The Create button is disabled until each AI-provenanced URL is either:
 
 - Acknowledged (operator checks the box), or
 - Cleared/replaced (operator edits the URL — provenance flips to `operator`, which is implicit acknowledgment).
@@ -108,7 +108,7 @@ Today `addMapsLocation` calls `fetchAndMergePlaceData` after `saveLocationOrThro
 - **Reliability:** AI grounded search consistently produces results where the prior SerpAPI search + Google-website scrape returned empty. The acknowledgment-checkbox invariant keeps correctness in the operator's hands for the higher-stakes URL fields.
 - **Cost:** ~$0.10–0.15 in Vertex grounding fees per dining add (3–4 calls × $0.035). At ~500 launch entries, ~$50–75 one-time. Negligible.
 - **Python surface:** `/field-suggestion` grows one new request kind (`url`). Validation logic is small; prompt template change is contained. No new endpoint.
-- **`FieldProvenance`:** unchanged. `ai` applies to `menuUrl` and `reservationUrl` in addition to the existing `type`/`idealFor`.
+- **`FieldProvenance`:** unchanged. `ai` applies to `menuUrl` and `bookingUrl` in addition to the existing `type`/`idealFor`.
 - **`pendingSuggestions` side channel:** kept. Not fed by Add anymore; still fed by per-field Suggest buttons on the edit page.
 - **TripAdvisor place fetch:** moves from post-Create to inline pre-Create for dining. Cleaner — the Location row has the TA data at Create time without a second roundtrip.
 - **Operator burden shape change:** trades "open a browser tab to find the TA URL before starting" for "~4 fewer fields to type by hand and one fewer post-Create phase to wait through." Net positive at our operator's stated pain point.

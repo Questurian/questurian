@@ -112,6 +112,7 @@ export const Attractions: CollectionConfig = {
                           type: 'group',
                           fields: [
                             { name: 'bookingRequired', type: 'checkbox' },
+                            { name: 'bookingUrl', type: 'text' },
                           ],
                         },
                       ],

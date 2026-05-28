@@ -251,6 +251,22 @@ def test_dining_angle_directives_cover_each_dining_angle():
         assert "{venue}" in template
 
 
+def test_attractions_angle_directives_cover_each_attractions_angle():
+    # ADR 0012: attractions keeps the ADR 0004 six-angle pool on the lean path.
+    attractions_directives = ANGLE_DIRECTIVES_BY_CATEGORY["attractions"]
+    expected = {
+        "signature-feature",
+        "setting",
+        "history-built",
+        "visit-time-tip",
+        "best-for-visit-type",
+        "whats-different",
+    }
+    assert set(attractions_directives.keys()) == expected
+    for template in attractions_directives.values():
+        assert "{venue}" in template
+
+
 # ---------- run_writer_brief orchestration ----------
 
 

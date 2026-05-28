@@ -143,12 +143,13 @@ export const ACCOMMODATIONS_SUGGESTION_FIELD_KEYS = [
   "walkability",
   "checkInTime",
   "checkOutTime",
+  "bookingUrl",
 ] as const;
 
 export type AccommodationsSuggestionFieldKey =
   (typeof ACCOMMODATIONS_SUGGESTION_FIELD_KEYS)[number];
 
-export type AccommodationsSuggestionKind = "single" | "multi";
+export type AccommodationsSuggestionKind = "single" | "multi" | "url";
 
 export interface AccommodationsSuggestionFieldDefinition {
   key: AccommodationsSuggestionFieldKey;
@@ -177,4 +178,5 @@ export const ACCOMMODATIONS_SUGGESTION_FIELDS = [
   { key: "walkability", label: "Walkability", kind: "single", options: WALKABILITY_OPTIONS },
   { key: "checkInTime", label: "Check-In Time", kind: "single", options: CHECK_IN_TIME_OPTIONS },
   { key: "checkOutTime", label: "Check-Out Time", kind: "single", options: CHECK_OUT_TIME_OPTIONS },
+  { key: "bookingUrl", label: "Booking URL", kind: "url" },
 ] as const satisfies readonly AccommodationsSuggestionFieldDefinition[];

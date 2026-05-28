@@ -377,6 +377,44 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
     ];
   }, [locationDetail]);
 
+  const importantOptionalFields = useMemo(() => {
+    const category = locationDetail.category;
+    if (
+      category !== "dining" &&
+      category !== "accommodations" &&
+      category !== "attractions" &&
+      category !== "nightlife"
+    ) {
+      return [];
+    }
+
+    const label =
+      category === "accommodations"
+        ? "Booking URL"
+        : category === "attractions"
+          ? "Tickets URL"
+          : "Reservation URL";
+    const detailsUrl =
+      category === "accommodations"
+        ? parseAccommodationsDetails(locationDetail.accommodationsDetails).bookingUrl
+        : category === "nightlife"
+          ? parseNightlifeDetails(locationDetail.nightlifeDetails).bookingUrl
+          : null;
+
+    return [
+      {
+        key: "bookingUrl",
+        label,
+        present: Boolean(locationDetail.bookingUrl?.trim() || detailsUrl),
+      },
+    ];
+  }, [locationDetail]);
+
+  const missingImportantOptionalFields = useMemo(
+    () => importantOptionalFields.filter((field) => !field.present),
+    [importantOptionalFields]
+  );
+
   const missingFields = useMemo(
     () => requiredFields.filter((field) => !field.present),
     [requiredFields]
@@ -510,6 +548,24 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
               ))}
             </div>
           )}
+          {missingImportantOptionalFields.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Important optional
+              </span>
+              {missingImportantOptionalFields.map((field) => (
+                <button
+                  key={field.key}
+                  type="button"
+                  onClick={() => setEditField(getEditField(field))}
+                  className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-muted-foreground/20 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors cursor-pointer"
+                  title={`Click to edit ${field.label}`}
+                >
+                  Missing {field.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {requiredFields.map((field) => (
               <button
@@ -521,6 +577,22 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
                   field.present
                     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
                     : "border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                }`}
+              >
+                {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                <span>{field.label}</span>
+              </button>
+            ))}
+            {importantOptionalFields.map((field) => (
+              <button
+                key={field.key}
+                type="button"
+                onClick={() => setEditField(getEditField(field))}
+                title={`Click to edit ${field.label}`}
+                className={`flex items-center gap-2 rounded border px-2 py-1 text-xs text-left w-full ${
+                  field.present
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                    : "border-muted-foreground/20 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors cursor-pointer"
                 }`}
               >
                 {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}

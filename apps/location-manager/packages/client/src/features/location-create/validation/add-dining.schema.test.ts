@@ -17,7 +17,7 @@ const validBaseForm = {
   idealFor: ["Date Nights"],
   tripadvisorUrl: "",
   menuUrl: "",
-  reservationUrl: "",
+  bookingUrl: "",
   googleUrl: "https://www.google.com/maps/place/test",
   placeId: "ChIJ123",
   latitude: "-12.0464",
@@ -49,7 +49,7 @@ describe("add dining schema", () => {
       ...validBaseForm,
       tripadvisorUrl: "not-a-url",
       menuUrl: "not-a-url",
-      reservationUrl: "not-a-url",
+      bookingUrl: "not-a-url",
       latitude: "500",
       longitude: "-500",
     });
@@ -61,7 +61,7 @@ describe("add dining schema", () => {
     const result = addDiningSchema.safeParse({
       ...validBaseForm,
       menuUrl: "https://example.com/menu",
-      reservationUrl: "https://example.com/reserve",
+      bookingUrl: "https://example.com/reserve",
     });
 
     expect(result.success).toBe(true);

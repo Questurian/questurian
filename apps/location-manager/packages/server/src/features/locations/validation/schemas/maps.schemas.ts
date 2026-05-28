@@ -82,7 +82,7 @@ export const createMapsSchema = z.object({
   phoneNumber: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   website: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   menuUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
-  reservationUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  bookingUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   idealFor: idealForTagsSchema.optional(),
   type: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   tripadvisorUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
@@ -198,12 +198,12 @@ const DINING_SUGGESTION_FIELD_KEYS_LIST = [
   "type",
   "idealFor",
   "menuUrl",
-  "reservationUrl",
+  "bookingUrl",
 ] as const;
 
 export const fieldSuggestionSchema = z
   .object({
-    category: z.enum(["accommodations", "dining"]),
+    category: z.enum(["accommodations", "dining", "attractions", "nightlife"]),
     locationId: z.number().int().positive().optional(),
     fieldKey: z.string().min(1),
     formValues: z.record(z.any()).refine((values) => {
@@ -237,6 +237,17 @@ export const fieldSuggestionSchema = z
           message: `fieldKey must be one of ${DINING_SUGGESTION_FIELD_KEYS_LIST.join(", ")} for dining`,
         });
       }
+      return;
+    }
+    // Per ADR-0009: attractions and nightlife may request bookingUrl only.
+    if (data.category === "attractions" || data.category === "nightlife") {
+      if (data.fieldKey !== "bookingUrl") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fieldKey"],
+          message: `fieldKey must be "bookingUrl" for ${data.category}`,
+        });
+      }
     }
   });
 
@@ -267,7 +278,7 @@ export const patchMapsSchema = z.object({
   phoneNumber: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   website: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   menuUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
-  reservationUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  bookingUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   tripadvisorUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   email: z.string().trim().email().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   neighborhoodDescription: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
@@ -322,7 +333,7 @@ export const patchMapsSchema = z.object({
          data.phoneNumber !== undefined ||
          data.website !== undefined ||
          data.menuUrl !== undefined ||
-         data.reservationUrl !== undefined ||
+         data.bookingUrl !== undefined ||
          data.placeId !== undefined ||
          data.tripadvisorUrl !== undefined ||
          data.email !== undefined ||

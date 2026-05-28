@@ -350,6 +350,7 @@ export function useAddAttractionsFlow() {
         phoneNumber: data.phone || undefined,
         attractionsDetails,
         tourIds: data.tourIds,
+        bookingUrl: data.bookingUrl || undefined,
       },
       {
         onSuccess: (response) => {

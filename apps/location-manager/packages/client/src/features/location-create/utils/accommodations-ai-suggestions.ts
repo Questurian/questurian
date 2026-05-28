@@ -18,6 +18,8 @@ export function isAccommodationOptionSuggestionEligible(input: {
   isDirty: boolean;
   isApiFilled: boolean;
   isAiSuggested: boolean;
+  /** URL-kind fields have no fixed options; eligibility skips the options check. */
+  isUrlKind?: boolean;
 }) {
   const isMissingOrDefault =
     optionValueIsEmpty(input.value) ||
@@ -25,7 +27,7 @@ export function isAccommodationOptionSuggestionEligible(input: {
 
   return (
     input.isPrefillReady &&
-    input.optionsCount > 0 &&
+    (input.isUrlKind || input.optionsCount > 0) &&
     !input.isDirty &&
     !input.isApiFilled &&
     !input.isAiSuggested &&

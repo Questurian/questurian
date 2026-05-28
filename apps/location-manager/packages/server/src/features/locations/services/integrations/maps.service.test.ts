@@ -307,7 +307,7 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
         category: "dining",
         idealFor: ["Date Nights"],
         menuUrl: "https://example.com/menu",
-        reservationUrl: "https://example.com/reserve",
+        bookingUrl: "https://example.com/reserve",
       },
       "dining"
     );
@@ -315,7 +315,7 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
     expect(saveLocationOrThrowMock).toHaveBeenCalledWith(
       expect.objectContaining({
         menuUrl: "https://example.com/menu",
-        reservationUrl: "https://example.com/reserve",
+        bookingUrl: "https://example.com/reserve",
       })
     );
   });
@@ -374,14 +374,14 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
 
     await service.updateMapsLocationById(91, {
       menuUrl: "https://example.com/menu",
-      reservationUrl: "https://example.com/reserve",
+      bookingUrl: "https://example.com/reserve",
     } as any);
 
     expect(updateLocationByIdMock).toHaveBeenCalledWith(
       91,
       expect.objectContaining({
         menuUrl: "https://example.com/menu",
-        reservationUrl: "https://example.com/reserve",
+        bookingUrl: "https://example.com/reserve",
       })
     );
   });

@@ -13,6 +13,7 @@ import { locationsApi } from '@client/shared/services/api';
 import { useCreateLocation } from '@client/shared/services/api/hooks';
 import { addNightlifeSchema, type AddNightlifeFormData } from '../validation/add-nightlife.schema';
 import { OperationHoursModal } from '../components/OperationHoursModal';
+import { BookingUrlSuggestRow } from '../components/BookingUrlSuggestRow';
 import { buildOperationHoursSummary, isOperationHoursJson } from '../components/operation-hours-utils';
 import { getIdealForOptionGroups } from '../constants/ai-prompt-template';
 import {
@@ -90,7 +91,7 @@ const CONTACT_FIELDS: Array<keyof AddNightlifeFormData> = [
   'countryCode',
   'phone',
   'website',
-  'reserveUrl',
+  'bookingUrl',
   'tripadvisorUrl',
   'daytimeRestaurant',
 ];
@@ -118,7 +119,7 @@ const NIGHTLIFE_FORM_DEFAULT_VALUES: AddNightlifeFormData = {
   hours: '',
   tripadvisorUrl: '',
   website: '',
-  reserveUrl: '',
+  bookingUrl: '',
   district: '',
   locationKey: '',
   ianaTimeId: '',
@@ -334,6 +335,7 @@ function SectionHeader({ title, isComplete = false, helperText }: SectionHeaderP
 export function AddNightlifeLocation() {
   const [activeSection, setActiveSection] = useState<NightlifeFormSection>('step1');
   const [isPrefillingGoogle, setIsPrefillingGoogle] = useState(false);
+  const [bookingUrlAcked, setBookingUrlAcked] = useState(true);
   const [operationHoursModalOpen, setOperationHoursModalOpen] = useState(false);
   const [prefillMessage, setPrefillMessage] = useState<string | null>(null);
   const [prefillError, setPrefillError] = useState<string | null>(null);
@@ -627,7 +629,7 @@ export function AddNightlifeLocation() {
       phone: data.phone || '',
       hours: nightlifeHours,
       website: data.website || '',
-      reserveUrl: data.reserveUrl || '',
+      bookingUrl: data.bookingUrl || '',
       daytimeRestaurant: data.daytimeRestaurant,
     });
 
@@ -651,6 +653,7 @@ export function AddNightlifeLocation() {
         lng: Number.isFinite(lngValue) ? lngValue : undefined,
         operationHours: hasStructuredHours ? operationHoursValue : undefined,
         tripadvisorUrl: data.tripadvisorUrl || undefined,
+        bookingUrl: data.bookingUrl || undefined,
         nightlifeDetails,
       },
       {
@@ -1113,13 +1116,16 @@ export function AddNightlifeLocation() {
                   <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label>Reservations URL</Label>
-                <Input placeholder="https://example.com/nebula/reserve" {...form.register('reserveUrl')} />
-                {form.formState.errors.reserveUrl && (
-                  <p className="text-xs text-destructive">{form.formState.errors.reserveUrl.message}</p>
-                )}
-              </div>
+              <BookingUrlSuggestRow
+                form={form}
+                category="nightlife"
+                label="Reservation URL"
+                fieldName="bookingUrl"
+                onAckChange={setBookingUrlAcked}
+              />
+              {form.formState.errors.bookingUrl && (
+                <p className="text-xs text-destructive">{form.formState.errors.bookingUrl.message}</p>
+              )}
               <div className="space-y-2 md:col-span-2">
                 <Label>TripAdvisor URL (Optional)</Label>
                 <Input placeholder="https://www.tripadvisor.com/..." {...form.register('tripadvisorUrl')} />
@@ -1171,7 +1177,20 @@ export function AddNightlifeLocation() {
               <Button type="button" variant="outline" onClick={goToPreviousSection}>
                 Previous
               </Button>
-              <Button type="submit" disabled={!isPrefillReady || !form.formState.isValid || isPending}>
+              <Button
+                type="submit"
+                disabled={
+                  !isPrefillReady ||
+                  !form.formState.isValid ||
+                  isPending ||
+                  !bookingUrlAcked
+                }
+                title={
+                  !bookingUrlAcked
+                    ? "Verify the AI-suggested Reservation URL or clear it before creating."
+                    : undefined
+                }
+              >
                 {isPending ? 'Creating...' : 'Create Nightlife Document'}
               </Button>
             </div>

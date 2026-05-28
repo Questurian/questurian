@@ -326,7 +326,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     tripadvisorUrl: location.tripadvisorUrl || null,
     tripadvisorLocationId: location.tripadvisorLocationId || null,
     menuUrl: location.menuUrl || null,
-    reservationUrl: location.reservationUrl || null,
+    bookingUrl: location.bookingUrl || null,
     payload_location_ref: location.payload_location_ref || null,
     selectedPayloadMediaSetIds: parseSelectedPayloadMediaSetIds(
       location.selectedPayloadMediaSetIdsJson || null

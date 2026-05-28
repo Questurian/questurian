@@ -45,6 +45,22 @@ export async function postFieldSuggestion(c: Context) {
       return c.json(successResponse(suggestion));
     }
 
+    // Per ADR-0009: attractions/nightlife support bookingUrl only. The dining
+    // service accepts a category override so the AI request lands with the
+    // correct grounded-search context.
+    if (dto.category === "attractions" || dto.category === "nightlife") {
+      const suggestion = await withTimeout(
+        container.diningFieldSuggestionService.suggestField({
+          fieldKey: "bookingUrl",
+          category: dto.category,
+          formValues: dto.formValues,
+          apiContext: dto.apiContext as Record<string, unknown> | undefined,
+        }),
+        AI_TIMEOUT_MS
+      );
+      return c.json(successResponse(suggestion));
+    }
+
     const suggestion = await withTimeout(
       container.accommodationsFieldSuggestionService.suggestField(
         dto as AccommodationsFieldSuggestionRequest

@@ -36,7 +36,7 @@ export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.El
   const hoursRows = parseListicleOperationHoursRows(item.operationHours)
   const websiteRaw = typeof item.website === 'string' ? item.website.trim() : ''
   const menuRaw = typeof item.menuUrl === 'string' ? item.menuUrl.trim() : ''
-  const reserveRaw = typeof item.reservationUrl === 'string' ? item.reservationUrl.trim() : ''
+  const reserveRaw = typeof item.bookingUrl === 'string' ? item.bookingUrl.trim() : ''
   const websiteHref = websiteRaw ? normalizeWebsiteUrl(websiteRaw) : ''
   const menuHref = menuRaw ? normalizeWebsiteUrl(menuRaw) : ''
   const reserveHref = reserveRaw ? normalizeWebsiteUrl(reserveRaw) : ''

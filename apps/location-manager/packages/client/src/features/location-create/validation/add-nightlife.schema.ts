@@ -65,7 +65,7 @@ export const addNightlifeSchema = z.object({
     .trim()
     .min(1, "Website is required")
     .refine((value) => /^https?:\/\//i.test(value), "Website must be a valid URL"),
-  reserveUrl: z
+  bookingUrl: z
     .string()
     .trim()
     .optional()

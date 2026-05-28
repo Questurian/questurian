@@ -80,7 +80,7 @@ export const addDiningSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((value) => (value === "" ? undefined : value)),
-  reservationUrl: z
+  bookingUrl: z
     .string()
     .trim()
     .url("Reservation URL must be a valid URL")

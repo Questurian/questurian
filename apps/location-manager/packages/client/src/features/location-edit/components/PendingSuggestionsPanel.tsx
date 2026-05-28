@@ -24,8 +24,13 @@ export function PendingSuggestionsPanel({
   const [busyField, setBusyField] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (category !== "dining") return null;
+  // Per ADR-0009: bookingUrl pending suggestions surface for all four enabled
+  // categories. Other pending fields (type, idealFor) remain dining-only.
   if (!pending || Object.keys(pending).length === 0) return null;
+  const visibleFields = Object.keys(pending).filter((field) =>
+    category === "dining" ? true : field === "bookingUrl",
+  );
+  if (visibleFields.length === 0) return null;
 
   async function runAction(field: string, action: "accept" | "dismiss") {
     setError(null);
@@ -62,7 +67,9 @@ export function PendingSuggestionsPanel({
       </p>
 
       <ul className="divide-y divide-purple-400/20 rounded-md border border-purple-400/20 bg-background/40">
-        {Object.entries(pending).map(([field, entry]) => (
+        {visibleFields.map((field) => {
+          const entry = pending[field];
+          return (
           <li key={field} className="flex items-start justify-between gap-3 p-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -95,7 +102,8 @@ export function PendingSuggestionsPanel({
               </Button>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       {error && (

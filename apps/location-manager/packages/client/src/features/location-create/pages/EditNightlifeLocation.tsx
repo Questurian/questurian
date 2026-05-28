@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -25,6 +26,8 @@ import {
   useUpdateLocation,
   type LocationResponse,
 } from "@client/shared/services/api";
+import { LOCATION_BY_ID_QUERY_KEY } from "@client/shared/services/api/hooks/useLocationById";
+import { PendingSuggestionsPanel } from "@client/features/location-edit/components/PendingSuggestionsPanel";
 import type { LocationCategory } from "@shared/types/location-category";
 import { addNightlifeSchema } from "../validation/add-nightlife.schema";
 import { OperationHoursModal } from "../components/OperationHoursModal";
@@ -104,7 +107,7 @@ const NIGHTLIFE_FORM_DEFAULT_VALUES: EditNightlifeFormData = {
   phone: "",
   hours: "",
   website: "",
-  reserveUrl: "",
+  bookingUrl: "",
   district: "",
   locationKey: "",
   ianaTimeId: "",
@@ -233,7 +236,7 @@ function mapLocationToNightlifeFormValues(location: LocationResponse): EditNight
       ? JSON.stringify(location.operationHours, null, 2)
       : details.hours || "",
     website: location.contact.website || details.website || "",
-    reserveUrl: details.reserveUrl || "",
+    bookingUrl: details.bookingUrl || "",
     district: location.district || "",
     locationKey: location.locationKey || "",
     ianaTimeId: location.ianaTimeId || "",
@@ -251,6 +254,7 @@ function mapLocationToNightlifeFormValues(location: LocationResponse): EditNight
 
 export function EditNightlifeLocation() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id, category } = useParams<{ id: string; category: LocationCategory }>();
 
   const parsedId = id ? Number.parseInt(id, 10) : Number.NaN;
@@ -263,6 +267,9 @@ export function EditNightlifeLocation() {
   const [prefillError, setPrefillError] = useState<string | null>(null);
   const [prefillSignature, setPrefillSignature] = useState<string | null>(null);
   const [updatedName, setUpdatedName] = useState<string | null>(null);
+  const [bookingSuggestState, setBookingSuggestState] = useState<
+    { status: "idle" } | { status: "busy" } | { status: "error"; message: string }
+  >({ status: "idle" });
 
   const form = useForm<EditNightlifeFormData>({
     resolver: zodResolver(editNightlifeSchema),
@@ -413,6 +420,23 @@ export function EditNightlifeLocation() {
     }
   };
 
+  const handleBookingUrlSuggest = async () => {
+    if (!locationId) return;
+    setBookingSuggestState({ status: "busy" });
+    try {
+      await locationsApi.proposePendingSuggestion(locationId, "bookingUrl");
+      await queryClient.invalidateQueries({
+        queryKey: LOCATION_BY_ID_QUERY_KEY("nightlife", locationId),
+      });
+      setBookingSuggestState({ status: "idle" });
+    } catch (err) {
+      setBookingSuggestState({
+        status: "error",
+        message: err instanceof Error ? err.message : "Suggest failed",
+      });
+    }
+  };
+
   const onSubmit = (data: EditNightlifeFormData) => {
     if (routeCategory !== "nightlife" || locationId === null) {
       setPrefillError("Invalid nightlife edit route.");
@@ -451,7 +475,7 @@ export function EditNightlifeLocation() {
       phone: data.phone || "",
       hours: nightlifeHours,
       website: data.website || "",
-      reserveUrl: data.reserveUrl || "",
+      bookingUrl: data.bookingUrl || "",
       daytimeRestaurant: data.daytimeRestaurant,
     });
 
@@ -544,6 +568,14 @@ export function EditNightlifeLocation() {
         )}
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          {locationId && (
+            <PendingSuggestionsPanel
+              locationId={locationId}
+              category="nightlife"
+              pending={location.pendingSuggestions}
+            />
+          )}
+
           <section className="space-y-4">
             <h2 className="text-xs font-semibold tracking-wide text-foreground">Step 1: Name + Address</h2>
 
@@ -907,10 +939,27 @@ export function EditNightlifeLocation() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Reserve URL</Label>
-                <Input placeholder="https://example.com/nebula/reserve" {...form.register("reserveUrl")} />
-                {form.formState.errors.reserveUrl && (
-                  <p className="text-xs text-destructive">{form.formState.errors.reserveUrl.message}</p>
+                <Label>Reservation URL</Label>
+                <Input placeholder="https://example.com/nebula/reserve" {...form.register("bookingUrl")} />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleBookingUrlSuggest()}
+                    disabled={bookingSuggestState.status === "busy"}
+                  >
+                    {bookingSuggestState.status === "busy" ? "Suggesting..." : "Suggest with AI"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Lands as a Pending Suggestion; accept to apply.
+                  </span>
+                </div>
+                {form.formState.errors.bookingUrl && (
+                  <p className="text-xs text-destructive">{form.formState.errors.bookingUrl.message}</p>
+                )}
+                {bookingSuggestState.status === "error" && (
+                  <p className="text-xs text-destructive">{bookingSuggestState.message}</p>
                 )}
               </div>
             </div>

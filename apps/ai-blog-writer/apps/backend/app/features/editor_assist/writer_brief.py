@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 # Per-angle directive templates, keyed by category. The {venue} placeholder is
 # filled by the curator (or by deterministic fallback rendering) before the
 # directive reaches the writer prompt. These are the venue-facing directives
-# referenced in ADR 0007 (nightlife), ADR 0009 (dining), and ADR 0011
-# (accommodations) — distinct from LISTICLE_ANGLE_GUIDANCE, which is the
-# legacy model-facing instruction text still used by the fat-prompt categories
-# (attractions, key_location).
+# referenced in ADR 0007 (nightlife), ADR 0009 (dining), ADR 0011
+# (accommodations), and ADR 0012 (attractions) — distinct from
+# LISTICLE_ANGLE_GUIDANCE, which is the legacy model-facing instruction text
+# still used by fat-prompt categories.
 ANGLE_DIRECTIVES_BY_CATEGORY: dict[str, dict[ListicleAngle, str]] = {
     "nightlife": {
         "best-for-night": (
@@ -117,6 +117,38 @@ ANGLE_DIRECTIVES_BY_CATEGORY: dict[str, dict[ListicleAngle, str]] = {
             "Open by naming the specific thing that sets {venue} apart from "
             "neighboring properties of the same kind — a design choice, a "
             "service rhythm, a location format, a hybrid concept."
+        ),
+    },
+    "attractions": {
+        "signature-feature": (
+            "Open by naming the specific feature {venue} is built around — "
+            "the viewpoint, route, room, artwork, ruin, exhibit, or natural "
+            "formation — and one concrete fact that makes it worth the stop."
+        ),
+        "setting": (
+            "Open by placing the reader at {venue} with one concrete physical "
+            "detail — the approach, surrounding terrain, material, light at a "
+            "specific hour, or what frames the site."
+        ),
+        "history-built": (
+            "Open by naming when {venue} was built, founded, used, or changed "
+            "and one specific fact tied to that history — who built it, what it "
+            "replaced, what it survived, or why it matters."
+        ),
+        "visit-time-tip": (
+            "Open with one specific, actionable visit tip for {venue} a "
+            "first-time visitor would not guess — a time of day, entrance, "
+            "walking order, ticket choice, or pacing move."
+        ),
+        "best-for-visit-type": (
+            "Open by naming the kind of visit {venue} serves best — a quick "
+            "photo stop, rainy afternoon, kid-friendly half day, full deep dive, "
+            "or quiet early-morning visit — and one concrete reason."
+        ),
+        "whats-different": (
+            "Open by naming the specific thing that sets {venue} apart from "
+            "nearby attractions of the same kind — a format, scale, access, "
+            "setting, collection, route, or viewpoint."
         ),
     },
 }
@@ -234,7 +266,7 @@ def _extract_json(text: str) -> Any:
         end = candidate.rfind("}")
         if start != -1 and end != -1 and end > start:
             try:
-                return json.loads(candidate[start : end + 1])
+                return json.loads(candidate[start: end + 1])
             except (ValueError, TypeError):
                 return None
         return None

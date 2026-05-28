@@ -7,15 +7,25 @@ import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { getLocationByIdForUpdate } from "../../repositories/core/location-read.repository";
 import { updateLocationById } from "../../repositories/core/location-write.repository";
 
-type PendingField = "type" | "idealFor";
+export type PendingField = "type" | "idealFor" | "bookingUrl";
 
-interface PendingEntry {
+export interface PendingEntry {
   value: string | string[];
   provenance: "ai";
 }
 
-interface PendingMap {
+export interface PendingMap {
   [field: string]: PendingEntry;
+}
+
+/** Mutates `pending` in place to add or replace an entry. */
+export function setPendingEntry(
+  pending: PendingMap,
+  field: PendingField,
+  value: string | string[],
+): PendingMap {
+  pending[field] = { value, provenance: "ai" };
+  return pending;
 }
 
 function parsePending(json: string | null | undefined): PendingMap {
@@ -53,8 +63,10 @@ function parseProvenance(json: string | null | undefined): Record<string, string
 }
 
 function isPendingField(value: string): value is PendingField {
-  return value === "type" || value === "idealFor";
+  return value === "type" || value === "idealFor" || value === "bookingUrl";
 }
+
+export { parsePending, parseProvenance };
 
 export class PendingSuggestionsService {
   acceptOrDismiss(
@@ -87,6 +99,9 @@ export class PendingSuggestionsService {
       } else if (field === "idealFor" && Array.isArray(entry.value)) {
         updates.idealForJson = JSON.stringify(entry.value);
         provenance.idealFor = entry.provenance;
+      } else if (field === "bookingUrl" && typeof entry.value === "string") {
+        updates.bookingUrl = entry.value;
+        provenance.bookingUrl = entry.provenance;
       } else {
         throw new BadRequestError(`Pending value for ${field} has unexpected shape`);
       }
@@ -104,5 +119,33 @@ export class PendingSuggestionsService {
     }
 
     return { applied: action, remaining: pending };
+  }
+
+  /**
+   * Write an AI-suggested value to `pending_suggestions.<field>` without
+   * touching the live field. Per ADR-0009 §6: edit-time AI suggestions surface
+   * as Pending Suggestions; operator must Accept to apply.
+   */
+  proposePending(
+    locationId: number,
+    field: PendingField,
+    value: string | string[],
+  ): { pending: PendingMap } {
+    const location = getLocationByIdForUpdate(locationId);
+    if (!location) {
+      throw new NotFoundError(`Location ${locationId} not found`);
+    }
+
+    const pending = parsePending(location.pendingSuggestionsJson);
+    setPendingEntry(pending, field, value);
+
+    const ok = updateLocationById(locationId, {
+      pendingSuggestionsJson: JSON.stringify(pending),
+    });
+    if (!ok) {
+      throw new Error(`Failed to update location ${locationId}`);
+    }
+
+    return { pending };
   }
 }

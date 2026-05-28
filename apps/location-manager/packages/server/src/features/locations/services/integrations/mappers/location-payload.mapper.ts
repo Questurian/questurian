@@ -248,9 +248,11 @@ function getNightlifeDetailsPayload(location: LocationResponse): PayloadNightlif
     ?? asRecord(getNightlifeSectionValue(details, "theDetails", "operationHours"))
     ?? location.operationHours
     ?? {};
-  const reserveUrl = asString(sectionDetails?.reserveUrl)
-    ?? asString(details.reserve_url)
-    ?? asString(getNightlifeSectionValue(details, "theDetails", "reserveUrl"))
+  const bookingUrl = location.bookingUrl
+    ?? asString(sectionDetails?.bookingUrl)
+    ?? asString(details.booking_url)
+    ?? asString(getNightlifeSectionValue(details, "theDetails", "bookingUrl"))
+    ?? asString(details.reserve_url) // legacy pre-ADR-0009 JSON key
     ?? "";
   const daytimeRestaurant = asBoolean(sectionDetails?.daytimeRestaurant)
     ?? asBoolean(details.daytime_restaurant)
@@ -282,7 +284,7 @@ function getNightlifeDetailsPayload(location: LocationResponse): PayloadNightlif
     },
     theDetails: {
       operationHours,
-      reserveUrl,
+      bookingUrl,
       daytimeRestaurant,
     },
   };
@@ -302,6 +304,7 @@ function getAttractionsDetailsPayload(location: LocationResponse): Record<string
 
   const payloadVisit = {
     ...(bookingRequired !== undefined ? { bookingRequired } : {}),
+    ...(location.bookingUrl ? { bookingUrl: location.bookingUrl } : {}),
   };
   return {
     ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
@@ -389,7 +392,11 @@ function parseAccommodationsGroups(location: LocationResponse): Record<string, u
     ...(asString(theDetails?.check_out_time) ? { checkOutTime: asString(theDetails?.check_out_time) } : {}),
     ...(asString(theDetails?.phone) ? { phone: asString(theDetails?.phone) } : {}),
     ...(asString(theDetails?.website_url) ? { websiteUrl: asString(theDetails?.website_url) } : {}),
-    ...(asString(theDetails?.booking_url) ? { bookingUrl: asString(theDetails?.booking_url) } : {}),
+    ...(location.bookingUrl
+      ? { bookingUrl: location.bookingUrl }
+      : asString(theDetails?.booking_url)
+        ? { bookingUrl: asString(theDetails?.booking_url) }
+        : {}),
     ...(asString(theDetails?.google_maps_url) ? { googleMapsUrl: asString(theDetails?.google_maps_url) } : {}),
   };
 
@@ -475,7 +482,7 @@ function mapDiningPayload(
     ...(location.idealFor ? { idealFor: location.idealFor } : {}),
     ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),
     ...(location.menuUrl ? { menuUrl: location.menuUrl } : {}),
-    ...(location.reservationUrl ? { reservationUrl: location.reservationUrl } : {}),
+    ...(location.bookingUrl ? { bookingUrl: location.bookingUrl } : {}),
   };
 }
 

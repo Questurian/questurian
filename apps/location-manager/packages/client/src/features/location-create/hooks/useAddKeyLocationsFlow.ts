@@ -337,7 +337,7 @@ export function useAddKeyLocationsFlow() {
         ianaTimeId: data.ianaTimeId || undefined,
         operationHours,
         website: data.website,
-        phoneNumber: data.phone,
+        phoneNumber: data.phone || undefined,
         keyLocationsDetails,
       },
       {

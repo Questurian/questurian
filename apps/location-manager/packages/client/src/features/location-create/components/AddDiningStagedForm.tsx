@@ -39,9 +39,9 @@ interface AddDiningStagedFormProps {
   isPrefillReady: boolean;
   locationTypes: { value: string; label: string }[];
   isLoadingTypes: boolean;
-  provenance: Partial<Record<"type" | "tripadvisorUrl" | "menuUrl" | "reservationUrl", FieldProvenance>>;
-  verifiedAiUrls: Record<"menuUrl" | "reservationUrl", boolean>;
-  onAcknowledgeAiUrl: (field: "menuUrl" | "reservationUrl", verified: boolean) => void;
+  provenance: Partial<Record<"type" | "tripadvisorUrl" | "menuUrl" | "bookingUrl", FieldProvenance>>;
+  verifiedAiUrls: Record<"menuUrl" | "bookingUrl", boolean>;
+  onAcknowledgeAiUrl: (field: "menuUrl" | "bookingUrl", verified: boolean) => void;
   allAiUrlsVerified: boolean;
   aiFieldStatus: Record<AiSuggestionFieldKey, AiFieldStatus>;
   onRetryAiField: (fieldKey: AiSuggestionFieldKey) => Promise<void> | void;
@@ -86,7 +86,7 @@ export function AddDiningStagedForm({
     (form.watch("idealFor")?.length ?? 0) > 0 &&
     !form.formState.errors.tripadvisorUrl &&
     !form.formState.errors.menuUrl &&
-    !form.formState.errors.reservationUrl &&
+    !form.formState.errors.bookingUrl &&
     !form.formState.errors.title &&
     !form.formState.errors.phoneNumber &&
     !form.formState.errors.website;
@@ -133,7 +133,7 @@ export function AddDiningStagedForm({
         "type",
         "tripadvisorUrl",
         "menuUrl",
-        "reservationUrl",
+        "bookingUrl",
         "title",
         "phoneNumber",
         "website",
@@ -487,31 +487,31 @@ export function AddDiningStagedForm({
                   <div className="space-y-2">
                     <Label className="inline-flex items-center gap-2">
                       Reservation URL
-                      <ProvenanceBadge provenance={provenance.reservationUrl} />
+                      <ProvenanceBadge provenance={provenance.bookingUrl} />
                       <AiStatusBadge
-                        fieldKey="reservationUrl"
+                        fieldKey="bookingUrl"
                         fieldLabel="Reservation URL"
-                        status={aiFieldStatus.reservationUrl}
+                        status={aiFieldStatus.bookingUrl}
                         onRetry={onRetryAiField}
                       />
                     </Label>
                     <Input
                       placeholder="https://example.com/reservations"
-                      {...form.register("reservationUrl")}
+                      {...form.register("bookingUrl")}
                     />
-                    {form.formState.errors.reservationUrl && (
+                    {form.formState.errors.bookingUrl && (
                       <p className="text-xs text-destructive">
-                        {form.formState.errors.reservationUrl.message}
+                        {form.formState.errors.bookingUrl.message}
                       </p>
                     )}
-                    {provenance.reservationUrl === "ai" && form.watch("reservationUrl") && (
+                    {provenance.bookingUrl === "ai" && form.watch("bookingUrl") && (
                       <label className="flex items-start gap-2 text-xs text-muted-foreground">
                         <input
                           type="checkbox"
                           className="mt-0.5 h-4 w-4 rounded border-border accent-foreground"
-                          checked={verifiedAiUrls.reservationUrl}
+                          checked={verifiedAiUrls.bookingUrl}
                           onChange={(event) =>
-                            onAcknowledgeAiUrl("reservationUrl", event.target.checked)
+                            onAcknowledgeAiUrl("bookingUrl", event.target.checked)
                           }
                         />
                         I opened the link and verified it works (required before Create).

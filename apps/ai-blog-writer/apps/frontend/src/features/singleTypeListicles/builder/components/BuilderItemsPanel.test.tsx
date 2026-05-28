@@ -33,6 +33,14 @@ vi.mock('../../../../shared/markdown-editor', () => ({
 }))
 
 function buildDraft(listicleType: SingleTypeListicleDraft['listicleType']): SingleTypeListicleDraft {
+  const blockTypeByListicleType = {
+    dining: 'data-dining',
+    accommodations: 'data-accommodations',
+    attractions: 'data-attractions',
+    nightlife: 'data-nightlife',
+    '': 'data-dining',
+  } as const
+
   return {
     draftId: 'draft-1',
     editorModelName: 'gemini-2.5-flash',
@@ -56,7 +64,7 @@ function buildDraft(listicleType: SingleTypeListicleDraft['listicleType']): Sing
     items: [
       {
         id: 'item-1',
-        blockType: listicleType === 'dining' ? 'data-dining' : 'data-accommodations',
+        blockType: blockTypeByListicleType[listicleType],
         item: 101,
         mediaMode: 'photos',
         selectedPhotos: [],
@@ -148,6 +156,15 @@ describe('BuilderItemsPanel', () => {
     renderPanel(buildDraft('accommodations'), [buildRelatedItem()])
 
     expect(screen.queryByRole('textbox', { name: /ideal for/i })).not.toBeInTheDocument()
+  })
+
+  it('shows attraction angle options for attractions listicles', () => {
+    renderPanel(buildDraft('attractions'), [buildRelatedItem()])
+
+    const angleSelect = screen.getByRole('combobox', { name: /blurb angle for item 1/i })
+    expect(angleSelect).toHaveTextContent('Signature Feature')
+    expect(angleSelect).toHaveTextContent('Visit-Time Tip')
+    expect(angleSelect).toHaveTextContent('Best For Visit Type')
   })
 
   it('shows auto-write as the primary AI action for empty blurbs', () => {

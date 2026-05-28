@@ -43,7 +43,7 @@ import {
   postTourTitleSuggestion, getTourSourceImage,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
   postAddMaps, postAddMapsWithPhotos, patchMapsById, postGooglePrefill, postFieldSuggestion,
-  postPendingSuggestionAccept, postPendingSuggestionDismiss,
+  postPendingSuggestionAccept, postPendingSuggestionDismiss, postPendingSuggestionPropose,
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
   // Content
@@ -178,6 +178,11 @@ app.post(
   "/api/dining/:id/pending-suggestions/dismiss",
   validateParams(deleteLocationIdSchema),
   postPendingSuggestionDismiss
+);
+app.post(
+  "/api/locations/:id/pending-suggestions/propose",
+  validateParams(deleteLocationIdSchema),
+  postPendingSuggestionPropose
 );
 app.delete(
   "/api/uploads/:id",

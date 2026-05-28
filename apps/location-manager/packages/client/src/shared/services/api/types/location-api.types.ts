@@ -17,7 +17,7 @@ export interface CreateMapsRequest {
   phoneNumber?: string;
   website?: string;
   menuUrl?: string;
-  reservationUrl?: string;
+  bookingUrl?: string;
   email?: string;
   placeId?: string;
   tripadvisorUrl?: string;
@@ -84,7 +84,7 @@ export interface GooglePrefillResponse {
   tripadvisorUrl: string | null;
   tripadvisorPlaceData: TripadvisorPrefillFields | null;
   menuUrl: string | null;
-  reservationUrl: string | null;
+  bookingUrl: string | null;
   provenance: Record<string, string>;
 }
 
@@ -108,7 +108,8 @@ export type AccommodationsFieldSuggestionFieldKey =
   | "gym"
   | "walkability"
   | "checkInTime"
-  | "checkOutTime";
+  | "checkOutTime"
+  | "bookingUrl";
 
 export interface AccommodationsFieldSuggestionRequest {
   category: Category;
@@ -126,7 +127,7 @@ export interface AccommodationsFieldSuggestionRequest {
 export interface AccommodationsFieldSuggestionResponse {
   fieldKey: AccommodationsFieldSuggestionFieldKey;
   fieldLabel: string;
-  kind: "single" | "multi";
+  kind: "single" | "multi" | "url";
   suggestion: string | string[] | null;
   confidence: number;
   reason: string;
@@ -143,7 +144,7 @@ export type DiningFieldSuggestionFieldKey =
   | "type"
   | "idealFor"
   | "menuUrl"
-  | "reservationUrl";
+  | "bookingUrl";
 
 export interface DiningFieldSuggestionRequest {
   category: "dining";
@@ -182,7 +183,7 @@ export interface UpdateMapsRequest {
   phoneNumber?: string;
   website?: string;
   menuUrl?: string | null;
-  reservationUrl?: string | null;
+  bookingUrl?: string | null;
   tripadvisorUrl?: string;
   selectedPayloadMediaSetIds?: string[] | null;
   idealFor?: string[];

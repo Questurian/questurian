@@ -71,6 +71,13 @@ export const addAttractionsSchema = z.object({
     .or(z.literal(""))
     .transform((value) => (value === "" ? undefined : value)),
   phone: z.string().trim().optional().or(z.literal("")),
+  bookingUrl: z
+    .string()
+    .trim()
+    .url("Tickets URL must be a valid URL")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? undefined : value)),
   tripadvisorUrl: z
     .string()
     .trim()

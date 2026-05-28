@@ -246,7 +246,7 @@ export const Dining: CollectionConfig = {
                       },
                     },
                     {
-                      name: 'reservationUrl',
+                      name: 'bookingUrl',
                       type: 'text',
                       admin: {
                         description: 'Reservation / booking URL (optional)',

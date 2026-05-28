@@ -149,7 +149,7 @@ function emptyFormValues(): EditLocationFormData {
     phoneNumber: "",
     website: "",
     menuUrl: "",
-    reservationUrl: "",
+    bookingUrl: "",
     email: "",
     neighborhoodDescription: "",
     operationHours: "",
@@ -178,7 +178,7 @@ function locationToFormValues(
     phoneNumber: location.contact.phoneNumber || "",
     website: location.contact.website || "",
     menuUrl: location.menuUrl || "",
-    reservationUrl: location.reservationUrl || "",
+    bookingUrl: location.bookingUrl || "",
     email: location.contact.email || "",
     neighborhoodDescription: location.neighborhoodDescription || "",
     operationHours: location.operationHours

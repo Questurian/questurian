@@ -67,7 +67,6 @@ export function AddKeyLocationsStagedForm({
     hasValue(form.watch("type")) &&
     hasValue(form.watch("status"));
   const operationsComplete =
-    hasValue(form.watch("phone")) &&
     hasValue(form.watch("hours"));
 
   const flowSections: Array<{
@@ -427,7 +426,7 @@ export function AddKeyLocationsStagedForm({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Phone</Label>
+                    <Label>Phone (optional)</Label>
                     <Input placeholder="+51 1 517-3100" {...form.register("phone")} />
                     {form.formState.errors.phone && (
                       <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>

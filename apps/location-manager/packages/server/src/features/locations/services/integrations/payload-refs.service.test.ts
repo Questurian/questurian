@@ -33,7 +33,7 @@ describe("getEditorialLocationsByPayloadRefs", () => {
       neighborhoodDescription: "Late-night corridor",
       website: "https://nebula.example.com",
       menuUrl: null,
-      reservationUrl: "https://nebula.example.com/reserve",
+      bookingUrl: "https://nebula.example.com/reserve",
       hoursJson: JSON.stringify({ Friday: "22:00 - 04:00" }),
       tripadvisorCuisinesJson: null,
       idealForJson: JSON.stringify(["Friends Night"]),

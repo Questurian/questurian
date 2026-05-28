@@ -129,7 +129,7 @@ function LegacyEditLocation() {
             category={location.category}
           />
           <TaxonomyFieldsSection form={form} />
-          <ContactFieldsSection form={form} category={location.category} />
+          <ContactFieldsSection form={form} category={location.category} locationId={location.id} />
           <DetailsFieldsSection
             form={form}
             operationHoursModalOpen={operationHoursModalOpen}

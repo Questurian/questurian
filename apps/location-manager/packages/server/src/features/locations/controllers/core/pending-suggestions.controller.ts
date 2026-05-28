@@ -1,9 +1,18 @@
 import type { Context } from "hono";
 import { ServiceContainer } from "@server/features/locations/container/service-container";
-import { successResponse } from "@shared/types/api-response";
-import { BadRequestError } from "@shared/errors/http-error";
+import { successResponse, errorResponse } from "@shared/types/api-response";
+import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
+import { getLocationById } from "../../repositories/core/location-read.repository";
+import type { LocationCategory } from "../../models/location";
 
 const container = ServiceContainer.getInstance();
+
+const SUPPORTED_PROPOSE_CATEGORIES: ReadonlySet<LocationCategory> = new Set([
+  "dining",
+  "accommodations",
+  "attractions",
+  "nightlife",
+]);
 
 export async function postPendingSuggestionAccept(c: Context) {
   return resolve(c, "accept");
@@ -11,6 +20,91 @@ export async function postPendingSuggestionAccept(c: Context) {
 
 export async function postPendingSuggestionDismiss(c: Context) {
   return resolve(c, "dismiss");
+}
+
+/**
+ * POST /api/locations/:id/pending-suggestions/propose
+ * Body: { field: "bookingUrl" }
+ *
+ * Per ADR-0009: runs the field-suggestion AI for bookingUrl, writes the result
+ * to pending_suggestions.bookingUrl. The operator then accepts or dismisses
+ * through the existing accept/dismiss flow.
+ */
+export async function postPendingSuggestionPropose(c: Context) {
+  const id = Number.parseInt(c.req.param("id"), 10);
+  if (!Number.isFinite(id) || id <= 0) {
+    throw new BadRequestError("Location id must be a positive integer");
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { field?: unknown };
+  if (body.field !== "bookingUrl") {
+    throw new BadRequestError('Body must include { field: "bookingUrl" }');
+  }
+
+  const location = getLocationById(id);
+  if (!location) {
+    throw new NotFoundError(`Location ${id} not found`);
+  }
+
+  const category = location.category;
+  if (!category || !SUPPORTED_PROPOSE_CATEGORIES.has(category)) {
+    throw new BadRequestError(
+      `Location category ${category ?? "(none)"} does not support bookingUrl suggestions`,
+    );
+  }
+
+  const formValues = {
+    name: location.name,
+    address: location.address,
+    bookingUrl: location.bookingUrl ?? "",
+  } as Record<string, unknown>;
+
+  const apiContext = {
+    placeId: location.placeId,
+    locationKey: location.locationKey,
+    district: location.district,
+    website: location.website,
+  };
+
+  const suggestion =
+    category === "accommodations"
+      ? await container.accommodationsFieldSuggestionService.suggestField({
+          category: "accommodations",
+          fieldKey: "bookingUrl",
+          formValues,
+          apiContext,
+        })
+      : await container.diningFieldSuggestionService.suggestField({
+          fieldKey: "bookingUrl",
+          category,
+          formValues,
+          apiContext,
+        });
+
+  if (!suggestion.suggestion || typeof suggestion.suggestion !== "string") {
+    return c.json(
+      errorResponse(suggestion.error || "AI did not return a usable booking URL."),
+      502,
+    );
+  }
+
+  const result = container.pendingSuggestionsService.proposePending(
+    id,
+    "bookingUrl",
+    suggestion.suggestion,
+  );
+
+  return c.json(
+    successResponse({
+      ...result,
+      suggestion: {
+        value: suggestion.suggestion,
+        confidence: suggestion.confidence,
+        reason: suggestion.reason,
+        sources: suggestion.sources,
+      },
+    }),
+  );
 }
 
 async function resolve(c: Context, action: "accept" | "dismiss") {

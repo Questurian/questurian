@@ -184,7 +184,7 @@ export interface PayloadNightlifeDetails {
   };
   theDetails: {
     operationHours: Record<string, unknown>;
-    reserveUrl: string;
+    bookingUrl: string;
     daytimeRestaurant: boolean;
   };
 }
@@ -338,7 +338,7 @@ export interface PayloadEntryData {
   phoneNumber?: string;
   website?: string;
   menuUrl?: string;
-  reservationUrl?: string;
+  bookingUrl?: string;
   email?: string;
   operationHours?: {
     hours: Array<{

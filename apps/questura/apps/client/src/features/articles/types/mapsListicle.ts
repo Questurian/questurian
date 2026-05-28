@@ -24,7 +24,7 @@ export type ListicleVenue = {
   phoneNumber?: string | null
   website?: string | null
   menuUrl?: string | null
-  reservationUrl?: string | null
+  bookingUrl?: string | null
   /** Payload JSON: `{ hours: [{ day, hours }] }` */
   operationHours?: unknown
 }

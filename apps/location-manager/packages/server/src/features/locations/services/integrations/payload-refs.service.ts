@@ -15,7 +15,7 @@ export interface EditorialLocation {
   neighborhoodDescription: string | null;
   website: string | null;
   menuUrl: string | null;
-  reservationUrl: string | null;
+  bookingUrl: string | null;
   operationHours: unknown | null;
   cuisines: string[] | null;
   idealFor: string[] | null;
@@ -94,7 +94,7 @@ export async function getEditorialLocationsByPayloadRefs(
       neighborhoodDescription: location.neighborhoodDescription ?? null,
       website: location.website ?? null,
       menuUrl: location.menuUrl ?? null,
-      reservationUrl: location.reservationUrl ?? null,
+      bookingUrl: location.bookingUrl ?? null,
       operationHours: safeParseJsonValue(location.hoursJson),
       cuisines: safeParseJsonArray(location.tripadvisorCuisinesJson),
       idealFor: safeParseJsonArray(location.idealForJson),

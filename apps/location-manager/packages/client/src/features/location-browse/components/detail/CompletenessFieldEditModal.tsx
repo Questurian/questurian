@@ -266,6 +266,8 @@ function getInitialValue(field: FieldDef, locationDetail: LocationResponse): str
       return contact.phoneNumber?.trim() ?? "";
     case "website":
       return contact.website?.trim() ?? "";
+    case "bookingUrl":
+      return locationDetail.bookingUrl?.trim() ?? "";
     case "contactUrl":
       return contact.url?.trim() ?? "";
     case "tripadvisorUrl":
@@ -335,6 +337,8 @@ function buildUpdatePayload(
       return { phoneNumber: trimmed || undefined };
     case "website":
       return { website: trimmed || undefined };
+    case "bookingUrl":
+      return { bookingUrl: trimmed || null };
     case "contactUrl":
       return null;
     case "tripadvisorUrl":
@@ -1325,7 +1329,7 @@ export function CompletenessFieldEditModal({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={`Enter ${field.label.toLowerCase()}`}
-            type={field.key === "website" ? "url" : "text"}
+            type={field.key === "website" || field.key === "bookingUrl" ? "url" : "text"}
           />
         );
     }

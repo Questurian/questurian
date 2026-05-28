@@ -45,7 +45,6 @@ from .listicle_writer import (
 from .writer_brief import (
     MIN_SOURCE_FACTS,
     WriterBrief,
-    WriterBriefTrace,
     run_writer_brief,
 )
 from .writer_models import WriterModelError, invoke_writer_model
@@ -485,7 +484,8 @@ def _generate_single_listicle_target(
     # 2b) writer_brief. The Writer Brief curator compresses the Research
     # Profile into a venue-tailored angle directive + flat Source Facts list.
     # Runs for categories on the lean writer path (ADR 0007 nightlife,
-    # ADR 0009 dining). The bucket-dump path remains for categories outside
+    # ADR 0009 dining, ADR 0011 accommodations, ADR 0012 attractions).
+    # The bucket-dump path remains for categories outside
     # LEAN_PROMPT_CATEGORIES until they are individually ported.
     use_lean_prompt = (
         is_blurb
@@ -687,16 +687,16 @@ def _generate_single_listicle_target(
                 "Return only the corrected final paragraph."
             )
         else:
-            # Dining lean retry routes through build_retry_prompt with a usable
-            # brief (ADR 0009). All other categories (and dining without a
-            # usable brief) get the fat-prompt retry.
+            # Lean retry routes through build_retry_prompt with a usable
+            # brief for categories ported after nightlife. Other categories
+            # get the fat-prompt retry.
             retry_brief = (
                 writer_brief
                 if (
                     use_lean_prompt
                     and writer_brief is not None
                     and writer_brief.is_usable
-                    and request_target.category == "dining"
+                    and request_target.category in {"dining", "accommodations", "attractions"}
                 )
                 else None
             )

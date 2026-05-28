@@ -421,7 +421,7 @@ function TourImageUploadPanel({
           0: file,
           length: 1,
           item: (index: number) => (index === 0 ? file : null),
-        } as FileList);
+        } as unknown as FileList);
       },
       onError: (error) => {
         setFileError(error instanceof Error ? error.message : "Could not download source image.");

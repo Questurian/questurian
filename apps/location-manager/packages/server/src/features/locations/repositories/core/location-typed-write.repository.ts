@@ -23,7 +23,7 @@ export function upsertTypedRow(
       tripadvisor_cuisines,
       tripadvisor_features,
       menu_url,
-      reservation_url,
+      booking_url,
       price_level
     )
     VALUES (
@@ -39,7 +39,7 @@ export function upsertTypedRow(
       $tripadvisor_cuisines,
       $tripadvisor_features,
       $menu_url,
-      $reservation_url,
+      $booking_url,
       $price_level
     )
     ON CONFLICT(entity_id) DO UPDATE SET
@@ -54,7 +54,7 @@ export function upsertTypedRow(
       tripadvisor_cuisines = excluded.tripadvisor_cuisines,
       tripadvisor_features = excluded.tripadvisor_features,
       menu_url = excluded.menu_url,
-      reservation_url = excluded.reservation_url,
+      booking_url = excluded.booking_url,
       price_level = excluded.price_level
   `).run({
     $entity_id: entityId,
@@ -69,7 +69,7 @@ export function upsertTypedRow(
     $tripadvisor_cuisines: params.tripadvisorCuisinesJson ?? null,
     $tripadvisor_features: params.tripadvisorFeaturesJson ?? null,
     $menu_url: params.menuUrl ?? null,
-    $reservation_url: params.reservationUrl ?? null,
+    $booking_url: params.bookingUrl ?? null,
     $price_level: params.priceLevel ?? null,
   });
 }
@@ -130,9 +130,9 @@ export function buildTypedUpdatePlan(id: number, updates: Partial<Location>): Up
     setClause.push("menu_url = $menu_url");
     params.$menu_url = updates.menuUrl;
   }
-  if (updates.reservationUrl !== undefined) {
-    setClause.push("reservation_url = $reservation_url");
-    params.$reservation_url = updates.reservationUrl;
+  if (updates.bookingUrl !== undefined) {
+    setClause.push("booking_url = $booking_url");
+    params.$booking_url = updates.bookingUrl;
   }
   if (updates.priceLevel !== undefined) {
     setClause.push("price_level = $price_level");

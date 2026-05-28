@@ -113,6 +113,12 @@ _Avoid_: attraction tour modal, quick tour, instant tour, tour import shortcut.
 
 A multi-variant image bundle (e.g. thumbnail / preview / full). LM generates variant files before Payload sync (per ADR `0001-mediaset-as-public-image-source` in Questura).
 
+### Location Booking URL
+
+A direct purchase/reservation URL for the Location itself (`bookingUrl`), surfaced per-category with category-appropriate labels (e.g. "Reservation URL" for dining and nightlife, "Booking URL" for accommodations, "Tickets URL" for attractions). Scoped to dining, accommodations, attractions, and nightlife; not applicable to key_locations.
+AI may suggest a `bookingUrl` value via grounded field-suggestion for any of the four enabled categories. At add-time the existing URL-acknowledgment gate blocks Create until the AI-supplied value is acknowledged, edited, or cleared — the gate generalises across categories, not dining-only. At edit-time, AI suggestions surface as **Pending Suggestion**s rather than direct field writes; the acknowledgment is structural (operator must Accept the suggestion to apply it) rather than a Save-button check.
+_Avoid_: confusing with `Tour.bookingLink`. A Location Booking URL is the location-level CTA; a Tour's `bookingLink` is the CTA for one bookable offering attached to a Location. An attraction may carry both — the Tours linked via `tourIds` and a fallback location-level `bookingUrl`.
+
 ### `InstagramEmbed`
 
 Curated social post linked to a Location.
@@ -140,7 +146,7 @@ _Avoid_: TripAdvisor review pipeline, accommodations review pipeline.
 
 ### Add Dining autofill flow
 
-The add-time workflow where an operator enters name, address, and a TripAdvisor URL (or marks the place as having no TripAdvisor listing); deterministic Google place data and — when supplied — TripAdvisor place data prefill high-confidence fields; and a grounded AI batch fills `idealFor`, `type` (only when Google's `types[]` mapping resolves to null or `other`), `menuUrl`, and `reservationUrl` before the Location is created. The flow is two reviewable phases (Basics, Review) plus the **Add-time photo import**; the prior post-create Stage 2 phase and the post-create Confirm Title phase do not exist in this flow.
+The add-time workflow where an operator enters name, address, and a TripAdvisor URL (or marks the place as having no TripAdvisor listing); deterministic Google place data and — when supplied — TripAdvisor place data prefill high-confidence fields; and a grounded AI batch fills `idealFor`, `type` (only when Google's `types[]` mapping resolves to null or `other`), `menuUrl`, and `bookingUrl` before the Location is created. The flow is two reviewable phases (Basics, Review) plus the **Add-time photo import**; the prior post-create Stage 2 phase and the post-create Confirm Title phase do not exist in this flow.
 _Avoid_: Add Dining Stage 1/Stage 2, ReviewsFetchPhase, dining review pipeline.
 
 ### Photo Import flow
@@ -209,8 +215,8 @@ Photos sourced via the **Photo Import flow** carry their Google contributor name
 - In the **Add Accommodations autofill flow**, API/AI prefill is one-shot for a given name/address signature. Restored drafts do not auto-run AI on page load; changing name/address makes prior prefill stale until Continue is clicked again, while the same already-prefilled signature cannot be rerun unless the operator clears the flow.
 - In the **Add Dining autofill flow**, the operator either supplies a TripAdvisor URL at Step 1 or explicitly marks the place as having no TripAdvisor listing; auto-resolution of TripAdvisor URL by external name+coordinate search is not part of this flow.
 - In the **Add Dining autofill flow**, field ownership precedence is `operator` > API (`google` / `tripadvisor`) > `ai`. Google owns deterministic prefill for placeId, coordinates, location key, district, time zone, phone, website, hours, and the initial `type` (when Google's `types[]` resolves to a known dining type). When the operator supplied a TripAdvisor URL, TripAdvisor place data prefills meal types, cuisines, features, and neighborhood description in the same Step 1 batch.
-- In the **Add Dining autofill flow**, the AI batch fires automatically inline after API prefill and blocks Step 1 with a single processing card until done. AI fills `idealFor` (always), `type` (only when Google deterministic mapping yielded null/`other`), `menuUrl`, and `reservationUrl`. Provenance for AI-supplied values is `ai`.
-- In the **Add Dining autofill flow**, AI-supplied URL fields (`menuUrl`, `reservationUrl`) require the operator to explicitly acknowledge each URL — by checking a verify control or by clearing/replacing the URL — before Create is enabled. AI-supplied option-list values (`idealFor`, `type`) do not require this acknowledgment because their domain is bounded.
+- In the **Add Dining autofill flow**, the AI batch fires automatically inline after API prefill and blocks Step 1 with a single processing card until done. AI fills `idealFor` (always), `type` (only when Google deterministic mapping yielded null/`other`), `menuUrl`, and `bookingUrl`. Provenance for AI-supplied values is `ai`.
+- In the **Add Dining autofill flow**, AI-supplied URL fields (`menuUrl`, `bookingUrl`) require the operator to explicitly acknowledge each URL — by checking a verify control or by clearing/replacing the URL — before Create is enabled. AI-supplied option-list values (`idealFor`, `type`) do not require this acknowledgment because their domain is bounded.
 - In the **Add Dining autofill flow**, the prior post-create AI re-suggest (Stage 2) phase, the post-create Confirm Title phase, the SerpAPI TripAdvisor-URL search by name+coordinates, and the Google-website link scraper for menu/reservation are removed. Title is operator-polished inline in the Review section.
 
 ## Naming Conventions

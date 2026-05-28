@@ -10,7 +10,6 @@ import {
 import {
   useStagedSources,
   useStartPhotoImport,
-  useRejectPhoto,
   useRetryStagedSource,
   useDeleteStagedSource,
   type StagedSourceSnapshot,
@@ -128,7 +127,6 @@ export function PhotoImportPanel({ locationId, category, placeId }: PhotoImportP
 
   const sourcesQuery = useStagedSources(locationId);
   const startImport = useStartPhotoImport();
-  const rejectPhoto = useRejectPhoto();
   const retryStaged = useRetryStagedSource();
   const deleteStaged = useDeleteStagedSource();
 

@@ -99,7 +99,7 @@ export interface GooglePrefillResult {
   tripadvisorUrl: string | null;
   tripadvisorPlaceData: TripadvisorPrefillFields | null;
   menuUrl: string | null;
-  reservationUrl: string | null;
+  bookingUrl: string | null;
   provenance: Record<string, string>;
 }
 
@@ -520,7 +520,7 @@ export class MapsService {
       ...(!existingLocation.phoneNumber && incomingEntry.phoneNumber && { phoneNumber: incomingEntry.phoneNumber }),
       ...(!existingLocation.website && incomingEntry.website && { website: incomingEntry.website }),
       ...(!existingLocation.menuUrl && incomingEntry.menuUrl && { menuUrl: incomingEntry.menuUrl }),
-      ...(!existingLocation.reservationUrl && incomingEntry.reservationUrl && { reservationUrl: incomingEntry.reservationUrl }),
+      ...(!existingLocation.bookingUrl && incomingEntry.bookingUrl && { bookingUrl: incomingEntry.bookingUrl }),
       ...(!existingLocation.email && incomingEntry.email && { email: incomingEntry.email }),
       ...(!existingLocation.neighborhoodDescription && incomingEntry.neighborhoodDescription && { neighborhoodDescription: incomingEntry.neighborhoodDescription }),
       ...(!existingLocation.placeId && incomingEntry.placeId && { placeId: incomingEntry.placeId }),
@@ -652,7 +652,7 @@ export class MapsService {
       provenance.tripadvisorUrl = diningEnrichment.tripadvisorUrlProvenance;
     }
     if (diningEnrichment.menuUrl) provenance.menuUrl = "scraper";
-    if (diningEnrichment.reservationUrl) provenance.reservationUrl = "scraper";
+    if (diningEnrichment.bookingUrl) provenance.bookingUrl = "scraper";
 
     return {
       googleUrl: generateGoogleMapsUrl(trimmedName, trimmedAddress),
@@ -671,7 +671,7 @@ export class MapsService {
       tripadvisorUrl: diningEnrichment.tripadvisorUrl,
       tripadvisorPlaceData: diningEnrichment.tripadvisorPlaceData,
       menuUrl: diningEnrichment.menuUrl,
-      reservationUrl: diningEnrichment.reservationUrl,
+      bookingUrl: diningEnrichment.bookingUrl,
       provenance,
     };
   }
@@ -689,7 +689,7 @@ export class MapsService {
     tripadvisorUrlProvenance: "operator" | "tripadvisor";
     tripadvisorPlaceData: TripadvisorPrefillFields | null;
     menuUrl: string | null;
-    reservationUrl: string | null;
+    bookingUrl: string | null;
   }> {
     if (category !== "dining") {
       return {
@@ -698,7 +698,7 @@ export class MapsService {
         tripadvisorUrlProvenance: "tripadvisor",
         tripadvisorPlaceData: null,
         menuUrl: null,
-        reservationUrl: null,
+        bookingUrl: null,
       };
     }
 
@@ -750,7 +750,7 @@ export class MapsService {
       tripadvisorUrlProvenance: tripadvisor.provenance,
       tripadvisorPlaceData,
       menuUrl: null,
-      reservationUrl: null,
+      bookingUrl: null,
     };
   }
 
@@ -843,8 +843,8 @@ export class MapsService {
     if (payload.menuUrl !== undefined) {
       entry.menuUrl = payload.menuUrl;
     }
-    if (payload.reservationUrl !== undefined) {
-      entry.reservationUrl = payload.reservationUrl;
+    if (payload.bookingUrl !== undefined) {
+      entry.bookingUrl = payload.bookingUrl;
     }
     const tripadvisorFields = this.resolveTripadvisorFields(payload.tripadvisorUrl);
     Object.assign(entry, tripadvisorFields);
@@ -1031,7 +1031,7 @@ export class MapsService {
       ...(updates.phoneNumber !== undefined && { phoneNumber: updates.phoneNumber }),
       ...(updates.website !== undefined && { website: updates.website }),
       ...(updates.menuUrl !== undefined && { menuUrl: updates.menuUrl }),
-      ...(updates.reservationUrl !== undefined && { reservationUrl: updates.reservationUrl }),
+      ...(updates.bookingUrl !== undefined && { bookingUrl: updates.bookingUrl }),
       ...(updates.email !== undefined && { email: updates.email }),
       ...(updates.neighborhoodDescription !== undefined && { neighborhoodDescription: updates.neighborhoodDescription }),
       ...(selectedPayloadMediaSetIdsJson !== undefined && { selectedPayloadMediaSetIdsJson }),

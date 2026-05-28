@@ -148,7 +148,7 @@ export const Nightlife: CollectionConfig = {
                                 description: 'Raw operation hours object from Location Manager',
                               },
                             },
-                            { name: 'reserveUrl', type: 'text' },
+                            { name: 'bookingUrl', type: 'text' },
                             { name: 'daytimeRestaurant', type: 'checkbox' },
                           ],
                         },
