@@ -1,5 +1,6 @@
 import { Block } from 'payload'
 import { angleField } from './utils/angleField'
+import { selectionReasonField } from './utils/selectionReasonField'
 import { createLocationFilter } from './utils/locationFilter'
 import { createItineraryItemMediaFields } from './utils/itemMedia'
 
@@ -30,5 +31,6 @@ export const ItineraryWhereStayingBlock: Block = {
         description: "Editorial context for where you're staying",
       },
     },
+    selectionReasonField,
   ],
 }

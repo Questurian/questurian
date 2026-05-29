@@ -187,6 +187,46 @@ Category meanings: dining frames the meal decisions the list helps with; nightli
 Related terms: List Tone, Listicle Angle.
 Do not confuse with: Listicle Angle, which is operator-selected per item and governs individual blurbs.
 
+### Itinerary Autobuild
+
+Definition: a pipeline that takes an operator's setup (location, title, day count) plus a free-text **Generation Brief** and fills a listicle-itinerary's day slots with selected Payload records, ordered per day, each carrying a **Selection Reason**. It fills *slots only* — it does not write blurbs, choose images, or publish. The operator reviews and edits the result in the builder before any blurb/image/publish step.
+Decision scope: the AI owns intent extraction and fit-scoring; deterministic code owns retrieval, day shaping/selection, and ordering. Querying Payload is function-calling over the REST API from inside the backend — not MCP, not a live CMS connection.
+Related terms: Generation Brief, Fit Score, Daypart, Lodging Anchor, Selection Reason, Plan Overview, List Tone.
+Do not confuse with: the blurb writer (separate, downstream; consumes Selection Reason as input).
+
+### Generation Brief
+
+Definition: the operator's free-text creative brief — the core AI input describing the intended experience ("luxury foodie day, fine dining, rooftop drinks, easy access"). Persisted as an internal (non-public) field so the itinerary can be re-generated and audited; it is not itinerary content shown to the public.
+Related terms: Itinerary Autobuild.
+Do not confuse with: the itinerary intro / header prose (public editorial content).
+
+### Fit Score
+
+Definition: an LLM-assigned score of how well a candidate record matches the extracted intent, computed by reading the record's existing tags/price/type. The LLM (not a keyword matcher) owns this so it can bridge divergent tag vocabularies across collections ("Fine Dining" ≈ "Luxury" ≈ "Upscale"). Used to rank candidates during selection.
+Related terms: Itinerary Autobuild, Selection Reason.
+
+### Daypart
+
+Definition: an internal planning concept (lunch / afternoon / dinner / drinks) the pipeline uses to shape and order a day. It is scaffolding only — never persisted as a field; it collapses into the existing ordered `items[]` and surfaces, if at all, inside the Selection Reason text. Itineraries carry no clock times.
+Related terms: Itinerary Autobuild, Lodging Anchor.
+Do not confuse with: a time slot (none exist) or any Payload field.
+
+### Lodging Anchor
+
+Definition: the single accommodation each day begins from; the fixed origin for that day's travel ordering. v1 uses one anchor for the whole trip (per-day lodging is an additive extension the schema already allows via per-day `whereStaying`). Ordering minimizes straight-line (Haversine) travel from the anchor through the day's selected stops.
+Related terms: Itinerary Autobuild, Daypart.
+
+### Selection Reason
+
+Definition: per-stop (and per-lodging) text explaining why this record filled this slot — written as a concrete fit + draw, deliberately shaped to seed a later blurb (not dry scoring text). Persisted as an internal Payload field, operator-editable, surfaced via an (i) popover in the builder, not rendered publicly.
+Related terms: Plan Overview, Fit Score; consumed downstream by the blurb writer (Listicle Angle / Writer Brief).
+Do not confuse with: a blurb (public editorial copy generated later).
+
+### Plan Overview
+
+Definition: a single trip-level rationale for the whole itinerary's shape (the day-by-day logic). Internal, persisted, operator-editable; companion to per-stop Selection Reasons.
+Related terms: Selection Reason, Itinerary Autobuild.
+
 ## Relationships
 
 - A **Run** has one **PipelineMeta** and many **StageResults**, finalized into one **PipelineArtifact**.

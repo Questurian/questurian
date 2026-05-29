@@ -43,6 +43,8 @@ import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-co
 import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
 import { fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
+import { generateItinerary } from '../builder/services/autobuild.api'
+import { applyAutobuildPlanToDraft } from '../builder/mappers/autobuild-plan.mapper'
 import { findItineraryItemById, type ListicleItineraryDraft } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
@@ -318,6 +320,7 @@ export default function ListicleItineraryBuilderPage() {
   }, [draft])
 
   const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
+  const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false)
 
   const applySlugAndOgUrl = useCallback((slug: string) => {
     const location = locations.find((l) => l.locationKey === draft?.location)
@@ -358,6 +361,45 @@ export default function ListicleItineraryBuilderPage() {
       setIsGeneratingSlug(false)
     }
   }, [draft, onError, applySlugAndOgUrl])
+
+  const handleGenerateItinerary = useCallback(async () => {
+    if (!draft) return
+    const brief = (draft.generationBrief || '').trim()
+    if (!draft.location || !draft.title.trim() || !brief) return
+    if (!token) {
+      onError('You must be signed in to generate an itinerary.')
+      return
+    }
+    const hasExistingStops = draft.days.some((day) => day.items.length > 0 || day.whereStaying.length > 0)
+    if (hasExistingStops && !window.confirm('This will replace the current stops with a freshly generated plan. Continue?')) {
+      return
+    }
+
+    setIsGeneratingItinerary(true)
+    setError(null)
+    setResult(null)
+    try {
+      const plan = await generateItinerary({
+        location: draft.location,
+        title: draft.title.trim(),
+        brief,
+        dayCount: draft.dayCount,
+        payloadToken: token,
+        sharedNeighborhoods: draft.sharedNeighborhoods,
+        modelName: resolveEditorAssistModelName(draft.editorModelName),
+      })
+      setDraft((current) => (current ? applyAutobuildPlanToDraft(current, plan) : current))
+      const filled = plan.days.reduce((sum, day) => sum + day.items.length, 0)
+      setResult(
+        `Generated ${filled} stop${filled === 1 ? '' : 's'} across ${plan.days.length} day${plan.days.length === 1 ? '' : 's'}.`
+        + (plan.notes.length ? ` Notes: ${plan.notes.join(' ')}` : ''),
+      )
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to generate itinerary.')
+    } finally {
+      setIsGeneratingItinerary(false)
+    }
+  }, [draft, token, onError, setDraft])
 
   const handleAutoFillOgUrl = useCallback(() => {
     if (!draft) return
@@ -771,6 +813,8 @@ export default function ListicleItineraryBuilderPage() {
             onSlugChange={applySlugAndOgUrl}
             onGenerateSlugWithAi={handleGenerateSlugWithAi}
             isGeneratingSlug={isGeneratingSlug}
+            onGenerateItinerary={handleGenerateItinerary}
+            isGeneratingItinerary={isGeneratingItinerary}
           />
 
           {(isStep1LockedView || isSynced) ? (

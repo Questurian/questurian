@@ -59,12 +59,17 @@ def _invoke_anthropic_writer(
     # the API returns 400 "temperature is deprecated for this model". Omit it
     # and let Anthropic apply its default.
     _ = temperature
+    # Stream the response. With large max_tokens the non-streaming API refuses the
+    # request ("Streaming is required for operations that may take longer than 10
+    # minutes"), since its worst-case timeout would exceed 10 min. Streaming has no
+    # such ceiling, so it lets us keep generous output limits.
     try:
-        message = client.messages.create(
+        with client.messages.stream(
             model=model_name,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
-        )
+        ) as stream:
+            message = stream.get_final_message()
     except Exception as exc:  # noqa: BLE001
         raise WriterModelError(f"Anthropic writer call failed: {exc}") from exc
 
@@ -115,7 +120,7 @@ def invoke_writer_model(
     *,
     prompt: str,
     model_name: str,
-    max_tokens: int = 1536,
+    max_tokens: int = 16384,
     temperature: float = 0.15,
 ) -> WriterResult:
     """Route a writer call to the appropriate provider based on model_name."""

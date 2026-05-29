@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 
 from utils import get_vertex_llm
 
+from .graph import run_itinerary_pipeline
+from .schemas import GenerateItineraryRequest, GenerateItineraryResponse
+
 router = APIRouter(prefix="/itineraries-pipeline", tags=["itineraries-pipeline"])
 logger = logging.getLogger(__name__)
 
@@ -48,7 +51,7 @@ async def generate_itinerary_titles(request: GenerateItineraryTitlesRequest) -> 
     try:
         llm = get_vertex_llm(
             temperature=0.35,
-            max_tokens=4096,
+            max_tokens=16384,
             model_name=model_used,
         )
         raw_result = llm.invoke(prompt)
@@ -64,3 +67,18 @@ async def generate_itinerary_titles(request: GenerateItineraryTitlesRequest) -> 
         raise HTTPException(status_code=502, detail="AI returned empty output")
 
     return GenerateItineraryTitlesResponse(text=raw_text, model_used=model_used)
+
+
+@router.post("/generate", response_model=GenerateItineraryResponse)
+async def generate_itinerary(request: GenerateItineraryRequest) -> GenerateItineraryResponse:
+    """Itinerary Autobuild: fill an itinerary's day slots from the brief.
+
+    Reads candidate records from Payload with the operator's JWT, scores and
+    selects them, orders each day, and returns the plan (slots + reasons only —
+    no blurbs/images). The frontend persists the result.
+    """
+    try:
+        return await run_itinerary_pipeline(request)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Itinerary Autobuild failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Itinerary generation failed") from exc

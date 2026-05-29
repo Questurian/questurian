@@ -125,6 +125,7 @@ async function itineraryItemToPayloadBlock(params: {
     // resolves to its single angle even when unselected.
     angle: resolveItineraryAngleForBlockType(item.blockType, item.angle) ?? undefined,
     blurb,
+    selectionReason: item.selectionReason?.trim() || undefined,
   }
 }
 
@@ -268,6 +269,8 @@ export function useItinerarySubmit({
         locationRef: selectedLocationRefId,
         sharedNeighborhoods: submitDraft.sharedNeighborhoods,
         listTone: submitDraft.listTone,
+        ...(submitDraft.generationBrief?.trim() ? { generationBrief: submitDraft.generationBrief.trim() } : {}),
+        ...(submitDraft.planOverview?.trim() ? { planOverview: submitDraft.planOverview.trim() } : {}),
         step1_complete: true,
         in_update_mode: false,
         step2_complete: submitDraft.step2_complete,

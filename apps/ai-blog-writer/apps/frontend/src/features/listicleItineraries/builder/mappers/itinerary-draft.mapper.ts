@@ -102,6 +102,7 @@ function mapPayloadBlockRowToItem(item: PayloadBlockRow, index: number): Itinera
     blurbMarkdown: item.blurb ? lexicalRichTextToMarkdown(item.blurb) : '',
     blurbLexical: item.blurb,
     blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
+    selectionReason: item.selectionReason?.trim() || '',
   }
 }
 
@@ -182,6 +183,8 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     hasLocalChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     listTone: resolveListTone(doc.listTone),
+    generationBrief: doc.generationBrief?.trim() || '',
+    planOverview: doc.planOverview?.trim() || '',
     title: doc.title || '',
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),

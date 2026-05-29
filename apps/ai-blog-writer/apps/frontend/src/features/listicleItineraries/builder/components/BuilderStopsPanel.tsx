@@ -542,6 +542,13 @@ export function BuilderStopsPanel({
         </div>
       </div>
 
+      {draft.planOverview?.trim() ? (
+        <div className="stl-plan-overview" role="note">
+          <span className="stl-plan-overview-label">ⓘ AI plan overview</span>
+          <p className="stl-plan-overview-text">{draft.planOverview}</p>
+        </div>
+      ) : null}
+
       <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
 
@@ -1372,6 +1379,25 @@ export function BuilderStopsPanel({
                 </div>
                 {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
                   <p className="stl-legacy-note">This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.</p>
+                ) : null}
+
+                {typeof item.selectionReason === 'string' ? (
+                  <div className="stl-stop-reason">
+                    <label className="stl-field-label-row">
+                      <span title="Why the AI chose this venue for this slot. Internal — not public. Seeds the blurb; edit freely.">
+                        ⓘ Why this pick
+                      </span>
+                    </label>
+                    <textarea
+                      className="stl-field-input stl-stop-reason-input"
+                      rows={2}
+                      value={item.selectionReason || ''}
+                      placeholder="AI rationale for this pick (internal — seeds the blurb)"
+                      onChange={(event) =>
+                        onUpdateItem(item.id, (current) => ({ ...current, selectionReason: event.target.value }))
+                      }
+                    />
+                  </div>
                 ) : null}
 
                 <RelatedItemPickerModal

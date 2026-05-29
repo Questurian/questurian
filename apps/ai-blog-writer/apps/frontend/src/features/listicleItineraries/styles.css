@@ -1969,3 +1969,49 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* Itinerary Autobuild — Description brief, plan overview, per-stop reason */
+.stl-autobuild {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--stl-border, #e2e2e2);
+}
+.stl-autobuild-brief {
+  width: 100%;
+  resize: vertical;
+}
+.stl-autobuild-actions {
+  margin-top: 10px;
+}
+.stl-plan-overview {
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--stl-border, #e2e2e2);
+  border-left: 3px solid var(--stl-accent, #2f6f4f);
+  border-radius: 6px;
+  background: var(--stl-subtle-bg, #f6f8f7);
+}
+.stl-plan-overview-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+.stl-plan-overview-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.stl-stop-reason {
+  margin-top: 10px;
+}
+.stl-stop-reason .stl-field-label-row span {
+  cursor: help;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.stl-stop-reason-input {
+  width: 100%;
+  resize: vertical;
+}

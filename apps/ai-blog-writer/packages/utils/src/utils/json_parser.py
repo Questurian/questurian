@@ -78,8 +78,9 @@ def parse_json_response(
     except json.JSONDecodeError as e:
         logger.debug(f"Initial JSON parse failed: {e}")
 
-        # Strategy 4: Try to fix truncated JSON by adding missing closing braces
-        fixed_result = _try_fix_truncated_json(result_text)
+        # Strategy 4: Repair common LLM defects — trailing commas, unterminated
+        # strings, and truncated arrays/objects (missing closing brackets).
+        fixed_result = _repair_json(result_text)
         if fixed_result is not None:
             return fixed_result
 
@@ -91,41 +92,72 @@ def parse_json_response(
         return default or {}
 
 
-def _try_fix_truncated_json(text: str) -> Optional[Dict[str, Any]]:
+def _repair_json(text: str) -> Optional[Dict[str, Any]]:
     """
-    Attempt to fix truncated JSON by adding missing closing braces/quotes.
+    Repair JSON that LLMs commonly emit malformed.
+
+    Handles, in a single string-aware pass:
+    - trailing commas before ``}`` / ``]`` (the usual cause of
+      "Expecting property name enclosed in double quotes")
+    - a response truncated mid-string (closes the open quote)
+    - a response truncated before its closing brackets (appends ``]``/``}``
+      in the correct nesting order, tracking both arrays and objects)
 
     Args:
-        text: Potentially truncated JSON string
+        text: Potentially malformed JSON string
 
     Returns:
-        Parsed JSON dict if fix was successful, None otherwise
+        Parsed JSON dict if repair succeeded, None otherwise
     """
-    open_braces = text.count("{")
-    close_braces = text.count("}")
+    stack: list[str] = []  # open containers, e.g. ['{', '[', '{']
+    in_string = False
+    escaped = False
 
-    if open_braces <= close_braces:
+    for ch in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]" and stack:
+            stack.pop()
+
+    fixed = text.rstrip()
+
+    # Close a string left open by truncation (e.g. ``"fit_note": "High-end``).
+    if in_string:
+        fixed += '"'
+
+    # Drop a dangling comma so the appended closer doesn't yield ``,}`` / ``,]``.
+    fixed = fixed.rstrip()
+    if fixed.endswith(","):
+        fixed = fixed[:-1].rstrip()
+
+    # Remove trailing commas that precede a closer anywhere in the body.
+    fixed = re.sub(r",(\s*[}\]])", r"\1", fixed)
+
+    # Append missing closers in reverse nesting order.
+    closers = {"{": "}", "[": "]"}
+    fixed += "".join(closers[ch] for ch in reversed(stack))
+
+    if fixed == text:
         return None
 
-    # Try adding closing braces and quotes
-    fixed_text = text.rstrip()
-
-    # If ends mid-string, close the string
-    if fixed_text.count('"') % 2 == 1:
-        fixed_text += '"'
-
-    # Add missing closing braces
-    missing_braces = open_braces - close_braces
-    fixed_text += "}" * missing_braces
-
-    logger.debug(f"Attempting to fix truncated JSON (added {missing_braces} braces)")
-
+    logger.debug("Attempting to repair malformed JSON")
     try:
-        result = json.loads(fixed_text)
-        logger.debug("Successfully parsed fixed JSON")
+        result = json.loads(fixed)
+        logger.debug("Successfully parsed repaired JSON")
         return result
     except json.JSONDecodeError:
-        logger.debug("Failed to parse fixed JSON")
+        logger.debug("Failed to parse repaired JSON")
         return None
 
 

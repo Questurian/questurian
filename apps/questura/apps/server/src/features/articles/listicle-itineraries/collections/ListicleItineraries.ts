@@ -18,6 +18,8 @@ import {
   sharedNeighborhoods,
   listTone,
   step1UiWrapper,
+  generationBrief,
+  planOverview,
   headerSection,
   dayCount,
   itineraryDays,
@@ -118,6 +120,8 @@ export const ListicleItineraries: CollectionConfig = {
     sharedNeighborhoods,
     listTone,
     step1UiWrapper,
+    generationBrief,
+    planOverview,
 
     headerSection,
     dayCount,

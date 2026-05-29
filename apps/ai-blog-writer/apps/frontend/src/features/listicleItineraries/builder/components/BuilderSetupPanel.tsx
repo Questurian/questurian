@@ -23,6 +23,9 @@ type BuilderSetupPanelProps = {
   onSlugChange?: (slug: string) => void
   onGenerateSlugWithAi?: () => Promise<void>
   isGeneratingSlug?: boolean
+  /** Itinerary Autobuild: fill the day slots from the Description brief. */
+  onGenerateItinerary?: () => void
+  isGeneratingItinerary?: boolean
 }
 
 function getAiTitleDisabledReason(draft: ListicleItineraryDraft, isSynced: boolean): string | undefined {
@@ -45,6 +48,8 @@ export function BuilderSetupPanel({
   onSlugChange,
   onGenerateSlugWithAi,
   isGeneratingSlug,
+  onGenerateItinerary,
+  isGeneratingItinerary,
 }: BuilderSetupPanelProps) {
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft, isSynced)
   const isSetupLocked = !isSynced && draft.step1_complete && !draft.in_update_mode
@@ -212,6 +217,41 @@ export function BuilderSetupPanel({
           </label>
         ) : null}
       </div>
+
+      {onGenerateItinerary ? (
+        <div className="stl-field stl-autobuild">
+          <label className="stl-field-label-row">
+            <span>Description (AI Autobuild brief)</span>
+          </label>
+          <textarea
+            className="stl-field-input stl-autobuild-brief"
+            rows={5}
+            value={draft.generationBrief || ''}
+            disabled={isSetupLocked || isGeneratingItinerary}
+            placeholder="Describe the experience — e.g. eat at the most luxurious fine-dining spots, premium afternoon, rooftop cocktails, comfortable central hotel, easy access between stops."
+            onChange={(event) => updateDraft({ generationBrief: event.target.value })}
+          />
+          <small className="stl-summary-note">
+            The AI reads the title + this brief, queries published listings, and fills the day slots
+            (with a reason for each pick). Blurbs and images are not generated. Re-running replaces the current stops.
+          </small>
+          <div className="stl-autobuild-actions">
+            <button
+              type="button"
+              className="stl-btn stl-btn-primary"
+              onClick={() => onGenerateItinerary()}
+              disabled={
+                isGeneratingItinerary
+                || !draft.location
+                || !draft.title.trim()
+                || !(draft.generationBrief || '').trim()
+              }
+            >
+              {isGeneratingItinerary ? 'Generating itinerary…' : 'Generate itinerary with AI'}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
     </section>
   )

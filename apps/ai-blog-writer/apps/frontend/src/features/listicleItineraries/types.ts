@@ -323,6 +323,11 @@ export type ItineraryItemBlock = {
   blurbMarkdown: string
   blurbLexical?: PayloadRichText
   blurbJsonText?: string
+  /**
+   * Internal AI rationale for why this record filled this slot, produced by
+   * Itinerary Autobuild. Operator-editable, not public; seeds the blurb writer.
+   */
+  selectionReason?: string
 }
 
 export type ListicleItineraryDraft = {
@@ -338,6 +343,10 @@ export type ListicleItineraryDraft = {
   editorModelName: EditorAssistModelName
   /** One editorial register for every blurb and the intro in this itinerary. */
   listTone: ListTone
+  /** Itinerary Autobuild: the operator's creative brief (internal, persisted). */
+  generationBrief?: string
+  /** Itinerary Autobuild: trip-level rationale for the plan (internal, persisted). */
+  planOverview?: string
   title: string
   location: string
   locationRef: number | null
@@ -379,6 +388,8 @@ export type PayloadItineraryDoc = {
   locationRef?: number | { id?: number }
   sharedNeighborhoods?: Array<number | { id?: number }>
   listTone?: ListTone
+  generationBrief?: string | null
+  planOverview?: string | null
   step1_complete?: boolean
   in_update_mode?: boolean
   step2_complete?: boolean
@@ -513,6 +524,7 @@ export type PayloadItineraryDoc = {
     instagramPost?: number | { id?: number } | null
     angle?: ListicleAngle | null
     blurb?: PayloadRichText
+    selectionReason?: string | null
   }>
   seoSection?: {
     seoTitle?: string | null
