@@ -1,4 +1,5 @@
 import { Block } from 'payload'
+import { angleField } from './utils/angleField'
 import { createLocationFilter } from './utils/locationFilter'
 import { createItineraryItemMediaFields } from './utils/itemMedia'
 
@@ -20,6 +21,7 @@ export const ItineraryAttractionsBlock: Block = {
       },
     },
     ...createItineraryItemMediaFields('attractions'),
+    angleField,
     {
       name: 'blurb',
       type: 'richText',

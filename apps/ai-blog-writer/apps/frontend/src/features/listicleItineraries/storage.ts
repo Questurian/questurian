@@ -3,8 +3,12 @@ import { createDraftStorage } from '../../shared/builder/storage/createDraftStor
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import {
   createEmptyDaySlice,
+  DEFAULT_LIST_TONE,
   isRelatedItemCollection,
   isTourAgencyPriceTier,
+  resolveItineraryAngleForBlockType,
+  resolveListTone,
+  type ItineraryBlockType,
   type ItineraryItemBlock,
   type ItineraryDaySlice,
   type ListicleItineraryDraft,
@@ -104,17 +108,19 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       ? itemValue.id
       : `${normalizedDraftId}_item_${itemIndex}`
 
+    const blockType: ItineraryBlockType =
+      itemValue.blockType === 'itinerary-accommodations'
+      || itemValue.blockType === 'itinerary-where-staying'
+      || itemValue.blockType === 'itinerary-attractions'
+      || itemValue.blockType === 'itinerary-nightlife'
+      || itemValue.blockType === 'itinerary-key-location'
+      || itemValue.blockType === 'itinerary-tour-agency'
+        ? itemValue.blockType
+        : 'itinerary-dining'
+
     return {
       id: itemId,
-      blockType:
-        itemValue.blockType === 'itinerary-accommodations'
-        || itemValue.blockType === 'itinerary-where-staying'
-        || itemValue.blockType === 'itinerary-attractions'
-        || itemValue.blockType === 'itinerary-nightlife'
-        || itemValue.blockType === 'itinerary-key-location'
-        || itemValue.blockType === 'itinerary-tour-agency'
-          ? itemValue.blockType
-          : 'itinerary-dining',
+      blockType,
       item: typeof itemValue.item === 'number' ? itemValue.item : null,
       mediaMode:
         itemValue.mediaMode === 'instagram'
@@ -146,6 +152,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
         : [],
       image: typeof itemValue.image === 'number' ? itemValue.image : null,
       instagramPost: typeof itemValue.instagramPost === 'number' ? itemValue.instagramPost : null,
+      angle: resolveItineraryAngleForBlockType(blockType, itemValue.angle),
       blurbMarkdown: typeof itemValue.blurbMarkdown === 'string' ? itemValue.blurbMarkdown : '',
       blurbLexical: isRecord(itemValue.blurbLexical) ? itemValue.blurbLexical : undefined,
       blurbJsonText: typeof itemValue.blurbJsonText === 'string' ? itemValue.blurbJsonText : '',
@@ -164,6 +171,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
     editorModelName: resolveEditorAssistModelName(
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined,
     ),
+    listTone: resolveListTone(value.listTone),
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',
     locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,
@@ -270,6 +278,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     payloadAuthorName: undefined,
     hasLocalChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
+    listTone: DEFAULT_LIST_TONE,
     title: '',
     location: '',
     locationRef: null,

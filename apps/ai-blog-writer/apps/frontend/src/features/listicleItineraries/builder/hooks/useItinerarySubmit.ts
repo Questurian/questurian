@@ -6,6 +6,7 @@ import { createItinerary, markdownToLexical, updateItinerary } from '../../api'
 import { saveDraft } from '../../storage'
 import {
   isManualItineraryBlockType,
+  resolveItineraryAngleForBlockType,
   type ItineraryBlockType,
   type InstagramPostOption,
   type ItineraryItemBlock,
@@ -120,6 +121,9 @@ async function itineraryItemToPayloadBlock(params: {
     mediaMode: item.mediaMode,
     selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
     selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,
+    // Pool-less stops (key-location) resolve to null and are omitted; nightlife
+    // resolves to its single angle even when unselected.
+    angle: resolveItineraryAngleForBlockType(item.blockType, item.angle) ?? undefined,
     blurb,
   }
 }
@@ -263,6 +267,7 @@ export function useItinerarySubmit({
         location: submitDraft.location,
         locationRef: selectedLocationRefId,
         sharedNeighborhoods: submitDraft.sharedNeighborhoods,
+        listTone: submitDraft.listTone,
         step1_complete: true,
         in_update_mode: false,
         step2_complete: submitDraft.step2_complete,

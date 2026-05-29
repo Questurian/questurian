@@ -4,6 +4,7 @@ import {
   buildItineraryGenerateListicleContentRequest,
   getItineraryAutoWriteTargetIds,
   getItineraryIntroTargetId,
+  getItineraryStopAngleDisabledReason,
 } from './ai-autowrite.service'
 import type {
   ItineraryItemBlock,
@@ -16,6 +17,7 @@ function buildDraft(): ListicleItineraryDraft {
   return {
     draftId: 'draft-1',
     editorModelName: 'gemini-2.5-flash',
+    listTone: 'elevated',
     title: 'One Perfect Day in Lima',
     location: 'peru|lima',
     locationRef: 1,
@@ -277,5 +279,132 @@ describe('listicleItineraries ai autowrite service', () => {
     expect(request.targets[0]?.supportingContext).toContain('Price: $$$')
     expect(request.targets[0]?.supportingContext).toContain('Tour duration: 8 hours')
     expect(request.targets[0]?.supportingContext).toContain('Starting point: Plaza de Armas (-13.516, -71.978)')
+  })
+
+  it('plumbs the resolved per-stop angle and the list tone into the request', () => {
+    const draft = buildDraft()
+    draft.days[0].items[1] = {
+      ...draft.days[0].items[1],
+      blurbMarkdown: '',
+      angle: 'signature-dish',
+    }
+
+    const request = buildItineraryGenerateListicleContentRequest({
+      draft,
+      relatedByBlockType: buildRelatedByBlockType(),
+      locations: buildLocations(),
+      targetIds: ['stop-2_blurb'],
+      modelName: 'gemini-2.5-flash',
+    })
+
+    expect(request.listTone).toBe('elevated')
+    expect(request.targets[0]).toEqual(expect.objectContaining({
+      targetId: 'stop-2_blurb',
+      category: 'dining',
+      angle: 'signature-dish',
+    }))
+  })
+
+  it('auto-resolves nightlife stops to best-for-night even with no angle selected', () => {
+    const draft = buildDraft()
+    draft.days[0].items = [{
+      ...draft.days[0].items[1],
+      id: 'night-1',
+      blockType: 'itinerary-nightlife',
+      item: 301,
+      blurbMarkdown: '',
+      angle: null,
+    }]
+    const related = buildRelatedByBlockType() as Record<
+      ItineraryItemBlock['blockType'],
+      RelatedItemOption[]
+    >
+    related['itinerary-nightlife'] = [
+      { id: 301, title: 'Carnaval', location: 'Barranco, Lima', gallery: [], instagramGallery: [] },
+    ]
+
+    const request = buildItineraryGenerateListicleContentRequest({
+      draft,
+      relatedByBlockType: related,
+      locations: buildLocations(),
+      targetIds: ['night-1_blurb'],
+      modelName: 'gemini-2.5-flash',
+    })
+
+    expect(request.targets[0]).toEqual(expect.objectContaining({
+      targetId: 'night-1_blurb',
+      category: 'nightlife',
+      angle: 'best-for-night',
+    }))
+  })
+
+  it('sends a null angle for pool-less key-location stops', () => {
+    const draft = buildDraft()
+
+    const request = buildItineraryGenerateListicleContentRequest({
+      draft,
+      relatedByBlockType: buildRelatedByBlockType(),
+      locations: buildLocations(),
+      targetIds: ['stop-1_blurb'],
+      modelName: 'gemini-2.5-flash',
+    })
+
+    expect(request.targets[0]).toEqual(expect.objectContaining({
+      targetId: 'stop-1_blurb',
+      category: 'key_location',
+      angle: null,
+    }))
+  })
+
+  describe('angle gating', () => {
+    const relatedCast = () => buildRelatedByBlockType() as Record<
+      ItineraryItemBlock['blockType'],
+      RelatedItemOption[]
+    >
+
+    it('excludes pooled-category stops without an angle and reports why', () => {
+      const draft = buildDraft()
+      const dining: ItineraryItemBlock = {
+        ...draft.days[0].items[1],
+        blurbMarkdown: '',
+        angle: null,
+      }
+      draft.days[0].items[1] = dining
+
+      expect(getItineraryStopAngleDisabledReason(dining)).toBe(
+        'Select a blurb angle before generating',
+      )
+      // key-location stop (pool-less) stays eligible; the dining stop is skipped.
+      expect(getItineraryAutoWriteTargetIds(draft, relatedCast())).toEqual([
+        getItineraryIntroTargetId(draft),
+        'stop-1_blurb',
+      ])
+    })
+
+    it('includes the pooled stop once an angle is selected', () => {
+      const draft = buildDraft()
+      const dining: ItineraryItemBlock = {
+        ...draft.days[0].items[1],
+        blurbMarkdown: '',
+        angle: 'signature-dish',
+      }
+      draft.days[0].items[1] = dining
+
+      expect(getItineraryStopAngleDisabledReason(dining)).toBeUndefined()
+      expect(getItineraryAutoWriteTargetIds(draft, relatedCast())).toContain('stop-2_blurb')
+    })
+
+    it('never blocks pool-less or single-angle nightlife stops', () => {
+      const draft = buildDraft()
+      // key-location (no pool)
+      expect(getItineraryStopAngleDisabledReason(draft.days[0].items[0])).toBeUndefined()
+      // nightlife with no angle still resolves to best-for-night
+      const night: ItineraryItemBlock = {
+        ...draft.days[0].items[1],
+        blockType: 'itinerary-nightlife',
+        angle: null,
+      }
+      expect(getItineraryStopAngleDisabledReason(night)).toBeUndefined()
+    })
   })
 })

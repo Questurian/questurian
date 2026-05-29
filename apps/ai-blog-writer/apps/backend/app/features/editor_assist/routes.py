@@ -3,6 +3,7 @@ Editor Assist API routes.
 
 Provides lightweight AI rewrite actions for staging block editors.
 """
+
 import logging
 import re
 import time
@@ -115,7 +116,9 @@ def _safe_text(value: Any) -> str:
 
 
 def _strip_markdown_fence(text: str) -> str:
-    fenced = re.match(r"^\s*```(?:markdown|md)?\s*(.*?)\s*```\s*$", text, flags=re.S | re.I)
+    fenced = re.match(
+        r"^\s*```(?:markdown|md)?\s*(.*?)\s*```\s*$", text, flags=re.S | re.I
+    )
     if fenced:
         return fenced.group(1).strip()
     return text.strip()
@@ -160,15 +163,27 @@ PayloadCollectionSlug = Literal[
 ]
 ListicleAngleRequest = Literal[
     # Dining
-    "signature-dish", "atmosphere", "founders-backstory",
-    "insider-tip", "best-for", "whats-different",
+    "signature-dish",
+    "atmosphere",
+    "founders-backstory",
+    "insider-tip",
+    "best-for",
+    "whats-different",
     # Accommodations (ADR 0011)
-    "location-and-setting", "view-and-vista", "design-and-aesthetic",
-    "signature-amenity", "food-and-beverage", "trip-fit",
-    "property-backstory", "booking-tip",
+    "location-and-setting",
+    "view-and-vista",
+    "design-and-aesthetic",
+    "signature-amenity",
+    "food-and-beverage",
+    "trip-fit",
+    "property-backstory",
+    "booking-tip",
     # Attractions
-    "signature-feature", "setting", "history-built",
-    "visit-time-tip", "best-for-visit-type",
+    "signature-feature",
+    "setting",
+    "history-built",
+    "visit-time-tip",
+    "best-for-visit-type",
     # Nightlife (single-angle pool per ADR 0008)
     "best-for-night",
 ]
@@ -197,7 +212,9 @@ class GenerateListicleContentRequest(BaseModel):
     article_title: str = Field(min_length=1, max_length=MAX_ARTICLE_TITLE_CHARS)
     article_type: ListicleArticleType
     location_label: str = Field(min_length=1, max_length=300)
-    article_context: str | None = Field(default=None, max_length=MAX_ARTICLE_CONTEXT_CHARS)
+    article_context: str | None = Field(
+        default=None, max_length=MAX_ARTICLE_CONTEXT_CHARS
+    )
     model_name: str | None = Field(default=None, max_length=120)
     custom_instruction: str | None = Field(default=None, max_length=MAX_PROMPT_CHARS)
     skip_existing: bool = False
@@ -290,11 +307,15 @@ def _generate_title_impl(request: GenerateTitleRequest) -> GenerateTitleResponse
 
     raw_text = writer_result.text
     if not raw_text:
-        raise HTTPException(status_code=502, detail="AI title generation returned empty output")
+        raise HTTPException(
+            status_code=502, detail="AI title generation returned empty output"
+        )
 
     title = _extract_generated_title(raw_text)
     if not title:
-        raise HTTPException(status_code=502, detail="AI title generation returned empty title")
+        raise HTTPException(
+            status_code=502, detail="AI title generation returned empty title"
+        )
 
     return GenerateTitleResponse(title=title)
 
@@ -413,17 +434,19 @@ def _generate_single_listicle_target(
 
     # 1) critical_fields_evaluated
     cf_start = time.perf_counter()
-    steps.append(StepEvent(
-        name="critical_fields_evaluated",
-        status="ok" if cf_result.passed else "failed",
-        details={
-            "passed": cf_result.passed,
-            "missing": list(cf_result.missing),
-            "category": request_target.category,
-            "field_type": request_target.field_type,
-        },
-        duration_ms=_elapsed_ms(cf_start),
-    ))
+    steps.append(
+        StepEvent(
+            name="critical_fields_evaluated",
+            status="ok" if cf_result.passed else "failed",
+            details={
+                "passed": cf_result.passed,
+                "missing": list(cf_result.missing),
+                "category": request_target.category,
+                "field_type": request_target.field_type,
+            },
+            duration_ms=_elapsed_ms(cf_start),
+        )
+    )
     if not cf_result.passed:
         return GenerateListicleTargetResponse(
             target_id=request_target.target_id,
@@ -442,33 +465,35 @@ def _generate_single_listicle_target(
         source_urls = _merge_urls(source_urls, research_profile.source_urls)
         warnings = list(research_profile.warnings)
         trace = research_profile_trace or ResearchProfileTrace(prompt="")
-        steps.append(StepEvent(
-            name="research_profile_completed",
-            status="ok" if research_profile.usable_for_blurb else "failed",
-            prompt=trace.prompt or None,
-            output=trace.raw_response or None,
-            model=trace.model or None,
-            details={
-                "requested_angle": requested_angle,
-                "effective_angle": research_profile.effective_angle,
-                "selected_angle": {
-                    "angle": research_profile.selected_angle.angle,
-                    "status": research_profile.selected_angle.status,
-                    "summary": research_profile.selected_angle.summary,
-                    "citations": list(research_profile.selected_angle.citations),
-                    "reason": research_profile.selected_angle.reason,
+        steps.append(
+            StepEvent(
+                name="research_profile_completed",
+                status="ok" if research_profile.usable_for_blurb else "failed",
+                prompt=trace.prompt or None,
+                output=trace.raw_response or None,
+                model=trace.model or None,
+                details={
+                    "requested_angle": requested_angle,
+                    "effective_angle": research_profile.effective_angle,
+                    "selected_angle": {
+                        "angle": research_profile.selected_angle.angle,
+                        "status": research_profile.selected_angle.status,
+                        "summary": research_profile.selected_angle.summary,
+                        "citations": list(research_profile.selected_angle.citations),
+                        "reason": research_profile.selected_angle.reason,
+                    },
+                    "standard_buckets": _research_buckets_details(
+                        research_profile.standard_buckets
+                    ),
+                    "usable_for_blurb": research_profile.usable_for_blurb,
+                    "source_urls": list(source_urls),
+                    "warnings": list(warnings),
+                    "parser_dropped_reason": trace.parser_dropped_reason,
+                    "error": trace.error,
                 },
-                "standard_buckets": _research_buckets_details(
-                    research_profile.standard_buckets
-                ),
-                "usable_for_blurb": research_profile.usable_for_blurb,
-                "source_urls": list(source_urls),
-                "warnings": list(warnings),
-                "parser_dropped_reason": trace.parser_dropped_reason,
-                "error": trace.error,
-            },
-            duration_ms=_elapsed_ms(rp_start),
-        ))
+                duration_ms=_elapsed_ms(rp_start),
+            )
+        )
 
     # 3) writer_called
     angle_failed = (
@@ -478,7 +503,11 @@ def _generate_single_listicle_target(
         and effective_angle is None
     )
     low_confidence = angle_failed
-    if is_blurb and research_profile is not None and not research_profile.usable_for_blurb:
+    if (
+        is_blurb
+        and research_profile is not None
+        and not research_profile.usable_for_blurb
+    ):
         low_confidence = True
 
     # 2b) writer_brief. The Writer Brief curator compresses the Research
@@ -497,13 +526,9 @@ def _generate_single_listicle_target(
     if use_lean_prompt:
         wb_start = time.perf_counter()
         venue_name = (
-            request_target.research_subject
-            or request_target.display_name
-            or ""
+            request_target.research_subject or request_target.display_name or ""
         ).strip()
-        location_label = (
-            request_target.location_label or article_location
-        ).strip()
+        location_label = (request_target.location_label or article_location).strip()
         writer_brief, wb_trace = run_writer_brief(
             venue_name=venue_name,
             location_label=location_label,
@@ -513,27 +538,29 @@ def _generate_single_listicle_target(
         )
         if not writer_brief.is_usable:
             low_confidence = True
-        steps.append(StepEvent(
-            name="writer_brief_completed",
-            status="ok" if writer_brief.is_usable else "failed",
-            prompt=wb_trace.prompt or None,
-            output=wb_trace.raw_response or None,
-            model=wb_trace.model or None,
-            details={
-                "angle": writer_brief.angle,
-                "angle_directive": writer_brief.angle_directive,
-                "source_facts": [
-                    {"fact": entry.fact, "citations": list(entry.citations)}
-                    for entry in writer_brief.source_facts
-                ],
-                "source_facts_count": len(writer_brief.source_facts),
-                "min_source_facts": MIN_SOURCE_FACTS,
-                "is_usable": writer_brief.is_usable,
-                "parser_dropped_reason": wb_trace.parser_dropped_reason,
-                "error": wb_trace.error,
-            },
-            duration_ms=_elapsed_ms(wb_start),
-        ))
+        steps.append(
+            StepEvent(
+                name="writer_brief_completed",
+                status="ok" if writer_brief.is_usable else "failed",
+                prompt=wb_trace.prompt or None,
+                output=wb_trace.raw_response or None,
+                model=wb_trace.model or None,
+                details={
+                    "angle": writer_brief.angle,
+                    "angle_directive": writer_brief.angle_directive,
+                    "source_facts": [
+                        {"fact": entry.fact, "citations": list(entry.citations)}
+                        for entry in writer_brief.source_facts
+                    ],
+                    "source_facts_count": len(writer_brief.source_facts),
+                    "min_source_facts": MIN_SOURCE_FACTS,
+                    "is_usable": writer_brief.is_usable,
+                    "parser_dropped_reason": wb_trace.parser_dropped_reason,
+                    "error": wb_trace.error,
+                },
+                duration_ms=_elapsed_ms(wb_start),
+            )
+        )
 
     findings_block = _format_research_profile_block(research_profile)
     target = _to_listicle_writer_target(
@@ -556,7 +583,11 @@ def _generate_single_listicle_target(
             custom_instruction=custom_instruction,
             list_tone=list_tone,
         )
-    elif is_blurb and research_profile is not None and not research_profile.usable_for_blurb:
+    elif (
+        is_blurb
+        and research_profile is not None
+        and not research_profile.usable_for_blurb
+    ):
         prompt = build_identity_only_writer_prompt(
             article_title=article_title,
             article_type=article_type,
@@ -597,13 +628,40 @@ def _generate_single_listicle_target(
             temperature=0.15,
         )
     except WriterModelError as exc:
-        steps.append(StepEvent(
+        steps.append(
+            StepEvent(
+                name="writer_called",
+                status="failed",
+                prompt=prompt,
+                model=model_name,
+                details={
+                    "error": str(exc),
+                    "custom_instruction": custom_instruction or None,
+                    "list_tone": list_tone,
+                    "requested_angle": requested_angle,
+                    "effective_angle": effective_angle,
+                    "low_confidence": low_confidence,
+                    "warnings": list(warnings),
+                },
+                duration_ms=_elapsed_ms(wr_start),
+            )
+        )
+        logger.exception(
+            "Writer model call failed for target %s", request_target.target_id
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    candidate = strip_generation_fence(writer_result.text)
+    model_used = writer_result.model_name
+    steps.append(
+        StepEvent(
             name="writer_called",
-            status="failed",
+            status="ok",
             prompt=prompt,
-            model=model_name,
+            output=candidate,
+            model=model_used,
             details={
-                "error": str(exc),
+                "raw_output": writer_result.text,
                 "custom_instruction": custom_instruction or None,
                 "list_tone": list_tone,
                 "requested_angle": requested_angle,
@@ -612,29 +670,8 @@ def _generate_single_listicle_target(
                 "warnings": list(warnings),
             },
             duration_ms=_elapsed_ms(wr_start),
-        ))
-        logger.exception("Writer model call failed for target %s", request_target.target_id)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    candidate = strip_generation_fence(writer_result.text)
-    model_used = writer_result.model_name
-    steps.append(StepEvent(
-        name="writer_called",
-        status="ok",
-        prompt=prompt,
-        output=candidate,
-        model=model_used,
-        details={
-            "raw_output": writer_result.text,
-            "custom_instruction": custom_instruction or None,
-            "list_tone": list_tone,
-            "requested_angle": requested_angle,
-            "effective_angle": effective_angle,
-            "low_confidence": low_confidence,
-            "warnings": list(warnings),
-        },
-        duration_ms=_elapsed_ms(wr_start),
-    ))
+        )
+    )
 
     # 4) validated
     val_start = time.perf_counter()
@@ -642,16 +679,18 @@ def _generate_single_listicle_target(
         field_type=target.field_type,
         text=candidate,
     )
-    steps.append(StepEvent(
-        name="validated",
-        status="ok" if not validation_errors else "failed",
-        details={
-            "validation_errors": list(validation_errors),
-            "passed": not validation_errors,
-            "field_type": target.field_type,
-        },
-        duration_ms=_elapsed_ms(val_start),
-    ))
+    steps.append(
+        StepEvent(
+            name="validated",
+            status="ok" if not validation_errors else "failed",
+            details={
+                "validation_errors": list(validation_errors),
+                "passed": not validation_errors,
+                "field_type": target.field_type,
+            },
+            duration_ms=_elapsed_ms(val_start),
+        )
+    )
 
     # 5) retry_called (only when first validation failed)
     if validation_errors:
@@ -696,7 +735,8 @@ def _generate_single_listicle_target(
                     use_lean_prompt
                     and writer_brief is not None
                     and writer_brief.is_usable
-                    and request_target.category in {"dining", "accommodations", "attractions"}
+                    and request_target.category
+                    in {"dining", "accommodations", "attractions"}
                 )
                 else None
             )
@@ -721,15 +761,19 @@ def _generate_single_listicle_target(
                 temperature=0.1,
             )
         except WriterModelError as exc:
-            steps.append(StepEvent(
-                name="retry_called",
-                status="failed",
-                prompt=retry_prompt,
-                model=model_name,
-                details={"error": str(exc)},
-                duration_ms=_elapsed_ms(rt_start),
-            ))
-            logger.exception("Writer model retry failed for target %s", request_target.target_id)
+            steps.append(
+                StepEvent(
+                    name="retry_called",
+                    status="failed",
+                    prompt=retry_prompt,
+                    model=model_name,
+                    details={"error": str(exc)},
+                    duration_ms=_elapsed_ms(rt_start),
+                )
+            )
+            logger.exception(
+                "Writer model retry failed for target %s", request_target.target_id
+            )
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
         candidate = strip_generation_fence(retry_result.text)
@@ -738,37 +782,41 @@ def _generate_single_listicle_target(
             text=candidate,
         )
         model_used = retry_result.model_name
-        steps.append(StepEvent(
-            name="retry_called",
-            status="ok" if not validation_errors else "failed",
-            prompt=retry_prompt,
-            output=candidate,
-            model=model_used,
-            details={
-                "raw_output": retry_result.text,
-                "post_retry_validation_errors": list(validation_errors),
-                "passed": not validation_errors,
-            },
-            duration_ms=_elapsed_ms(rt_start),
-        ))
+        steps.append(
+            StepEvent(
+                name="retry_called",
+                status="ok" if not validation_errors else "failed",
+                prompt=retry_prompt,
+                output=candidate,
+                model=model_used,
+                details={
+                    "raw_output": retry_result.text,
+                    "post_retry_validation_errors": list(validation_errors),
+                    "passed": not validation_errors,
+                },
+                duration_ms=_elapsed_ms(rt_start),
+            )
+        )
 
     # 6) finalized
     fn_start = time.perf_counter()
     if validation_errors:
-        steps.append(StepEvent(
-            name="finalized",
-            status="failed",
-            output=candidate,
-            model=model_used,
-            details={
-                "final_status": "error",
-                "validation_errors": list(validation_errors),
-                "source_urls": list(source_urls),
-                "low_confidence": low_confidence,
-                "warnings": list(warnings),
-            },
-            duration_ms=_elapsed_ms(fn_start),
-        ))
+        steps.append(
+            StepEvent(
+                name="finalized",
+                status="failed",
+                output=candidate,
+                model=model_used,
+                details={
+                    "final_status": "error",
+                    "validation_errors": list(validation_errors),
+                    "source_urls": list(source_urls),
+                    "low_confidence": low_confidence,
+                    "warnings": list(warnings),
+                },
+                duration_ms=_elapsed_ms(fn_start),
+            )
+        )
         return GenerateListicleTargetResponse(
             target_id=request_target.target_id,
             status="error",
@@ -783,19 +831,21 @@ def _generate_single_listicle_target(
             steps=steps,
         )
 
-    steps.append(StepEvent(
-        name="finalized",
-        status="ok",
-        output=candidate,
-        model=model_used,
-        details={
-            "final_status": "generated",
-            "source_urls": list(source_urls),
-            "low_confidence": low_confidence,
-            "warnings": list(warnings),
-        },
-        duration_ms=_elapsed_ms(fn_start),
-    ))
+    steps.append(
+        StepEvent(
+            name="finalized",
+            status="ok",
+            output=candidate,
+            model=model_used,
+            details={
+                "final_status": "generated",
+                "source_urls": list(source_urls),
+                "low_confidence": low_confidence,
+                "warnings": list(warnings),
+            },
+            duration_ms=_elapsed_ms(fn_start),
+        )
+    )
     return GenerateListicleTargetResponse(
         target_id=request_target.target_id,
         status="generated",
@@ -813,6 +863,8 @@ def _generate_single_listicle_target(
 def _evaluate_target_cf(
     request_target: GenerateListicleTargetRequest,
 ) -> CriticalFieldsResult:
+    if request_target.field_type == "intro":
+        return CriticalFieldsResult(passed=True, missing=[])
     return evaluate_critical_fields(
         name=request_target.display_name or request_target.research_subject,
         category=request_target.category,
@@ -848,13 +900,15 @@ def _build_research_profile_requests(
             continue
         venue_name = (t.display_name or t.research_subject or "").strip()
         location_label = (t.location_label or article_location).strip()
-        requests.append(ResearchProfileRequest(
-            target_id=t.target_id,
-            venue_name=venue_name,
-            location_label=location_label,
-            category=t.category,
-            requested_angle=t.angle,
-        ))
+        requests.append(
+            ResearchProfileRequest(
+                target_id=t.target_id,
+                venue_name=venue_name,
+                location_label=location_label,
+                category=t.category,
+                requested_angle=t.angle,
+            )
+        )
     return requests
 
 
@@ -864,7 +918,9 @@ def _generate_listicle_content_impl(
     article_title = request.article_title.strip()
     article_location = request.location_label.strip()
     article_context = request.article_context.strip() if request.article_context else ""
-    custom_instruction = request.custom_instruction.strip() if request.custom_instruction else ""
+    custom_instruction = (
+        request.custom_instruction.strip() if request.custom_instruction else ""
+    )
 
     if not article_title:
         raise HTTPException(status_code=400, detail="article_title is required")
@@ -930,7 +986,9 @@ def _generate_listicle_content_impl(
                 model_name=model_used,
                 cf_result=cf_by_target_id[request_target.target_id],
                 research_profile=research_by_target_id.get(request_target.target_id),
-                research_profile_trace=research_trace_by_target_id.get(request_target.target_id),
+                research_profile_trace=research_trace_by_target_id.get(
+                    request_target.target_id
+                ),
                 list_tone=request.list_tone,
                 requested_angle=requested_angle,
                 effective_angle=effective_angle,
@@ -1009,7 +1067,9 @@ def _rewrite_block_impl(request: RewriteBlockRequest) -> RewriteBlockResponse:
 
     rewritten_content = _extract_rewritten_block(raw_text)
     if not rewritten_content:
-        raise HTTPException(status_code=502, detail="AI rewrite returned empty block content")
+        raise HTTPException(
+            status_code=502, detail="AI rewrite returned empty block content"
+        )
 
     rewritten_content = normalize_dashes(rewritten_content)
 
@@ -1047,7 +1107,9 @@ async def get_listicle_guidelines() -> ListicleGuidelinesResponse:
     )
 
 
-@router.post("/generate-listicle-content", response_model=GenerateListicleContentResponse)
+@router.post(
+    "/generate-listicle-content", response_model=GenerateListicleContentResponse
+)
 async def generate_listicle_content(
     request: GenerateListicleContentRequest,
 ) -> GenerateListicleContentResponse:
@@ -1058,7 +1120,9 @@ async def generate_listicle_content(
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Editor Assist graph generate-listicle-content failed: %s", exc)
+        logger.exception(
+            "Editor Assist graph generate-listicle-content failed: %s", exc
+        )
         raise HTTPException(
             status_code=502,
             detail="AI listicle generation graph failed",

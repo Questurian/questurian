@@ -164,6 +164,7 @@ Do not confuse with: grounded-search citation snippets, which are produced on de
 ### List Tone
 
 Definition: a single editorial register chosen by the operator at listicle setup that applies uniformly to every blurb and the intro in that listicle (e.g. Elevated, Casual, Hidden Gem, Family-Friendly, Date Night, Budget). One per listicle.
+Article-type scope: one List Tone per article for both single-type listicles and listicle itineraries. An itinerary spanning multiple days and mixed categories still carries exactly one List Tone; per-item variation comes from Listicle Angle, not tone.
 Related terms: Listicle Angle.
 Do not confuse with: Article Type (which is the structural template — single-type-listicle vs guide vs review — not a voice register).
 
@@ -172,9 +173,19 @@ Do not confuse with: Article Type (which is the structural template — single-t
 Definition: a per-item editorial framing for each blurb in a listicle, drawn from a category-specific pool of angles that map to lead-sentence shapes (named noun + fact, sensory detail + room, person + fact, actionable tip, occasion + evidence, differentiator). Always operator-selected per item; the pipeline has no auto-angle path (ADR 0010). Combined with List Tone, the writer prompt becomes "write in <tone> from the <angle> angle for <venue>."
 Per-category pool status: dining has a production pool (`signature-dish`, `atmosphere`, `founders-backstory`, `insider-tip`, `best-for`, `whats-different`) since ADR 0003 and routes through the lean writer prompt + Writer Brief since ADR 0009; nightlife ships with a single-angle pool (`best-for-night`); accommodations ships with a 9-angle pool (`location-and-setting`, `view-and-vista`, `design-and-aesthetic`, `signature-amenity`, `food-and-beverage`, `trip-fit`, `property-backstory`, `booking-tip`, `whats-different`) since ADR 0011 and routes through the lean writer prompt + Writer Brief; attractions ships with a 6-angle pool (`signature-feature`, `setting`, `history-built`, `visit-time-tip`, `best-for-visit-type`, `whats-different`) since ADR 0012 and routes through the lean writer prompt + Writer Brief; key_location has no pool yet.
 Pool use: each pool serves as the vocabulary for the operator dropdown and Research Profile selected-angle evidence.
+Article-type scope: the same per-category pools apply per item in both single-type listicles and listicle itineraries. In an itinerary, each stop's category selects its pool (dining/nightlife/accommodations/attractions). The two itinerary-only block types carry no angle: `key_location` (no pool yet) and `tour-agency` (manual stop driven by its structured fields). Itineraries reuse the existing pools rather than introducing itinerary-specific or flow/sequencing angles; stop sequencing is carried by the intro and per-stop supporting context, not the angle.
 Requested vs effective: `requested_angle` is the operator's intent; `effective_angle` is the supported angle actually sent to the writer and may be null when the operator's chosen framing lacks cited evidence (low-confidence fallback).
 Related terms: List Tone, Critical Fields Guideline.
 Do not confuse with: List Tone (one per listicle vs one per item); `idealFor` (a venue attribute, not an editorial angle).
+
+### Listicle Category Intro Angle
+
+Definition: a list-level editorial framing for the article intro, derived from the listicle's venue category (dining, nightlife, accommodations, attractions). It shapes what promise the intro makes before the item list begins.
+Source boundary: intro generation uses selected venue names, article title, location, listicle type, item count, List Tone, and the category intro angle; per-venue Research Profiles stay blurb-only.
+Long-list rule: selected venue names inform the range and promise of the intro, but the intro should not list venue names by default.
+Category meanings: dining frames the meal decisions the list helps with; nightlife frames the kind of night out the list helps plan; accommodations frames the kind of stay the list helps choose; attractions frames the kind of visit the list helps shape.
+Related terms: List Tone, Listicle Angle.
+Do not confuse with: Listicle Angle, which is operator-selected per item and governs individual blurbs.
 
 ## Relationships
 
@@ -192,7 +203,7 @@ Do not confuse with: List Tone (one per listicle vs one per item); `idealFor` (a
 - An article cannot be synced to Payload from a Draft with `hasUnsyncedPayloadChanges = false` that has not been edited locally — that's a no-op, not an error.
 - `aiFieldPaths` filled by AI Blog Writer **must** conform to `/location-guide-contract.json`. Out-of-contract writes are rejected at the contract boundary.
 - Vertex AI usage is centralized in `packages/utils.get_vertex_llm`; features should not instantiate clients directly.
-- **Listicle Angle is always operator-selected.** The pipeline has no auto-angle path; generation is blocked until the operator picks an angle from the category pool (ADR 0010).
+- **Listicle Angle is always operator-selected.** The pipeline has no auto-angle path; generation is blocked until the operator picks an angle from the category pool (ADR 0010). In itineraries this gating is per-stop and scoped to pooled categories: a stop whose category has a pool requires an angle before that stop is eligible for auto-write, while `key_location` and `tour-agency` stops (no pool) are always eligible; bulk "auto-write all" generates eligible stops and skips angle-less ones with a visible reason rather than hard-failing. Single-angle nightlife stops (ADR 0008) are force-resolved to `best-for-night`, so they are never blocked.
 - A user-selected **Listicle Angle** is authoritative research intent; if cited evidence cannot support it, the writer may fall back to **Research Bucket** evidence only and must mark the item low-confidence rather than invent angle support or silently switch angles.
 - **Research Profile** proves or rejects the selected angle while gathering standard **Research Buckets**; if selected-angle evidence is weak/unsupported, the writer falls back to Research Buckets as low-confidence, then identity-only low-confidence if buckets are also unusable.
 - Only supported selected-angle evidence reaches the writer as a **Listicle Angle**; weak or unsupported angle evidence is excluded from the writer prompt and surfaced as a warning.
@@ -234,6 +245,7 @@ When working in this context:
 - Should `keyword_intel` (non-article feature) be split into its own context? It shares the run lifecycle but not the article shape.
 - Is the converter genuinely stateless across content edge cases (tables, embedded HTML)? No regression tests exist at the converter boundary.
 - The `images` and `editor_assist` features are not represented in the Stage[N] vocabulary — they're orthogonal services. Should the glossary distinguish "article features" vs "assist features"?
+- Should the itinerary manual `tour-agency` stop be retired in favor of attraction-linked tours? The Payload `attractions.tours` relationship already exists (ordered, from LM); an attraction stop card could recommend its linked tours instead of a standalone manual tour stop. Tracked as proposed ADR 0013; deferred from the AI auto-write hookup (tours are structured data, not AI prose).
 
 ## Child Contexts
 

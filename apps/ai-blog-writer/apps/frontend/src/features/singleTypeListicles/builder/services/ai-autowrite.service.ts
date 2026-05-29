@@ -59,6 +59,21 @@ function mapBlockTypeToCategory(blockType: ListicleBlockType): ListicleWriterCat
   }
 }
 
+function mapListicleTypeToCategory(listicleType: SingleTypeListicleDraft['listicleType']): ListicleWriterCategory | undefined {
+  switch (listicleType) {
+    case 'accommodations':
+      return 'accommodations'
+    case 'attractions':
+      return 'attractions'
+    case 'nightlife':
+      return 'nightlife'
+    case 'dining':
+      return 'dining'
+    default:
+      return undefined
+  }
+}
+
 function mapBlockTypeToPayloadCollection(
   blockType: ListicleBlockType,
 ): 'dining' | 'accommodations' | 'attractions' | 'nightlife' {
@@ -79,6 +94,14 @@ export function getSingleTypeIntroTargetId(draft: SingleTypeListicleDraft): stri
   return `${draft.draftId}${INTRO_TARGET_ID_SUFFIX}`
 }
 
+export function getSingleTypeIntroDisabledReason(draft: SingleTypeListicleDraft): string | undefined {
+  if (!draft.listicleType) return 'Select a listicle data type first'
+  if (draft.targetItemCount < 1) return 'Select a target list size first'
+  if (draft.items.length < draft.targetItemCount) return 'Create all item slots before writing intro'
+  if (draft.items.some((item) => !item.item)) return 'Select every item before writing intro'
+  return undefined
+}
+
 function buildIntroTarget(
   draft: SingleTypeListicleDraft,
   relatedItems: RelatedItemOption[],
@@ -97,6 +120,7 @@ function buildIntroTarget(
   return {
     targetId: getSingleTypeIntroTargetId(draft),
     fieldType: 'intro',
+    category: mapListicleTypeToCategory(draft.listicleType),
     currentContent: draft.header.introMarkdown,
     locationLabel: articleLocationLabel,
     supportingContext,
@@ -137,7 +161,7 @@ export function getSingleTypeAutoWriteTargetIds(
   relatedItems: RelatedItemOption[],
 ): string[] {
   const targetIds: string[] = []
-  if (!draft.header.introMarkdown.trim()) {
+  if (!draft.header.introMarkdown.trim() && !getSingleTypeIntroDisabledReason(draft)) {
     targetIds.push(getSingleTypeIntroTargetId(draft))
   }
 

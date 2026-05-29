@@ -1,4 +1,4 @@
-import { resizeItineraryDays, type ListicleItineraryDraft, type LocationOption } from '../../types'
+import { LIST_TONE_OPTIONS, resizeItineraryDays, type ListicleItineraryDraft, type ListTone, type LocationOption } from '../../types'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
 import { AiTitleInput } from '../../../../shared/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
@@ -160,6 +160,28 @@ export function BuilderSetupPanel({
             ) : null}
           </div>
         </label>
+
+        <div className="stl-field">
+          <label className="stl-field-label-row">
+            <span>List Tone *</span>
+          </label>
+          <select
+            className="stl-field-input"
+            value={draft.listTone}
+            disabled={isSetupLocked}
+            onChange={(event) => updateDraft({ listTone: event.target.value as ListTone })}
+            aria-label="List tone for AI-generated copy"
+          >
+            {LIST_TONE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} — {option.description}
+              </option>
+            ))}
+          </select>
+          <small className="stl-summary-note">
+            Sets the editorial register for every blurb and the intro in this itinerary. You can change it any time and re-generate.
+          </small>
+        </div>
 
         {showNeighborhoodPicker ? (
           <label className="stl-field">

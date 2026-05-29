@@ -22,6 +22,7 @@ type BuilderHeaderPanelProps = {
   isIntroAiGenerating: boolean
   introAiQueueCount: number
   introAiStatus: string | null
+  introAiDisabledReason?: string
   isLocked: boolean
   isSynced?: boolean
   onContinueStep2: () => void
@@ -43,6 +44,7 @@ export function BuilderHeaderPanel({
   isIntroAiGenerating,
   introAiQueueCount,
   introAiStatus,
+  introAiDisabledReason,
   isLocked,
   isSynced = false,
   onContinueStep2,
@@ -86,7 +88,8 @@ export function BuilderHeaderPanel({
             type="button"
             className={introAiButtonClassName}
             onClick={() => void onIntroAiAutoWrite()}
-            disabled={isIntroAiGenerating}
+            disabled={isIntroAiGenerating || Boolean(introAiDisabledReason)}
+            title={introAiDisabledReason}
           >
             <AiJobButtonContent
               isRunning={isIntroAiGenerating}

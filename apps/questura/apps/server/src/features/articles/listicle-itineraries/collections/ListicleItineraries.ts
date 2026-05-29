@@ -16,6 +16,7 @@ import {
   location,
   locationRef,
   sharedNeighborhoods,
+  listTone,
   step1UiWrapper,
   headerSection,
   dayCount,
@@ -115,6 +116,7 @@ export const ListicleItineraries: CollectionConfig = {
     locationRef,
     slug,
     sharedNeighborhoods,
+    listTone,
     step1UiWrapper,
 
     headerSection,

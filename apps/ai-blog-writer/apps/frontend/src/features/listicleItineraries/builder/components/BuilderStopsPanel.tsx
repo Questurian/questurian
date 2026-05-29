@@ -8,6 +8,7 @@ import type {
   InstagramPostOption,
   ItineraryBlockType,
   ItineraryItemBlock,
+  ListicleAngle,
   ListicleItineraryDraft,
   MediaAssetOption,
   MediaMode,
@@ -18,11 +19,13 @@ import type {
   TourAgencyStartingPoint,
 } from '../../types'
 import {
+  getItineraryAngleOptions,
   isManualItineraryBlockType as isManualBlockType,
   relatedCollectionToBlockType,
   TOUR_AGENCY_PRICE_TIERS,
   WHERE_STAYING_BLOCK_TYPE,
 } from '../../types'
+import { getItineraryStopAngleDisabledReason } from '../services/ai-autowrite.service'
 import {
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
@@ -578,6 +581,8 @@ export function BuilderStopsPanel({
             const firstItemPhoto = photoObjects[0]
             const firstItemPhotoUrl = firstItemPhoto ? resolveImageUrl(firstItemPhoto) : undefined
             const selectedRelatedItemLabel = getRelatedItemDisplayLabel(selectedRelatedItem)
+            const angleOptions = getItineraryAngleOptions(item.blockType)
+            const angleDisabledReason = getItineraryStopAngleDisabledReason(item)
             const existingStopOptions = buildExistingStopOptions(relatedByBlockType)
             const selectedStartingPointExistingStopKey = getSelectedStartingPointExistingStopKey(
               item.startingPoint,
@@ -1299,11 +1304,40 @@ export function BuilderStopsPanel({
                   <div className="stl-field-label-row">
                     <span>Blurb *</span>
                     <div className="stl-inline-actions">
+                      {angleOptions.length > 0 ? (
+                        <select
+                          className="stl-field-input stl-angle-select"
+                          value={item.angle && angleOptions.some((option) => option.value === item.angle) ? item.angle : ''}
+                          onChange={(event) => {
+                            const next = event.target.value
+                            onUpdateItem(item.id, (current) => ({
+                              ...current,
+                              angle: next === '' ? null : (next as ListicleAngle),
+                            }))
+                          }}
+                          aria-label={
+                            section === 'whereStaying'
+                              ? `Blurb angle for lodging ${localIndex + 1}`
+                              : `Blurb angle for stop ${localIndex + 1}`
+                          }
+                          title="Blurb angle — operator must select one before generating"
+                        >
+                          <option value="" disabled>
+                            Select an angle…
+                          </option>
+                          {angleOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
                       <button
                         type="button"
                         className="stl-btn stl-btn-secondary"
                         onClick={() => void onStopBlurbAiAutoWrite(item.id)}
-                        disabled={activeAiItemId === item.id}
+                        disabled={activeAiItemId === item.id || Boolean(angleDisabledReason)}
+                        title={angleDisabledReason}
                       >
                         {activeAiItemId === item.id
                           ? 'Writing...'

@@ -121,13 +121,16 @@ def test_build_writer_prompt_for_intro_keeps_article_context():
         target=ListicleWriterTarget(
             target_id="draft-1_header_intro",
             field_type="intro",
-            category=None,
+            category="nightlife",
             supporting_context="Selected venues: Ayahuasca",
         ),
     )
 
     assert "BUILDER CONTEXT\nSelected venues: Ayahuasca" in prompt
     assert "ARTICLE CONTEXT\n### Item 1\nSelected source snapshot" in prompt
+    assert "LISTICLE CATEGORY INTRO ANGLE\nnightlife:" in prompt
+    assert "Use selected venue names as range context only" in prompt
+    assert "Use the online research to inform the copy" not in prompt
 
 
 def test_build_generation_prompt_for_itinerary_intro_uses_itinerary_guidance():
@@ -207,12 +210,9 @@ def test_voice_rules_block_is_injected_for_nightlife_blurb():
     assert "Do not write a standalone address sentence" in block
 
 
-def test_voice_rules_block_is_empty_for_non_enabled_categories():
-    """Per ADR 0004 the gate is opened per-category as each clears its
-    validation bar. Dining, nightlife (ADR 0007/0009), and accommodations
-    (ADR 0011) are enabled; attractions and key_location remain on the
-    fat-prompt path with no voice rules block."""
-    assert _voice_rules_block("attractions", "blurb") == ""
+def test_voice_rules_block_is_empty_for_key_location():
+    """Per-category gate stays closed for key_location, which has no lean
+    Writer Brief path."""
     assert _voice_rules_block("key_location", "blurb") == ""
 
 
@@ -227,6 +227,7 @@ def test_voice_rules_block_is_empty_for_intros_even_in_dining():
 
 def _lean_brief(angle="best-for-night"):
     from app.features.editor_assist.writer_brief import SourceFact, WriterBrief
+
     return WriterBrief(
         angle_directive=(
             "Open by naming the kind of night Ayahuasca is best for, and give "
@@ -234,9 +235,14 @@ def _lean_brief(angle="best-for-night"):
             "the pacing."
         ),
         source_facts=[
-            SourceFact(fact="Set in the Berninzon mansion in Barranco.", citations=["https://x"]),
+            SourceFact(
+                fact="Set in the Berninzon mansion in Barranco.",
+                citations=["https://x"],
+            ),
             SourceFact(fact="Pisco-forward cocktail program.", citations=["https://y"]),
-            SourceFact(fact="Open late, roughly until 2 or 3 AM.", citations=["https://z"]),
+            SourceFact(
+                fact="Open late, roughly until 2 or 3 AM.", citations=["https://z"]
+            ),
         ],
         angle=angle,
         venue="Ayahuasca",
@@ -245,6 +251,7 @@ def _lean_brief(angle="best-for-night"):
 
 def _lean_target(supporting_context="Some LM identity dump that should not appear"):
     from app.features.editor_assist.listicle_writer import ListicleWriterTarget
+
     return ListicleWriterTarget(
         target_id="item-1_blurb",
         field_type="blurb",
@@ -295,7 +302,9 @@ def test_lean_nightlife_prompt_omits_legacy_voice_walls_and_builder_context():
         article_title="Best Bars in Barranco",
         article_type="single-type-listicle",
         article_location="Lima, Peru",
-        target=_lean_target(supporting_context="hours: noon to 3am, sqm: 1200, lunch service"),
+        target=_lean_target(
+            supporting_context="hours: noon to 3am, sqm: 1200, lunch service"
+        ),
         brief=_lean_brief(),
         list_tone="elevated",
     )
@@ -319,6 +328,7 @@ def test_lean_nightlife_prompt_renders_current_draft_when_present():
         ListicleWriterTarget,
         build_lean_writer_prompt,
     )
+
     target = ListicleWriterTarget(
         target_id="item-1_blurb",
         field_type="blurb",
@@ -345,6 +355,7 @@ def test_lean_nightlife_prompt_falls_back_to_elevated_tone_when_unset():
     from app.features.editor_assist.listicle_writer import (
         build_lean_writer_prompt,
     )
+
     prompt = build_lean_writer_prompt(
         category="nightlife",
         article_title="Best Bars",

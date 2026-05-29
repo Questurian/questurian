@@ -28,6 +28,7 @@ import {
   applySingleTypeListicleGeneratedContent,
   buildSingleTypeGenerateListicleContentRequest,
   getSingleTypeAutoWriteTargetIds,
+  getSingleTypeIntroDisabledReason,
   getSingleTypeIntroTargetId,
 } from '../builder/services/ai-autowrite.service'
 import {
@@ -448,6 +449,11 @@ export default function SingleTypeListicleBuilderPage() {
   const autoWriteIntro = useCallback(async (): Promise<void> => {
     const currentDraft = draftRef.current
     if (!currentDraft) return
+    const disabledReason = getSingleTypeIntroDisabledReason(currentDraft)
+    if (disabledReason) {
+      onError(disabledReason)
+      return
+    }
 
     const draftId = currentDraft.draftId
     const targetId = getSingleTypeIntroTargetId(currentDraft)
@@ -833,6 +839,7 @@ export default function SingleTypeListicleBuilderPage() {
   }
 
   const introTargetId = getSingleTypeIntroTargetId(draft)
+  const introAiDisabledReason = getSingleTypeIntroDisabledReason(draft)
   const introVisualState = aiJobVisualStateById[introTargetId]
     ?? (activeAiWriteJobId === introTargetId ? 'running' : queuedAiWriteJobIds.includes(introTargetId) ? 'queued' : undefined)
   const queuedIntroAiCount = introVisualState === 'queued'
@@ -924,6 +931,7 @@ export default function SingleTypeListicleBuilderPage() {
               isIntroAiGenerating={activeAiWriteJobId === introTargetId}
               introAiQueueCount={queuedIntroAiCount}
               introAiStatus={introAiStatus}
+              introAiDisabledReason={introAiDisabledReason}
               onIntroInspect={() => openInspect(introTargetId, 'Intro')}
               introHasInspectableSteps={Boolean(stepsByTargetId[introTargetId]?.length)}
               isLocked={isStep2Locked}

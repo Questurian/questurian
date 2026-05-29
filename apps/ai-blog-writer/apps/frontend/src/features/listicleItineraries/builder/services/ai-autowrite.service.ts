@@ -13,9 +13,11 @@ import type {
   RelatedItemOption,
 } from '../../types'
 import {
+  getItineraryAngleOptions,
   getItineraryBlocksInArticleOrder,
   isManualItineraryBlockType,
   relatedCollectionToBlockType,
+  resolveItineraryAngleForBlockType,
 } from '../../types'
 import { buildItineraryAiArticleContext, getItineraryAiArticleTitle } from './ai-rewrite.service'
 
@@ -173,7 +175,24 @@ function buildStopTarget(
     locationLabel: articleLocationLabel,
     currentContent: item.blurbMarkdown,
     supportingContext,
+    angle: resolveItineraryAngleForBlockType(item.blockType, item.angle),
   }
+}
+
+/**
+ * Why a stop is not yet eligible for auto-write, or undefined if it is.
+ * Mirrors single-type angle gating (ADR 0010): a stop whose category has an
+ * angle pool must have an angle selected. Pool-less stops (`key-location`,
+ * `tour-agency`) and single-angle nightlife are always eligible.
+ */
+export function getItineraryStopAngleDisabledReason(
+  item: ItineraryItemBlock,
+): string | undefined {
+  if (getItineraryAngleOptions(item.blockType).length === 0) return undefined
+  if (resolveItineraryAngleForBlockType(item.blockType, item.angle) === null) {
+    return 'Select a blurb angle before generating'
+  }
+  return undefined
 }
 
 export function getItineraryAutoWriteTargetIds(
@@ -195,6 +214,8 @@ export function getItineraryAutoWriteTargetIds(
     } else if (!item.title.trim() && !item.operator.trim()) {
       return
     }
+    // Skip-with-reason: pooled-category stops need an angle before auto-write.
+    if (getItineraryStopAngleDisabledReason(item)) return
     targetIds.push(`${item.id}_blurb`)
   })
 
@@ -269,6 +290,7 @@ export function buildItineraryGenerateListicleContentRequest(params: {
     modelName,
     customInstruction,
     skipExisting,
+    listTone: draft.listTone,
     targets,
   }
 }

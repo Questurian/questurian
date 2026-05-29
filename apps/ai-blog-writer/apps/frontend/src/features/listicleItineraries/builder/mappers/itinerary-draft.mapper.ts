@@ -4,6 +4,8 @@ import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-sect
 import {
   isRelatedItemCollection,
   isTourAgencyPriceTier,
+  resolveItineraryAngleForBlockType,
+  resolveListTone,
   type ItineraryDaySlice,
   type ItineraryItemBlock,
   type ListicleItineraryDraft,
@@ -72,10 +74,11 @@ function normalizePayloadKeyLocations(
 
 function mapPayloadBlockRowToItem(item: PayloadBlockRow, index: number): ItineraryItemBlock {
   const itemId = item.id || `item_${Date.now()}_${index}`
+  const blockType = item.blockType || 'itinerary-dining'
 
   return {
     id: itemId,
-    blockType: item.blockType || 'itinerary-dining',
+    blockType,
     item: getRelationshipId(item.item),
     mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
     selectedPhotos: getRelationshipIds(item.selectedPhotos),
@@ -95,6 +98,7 @@ function mapPayloadBlockRowToItem(item: PayloadBlockRow, index: number): Itinera
     keyLocations: normalizePayloadKeyLocations(item.keyLocations, itemId),
     image: getRelationshipId(item.image),
     instagramPost: getRelationshipId(item.instagramPost),
+    angle: resolveItineraryAngleForBlockType(blockType, item.angle),
     blurbMarkdown: item.blurb ? lexicalRichTextToMarkdown(item.blurb) : '',
     blurbLexical: item.blurb,
     blurbJsonText: item.blurb ? JSON.stringify(item.blurb, null, 2) : '',
@@ -177,6 +181,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     }),
     hasLocalChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
+    listTone: resolveListTone(doc.listTone),
     title: doc.title || '',
     location: doc.location || '',
     locationRef: getRelationshipId(doc.locationRef),

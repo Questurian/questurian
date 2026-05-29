@@ -3,6 +3,7 @@ import {
   applySingleTypeListicleGeneratedContent,
   buildSingleTypeGenerateListicleContentRequest,
   getSingleTypeAutoWriteTargetIds,
+  getSingleTypeIntroDisabledReason,
   getSingleTypeIntroTargetId,
 } from './ai-autowrite.service'
 import type { LocationOption, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
@@ -136,6 +137,8 @@ describe('singleTypeListicles ai autowrite service', () => {
       expect.objectContaining({
         targetId: introTargetId,
         fieldType: 'intro',
+        category: 'dining',
+        supportingContext: expect.stringContaining('Selected venues: La Mar, Mérito'),
       }),
       expect.objectContaining({
         targetId: 'item-1_blurb',
@@ -171,6 +174,16 @@ describe('singleTypeListicles ai autowrite service', () => {
 
     expect(getSingleTypeAutoWriteTargetIds(draft, buildRelatedItems())).toEqual([
       getSingleTypeIntroTargetId(draft),
+      'item-1_blurb',
+    ])
+  })
+
+  it('does not include intro in bulk auto-write until every item is selected', () => {
+    const draft = buildDraft()
+    draft.items[1] = { ...draft.items[1]!, item: null }
+
+    expect(getSingleTypeIntroDisabledReason(draft)).toBe('Select every item before writing intro')
+    expect(getSingleTypeAutoWriteTargetIds(draft, buildRelatedItems())).toEqual([
       'item-1_blurb',
     ])
   })

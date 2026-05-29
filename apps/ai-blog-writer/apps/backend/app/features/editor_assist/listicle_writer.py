@@ -171,6 +171,29 @@ LIST_TONE_GUIDANCE: dict[ListTone, str] = {
     ),
 }
 
+INTRO_CATEGORY_ANGLE_GUIDANCE: dict[ListicleCategory, str] = {
+    "dining": (
+        "Frame the meal decisions this list helps with: cravings, settings, occasions, "
+        "and the neighborhood spread. Promise useful dining range without listing venues."
+    ),
+    "nightlife": (
+        "Frame the kind of night out this list helps plan: mood, drinks or music, crowd, "
+        "pacing, and late-night fit. Promise a useful night-out map without listing venues."
+    ),
+    "accommodations": (
+        "Frame the kind of stay this list helps choose: location base, property style, "
+        "amenities, and trip fit. Promise a useful stay-planning lens without listing properties."
+    ),
+    "attractions": (
+        "Frame the kind of visit this list helps shape: must-see stops, pacing, setting, "
+        "and cultural or natural payoff. Promise a useful visit plan without listing attractions."
+    ),
+    "key_location": (
+        "Frame the kind of place or pause this list helps add to the itinerary. Promise "
+        "a useful travel lens without listing every location."
+    ),
+}
+
 BLURB_MIN_WORDS = 90
 BLURB_MAX_WORDS = 140
 INTRO_MIN_WORDS = 80
@@ -278,7 +301,9 @@ PROCESS_PATTERN = re.compile(
     r"\b(?:reviews?\s+say|reviewers?\s+say|diners?\s+say|articles?\s+say|based on reviews?|according to reviews?)\b",
     flags=re.I,
 )
-FENCE_PATTERN = re.compile(r"^\s*```(?:markdown|md|text)?\s*(.*?)\s*```\s*$", flags=re.S | re.I)
+FENCE_PATTERN = re.compile(
+    r"^\s*```(?:markdown|md|text)?\s*(.*?)\s*```\s*$", flags=re.S | re.I
+)
 
 
 @dataclass(frozen=True)
@@ -301,7 +326,7 @@ def strip_generation_fence(text: str) -> str:
     else:
         for prefix in ("Paragraph:", "Intro:", "Blurb:", "Copy:"):
             if stripped.startswith(prefix):
-                stripped = stripped[len(prefix):].strip()
+                stripped = stripped[len(prefix) :].strip()
                 break
     return normalize_dashes(stripped)
 
@@ -316,17 +341,26 @@ def _word_count(text: str) -> int:
 
 def _build_common_rules(*, field_type: ListicleFieldType) -> list[str]:
     lines = [
-        "Use the online research to inform the copy, but never mention reviews, reviewers, diners, guests, articles, sources, or the research process.",
+        "Never mention reviews, reviewers, diners, guests, articles, sources, or the research process.",
         "Do not mention ratings, stars, or review scores.",
         "Do not invent details.",
         "Do not sound like a hotel brochure, tourist ad, or AI summary.",
         "No em dashes.",
     ]
     if field_type == "blurb":
-        lines.insert(0, f"Write one paragraph of about {BLURB_MIN_WORDS} to {BLURB_MAX_WORDS} words.")
-        lines.insert(1, "Do not include a heading or subheading. The subject title is rendered elsewhere in the builder.")
+        lines.insert(
+            0,
+            f"Write one paragraph of about {BLURB_MIN_WORDS} to {BLURB_MAX_WORDS} words.",
+        )
+        lines.insert(
+            1,
+            "Do not include a heading or subheading. The subject title is rendered elsewhere in the builder.",
+        )
     else:
-        lines.insert(0, f"Write one intro paragraph of about {INTRO_MIN_WORDS} to {INTRO_MAX_WORDS} words.")
+        lines.insert(
+            0,
+            f"Write one intro paragraph of about {INTRO_MIN_WORDS} to {INTRO_MAX_WORDS} words.",
+        )
         lines.insert(1, "Do not include a heading or subheading.")
     return lines
 
@@ -367,7 +401,10 @@ def build_generation_prompt(
     )
 
     if target.field_type == "intro":
-        rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="intro"))
+        rules = "\n".join(
+            f"- {line}" for line in _build_common_rules(field_type="intro")
+        )
+        intro_angle_block = _intro_category_angle_block(target.category)
         itinerary_context = (
             "Frame the piece like a polished itinerary opener that previews the overall day or sequence."
             if article_type == "listicle-itinerary"
@@ -385,17 +422,18 @@ def build_generation_prompt(
             f"Article type:\n{article_type_label}\n\n"
             f"Article title:\n{article_title.strip()}\n\n"
             f"Location:\n{format_location_for_prompt(article_location)}\n"
+            f"{intro_angle_block}"
             f"{context_block}"
             f"{current_copy_block}"
             "\n\nTask:\n"
-            "First, research the destination and the venues, stops, or experiences referenced online. "
-            "Use official sites first where available, then recent articles and recent user feedback to verify specifics. "
-            "Then write one publication-ready intro paragraph based on that research. "
+            "Use the supplied context as the source of truth. Write one publication-ready intro paragraph. "
             "If CURRENT BUILDER COPY is present, treat it as a draft reference only and improve it freely.\n\n"
             "Requirements:\n"
             f"{rules}\n"
             f"- {itinerary_context}\n"
             "- Make clear what kind of experience this article delivers in this location.\n"
+            "- Use selected venue names as range context only; do not list venues by default.\n"
+            f"{'- Let the LISTICLE CATEGORY INTRO ANGLE shape the article promise.' + chr(10) if intro_angle_block else ''}"
             "- Keep the writing concise, polished, and specific.\n"
             f"{custom_block}\n\n"
             "Output:\n"
@@ -407,7 +445,9 @@ def build_generation_prompt(
     rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="blurb"))
     subject_label = variant["subject_label"]
     subject_name = (target.research_subject or target.display_name or "").strip()
-    subject_location = format_location_for_prompt(target.location_label or article_location)
+    subject_location = format_location_for_prompt(
+        target.location_label or article_location
+    )
     custom_block = (
         f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
         if custom_instruction.strip()
@@ -441,7 +481,9 @@ def build_generation_prompt(
     ).strip()
 
 
-def _voice_rules_block(category: ListicleCategory | None, field_type: ListicleFieldType) -> str:
+def _voice_rules_block(
+    category: ListicleCategory | None, field_type: ListicleFieldType
+) -> str:
     # Per-category gate; see ANTI_AI_PROMPT_CATEGORIES. A category is added to
     # the set once it clears the validation bar (≥70% banned-phrase reduction
     # across 20 blurbs, zero fabricated anchors). Intros remain on the legacy
@@ -449,9 +491,7 @@ def _voice_rules_block(category: ListicleCategory | None, field_type: ListicleFi
     if field_type != "blurb" or category not in ANTI_AI_PROMPT_CATEGORIES:
         return ""
     category_block = (
-        f"\n\n{NIGHTLIFE_BLURB_CALIBRATION}"
-        if category == "nightlife"
-        else ""
+        f"\n\n{NIGHTLIFE_BLURB_CALIBRATION}" if category == "nightlife" else ""
     )
     return f"\n\n{ANTI_AI_TELLS_BLURB}{category_block}"
 
@@ -463,6 +503,15 @@ def _tone_block(list_tone: ListTone | None) -> str:
     if not guidance:
         return ""
     return f"\n\nLIST TONE\n{list_tone}: {guidance}"
+
+
+def _intro_category_angle_block(category: ListicleCategory | None) -> str:
+    if category is None:
+        return ""
+    guidance = INTRO_CATEGORY_ANGLE_GUIDANCE.get(category)
+    if not guidance:
+        return ""
+    return f"\n\nLISTICLE CATEGORY INTRO ANGLE\n{category}: {guidance}"
 
 
 def _angle_block(listicle_angle: ListicleAngle | None) -> str:
@@ -497,6 +546,7 @@ def build_writer_prompt(
         include_article_context=target.field_type == "intro",
     )
     tone_block = _tone_block(list_tone)
+    intro_angle_block = _intro_category_angle_block(target.category)
     # Angle only applies to blurbs; intros are list-level and have no per-item angle.
     angle_block = _angle_block(listicle_angle) if target.field_type == "blurb" else ""
     current_copy_block = (
@@ -506,7 +556,9 @@ def build_writer_prompt(
     )
 
     if target.field_type == "intro":
-        rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="intro"))
+        rules = "\n".join(
+            f"- {line}" for line in _build_common_rules(field_type="intro")
+        )
         itinerary_context = (
             "Frame the piece like a polished itinerary opener that previews the overall day or sequence."
             if article_type == "listicle-itinerary"
@@ -524,7 +576,8 @@ def build_writer_prompt(
             f"Article type:\n{article_type_label}\n\n"
             f"Article title:\n{article_title.strip()}\n\n"
             f"Location:\n{format_location_for_prompt(article_location)}"
-            f"{tone_block}\n"
+            f"{tone_block}"
+            f"{intro_angle_block}\n"
             f"{context_block}"
             f"{current_copy_block}"
             "\n\nTask:\n"
@@ -535,7 +588,9 @@ def build_writer_prompt(
             f"{rules}\n"
             f"- {itinerary_context}\n"
             "- Make clear what kind of experience this article delivers in this location.\n"
+            "- Use selected venue names as range context only; do not list venues by default.\n"
             f"{'- Match the LIST TONE precisely.' + chr(10) if tone_block else ''}"
+            f"{'- Let the LISTICLE CATEGORY INTRO ANGLE shape the article promise.' + chr(10) if intro_angle_block else ''}"
             "- Keep the writing concise, polished, and specific.\n"
             f"{custom_block}\n\n"
             "Output:\n"
@@ -547,7 +602,9 @@ def build_writer_prompt(
     rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="blurb"))
     subject_label = variant["subject_label"]
     subject_name = (target.research_subject or target.display_name or "").strip()
-    subject_location = format_location_for_prompt(target.location_label or article_location)
+    subject_location = format_location_for_prompt(
+        target.location_label or article_location
+    )
     custom_block = (
         f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
         if custom_instruction.strip()
@@ -639,7 +696,9 @@ def build_lean_writer_prompt(
     """
     article_type_label = ARTICLE_TYPE_LABELS[article_type]
     venue_name = (target.research_subject or target.display_name or "").strip()
-    venue_location = format_location_for_prompt(target.location_label or article_location)
+    venue_location = format_location_for_prompt(
+        target.location_label or article_location
+    )
     tone_guidance = LIST_TONE_GUIDANCE.get(list_tone) if list_tone else None
     tone_line = (
         f"Tone: {list_tone}. {tone_guidance}"
@@ -721,7 +780,9 @@ def build_identity_only_writer_prompt(
     rules = "\n".join(f"- {line}" for line in _build_common_rules(field_type="blurb"))
     subject_label = variant["subject_label"]
     subject_name = (target.research_subject or target.display_name or "").strip()
-    subject_location = format_location_for_prompt(target.location_label or article_location)
+    subject_location = format_location_for_prompt(
+        target.location_label or article_location
+    )
     tone_block = _tone_block(list_tone)
     custom_block = (
         f"\n\nCUSTOM INSTRUCTION\n{custom_instruction.strip()}"
@@ -848,15 +909,21 @@ def validate_generated_text(
         errors.append("Output must not mention ratings, stars, or scores.")
 
     lowered = normalized.casefold()
-    if PROCESS_PATTERN.search(stripped) or any(phrase in lowered for phrase in REVIEW_DISCLOSURE_PHRASES):
+    if PROCESS_PATTERN.search(stripped) or any(
+        phrase in lowered for phrase in REVIEW_DISCLOSURE_PHRASES
+    ):
         errors.append("Output must not expose the research or review process.")
 
     word_count = _word_count(normalized)
-    if field_type == "blurb" and (word_count < BLURB_MIN_WORDS or word_count > BLURB_MAX_WORDS):
+    if field_type == "blurb" and (
+        word_count < BLURB_MIN_WORDS or word_count > BLURB_MAX_WORDS
+    ):
         errors.append(
             f"Blurb must be between {BLURB_MIN_WORDS} and {BLURB_MAX_WORDS} words."
         )
-    if field_type == "intro" and (word_count < INTRO_MIN_WORDS or word_count > INTRO_MAX_WORDS):
+    if field_type == "intro" and (
+        word_count < INTRO_MIN_WORDS or word_count > INTRO_MAX_WORDS
+    ):
         errors.append(
             f"Intro must be between {INTRO_MIN_WORDS} and {INTRO_MAX_WORDS} words."
         )

@@ -10,13 +10,21 @@ import app.features.editor_assist.writer_brief as writer_brief_mod
 
 def _fake_curator(*, prompt, model_name, max_tokens, temperature):
     return (
-        json.dumps({
-            "angle_directive": "Open by naming one specific dish at La Mar.",
-            "source_facts": [
-                {"fact": "Cevicheria with Peruvian seafood.", "citations": ["https://example.com/a"]},
-                {"fact": "Tasting menu on weekends.", "citations": ["https://example.com/b"]},
-            ],
-        }),
+        json.dumps(
+            {
+                "angle_directive": "Open by naming one specific dish at La Mar.",
+                "source_facts": [
+                    {
+                        "fact": "Cevicheria with Peruvian seafood.",
+                        "citations": ["https://example.com/a"],
+                    },
+                    {
+                        "fact": "Tasting menu on weekends.",
+                        "citations": ["https://example.com/b"],
+                    },
+                ],
+            }
+        ),
         model_name,
     )
 
@@ -57,8 +65,16 @@ def _research_profile_payload(
     selected_angle = {
         "angle": angle,
         "status": selected_status if angle else "not-requested",
-        "summary": f"Verified fact about {angle}." if angle and selected_status == "supported" else "",
-        "citations": [f"https://example.com/{angle}"] if angle and selected_status == "supported" else [],
+        "summary": (
+            f"Verified fact about {angle}."
+            if angle and selected_status == "supported"
+            else ""
+        ),
+        "citations": (
+            [f"https://example.com/{angle}"]
+            if angle and selected_status == "supported"
+            else []
+        ),
         "reason": f"{angle} support status is {selected_status}." if angle else "",
     }
     findings = [
@@ -68,25 +84,27 @@ def _research_profile_payload(
         }
         for idx in range(bucket_findings)
     ]
-    return json.dumps({
-        "selected_angle": selected_angle,
-        "standard_buckets": {
-            "reputation-summary": findings,
-            "specific-offerings": [],
-            "experience-texture": [],
-            "history-or-ownership": [],
-            "practical-usefulness": [],
-            "best-for": [],
-            "standout-hook": [],
-            "social-proof": [],
-            "visual-assets": [],
-            "caveats-or-fit-warnings": [],
-            "timing-tips": [],
-            "neighborhood-context": [],
-            "crowd-and-vibe": [],
-        },
-        "warnings": [],
-    })
+    return json.dumps(
+        {
+            "selected_angle": selected_angle,
+            "standard_buckets": {
+                "reputation-summary": findings,
+                "specific-offerings": [],
+                "experience-texture": [],
+                "history-or-ownership": [],
+                "practical-usefulness": [],
+                "best-for": [],
+                "standout-hook": [],
+                "social-proof": [],
+                "visual-assets": [],
+                "caveats-or-fit-warnings": [],
+                "timing-tips": [],
+                "neighborhood-context": [],
+                "crowd-and-vibe": [],
+            },
+            "warnings": [],
+        }
+    )
 
 
 # ---------- Unrelated routes still work (regression coverage) ----------
@@ -98,7 +116,8 @@ def test_rewrite_block_returns_envelope_content(monkeypatch):
         model_name = editor_assist_routes.DEFAULT_MODEL
 
     monkeypatch.setattr(
-        editor_assist_routes, "invoke_writer_model",
+        editor_assist_routes,
+        "invoke_writer_model",
         lambda **_kwargs: _WriterResult(),
     )
 
@@ -122,11 +141,11 @@ def test_rewrite_block_returns_envelope_content(monkeypatch):
 
 def test_blurb_target_missing_payload_doc_id_fails_critical_fields(monkeypatch):
     """A blurb target without Payload doc identity hard-blocks before research."""
+
     def _should_not_be_called(*a, **kw):
         raise AssertionError("evidence research must not run for CF-failed target")
-    monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded", _should_not_be_called
-    )
+
+    monkeypatch.setattr(research_profile_mod, "_invoke_grounded", _should_not_be_called)
 
     client = _build_client()
     response = client.post(
@@ -159,8 +178,11 @@ def test_blurb_target_missing_payload_doc_id_fails_critical_fields(monkeypatch):
 
 def test_blurb_with_supported_angle_generates_normally(monkeypatch):
     monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded",
-        lambda *a, **kw: _FakeGroundedResult(_research_profile_payload(angle="signature-dish")),
+        research_profile_mod,
+        "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(
+            _research_profile_payload(angle="signature-dish")
+        ),
     )
     monkeypatch.setattr(writer_brief_mod, "_invoke_curator_model", _fake_curator)
 
@@ -232,8 +254,11 @@ def test_blurb_with_supported_angle_generates_normally(monkeypatch):
 
 def test_manual_angle_uses_research_profile(monkeypatch):
     monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded",
-        lambda *a, **kw: _FakeGroundedResult(_research_profile_payload(angle="atmosphere")),
+        research_profile_mod,
+        "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(
+            _research_profile_payload(angle="atmosphere")
+        ),
     )
     monkeypatch.setattr(writer_brief_mod, "_invoke_curator_model", _fake_curator)
 
@@ -293,7 +318,8 @@ def test_manual_angle_uses_research_profile(monkeypatch):
 def test_blurb_with_no_evidence_takes_identity_only_path(monkeypatch):
     """Demote-and-warn: operator angle unsupported + no bucket findings takes identity-only prompt."""
     monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded",
+        research_profile_mod,
+        "_invoke_grounded",
         lambda *a, **kw: _FakeGroundedResult(
             _research_profile_payload(
                 angle="signature-dish",
@@ -349,7 +375,9 @@ def test_blurb_with_no_evidence_takes_identity_only_path(monkeypatch):
     # Research Profile step marked failed but writer still runs.
     step_names = [s["name"] for s in payload["steps"]]
     assert "research_profile_completed" in step_names
-    rp_step = next(s for s in payload["steps"] if s["name"] == "research_profile_completed")
+    rp_step = next(
+        s for s in payload["steps"] if s["name"] == "research_profile_completed"
+    )
     assert rp_step["status"] == "failed"
 
 
@@ -358,26 +386,39 @@ def test_blurb_with_no_evidence_takes_identity_only_path(monkeypatch):
 
 def _fake_accommodations_curator(*, prompt, model_name, max_tokens, temperature):
     return (
-        json.dumps({
-            "angle_directive": (
-                "Open by placing Hotel B on the ridge above the old quarter, "
-                "naming what sits on either side."
-            ),
-            "source_facts": [
-                {"fact": "Set on a ridge above the medina.", "citations": ["https://example.com/a"]},
-                {"fact": "Walking distance to the souk.", "citations": ["https://example.com/b"]},
-            ],
-        }),
+        json.dumps(
+            {
+                "angle_directive": (
+                    "Open by placing Hotel B on the ridge above the old quarter, "
+                    "naming what sits on either side."
+                ),
+                "source_facts": [
+                    {
+                        "fact": "Set on a ridge above the medina.",
+                        "citations": ["https://example.com/a"],
+                    },
+                    {
+                        "fact": "Walking distance to the souk.",
+                        "citations": ["https://example.com/b"],
+                    },
+                ],
+            }
+        ),
         model_name,
     )
 
 
 def test_accommodations_blurb_runs_lean_path(monkeypatch):
     monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded",
-        lambda *a, **kw: _FakeGroundedResult(_research_profile_payload(angle="location-and-setting")),
+        research_profile_mod,
+        "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(
+            _research_profile_payload(angle="location-and-setting")
+        ),
     )
-    monkeypatch.setattr(writer_brief_mod, "_invoke_curator_model", _fake_accommodations_curator)
+    monkeypatch.setattr(
+        writer_brief_mod, "_invoke_curator_model", _fake_accommodations_curator
+    )
 
     captured = {"prompt": ""}
 
@@ -446,26 +487,39 @@ def test_accommodations_blurb_runs_lean_path(monkeypatch):
 
 def _fake_attractions_curator(*, prompt, model_name, max_tokens, temperature):
     return (
-        json.dumps({
-            "angle_directive": (
-                "Open by naming the cliffside route at Mirador C and one "
-                "concrete reason it earns the stop."
-            ),
-            "source_facts": [
-                {"fact": "The route follows a cliffside path.", "citations": ["https://example.com/a"]},
-                {"fact": "Morning visits avoid the tour-bus peak.", "citations": ["https://example.com/b"]},
-            ],
-        }),
+        json.dumps(
+            {
+                "angle_directive": (
+                    "Open by naming the cliffside route at Mirador C and one "
+                    "concrete reason it earns the stop."
+                ),
+                "source_facts": [
+                    {
+                        "fact": "The route follows a cliffside path.",
+                        "citations": ["https://example.com/a"],
+                    },
+                    {
+                        "fact": "Morning visits avoid the tour-bus peak.",
+                        "citations": ["https://example.com/b"],
+                    },
+                ],
+            }
+        ),
         model_name,
     )
 
 
 def test_attractions_blurb_runs_lean_path(monkeypatch):
     monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded",
-        lambda *a, **kw: _FakeGroundedResult(_research_profile_payload(angle="signature-feature")),
+        research_profile_mod,
+        "_invoke_grounded",
+        lambda *a, **kw: _FakeGroundedResult(
+            _research_profile_payload(angle="signature-feature")
+        ),
     )
-    monkeypatch.setattr(writer_brief_mod, "_invoke_curator_model", _fake_attractions_curator)
+    monkeypatch.setattr(
+        writer_brief_mod, "_invoke_curator_model", _fake_attractions_curator
+    )
 
     captured = {"prompt": ""}
 
@@ -534,9 +588,8 @@ def test_attractions_blurb_runs_lean_path(monkeypatch):
 def test_intro_target_does_not_invoke_evidence_profile(monkeypatch):
     def _should_not_be_called(*a, **kw):
         raise AssertionError("evidence research must not run for intro targets")
-    monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded", _should_not_be_called
-    )
+
+    monkeypatch.setattr(research_profile_mod, "_invoke_grounded", _should_not_be_called)
 
     class _WriterResult:
         def __init__(self, text: str) -> None:
@@ -544,7 +597,8 @@ def test_intro_target_does_not_invoke_evidence_profile(monkeypatch):
             self.model_name = "gemini-2.5-pro"
 
     monkeypatch.setattr(
-        editor_assist_routes, "invoke_writer_model",
+        editor_assist_routes,
+        "invoke_writer_model",
         lambda **kw: _WriterResult(_paragraph(90)),
     )
 
@@ -559,13 +613,7 @@ def test_intro_target_does_not_invoke_evidence_profile(monkeypatch):
                 {
                     "target_id": "draft-1_header_intro",
                     "field_type": "intro",
-                    # Intros pass CF when name/category/location_label/payload_doc_id
-                    # are present. Operator builds intros from selected venues, so the
-                    # intro target itself is identified by the article title here.
-                    "display_name": "Best Restaurants in Lima",
-                    "category": "dining",
                     "location_label": "Lima, Peru",
-                    "payload_doc_id": "intro-1",
                 },
             ],
         },
@@ -582,9 +630,8 @@ def test_intro_target_does_not_invoke_evidence_profile(monkeypatch):
 def test_skip_existing_preserves_current_content(monkeypatch):
     def _should_not_be_called(*a, **kw):
         raise AssertionError("evidence research must not run for skipped targets")
-    monkeypatch.setattr(
-        research_profile_mod, "_invoke_grounded", _should_not_be_called
-    )
+
+    monkeypatch.setattr(research_profile_mod, "_invoke_grounded", _should_not_be_called)
 
     def _writer_should_not_be_called(**kw):
         raise AssertionError("writer must not run for skipped targets")
