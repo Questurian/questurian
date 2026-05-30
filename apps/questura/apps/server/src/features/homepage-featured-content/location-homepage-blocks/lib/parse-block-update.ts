@@ -35,6 +35,7 @@ export type ParsedBlockUpdateInput = {
   blockId: string
   hasItems: boolean
   items: unknown[]
+  slotCount: number | null
   fields: ParsedBlockUpdateFields
 }
 
@@ -96,6 +97,15 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
   const rawItems = bodyRecord.items
   const hasItems = Array.isArray(rawItems)
   const items = hasItems ? rawItems : []
+  const rawSlotCount = bodyRecord.slotCount
+  const slotCount =
+    typeof rawSlotCount === 'number' && Number.isInteger(rawSlotCount)
+      ? rawSlotCount
+      : null
+
+  if (rawSlotCount !== undefined && slotCount === null) {
+    return { ok: false, status: 400, message: 'slotCount must be an integer when provided.' }
+  }
 
   if (!hasItems && !hasBlockFieldUpdates(fields)) {
     return {
@@ -112,6 +122,7 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
       blockId: bodyRecord.blockId,
       hasItems,
       items,
+      slotCount,
       fields,
     },
   }

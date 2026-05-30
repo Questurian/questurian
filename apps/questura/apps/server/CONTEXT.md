@@ -155,7 +155,7 @@ Identity + general-purpose taxonomy.
 ## Decisions
 
 - **MediaSet ADRs** govern all public-image work — read both before touching media code: `0001-mediaset-as-public-image-source.md` (carve-outs, placement model) and `0002-media-source-focal-point-and-pipeline.md` (source/focal-point on MediaSet, `from-source` pipeline owned here, view-model layer, retirement-as-deliverable).
-- **Push mode in dev** (`db.push: true`) — schema migrations are pulled from collection definitions; production migrations live in `src/migrations/`.
+- **Migration mode** (`db.push: false`) — Payload schema changes must be committed as files in `src/migrations/`. After editing collections, create and apply a migration with `pnpm db:migrate:create <name>` then `pnpm db:migrate`.
 - **Bunny CDN storage** for media via the official plugin.
 - **Resend** for email; **Stripe** for payments — single providers, not abstracted.
 - **`next/image` is deferred** — see the ADR. Adopting it needs its own decision.

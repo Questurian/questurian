@@ -358,8 +358,14 @@ export default function LocationHomepagePage() {
                     ...homepageBlockEditorIdentity(block),
                     token,
                   ]}
-                  saveSelection={async (currentToken, items) => {
-                    const updated = await updateLocationHomepageBlock(currentToken, numericId, block.id, items)
+                  saveSelection={async (currentToken, items, slotCount) => {
+                    const updated = await updateLocationHomepageBlock(
+                      currentToken,
+                      numericId,
+                      block.id,
+                      items,
+                      slotCount,
+                    )
                     const updatedBlock = updated.pageBlocks.find(
                       (candidate): candidate is ArticleCuratedHomepageBlockResponse =>
                         candidate.id === block.id && candidate.blockType === block.blockType,

@@ -7,9 +7,11 @@ const beforeValidateHook = LocationHomepages.hooks?.beforeValidate?.[0]
 async function runBeforeValidate({
   pageBlocks,
   location,
+  originalPageBlocks,
   relatedLocations = {},
 }: {
   pageBlocks: unknown[]
+  originalPageBlocks?: unknown[]
   location: {
     id: number
     level: 'city' | 'neighborhood'
@@ -41,6 +43,7 @@ async function runBeforeValidate({
     },
     originalDoc: {
       location,
+      pageBlocks: originalPageBlocks,
     },
     req: {
       payload: {
@@ -62,6 +65,10 @@ async function runBeforeValidate({
                 ...relatedLocation,
               }
             }
+          }
+
+          if (collection === 'articles') {
+            throw new Error(`Article not found: ${id}`)
           }
 
           throw new Error(`Unexpected lookup: ${collection}:${id}`)
@@ -167,5 +174,36 @@ describe('LocationHomepages collection validation', () => {
     ).rejects.toThrow(
       'Location Grid blocks are only available on city homepages.',
     )
+  })
+
+  it('allows deleting a block when an unchanged remaining block has stale refs', async () => {
+    const location = {
+      id: 10,
+      level: 'city' as const,
+      locationKey: 'usa|austin',
+      countryName: 'United States',
+      cityName: 'Austin',
+    }
+    const staleBlock = {
+      id: 'stale',
+      blockType: 'featured-articles',
+      slotCount: 1,
+      items: [{ relationTo: 'articles', value: 999 }],
+    }
+    const removedBlock = {
+      id: 'remove-me',
+      blockType: 'newsletter-signup',
+      items: [],
+    }
+
+    const result = await runBeforeValidate({
+      location,
+      originalPageBlocks: [staleBlock, removedBlock],
+      pageBlocks: [staleBlock],
+    })
+
+    expect(result).toEqual({
+      pageBlocks: [staleBlock],
+    })
   })
 })

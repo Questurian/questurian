@@ -53,7 +53,7 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
-    push: true, // Automatically create/update schema from collection definitions (push mode)
+    push: false,
     pool: {
       connectionString: APP_CONFIG.database.uri,
       max: 20, // Maximum number of connections in the pool
@@ -69,9 +69,8 @@ export default buildConfig({
   }),
   sharp: sharp as any,
   onInit: async () => {
-    // Payload runs Postgres in `push` mode, which drops tables it does not own
-    // (including Better Auth's `visitor_auth_*` tables) on every boot. Re-create
-    // them here, after the schema push has run, so visitor auth survives restarts.
+    // Better Auth owns `visitor_auth_*`; Payload owns CMS collections. Keep this
+    // idempotent guard so fresh or partially migrated dev DBs still have auth DDL.
     const { ensureVisitorAuthSchema } = await import(
       './features/visitor-auth/lib/ensure-visitor-auth-schema'
     )

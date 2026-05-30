@@ -248,7 +248,7 @@ _Avoid_: public auth, visitor auth
 ## Decisions
 
 - **Payload 3 on Next.js** (single repo for admin + frontend code surface).
-- **PostgreSQL** via `@payloadcms/db-postgres` with `push: true` in dev.
+- **PostgreSQL** via `@payloadcms/db-postgres` with migration-driven schema updates (`push: false`).
 - **MediaSet is the public image source** (see ADR 0001). MediaAsset is the file; MediaSet is the visual subject.
 - **First placement set**: `card`, `square-card`, `wide-card`, `hero`, `article-header`, `open-graph`. Required variants: `thumbnail`, `square`, `wide`, `hero`, `wide`, `open_graph` respectively.
 - **Variant generation lives in Questura** (see ADR 0002). `POST /api/media-sets/from-source` is the single entry point; LM and editorial uploads both go through it. `autoCreateMediaSetForAsset` is removed.

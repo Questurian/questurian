@@ -11,6 +11,10 @@ export function formatPublicHomepageBlock(block: unknown, location?: LocationCon
   }
 
   const selection = isRecord(block.selection) ? block.selection : null
+  if (selection?.isComplete === false) {
+    return null
+  }
+
   const rawItems = Array.isArray(selection?.items) ? selection.items : []
 
   return {

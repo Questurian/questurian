@@ -8,6 +8,9 @@ export function formatPublicLocationHomepageDoc(
   location?: LocationContext,
 ) {
   return {
-    pageBlocks: resolvedBlocks.map((block) => formatPublicHomepageBlock(block, location)),
+    pageBlocks: resolvedBlocks.flatMap((block) => {
+      const publicBlock = formatPublicHomepageBlock(block, location)
+      return publicBlock ? [publicBlock] : []
+    }),
   }
 }

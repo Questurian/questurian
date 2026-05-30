@@ -235,15 +235,17 @@ pnpm test -- --run src/features/auth/__tests__/forgot-password.test.ts
 ## Deployment
 
 ### Pre-Deployment Checklist
-1. Run `pnpm generate:types` to regenerate Payload types from collections
-2. Run `pnpm build` to compile and verify no errors
-3. Run `pnpm test` to ensure tests pass
-4. Run `pnpm lint` to check for code issues
-5. Set all env vars in production environment
+1. Run `pnpm db:migrate` to apply committed Payload migrations
+2. Run `pnpm generate:types` to regenerate Payload types from collections
+3. Run `pnpm build` to compile and verify no errors
+4. Run `pnpm test` to ensure tests pass
+5. Run `pnpm lint` to check for code issues
+6. Set all env vars in production environment
 
 ### Database
 - Requires PostgreSQL (Neon recommended for serverless)
-- Payload handles schema creation/updates automatically (`push: true` in config)
+- Payload schema changes are migration-driven (`push: false` in config)
+- After editing Payload collections, run `pnpm db:migrate:create <name>`, review the generated file in `src/migrations`, then run `pnpm db:migrate`
 - Connection pooling configured: min=2, max=20 connections
 
 ### Deployment Targets

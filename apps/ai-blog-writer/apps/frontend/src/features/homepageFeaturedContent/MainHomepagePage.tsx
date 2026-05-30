@@ -299,11 +299,12 @@ export default function MainHomepagePage() {
                     ...homepageBlockEditorIdentity(block),
                     token,
                   ]}
-                  saveSelection={async (currentToken, items) => {
+                  saveSelection={async (currentToken, items, slotCount) => {
                     const updated = await updateMainHomepageBlock(
                       currentToken,
                       block.id,
                       items,
+                      slotCount,
                     )
                     const updatedBlock = updated.pageBlocks.find(
                       (candidate): candidate is ArticleCuratedHomepageBlockResponse =>

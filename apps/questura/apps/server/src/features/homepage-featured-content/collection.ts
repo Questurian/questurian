@@ -173,9 +173,13 @@ export const LocationHomepages: CollectionConfig = {
 
         // 3. Validate supported page blocks
         if (data) {
-          const arr = data['pageBlocks' as keyof typeof data]
+          const arr = (data as Record<string, unknown>).pageBlocks
           if (Array.isArray(arr)) {
-            await normalizePageBlocksArrayInPlace(req, arr as unknown[], locationGridScope)
+            await normalizePageBlocksArrayInPlace(req, arr as unknown[], locationGridScope, {
+              originalPageBlocks: Array.isArray(originalDoc?.pageBlocks)
+                ? originalDoc.pageBlocks as unknown[]
+                : undefined,
+            })
           }
         }
 

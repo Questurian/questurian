@@ -229,6 +229,23 @@ describe('formatPublicLocationHomepageDoc', () => {
     expect(response.pageBlocks[0]).toBe(nonArticleBlock)
   })
 
+  it('omits incomplete article blocks from the public homepage', () => {
+    const response = formatPublicLocationHomepageDoc([
+      {
+        blockType: 'featured-articles',
+        selection: {
+          totalSlots: 8,
+          allowDrafts: false,
+          isComplete: false,
+          invalidItems: [{ slot: 7, reason: 'not_published' }],
+          items: [{ relationTo: 'articles', title: 'Still valid' }],
+        },
+      },
+    ] as never)
+
+    expect(response).toEqual({ pageBlocks: [] })
+  })
+
   it('returns only pageBlocks at the top level', () => {
     const response = formatPublicLocationHomepageDoc([] as never)
 

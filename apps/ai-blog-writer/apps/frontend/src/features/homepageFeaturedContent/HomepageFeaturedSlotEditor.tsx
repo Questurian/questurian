@@ -94,7 +94,6 @@ export default function HomepageFeaturedSlotEditor({
     hasUnsavedChanges,
     saveDisabled,
     invalidItemsBySlot,
-    resultMessage,
     saveNotification,
     searchValue,
     effectiveCollectionFilter,
@@ -145,9 +144,11 @@ export default function HomepageFeaturedSlotEditor({
     <>
       {savedInvalidItems.length > 0 && (
         <div className="hf-banner warning">
-          {savedInvalidItems.length === 1
-            ? 'One saved slot is no longer eligible. Replace it before saving again.'
-            : `${savedInvalidItems.length} saved slots are no longer eligible. Replace them before saving.`}
+          {typeof slotEditorState.repairSlotCount === 'number'
+            ? `${savedInvalidItems.length} saved slot${savedInvalidItems.length === 1 ? '' : 's'} no longer eligible. This block will save as ${slotEditorState.repairSlotCount} slot${slotEditorState.repairSlotCount === 1 ? '' : 's'}.`
+            : savedInvalidItems.length === 1
+              ? 'One saved slot is no longer eligible. Replace it before saving again.'
+              : `${savedInvalidItems.length} saved slots are no longer eligible. Replace them before saving.`}
         </div>
       )}
 

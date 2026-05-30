@@ -77,11 +77,17 @@ export type UseHomepageFeaturedSlotsOptions = {
   token: string | null
   canManage: boolean
   selection: HomepageFeaturedSelection
-  saveSelection: (token: string, items: HomepageFeaturedItemRef[]) => Promise<HomepageFeaturedSelection>
+  saveSelection: (
+    token: string,
+    items: HomepageFeaturedItemRef[],
+    slotCount?: number,
+  ) => Promise<HomepageFeaturedSelection>
   fetchCandidates: (token: string, params: CandidateParams) => Promise<HomepageFeaturedCandidatesResponse>
   selectionQueryKey: unknown[]
   /** When set, candidate search stays on this collection (e.g. Questurian Maps → single-type listicles). */
   lockedCollectionFilter?: HomepageFeaturedCollection
+  /** When stale saved items were removed, persist remaining items under this lower slot count. */
+  repairSlotCount?: number
 }
 
 export type SaveNotification = {
@@ -106,6 +112,7 @@ export type UseHomepageFeaturedSlotsResult = {
   invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
   resultMessage: string | null
   saveNotification: SaveNotification | null
+  repairSlotCount?: number
   searchValue: string
   collectionFilter: HomepageFeaturedCollection | 'all'
   /** Resolved filter sent to the candidates API (respects `lockedCollectionFilter`). */
@@ -135,6 +142,7 @@ export function useHomepageFeaturedSlots(
     fetchCandidates,
     selectionQueryKey,
     lockedCollectionFilter,
+    repairSlotCount,
   } = options
 
   const [searchValue, setSearchValue] = useState('')
@@ -204,7 +212,7 @@ export function useHomepageFeaturedSlots(
   })
 
   const saveMutation = useMutation({
-    mutationFn: (items: HomepageFeaturedItemRef[]) => saveSelection(token!, items),
+    mutationFn: (items: HomepageFeaturedItemRef[]) => saveSelection(token!, items, repairSlotCount),
     onSuccess: (selection) => {
       const nextSlots = mapSelectionToSlots(selection)
       setSavedSlots(nextSlots)
@@ -222,17 +230,22 @@ export function useHomepageFeaturedSlots(
   })
 
   const slots = draftSlots ?? savedSlots
+  const saveItems = buildSaveItems(slots)
   const usedKeys = new Set(
     slots.flatMap((item) => (item ? [`${item.relationTo}:${item.id}`] : [])),
   )
   const hasAllSlotsFilled = slots.every((item) => item !== null)
   const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false
+  const hasRepairableStaleSlots =
+    typeof repairSlotCount === 'number' &&
+    savedInvalidItems.length > 0 &&
+    saveItems.length === repairSlotCount
   const saveDisabled =
     !token ||
-    !hasAllSlotsFilled ||
+    (!hasAllSlotsFilled && !hasRepairableStaleSlots) ||
     hasDuplicateSlots(slots) ||
     saveMutation.isPending ||
-    !hasUnsavedChanges
+    (!hasUnsavedChanges && !hasRepairableStaleSlots)
 
   const invalidItemsBySlot = new Map<number, HomepageFeaturedInvalidItem>()
   for (const item of savedInvalidItems) {
@@ -244,7 +257,7 @@ export function useHomepageFeaturedSlots(
   useEffect(() => {
     if (saveDisabled) return
     const timer = setTimeout(() => {
-      mutate(buildSaveItems(slots))
+      mutate(saveItems)
     }, 800)
     return () => clearTimeout(timer)
   }, [saveDisabled, draftSlots, mutate]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -303,7 +316,7 @@ export function useHomepageFeaturedSlots(
 
   function handleSave() {
     if (saveDisabled) return
-    saveMutation.mutate(buildSaveItems(slots))
+    saveMutation.mutate(saveItems)
   }
 
   return {
@@ -322,6 +335,7 @@ export function useHomepageFeaturedSlots(
     invalidItemsBySlot,
     resultMessage,
     saveNotification,
+    repairSlotCount,
     searchValue,
     collectionFilter,
     effectiveCollectionFilter,

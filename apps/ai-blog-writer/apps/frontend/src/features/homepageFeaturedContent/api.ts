@@ -113,10 +113,14 @@ export async function updateMainHomepageBlock(
   token: string,
   blockId: string,
   items: HomepageBlockSaveItem[],
+  slotCount?: number,
 ): Promise<MainHomepageResponse> {
+  const body: Record<string, unknown> = { blockId, items }
+  if (typeof slotCount === 'number') body.slotCount = slotCount
+
   return homepageFeaturedRequest('/api/homepage-featured-content', token, {
     method: 'PUT',
-    body: JSON.stringify({ blockId, items }),
+    body: JSON.stringify(body),
   })
 }
 

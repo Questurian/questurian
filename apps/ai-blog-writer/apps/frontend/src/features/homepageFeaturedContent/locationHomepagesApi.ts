@@ -161,10 +161,14 @@ export async function updateLocationHomepageBlock(
   id: number,
   blockId: string,
   items: HomepageBlockSaveItem[],
+  slotCount?: number,
 ): Promise<LocationHomepageResponse> {
+  const body: Record<string, unknown> = { blockId, items }
+  if (typeof slotCount === 'number') body.slotCount = slotCount
+
   return locationHomepageRequest(`/api/location-homepages/${id}`, token, {
     method: 'PUT',
-    body: JSON.stringify({ blockId, items }),
+    body: JSON.stringify(body),
   })
 }
 

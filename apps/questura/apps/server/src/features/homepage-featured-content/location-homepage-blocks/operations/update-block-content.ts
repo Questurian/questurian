@@ -9,7 +9,10 @@ import {
   resolveLocationGridScope,
   type RawBlock,
 } from '../../resolve-page-blocks/service'
-import { resolveStoredSlotCountForBlockType } from '../../slot-count/service'
+import {
+  isValidRequestedSlotCount,
+  resolveStoredSlotCountForBlockType,
+} from '../../slot-count/service'
 import {
   applyBlockFieldUpdates,
   applyBlockItemsUpdate,
@@ -63,7 +66,18 @@ export async function updateLocationHomepageBlockContent(
   }
 
   const locationGridScope = await resolveLocationGridScope(payload, doc.location)
-  const blockSlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+  const resolvedBlockSlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+  const blockSlotCount = parsed.input.slotCount ?? resolvedBlockSlotCount
+
+  if (!isValidRequestedSlotCount(block.blockType, blockSlotCount)) {
+    return {
+      status: 400,
+      body: {
+        message: `slotCount ${blockSlotCount} is not supported for "${block.blockType}".`,
+      },
+    }
+  }
+
   const updatedBlocks = [...rawBlocks]
 
   if (parsed.input.hasItems) {
