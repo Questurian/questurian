@@ -9,9 +9,15 @@ import { APP_CONFIG } from '@/shared/config'
  * tables and makes every sign-in/sign-up fail with a 500.
  *
  * This guard re-creates the tables after Payload has finished its schema push
- * (called from `onInit`). It is idempotent (`CREATE TABLE IF NOT EXISTS`) and
- * never drops or alters existing data. The DDL mirrors the committed migration
+ * (called from `onInit`). The DDL is idempotent (`CREATE TABLE IF NOT EXISTS`)
+ * and mirrors the committed migration
  * `src/migrations/20260529000000_better_auth_visitor_tables.ts`.
+ *
+ * After ensuring the schema, it also removes orphaned `visitor_profiles` rows
+ * (profiles whose `auth_user_id` no longer maps to a `visitor_auth_users` row),
+ * which can arise precisely because the auth tables above were dropped and
+ * recreated empty while the Payload-owned profile table persisted. It never
+ * alters the auth tables' data.
  */
 export async function ensureVisitorAuthSchema(): Promise<void> {
   if (!APP_CONFIG.database.uri) {
@@ -102,6 +108,26 @@ export async function ensureVisitorAuthSchema(): Promise<void> {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS "visitor_auth_verifications_identifier_idx"
       ON "visitor_auth_verifications" ("identifier");
+    `)
+
+    // Sweep orphaned visitor profiles. `visitor_profiles` is Payload-owned and
+    // survives across boots, whereas the Better Auth `visitor_auth_*` tables can
+    // be dropped/recreated empty by Payload's push mode (see comment above). A
+    // profile is only ever created *after* its auth user exists, so any profile
+    // whose `auth_user_id` no longer maps to a `visitor_auth_users` row is a
+    // dangling record that breaks the sign-in account check. Remove them so the
+    // email-existence check stays consistent with the auth source of truth.
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF to_regclass('public.visitor_profiles') IS NOT NULL THEN
+          DELETE FROM "visitor_profiles" vp
+          WHERE vp."auth_user_id" IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM "visitor_auth_users" u WHERE u."id" = vp."auth_user_id"
+            );
+        END IF;
+      END $$;
     `)
   } finally {
     await pool.end()
