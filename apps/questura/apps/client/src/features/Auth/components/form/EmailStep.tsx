@@ -8,9 +8,7 @@ import type { EmailStepProps } from '../../types';
 
 export default function EmailStep({
   email,
-  isSignUp,
   onChange,
-  onModeChange,
   onSubmit,
   fieldError,
   loading,
@@ -21,27 +19,6 @@ export default function EmailStep({
   return (
     <form className={inModal ? "space-y-4" : "mt-8 space-y-6"} onSubmit={onSubmit}>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-1">
-          <button
-            type="button"
-            onClick={() => onModeChange(false)}
-            className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              !isSignUp ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            Sign in
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange(true)}
-            className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              isSignUp ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            Sign up
-          </button>
-        </div>
-
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-black mb-1">
             Email

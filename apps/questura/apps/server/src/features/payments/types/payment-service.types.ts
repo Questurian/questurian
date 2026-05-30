@@ -4,6 +4,8 @@ export interface UserSubscriptionUpdate {
   membershipExpiration?: string | null
   subscriptionRenewsAt?: string | null
   cancelAtPeriodEnd?: boolean
+  firstName?: string
+  lastName?: string
 }
 
 export interface StripeCleanupResult {

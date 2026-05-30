@@ -68,6 +68,15 @@ export default buildConfig({
     apiKey: APP_CONFIG.email.apiKey,
   }),
   sharp: sharp as any,
+  onInit: async () => {
+    // Payload runs Postgres in `push` mode, which drops tables it does not own
+    // (including Better Auth's `visitor_auth_*` tables) on every boot. Re-create
+    // them here, after the schema push has run, so visitor auth survives restarts.
+    const { ensureVisitorAuthSchema } = await import(
+      './features/visitor-auth/lib/ensure-visitor-auth-schema'
+    )
+    await ensureVisitorAuthSchema()
+  },
   plugins: [
     payloadCloudPlugin(),
     bunnyStorage({

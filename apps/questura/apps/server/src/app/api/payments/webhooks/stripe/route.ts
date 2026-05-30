@@ -125,6 +125,19 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     }
   }
 
+  // Capture the billing name Stripe collected at checkout, but only if the
+  // visitor profile doesn't already have a name (don't clobber a name the user
+  // set themselves in settings/account).
+  const billingName = session.customer_details?.name?.trim()
+  if (billingName) {
+    const profile = await findVisitorProfileByStripeCustomerId(customerId)
+    if (profile && !profile.firstName && !profile.lastName) {
+      const parts = billingName.split(/\s+/).filter(Boolean)
+      updateData.firstName = parts[0] ?? ''
+      updateData.lastName = parts.slice(1).join(' ')
+    }
+  }
+
   // Update user with subscription info
   const success = await updateUserSubscription(customerId, updateData)
 

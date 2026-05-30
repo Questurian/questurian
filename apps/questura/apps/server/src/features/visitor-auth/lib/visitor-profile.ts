@@ -25,6 +25,7 @@ export async function findVisitorProfileByAuthUserId(authUserId: string) {
     collection: 'visitor-profiles',
     depth: 0,
     limit: 1,
+    overrideAccess: true,
     where: {
       authUserId: { equals: authUserId },
     },
@@ -39,6 +40,7 @@ export async function findVisitorProfileByStripeCustomerId(stripeCustomerId: str
     collection: 'visitor-profiles',
     depth: 0,
     limit: 1,
+    overrideAccess: true,
     where: {
       stripeCustomerId: { equals: stripeCustomerId },
     },
@@ -59,6 +61,7 @@ export async function updateVisitorProfileByAuthUserId(
     collection: 'visitor-profiles',
     id: existing.id,
     data,
+    overrideAccess: true,
   })
 }
 
@@ -79,5 +82,6 @@ export async function ensureVisitorProfileForAuthUser(user: BetterAuthUser) {
       subscriptionStatus: 'none',
       cancelAtPeriodEnd: false,
     },
+    overrideAccess: true,
   })
 }

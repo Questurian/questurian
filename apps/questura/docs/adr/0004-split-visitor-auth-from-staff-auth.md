@@ -8,11 +8,11 @@ BetterAuth database tables are managed through committed Questura Server SQL mig
 
 This chooses a more explicit boundary over the simpler Payload-only model because public-user scale and OAuth/signup behavior should evolve without widening the CMS admin attack surface. It also avoids making BetterAuth responsible for Payload admin access unless that integration is later proven necessary and maintainable.
 
-Because Questura public auth has not been deployed, the migration will happen as a direct cutover rather than a staged compatibility migration. BetterAuth and VisitorProfiles replace public `/me`, signup, login, OAuth, and Stripe auth flows before launch; Payload `Users` becomes staff-only; legacy custom JWT, token-in-URL, account-check, and public `role: "user"` paths are removed rather than kept as compatibility shims.
+Because Questura public auth has not been deployed, the migration will happen as a direct data-model cutover rather than a staged public-session migration. BetterAuth and VisitorProfiles replace public `/me`, signup, login, OAuth, and Stripe auth flows before launch; Payload `Users` becomes staff-only; legacy custom JWT, token-in-URL, and public `role: "user"` paths are removed. Legacy route names may remain only as adapters over BetterAuth Visitor auth while client flows are migrated.
 
 Payload `Users` supports only Staff identity roles: `admin`, `editor`, and `writer`. The legacy `user` role is removed rather than kept unused, so role checks for `user` are treated as legacy cleanup targets.
 
-Legacy removal is part of the BetterAuth implementation itself, not follow-up cleanup. The implementation is incomplete until legacy `/api/auth/*`, `/api/user/*`, custom JWT helpers, visitor `payload-token` usage, client calls to old auth routes, and `Users.role = "user"` are removed or replaced.
+Legacy removal is part of the BetterAuth implementation itself, not follow-up cleanup. The implementation is incomplete until custom JWT helpers, visitor `payload-token` usage, and `Users.role = "user"` are removed or replaced. Any retained `/api/auth/*` or `/api/user/*` public routes are compatibility adapters over BetterAuth Visitor auth, not aliases to Payload `Users`.
 
 Existing Payload visitor sessions do not need a compatibility window because there are no deployed public sessions to preserve. Sensitive account and payment actions require a BetterAuth Visitor session.
 
@@ -20,9 +20,9 @@ Visitor auth uses BetterAuth's `questura_visitor` cookie namespace. The `payload
 
 The browser calls Questura Server Visitor-auth endpoints directly rather than proxying them through Questura Client. The BetterAuth catch-all route therefore returns credentialed CORS headers and handles preflight requests. Client callback URLs are absolute Questura Client URLs so OAuth, reset-password, and email-change flows return to the public app instead of the backend origin.
 
-Legacy visitor-facing custom auth endpoints are deleted rather than kept as aliases or permanent shims. BetterAuth replaces public signup, login, logout, refresh, OAuth, verification, password reset/change, email-change, password verification, account-check, and token-bearing callback flows. Staff/Payload admin auth remains Payload-owned. Account endpoints may be reintroduced only when they represent Visitor account product operations, not as wrappers over legacy JWT assumptions.
+Legacy visitor-facing custom auth implementation is deleted rather than kept as a permanent parallel system. BetterAuth replaces public signup, login, logout, refresh, OAuth, verification, password reset/change, email-change, password verification, account-check, and token-bearing callback flows. Staff/Payload admin auth remains Payload-owned. Compatibility route names may delegate to BetterAuth where needed so existing client surfaces can migrate without restoring legacy JWT assumptions.
 
-The new Visitor auth UX does not keep the account-check preflight pattern. Visitors choose sign in or sign up explicitly, and auth responses avoid revealing whether an email exists except where the Visitor has explicitly submitted a create/update action.
+Visitor auth keeps one email-first entry flow. Account-state decisions are backed by BetterAuth Visitor records and may be exposed through compatibility adapters only where needed for that flow; the UI does not ask visitors to choose separate sign-in and sign-up paths.
 
 `GET /api/me` is the canonical current-principal endpoint for the public app. It returns a normalized current-principal view for either Visitor auth or Staff auth, including authenticated Staff identities when Staff auth is present. Client flows that require a Visitor account reject Staff current principals. `/api/user/me` is removed rather than kept as a compatibility alias.
 

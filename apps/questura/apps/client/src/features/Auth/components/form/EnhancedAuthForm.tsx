@@ -3,7 +3,7 @@
 import { validateEmail, getFormTitle, getFormSubtitle } from '../../lib/auth-utils';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { useAuthSubmit } from '../../hooks/useAuthSubmit';
-import { isServiceUnavailableError } from '@/lib/api';
+import { isServiceUnavailableError, post } from '@/lib/api';
 import AuthFormLayout from './AuthFormLayout';
 import EmailStep from './EmailStep';
 import PasswordStep from './PasswordStep';
@@ -37,7 +37,26 @@ export default function EnhancedAuthForm({
     }
 
     authForm.setErrors([]);
-    authForm.proceedToPasswordStep();
+
+    // Detect whether the account already exists so we route to sign-in vs sign-up
+    // automatically (restores the pre-rewrite behavior). If the check is
+    // unavailable, fall back to the manually-selected tab rather than blocking.
+    authForm.setLoading(true);
+    try {
+      const result = await post<{ exists?: boolean }>('/api/user/check', {
+        email: authForm.formData.email,
+      });
+      authForm.proceedToPasswordStep(typeof result.exists === 'boolean' ? result.exists : undefined);
+    } catch (error) {
+      if (isServiceUnavailableError(error)) {
+        authForm.setErrors([{ message: 'Service is unavailable. Please try again later.' }]);
+        return;
+      }
+      // Non-service errors: proceed using the currently-selected tab.
+      authForm.proceedToPasswordStep();
+    } finally {
+      authForm.setLoading(false);
+    }
   };
 
   // Handle password step submission

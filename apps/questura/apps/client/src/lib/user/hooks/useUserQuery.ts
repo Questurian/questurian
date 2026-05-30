@@ -147,7 +147,7 @@ export function useSignupMutation() {
         await post('/api/visitor-auth/sign-up/email', {
           email: variables.email,
           password: variables.password,
-          name: name || variables.email,
+          name,
           callbackURL,
         });
         const user = await getCurrentUser();

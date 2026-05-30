@@ -51,7 +51,12 @@ export const useAuthForm = ({ prefillEmail, onModeChange }: UseAuthFormOptions =
     return errors.filter(error => !error.field).map(error => error.message);
   };
 
-  const proceedToPasswordStep = () => {
+  const proceedToPasswordStep = (userExists?: boolean) => {
+    // Auto-select sign-in vs sign-up based on whether the account exists.
+    // Falls back to the currently-selected tab when existence is unknown.
+    if (typeof userExists === 'boolean') {
+      setIsSignUp(!userExists);
+    }
     setShowPasswordStep(true);
   };
 

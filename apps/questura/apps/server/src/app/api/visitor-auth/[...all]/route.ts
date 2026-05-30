@@ -7,7 +7,16 @@ import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 const handlers = toNextJsHandler(visitorAuth)
 
 async function withCors(req: NextRequest, handler: (request: Request) => Promise<Response>) {
-  const response = await handler(req)
+  let response: Response
+
+  try {
+    response = await handler(req)
+  } catch (error) {
+    response = error instanceof Response
+      ? error
+      : Response.json({ error: 'Authentication request failed' }, { status: 500 })
+  }
+
   const headers = new Headers(response.headers)
 
   for (const [key, value] of Object.entries(getCorsHeaders(req))) {

@@ -192,8 +192,8 @@ _Avoid_: public auth, visitor auth
 - Staff email addresses cannot become Visitor accounts.
 - Staff email blocking uses both known staff-domain checks and Payload `Users` lookup.
 - Visitor auth flows avoid account-discovery responses except where a user has explicitly submitted a create/update action.
-- Visitor signup/login does not use a preflight account-check step.
-- Visitor auth UI presents explicit sign-in and sign-up paths rather than probing whether an email exists.
+- Visitor auth uses a single email-first entry flow: a visitor enters an email, then Questura determines whether to continue an existing Visitor account sign-in or create a new Visitor account.
+- Visitor auth UI does not present separate sign-in and sign-up paths for email/password entry.
 - Visitor auth endpoints are abuse-sensitive surfaces and require rate limiting, bot protection, and audit logging.
 - Production Visitor auth rate limiting is Redis-backed; database-backed limits are local/spike-only.
 - Unverified email/password Visitor accounts may sign in and browse free public content.
@@ -219,8 +219,8 @@ _Avoid_: public auth, visitor auth
 - `GET /api/me` is the canonical public current-principal endpoint.
 - `GET /api/me` returns Staff identities as authenticated Current principals when Staff auth is present.
 - Client flows that require a Visitor account reject a Staff current principal.
-- Legacy visitor-facing auth and user endpoints are not compatibility aliases; they are removed before launch.
-- New Visitor auth is not complete until legacy visitor auth routes, custom JWT helpers, visitor `payload-token` usage, client calls to old auth routes, and `Users.role = "user"` are removed.
+- Legacy visitor-facing route names may exist only as compatibility adapters over Visitor auth; they must not read or write Payload `Users` as public accounts.
+- New Visitor auth is not complete until custom JWT helpers, visitor `payload-token` usage, and `Users.role = "user"` are removed.
 - Stripe customer and subscription records belong only to Visitor accounts.
 - Staff identities never create Stripe checkout or customer records.
 - Payment APIs authenticate through the Current principal and require a Visitor principal for Stripe checkout/customer operations.
